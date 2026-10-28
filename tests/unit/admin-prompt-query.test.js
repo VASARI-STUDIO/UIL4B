@@ -63,3 +63,92 @@ test('the filter buttons and the refresh button both go through the capped loade
   assert.match(src, /onClick=\{\(\) => selectPromptFilter\(f\)\}/, 'the filter buttons no longer reload the list')
   assert.match(src, /await loadPrompts\(promptFilterRef\.current\)/, 'refresh no longer reloads prompts for the active filter')
 })
+
+// ── The loader the tab runs: stale reads and failures ────────────────────────
+import { createPromptLoader, promptReadErrorText } from '../../src/utils/adminPromptQuery.js'
+
+/** A read the test finishes by hand, so it decides which one is slower. */
+function deferredRead() {
+  const pending = []
+  const read = (spec) => new Promise((resolve, reject) => pending.push({ spec, resolve, reject }))
+  return { read, pending }
+}
+
+function screen() {
+  const s = { list: null, error: '', loading: false, cleared: 0, starts: [] }
+  s.hooks = {
+    onStart: (spec, { clear }) => { s.loading = true; s.error = ''; s.starts.push(spec.status); if (clear) { s.list = []; s.cleared++ } },
+    onList: (list) => { s.list = list; s.loading = false },
+    onError: (err) => { s.list = []; s.loading = false; s.error = promptReadErrorText(err) },
+  }
+  return s
+}
+
+test('a slower earlier read cannot overwrite a newer one', async () => {
+  const { read, pending } = deferredRead()
+  const s = screen()
+  const load = createPromptLoader({ read, ...s.hooks })
+
+  const first = load('pending')
+  const second = load('approved', { clear: true })
+  assert.deepEqual(pending.map((p) => p.spec.status), ['pending', 'approved'])
+
+  pending[1].resolve([{ id: 'a1', status: 'approved' }])
+  await second
+  pending[0].resolve([{ id: 'p1', status: 'pending' }])
+  await first
+  assert.deepEqual(s.list, [{ id: 'a1', status: 'approved' }], 'the older read landed on top of the newer filter')
+})
+
+test('a slower earlier read that FAILS cannot put its error under the newer filter either', async () => {
+  const { read, pending } = deferredRead()
+  const s = screen()
+  const load = createPromptLoader({ read, ...s.hooks })
+  const first = load('pending')
+  const second = load('rejected', { clear: true })
+  pending[1].resolve([{ id: 'r1' }])
+  await second
+  pending[0].reject(Object.assign(new Error('offline'), { code: 'unavailable' }))
+  await first
+  assert.equal(s.error, '')
+  assert.deepEqual(s.list, [{ id: 'r1' }])
+})
+
+test('a filter switch clears the list at once; a refresh does not', async () => {
+  const { read, pending } = deferredRead()
+  const s = screen()
+  s.list = [{ id: 'old' }]
+  const load = createPromptLoader({ read, ...s.hooks })
+  const switched = load('approved', { clear: true })
+  assert.deepEqual(s.list, [], 'the old filter\'s rows are still on screen while the new read is in flight')
+  assert.equal(s.loading, true)
+  pending[0].resolve([{ id: 'a' }])
+  await switched
+
+  const refreshed = load('approved')
+  assert.deepEqual(s.list, [{ id: 'a' }], 'a refresh blanked the list')
+  pending[1].resolve([{ id: 'a' }, { id: 'b' }])
+  await refreshed
+  assert.equal(s.list.length, 2)
+})
+
+test('a refused read is reported, with the index hint for failed-precondition, not shown as an empty list', async () => {
+  const s = screen()
+  const load = createPromptLoader({
+    read: async () => { throw Object.assign(new Error('The query requires an index.'), { code: 'failed-precondition' }) },
+    ...s.hooks,
+  })
+  await load('pending', { clear: true })
+  assert.match(s.error, /requires an index/)
+  assert.match(s.error, /firestore:indexes/, 'the missing-index case does not say how to fix it')
+  assert.equal(s.loading, false)
+  assert.equal(promptReadErrorText(new Error('boom')), 'boom')
+})
+
+test('Admin.jsx shows the read failure instead of "No pending prompts yet"', () => {
+  const src = stripComments(read('src/pages/Admin.jsx'))
+  assert.match(src, /createPromptLoader\(\{/, 'the tab no longer runs the tested loader')
+  assert.match(src, /\{promptsError && \(/, 'the prompts error is no longer rendered')
+  assert.match(src, /!promptsError && pendingPrompts\.filter/, 'the empty sentence is shown even when the read failed')
+  assert.match(src, /loadPrompts\(next,\s*\{\s*clear:\s*true\s*\}\)/, 'a filter switch no longer clears the list')
+})
