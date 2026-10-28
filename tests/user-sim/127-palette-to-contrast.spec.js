@@ -18,8 +18,8 @@ test('a signed-out visitor opens the untouched board in the Contrast Checker', a
   expect(hexes.length, 'no hex values read off the board').toBeGreaterThan(1)
 
   await page.getByRole('button', { name: /^Extra tools/ }).click()
-  await page.getByRole('menuitem', { name: 'Check in Contrast Checker' }).or(page.getByRole('button', { name: 'Check in Contrast Checker' })).first().click()
-  await expect(page).toHaveURL(/\/create\/contrast$/)
+  await page.getByRole('menuitem', { name: 'Check contrast' }).or(page.getByRole('button', { name: 'Check contrast' })).first().click()
+  await expect(page).toHaveURL(/\/create\/contrast\?fg=[0-9A-F]{6}&bg=[0-9A-F]{6}&from=palette/)
 
   await expect.poll(async () => {
     const text = (await page.locator('main').innerText()).toUpperCase()
