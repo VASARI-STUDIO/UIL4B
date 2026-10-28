@@ -423,3 +423,146 @@ test.describe('B2 previews painted with the palette', () => {
     await expect(page.locator('.cc-pv [data-pair-part]')).toHaveCount(0)
   })
 })
+
+// THE LAYOUT OF THE HAND-OFF (fix round 1). The strip follows the picture it
+// changes, the frame fits the window with a palette as it does without one, the
+// beside tag costs no row at 320, the toolbar keeps the checker's name at 320, and
+// a field says what role it holds. Worked from the palette above, not read back:
+//
+//   Deep on Subtle     #0B1220 on #F7F7F4   the reading pair; roles Deep and Subtle
+//   Primary on Accent  #1E3A8A on #0F766E   two brand colours ("beside")
+//   Secondary          Analogous −30° under the analogous system: the longest name
+//
+// MUTATIONS (each turns the tests named red):
+//   <div className="cc-strip"> moved back after <ToolPanel>           -> "R1 the strip comes before the result panel" at 390 and 768
+//   {hasPalette && !stacked && ctxBar} put back above the frame       -> "R1 with a palette the frame ends inside 1440x900"
+//   the 339px container rule in Interface.css puts the tag back in
+//     its own row (grid-column:1; justify-self:start; margin-left:0)  -> "R1 at 320 the beside tag costs no row"
+//   the max-width 359px rule hiding .tl-btn--back .tl-btn-label removed -> "R1 at 320 the toolbar title is whole"
+//   roleText={null} on both HexFields                                 -> "R1 a field label names the role"
+//   sideRole(fg, fgRole) given handoff.fgRole instead of fgRole       -> "R1 a field label names the role ... drops it"
+//   .cc-field-role set to display:inline on a phone (it wraps the label
+//     to three lines and the row grows 3px at 390)                    -> "R1 a long role name does not change the height of the fields" at 390
+const READING = '/create/contrast?fg=0B1220&bg=F7F7F4&from=palette&fgRole=deep&bgRole=subtle'
+const SECONDARY = '/create/contrast?fg=F59E0B&bg=F7F7F4&from=palette&fgRole=secondary&bgRole=subtle'
+const PHONE = (width, height) => ({ viewport: { width, height }, isMobile: true, hasTouch: true })
+
+async function openAt(browser, opts, url, { harmony = 'auto', palette = true } = {}) {
+  const ctx = await browser.newContext(opts)
+  const page = await ctx.newPage()
+  if (palette) await seed(page, { harmony })
+  await go(page, url)
+  await page.evaluate(() => document.fonts.ready)
+  return { ctx, page }
+}
+
+test.describe('R1 the layout of the hand-off', () => {
+  for (const vp of [{ width: 390, height: 844, phone: true }, { width: 768, height: 1024, phone: false }]) {
+    test(`R1 the strip comes before the result panel, under the frame, at ${vp.width}`, async ({ browser }) => {
+      const { ctx, page } = await openAt(browser, vp.phone ? PHONE(vp.width, vp.height) : { viewport: { width: vp.width, height: vp.height } }, READING)
+      watch(page, `a window ${vp.width}px wide`)
+      const [frame, strip, panel] = await Promise.all(['.cc-frame', '.cc-strip', '.cc-panel'].map((s) => page.locator(s).boundingBox()))
+      expect(strip.y, 'the strip is below the frame').toBeGreaterThanOrEqual(frame.y + frame.height - 1)
+      // The caption, the switch and (on a phone) the legend's lede sit between; never a screen of other things.
+      expect(strip.y - (frame.y + frame.height), 'the strip is the next thing under the frame').toBeLessThanOrEqual(200)
+      expect(strip.y, 'the strip comes before the result panel').toBeLessThan(panel.y)
+      await ctx.close()
+    })
+  }
+
+  test('R1 with a palette the frame ends inside 1440x900, where it ends without one', async ({ browser }) => {
+    const withPalette = await openAt(browser, { viewport: { width: 1440, height: 900 } }, READING)
+    watch(withPalette.page, 'someone on a laptop who came from the Palette Builder')
+    const a = await withPalette.page.locator('.cc-frame').boundingBox()
+    // Cancel and Save are in the frame, and the frame is on the screen.
+    expect(a.y + a.height, 'the frame ends inside the window').toBeLessThanOrEqual(900)
+    const btns = await withPalette.page.locator('.cc-pv .ro-btn').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom))
+    expect(btns.length).toBe(2)
+    expect(Math.max(...btns), 'Cancel and Save are inside the window').toBeLessThanOrEqual(900)
+    await withPalette.ctx.close()
+
+    const direct = await openAt(browser, { viewport: { width: 1440, height: 900 } }, '/create/contrast', { palette: false })
+    const b = await direct.page.locator('.cc-frame').boundingBox()
+    expect(Math.abs(a.y - b.y), 'the frame is where a direct visit puts it').toBeLessThanOrEqual(1)
+    await direct.ctx.close()
+  })
+
+  test('R1 at 320 the beside tag costs no row, so Cancel and Save stay in the frame as they do on a direct visit', async ({ browser }) => {
+    const rooms = []
+    for (const [url, palette] of [['/create/contrast?fg=1E3A8A&bg=0F766E&from=palette&fgRole=primary&bgRole=accent', true], ['/create/contrast', false]]) {
+      const { ctx, page } = await openAt(browser, PHONE(320, 568), url, { palette })
+      watch(page, 'a 320px phone')
+      if (palette) await expect(page.locator('.ro-tag[data-pair-part]')).toBeVisible()
+      const read = await page.evaluate(() => {
+        const frame = document.querySelector('.cc-frame').getBoundingClientRect()
+        const bottoms = [...document.querySelectorAll('.cc-pv .ro-btn')].map((e) => e.getBoundingClientRect().bottom)
+        return { count: bottoms.length, room: frame.bottom - 1 - Math.max(...bottoms) }
+      })
+      expect(read.count, 'Cancel and Save').toBe(2)
+      expect(read.room, 'Cancel and Save end inside the frame').toBeGreaterThanOrEqual(0)
+      rooms.push(read.room)
+      await ctx.close()
+    }
+    // The tag is up beside the title, so the room is what a direct visit has (about 8px), not 24px less.
+    expect(rooms[0], `room with the tag ${rooms[0]}px, without ${rooms[1]}px`).toBeGreaterThanOrEqual(rooms[1] - 1)
+  })
+
+  test('R1 at 320 the toolbar title is whole and the way back keeps its name', async ({ browser }) => {
+    const { ctx, page } = await openAt(browser, PHONE(320, 568), READING)
+    watch(page, 'a 320px phone')
+    const read = await page.evaluate(() => {
+      const t = document.querySelector('.tl-title')
+      return { clip: t.scrollWidth - t.clientWidth, text: t.textContent }
+    })
+    expect(read.text).toBe('Contrast Checker')
+    expect(read.clip, 'the title is cut with an ellipsis').toBeLessThanOrEqual(0)
+    const back = backLink(page)
+    await expect(back).toBeVisible()
+    await expect(back.locator('.tl-btn-label')).toBeHidden()
+    expect((await back.boundingBox()).width, 'the arrow is a touch target').toBeGreaterThanOrEqual(44)
+    await ctx.close()
+    // From 360px the word is back.
+    const wider = await openAt(browser, PHONE(360, 640), READING)
+    await expect(backLink(wider.page).locator('.tl-btn-label')).toHaveText('Palette')
+    await wider.ctx.close()
+  })
+
+  test('R1 a field label names the role on a hand-off, and drops it after the colour is edited', async ({ page }) => {
+    watch(page, 'a designer who arrived with a pair from the palette')
+    await seed(page)
+    await go(page, READING)
+    const fgRoleText = page.locator('label[for="cc-fg"] .cc-field-role')
+    const bgRoleText = page.locator('label[for="cc-bg"] .cc-field-role')
+    await expect(fgRoleText).toHaveText(/Deep/)
+    await expect(bgRoleText).toHaveText(/Subtle/)
+    // The label still names the input as before, with the role after it.
+    await expect(page.getByRole('textbox', { name: /^Text colour/ })).toHaveValue('#0B1220')
+
+    await fgField(page).fill('#E07B00')
+    await fgField(page).press('Enter')
+    await expect(fgRoleText).toHaveCount(0)
+    await expect(bgRoleText, 'the other side keeps its role').toHaveText(/Subtle/)
+  })
+
+  test('R1 a direct visit with no palette has no role on its labels', async ({ page }) => {
+    watch(page, 'someone opening the checker from the tools list')
+    await go(page, '/create/contrast?fg=AAAAAA&bg=FFFFFF')
+    await expect(page.locator('.cc-field-role')).toHaveCount(0)
+  })
+
+  for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 768, height: 1024, phone: false }, { width: 390, height: 844, phone: true }, { width: 320, height: 568, phone: true }]) {
+    test(`R1 a long role name does not change the height of the fields at ${vp.width}`, async ({ browser }) => {
+      const opts = vp.phone ? PHONE(vp.width, vp.height) : { viewport: { width: vp.width, height: vp.height } }
+      const direct = await openAt(browser, opts, '/create/contrast?fg=F59E0B&bg=F7F7F4', { palette: false })
+      const base = (await direct.page.locator('.cc-pairbar').boundingBox()).height
+      await direct.ctx.close()
+      // Analogous −30° is the longest name the analogous system gives.
+      const { ctx, page } = await openAt(browser, opts, SECONDARY, { harmony: 'analogous' })
+      watch(page, `a window ${vp.width}px wide`)
+      await expect(page.locator('label[for="cc-fg"] .cc-field-role')).toHaveText(/Analogous −30°/)
+      const named = (await page.locator('.cc-pairbar').boundingBox()).height
+      expect(Math.abs(named - base), `fields ${named}px with roles, ${base}px without`).toBeLessThanOrEqual(1)
+      await ctx.close()
+    })
+  }
+})
