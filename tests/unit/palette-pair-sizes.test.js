@@ -49,12 +49,12 @@ test('the three classes are body 4.5, large 3 and UI parts 3, in that order', ()
   assert.deepEqual(SIZE_CLASSES.map((c) => [c.id, c.min]), [['body', 4.5], ['large', 3], ['ui', 3]])
 })
 
-// Part 1 of the views rework builds Interface and Specimen; part 2 adds Article and
-// Landing page between them (and 'landing' becomes the one view with a part to drop).
+// The views, in control order: Interface, Article, Landing page, Specimen. Only
+// 'landing' has a part to drop (" page") on a narrow screen.
 test('the views are listed in control order, Interface first and Specimen last', () => {
   const ids = PAIR_VIEWS.map((v) => v.id)
-  assert.equal(ids[0], 'interface')
-  assert.equal(ids.at(-1), 'specimen')
+  assert.deepEqual(ids, ['interface', 'article', 'landing', 'specimen'])
+  assert.deepEqual(PAIR_VIEWS.filter((v) => v.more).map((v) => [v.id, v.label, v.more]), [['landing', 'Landing', ' page']])
   for (const v of PAIR_VIEWS) assert.equal(v.label + (v.more || ''), v.name, `${v.id}: label plus the dropped part is the name`)
 })
 
@@ -94,6 +94,13 @@ test('the legend line says "Every AA test passes" until the pair also clears AAA
   assert.match(legendLede(7), /^Every test passes\./, '7:1 clears AAA too')
   assert.match(legendLede(21), /^Every test passes\./)
   assert.match(legendLede(4.49), /^The largest part that misses its test is outlined\./, 'under 4.5:1 body text fails')
+})
+
+test('the new views list the parts their tests are read on', () => {
+  assert.match(UI_PARTS.article, /(^|, )\.bs-chart-line(,|$)/)
+  assert.match(UI_PARTS.article, /(^|, )\.bs-link-u(,|$)/)
+  assert.match(UI_PARTS.landing, /(^|, )\.tw-card(,|$)/)
+  assert.match(UI_PARTS.landing, /(^|, )\.tw-receipt(,|$)/)
 })
 
 test('the Interface view lists the input box inside the focus ring as a UI part', () => {

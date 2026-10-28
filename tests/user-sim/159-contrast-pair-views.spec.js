@@ -29,12 +29,9 @@ const FG = '#777777'
 const BG = '#ffffff'
 const FG_RGB = 'rgb(119, 119, 119)'
 const BG_RGB = 'rgb(255, 255, 255)'
-// Part 1 of the views rework builds Interface; Article and Landing page arrive in part 2
-// (PART_TWO, used by the test.fixme tests below). Specimen is covered in 171.
+// The three product views; Specimen is covered in 171.
 const VIEWS = [
   { id: 'interface', name: 'Interface' },
-]
-const PART_TWO = [
   { id: 'article', name: 'Article' },
   { id: 'landing', name: 'Landing page' },
 ]
@@ -148,10 +145,8 @@ test.describe('the Contrast Checker views', () => {
     })
   }
 
-  // PART 2: needs the Article view (.bs-head is its headline). Delete .fixme then.
-  test.fixme('the Article headline is larger than its body text', async ({ page }) => {
+  test('the Article headline is larger than its body text', async ({ page }) => {
     watch(page, 'designer reading the Article view')
-    expect(PART_TWO[0].id).toBe('article')
     await openPair(page)
     const pv = await pickView(page, 'Article')
     await settle(page)
@@ -169,10 +164,8 @@ test.describe('the Contrast Checker views', () => {
 test.describe('the Contrast Checker views on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
-  // PART 2: needs the Landing page view. Delete .fixme then.
-  test.fixme('the Landing button reads "Landing", the other buttons keep their names', async ({ page }) => {
+  test('the Landing button reads "Landing", the other buttons keep their names', async ({ page }) => {
     watch(page, 'designer on a phone choosing a view')
-    expect(PART_TWO[1].name).toBe('Landing page')
     await openPair(page)
     const group = page.getByRole('group', { name: 'Preview the pair on' })
     const landing = group.getByRole('button', { name: 'Landing page', exact: true })
@@ -195,8 +188,7 @@ test.describe('the Contrast Checker views on a phone', () => {
     }
   })
 
-  // PART 2: needs the Landing page view. Delete .fixme then.
-  test.fixme('the Landing button keeps its whole name on a wide screen', async ({ page }) => {
+  test('the Landing button keeps its whole name on a wide screen', async ({ page }) => {
     watch(page, 'designer on a desktop choosing a view')
     await page.setViewportSize({ width: 1440, height: 900 })
     await openPair(page)
