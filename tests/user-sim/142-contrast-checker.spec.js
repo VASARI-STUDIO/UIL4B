@@ -415,9 +415,81 @@ test.describe('Contrast Checker · a hex that is not finished or not right', () 
   })
 })
 
+test.describe('Contrast Checker · the "How contrast is measured" link', () => {
+  const NAME = 'How contrast is measured (opens in a new tab)'
+  const link = (page) => page.getByRole('link', { name: NAME, exact: true })
+
+  // The article is long and the person is mid-check, so it opens beside the
+  // checker, and the link says so before it is followed.
+  //
+  // MUTATION 1: in ContrastChecker.jsx put back the router Link (to=...) for the
+  // anchor; the target and href expectations go red. MUTATION 2: delete rel="noopener"; the rel
+  // expectation goes red. MUTATION 3: delete the sr-only span; no link has the
+  // name, and the lookup times out.
+  test('is a new-tab anchor with noopener, an icon and a name that says so', async ({ page }) => {
+    watch(page, 'a designer who wants the reasoning behind the numbers')
+    await go(page, '/create/contrast')
+    await expect(link(page), 'one link, named for a screen reader').toHaveCount(1)
+    await expect(link(page)).toHaveAttribute('href', '/learn/colour-contrast')
+    await expect(link(page)).toHaveAttribute('target', '_blank')
+    await expect(link(page)).toHaveAttribute('rel', /(^|\s)noopener(\s|$)/)
+    await expect(link(page).locator('svg'), 'the arrow icon').toHaveCount(1)
+    // The icon is decoration: the visible words and the sr-only hint are the whole name.
+    await expect(link(page).locator('svg')).toHaveAttribute('aria-hidden', 'true')
+    await expect(link(page)).toHaveText('How contrast is measured (opens in a new tab)')
+    // The hint is hidden from sight, so it cannot push the visible link wider than its words.
+    const hint = link(page).locator('.sr-only')
+    await expect(hint).toHaveText(' (opens in a new tab)')
+    expect((await hint.boundingBox()).width, 'the hint is visually hidden').toBeLessThanOrEqual(1)
+  })
+
+  // MUTATION: change target="_blank" to target="_self" (or put the router Link
+  // back); the popup never arrives and the wait times out. (Dropping rel does not turn this red: browsers
+  // treat target=_blank as noopener, so window.opener stays null. The rel attribute test above catches that.)
+  test('clicking it opens the article in a new tab and leaves the checker as it was', async ({ page }) => {
+    watch(page, 'a designer mid-check who wants the explanation')
+    await go(page, '/create/contrast?fg=1F2937&bg=F8FAFC')
+    await expect(page.locator('.cc-ratio-num')).toHaveText('14.02:1')
+    await fgInput(page).fill('#374151')
+    const before = page.url()
+    const colours = [await fgInput(page).inputValue(), await bgInput(page).inputValue()]
+    expect(colours).toEqual(['#374151', '#F8FAFC'])
+    const ratio = await page.locator('.cc-ratio-num').textContent()
+
+    const [popup] = await Promise.all([page.waitForEvent('popup'), link(page).click()])
+    await popup.waitForLoadState('domcontentloaded')
+    expect(new URL(popup.url()).pathname).toBe('/learn/colour-contrast')
+    expect(page.url(), 'the checker stays at its own address').toBe(before)
+    await expect(fgInput(page)).toHaveValue('#374151')
+    await expect(bgInput(page)).toHaveValue('#F8FAFC')
+    await expect(page.locator('.cc-ratio-num')).toHaveText(ratio)
+    // window.opener, not Playwright's popup.opener(): Chromium reports the opener there even for noopener.
+    expect(await popup.evaluate(() => window.opener), 'noopener: the new tab has no handle back to the checker').toBeNull()
+    await popup.close()
+  })
+})
+
+test.describe('Contrast Checker · the explainer wording', () => {
+  // The three bullets are the quick answer to "what do AA and AAA mean here".
+  // Their wording, per theme and per pair, is held in 170; this holds the one
+  // fact the old note had wrong.
+  //
+  // MUTATION: put "19px bold" back into the Large text bullet; the 19px
+  // expectation and the 18.66px expectation both go red.
+  test('names 4.5:1, 3:1, 7:1, 24px and 18.66px, and never 19px', async ({ page }) => {
+    watch(page, 'a designer deciding if 19px bold text counts as large')
+    await go(page, '/create/contrast')
+    const text = await page.locator('.cc-note').innerText()
+    for (const needle of ['4.5:1', '3:1', '7:1', '24px', '18.66px']) expect(text, needle).toContain(needle)
+    expect(text).not.toContain('19px')
+  })
+})
+
 test.describe('Contrast Checker · a thumb on a phone', () => {
   // MUTATION: in contrast.css lower the coarse-pointer swatch to 32px
   // (.cc .cc-swatch { width: 32px; height: 32px }); the swatches go red.
+  // Same for the measurement link: lower `.cc .cc-note-link { min-height: 44px }`
+  // inside @media (pointer: coarse) to 24px and it goes red.
   test('every control is at least 44px at 390', async ({ browser }) => {
     const { ctx, page } = await phone(browser, 390)
     watch(page, 'someone using the checker with a thumb')
@@ -429,12 +501,12 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
       coarse: matchMedia('(pointer: coarse)').matches,
       boxes: [
         '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch',
-        '.tl-export-btn',
+        '.tl-export-btn', '.cc-note-link',
       ].flatMap((sel) => [...document.querySelectorAll(sel)].map((el, i) => {
         const r = el.getBoundingClientRect()
         return { sel: `${sel}[${i}]`, w: Math.round(r.width), h: Math.round(r.height) }
       })),
-      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch']
+      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link']
         .map((sel) => [sel, document.querySelectorAll(sel).length]),
     }))
     expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
