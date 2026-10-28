@@ -395,21 +395,60 @@
 .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
-/* Picked for the Shuffle pool: a dashed 2px ring just inside the chip, in the
-   chip's own ink (white or near-black), so it reads on any colour and never
-   collides with the outer ring and tick that mark the stop's colour. */
-.grd .grd-chip.is-picked { position: relative; }
-.grd .grd-chip.is-picked::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border: 2px dashed currentColor;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.grd .grd-chips--shades .grd-chip.is-picked::after { inset: 2px; border-width: 1.5px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-chip:hover { border-color: var(--tl-line-on); }
+}
+
+/* Starter pairs: two flat halves in one pill, one press sets the first and last stop. */
+.grd .grd-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
+.grd .grd-pair {
+  display: flex;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--tl-line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+}
+.grd .grd-pair-half { flex: 1 1 50%; }
+.grd .grd-pair:active { transform: scale(0.97); }
+.grd .grd-pair:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+.grd .grd-pair[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-pair:hover { border-color: var(--tl-line-on); }
+}
+
+/* The no-palette and one-colour states. The blocks sit in slots that are the same
+   height whichever of them is drawn (pairs and colours, or a project's colours; a
+   project select or none), so nothing in the panel moves when a press, a project
+   choice or the projects loading changes what is shown. */
+.grd .grd-sparse { display: grid; gap: 8px; }
+.grd .grd-sparse .grd-avail-note { min-height: 36px; line-height: 18px; }
+.grd .grd-sparse-body { display: grid; gap: 8px; align-content: start; min-height: 178px; }
+.grd .grd-avail-block { display: grid; gap: 6px; align-content: start; }
+.grd .grd-avail-from { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.grd .grd-avail-from .grd-avail-link { margin-left: auto; flex: 0 0 auto; }
+.grd .grd-from-select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 190px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--tl-line);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-ink);
+  font-size: 12.5px;
+  transition: border-color var(--dur-1) var(--ease-standard);
+}
+.grd .grd-from-select .menu-select-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd .grd-from-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-from-select:hover { border-color: var(--tl-line-on); }
 }
 
 /* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
@@ -756,6 +795,11 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-pair { width: 72px; height: 44px; border-radius: 22px; }
+  .grd .grd-sparse .grd-avail-note { min-height: 36px; }
+  .grd .grd-sparse-body { min-height: 242px; }
+  .grd .grd-avail-from { min-height: 44px; }
+  .grd .grd-from-select { height: 44px; font-size: 13px; }
   .grd .grd-chips--starter { grid-template-columns: repeat(5, 44px); }
   .grd .grd-chips-more { height: 44px; }
   .grd .grd-chips--shades { gap: 4px; }
@@ -797,7 +841,7 @@
 
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
-:where(html[data-reduced-motion="true"]) .grd .grd-chip:active { transform: none; }
+:where(html[data-reduced-motion="true"]) .grd :is(.grd-chip, .grd-pair):active { transform: none; }
 :where(html[data-reduced-motion="true"]) .grd .grd-copy,
 :where(html[data-reduced-motion="true"]) .grd .grd-copy-idle,
 :where(html[data-reduced-motion="true"]) .grd .grd-copy-done { transition: none !important; }
@@ -809,10 +853,10 @@
   :where(html:not([data-reduced-motion="false"])) .grd .grd-copy:active { transform: none; }
   :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
   :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .grd .grd-chip:active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-chip, .grd-pair):active { transform: none; }
 }
 @media (forced-colors: active) {
-  .grd .grd-chip { forced-color-adjust: none; border-color: CanvasText; }
+  .grd :is(.grd-chip, .grd-pair) { forced-color-adjust: none; border-color: CanvasText; }
   .grd .grd-chip.is-on,
   .grd .grd-stop.is-on,
   .grd .grd-preset.is-on { outline: 2px solid Highlight; }
@@ -865,18 +909,33 @@
 .grd-shuf-body .grd-shuf-keep:focus-visible,
 .grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd-shuf-body .grd-shuf-hint { margin: -6px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+/* The Colours row's checklist: the palette colours Shuffle from palette may use.
+   It scrolls inside itself, so a long palette never stretches the popover or sheet. */
+.grd-shuf-body .grd-pool { display: grid; gap: 2px; max-height: 208px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; border: 1px solid var(--tl-line); border-radius: 8px; }
+.grd-shuf-body .grd-pool-opt { -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; color: var(--tl-ink); cursor: pointer; }
+.grd-shuf-body .grd-pool-opt input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--tl-link); }
+.grd-shuf-body .grd-pool-opt:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+.grd-shuf-body .grd-pool-dot { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--tl-line); }
+.grd-shuf-body .grd-pool-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd-shuf-body .grd-pool-count { margin: 2px 6px 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .grd-shuf-body .grd-pool-opt:hover { background: var(--tl-wash-on); }
+}
+@media (forced-colors: active) {
+  .grd-shuf-body .grd-pool-dot { forced-color-adjust: none; border-color: CanvasText; }
+}
 @media (pointer: coarse) {
+  .grd-shuf-body .grd-pool-opt { min-height: 44px; }
+  .grd-shuf-body .grd-pool-opt input { width: 22px; height: 22px; }
   .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
   .grd-shuf-body .grd-shuf-keep { min-height: 44px; }
   .grd .grd-shuf-x { width: 44px; height: 44px; }
 }
 :where(html[data-reduced-motion="true"]) .grd-shuf-body .grd-shuf-keep { transition: none !important; }
 
-/* The Available colours head row is the height of its tallest possible content
-   (the "Clear picks" button), so picking colours never makes the panel taller. */
+/* The Available colours head row holds one line ("Painting stop 1 of 2") at a
+   fixed height, so what it says never moves the panel. */
 .grd .grd-avail > .tl-sec-head { min-height: 26px; }
-/* The way in to picking, shown while nothing is picked. It takes the place of
-   the picks controls in the same row, so nothing moves. */
 .grd .grd-avail > .tl-sec-head .tl-sec-label { flex: 0 0 auto; white-space: nowrap; }
 .grd .grd-avail-tip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--tl-dim); }
 @media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
