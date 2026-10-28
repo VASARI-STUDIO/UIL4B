@@ -963,11 +963,18 @@ export function nearestPassingLightness(move, against, targetRatio) {
   return best
 }
 
-// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
-// applied in linear sRGB. Source: the canonical published severity table
-// (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
-// separately via Rec.709 luma. Rows are row-major [r;g;b].
+// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices (and
+// deuteranomaly at 0.6), applied in linear sRGB. Source: the authors' Table 1 of
+// pre-computed matrices (inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation), the
+// same table DaltonLens / colorspace R `simulate_cvd` carry. Achromatopsia is
+// handled separately via Rec.709 luma. Rows are row-major [r;g;b].
 const MACHADO_2009 = {
+  // Anomalous trichromacy: the deuteranomaly column at severity 0.6.
+  deuteranomaly: [
+    0.498864, 0.674741, -0.173604,
+    0.205199, 0.754872, 0.039929,
+    -0.011131, 0.030969, 0.980162,
+  ],
   protanopia: [
     0.152286, 1.052583, -0.204868,
     0.114503, 0.786281, 0.099216,
@@ -986,7 +993,7 @@ const MACHADO_2009 = {
 }
 
 // simCvd(hex, type) — simulate colour-vision deficiency in linear sRGB.
-// type: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'.
+// type: 'normal' | 'protanopia' | 'deuteranopia' | 'deuteranomaly' | 'tritanopia' | 'achromatopsia'.
 // Never throws; returns the input hex unchanged on bad/unknown input.
 export function simCvd(hex, type) {
   try {

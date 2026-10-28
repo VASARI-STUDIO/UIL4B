@@ -608,19 +608,27 @@ const HARM_GLYPHS = {
 const HarmonyGlyph = ({ id, size = 14 }) => <Ico size={size}>{HARM_GLYPHS[id] || HARM_GLYPHS.auto}</Ico>
 // An eye whose pupil is a dot in the hue that mode loses (a hollow ring for no
 // colour, the text colour for normal). The outline follows currentColor. Each
-// size has its own geometry so the strokes land on whole pixels.
+// size has its own geometry so the strokes land on whole pixels. The mild mode's
+// dot is half-filled: a hue ring (`half` thick, flush with the full dot's edge)
+// round a hue left half, so it reads as the green-blind dot at half strength and
+// keeps the full hue's contrast in light and dark (a faded dot would not).
 const VISION_EYE = {
-  20: { d: 'M1.75 10C3.6 6.4 6.6 4.5 10 4.5s6.4 1.9 8.25 5.5C16.4 13.6 13.4 15.5 10 15.5S3.6 13.6 1.75 10Z', stroke: 1.5, c: 10, dot: 3.25, ring: 2.75 },
-  16: { d: 'M1.5 8C2.95 5.15 4.95 3.6 8 3.6s5.05 1.55 6.5 4.4C13.05 10.85 11.05 12.4 8 12.4S2.95 10.85 1.5 8Z', stroke: 1.25, c: 8, dot: 2.6, ring: 2.2 },
+  20: { d: 'M1.75 10C3.6 6.4 6.6 4.5 10 4.5s6.4 1.9 8.25 5.5C16.4 13.6 13.4 15.5 10 15.5S3.6 13.6 1.75 10Z', stroke: 1.5, c: 10, dot: 3.25, ring: 2.75, half: 1.25 },
+  16: { d: 'M1.5 8C2.95 5.15 4.95 3.6 8 3.6s5.05 1.55 6.5 4.4C13.05 10.85 11.05 12.4 8 12.4S2.95 10.85 1.5 8Z', stroke: 1.25, c: 8, dot: 2.6, ring: 2.2, half: 1 },
 }
 const VisionIcon = ({ mode, size = 20, className }) => {
   const g = VISION_EYE[size]
+  const hue = VISION_HUES[mode] || 'currentColor'
+  const hr = g.dot - g.half / 2
   return (
     <svg className={className} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" stroke="currentColor" strokeWidth={g.stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path className="vis-eye" d={g.d} />
-      {mode === 'achromatopsia'
-        ? <circle className="vis-ring" cx={g.c} cy={g.c} r={g.ring} />
-        : <circle className="vis-dot" cx={g.c} cy={g.c} r={g.dot} stroke="none" fill={VISION_HUES[mode] || 'currentColor'} />}
+      {mode === 'achromatopsia' && <circle className="vis-ring" cx={g.c} cy={g.c} r={g.ring} />}
+      {mode === 'deuteranomaly' && <>
+        <circle className="vis-dot" cx={g.c} cy={g.c} r={hr} stroke={hue} strokeWidth={g.half} />
+        <path className="vis-dot" d={`M${g.c} ${g.c - hr}A${hr} ${hr} 0 0 0 ${g.c} ${g.c + hr}Z`} stroke="none" fill={hue} />
+      </>}
+      {mode !== 'achromatopsia' && mode !== 'deuteranomaly' && <circle className="vis-dot" cx={g.c} cy={g.c} r={g.dot} stroke="none" fill={hue} />}
     </svg>
   )
 }
