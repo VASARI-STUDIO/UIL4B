@@ -189,6 +189,21 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     expect(await page.evaluate(() => localStorage.getItem('vs-first-win-started'))).toMatch(/^\d+$/)
   })
 
+  test('at 390px "Not now" is a 44px target and the card has no outer panel', async ({ page, baseURL }) => {
+    watch(page, 'a new account on a phone declining the first win')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openFirstWin(page, baseURL)
+
+    const box = await page.getByRole('button', { name: /Not now/ }).boundingBox()
+    expect(box.height, '"Not now" is shorter than 44px on a phone').toBeGreaterThanOrEqual(44)
+    const card = await page.locator('.onb-card').evaluate((el) => {
+      const s = getComputedStyle(el)
+      return { border: s.borderTopWidth, width: el.getBoundingClientRect().width }
+    })
+    expect(card.border, 'the onboarding card still has a border on a phone').toBe('0px')
+    expect(card.width, 'the onboarding card still spends width on padding').toBeGreaterThanOrEqual(390 - 2 * 16 - 1)
+  })
+
   test('the three unread survey questions are gone from the flow', async ({ page, baseURL }) => {
     // onboarding-survey-unused. Asserted on the RENDERED flow rather than on
     // source text: the question is whether a new account is still made to
