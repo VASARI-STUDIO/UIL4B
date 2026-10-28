@@ -363,8 +363,10 @@ export default function ContrastChecker({ onCopy }) {
     const same = (a, b) => String(a).toUpperCase() === String(b).toUpperCase()
     if (role === 'white' || role === 'canvas') return same(hex, WHITE) ? role : null
     if (role === 'near-black') return same(hex, NEAR_BLACK) ? role : null
-    const slot = kit.find((c) => c.role === role)
-    return slot && same(slot.hex, hex) ? role : null
+    // Checked against every colour the palette holds, not only the strip's
+    // first seven: a hand-off from the 8th to 10th column names its colour too.
+    const i = (design?.palette?.colors || []).findIndex((_, k) => roleAt(k) === role)
+    return i >= 0 && same(normaliseHex(design.palette.colors[i]), hex) ? role : null
   }
   const seedFgRole = trustRole(seed.fg, handoff.fgRole)
   const seedBgRole = trustRole(seed.bg, handoff.bgRole)

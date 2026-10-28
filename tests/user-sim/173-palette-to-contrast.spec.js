@@ -656,4 +656,21 @@ test.describe('R2 hand-off fix round', () => {
     await expect(root(page)).toHaveAttribute('data-fg-role', 'primary')
     await expect(root(page)).toHaveAttribute('data-bg-role', 'subtle')
   })
+
+  // MUTATION: check the role against the strip's seven colours (`kit`) instead of
+  // the whole palette; the 8th colour loses its name.
+  test('R2 an 8th colour handed off keeps its name, past the seven on the strip', async ({ page }) => {
+    watch(page, 'someone checking the eighth colour of a long palette')
+    const colours = [...PALETTE, '#9F1239', '#65A30D', '#7C2D12']
+    await page.addInitScript((c) => {
+      localStorage.setItem('vs-current-design', JSON.stringify({
+        palette: { base: c[0], harmony: 'auto', extraColors: [], locked: [], activeIdx: 0, colors: c },
+      }))
+    }, colours)
+    // Index 7 is alt-3 (slots 0 to 4 are named, then alt-1 onwards).
+    await go(page, '/create/contrast?fg=7C2D12&bg=F7F7F4&from=palette&fgRole=alt-3&bgRole=subtle')
+    await expect(fgField(page)).toHaveValue('#7C2D12')
+    await expect(page.locator('label[for="cc-fg"] .cc-field-role')).toHaveText(/Alternative 3/)
+    await expect(root(page)).toHaveAttribute('data-fg-role', 'alt-3')
+  })
 })
