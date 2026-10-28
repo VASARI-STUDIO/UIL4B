@@ -51,7 +51,9 @@
 .grd .grd-stage {
   position: relative;
   isolation: isolate;
-  min-height: clamp(240px, 42vh, 440px);
+  /* 9px under the clamp: the rail below it holds 9px more, so a stop's mark clears the
+     code box and the page keeps the height it had. */
+  min-height: calc(clamp(240px, 42vh, 440px) - 9px);
 }
 .grd .grd-canvas {
   position: absolute;
@@ -81,7 +83,9 @@
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
-.grd .grd-rail-wrap { position: relative; padding: 0 12px; }
+/* The bottom margin is the room under a stop's mark: the mark hangs 1px under the rail and is
+   12px tall, and 8px stays clear below it. */
+.grd .grd-rail-wrap { position: relative; padding: 0 12px; margin-bottom: 9px; }
 .grd .grd-rail {
   position: relative;
   height: 38px;
@@ -119,7 +123,7 @@
 .grd .grd-handle.is-sel .grd-handle-dot { border-color: var(--t0); box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-handle.is-locked .grd-handle-dot { border-style: double; }
 /* What Random keeps on a stop, under its dot just below the bar (rail and mini
-   ramp share it): a 10px closed lock for the colour, a short tick for the position.
+   ramp share it): a 12px closed lock for the colour, a 12px pin for the position.
    It hangs on the card, not on the gradient, so ink always reads. `--lm-drop` is
    the distance from the handle's centre to just past the bar's edge. */
 .grd .grd-handle { --lm-drop: 20px; }
@@ -134,8 +138,8 @@
   color: var(--tl-ink);
   pointer-events: none;
 }
-.grd .grd-lockmark-lock { display: grid; place-items: center; width: 10px; height: 10px; }
-.grd .grd-lockmark-tick { width: 2px; height: 8px; border-radius: 1px; background: currentColor; }
+.grd .grd-lockmark-lock,
+.grd .grd-lockmark-pin { display: grid; place-items: center; width: 12px; height: 12px; }
 @media (forced-colors: active) {
   .grd .grd-lockmark { color: CanvasText; forced-color-adjust: none; }
 }
@@ -371,11 +375,13 @@
   cursor: pointer;
   transition: background .16s ease, color .16s ease;
 }
-.grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); }
+.grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); box-shadow: inset 0 0 0 1px var(--tl-line-on); }
 .grd .grd-iconbtn[disabled],
 .grd .grd-iconbtn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-iconbtn:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-2); color: var(--tl-ink); }
+  /* A lock that is on keeps its on look under the pointer. */
+  .grd .grd-lock.is-on:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-on); }
 }
 .grd .grd-add { width: 100%; height: 36px; min-height: 36px; font-size: 13px; }
 /* Out of stops: the label keeps full text contrast (it says why), and only the
@@ -386,6 +392,18 @@
 .grd .tl-btn.grd-add[aria-disabled="true"] .tl-btn-ico { opacity: .4; }
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
+/* A free account sees "Pro" as a word beside Tints, not a second padlock. */
+.grd .grd-pro-tag { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--tl-dim); }
+
+/* The line in the Selected stop and Geometry label rows that says what a lock does.
+   Its line box is the label's height, so the row keeps the height it had. */
+.grd .tl-sec-head:has(> .grd-lock-cap) > .tl-sec-label { flex: none; white-space: nowrap; }
+.grd .grd-lock-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 12px; color: var(--tl-dim); }
+.grd .grd-lock-cap-short { display: none; }
+@media (max-width: 379px) {
+  .grd .grd-lock-cap-long { display: none; }
+  .grd .grd-lock-cap-short { display: inline; }
+}
 
 /* ── AVAILABLE COLOURS ──────────────────────────────────────────────────────
    Round chips: every palette colour, then the active colour's shades. The chosen
@@ -553,8 +571,10 @@
 /* The position lock is 26px beside a 24px slider: a 1px overhang each side keeps
    the row the height it had, so adding it moves nothing (44px on touch matches). */
 .grd .grd-pos-lock { margin-block: -1px; }
-/* The lock sits at the row's top right, clear of the wheel and its number. */
+/* The lock sits at the row's top right, clear of the wheel and its number; on a finger
+   the row is tall enough to centre it on the wheel. */
 .grd .grd-angle-lock { align-self: flex-start; }
+@media (pointer: coarse) { .grd .grd-angle-lock { align-self: center; } }
 
 /* ── Angle wheel ─────────────────────────────────────────────────────────────
    A dial you drag, step with the arrow keys, or type into. 0deg is straight up
@@ -888,6 +908,17 @@
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 
+/* On the narrowest phones the Selected stop row (swatch, hex, colour lock, Tints)
+   gives the hex its width: Tints is its icon alone (the button keeps its name and
+   its Pro note in aria-label and title), the same 26px as a lock, 44px on a finger. */
+@media (max-width: 360px) {
+  .grd .grd-tints-btn { width: 26px; min-width: 0; padding: 0; gap: 0; }
+  .grd .grd-tints-label, .grd .grd-pro-tag { display: none; }
+}
+@media (max-width: 360px) and (pointer: coarse) {
+  .grd .grd-tints-btn { width: 44px; min-width: 44px; }
+}
+
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
 :where(html[data-reduced-motion="true"]) .grd :is(.grd-chip, .grd-pair):active { transform: none; }
@@ -1011,7 +1042,9 @@
    bar is a gradient image, which cannot transition, so it repaints at once; the dot
    colours ease. The target dot has a ring in --t0 (an outline under forced colours),
    so the state is never colour alone. */
-.grd .grd-ramp { padding: 0 12px; }
+/* The 5px taken from the gap above is given back below, so a mark under a dot (12px, 1px under
+   the bar) clears the colours that follow and the section keeps its height. */
+.grd .grd-ramp { padding: 0 12px; margin-block: -5px 5px; }
 .grd .grd-ramp-track { position: relative; height: 24px; }
 .grd .grd-ramp-bar { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--tl-line); }
 .grd .grd-ramp-dot {

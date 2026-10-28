@@ -19,6 +19,9 @@
 //   the Keep the angle button put back in ShuffleBody          -> "Shuffle settings no longer holds Keep the angle"
 //   the EVERY_COLOUR_LOCKED toast dropped from randomise      -> "when every colour is locked ..."
 //   LockMark returns null                                     -> "a locked stop wears a mark on the rail and the ramp"
+//   the persist effect writes {color, position} only          -> "the stop locks are kept in the shared design", "... comes back from another tool ..."
+//   RANDOM_DRAWS_SPACE set true (or the guard removed)        -> "the angle lock names the angle it keeps, and the interpolation lock is not offered"
+//   keepLabel for the angle loses its value                   -> "the angle lock names the angle it keeps ..."
 //   .grd .grd-iconbtn { width: 44px } removed from coarse     -> "the lock buttons are 44px on a finger"
 //   a lock row given its own height (a new row)               -> "toggling every lock does not change the page height"  (also the 768 case)
 import { test, expect } from './base.js'
@@ -52,7 +55,8 @@ async function open(page) {
 const stopList = (page) => page.getByRole('group', { name: 'Stop list' })
 const selectedSection = (page) => panelOf(page).getByRole('group', { name: 'Selected stop' })
 const geometry = (page) => panelOf(page).getByRole('group', { name: 'Geometry' })
-const lockIn = (scope, thing) => scope.getByRole('button', { name: new RegExp(`(^Keep ${thing} when you press Random$)|(^${thing[0].toUpperCase()}${thing.slice(1)} (is|are) kept\\. Press to let Random change (it|them)\\.$)`) })
+// The angle's label carries its value ("Keep the angle (160°) when you press Random"), so each name takes an optional "(N°)".
+const lockIn = (scope, thing) => scope.getByRole('button', { name: new RegExp(`(^Keep ${thing}(?: \\(\\d+°\\))? when you press Random$)|(^${thing[0].toUpperCase()}${thing.slice(1)}(?: \\(\\d+°\\))? (is|are) kept\\. Press to let Random change (it|them)\\.$)`) })
 const random = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Random$/ })
 const typeOf = (page) => page.evaluate(() => document.querySelector('.grd-canvas').getAttribute('aria-label').replace(' gradient preview', ''))
 const hexOfStop = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) }).getAttribute('aria-label').then((s) => /#[0-9A-F]{6}/i.exec(s)[0].toUpperCase())
@@ -64,10 +68,10 @@ const settingsDialog = async (page) => {
   return d
 }
 
-/** The five lock buttons in Selected stop and Geometry, as [scope, what they keep]. */
+/** The four lock buttons in Selected stop and Geometry, as [scope, what they keep]. The interpolation lock is hidden until G3. */
 const LOCK_PLACES = (page) => [
   [selectedSection(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"],
-  [geometry(page), 'the type'], [geometry(page), 'the angle'], [geometry(page), 'the interpolation'],
+  [geometry(page), 'the type'], [geometry(page), 'the angle'],
 ]
 /** Locking each one in turn moves neither the page, the panel nor Available colours. */
 async function expectLocksKeepHeight(page) {
@@ -96,7 +100,6 @@ test.describe('the locks at 1440', () => {
       ['stop 1\'s colour', stopList(page)],
       ['the type', geometry(page)],
       ['the angle', geometry(page)],
-      ['the interpolation', geometry(page)],
     ]
     for (const [thing, scope] of places) {
       const btn = lockIn(scope, thing)
@@ -222,16 +225,52 @@ test.describe('the locks at 1440', () => {
     await expect(page.locator('.toast.show')).toContainText('Every colour is locked, so only the shape changed.')
   })
 
-  test('a locked stop wears a mark on the rail and the ramp: a lock for colour, a tick for position', async ({ page }) => {
+  test('a locked stop wears a mark on the rail and the ramp: a lock for colour, a pin for position', async ({ page }) => {
     await open(page)
     await expect(page.locator('.grd-lockmark')).toHaveCount(0)
     await lockIn(stopList(page), "stop 1's colour").click()
     await expect(page.locator('.grd-handle .grd-lockmark-lock')).toHaveCount(1)
     await expect(page.locator('.grd-ramp-dot .grd-lockmark-lock')).toHaveCount(1)
-    await expect(page.locator('.grd-lockmark-tick')).toHaveCount(0)
+    await expect(page.locator('.grd-lockmark-pin')).toHaveCount(0)
     await lockIn(selectedSection(page), "stop 1's position").click()
-    await expect(page.locator('.grd-handle .grd-lockmark-tick')).toHaveCount(1)
-    await expect(page.locator('.grd-ramp-dot .grd-lockmark-tick')).toHaveCount(1)
+    await expect(page.locator('.grd-handle .grd-lockmark-pin svg')).toHaveCount(1)
+    await expect(page.locator('.grd-ramp-dot .grd-lockmark-pin svg')).toHaveCount(1)
+    // Both marks are 12px, so they read at a glance.
+    const sizes = await page.locator('.grd-handle .grd-lockmark svg').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)))
+    expect(sizes).toEqual([12, 12])
+  })
+
+  test('the angle lock names the angle it keeps, and the interpolation lock is not offered', async ({ page }) => {
+    await open(page)
+    await expect(geometry(page).getByRole('button', { name: 'Keep the angle (160°) when you press Random' })).toBeVisible()
+    await lockIn(geometry(page), 'the angle').click()
+    await expect(geometry(page).getByRole('button', { name: 'The angle (160°) is kept. Press to let Random change it.' })).toHaveAttribute('aria-pressed', 'true')
+    // Random does not draw the interpolation space until G3, so there is no lock to press.
+    await expect(geometry(page).getByRole('button', { name: /interpolation/i })).toHaveCount(0)
+    await expect(geometry(page).getByRole('group', { name: 'Interpolation' }).getByRole('button')).toHaveCount(2)
+  })
+
+  test('the stop locks are kept in the shared design, so they survive a trip to another tool', async ({ page }) => {
+    await open(page)
+    await lockIn(stopList(page), "stop 1's colour").click()
+    await page.getByRole('button', { name: /^Select stop 2, #/ }).click()
+    await lockIn(selectedSection(page), "stop 2's position").click()
+    const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design') || '{}').gradient?.stops?.map((s) => [!!s.lockColour, !!s.lockPosition]))
+    await expect.poll(saved).toEqual([[true, false], [false, true], [false, false]])
+  })
+
+  test('a design that comes back from another tool with locks shows them on', async ({ page }) => {
+    await page.addInitScript((d) => {
+      localStorage.setItem('vs-current-design', JSON.stringify({
+        palette: { base: d.palette[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors: d.palette },
+        gradient: { ...d.gradient, stops: d.gradient.stops.map((s, i) => ({ ...s, lockColour: i === 0, lockPosition: i === 1 })) },
+      }))
+    }, { palette: PALETTE, gradient: SEED })
+    await go(page, ROUTE)
+    await expect(panelOf(page)).toBeVisible()
+    await expect(lockIn(stopList(page), "stop 1's colour")).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.grd-handle .grd-lockmark-lock')).toHaveCount(1)
+    await expect(page.locator('.grd-handle .grd-lockmark-pin')).toHaveCount(1)
   })
 
   test('toggling every lock does not change the page height', async ({ page }) => {

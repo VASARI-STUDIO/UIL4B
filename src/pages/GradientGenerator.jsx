@@ -69,6 +69,9 @@ const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], pool: [] }
 // the filters. An older filters entry's `keepAngle: true` becomes the angle lock
 // on load (parseGeometryLocks), and the filters no longer carry it.
 const LOCKS_KEY = 'vs-gradient-locks'
+// Random does not draw the interpolation space yet, so a lock on it would keep
+// nothing. G3 makes Random draw it and flips this on, which shows the lock again.
+const RANDOM_DRAWS_SPACE = false
 function readLocks() {
   try { return parseGeometryLocks(sessionStorage.getItem(LOCKS_KEY), sessionStorage.getItem(FILTER_KEY)) } catch { /* storage blocked */ }
   return parseGeometryLocks(null, null)
@@ -359,15 +362,15 @@ function useRoving(rootRef, selector, start, remember = false) {
 }
 
 // What Random will keep on a stop, drawn under its dot on the rail and the mini
-// ramp: a closed lock for the colour, a short vertical tick for the position. Both
-// sit on a chip of the card tone so they read over any colour. Purely visual; the
-// handle's and the dot's names say the same in words.
+// ramp: a closed lock for the colour, a pin for the position. They hang on the card
+// under the bar, so ink reads over any colour. Purely visual; the handle's and the
+// dot's names say the same in words.
 function LockMark({ stop }) {
   if (!stop.lockColour && !stop.lockPosition) return null
   return (
     <span className="grd-lockmark" aria-hidden="true">
-      {stop.lockColour && <span className="grd-lockmark-lock"><ToolIcon name="lock-simple" size={10} /></span>}
-      {stop.lockPosition && <span className="grd-lockmark-tick" />}
+      {stop.lockColour && <span className="grd-lockmark-lock"><ToolIcon name="lock-simple" size={12} /></span>}
+      {stop.lockPosition && <span className="grd-lockmark-pin"><ToolIcon name="push-pin" size={12} /></span>}
     </span>
   )
 }
@@ -566,6 +569,15 @@ const LockBtn = ({ on, onClick, label, className = '', unavailable = false, desc
 const keepLabel = (on, what, plural = false) => (on
   ? `${what[0].toUpperCase()}${what.slice(1)} ${plural ? 'are' : 'is'} kept. Press to let Random ${plural ? 'change them' : 'change it'}.`
   : `Keep ${what} when you press Random`)
+
+// The line in the Selected stop and Geometry label rows that says what a lock does.
+// The short form is for phones under 380px, where the long one would not fit the row.
+const LOCK_CAPTION = (
+  <span className="grd-lock-cap" aria-hidden="true">
+    <span className="grd-lock-cap-long">Lock keeps it when you press Random</span>
+    <span className="grd-lock-cap-short">Lock keeps it on Random</span>
+  </span>
+)
 
 // What Random says when it has nothing to change in the colours.
 const EVERY_COLOUR_LOCKED = 'Every colour is locked, so only the shape changed.'
@@ -934,7 +946,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // `source` travels with it so the Pro gate on gallery gradients survives a
   // remount/refresh and stays consistent with ColorStudio's gradient editor.
   useEffect(() => {
-    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type, space, source: fromLibrary ? 'gallery' : 'own' })
+    // The stop locks travel with the design so they survive a trip to another tool;
+    // the export and share paths drop them again (documentDesign, the gallery sanitiser).
+    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position, lockColour: !!s.lockColour, lockPosition: !!s.lockPosition })), angle, type, space, source: fromLibrary ? 'gallery' : 'own' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops, angle, type, space, fromLibrary])
 
@@ -1157,8 +1171,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [openProModal])
 
   // Build a fresh set of stops that honours each stop's colour and position locks
-  // (the rules live in utils/gradientLocks). `sample(i)` supplies the colour for a
-  // free slot (random hex, or a palette pick) so both randomisers share them.
+  // (the rules live in utils/gradientLocks). `sample(r)` supplies the colour for the stop at ramp place r, a
+  // free one (random hex, or a palette pick), so both randomisers share them.
   const rollStops = useCallback((sample, count, closeSeam = false) => rebuildStops(stops, sample, count, closeSeam), [stops])
 
   // The options for one roll: the Shuffle filters, with the person's locks laid
@@ -2277,7 +2291,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </ToolButton>
           </ToolSection>
 
-          <ToolSection label="Selected stop">
+          <ToolSection label="Selected stop" aside={LOCK_CAPTION}>
             {selected && (
               <div className="grd-pick">
                 <span className="grd-pick-swatch">
@@ -2316,8 +2330,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   aria-label={isPro ? `Tints of stop ${activeStop + 1}` : `Tints of stop ${activeStop + 1} (Pro)`}
                   title={isPro ? 'Tints of this stop' : 'Tints of this stop (Pro)'}
                 >
-                  <ToolIcon name={isPro ? 'swatches' : 'lock-simple'} size={14} />
+                  <ToolIcon name="swatches" size={14} />
                   <span className="grd-tints-label">Tints</span>
+                  {!isPro && <span className="grd-pro-tag">Pro</span>}
                 </button>
               </div>
             )}
@@ -2344,7 +2359,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
           </ToolSection>
 
-          <ToolSection label="Geometry" className="grd-geo">
+          <ToolSection label="Geometry" className="grd-geo" aside={LOCK_CAPTION}>
             <div className="grd-row">
               <ToolPills
                 label="Gradient type"
@@ -2370,13 +2385,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               ) : (
                 <p className="grd-angle-none" id="grd-angle-none">Radial gradients have no angle</p>
               )}
-              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, 'the angle')} />
+              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, `the angle (${Math.round(angle)}°)`)} />
             </div>
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
               <div className="grd-interp-ctl">
                 <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={setSpace} />
-                <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />
+                {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
               </div>
               {/* Both hints sit in one grid cell, the idle one hidden, so the
                   cell is as tall as the longer hint whichever is showing. */}
