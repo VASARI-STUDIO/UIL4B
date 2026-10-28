@@ -312,7 +312,7 @@ test.describe('the locks on a finger (390, touch)', () => {
       const r = e.getBoundingClientRect()
       return { name: e.getAttribute('aria-label'), w: Math.round(r.width), h: Math.round(r.height) }
     }))
-    expect(boxes.length).toBeGreaterThanOrEqual(8)
+    expect(boxes.length, '3 stop rows + the selected stop colour and position + type + angle; no interpolation lock yet').toBe(7)
     for (const b of boxes) {
       expect(b.w, `${b.name} width`).toBeGreaterThanOrEqual(44)
       expect(b.h, `${b.name} height`).toBeGreaterThanOrEqual(44)
