@@ -102,3 +102,19 @@
   .tw .tw-h{font-size:32px}
   .tw .tw-sub{font-size:16px}
 }
+
+/* ── Palette context ──────────────────────────────────────────────────────────
+ * Only with data-ctx="on" on the root (PairExample); see Interface.css. The parts
+ * marked data-pair-part are painted in the pair, the rest in the palette's roles:
+ * the primary fills the buttons, the accent the badge and ticks, the strong
+ * border the card, the receipt and the outline button. */
+.pvs[data-ctx="on"] .tw [data-pair-part]{color:var(--pv-pair-fg)}
+.pvs[data-ctx="on"] .tw :is(.tw-card,.tw-receipt,.tw-btn--outline){border-color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .tw .tw-torn{color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .tw .tw-link-u{background:currentColor}
+.pvs[data-ctx="on"] .tw .tw-link:not([data-pair-part]){color:var(--pv-primary-ink)}
+.pvs[data-ctx="on"] .tw .tw-feat .tw-check{color:var(--pv-accent)}
+.pvs[data-ctx="on"] .tw .tw-btn--fill:not([data-pair-part]){border-color:var(--pv-primary);background:var(--pv-primary);color:var(--pv-on-primary)}
+.pvs[data-ctx="on"] .tw .tw-btn--fill[data-pair-part]{border-color:var(--pv-pair-bg);background:var(--pv-pair-bg)}
+.pvs[data-ctx="on"] .tw .tw-badge:not([data-pair-part]){border-color:var(--pv-accent);background:var(--pv-accent);color:var(--pv-on-accent)}
+.pvs[data-ctx="on"] .tw .tw-badge[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}

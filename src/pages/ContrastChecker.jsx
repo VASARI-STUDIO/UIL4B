@@ -8,7 +8,8 @@ import {
 import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
 import { parseHandoff, roleAt } from '../utils/contrastHandoff'
-import { groupPairs, roleName } from '../utils/contrastStrip'
+import { groupPairs, pairJob, roleName } from '../utils/contrastStrip'
+import { derivePaletteRoles } from '../utils/palettePreviewRoles'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
 import { PAIR_VIEWS, legendLede } from '../utils/palettePairSizes'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -358,6 +359,26 @@ export default function ContrastChecker({ onCopy }) {
     return swatches.find((s) => s.hex === hex)?.name || word
   }
   const sideNames = { text: sideName(fg, fgRole, 'text'), background: sideName(bg, bgRole, 'background') }
+
+  // PALETTE CONTEXT. With a palette, the previews are painted in its roles and only
+  // the parts that do the pair's job take the pair; the switch turns that off. A
+  // side's role is its hand-off role while it is unchanged, else the kit role of
+  // the colour it now holds, so a strip tap is read the way the hand-off was.
+  const [aroundOn, setAroundOn] = useState(true)
+  const context = hasPalette && aroundOn
+  const roleOfHex = (hex, role) => role || kit.find((c) => c.hex.toUpperCase() === hex.toUpperCase())?.role || null
+  const job = pairJob(fg, bg, roleOfHex(fg, fgRole), roleOfHex(bg, bgRole))
+  const paletteRoles = useMemo(
+    () => (context ? derivePaletteRoles(design?.palette?.colors, { mode: 'light', harmony }) : null),
+    [context, design?.palette?.colors, harmony],
+  )
+  // Beside colour: the legend leads with UI parts, and they are outlined until a test is chosen.
+  const lead = context && job === 'beside' ? 'ui' : null
+  // What the frame caption calls a side: its role name, else the colour's own hex.
+  const captionName = (hex, role) => (role ? roleName(role, harmony) : null) || swatches.find((s) => s.hex.toUpperCase() === hex.toUpperCase())?.name || hex.toUpperCase()
+  const caption = context
+    ? `Your palette, with ${captionName(fg, fgRole)} on ${captionName(bg, bgRole)} under test`
+    : 'Painted in your two colours only'
   // The fixes reserve is as wide as its longest possible name, so a role named in
   // a live row never wraps further than the reserve does.
   const reserveNames = [
@@ -376,6 +397,18 @@ export default function ContrastChecker({ onCopy }) {
         history: false,
       }
     : undefined
+
+  // The caption and the switch above or below the frame. The switch is one button
+  // with role="switch" whose words are its name, so a tap on them flips it.
+  const ctxBar = (
+    <div className="cc-ctxbar">
+      <p className="cc-ctx-cap">{caption}</p>
+      <button type="button" role="switch" aria-checked={aroundOn} className="cc-switch" onClick={() => setAroundOn(!aroundOn)}>
+        <span>Show my palette around it</span>
+        <span className="cc-switch-track" aria-hidden="true" />
+      </button>
+    </div>
+  )
 
   // ── Taking the result away ──
   const resultText = () => [
@@ -471,7 +504,13 @@ export default function ContrastChecker({ onCopy }) {
               its parts need no scroll between them. It is there for every view, so
               the page does not change height as the view does. Stacked, its lede
               moves under the frame to keep the picture high on the screen. */}
-          <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} />
+          <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} lead={lead} />
+
+          {/* With a palette: what the frame shows, and the switch back to the two-colour
+              picture. Above the frame, except on a phone, where the picture keeps the
+              first screen and this sits under it. Both states are one line high (the
+              caption is clamped), so the switch moves nothing. */}
+          {hasPalette && !stacked && ctxBar}
 
           {/* The frame is a fixed height at each width and holds whatever is in it
               (the view, the loading placeholder or the failure message), so a
@@ -480,10 +519,16 @@ export default function ContrastChecker({ onCopy }) {
               current picture. */}
           <div className="cc-frame" style={{ background: bg }}>
             <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} onRetry={retryPair} />
+              <PairExample
+                viewId={shown} fg={fg} bg={bg}
+                highlight={hovered || pinned || lead} pinned={pinned}
+                paletteRoles={paletteRoles} job={job}
+                onRetry={retryPair}
+              />
             </Suspense>
           </div>
-          {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio)}</p>}
+          {hasPalette && stacked && ctxBar}
+          {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio, lead === 'ui')}</p>}
         </ToolMain>
 
         <ToolPanel label="Contrast result" className="cc-panel">

@@ -122,6 +122,50 @@
 .cc .cc-pv [data-hit="on"] { scroll-margin-block: calc(var(--chrome-h) + 80px) 96px; }
 .cc .cc-pv-wait { height: 100%; }
 
+/* ── Palette context: the caption and the "Show my palette around it" switch ──
+   One line high at 560px and up (the caption gives way with an ellipsis); on a
+   phone, under the frame, the caption is held to two lines and reserves both, so
+   neither state moves the page. */
+.cc .cc-ctxbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-width: 0; }
+.cc .cc-ctx-cap { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+.cc .cc-switch { display: flex; flex: none; align-items: center; gap: var(--s-2); min-height: 24px; padding: 0; border: 0; background: none; color: var(--tl-ink); font: inherit; font-size: 13px; line-height: 1.2; text-align: left; cursor: pointer; touch-action: manipulation; }
+.cc .cc-switch-track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border: 1px solid var(--tl-line-on);
+  border-radius: 999px;
+  transition: background-color .16s ease, border-color .16s ease;
+}
+.cc .cc-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--tl-dim);
+  transition: transform .16s ease, background-color .16s ease;
+}
+.cc .cc-switch[aria-checked="true"] .cc-switch-track { border-color: var(--tl-ink); background: var(--tl-ink); }
+.cc .cc-switch[aria-checked="true"] .cc-switch-track::after { transform: translateX(16px); background: var(--tl-card); }
+@media (max-width: 559px) {
+  .cc .cc-ctxbar { flex-direction: column; align-items: stretch; gap: var(--s-1); }
+  .cc .cc-ctx-cap { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; min-height: 3em; white-space: normal; }
+  .cc .cc-switch { justify-content: space-between; }
+}
+@media (pointer: coarse) {
+  .cc .cc-switch { min-height: 44px; }
+}
+:where(html[data-reduced-motion="true"]) .cc .cc-switch-track,
+:where(html[data-reduced-motion="true"]) .cc .cc-switch-track::after { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-switch-track,
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-switch-track::after { transition: none; }
+}
+
 /* ── Where each test lands ──────────────────────────────────────────────── */
 .cc .cc-lg { display: grid; gap: 6px; }
 .cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }

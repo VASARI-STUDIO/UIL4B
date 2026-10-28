@@ -26,8 +26,10 @@
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 .ro .ro-main{display:flex;flex:1;flex-direction:column;justify-content:space-between;gap:var(--s-3);min-width:0;min-height:0;padding:var(--s-3) var(--s-4) var(--s-4)}
-.ro .ro-title{font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
-.ro .ro-meta{margin-top:var(--s-1);font-size:12px;line-height:1.5}
+/* The header is a grid so the pair's tag (palette context) can sit beside the meta line; the title spans both columns. */
+.ro .ro-head{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.ro .ro-title{grid-column:1/-1;font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
+.ro .ro-meta{grid-column:1;min-width:0;margin-top:var(--s-1);font-size:12px;line-height:1.5}
 
 /* The week strip: seven days, each shift an outline. Dropped under 560px. */
 .ro .ro-week{display:none}
@@ -107,4 +109,33 @@
 /* ── Under 360px: less padding, so the buttons stay whole in the 440px frame ─ */
 @container pvs (max-width:359px){
   .ro .ro-main{gap:var(--s-2);padding:var(--s-2) var(--s-4) var(--s-3)}
+}
+
+/* ── Palette context ──────────────────────────────────────────────────────────
+ * Only with data-ctx="on" on the root (PairExample): the screen is the palette's
+ * own roles, and the parts marked data-pair-part, the ones the pair's job covers,
+ * are painted in the pair (--pv-pair-fg on --pv-pair-bg). Fills the pair is not
+ * about take the primary, borders the strong border, the focus ring the accent.
+ * Off, none of this applies and the view is the two-colour picture above. */
+.pvs[data-ctx="on"] .ro [data-pair-part]{color:var(--pv-pair-fg)}
+.pvs[data-ctx="on"] .ro :is(.ro-card,.ro-select,.ro-input,.ro-btn--outline){border-color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .ro .ro-focus{border-color:var(--pv-accent)}
+.pvs[data-ctx="on"] .ro :is(.ro-toggle,.ro-check,.ro-navbar,.ro-btn--fill):not([data-pair-part]){background:var(--pv-primary);color:var(--pv-on-primary)}
+.pvs[data-ctx="on"] .ro .ro-btn--fill:not([data-pair-part]){border-color:var(--pv-primary)}
+.pvs[data-ctx="on"] .ro .ro-toggle:not([data-pair-part]) .ro-knob{background:var(--pv-on-primary)}
+.pvs[data-ctx="on"] .ro :is(.ro-toggle,.ro-check,.ro-navbar,.ro-btn--fill)[data-pair-part]{background:var(--pv-pair-bg);color:var(--pv-pair-fg)}
+.pvs[data-ctx="on"] .ro .ro-btn--fill[data-pair-part]{border-color:var(--pv-pair-bg)}
+.pvs[data-ctx="on"] .ro .ro-toggle[data-pair-part] .ro-knob{background:var(--pv-pair-fg)}
+/* A shift is the pair next to the page: a pair-coloured block with a label in it. */
+.pvs[data-ctx="on"] .ro .ro-shift{border-color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .ro .ro-shift[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}
+/* The tag beside the meta line (two brand colours only). Its row is the meta
+   line's own height, and the meta line gives way with an ellipsis before the tag
+   or the frame's edge does. Under 340px the meta line is gone and the tag takes
+   its place at the left. */
+.pvs[data-ctx="on"] .ro .ro-tag{grid-column:2;align-self:center;display:flex;align-items:center;height:20px;margin:var(--s-1) 0 0 var(--s-3);padding:0 var(--s-2);border:1px solid var(--pv-pair-fg);border-radius:999px;background:var(--pv-pair-bg)}
+.pvs[data-ctx="on"] .ro .ro-tag>span{font-size:12px;line-height:1;white-space:nowrap}
+.pvs[data-ctx="on"] .ro .ro-head:has(.ro-tag) .ro-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@container pvs (max-width:339px){
+  .pvs[data-ctx="on"] .ro .ro-tag{grid-column:1;justify-self:start;margin-left:0}
 }
