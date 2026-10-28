@@ -14,15 +14,22 @@ function childOptions(children) {
   })
 }
 
-export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false }) {
+// An option may also carry `icon` (a node drawn before the label), `triggerIcon`
+// (the smaller node the toolbar trigger shows), `short` (the trigger's text) and
+// `divider` (a hairline above the row). Any `icon` turns the whole list into the
+// two-line "rich" form; `footnote` is a note under the rows. A list that passes
+// none of these renders as it always has.
+export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote }) {
   const uid = useId()
   const triggerId = id || `select-${uid}`
   const listId = `${triggerId}-list`
+  const footId = `${listId}-foot`
   const groups = options || childOptions(children)
   const rows = flattenOptions(groups)
   const current = rows.find(option => String(option.value) === String(value))
   const currentMark = current?.mark || groups.find(option => option.options && flattenOptions([option]).some(row => String(row.value) === String(value)))?.mark
   const currentLabel = `${current?.label ?? value}${currentMark ? `, ${currentMark}` : ''}`
+  const rich = rows.some(option => option.icon)
   const name = ariaLabel || ariaName || label
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
@@ -137,8 +144,9 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     // alone, so the description is not also read as part of the name.
     const descId = option.desc ? `${listId}-${rowIndex}-desc` : undefined
     return <div key={String(option.value)} id={`${listId}-${rowIndex}`} role="option" aria-label={option.mark || groupMark ? `${option.label}, ${option.mark || groupMark}` : option.desc ? option.label : undefined} aria-describedby={descId} aria-selected={String(option.value) === String(value)} aria-disabled={option.disabled || undefined}
-      className={`pop-item menu-select-option${option.desc ? ' menu-select-option--desc' : ''}${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
+      className={`pop-item menu-select-option${option.desc ? ' menu-select-option--desc' : ''}${option.icon ? ' menu-select-option--rich' : ''}${option.divider ? ' menu-select-option--divider' : ''}${active === rowIndex ? ' is-active' : ''}`} data-option-index={rowIndex} data-value={String(option.value)}
       onPointerMove={() => { if (!option.disabled) setActive(rowIndex) }} onClick={() => choose(rowIndex)}>
+      {option.icon && <span className="menu-select-icon" aria-hidden="true">{option.icon}</span>}
       {option.desc
         ? <span className="menu-select-body"><span className="menu-select-text">{option.label}</span><span id={descId} className="menu-select-desc">{option.desc}</span></span>
         : <span className="menu-select-text">{option.label}</span>}
@@ -153,18 +161,21 @@ export default function MenuSelect({ label, value, options, children, onChange, 
         if (listboxKeyAction(event.key, false, disabled) === 'open') { event.preventDefault(); if (!open) show() }
       }}>
       {toolbar && <span className="tl-select-k">{label}</span>}
-      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{currentLabel}</span>
+      {toolbar && current?.triggerIcon}
+      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{toolbar && current?.short ? current.short : currentLabel}</span>
       <ToolIcon name="caret-up-down" size={13} className={toolbar ? 'tl-select-caret' : 'menu-select-caret'} />
     </button>
     {open && !disabled && createPortal(<>
       <div ref={scrimRef} className="menu-select-scrim" aria-hidden="true" data-pop-trigger={triggerId} data-pop-scrim={listId}
         onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); close() }} />
       <div ref={popRef} id={listId} role="listbox" tabIndex={-1} aria-label={name} aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-      className="pop menu-select-list" data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
+      aria-describedby={footnote ? footId : undefined}
+      className={`pop menu-select-list${rich ? ' menu-select-list--rich' : ''}`} data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
       {groups.map((option, groupIndex) => option.options ? <div key={groupIndex} role="group" aria-label={option.mark ? `${option.group}, ${option.mark}` : option.group}>
         <div className="pop-head" aria-hidden="true"><span>{option.group}</span>{option.mark && <span className="menu-select-mark">{option.mark}</span>}</div>
         {flattenOptions([option]).map(row => renderRow(row, option.mark))}
       </div> : renderRow(typeof option === 'string' ? { value: option, label: option } : option))}
+      {footnote && <p id={footId} className="menu-select-foot" aria-hidden="true">{footnote}</p>}
     </div></>, document.body)}
   </>
 }

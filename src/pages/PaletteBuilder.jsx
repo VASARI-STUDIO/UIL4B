@@ -26,6 +26,7 @@ import { freeVariationIds, paletteVariations, scorePalette } from '../utils/pale
 import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { roleLabel } from '../utils/paletteRoles'
 import { barRef, colRef } from '../utils/paletteBoard'
+import { VISION_HUES, VISION_MODES, VISION_NOTE, visionAnnouncement, visionMode } from '../utils/visionModes'
 import { BRAND_ROWS, LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
@@ -210,15 +211,6 @@ const HARMONIES = [
 // the moment a free user edits from it — otherwise it becomes a backdoor into
 // the paid harmony engine.
 const FREE_SYSTEMS = ['auto', 'monochromatic']
-
-// Colour-vision preview modes — same ids simCvd understands.
-const VISION_MODES = [
-  ['normal', 'Normal'],
-  ['protanopia', 'Protanopia'],
-  ['deuteranopia', 'Deuteranopia'],
-  ['tritanopia', 'Tritanopia'],
-  ['achromatopsia', 'Achromatopsia'],
-]
 
 // Global adjust lens — identical field spec to the studio ({h,s,b,temp}).
 // snapRadius is absolute (track units): the hue track is ±180 so the default
@@ -615,15 +607,70 @@ const HARM_GLYPHS = {
   custom: <><path d="M4 20h16" /><path d="M6 15.5 14 7.5l2.5 2.5-8 8H6z" /></>,
 }
 const HarmonyGlyph = ({ id, size = 14 }) => <Ico size={size}>{HARM_GLYPHS[id] || HARM_GLYPHS.auto}</Ico>
-// One icon per colour-vision mode for the Vision dropdown.
-const VISION_GLYPHS = {
-  normal: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>,
-  protanopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /></>,
-  deuteranopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /><path d="M9.5 13.5h5" /></>,
-  tritanopia: <><path d="M12 3s6 6.7 6 10.5a6 6 0 0 1-12 0C6 9.7 12 3 12 3Z" /><path d="M12 9v7" /></>,
-  achromatopsia: <><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" /></>,
+// An eye whose pupil is a dot in the hue that mode loses (a hollow ring for no
+// colour, the text colour for normal). The outline follows currentColor. Each
+// size has its own geometry so the strokes land on whole pixels.
+const VISION_EYE = {
+  20: { d: 'M1.75 10C3.6 6.4 6.6 4.5 10 4.5s6.4 1.9 8.25 5.5C16.4 13.6 13.4 15.5 10 15.5S3.6 13.6 1.75 10Z', stroke: 1.5, c: 10, dot: 3.25, ring: 2.75 },
+  16: { d: 'M1.5 8C2.95 5.15 4.95 3.6 8 3.6s5.05 1.55 6.5 4.4C13.05 10.85 11.05 12.4 8 12.4S2.95 10.85 1.5 8Z', stroke: 1.25, c: 8, dot: 2.6, ring: 2.2 },
 }
-const VisionGlyph = ({ id, size = 14 }) => <Ico size={size}>{VISION_GLYPHS[id] || VISION_GLYPHS.normal}</Ico>
+const VisionIcon = ({ mode, size = 20, className }) => {
+  const g = VISION_EYE[size]
+  return (
+    <svg className={className} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" stroke="currentColor" strokeWidth={g.stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path className="vis-eye" d={g.d} />
+      {mode === 'achromatopsia'
+        ? <circle className="vis-ring" cx={g.c} cy={g.c} r={g.ring} />
+        : <circle className="vis-dot" cx={g.c} cy={g.c} r={g.dot} stroke="none" fill={VISION_HUES[mode] || 'currentColor'} />}
+    </svg>
+  )
+}
+
+// The strip above the board while a colour-vision check is on: names the mode,
+// says which half is which, and gives a way out. The icon and the text each have a
+// phone form that CSS swaps in at 767px and below. It is not a live region: the
+// page's sr-only message announces the change. If it goes while focus is inside
+// it (Undo, the Reset shortcut), focus moves somewhere that stays.
+//
+// Where focus goes once the strip's button is gone: the Vision select if it is on
+// the row, else the Extra tools button. Turn off uses this too.
+const focusVisionFallback = () => {
+  const bar = document.querySelector('[data-tool-toolbar]')
+  const target = bar?.querySelector('[data-tl-item="vision"] .menu-select-trigger') || bar?.querySelector('.tl-more-btn')
+  target?.focus({ preventScroll: true })
+}
+const VisionStrip = ({ mode, onTurnOff }) => {
+  const ref = useRef(null)
+  // A layout cleanup on unmount runs before React takes the node out, so focus is still readable.
+  // The move waits a frame: the toolbar measures its row again in the same commit
+  // (the mode name changed), and for a moment shows every item, so a target found now
+  // can leave the row before paint. Focus that someone has already placed is left alone.
+  useLayoutEffect(() => () => {
+    if (!ref.current?.contains(document.activeElement)) return
+    requestAnimationFrame(() => {
+      const now = document.activeElement
+      if (!now || now === document.body) focusVisionFallback()
+    })
+  }, [])
+  const m = visionMode(mode)
+  return (
+    <div className="plb-vision" ref={ref}>
+      <VisionIcon mode={mode} size={20} className="plb-vision-ico plb-vision-ico--lg" />
+      <VisionIcon mode={mode} size={16} className="plb-vision-ico plb-vision-ico--sm" />
+      <span className="plb-vision-text">
+        <b className="plb-vision-name">
+          <span className="plb-vision-long">{m.name}.</span>
+          <span className="plb-vision-short">{m.short}.</span>
+        </b>
+        <span className="plb-vision-rest">
+          <span className="plb-vision-long">Top half: your colour. Bottom half: how it looks.</span>
+          <span className="plb-vision-short">Bottom half: how it looks.</span>
+        </span>
+      </span>
+      <button type="button" className="tl-btn tl-btn--quiet plb-vision-off" aria-label="Turn off the colour vision check" onClick={onTurnOff}>Turn off</button>
+    </div>
+  )
+}
 
 // ── HctPicker — per-column Hue·Chroma·Tone editor (the M3 space the whole
 // engine runs in), plus a hex field. Edits the RAW colour; the global adjust
@@ -889,6 +936,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // rather than re-applying whatever lens was last left on this device.
   const [adjust, setAdjust] = useState(initial.adjust)
   const [vision, setVision] = useState('normal')
+  // A stored or restored value this build does not know is treated as normal: no
+  // split board, no strip. The raw value is kept as it came.
+  const activeVision = VISION_MODES.some((m) => m.id === vision) ? vision : 'normal'
   const [showContrast, setShowContrast] = useState(false)
   const [liveMsg, setLiveMsg] = useState('')
 
@@ -2581,7 +2631,28 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
   const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro' }))
-  const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
+  // `desc` is the one-line hint under each name; the divider sets Normal apart
+  // from the modes, and `short` / `triggerIcon` are what the toolbar trigger shows.
+  const visionOptions = VISION_MODES.map((m, i) => ({
+    value: m.id, label: m.name, desc: m.hint, short: m.short, divider: i === 1,
+    icon: <VisionIcon mode={m.id} size={20} />, triggerIcon: <VisionIcon mode={m.id} size={16} />,
+  }))
+  // The mode the live region last said. A mode that comes back some other way
+  // (Undo, Redo, a restore from history) is announced by the effect below, after
+  // that action's own message.
+  const announcedVisionRef = useRef('normal')
+  const changeVision = (id) => { announcedVisionRef.current = id; setVision(id); setLiveMsg(visionAnnouncement(id)) }
+  useEffect(() => {
+    if (announcedVisionRef.current === activeVision) return
+    announcedVisionRef.current = activeVision
+    const said = visionAnnouncement(activeVision)
+    setLiveMsg((prev) => (prev ? `${prev} ${said}` : said))
+  }, [activeVision])
+  // The strip's button goes with the mode, so focus moves off it first.
+  const turnOffVision = () => {
+    focusVisionFallback()
+    changeVision('normal')
+  }
   // From the Extra tools overflow a choice also closes the panel, so that a Pro
   // wall raised by the choice is not opened underneath it.
   const systemSelect = (className, closePanel) => (
@@ -2599,9 +2670,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       className={className}
       label="Vision"
       ariaLabel="Colour vision check"
-      value={vision}
+      value={activeVision}
       options={visionOptions}
-      onChange={(v) => { closePanel?.(); setVision(v) }}
+      footnote={VISION_NOTE}
+      onChange={(v) => { closePanel?.(); changeVision(v) }}
     />
   )
   const seedChip = (
@@ -2658,7 +2730,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'From image', icon: 'image', onSelect: () => { closeAllMenus(); setImgOpen(true) } },
     },
     { id: 'system', priority: 1, render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
-    { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    // `measure`: the trigger's width follows the mode name, so the row is measured again when it changes.
+    { id: 'vision', priority: 0, measure: activeVision, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
     { id: 'div', priority: 2, divider: true },
     { id: 'undo', priority: 5, render: () => historyButton('undo'), menu: { label: 'Undo', icon: 'arrow-counter-clockwise', disabled: !canUndo, onSelect: undoPalette } },
     { id: 'redo', priority: 4, render: () => historyButton('redo'), menu: { label: 'Redo', icon: 'arrow-clockwise', disabled: !canRedo, onSelect: redoPalette } },
@@ -2759,6 +2832,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
+      {/* A colour-vision check is on: say so above the board and give a way out. */}
+      {activeVision !== 'normal' && (
+        <VisionStrip mode={activeVision} onTurnOff={turnOffVision} />
+      )}
+
       {/* THE BOARD (D:1017-1043). The set is the named unit (role=group,
           named by the page's h1) and each colour an item inside it — never a
           landmark per swatch. */}
@@ -2767,8 +2845,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           {adjusted.map((c, i) => {
             // Vision check: the TOP half paints the real colour, the BOTTOM
             // half simulates it through the chosen colour-vision deficiency.
-            const isSplit = vision !== 'normal'
-            const sim = isSplit ? simCvd(c, vision) : c
+            const isSplit = activeVision !== 'normal'
+            const sim = isSplit ? simCvd(c, activeVision) : c
             const ink = textColorForBg(sim)
             const anti = ink === '#000000' ? '#FFFFFF' : '#000000'
             const meta = columnMeta[i]
@@ -3553,9 +3631,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             colors={adjusted}
             paletteScore={paletteScore}
             harmony={harmony}
-            vision={vision}
-            visionLabel={VISION_MODES.find(([id]) => id === vision)?.[1] || ''}
-            onResetVision={() => setVision('normal')}
+            vision={activeVision}
+            visionLabel={visionMode(activeVision).name}
+            onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}
             onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}

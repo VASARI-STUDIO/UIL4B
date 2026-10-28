@@ -90,7 +90,9 @@ export function ToolLayout({
 //                             `close()` shuts the panel and returns focus to
 //                             its button — call it before opening a dialog
 //     priority: 0,            higher stays on the row longer
-//     align: 'end',           the first 'end' item starts the right-hand group
+//     measure: value,         optional; when it changes the row is measured
+//                             again (for an item whose width follows a value)
+//     align: 'end',          the first 'end' item starts the right-hand group
 //     divider: true }         a 1x24 hairline; never listed in the overflow
 //   menu: false               a readout, not an action: it simply leaves
 //   inline: false             overflow only — never on the row (the palette's
@@ -111,7 +113,8 @@ export function ToolToolbar({
   const close = useCallback(() => setOpen(false), [setOpen])
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
 
-  const itemKey = items.map((it) => it.id).join('|')
+  // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
+  const itemKey = items.map((it) => (it.measure == null ? it.id : `${it.id}:${it.measure}`)).join('|')
   // A new set of items needs a fresh measurement. Derived rather than set from
   // an effect: an effect that set `measuring` back to true in the same commit
   // the measurement set it false batched to "true → true", React bailed out of
@@ -389,8 +392,8 @@ export function ToolButton({
 
 // ── ToolSelect ────────────────────────────────────────────────────────────
 // A labelled toolbar trigger backed by the shared listbox.
-export function ToolSelect({ label, value, options, onChange, ariaLabel, className, disabled }) {
-  return <MenuSelect toolbar label={label} value={value} options={options} onChange={onChange} ariaLabel={ariaLabel} className={className} disabled={disabled} />
+export function ToolSelect({ label, value, options, onChange, ariaLabel, className, disabled, footnote }) {
+  return <MenuSelect toolbar label={label} value={value} options={options} onChange={onChange} ariaLabel={ariaLabel} className={className} disabled={disabled} footnote={footnote} />
 }
 
 // The r14 tray the palette draws around undo/redo.
