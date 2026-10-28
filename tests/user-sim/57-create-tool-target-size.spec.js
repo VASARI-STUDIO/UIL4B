@@ -192,8 +192,12 @@ test.describe('the small in-page controls that actually do something', () => {
       const list = [...document.querySelectorAll('.plb-adjust .tl-slider-v')]
       return list.map((v) => {
         const box = v.getBoundingClientRect()
+        // Hue's degree sign hangs past the column on purpose (.plb-deg), so
+        // measure up to the end of the digits, not the end of the element.
         const range = document.createRange()
         range.selectNodeContents(v)
+        const deg = v.querySelector('.plb-deg')
+        if (deg) range.setEndBefore(deg)
         const text = range.getBoundingClientRect()
         return {
           right: Math.round(text.right),

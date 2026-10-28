@@ -327,15 +327,30 @@
 }
 
 /* ── ADJUST ALL (D:1044-1057) ───────────────────────────────────────────── */
+/* The bar breaks on ITS OWN width (a size container), never the window's, and
+   only into shapes that were drawn on purpose. W is the bar's content width:
+     W >= 1380   one row:   ADJUST ALL | Hue Sat Tone Temp | Reset Copy
+     820 - 1379  one row:   ADJUST ALL | Hue Sat / Tone Temp | Reset Copy
+     480 - 819   two rows:  ADJUST ALL .......... Reset Copy
+                            Hue Sat / Tone Temp (full width)
+     < 480       a column:  title, four slider rows, then the buttons
+   Each cut is where a track would drop under 110px (100px at 480), so no width
+   in between can show three-and-one, a ragged stack or a half-empty row, and the
+   height changes only at a cut. Label and value columns are fixed (below), so
+   tracks line up in every shape. */
 .plb .plb-adjust {
-  display: flex;
-  align-items: center;
-  gap: clamp(12px, 2vw, 26px);
-  flex-wrap: wrap;
+  container: plb-adjust / inline-size;
   padding: 13px clamp(12px, 2vw, 20px);
   background: var(--tl-card2);
   border-top: 1px solid var(--tl-hair);
 }
+.plb .plb-adjust-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 24px;
+}
+.plb .plb-adjust-actions { display: flex; flex-direction: column; gap: 8px; }
 .plb .plb-adjust-title {
   margin: 0;
   font-family: var(--mono);
@@ -355,11 +370,38 @@
   --plb-sl-thumb: 15px;
 }
 .plb .plb-adjust-fields {
-  flex: 1 1 520px;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
-  gap: 12px clamp(16px, 1.6vw, 22px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px 20px;
+}
+@container plb-adjust (width >= 480px) {
+  .plb .plb-adjust-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "fields fields";
+  }
+  .plb .plb-adjust-title { grid-area: title; }
+  .plb .plb-adjust-fields { grid-area: fields; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plb .plb-adjust-actions { grid-area: actions; flex-direction: row; align-items: center; }
+}
+@container plb-adjust (width >= 820px) {
+  .plb .plb-adjust-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "title fields actions";
+  }
+  /* Capped so the 2x2 tracks stay near 240px instead of stretching to ~395px
+     and then dropping to ~122px when the row goes four across at 1380. The
+     slack falls between the fields and Copy CSS. */
+  .plb .plb-adjust-fields { max-width: 760px; }
+}
+@container plb-adjust (width >= 1380px) {
+  .plb .plb-adjust-fields { max-width: none; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container plb-adjust (width < 480px) {
+  /* Stacked, the sliders sit above the buttons: nothing under the pointer moves,
+     and Reset joins only once there is something to reset. */
+  .plb .plb-adjust-reset.is-idle { display: none; }
+  .plb .plb-copycss { justify-content: center; }
 }
 .plb .plb-adjust .tl-slider {
   display: grid;
@@ -402,8 +444,18 @@
   text-transform: uppercase;
   color: var(--tl-faint);
 }
-.plb .plb-adjust .tl-slider-v { min-width: 0; text-align: right; color: color-mix(in srgb, var(--t0) 80%, var(--bg-0)); }
+/* Signed values in the fixed column, digits one width and flush right, so the
+   tracks end at the same place whatever the number says. */
+.plb .plb-adjust .tl-slider-v {
+  min-width: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--t0) 80%, var(--bg-0));
+}
 .plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
+/* The degree sign hangs outside the digit column: zero width, drawn past the
+   right edge into the gap, so Hue's digits end where the other values' do. */
+.plb .plb-adjust .plb-deg { display: inline-block; width: 0; overflow: visible; }
 /* Laid out while idle so the bar does not reflow on the first nudge. */
 .plb .plb-adjust-reset.is-idle { visibility: hidden; }
 .plb .plb-copycss {
@@ -422,6 +474,10 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .plb .plb-copycss:hover { background: color-mix(in srgb, var(--t0) 9%, transparent); }
+}
+/* A finger gets the 44px floor (Reset's .tl-btn and the range inputs already do). */
+@media (pointer: coarse) {
+  .plb .plb-copycss { min-height: 44px; }
 }
 
 /* Undo and redo: two of the toolbar's round icon buttons, held close together. */
@@ -488,11 +544,6 @@
     border-left: 0;
     border-top: 1px solid var(--tl-hair);
   }
-  .plb .plb-adjust { flex-direction: column; align-items: stretch; }
-  .plb .plb-adjust-fields { flex: 0 0 auto; }
-  /* Stacked, the sliders sit above it: nothing under the pointer moves. */
-  .plb .plb-adjust-reset.is-idle { display: none; }
-  .plb .plb-copycss { justify-content: center; }
 }
 /* The SPACE keycap is hidden below 1024. It is 62px wide, and at 768 it is what
    pushes Redo off the row; without it undo, redo, Randomise, Suggest, Extra tools
