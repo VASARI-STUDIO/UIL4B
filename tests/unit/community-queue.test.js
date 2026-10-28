@@ -232,7 +232,8 @@ test('the gallery reads the account only, and withdraws from the account', () =>
   assert.match(src, /listMySubmissions\(uid, 'gradient'\)/)
   assert.match(src, /deleteSubmission\(s\.docId\)/)
   assert.ok(!/mergeSubmissions\(/.test(src), 'no merge with a browser-held list')
-  assert.match(src, /Sign in to keep these gradients with your account\./)
+  assert.ok(src.includes("from this browser {legacyCount === 1 ? 'is' : 'are'} waiting."))
+  assert.ok(src.includes("Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account."))
   assert.match(src, /useGradientSubmissionMigration\(/)
 })
 
