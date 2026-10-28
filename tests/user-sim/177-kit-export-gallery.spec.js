@@ -8,7 +8,11 @@
 //   - a free account is sent only blurred raster previews and never asks for a Pro file;
 //   - at the free cap the walkthrough keeps its cap message and never opens the gallery;
 //   - the fixed bar never covers the last line at 320, 390, 768 and 1440;
-//   - the keyboard reaches design, file, "Not now" and the button, in that order.
+//   - the keyboard reaches design, file, "Not now" and the button, in that order;
+//   - the trial line always carries the cancel-before promise, Rename is there and a second "Open project" is not;
+//   - at 1440 the three frames are one height and the cards start where the bar's content starts;
+//   - "Back to your export" on the checkout return page is only for the account and project that made the pick;
+//   - a Pro account's default pick exports through the server.
 //
 // MUTATION (each break must fail the test named after it):
 //   - Point the walkthrough's navigate() back at /projects/:id: "the walkthrough ends on the gallery" fails.
@@ -16,8 +20,12 @@
 //   - Draw the previews with blurred={false} for a free account: "a free account is sent only blurred
 //     previews" fails.
 //   - Drop the bottom padding on .pxg: "the fixed bar never covers" fails at the width it overflows.
+//   - Remove `.app-page:has(>.pxg){max-width:none;padding-inline:0}`: the 1440 test fails (cards start at x=182).
+//   - Drop the uid or project check in CheckoutReturn.jsx: "Back to your export" test fails.
+//   - Move reservePrintWindow back after the gate: nothing here sees it (Safari only); see utils/exportDocument.js.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
 const nameForm = (page) => page.getByRole('dialog', { name: 'Name your project' })
@@ -74,6 +82,45 @@ test.describe('the export gallery', () => {
     await expect(cta(page)).toHaveText('Continue for 7-day free trial')
   })
 
+  test('the trial line always carries the cancel-before promise; Rename is there and a second "Open project" is not', async ({ page }) => {
+    watch(page, 'a free designer reading the trial terms')
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, GALLERY)
+    await expect(cta(page)).toBeEnabled()
+    await expect(page.locator('.pxg-price')).toContainText(/Cancel before .+ and you pay nothing\./)
+    await expect(page.locator('.pxg-saved').getByRole('button', { name: 'Rename' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Open project$/ })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /^Not now/ })).toBeVisible()
+  })
+
+  test('Rename changes the project name in place', async ({ page }) => {
+    watch(page, 'a free designer renaming from the gallery')
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, GALLERY)
+    await page.locator('.pxg-saved').getByRole('button', { name: 'Rename' }).click()
+    await page.getByRole('textbox', { name: /^Rename / }).fill('Renamed Studio')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Choose a design for Renamed Studio' })).toBeVisible()
+  })
+
+  test('1440px: the three frames are one height and the cards start where the bar content starts', async ({ page }) => {
+    watch(page, 'a designer at 1440px')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, GALLERY)
+    await expect(cta(page)).toBeEnabled()
+    const m = await page.evaluate(() => {
+      const heights = [...document.querySelectorAll('.pxg-frame')].map((f) => f.getBoundingClientRect().height)
+      const card = document.querySelector('.pxg-card').getBoundingClientRect()
+      const bar = document.querySelector('.pxg-bar')
+      const barLeft = bar.getBoundingClientRect().left + parseFloat(getComputedStyle(bar).paddingLeft)
+      return { heights, card: card.left, barLeft }
+    })
+    expect(m.heights).toHaveLength(3)
+    expect(Math.max(...m.heights) - Math.min(...m.heights), `frame heights ${m.heights}`).toBeLessThanOrEqual(1)
+    expect(Math.abs(m.card - m.barLeft), `card left ${m.card}, bar content left ${m.barLeft}`).toBeLessThanOrEqual(2)
+  })
+
   test('the trial button goes to checkout on the yearly plan, marked as from the gallery', async ({ page }) => {
     watch(page, 'a free designer choosing a Pro file')
     await signIn(page, { plan: 'free', projects: 1 })
@@ -117,7 +164,67 @@ test.describe('the export gallery', () => {
       expect(await img.evaluate((el) => el.naturalWidth)).toBeLessThanOrEqual(400)
     }
     await cta(page).click()
+    // The click's only effect is the trip to checkout; wait for it, then look at what was asked.
+    await expect(page).toHaveURL(/\/checkout\?plan=yearly&from=kit-gallery$/)
     expect(asked, 'a free account asked the server for a Pro file').toHaveLength(0)
+  })
+
+  test('a Pro account on the default pick exports through the server', async ({ page }) => {
+    watch(page, 'a Pro subscriber exporting the book from the gallery')
+    await page.addInitScript(() => { window.print = () => {} })
+    const asked = []
+    await page.route('**/api/ai?export=document', async (route) => {
+      const req = route.request()
+      asked.push({ method: req.method(), auth: req.headers().authorization, body: req.postDataJSON() })
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, format: 'book', html: buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' }) }),
+      })
+    })
+    await signIn(page, { plan: 'pro', projects: 1 })
+    await go(page, GALLERY)
+    await expect(cta(page)).toHaveText('Export PDF')
+    await expect(cta(page)).toBeEnabled()
+    const [doc] = await Promise.all([page.context().waitForEvent('page'), cta(page).click()])
+    await expect(doc.locator('.cv-title')).toBeVisible()
+    expect(asked, 'the gallery must ask the server exactly once').toHaveLength(1)
+    expect(asked[0].method).toBe('POST')
+    expect(asked[0].auth).toMatch(/^Bearer .+/)
+    expect(asked[0].body.format).toBe('book')
+  })
+
+  test('"Back to your export" is only for the account and project that made the pick', async ({ browser }) => {
+    const PAID = JSON.stringify({ status: 'complete', mode: 'subscription', customerEmail: 'free.user@uil4b.test', subscriptionActive: true })
+    const visit = async (pickFor) => {
+      const context = await browser.newContext()
+      const page = await context.newPage()
+      watch(page, 'a buyer returning from checkout')
+      await page.route('**/api/checkout-status**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: PAID }))
+      const session = await signIn(page, { plan: 'free', projects: 1 })
+      const pick = pickFor(session.uid)
+      await page.addInitScript((value) => { sessionStorage.setItem('uil4b.kitGalleryPick', JSON.stringify({ ...value, at: Date.now() })) }, pick)
+      await go(page, '/checkout/return?session_id=cs_test_paid')
+      await expect(page.locator('main h1')).toContainText('You’re on UIL4B Pro')
+      return { context, page }
+    }
+    const back = (page) => page.getByRole('link', { name: 'Back to your export' })
+
+    // Control: the same account, a project it has. The link is there, so "absent" below means something.
+    const own = await visit((uid) => ({ projectId: 'seed-1', design: 'book', format: 'pdf', uid }))
+    await expect(back(own.page)).toBeVisible()
+    await expect(back(own.page)).toHaveAttribute('href', '/projects/seed-1/export')
+    await own.context.close()
+
+    const foreign = await visit(() => ({ projectId: 'seed-1', design: 'book', format: 'pdf', uid: 'someone-else' }))
+    await expect(foreign.page.getByRole('link', { name: 'Start building' })).toBeVisible()
+    await expect(back(foreign.page)).toHaveCount(0)
+    await foreign.context.close()
+
+    const gone = await visit((uid) => ({ projectId: 'deleted-project', design: 'book', format: 'pdf', uid }))
+    await expect(gone.page.getByRole('link', { name: 'Start building' })).toBeVisible()
+    await expect(back(gone.page)).toHaveCount(0)
+    await gone.context.close()
   })
 
   test('at the free cap the walkthrough shows the cap message and never opens the gallery', async ({ page }) => {
@@ -156,7 +263,7 @@ test.describe('the export gallery', () => {
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, GALLERY)
     await expect(cta(page)).toBeEnabled()
-    await page.locator('.pxg-saved a').focus()
+    await page.locator('.pxg-saved button').focus()
     const order = []
     for (let i = 0; i < 6; i += 1) {
       await page.keyboard.press('Tab')
