@@ -196,7 +196,7 @@ const IMG_MAX_MB = 4 // uploaded-image size cap for the free image picker
 // Harmony options for the Colour System dropdown. `free` mirrors the studio's
 // CSYS_HARMS split, plus the tonal Auto system which is always free.
 const HARMONIES = [
-  { id: 'auto', label: 'Auto', free: true, desc: 'Your colour, a close second hue, then light to dark.' },
+  { id: 'auto', label: 'Auto', free: true, desc: 'Your colour, a near hue, light to dark.' },
   { id: 'monochromatic', label: 'Monochromatic', free: true, desc: 'One hue in lighter and darker shades.' },
   { id: 'analogous', label: 'Analogous', free: false, desc: 'Neighbouring hues, calm and cohesive.' },
   { id: 'complement', label: 'Complementary', free: false, desc: 'Opposite hues, for maximum contrast.' },
