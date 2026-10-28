@@ -111,9 +111,11 @@ export default async function handler(req, res) {
     // and acting on it would strip every administrator's claim at once.
     if (!isAdmin && decoded.admin === true && adminEmails().length > 0) {
       try {
-        // Revoke FIRST. If the process dies between the two calls, the claim is
-        // still on the account, so the next call here finds it and retries; the
-        // other order could leave the claim cleared with the old tokens live.
+        // Revoke FIRST, so no token issued before the removal outlives it. If the
+        // claim clear then fails, the revoked token cannot reach this branch
+        // again: the claim stays until the account signs in again and calls
+        // here, or scripts/sweep-admin-claims.mjs runs. The error log below is
+        // the signal to run the sweep.
         await adminAuth().revokeRefreshTokens(decoded.uid)
         // setCustomUserClaims replaces the whole object, so keep the others.
         const { admin: _removed, ...kept } = (await adminAuth().getUser(decoded.uid)).customClaims || {}
