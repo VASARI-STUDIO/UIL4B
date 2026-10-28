@@ -30,11 +30,27 @@ async function at(browser, width, { theme = 'light' } = {}) {
   return { ctx, page }
 }
 
+/**
+ * The Vision trigger, ready to use. When it is not on the row it lives in the
+ * Extra tools panel, and that panel moves focus to its first control one frame
+ * after it opens (usePopover, `autoFocus`). A `focus()` or a key press sent
+ * before that frame is taken from the trigger, so wait until focus is inside the
+ * panel before touching anything in it.
+ */
+async function visionTrigger(page, trigger = TRIGGER) {
+  const onRow = page.locator(`[data-tool-toolbar] ${trigger}`)
+  if (!(await onRow.count())) {
+    await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
+    const panel = page.getByRole('dialog', { name: 'Extra tools' })
+    await expect(panel).toBeVisible()
+    await expect.poll(() => panel.evaluate((el) => el.contains(document.activeElement)), { message: 'Extra tools has taken focus' }).toBe(true)
+  }
+  return page.locator(`${trigger}:visible`).first()
+}
+
 /** Open the Vision list, through Extra tools when the select is not on the row. */
 async function openVision(page) {
-  const onRow = page.locator(`[data-tool-toolbar] ${TRIGGER}`)
-  if (!(await onRow.count())) await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
-  await page.locator(`${TRIGGER}:visible`).first().click()
+  await (await visionTrigger(page)).click()
   const list = page.getByRole('listbox', { name: 'Colour vision check' })
   await expect(list).toBeVisible()
   return list
@@ -49,7 +65,8 @@ async function chooseMode(page, id) {
 
 for (const width of WIDTHS) {
   test.describe(`Vision check at ${width}px`, () => {
-    // MUTATION: add `max-width: 240px` to `.menu-select-list--rich` in global.css.
+    // MUTATION: in global.css change `.pop.menu-select-list.menu-select-list--rich` to `min-width:0;width:240px`
+    // (the list is `width: max-content`, so only a fixed width narrows it; `max-width` loses to the rule's `min-width`).
     test(`the list has five rows and every hint is whole (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
       const list = await openVision(page)
@@ -86,14 +103,29 @@ for (const width of WIDTHS) {
     // MUTATION: remove `changeVision` from the select's onChange in PaletteBuilder.jsx.
     test(`choosing Green-blind with the keyboard splits the board and shows the strip (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
-      const onRow = page.locator(`[data-tool-toolbar] ${TRIGGER}`)
-      if (!(await onRow.count())) await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
-      await page.locator(`${TRIGGER}:visible`).first().focus()
+      const trigger = await visionTrigger(page)
+      await trigger.focus()
+      await expect(trigger).toBeFocused()
+      // The first ArrowDown opens the list on the current row (Normal) and moves
+      // focus into it; wait for that before the second one moves down a row.
       await page.keyboard.press('ArrowDown')
+      const list = page.getByRole('listbox', { name: 'Colour vision check' })
+      await expect(list).toBeFocused()
       await page.keyboard.press('ArrowDown')
+      await expect(list.locator('[data-value="deuteranopia"]')).toHaveClass(/is-active/)
       await page.keyboard.press('Enter')
       const strip = page.locator('.plb-vision[role="status"]')
-      await expect(strip).toContainText('Green-blind (deuteranopia)')
+      // Read what is on screen (innerText skips display:none), not textContent: at
+      // 390 the long name is in the markup but hidden, and §1.7 shows the short one.
+      if (width >= 768) {
+        await expect(strip).toContainText('Green-blind (deuteranopia).', { useInnerText: true })
+        await expect(strip).toContainText('Top half: your colour. Bottom half: how it looks.', { useInnerText: true })
+      } else {
+        await expect(strip).toContainText('Green-blind in the bottom half.', { useInnerText: true })
+        await expect(strip).not.toContainText('deuteranopia', { useInnerText: true })
+        await expect(strip.locator('.plb-vision-short').first()).toBeVisible()
+        await expect(strip.locator('.plb-vision-long').first()).toBeHidden()
+      }
       // Focus is back on the Vision trigger, or on Extra tools when the select lives there.
       const focused = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '')
       expect(focused.startsWith('Colour vision check') || focused === 'Extra tools', `focus is on "${focused}"`).toBe(true)
@@ -109,15 +141,21 @@ for (const width of WIDTHS) {
       await ctx.close()
     })
 
-    // MUTATION: make Escape call `choose(active)` in MenuSelect.jsx.
+    // MUTATION: in the `dismiss` handler in MenuSelect.jsx, make Escape call `onChange` with the row
+    // that `aria-activedescendant` points at. (Adding Escape to the 'select' case of listboxKeys.js only
+    // makes Escape close the whole Extra tools panel, which this test also catches, by the trigger check.)
     test(`Escape leaves the mode alone (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
       const list = await openVision(page)
+      // Move to another row first, so Escape has a different row to wrongly choose.
+      await expect(list).toBeFocused()
       await page.keyboard.press('ArrowDown')
+      await expect(list.locator('[data-value="deuteranopia"]')).toHaveClass(/is-active/)
       await page.keyboard.press('Escape')
       await expect(list).toBeHidden()
       await expect(page.locator('.plb-vision')).toHaveCount(0)
       await expect(page.locator('.plb-col--split')).toHaveCount(0)
+      await expect(page.locator(`${TRIGGER}:visible`).first()).toHaveAttribute('aria-label', 'Colour vision check: Normal vision')
       await ctx.close()
     })
 
@@ -135,24 +173,10 @@ for (const width of WIDTHS) {
       await ctx.close()
     })
 
-    // MUTATION: remove `white-space: nowrap` from `.plb-vision-text` in palette-builder.css.
-    test(`the strip is one height for every mode (${width})`, async ({ browser }) => {
-      const { ctx, page } = await at(browser, width)
-      const heights = {}
-      for (const mode of VISION_MODES.filter((m) => m.id !== 'normal')) {
-        await chooseMode(page, mode.id)
-        heights[mode.id] = await page.locator('.plb-vision').evaluate((el) => el.getBoundingClientRect().height)
-      }
-      expect(new Set(Object.values(heights)).size, `heights ${JSON.stringify(heights)}`).toBe(1)
-      await ctx.close()
-    })
-
     // MUTATION: apply `menu-select-option--rich` to every row in MenuSelect.jsx.
     test(`other selects are unchanged (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
-      const onRow = page.locator('[data-tool-toolbar] button[aria-label^="Colour system"]')
-      if (!(await onRow.count())) await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
-      await page.locator('button[aria-label^="Colour system"]:visible').first().click()
+      await (await visionTrigger(page, 'button[aria-label^="Colour system"]')).click()
       const list = page.getByRole('listbox', { name: 'Colour system' })
       await expect(list).toBeVisible()
       await expect(list).not.toHaveClass(/menu-select-list--rich/)
@@ -164,7 +188,31 @@ for (const width of WIDTHS) {
   })
 }
 
+// 320 is in the list on purpose: it is the one width where the longest strip text
+// (Green-blind) is close enough to the Turn off button to wrap if it is allowed to.
 // MUTATION: remove `white-space: nowrap` from `.plb-vision-text` in palette-builder.css.
+for (const width of [320, ...WIDTHS]) {
+  test(`the strip is one height for every mode (${width})`, async ({ browser }) => {
+    const { ctx, page } = await at(browser, width)
+    const heights = {}
+    for (const mode of VISION_MODES.filter((m) => m.id !== 'normal')) {
+      await chooseMode(page, mode.id)
+      // The name is one line (a 13px line is about 21px; a wrapped one is about 43px). On a phone the
+      // 44px button hides a wrap from the strip's own height, so the line count is checked as well.
+      const { strip, name } = await page.locator('.plb-vision').evaluate((el) => ({
+        strip: el.getBoundingClientRect().height,
+        name: el.querySelector('.plb-vision-name').getBoundingClientRect().height,
+      }))
+      expect(name, `${mode.id} name wraps`).toBeLessThan(30)
+      heights[mode.id] = strip
+    }
+    expect(new Set(Object.values(heights)).size, `heights ${JSON.stringify(heights)}`).toBe(1)
+    await ctx.close()
+  })
+}
+
+// MUTATION: remove `.plb .plb-vision-long { display: none; }` from the 767px block in palette-builder.css
+// (the long wording then shows on a phone and runs off the right edge).
 test('nothing is wider than the screen at 320px with a mode on', async ({ browser }) => {
   const { ctx, page } = await at(browser, 320)
   await chooseMode(page, 'achromatopsia')
@@ -177,7 +225,9 @@ test('nothing is wider than the screen at 320px with a mode on', async ({ browse
   await ctx.close()
 })
 
-// MUTATION: remove the `@media (pointer: coarse)` rules for `.plb-vision-off` and the rich rows.
+// MUTATION: remove the `.plb .plb-vision .plb-vision-off { min-width: 44px; height: 44px; ... }` rule inside the
+// `@media (pointer: coarse)` block in palette-builder.css. (The rows are 52px before the coarse rule, so
+// removing the rows' 56px rule does not fail the row check; the row check is a floor, not a guard on that rule.)
 test('on a touch screen the rows and Turn off are 44px or more', async ({ browser }) => {
   const { ctx, page } = await at(browser, 390)
   const list = await openVision(page)
@@ -191,7 +241,7 @@ test('on a touch screen the rows and Turn off are 44px or more', async ({ browse
   await ctx.close()
 })
 
-// MUTATION: make `.vis-dot` fill the dot with `currentColor` in VisionIcon.
+// MUTATION: in global.css add `[data-theme="dark"] .vis-dot { fill: currentColor }`.
 test('the dot hue is the same in the dark theme', async ({ browser }) => {
   const { ctx, page } = await at(browser, 1440, { theme: 'dark' })
   const list = await openVision(page)
