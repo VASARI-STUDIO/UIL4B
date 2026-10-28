@@ -268,23 +268,45 @@ for (const screen of SCREENS) {
   })
 }
 
-// At 390, 768 and 1440 both interpolation hints wrap to the same number of lines,
-// so those widths cannot tell a shared cell from a swapped paragraph. At 400 the
-// Perceived hint fits one line and the Standard hint needs two (measured), which
-// is the width where a hint that is swapped in and out moves the page.
-test.describe('the interpolation hint at the width where the two hints differ in length', () => {
+// At 390, 768 and 1440 both interpolation hints may wrap to the same number of
+// lines, so those widths cannot tell a shared cell from a swapped paragraph. The
+// Perceived hint is the shorter (61 characters against 69), so somewhere between
+// a phone and a tablet there is a band of widths where it fits one line and the
+// Standard hint needs two: that is where a hint that is swapped in and out moves
+// the page. Which widths those are depends on the font the machine draws (the
+// Windows and Linux faces measure differently, so a fixed 400 held on one and
+// not the other), so the test FINDS the band by measuring the hints at each
+// width, and fails with the measurements if there is none.
+test.describe('the interpolation hint at a width where the two hints differ in length', () => {
   test.use({ viewport: { width: 400, height: 900 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
 
   test('the two hints wrap to different heights here, and switching still changes nothing', async ({ page }) => {
     watch(page, 'a designer on a mid-size phone comparing colour spaces')
     await open(page)
     const panel = panelOf(page)
-    const lines = await page.evaluate(() => [...document.querySelectorAll('.grd-interp-hint')].map((p) => {
+    const measure = () => page.evaluate(() => [...document.querySelectorAll('.grd-interp-hint')].map((p) => {
       const r = document.createRange()
       r.selectNodeContents(p)
       return Math.round(r.getBoundingClientRect().height)
     }))
-    expect(lines.length, 'both hints are in the panel').toBe(2)
+    // Scan 320..700 in 2px steps for the widest run of widths where the hints
+    // differ, and sit in the middle of it so a pixel of font drift cannot end it.
+    const seen = []
+    let run = []
+    let best = []
+    for (let w = 320; w <= 700; w += 2) {
+      await page.setViewportSize({ width: w, height: 900 })
+      const h = await measure()
+      expect(h.length, 'both hints are in the panel').toBe(2)
+      seen.push(`${w}:${h.join('/')}`)
+      if (h[0] !== h[1]) run.push(w)
+      else { if (run.length > best.length) best = run; run = [] }
+    }
+    if (run.length > best.length) best = run
+    expect(best.length, `no width from 320 to 700 gives the two hints different heights, so this test proves nothing. Heights (hint 1/hint 2) by width: ${seen.join(' ')}`).toBeGreaterThan(0)
+    await page.setViewportSize({ width: best[Math.floor(best.length / 2)], height: 900 })
+    await settle(page)
+    const lines = await measure()
     expect(lines[0], 'the hints differ in length at this width, or this test proves nothing').not.toBe(lines[1])
 
     const l = ledger(page)

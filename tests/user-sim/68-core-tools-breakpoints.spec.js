@@ -337,38 +337,77 @@ test('/create/font-pair · the specimen heading keeps “Typography” whole at 
   expect(failures, `words broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/gradient · the CSS output never splits a hex value across two lines', async ({ browser }) => {
+test('/create/gradient · the CSS output wraps inside its well, with no sideways scroll, and never splits a hex value across two lines', async ({ browser }) => {
   // `.ggn-css code{word-break:break-all}` once wrapped "#7C3AED" as "#7" /
-  // "C3AED" — one colour reading as two. The design's drawn code well
-  // (D:638-640) is `white-space:pre` in an `overflow-x:auto` box: the
-  // declaration stays on ONE line and scrolls, so no token can be split.
+  // "C3AED" — one colour reading as two. The well now holds the CSS in a fixed
+  // 152px box with `white-space:pre-wrap; overflow-wrap:anywhere`: a long
+  // declaration (twelve stops is one very long line) wraps at its spaces and
+  // scrolls UP AND DOWN inside the box, never sideways. Wrapping at spaces
+  // means a "#RRGGBB" token moves to the next line whole; `anywhere` only
+  // breaks a token that is wider than the whole line, which a hex is not.
   //
-  // MUTATION: set `white-space:normal; word-break:break-all` on
-  // .grd-code-text — the line count goes above 1 and hex tokens split.
-  test.setTimeout(60_000)
+  // So the contract measured here, at 390 (narrowest phone) and 1097, with a
+  // twelve-stop gradient: the well does not scroll sideways, the CSS really
+  // does wrap (positive control, or "no split" is trivially true), and each
+  // hex token, measured on its own with a Range, sits on a single line.
+  //
+  // MUTATION: set `word-break:break-all` on .grd-code-text — hex tokens split
+  // and this goes red naming them. Put `white-space:pre; overflow-x:auto`
+  // back — the well scrolls sideways and the wrap control goes red.
+  test.setTimeout(90_000)
   const failures = []
   for (const width of [390, 1097]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `a developer reading the gradient's CSS at ${width}px`)
     await go(page, '/create/gradient')
+    const panel = page.getByRole('complementary', { name: 'Gradient controls' })
+    const add = panel.getByRole('button', { name: /^Add a stop$/ })
+    // Grow the ramp to twelve stops so the declaration is as long as it gets.
+    while ((await page.locator('.grd-stop').count()) < 12) {
+      const before = await page.locator('.grd-stop').count()
+      await add.click()
+      await expect(page.locator('.grd-stop')).toHaveCount(before + 1)
+    }
     const code = page.locator('.grd-code-text code')
     await expect(code).toContainText('gradient(')
     await code.scrollIntoViewIfNeeded()
     await settle(page)
-    const split = await page.evaluate(splitWords, '.grd-code-text code')
-    const m = await page.locator('.grd-code-text').evaluate((el) => ({
-      lines: Math.round(el.querySelector('code').getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
-      scrolls: el.scrollWidth > el.clientWidth,
-      overflowX: getComputedStyle(el).overflowX,
-    }))
+    const m = await page.locator('.grd-code-text').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      const codeEl = el.querySelector('code')
+      const lineH = parseFloat(cs.lineHeight)
+      // Every "#RRGGBB" (and 3 or 8 digit) token, measured on its own: how many
+      // distinct line tops do its glyph boxes sit on?
+      const hexes = []
+      const walker = document.createTreeWalker(codeEl, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        const re = /#[0-9A-Fa-f]{3,8}\b/g
+        let t
+        while ((t = re.exec(node.nodeValue))) {
+          const r = document.createRange()
+          r.setStart(node, t.index); r.setEnd(node, t.index + t[0].length)
+          const tops = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top)))
+          hexes.push({ text: t[0], lines: tops.size })
+        }
+      }
+      return {
+        whiteSpace: cs.whiteSpace,
+        sidewaysScroll: el.scrollWidth > el.clientWidth + 1,
+        lines: Math.round(codeEl.getBoundingClientRect().height / lineH),
+        hexes,
+      }
+    })
     await ctx.close()
-    // POSITIVE CONTROL: at 390 the declaration is longer than its box, so the
-    // no-wrap is really being exercised rather than trivially true.
-    if (width === 390) expect(m.scrolls, 'the declaration is longer than the well at 390').toBe(true)
-    expect(m.overflowX, 'the well scrolls sideways instead of wrapping').toBe('auto')
-    if (m.lines > 1) failures.push(`${width}px: the declaration wraps onto ${m.lines} lines`)
-    const hex = split.filter((w) => /#[0-9A-Fa-f]{3,8}/.test(w))
-    if (hex.length) failures.push(`${width}px: ${hex.join(', ')}`)
+    // POSITIVE CONTROLS: twelve stops put twelve colours in the declaration,
+    // and that declaration is too long for one line, so the wrap is real.
+    expect(m.hexes.length, `${width}px: hex tokens measured`).toBeGreaterThanOrEqual(12)
+    expect(m.lines, `${width}px: the declaration is longer than one line of the well, so wrapping is exercised`).toBeGreaterThan(1)
+    // THE CONTRACT.
+    expect(m.whiteSpace, `${width}px: the CSS wraps rather than running on`).toBe('pre-wrap')
+    expect(m.sidewaysScroll, `${width}px: the well scrolls sideways`).toBe(false)
+    const split = m.hexes.filter((h) => h.lines > 1).map((h) => h.text)
+    if (split.length) failures.push(`${width}px: ${split.join(', ')}`)
   }
   expect(failures, `hex values broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })

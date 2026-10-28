@@ -281,7 +281,7 @@ test.describe('Gradient · From palette without a usable palette says so', () =>
     await expect(note).toBeVisible()
     await expect(live.locator('.grd-note--palette'), 'the note is inside the live region').toHaveCount(1)
     // A fresh visit already holds the one seed colour, which is not a gradient.
-    await expect(note).toContainText('Needs a palette with two or more colours.')
+    await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
     await expect(note.getByRole('link')).toHaveAttribute('href', '/create/palette')
     await expect(note, 'focus did not move to the note').toBeFocused()
 
@@ -302,7 +302,7 @@ test.describe('Gradient · From palette without a usable palette says so', () =>
     await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
     const note = page.locator('.grd .grd-note--palette')
     await expect(note).toBeVisible()
-    await expect(note).toContainText('No palette yet.')
+    await expect(note.locator('.grd-note-text')).toHaveText('No palette yet')
     await expect(note.getByRole('link', { name: 'Make one in Palette Builder' })).toHaveAttribute('href', '/create/palette')
   })
 
@@ -313,8 +313,8 @@ test.describe('Gradient · From palette without a usable palette says so', () =>
     await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
     const note = page.locator('.grd .grd-note--palette')
     await expect(note).toBeVisible()
-    await expect(note).toContainText('Needs a palette with two or more colours.')
-    await expect(note, 'a one-colour palette is not "no palette"').not.toContainText('No palette yet.')
+    await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
+    await expect(note, 'a one-colour palette is not "no palette"').not.toContainText('No palette yet')
     await expect(note.getByRole('link', { name: 'Add colours in Palette Builder' })).toHaveAttribute('href', '/create/palette')
   })
 
@@ -328,6 +328,10 @@ test.describe('Gradient · From palette without a usable palette says so', () =>
       const box = await note.boundingBox()
       expect(box.x, 'the note starts inside the screen').toBeGreaterThanOrEqual(0)
       expect(box.x + box.width, `the note runs past the ${width}px screen`).toBeLessThanOrEqual(width)
+      // Under 520px the lead-in ("Add colours in") is dropped; the link is its
+      // name alone, and the note text still says what is needed.
+      await expect(note.getByRole('link'), 'the lead-in is dropped on a phone').toHaveAccessibleName('Palette Builder')
+      await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
       const link = await note.getByRole('link').boundingBox()
       expect(link.x + link.width, 'the link runs past the screen').toBeLessThanOrEqual(width)
       const dismiss = await note.getByRole('button', { name: 'Dismiss' }).boundingBox()
@@ -346,7 +350,7 @@ test.describe('Gradient · From palette without a usable palette says so', () =>
     await go(page, '/create/gradient')
     await page.evaluate(() => window.scrollTo(0, 700))
     // POSITIVE CONTROL: the page really is scrolled, so the note's own place
-    // (above the canvas) is above the fold.
+    // (the canvas's foot) is above the fold.
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
     const note = await fromPaletteViaMore(page)
     await expect(note).toBeVisible()
