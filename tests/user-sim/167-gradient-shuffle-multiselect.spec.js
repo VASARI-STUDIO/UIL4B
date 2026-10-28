@@ -404,7 +404,8 @@ for (const w of [390, 360]) {
       await open(page)
       const scope = await openSettings(page)
       for (const b of await scope.locator('.tl-pill').all()) {
-        expect((await b.boundingBox()).height, await b.textContent()).toBeGreaterThanOrEqual(44)
+        // rounded: the sheet's transform leaves sub-pixel heights such as 43.99997
+        expect(Math.round((await b.boundingBox()).height), await b.textContent()).toBeGreaterThanOrEqual(44)
       }
     })
 
