@@ -1730,6 +1730,11 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    over the fields and the submit button on a small screen, 320x640 and 390x640.
    Gone there; the form scrolls, with nothing fixed over it. */
 @media(max-width:640px),(max-height:500px){.global-feedback-btn.global-feedback-btn--form{display:none}}
+/* Its replacement there: a quiet in-flow link (ReportProblemLink), drawn only
+   where the bubble is not, so a screen never carries both. */
+.report-problem{display:none;align-items:center;justify-content:center;min-height:44px;padding:0 8px;background:none;border:0;font-family:var(--font);font-size:13px;color:var(--t2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.report-problem:hover{color:var(--t0)}
+@media(max-width:640px),(max-height:500px){.report-problem{display:inline-flex}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
 .fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}

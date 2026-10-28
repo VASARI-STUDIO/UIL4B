@@ -56,7 +56,9 @@ const NO_BUTTON = new Set([
 // The sign-in and payment forms fill a phone's width, and the fixed bubble sat
 // over their fields and submit button at 320x640 and 390x640. They keep the
 // button on a roomy screen (a visitor with a sign-in problem can still report
-// it); on a small one global.css hides it, and the right-click menu still works.
+// it); on a small one global.css hides it and a quiet "Report a problem" link
+// (ReportProblemLink) in the form itself opens this same dialog. The right-click
+// menu is no substitute there: a touch-only phone does not offer it.
 // A pattern, not a second literal list: the test beside NO_BUTTON reads every
 // quoted path in this file as a route the button is absent from.
 const FORM_ROUTE = /^\/(?:login|checkout)$/
