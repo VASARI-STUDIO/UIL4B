@@ -322,6 +322,19 @@
 .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+/* Picked for the Shuffle pool: a dashed 2px ring just inside the chip, in the
+   chip's own ink (white or near-black), so it reads on any colour and never
+   collides with the outer ring and tick that mark the stop's colour. */
+.grd .grd-chip.is-picked { position: relative; }
+.grd .grd-chip.is-picked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px dashed currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.grd .grd-chips--shades .grd-chip.is-picked::after { inset: 2px; border-width: 1.5px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-chip:hover { border-color: var(--tl-line-on); }
 }

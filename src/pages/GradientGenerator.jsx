@@ -245,20 +245,38 @@ const STARTER_COLOURS = [
 // last place, so the row never takes more room than thirteen colours do.
 const MAX_CHIPS = 13
 
-// A round colour chip that sets the selected stop. The chosen state is a ring and
-// a tick, so it never rests on colour alone; the tick takes white or near-black
-// ink by the chip's own lightness.
-function ColourChip({ hex, label, on, onPick }) {
+// A round colour chip that sets the selected stop(s). The chosen state is a ring
+// and a tick, so it never rests on colour alone; the tick takes white or
+// near-black ink by the chip's own lightness. A colour picked as part of the
+// Shuffle pool wears a dashed ring in that same ink. Shift, Ctrl or Cmd+click
+// picks or unpicks it without applying it; on touch a press and hold does.
+function ColourChip({ hex, label, on, picked, onPick, onTogglePick }) {
   const light = useMemo(() => hexToOklch(hex)[0] >= 60, [hex])
+  const hold = useRef({ timer: 0, fired: false })
+  useEffect(() => () => clearTimeout(hold.current.timer), [])
+  const name = `${label}, ${hex}${picked ? ', picked for shuffle' : ''}`
   return (
     <button
       type="button"
-      className={`grd-chip${on ? ' is-on' : ''}${light ? ' is-light' : ''}`}
+      className={`grd-chip${on ? ' is-on' : ''}${picked ? ' is-picked' : ''}${light ? ' is-light' : ''}`}
       style={{ background: hex }}
       aria-pressed={on}
-      aria-label={`${label}, ${hex}`}
-      title={`${label}, ${hex}`}
-      onClick={() => onPick(hex, label)}
+      aria-label={name}
+      title={name}
+      onPointerDown={(e) => {
+        hold.current.fired = false
+        if (e.pointerType !== 'touch') return
+        hold.current.timer = setTimeout(() => { hold.current.fired = true; onTogglePick(hex, label) }, 450)
+      }}
+      onPointerUp={() => clearTimeout(hold.current.timer)}
+      onPointerCancel={() => clearTimeout(hold.current.timer)}
+      onPointerLeave={() => clearTimeout(hold.current.timer)}
+      onContextMenu={(e) => { if (e.pointerType === 'touch' || hold.current.fired) e.preventDefault() }}
+      onClick={(e) => {
+        if (hold.current.fired) { hold.current.fired = false; return }
+        if (e.shiftKey || e.ctrlKey || e.metaKey) onTogglePick(hex, label)
+        else onPick(hex, label)
+      }}
     >
       {on && <ToolIcon name="check" size={12} />}
     </button>
@@ -875,7 +893,25 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
   const paletteHexes = useMemo(() => chips.map((c) => c.hex), [chips])
-  const canRandomFromPalette = paletteHexes.length >= 2
+  // Colours picked (Shift-click) as the Shuffle pool. They only count while they
+  // are still on offer, and from two up: one pick is just a mark.
+  const [chipPicks, setChipPicks] = useState([])
+  const offered = useMemo(() => new Set([
+    ...(chips.length ? chips : STARTER_COLOURS).map((c) => c.hex.toUpperCase()),
+    ...(shades ? shades.items.map((c) => c.hex.toUpperCase()) : []),
+  ]), [chips, shades])
+  const livePicks = useMemo(() => chipPicks.filter((h) => offered.has(h)), [chipPicks, offered])
+  const usingPicks = livePicks.length >= 2
+  const pool = usingPicks ? livePicks : paletteHexes
+  const togglePick = useCallback((hex) => {
+    const h = hex.toUpperCase()
+    const next = livePicks.includes(h) ? livePicks.filter((x) => x !== h) : [...livePicks, h]
+    setChipPicks(next)
+    say(next.length >= 2 ? `Shuffle from ${next.length} picked colours` : next.length === 1 ? '1 colour picked. Pick another to shuffle from picks.' : 'Picks cleared')
+  }, [livePicks, say])
+  const clearPicks = useCallback(() => { setChipPicks([]); say('Picks cleared') }, [say])
+  const canRandomFromPalette = pool.length >= 2
+  const shuffleHint = usingPicks ? `Shuffle from ${livePicks.length} picked colours` : SHUFFLE_PALETTE_NEEDS
   // Pressing Shuffle from palette with nothing to draw from says why in a toast
   // and takes the person to the Available colours note, which holds the way to
   // make a palette. The count is how many times it was pressed, so a second
@@ -892,7 +928,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // take 2–3 → spread evenly → random type/angle. Falls back to fully-random
   // if the palette can't make a gradient (guarded by canRandomFromPalette).
   const randomiseFromPalette = useCallback(() => {
-    const pool = paletteHexes // already filtered + deduped
     if (pool.length < 2) { randomise(); return }
     // The type, count and angle come from the same roll as Random; only the
     // colours differ. A two-colour pick has to differ in lightness or hue, and
@@ -904,8 +939,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     if (!filters.keepAngle) setAngle(g.angle)
     selectOnly(0)
     setFromLibrary(false)
-    toast?.('Random gradient from your palette')
-  }, [paletteHexes, randomise, rollStops, filters, toast, selectOnly])
+    toast?.(usingPicks ? `Random gradient from ${pool.length} picked colours` : 'Random gradient from your palette')
+  }, [pool, usingPicks, randomise, rollStops, filters, toast, selectOnly])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
@@ -1357,16 +1392,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               icon="swatches"
               onClick={fromPalette}
               aria-disabled={!canRandomFromPalette || undefined}
-              aria-describedby={canRandomFromPalette ? undefined : 'grd-shuffle-palette-hint'}
-              title={canRandomFromPalette ? 'Build a random gradient from your current palette' : SHUFFLE_PALETTE_NEEDS}
+              aria-describedby={canRandomFromPalette && !usingPicks ? undefined : 'grd-shuffle-palette-hint'}
+              title={canRandomFromPalette && !usingPicks ? 'Build a random gradient from your current palette' : shuffleHint}
             >
               Shuffle from palette
             </ToolButton>
           ),
           menu: {
             label: 'Shuffle from palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
-            describedBy: canRandomFromPalette ? undefined : 'grd-shuffle-palette-hint',
-            title: canRandomFromPalette ? 'Build a random gradient from your current palette' : SHUFFLE_PALETTE_NEEDS,
+            describedBy: canRandomFromPalette && !usingPicks ? undefined : 'grd-shuffle-palette-hint',
+            title: canRandomFromPalette && !usingPicks ? 'Build a random gradient from your current palette' : shuffleHint,
             onSelect: fromPalette,
           },
         },
@@ -1413,7 +1448,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-stage">
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
           </div>
-          {!canRandomFromPalette && <span id="grd-shuffle-palette-hint" className="sr-only">{SHUFFLE_PALETTE_NEEDS}</span>}
+          {(!canRandomFromPalette || usingPicks) && <span id="grd-shuffle-palette-hint" className="sr-only">{shuffleHint}</span>}
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
               keep dragging to place it; drag or arrow a handle to move it
@@ -1497,7 +1532,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           {/* AVAILABLE COLOURS. Every colour in the palette, one press from the
               selected stop, then its shades when the project's ramp is current.
               With no palette the ten starter colours stand in. */}
-          <ToolSection label="Available colours" labelId="grd-avail-label" className="grd-avail">
+          <ToolSection
+            label="Available colours"
+            labelId="grd-avail-label"
+            className="grd-avail"
+            aside={chipPicks.length > 0 ? <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button> : undefined}
+          >
+            <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. On a touch screen, press and hold.</span>
             <div className="sr-only" role="status">{pickNote}</div>
             {chips.length === 0 && (
               <div className="grd-avail-help">
@@ -1508,16 +1549,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {chips.length === 0 ? (
               <>
                 <span className="grd-avail-sub" id="grd-starter-label">Starter colours</span>
-                <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label">
+                <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label" aria-describedby="grd-picks-hint">
                   {STARTER_COLOURS.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} onPick={pickColour} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                   ))}
                 </div>
               </>
             ) : (
-              <div className="grd-chips" role="group" aria-label="Palette colours">
+              <div className="grd-chips" role="group" aria-label="Palette colours" aria-describedby="grd-picks-hint">
                 {shownChips.map((c) => (
-                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
+                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                 ))}
                 {hiddenChips > 0 && (
                   <Link to="/create/palette" className="grd-chips-more">
@@ -1535,9 +1576,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {shades && (
               <div className="grd-shades">
                 <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
-                <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label">
+                <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label" aria-describedby="grd-picks-hint">
                   {shades.items.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
                   ))}
                 </div>
               </div>
