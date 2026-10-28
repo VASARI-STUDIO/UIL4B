@@ -52,11 +52,23 @@
 .checkout-page .card:hover { border-color: var(--co-hair); }
 
 .checkout-page .checkout-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.checkout-page .checkout-summary { position: sticky; top: calc(var(--nav-clear) + 12px); display: flex; flex-direction: column; gap: 14px; }
+/* The DOM order is the summary, the payment panel, then "Back to settings", so
+   the tab order is the reading order on a phone, where they stack that way.
+   From 761px the link goes back under the summary card by grid area. That media
+   query is the exact complement of the phone block's (and of the page's own
+   `wide`), so no fractional width matches neither. The 14px between card and
+   link is the 20px grid gap less 6px. */
+.checkout-page .checkout-grid > .checkout-back { justify-self: start; }
+@media not all and (max-width: 760px) {
+  .checkout-page .checkout-grid { grid-template-areas: "summary form" "back form"; grid-template-rows: auto 1fr; }
+  .checkout-page .checkout-summary { grid-area: summary; }
+  .checkout-page .checkout-form { grid-area: form; }
+  .checkout-page .checkout-grid > .checkout-back { grid-area: back; margin-top: -6px; }
+}
 
 .checkout-page .checkout-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--co-hair); }
 .checkout-page .checkout-plan-name { font-size: 16px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
-.checkout-page .checkout-plan-cadence { margin-top: 3px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t1); }
+.checkout-page .checkout-plan-cadence { margin-top: 3px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t1); }
 .checkout-page .checkout-plan-price { text-align: right; white-space: nowrap; }
 .checkout-page .checkout-plan-amount { display: block; font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -.015em; line-height: 1; color: var(--t0); font-variant-numeric: tabular-nums; }
 .checkout-page .checkout-plan-per { font-size: 12px; color: var(--t1); }
@@ -87,6 +99,17 @@
 }
 .checkout-page .checkout-features { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--co-hair); list-style: none; }
 .checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
+/* The list folds into a disclosure on a phone only. Wider, the summary is
+   hidden and the list is open (the page sets `open`), as it was before. */
+@media not all and (max-width: 760px) { .checkout-page .checkout-included > summary { display: none; } }
+@media (max-width: 760px) {
+  .checkout-page .checkout-included { margin-top: 18px; border-top: 1px solid var(--co-hair); }
+  .checkout-page .checkout-included > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-size: 14px; font-weight: 560; color: var(--t0); cursor: pointer; list-style: none; }
+  .checkout-page .checkout-included > summary::-webkit-details-marker { display: none; }
+  .checkout-page .checkout-included > summary::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform 150ms ease-out; }
+  .checkout-page .checkout-included[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+  .checkout-page .checkout-included .checkout-features { margin-top: 0; padding-top: 4px; border-top: 0; }
+}
 .checkout-page .checkout-check { flex-shrink: 0; margin-top: 3px; color: var(--accent-mid); }
 .checkout-page .checkout-back { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; min-height: 32px; padding: 0 2px; font-size: 13px; color: var(--t1); text-decoration: none; }
 .checkout-page .checkout-back:hover { color: var(--t0); }
@@ -104,7 +127,7 @@
 .checkout-page .checkout-period-opt { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 6px 4px; border-radius: var(--btn-radius); color: var(--t1); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
 .checkout-page .checkout-period-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .checkout-page .checkout-period-label { font-size: 13px; font-weight: 560; line-height: 1.2; }
-.checkout-page .checkout-period-save { min-height: 1.3em; font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; line-height: 1.3; color: var(--t2); font-variant-numeric: tabular-nums; }
+.checkout-page .checkout-period-save { min-height: 1.3em; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; line-height: 1.3; color: var(--t2); font-variant-numeric: tabular-nums; }
 .checkout-page .checkout-period-save:empty { display: none; }
 .checkout-page .checkout-period-opt:hover { background: var(--co-wash); color: var(--t0); }
 .checkout-page .checkout-period-opt.is-on { background: var(--t0); color: var(--card); }
@@ -171,21 +194,22 @@
 
 /* Two columns, panel at its narrowest: the yearly trial sentence needs three
    lines until about 790px. The band runs to 860px for room (a longer amount
-   adds characters); wider, two lines hold. */
-@media (min-width: 761px) and (max-width: 860px) {
+   adds characters); wider, two lines hold. One column has the same floor, so
+   the band has no lower edge and no width falls between it and the phone
+   block. */
+@media (max-width: 860px) {
   .checkout-page .checkout-renewal { min-height: 4.5em; }
 }
 @media (max-width: 760px) {
   .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
-  .checkout-page .checkout-summary { position: static; }
+  .checkout-page .checkout-plan-note, .checkout-page .checkout-trial, .checkout-page .checkout-terms { font-size: 13px; }
   .checkout-page .checkout-back { min-height: 44px; }
-  .checkout-page .checkout-renewal { min-height: 4.5em; }
   /* Signed out, the sign-in moves up into the summary card, above the
-     features list, and the panel that held it goes. */
+     folded features list, and the panel that held it goes. */
   .checkout-page .checkout-form.is-signed-out { display: none; }
   .checkout-page .checkout-signin--inline { display: flex; align-items: stretch; gap: 6px; margin-top: 18px; padding: 18px 0 0; border-top: 1px solid var(--co-hair); text-align: left; }
   .checkout-page .checkout-signin--inline .checkout-signin-btn { min-height: 44px; }
-  .checkout-page .checkout-signin--inline + .checkout-features { margin-top: 18px; }
+  .checkout-page .checkout-signin--inline + .checkout-included { margin-top: 18px; }
 }
 @media (max-width: 420px) {
   .checkout-page .card { padding: 18px; }
