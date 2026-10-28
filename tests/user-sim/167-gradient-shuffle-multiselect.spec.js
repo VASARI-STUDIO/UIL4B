@@ -521,7 +521,7 @@ test.describe('selecting several stops at 1440px', () => {
     for (const n of [1, 2, 4]) expect(after[n - 1], `stop ${n}`).toBe(THIRTEEN[1])
     for (const n of [3, 5]) expect(after[n - 1], `stop ${n} left alone`).toBe(before[n - 1])
     // The sentence is Available colours' own status line now; the Stops region does not repeat it.
-    await expect(page.locator('#grd-avail-status')).toHaveText(/^3 selected stops set to Secondary 500\.​?$/)
+    await expect(page.locator('#grd-avail-status')).toHaveText(/^3 selected stops set to Secondary 500\.\u200B?$/)
     await expect(page.locator('[role="status"]').filter({ hasText: 'set to Secondary 500' })).toHaveCount(1)
     // A selection stays a selection: no advance.
     await expect(selCount(page)).toHaveText('3 selected')
