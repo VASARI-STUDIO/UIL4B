@@ -5,9 +5,10 @@
 //      brand guides), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
 //   2. The Palette toolbar stays on one line across screen widths.
-//   3. Gradient "From palette" with fewer than two palette colours says so on
-//      the page, with a link to the Palette Builder; the note is scrolled into
-//      view and takes focus, and dismissing it returns focus to what opened it.
+//   3. Gradient "Shuffle from palette" with fewer than two palette colours says
+//      so: the Available colours section holds the note and a link to the
+//      Palette Builder, a press scrolls the note into view and gives it focus,
+//      and a toast and the button's own description say the same thing.
 //   4. The workspace is one target and one label everywhere it is offered: the
 //      header icon, the account popover and the phone menu sheet.
 //   5. A search row for a Learn guide carries no Documentation pill.
@@ -15,11 +16,12 @@
 // MUTATION: point `docs-design` at '/docs-design' in toolIndex.js, or drop
 // `offerableCategories` from the empty-query list in CommandPalette.jsx, or
 // let the Palette toolbar wrap, or make
-// `fromPalette` in GradientGenerator.jsx return without `setPaletteMissing(true)`,
-// or point the header bookmark Link, the popover row or the sheet row in
-// PillNav.jsx back at '/discover/palettes', or give a Learn guide row in
-// toolIndex.js a category again, or drop the scroll/focus effect or the focus
-// return from the From palette note: the matching test below goes red.
+// `fromPalette` in GradientGenerator.jsx return without `setPaletteMissing`
+// or without its toast, or point the header bookmark Link, the popover row or
+// the sheet row in PillNav.jsx back at '/discover/palettes', or give a Learn
+// guide row in toolIndex.js a category again, or drop the scroll/focus effect
+// from the Available colours note, or take the aria-describedby off the
+// Shuffle from palette button: the matching test below goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -220,19 +222,20 @@ test.describe('Palette Builder toolbar fits on one line', () => {
   }
 })
 
-// ── From palette ─────────────────────────────────────────────────────────────
+// ── Shuffle from palette ─────────────────────────────────────────────────────
 
-const activeLabel = (page) => page.evaluate(() => {
-  const el = document.activeElement
-  return el ? (el.getAttribute('aria-label') || el.textContent || el.tagName).trim() : ''
-})
+const NEEDS = 'Needs a palette with two or more colours'
+const ONE_COLOUR_NOTE = 'Add a second colour in Palette Builder to shuffle from it.'
+const NO_PALETTE_NOTE = 'No palette yet. Colours you build in Palette Builder show up here.'
+const shuffleButton = (page) => page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^Shuffle from palette/ })
+const availNote = (page) => page.locator('.grd .grd-avail-note')
 
-// Phone: open More, wait for the sheet to come to rest, press From palette.
+// Phone: open More, wait for the sheet to come to rest, press Shuffle from palette.
 async function fromPaletteViaMore(page) {
   await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'More', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'More' })
   await expect(sheet).toBeVisible()
-  const fromPalette = sheet.getByRole('button', { name: /^From palette/ })
+  const fromPalette = sheet.getByRole('button', { name: /^Shuffle from palette/ })
   // The sheet slides up; wait until its row has come to rest on screen. On
   // screen is not at rest: the row's bottom edge passes 844 while it is still
   // about 80px below its resting place, which is a whole row, so a press
@@ -250,7 +253,7 @@ async function fromPaletteViaMore(page) {
   ).toBe(0)
   await fromPalette.click({ force: true })
   await expect(sheet).toBeHidden()
-  return page.locator('.grd .grd-note--palette')
+  return availNote(page)
 }
 
 const withPaletteOf = (page, colors) => page.addInitScript((list) => {
@@ -259,115 +262,114 @@ const withPaletteOf = (page, colors) => page.addInitScript((list) => {
   }))
 }, colors)
 
-test.describe('Gradient · From palette without a usable palette says so', () => {
-  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing From palette before making a palette') })
+test.describe('Gradient · Shuffle from palette without a usable palette says so', () => {
+  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing Shuffle from palette before making a palette') })
 
-  test('a fresh visit: the note is visible, takes focus, links to the Palette Builder, and dismisses back to the button', async ({ page }) => {
+  test('a fresh visit: the note is already in Available colours; a press toasts, moves focus to it, and its link opens the Palette Builder', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
     const main = page.locator('.grd')
-    const note = main.locator('.grd-note--palette')
-    await expect(note, 'the note is not there before anything is pressed').toHaveCount(0)
-    // The live region is mounted and empty before anything happens: one that
-    // appears already full is often not announced.
-    const live = main.locator('.grd-live')
-    await expect(live).toHaveAttribute('role', 'status')
-    await expect(live).toBeEmpty()
+    const note = availNote(page)
+    // A fresh visit already holds the one seed colour, which is not a gradient.
+    // The note is part of the section from the start, not something a press makes.
+    await expect(note).toBeVisible()
+    await expect(note).toHaveText(ONE_COLOUR_NOTE)
+    await expect(note, 'nothing has been pressed, so focus is elsewhere').not.toBeFocused()
+    await expect(main.locator('.grd-note--palette, .grd-live'), 'the canvas note and its live region are gone').toHaveCount(0)
 
     // aria-disabled is how the button looks unavailable while staying
     // pressable, so Playwright's own "enabled" check is skipped on purpose.
-    const button = main.locator('[data-tool-toolbar]').getByRole('button', { name: /^From palette/ })
+    const button = shuffleButton(page)
+    await expect(button).toHaveAttribute('aria-disabled', 'true')
+    await expect(button, 'the reason is its accessible description').toHaveAccessibleDescription(NEEDS)
+    await expect(button).toHaveAccessibleName('Shuffle from palette')
     await button.click({ force: true })
-    await expect(note).toBeVisible()
-    await expect(live.locator('.grd-note--palette'), 'the note is inside the live region').toHaveCount(1)
-    // A fresh visit already holds the one seed colour, which is not a gradient.
-    await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
-    await expect(note.getByRole('link')).toHaveAttribute('href', '/create/palette')
+    await expect(page.locator('.toast.show'), 'the press says why').toContainText(NEEDS)
     await expect(note, 'focus did not move to the note').toBeFocused()
 
-    await note.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(note).toHaveCount(0)
-    await expect(live).toBeEmpty()
-    await expect(button, 'focus was lost when the note went away').toBeFocused()
-
-    await button.click({ force: true })
-    await note.getByRole('link').click()
+    const link = note.locator('xpath=following-sibling::a[1]')
+    await expect(link).toHaveAccessibleName('Open Palette Builder')
+    await expect(link).toHaveAttribute('href', '/create/palette')
+    await link.click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
   })
 
-  test('with no colours at all the note says there is no palette yet', async ({ page }) => {
+  test('with no colours at all the note says there is no palette yet, and the starter colours stand in', async ({ page }) => {
     await withPaletteOf(page, [])
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
-    const note = page.locator('.grd .grd-note--palette')
+    await shuffleButton(page).click({ force: true })
+    const note = availNote(page)
     await expect(note).toBeVisible()
-    await expect(note.locator('.grd-note-text')).toHaveText('No palette yet')
-    await expect(note.getByRole('link', { name: 'Make one in Palette Builder' })).toHaveAttribute('href', '/create/palette')
+    await expect(note).toHaveText(NO_PALETTE_NOTE)
+    await expect(note).toBeFocused()
+    await expect(page.locator('.grd').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
+    // POSITIVE CONTROL: the section is not an empty box, the ten starter colours are in it.
+    await expect(page.getByRole('group', { name: 'Starter colours' }).getByRole('button')).toHaveCount(10)
   })
 
   test('with one colour the note says what is needed, not that there is no palette', async ({ page }) => {
     await withPaletteOf(page, ['#0051FF'])
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
-    const note = page.locator('.grd .grd-note--palette')
+    await shuffleButton(page).click({ force: true })
+    const note = availNote(page)
     await expect(note).toBeVisible()
-    await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
+    await expect(note).toHaveText(ONE_COLOUR_NOTE)
     await expect(note, 'a one-colour palette is not "no palette"').not.toContainText('No palette yet')
-    await expect(note.getByRole('link', { name: 'Add colours in Palette Builder' })).toHaveAttribute('href', '/create/palette')
+    await expect(note).toBeFocused()
+    await expect(page.locator('.grd').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
   })
 
   for (const width of [320, 390]) {
-    test(`from the phone More sheet at ${width}px the note shows, stays inside the screen and dismisses back to More`, async ({ page }) => {
+    test(`from the phone More sheet at ${width}px the note takes focus and stays inside the screen`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 })
       await go(page, '/create/gradient')
       const note = await fromPaletteViaMore(page)
       await expect(note).toBeVisible()
       await expect(note, 'focus did not move to the note').toBeFocused()
+      await expect(page.locator('.toast.show')).toContainText(NEEDS)
       const box = await note.boundingBox()
       expect(box.x, 'the note starts inside the screen').toBeGreaterThanOrEqual(0)
       expect(box.x + box.width, `the note runs past the ${width}px screen`).toBeLessThanOrEqual(width)
-      // Under 520px the lead-in ("Add colours in") is dropped; the link is its
-      // name alone, and the note text still says what is needed.
-      await expect(note.getByRole('link'), 'the lead-in is dropped on a phone').toHaveAccessibleName('Palette Builder')
-      await expect(note.locator('.grd-note-text')).toHaveText('Needs two or more colours')
-      const link = await note.getByRole('link').boundingBox()
+      const link = await note.locator('xpath=following-sibling::a[1]').boundingBox()
       expect(link.x + link.width, 'the link runs past the screen').toBeLessThanOrEqual(width)
-      const dismiss = await note.getByRole('button', { name: 'Dismiss' }).boundingBox()
-      expect(dismiss.x + dismiss.width, 'the dismiss control runs past the screen').toBeLessThanOrEqual(width)
       expect(await page.evaluate(() => document.documentElement.scrollWidth), 'the page scrolls sideways').toBeLessThanOrEqual(width)
-
-      await note.getByRole('button', { name: 'Dismiss' }).click()
-      await expect(note).toHaveCount(0)
-      expect(await activeLabel(page), 'focus was lost when the note went away').toBe('More')
     })
   }
 
-  test('on a phone scrolled down the note is scrolled into view, clear of the sticky toolbar', async ({ page }) => {
+  test('on a phone scrolled right down the note is scrolled into view, clear of the sticky toolbar', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/gradient')
-    await page.evaluate(() => window.scrollTo(0, 700))
-    // POSITIVE CONTROL: the page really is scrolled, so the note's own place
-    // (the canvas's foot) is above the fold.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    // POSITIVE CONTROL: the page really is scrolled, and the note's own place
+    // (the panel's first section) is above the fold.
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
+    const bar = page.locator('[data-tool-toolbar]')
+    const before = await availNote(page).boundingBox()
+    const barBox = await bar.boundingBox()
+    expect(before.y + before.height, 'the note starts hidden, above or under the toolbar').toBeLessThanOrEqual(barBox.y + barBox.height)
     const note = await fromPaletteViaMore(page)
     await expect(note).toBeVisible()
     await expect(note).toBeFocused()
     await expect.poll(async () => {
-      const [n, bar] = await Promise.all([note.boundingBox(), page.locator('[data-tool-toolbar]').boundingBox()])
-      return n.y >= bar.y + bar.height - 1 && n.y + n.height <= 844
+      const [n, b] = await Promise.all([note.boundingBox(), bar.boundingBox()])
+      return n.y >= b.y + b.height - 1 && n.y + n.height <= 844
     }, 'the note is off screen or under the toolbar').toBe(true)
   })
 
-  test('with a palette of two colours it builds a gradient and shows no note', async ({ page }) => {
+  test('with a palette of two colours it builds a gradient and the section shows no note', async ({ page }) => {
     await withPaletteOf(page, ['#0051FF', '#FF5A1F', '#12B76A'])
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click()
+    await shuffleButton(page).click()
     // POSITIVE CONTROL: the press did something (a gradient was built).
     await expect(page.locator('.toast.show')).toContainText('from your palette')
-    await expect(page.locator('.grd .grd-note--palette')).toHaveCount(0)
+    await expect(page.locator('.toast.show')).not.toContainText(NEEDS)
+    await expect(availNote(page)).toHaveCount(0)
+    await expect(shuffleButton(page)).not.toHaveAttribute('aria-disabled', /.*/)
+    // POSITIVE CONTROL: the three chips are there, so "no note" is not "no section".
+    await expect(page.getByRole('group', { name: 'Available colours' }).getByRole('button')).toHaveCount(3)
   })
 })
