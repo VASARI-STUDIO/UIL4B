@@ -12,6 +12,8 @@ import { paletteBuilderUrl } from '../data/paletteGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import { navigatesThisTab } from '../utils/handoffSlot'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
+import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
 import {
   BETA_NOTE,
   MAX_PROMPT_CHARS,
@@ -266,6 +268,9 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
   // about one browser rather than a fact about an account.
   const [server, setServer] = useState(null)
   const [dismissedWall, setDismissedWall] = useState(false)
+  // True after /api/ai refused an unverified email. The prompt replaces an
+  // error alert, and once the address is verified it repeats the request.
+  const [needsVerify, setNeedsVerify] = useState(false)
   const resultRef = useRef(null)
 
   const allowance = generationAllowance(planId)
@@ -301,6 +306,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
     if (ensureAccount && !(await ensureAccount())) return
     setStatus('working')
     setError(null)
+    setNeedsVerify(false)
     try {
       const token = await getToken?.()
       if (!token) throw new Error('Your session has expired. Sign out and back in, then try again.')
@@ -311,6 +317,12 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
         body: JSON.stringify({ task: 'brand-starter', description: trimmed.slice(0, MAX_PROMPT_CHARS) }),
       })
       const data = await r.json().catch(() => ({}))
+
+      if (isEmailUnverifiedReply(r.status, data)) {
+        setNeedsVerify(true)
+        setStatus('idle')
+        return
+      }
 
       // Absorb the count from EVERY response, success or refusal. A 429 carries
       // the authoritative figures too, and reading them is what makes the meter
@@ -398,6 +410,8 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
           </div>
         </div>
       )}
+
+      {needsVerify && <VerifyEmailPrompt onVerified={generate} />}
 
       <div className="bs-composer">
         <label className="bs-label" htmlFor="bs-brief">What are you designing for?</label>
