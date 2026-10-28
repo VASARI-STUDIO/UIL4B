@@ -688,9 +688,6 @@
   .grd-tintmenu-item:focus-visible { outline-color: Highlight; }
 }
 
-/* ── The submit modal's preview strip ───────────────────────────────────── */
-.grd-submit-preview { height: 88px; margin-bottom: var(--s-4); border-radius: 12px; border: 1px solid var(--border); }
-
 /* ── Coarse pointers: 44px on every stop control, 16px in the hex field so
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {

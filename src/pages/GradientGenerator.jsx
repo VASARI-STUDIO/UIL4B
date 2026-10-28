@@ -25,17 +25,12 @@ import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
-import { appendGradientSubmission, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
-import { buildQueueRecord } from '../utils/communityQueue'
-import { publishToQueue } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import useModalDialog from '../hooks/useModalDialog'
 import useExportGate from '../hooks/useExportGate'
-import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
-// tool-shell.css carries the .ui-form / .ui-field rules the submit modal uses.
+// tool-shell.css is the shared tool shell the other tool pages load too.
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/gradient.css'
 
@@ -346,72 +341,6 @@ function StopHexInput({ color, label, onCommit }) {
   )
 }
 
-// Submit-for-review modal for the gradient library. Same shape and the same
-// `ui-modal` chrome the Community Hub's design submission already uses, on the
-// same local-first storage pattern — this adds no backend and publishes nothing.
-// The note is the honest part: the gradient is QUEUED, not live.
-function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
-  const [form, setForm] = useState({ name: gradient.name || '', author: authorName || '', note: '' })
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const submitDialogRef = useModalDialog(onClose)
-
-  const submit = () => {
-    if (busy) return                                   // double-submit guard
-    if (!form.name.trim()) return setError('Give your gradient a name.')
-    setBusy(true)
-    const ok = onSubmit({
-      name: form.name.trim(),
-      author: form.author.trim(),
-      note: form.note.trim(),
-    })
-    if (!ok) { setBusy(false); setError('That gradient could not be queued. Try again.') }
-  }
-
-  return (
-    <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a gradient for review" tabIndex={-1} ref={submitDialogRef}>
-        <div className="ui-modal-head">
-          <h2 className="ui-modal-title">Submit for review</h2>
-          <button className="ui-modal-x" onClick={onClose} aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-        </div>
-        <div className="ui-modal-body">
-          <div className="grd-submit-preview" style={{ background: gradient.css }} aria-hidden="true" />
-          <div className="ui-form">
-            <label className="ui-field">
-              <span>Name</span>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Harbour Dusk" maxLength={60} />
-            </label>
-            <label className="ui-field">
-              <span>Author</span>
-              <input type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Your name (optional)" maxLength={40} />
-            </label>
-            <label className="ui-field">
-              <span>Note for the reviewer</span>
-              <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Where it works well (optional)" maxLength={200} />
-            </label>
-            {error && <div className="ui-modal-err" role="alert">{error}</div>}
-            <p className="ui-modal-note">
-              Your gradient is queued for review on this browser — it is <strong>not published</strong>.
-              Shared publishing to the gradient library isn’t live yet, so nothing appears in the
-              gallery until a reviewer approves it. You can withdraw it any time from the gallery.
-            </p>
-          </div>
-          <div className="ui-modal-actions ui-modal-actions--row">
-            <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btn-accent" onClick={submit} disabled={busy}>
-              {busy ? 'Queueing…' : 'Queue for review'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Why Shuffle from palette is inert: its title, its accessible description and
 // the toast a press raises all say this.
 const SHUFFLE_PALETTE_NEEDS = 'Needs a palette with two or more colours'
@@ -531,20 +460,15 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
   )
 }
 
-// Community submission surface name for the sign-in gate (utils/submitIntent).
-const SUBMIT_SURFACE = 'gradient'
-
 // `onExport` is this tool's ONE declared export hook — the copy of the payload
 // that IS the artefact. It defaults to `onCopy` so the component still copies
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
   const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
-  const { user, userProfile, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const requireExportAccount = useExportGate()
-  // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
-  const uid = user?.uid || null
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -680,10 +604,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The stop currently being dragged (index, or null). Drives the live position
   // readout on the handle so a fine adjustment is read, not guessed.
   const [dragIdx, setDragIdx] = useState(null)
-
-  // Submit-for-review (gradient library). Local-first queue only — see
-  // utils/gradientSubmissions.js.
-  const [submitOpen, setSubmitOpen] = useState(false)
 
   const barRef = useRef(null)
   // Handle elements by stop index, so a stop added by pressing the rail can be
@@ -1200,96 +1120,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }
   }
 
-  // Queue the current gradient for review. Local-first, exactly like the
-  // Community Hub's design submission: it lands in this browser's queue with a
-  // 'pending' status and is not published anywhere. Returns false if the
-  // gradient could not be stored, so the modal can say so rather than lie.
-  // Ask a signed-out user to sign in BEFORE the submission form exists, so
-  // nobody names a gradient and writes a reviewer note only to be told they need
-  // an account. While auth is still resolving we show neither prompt — the
-  // trigger is disabled rather than flashing the wrong dialog.
-  //
-  // The gradient itself lives in ProjectContext (persisted), so signing in never
-  // costs the user their work; the intent slot only remembers that the FORM
-  // should re-open if the sign-in remounted this surface.
-  // The single place the submission form is opened. Both the gate below and the
-  // post-sign-in resume go through it, so there is exactly one path to a form.
-  const openSubmitForm = useCallback(() => {
-    consumeSubmitIntent()
-    setSubmitOpen(true)
-  }, [])
-
-  const openSubmit = useCallback(async () => {
-    if (authLoading) return
-    if (!uid) {
-      setSubmitIntent(SUBMIT_SURFACE)
-      // `signup: true` for the same reason as the Type Scale save and the
-      // export gate: this branch is only reached when `uid` is absent, so the
-      // person meeting it has no account, and "Log in to continue" greets them
-      // with a form for one they have never made.
-      const signedIn = await requireLogin('submit a gradient to the community library', {
-        free: true,
-        signup: true,
-        reasons: COMMUNITY_SUBMIT_REASONS,
-      })
-      if (!signedIn) { resetSubmitIntent(); return }
-    }
-    openSubmitForm()
-  }, [authLoading, uid, requireLogin, openSubmitForm])
-
-  // Resume the intent when signing in remounted this surface. In-memory only —
-  // a full page reload finds nothing and the tool opens normally.
-  useEffect(() => {
-    if (authLoading || !uid) return
-    if (!hasSubmitIntent(SUBMIT_SURFACE)) return
-    openSubmitForm()
-  }, [authLoading, uid, openSubmitForm])
-
-  const submitForReview = useCallback(async (fields) => {
-    if (!uid) { setSubmitOpen(false); return false }   // defence in depth
-    const record = sanitizeGradientSubmission({
-      id: `g${Date.now()}`,
-      ...fields,
-      authorEmail: user?.email,
-      type,
-      angle: Math.round(angle),
-      stops: stops.map(s => ({ color: s.color, position: Math.round(s.position) })),
-      status: 'pending',
-      submittedAt: Date.now(),
-    })
-    if (!record) return false
-
-    // Local first: submitting works offline and the user's own list updates
-    // without waiting on a round trip.
-    appendGradientSubmission(record)
-    setSubmitOpen(false)
-
-    // Then publish to the shared queue. Until this existed, a submission never
-    // left the browser — invisible on the user's other devices, and invisible
-    // to any reviewer, so "pending" described a review that could not happen.
-    const queued = buildQueueRecord({
-      kind: 'gradient',
-      name: record.name,
-      user,
-      payload: { type: record.type, angle: record.angle, stops: record.stops },
-    })
-    if (!queued) {
-      // No signed-in user — the local copy stands, and the message says so
-      // rather than claiming it reached a reviewer.
-      toast?.('Saved to this browser. Sign in to submit it for review.')
-      return true
-    }
-    try {
-      await publishToQueue({ ...queued, localId: record.id })
-      toast?.('Gradient submitted for review')
-    } catch {
-      // Never claim it reached the queue when it did not. The local copy is
-      // kept, so nothing the user made is lost.
-      toast?.('Saved locally — we could not reach the review queue. Try again later.')
-    }
-    return true
-  }, [angle, stops, type, toast, uid, user])
-
   // ── Drag: stop handles on the preview rail ──
   // One drag session, shared by "grab an existing handle" and "press the rail to
   // create one", so a newly added stop is immediately draggable in the SAME
@@ -1635,21 +1465,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           id: 'reset', priority: 1,
           render: () => <ToolButton icon="arrow-counter-clockwise" onClick={reset} title="Reset to the starting gradient">Reset</ToolButton>,
           menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset },
-        },
-        {
-          id: 'submit', priority: 0,
-          render: () => (
-            <ToolButton
-              icon="upload-simple"
-              onClick={openSubmit}
-              disabled={authLoading}
-              aria-busy={authLoading || undefined}
-              title={authLoading ? 'Checking your account…' : 'Submit this gradient for review for the gradient library'}
-            >
-              Submit for review
-            </ToolButton>
-          ),
-          menu: { label: 'Submit for review', icon: 'upload-simple', disabled: authLoading, onSelect: openSubmit },
         },
         {
           id: 'count', priority: 2, align: 'end', menu: false,
@@ -2130,16 +1945,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           onApply={applyTint}
           onGate={gateTints}
           onClose={closeTintMenu}
-        />
-      )}
-
-      {/* Only ever mounted for a signed-in user — see openSubmit above. */}
-      {submitOpen && uid && (
-        <SubmitGradientModal
-          gradient={{ css: paintCss, name: '' }}
-          authorName={userProfile?.displayName || user?.displayName || ''}
-          onClose={() => setSubmitOpen(false)}
-          onSubmit={submitForReview}
         />
       )}
     </ToolLayout>
