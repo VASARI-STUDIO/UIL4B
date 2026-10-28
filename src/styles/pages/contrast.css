@@ -49,7 +49,7 @@
 /* The role after the word ("Text colour · Deep") on one line that gives way with
    an ellipsis, so a long name never adds a row. A phone puts it under the word. */
 @media (min-width: 560px) {
-  .cc .cc-field-k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cc .cc-field-k:has(.cc-field-role) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .cc .cc-field-row { display: flex; gap: var(--s-2); min-width: 0; }
 .cc .cc-field .cpk-wrap { flex: 0 0 auto; }
@@ -473,7 +473,7 @@
   .cc .cc-field-short { display: inline; }
   /* The role goes under the word, held to two lines: both fit in the 44px the
      control takes, so a role or a long name never changes the field's height. */
-  .cc .cc-field-k { line-height: 1.2; }
+  .cc .cc-field-k:has(.cc-field-role) { line-height: 1.2; }
   .cc .cc-field-role { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 11.5px; line-height: 1.15; overflow-wrap: anywhere; }
   .cc .cc-field-sep { display: none; }
   /* The full label stays the input's name for a screen reader. */

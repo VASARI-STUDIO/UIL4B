@@ -479,6 +479,8 @@ test.describe('R1 the layout of the hand-off', () => {
     const a = await withPalette.page.locator('.cc-frame').boundingBox()
     // Cancel and Save are in the frame, and the frame is on the screen.
     expect(a.y + a.height, 'the frame ends inside the window').toBeLessThanOrEqual(900)
+    // The view is lazy: wait for both buttons before reading where they are.
+    await expect(withPalette.page.locator('.cc-pv .ro-btn')).toHaveCount(2)
     const btns = await withPalette.page.locator('.cc-pv .ro-btn').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom))
     expect(btns.length).toBe(2)
     expect(Math.max(...btns), 'Cancel and Save are inside the window').toBeLessThanOrEqual(900)
@@ -496,6 +498,8 @@ test.describe('R1 the layout of the hand-off', () => {
       const { ctx, page } = await openAt(browser, PHONE(320, 568), url, { palette })
       watch(page, 'a 320px phone')
       if (palette) await expect(page.locator('.ro-tag[data-pair-part]')).toBeVisible()
+      // The view is lazy: wait for both buttons before measuring.
+      await expect(page.locator('.cc-pv .ro-btn')).toHaveCount(2)
       const read = await page.evaluate(() => {
         const frame = document.querySelector('.cc-frame').getBoundingClientRect()
         const bottoms = [...document.querySelectorAll('.cc-pv .ro-btn')].map((e) => e.getBoundingClientRect().bottom)
