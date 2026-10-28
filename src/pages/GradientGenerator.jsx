@@ -1097,10 +1097,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // Copy CSS and Copy Tailwind class go through onExport so the activation count
   // is unchanged; it writes the clipboard and toasts.
+  // The one export call: every copy and download path runs through it.
+  const sendExport = useCallback(value => onExport?.(value), [onExport])
   const copyExport = useCallback((value) => {
     closeSave('item')
-    return onExport?.(value)
-  }, [onExport, closeSave])
+    return sendExport(value)
+  }, [sendExport, closeSave])
 
   // The code well's Copy button and Ctrl/Cmd+C. Straight to onExport, the same
   // path as the menu rows, so activation counting is unchanged. It does not go
@@ -1108,12 +1110,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // pull a keyboard user out of the well. Only a refused clipboard (false) skips
   // the "Copied" swap; the toast carries that error.
   const copyCode = useCallback(async () => {
-    const ok = await onExport?.(exportCode)
+    const ok = await sendExport(exportCode)
     if (ok === false) return
     clearTimeout(copiedTimer.current)
     setCopied(true)
     copiedTimer.current = setTimeout(() => setCopied(false), 1400)
-  }, [onExport, exportCode])
+  }, [sendExport, exportCode])
   const onCodeKeyDown = (e) => {
     // Ctrl/Cmd+C with nothing selected copies the whole snippet. With a text
     // selection the browser's own copy runs untouched.
