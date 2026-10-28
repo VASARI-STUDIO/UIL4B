@@ -166,11 +166,13 @@ test.describe('Palette Builder to Contrast Checker', () => {
 
   test('P4 an unknown role or an unknown source in the address is ignored', async ({ page }) => {
     watch(page, 'someone opening a hand-written address')
+    // The palette has five slots, so alt-2 names nothing in it (and "bogus" is not a role at all).
+    await seed(page)
     await go(page, '/create/contrast?fg=0B1220&bg=F7F7F4&from=palette&fgRole=bogus&bgRole=alt-2')
     await expect(fgField(page)).toHaveValue('#0B1220')
     await expect(backLink(page)).toBeVisible()
     await expect(root(page)).not.toHaveAttribute('data-fg-role', /.*/)
-    await expect(root(page)).toHaveAttribute('data-bg-role', 'alt-2')
+    await expect(root(page)).not.toHaveAttribute('data-bg-role', /.*/)
 
     await go(page, '/create/contrast?fg=0B1220&bg=F7F7F4&from=elsewhere&fgRole=deep')
     await expect(fgField(page)).toHaveValue('#0B1220')
@@ -180,7 +182,8 @@ test.describe('Palette Builder to Contrast Checker', () => {
 
   test('P4 a role goes once its side is changed', async ({ page }) => {
     watch(page, 'a designer editing the colour they were sent with')
-    await go(page, '/create/contrast?fg=0B1220&bg=F7F7F4&from=palette&fgRole=deep&bgRole=subtle')
+    await seed(page)
+    await go(page,'/create/contrast?fg=0B1220&bg=F7F7F4&from=palette&fgRole=deep&bgRole=subtle')
     await expect(root(page)).toHaveAttribute('data-fg-role', 'deep')
     await fgField(page).fill('#334155')
     await fgField(page).press('Enter')
@@ -565,4 +568,88 @@ test.describe('R1 the layout of the hand-off', () => {
       await ctx.close()
     })
   }
+})
+
+// FIX ROUND 2. The pair's own labels stay readable, a direct visit's heading does not
+// claim a palette, and a role in the address is believed only when the palette backs it.
+//
+//   Primary on Accent  #1E3A8A on #0F766E   "beside": a tag and week-strip shifts
+//   forged pair        #A78BFA on #E5E7EB   2.20:1, so both sides have a fix row;
+//                                           the colours are in no palette and no pole
+//   other palette      the five above with #7C3AED as Primary
+//
+// MUTATIONS (each turns the tests named red):
+//   remove the `[data-pair-part] ... [data-hit="off"]{opacity:1}` rule
+//     in palette-preview.css                                           -> "R2 the pair's own labels are not dimmed"
+//   the heading always reads "in your palette"                         -> "R2 a direct visit's heading"
+//   trustRole returns the role whatever the palette holds              -> "R2 a forged address" (both cases)
+//   trustRole skips the hasPalette test                                -> "R2 a forged address ... no palette"
+//   trustRole compares the slot name but not its hex                   -> "R2 a forged address ... another palette"
+//   trustRole drops every role (returns null)                          -> "R2 a forged address" control: Primary no longer named
+const FORGED = '/create/contrast?fg=A78BFA&bg=E5E7EB&from=palette&fgRole=primary&bgRole=secondary'
+
+test.describe('R2 hand-off fix round', () => {
+  test('R2 the pair\'s own labels are not dimmed in the beside view at 1440', async ({ browser }) => {
+    const { ctx, page } = await openAt(browser, { viewport: { width: 1440, height: 900 } }, BESIDE)
+    watch(page, 'a designer checking two brand colours on a wide screen')
+    const labels = { tag: page.locator('.ro-tag[data-pair-part] > span'), shift: page.locator('.ro-shift[data-pair-part] > span').first() }
+    await expect(labels.tag).toHaveText('Closing shift')
+    await expect(labels.shift).toBeVisible()
+    // POSITIVE CONTROL: UI parts is the lit test, so these body-sized labels are marked "off".
+    // Without this the opacity below would read 1 on a page where nothing was marked yet.
+    await expect(labels.tag).toHaveAttribute('data-hit', 'off')
+    await expect(labels.shift).toHaveAttribute('data-hit', 'off')
+    // The opacity fades over 150ms, so let a dim finish before reading it.
+    await page.waitForTimeout(500)
+    for (const [name, label] of Object.entries(labels)) {
+      expect(await label.evaluate((el) => getComputedStyle(el).opacity), `the ${name} label's opacity`).toBe('1')
+    }
+    await ctx.close()
+  })
+
+  test('R2 a direct visit\'s heading does not claim a palette', async ({ page }) => {
+    watch(page, 'someone opening the checker from the tools list')
+    await go(page, '/create/contrast?fg=AAAAAA&bg=FFFFFF')
+    await expect(page.getByRole('heading', { name: 'Pairs to check', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Pairs to check in your palette' })).toHaveCount(0)
+    // The lede still says the colours are generated.
+    await expect(page.locator('.cc-pairs .cc-lede')).toContainText('From the colours your base generates.')
+  })
+
+  test('R2 a forged address with no palette shows no role', async ({ page }) => {
+    watch(page, 'someone opening a pasted link with no palette of their own')
+    await go(page, FORGED)
+    await expect(fgField(page)).toHaveValue('#A78BFA')
+    await expect(page.locator('.cc-field-role')).toHaveCount(0)
+    await expect(root(page)).not.toHaveAttribute('data-fg-role', /.*/)
+    await expect(root(page)).not.toHaveAttribute('data-bg-role', /.*/)
+    const lines = page.locator('.cc-fixes-live .cc-fix-line')
+    await expect(lines.first()).toContainText(/^(Lighten|Darken) text to #/)
+    expect((await lines.allTextContents()).join(' '), 'no fix row names a role').not.toMatch(/Primary|Secondary/)
+  })
+
+  test('R2 a forged address with another palette shows no role, and a true role is still named', async ({ page }) => {
+    watch(page, 'someone opening a stale link after changing their palette')
+    const colours = ['#7C3AED', ...PALETTE.slice(1)]
+    await page.addInitScript((c) => {
+      localStorage.setItem('vs-current-design', JSON.stringify({
+        palette: { base: c[0], harmony: 'auto', extraColors: [], locked: [], activeIdx: 0, colors: c },
+      }))
+    }, colours)
+    // Primary is #7C3AED now, not #A78BFA, and a five-colour palette has no alt-4.
+    await go(page, '/create/contrast?fg=A78BFA&bg=E5E7EB&from=palette&fgRole=primary&bgRole=alt-4')
+    await expect(fgField(page)).toHaveValue('#A78BFA')
+    await expect(page.locator('.cc-field-role')).toHaveCount(0)
+    await expect(root(page)).not.toHaveAttribute('data-fg-role', /.*/)
+    await expect(root(page)).not.toHaveAttribute('data-bg-role', /.*/)
+    const lines = page.locator('.cc-fixes-live .cc-fix-line')
+    await expect(lines.first()).toContainText(/^(Lighten|Darken) text to #/)
+    expect((await lines.allTextContents()).join(' '), 'no fix row names a role').not.toMatch(/Primary|Alt/)
+
+    // CONTROL: the same palette's own Primary is believed, so the checks above are not just "roles never show".
+    await go(page, '/create/contrast?fg=7C3AED&bg=F7F7F4&from=palette&fgRole=primary&bgRole=subtle')
+    await expect(page.locator('label[for="cc-fg"] .cc-field-role')).toHaveText(/Primary/)
+    await expect(root(page)).toHaveAttribute('data-fg-role', 'primary')
+    await expect(root(page)).toHaveAttribute('data-bg-role', 'subtle')
+  })
 })

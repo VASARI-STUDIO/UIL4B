@@ -434,7 +434,7 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       // a heading, not an h2. The legend's own heading is the page's, so it is listed.
       expect(read.specimenTags, `${theme}: no preview row is a heading`).not.toContain('H2')
       expect(read.inViewHeadings, `${theme}: no heading inside the preview`).toBe(0)
-      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Pairs to check in your palette'])
+      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Pairs to check'])
 
       // The claim the founder retired, and the tagline beside it.
       expect(read.body, `${theme}`).not.toContain('Free while in beta')
