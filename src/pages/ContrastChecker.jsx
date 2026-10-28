@@ -430,9 +430,9 @@ export default function ContrastChecker({ onCopy }) {
             </ul>
             <div className="cc-note">
               <ul className="cc-explain">
-                <li><strong>AA</strong> is the usual target: 4.5:1 for normal text, 3:1 for large text, and 3:1 for icons, input borders and other UI parts.</li>
-                <li><strong>AAA</strong> is stricter: 7:1 for normal text and 4.5:1 for large text. UI parts have no AAA level.</li>
-                <li><strong>Large text</strong> is 24px or bigger, or 18.66px or bigger in bold.</li>
+                <li><strong>AA</strong> is the usual target: 4.5:1 for normal text, 3:1 for large text, icons and input borders.</li>
+                <li><strong>AAA</strong> is stricter: 7:1 for normal text and 4.5:1 for large text. UI components have no AAA level.</li>
+                <li><strong>Large text</strong> is 24px and up, or 18.66px and up if bold.</li>
               </ul>
               {/* A plain anchor: a router Link adds nothing to a new tab. The visible
                   words stay the accessible name, with the new-tab hint appended. */}
