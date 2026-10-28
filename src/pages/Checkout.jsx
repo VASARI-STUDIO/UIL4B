@@ -10,6 +10,7 @@ import { refreshPrices, usePrices, useProPrice, formatPrice } from '../hooks/use
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
+import { verifyErrorText } from '../utils/emailVerification'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -95,7 +96,7 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
     let instance = null
     // Only the instance on screen reports a failure: a request for a period
     // the buyer has already left fails quietly and leaves the new one alone.
-    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout') }
+    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout', e?.code) }
     const created = embedQueue.then(async () => {
       if (!live) return
       let stripe
@@ -157,10 +158,49 @@ function SignInToPay({ className = '', cadence, onClick }) {
   )
 }
 
+// Shown when the server refuses checkout because the account's email is not
+// verified (code 'email-unverified'). It reuses the verification link the
+// reminder bar and Settings send. "I've verified" re-reads the account and mints
+// a fresh ID token first, because the server judges the token's own copy of the
+// flag, then asks for the form again.
+function VerifyEmailPrompt({ email, message, onResend, onRetry }) {
+  const [state, setState] = useState('idle') // idle | sending | sent | failed
+  const [failure, setFailure] = useState('')
+  const resend = async () => {
+    if (state === 'sending') return
+    setState('sending')
+    try {
+      await onResend()
+      setState('sent')
+    } catch (e) {
+      setFailure(verifyErrorText(e))
+      setState('failed')
+    }
+  }
+  return (
+    <>
+      <span className="checkout-error-p">{message}</span>
+      <span className="checkout-error-p" role="status">
+        {state === 'sent'
+          ? <> Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
+          : <> We sent a link{email ? <> to {email}</> : null} when you signed up. Open it, or send a new one.</>}
+      </span>
+      {state === 'failed' && <span className="checkout-error-p" role="alert"> {failure}</span>}
+      <div>
+        <button type="button" className="btn btn-s checkout-error-retry" aria-disabled={state === 'sending' || undefined} onClick={resend}>
+          {state === 'sending' ? 'Sending…' : state === 'sent' ? 'Resend link' : 'Send link'}
+        </button>
+        {' '}
+        <button type="button" className="btn btn-s checkout-error-retry" onClick={onRetry}>I’ve verified, try again</button>
+      </div>
+    </>
+  )
+}
+
 export default function Checkout() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
   const { requireLogin } = useLoginPrompt()
 
@@ -170,6 +210,12 @@ export default function Checkout() {
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const [error, setError] = useState('')
+  // The server's reason code for the error, when it sent one.
+  const [errorCode, setErrorCode] = useState('')
+  const failCheckout = useCallback((message, code) => {
+    setError(message)
+    setErrorCode(code || '')
+  }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
   const [sessionPlan, setSessionPlan] = useState(planKey)
@@ -447,15 +493,32 @@ export default function Checkout() {
             </div>
           ) : error ? (
             <div className="checkout-error" role="alert" tabIndex={-1} ref={errorRef}>
-              <strong className="checkout-error-h">Checkout unavailable</strong>
-              <span className="checkout-error-p">{error}</span>
-              {error.includes('Server configuration') && (
-                <p className="checkout-error-note">
-                  This usually means the Firebase service account key isn't configured on the server.
-                  If you're the site owner, check Vercel environment variables.
-                </p>
+              {errorCode === 'email-unverified' ? (
+                <>
+                  <strong className="checkout-error-h">Verify your email to continue</strong>
+                  <VerifyEmailPrompt
+                    email={user.email}
+                    message={error}
+                    onResend={sendVerificationEmail}
+                    onRetry={async () => {
+                      await refreshEmailVerified().catch(() => {})
+                      setError('')
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <strong className="checkout-error-h">Checkout unavailable</strong>
+                  <span className="checkout-error-p">{error}</span>
+                  {error.includes('Server configuration') && (
+                    <p className="checkout-error-note">
+                      This usually means the Firebase service account key isn't configured on the server.
+                      If you're the site owner, check Vercel environment variables.
+                    </p>
+                  )}
+                  <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
+                </>
               )}
-              <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
             </div>
           ) : (
             <>
@@ -472,7 +535,7 @@ export default function Checkout() {
               {/* A new period destroys the form at once; the next is created
                   once the choice has rested, with a new session request. */}
               {sessionPlan === planKey && (
-                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={setError} onPaying={setPaying} />
+                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={failCheckout} onPaying={setPaying} />
               )}
               {/* From the moment a form is destroyed until the next one
                   mounts. Kept in the tree and emptied, so each new load is

@@ -81,7 +81,7 @@ function setup(t, { configured, prices = {}, lookup = {}, honoursActiveFilter = 
     return { client_secret: 'cs_secret_test' }
   })
 
-  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.com' }))
+  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.com', email_verified: true }))
   const db = adminDb()
   const userDoc = { get: async () => ({ exists: false, data: () => undefined }) }
   t.mock.method(db, 'collection', () => ({ doc: () => userDoc }))

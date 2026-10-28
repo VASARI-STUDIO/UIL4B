@@ -263,12 +263,26 @@ export default async function handler(req, res) {
 
   let uid
   let email
+  let emailVerified
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
     email = decoded.email || null
+    emailVerified = decoded.email_verified === true
   } catch (e) {
     return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
+  }
+
+  // Paying needs a verified email. Google sign-ins arrive verified; a password
+  // account is asked to verify first. Placed before the rate limit on purpose:
+  // this refusal does no Firestore or Stripe work, so there is nothing to
+  // protect, and counting it would let an unverified account spend the allowance
+  // it needs once it has verified. The client reads `code` to offer the link.
+  if (!emailVerified) {
+    return res.status(403).json({
+      code: 'email-unverified',
+      error: 'Verify your email address before subscribing. No payment session was created.',
+    })
   }
 
   // After the body checks above and the token check, so a malformed or unsigned
