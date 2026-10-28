@@ -62,10 +62,11 @@ export function pickOutlineColour(bg, fg, candidates = OUTLINE_CANDIDATES) {
 // The views a pair can fill, in the order the control lists them. `label` is
 // what the control always shows; `more` is the part a narrow screen drops
 // ("Landing page" shortens to "Landing"). `name` is the whole name. Interface is
-// the first view and Specimen the last; Article and Landing page join between
-// them in the next part of the rework.
+// the first view and Specimen the last.
 export const PAIR_VIEWS = [
   { id: 'interface', label: 'Interface', name: 'Interface' },
+  { id: 'article', label: 'Article', name: 'Article' },
+  { id: 'landing', label: 'Landing', more: ' page', name: 'Landing page' },
   { id: 'specimen', label: 'Specimen', name: 'Specimen' },
 ]
 
@@ -76,5 +77,7 @@ export const PAIR_VIEWS = [
 // text of its own, so a labelled button is measured as a UI part and as text.
 export const UI_PARTS = {
   interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-input, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill',
+  article: '.bs-sub, .bs-quote-rule, .bs-link-u, .bs-chart-axis, .bs-chart-line',
+  landing: '.tw-btn--fill, .tw-btn--outline, .tw-link-u, .tw-card, .tw-check, .tw-receipt, .tw-torn, .tw-badge',
   specimen: '.sp-btn, .sp-btn svg',
 }

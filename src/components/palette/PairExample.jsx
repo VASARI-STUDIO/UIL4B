@@ -1,5 +1,5 @@
-// A Contrast Checker pair painted on one of the pair views (Interface,
-// Specimen; src/components/contrast/views). The pair is two colours, not a
+// A Contrast Checker pair painted on one of the pair views (Interface, Article,
+// Landing page, Specimen; src/components/contrast/views). The pair is two colours, not a
 // palette, and the picture exists to prove the verdict: a view paints only
 // --pv-text and --pv-canvas, so a failing pair looks as bad here as it is.
 //
@@ -109,7 +109,7 @@ function markSizes(root, uiSelector, highlight, failing) {
 }
 
 /**
- * @param {{viewId: 'interface'|'specimen', fg: string, bg: string,
+ * @param {{viewId: 'interface'|'article'|'landing'|'specimen', fg: string, bg: string,
  *   highlight?: string|null, pinned?: string|null}} props fg and bg are
  *   #rrggbb; highlight is a size class to outline; pinned is the class a click
  *   or tap holds, whose first part is brought into view

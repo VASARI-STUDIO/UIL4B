@@ -1,0 +1,105 @@
+/* Tidewell (Landing.jsx): the Landing view of a Contrast Checker pair.
+ *
+ * Colour is only --pv-text and --pv-canvas, the pair itself: no tint, no
+ * opacity, no shadow, so hierarchy comes from size, weight and space. Every rule
+ * is scoped under .tw (specificity above the scene reset in palette-preview.css,
+ * which loads in either order). The face is the app's own (var(--font)).
+ *
+ * Layout is a container query on .pvs, the view's root, so it follows the width
+ * the frame gives it and not the window. Sections drop whole, never half a line:
+ *   800px and up   nav, hero, the receipt beside it, the price card
+ *   560 to 799     the receipt goes; hero and price card side by side
+ *   under 560      nav without links, hero, and the price card as a name and a price
+ * Each fits the fixed frame (520, 480 or 440px tall) with nothing clipped. */
+
+.tw{
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"nav" "hero" "card";
+  height:100%;min-height:0;padding:var(--s-3) var(--s-4);row-gap:var(--s-3);
+  font-size:15px;line-height:1.4;color:var(--pv-text)
+}
+
+/* ── Nav ──────────────────────────────────────────────────────────────────── */
+.tw .tw-nav{grid-area:nav;display:flex;align-items:center;gap:var(--s-5);min-width:0}
+.tw .tw-brand{font-size:20px;font-weight:700;line-height:1.2;letter-spacing:-.01em;margin-right:auto}
+.tw .tw-links{display:none;gap:var(--s-5);font-size:15px}
+.tw .tw-links li{white-space:nowrap}
+
+/* ── Buttons and the underlined link ──────────────────────────────────────── */
+.tw .tw-btn{display:flex;align-items:center;justify-content:center;height:40px;padding:0 var(--s-4);border:1px solid var(--pv-text);border-radius:8px}
+.tw .tw-btn>span{font-size:15px;line-height:1;white-space:nowrap}
+.tw .tw-btn--sm{height:32px;padding:0 var(--s-3)}
+.tw .tw-btn--sm>span{font-size:14px}
+.tw .tw-btn--fill{background:var(--pv-text);color:var(--pv-canvas)}
+.tw .tw-btn--fill>span{font-weight:600}
+.tw .tw-btn--outline>span{font-weight:500}
+.tw .tw-btn--block{width:100%}
+/* The link's underline is a 1px line drawn under it, so it is measured as a part. */
+.tw .tw-link{position:relative;display:inline-flex;align-items:center;height:24px;white-space:nowrap}
+.tw .tw-link>span{font-size:15px;font-weight:500;line-height:1}
+.tw .tw-link-u{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--pv-text)}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.tw .tw-hero{grid-area:hero;align-self:start;display:flex;flex-direction:column;min-width:0}
+.tw .tw-h{font-size:36px;font-weight:600;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
+.tw .tw-sub{max-width:44ch;margin-top:var(--s-2);font-size:18px;line-height:1.45;text-wrap:pretty}
+.tw .tw-cta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2) var(--s-4);margin-top:var(--s-3)}
+.tw .tw-help{margin-top:var(--s-2);font-size:12px;line-height:1.5}
+
+/* ── Receipt: 800px and up ────────────────────────────────────────────────── */
+.tw .tw-receipt{display:none;grid-area:receipt;flex-direction:column;border:1px solid var(--pv-text);border-bottom:0}
+.tw .tw-rbody{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-3) var(--s-3) var(--s-2)}
+.tw .tw-rstore{font-size:14px;font-weight:600;line-height:1.3}
+.tw .tw-rdate{font-size:12px;line-height:1.5}
+.tw .tw-rlines{display:flex;flex-direction:column;gap:2px;margin-top:var(--s-1)}
+.tw .tw-rrow{display:flex;justify-content:space-between;gap:var(--s-2);font-size:12px;line-height:1.5}
+.tw .tw-rtotal{margin-top:var(--s-1);font-size:14px;font-weight:600;line-height:1.3}
+.tw .tw-rgst{font-size:12px;line-height:1.5}
+.tw .tw-badge{display:inline-flex;align-items:center;gap:var(--s-1);align-self:flex-start;margin-top:var(--s-1);padding:2px var(--s-2) 2px 6px;border:1px solid var(--pv-text);border-radius:999px}
+.tw .tw-badge>span{font-size:12px;line-height:1.4}
+.tw .tw-check{flex:none}
+.tw .tw-torn{display:block;width:100%;height:6px;margin-bottom:-1px;overflow:visible}
+
+/* ── Price card ───────────────────────────────────────────────────────────── */
+.tw .tw-card{grid-area:card;display:flex;flex-direction:column;min-width:0;padding:var(--s-3) var(--s-4);border:1px solid var(--pv-text);border-radius:16px}
+.tw .tw-plan{font-size:16px;font-weight:600;line-height:1.3}
+.tw .tw-price{display:flex;align-items:baseline;gap:var(--s-2);margin-top:2px}
+.tw .tw-amt{font-size:40px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
+.tw .tw-per{font-size:14px;line-height:1.3}
+/* Under 560px the card is a name and a price: the features, button and fine print go. */
+.tw .tw-feats,.tw .tw-card>.tw-btn,.tw .tw-fine{display:none}
+.tw .tw-feat{display:flex;align-items:flex-start;gap:var(--s-2);font-size:15px;line-height:1.4}
+.tw .tw-feat .tw-check{margin-top:2px}
+.tw .tw-fine{font-size:12px;line-height:1.5}
+
+/* ── 560 to 799px: hero and the full price card side by side ──────────────── */
+@container pvs (min-width:560px){
+  .tw{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+    grid-template-areas:"nav nav" "hero card";
+    padding:var(--s-4) var(--s-5);column-gap:var(--s-5);row-gap:var(--s-4)}
+  .tw .tw-links{display:flex}
+  .tw .tw-hero,.tw .tw-card{align-self:center}
+  .tw .tw-h{font-size:40px}
+  .tw .tw-cta{margin-top:var(--s-4)}
+  .tw .tw-card{gap:0;padding:var(--s-4)}
+  .tw .tw-feats{display:flex;flex-direction:column;gap:var(--s-2);margin:var(--s-3) 0}
+  .tw .tw-card>.tw-btn,.tw .tw-fine{display:flex}
+  .tw .tw-fine{margin-top:var(--s-2)}
+}
+
+/* ── 800px and up: the receipt between hero and card ──────────────────────── */
+@container pvs (min-width:800px){
+  .tw{grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1fr);
+    grid-template-areas:"nav nav nav" "hero receipt card";
+    padding:var(--s-5) var(--s-6);column-gap:var(--s-6)}
+  .tw .tw-h{font-size:48px;line-height:1.08}
+  .tw .tw-receipt{display:flex;align-self:center}
+}
+
+/* ── Under 340px: the same page, tighter ──────────────────────────────────── */
+@container pvs (max-width:339px){
+  .tw{padding:var(--s-3)}
+  .tw .tw-h{font-size:32px}
+  .tw .tw-sub{font-size:16px}
+  .tw .tw-help{display:none}
+}
