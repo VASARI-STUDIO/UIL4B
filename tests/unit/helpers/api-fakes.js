@@ -16,8 +16,11 @@ export function fakeRes() {
  * An Admin Auth fake. `tokens` maps a bearer string to what verifyIdToken
  * resolves to, or to an Error to throw. Every call is recorded.
  */
-export function fakeAuth({ tokens = {}, users = {}, pageSize = 1000 } = {}) {
-  const calls = { verify: [], setClaims: [], revoke: [] }
+export function fakeAuth({ tokens = {}, users = {}, pageSize = 1000, failRevoke = [], failSetClaims = [] } = {}) {
+  // `order` is every revoke/claims write in the sequence it happened, as
+  // 'revoke:uid' and 'claims:uid'. `failRevoke` and `failSetClaims` list uids
+  // whose call throws (and is not recorded as having happened).
+  const calls = { verify: [], setClaims: [], revoke: [], order: [] }
   const accounts = new Map(Object.entries(users).map(([uid, u]) => [uid, { uid, customClaims: {}, ...u }]))
   return {
     calls,
@@ -35,10 +38,16 @@ export function fakeAuth({ tokens = {}, users = {}, pageSize = 1000 } = {}) {
       return { ...u, customClaims: { ...u.customClaims } }
     },
     async setCustomUserClaims(uid, claims) {
+      if (failSetClaims.includes(uid)) throw new Error(`setCustomUserClaims failed for ${uid}`)
       calls.setClaims.push({ uid, claims: { ...claims } })
+      calls.order.push(`claims:${uid}`)
       accounts.get(uid).customClaims = { ...claims }
     },
-    async revokeRefreshTokens(uid) { calls.revoke.push(uid) },
+    async revokeRefreshTokens(uid) {
+      if (failRevoke.includes(uid)) throw new Error(`revokeRefreshTokens failed for ${uid}`)
+      calls.revoke.push(uid)
+      calls.order.push(`revoke:${uid}`)
+    },
     // Paged by `pageSize`, so a sweep's pagination is exercised.
     async listUsers(_max, pageToken) {
       const all = [...accounts.values()]

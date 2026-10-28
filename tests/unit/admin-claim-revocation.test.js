@@ -8,6 +8,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
+import { read, stripComments } from './helpers/source-text.js'
 
 register('./helpers/api-stub-loader.mjs', import.meta.url)
 
@@ -139,4 +140,64 @@ test('--apply clears only the stale claims, keeps the other claims and revokes e
   assert.deepEqual(auth.calls.revoke.sort(), ['ex-admin', 'late', 'squatter'])
   assert.deepEqual(auth.accounts.get('ex-admin').customClaims, { beta: 'yes' })
   assert.equal(auth.accounts.get('boss').customClaims.admin, true, 'a current administrator keeps the claim')
+})
+
+/* ── Revoke first, clear second (fix round 2, item 1) ─────────────────────── */
+
+test('the stale claim is cleared AFTER the sessions are revoked, never before', async () => {
+  const auth = setup({
+    tokens: { t: token('ex-admin', { admin: true }) },
+    users: { 'ex-admin': { customClaims: { admin: true } } },
+  })
+  await verifyAdmin(req('t'), fakeRes())
+  assert.deepEqual(auth.calls.order, ['revoke:ex-admin', 'claims:ex-admin'])
+})
+
+test('if the revoke fails the claim stays, so the next call finds it and tries again', async () => {
+  process.env.ADMIN_EMAILS = ADMIN
+  const auth = fakeAuth({
+    tokens: { t: token('ex-admin', { admin: true }) },
+    users: { 'ex-admin': { customClaims: { admin: true } } },
+    failRevoke: ['ex-admin'],
+  })
+  install({ auth, db: fakeDb() })
+  const res = fakeRes()
+  await verifyAdmin(req('t'), res)
+  assert.equal(res.body.claimUpdated, false)
+  assert.equal(auth.accounts.get('ex-admin').customClaims.admin, true, 'the claim must still be there to be found again')
+  assert.deepEqual(auth.calls.setClaims, [])
+})
+
+test('the sweep revokes before it clears the claim', async () => {
+  const auth = sweepAccounts()
+  await sweepAdminClaims(auth, { apply: true })
+  for (const uid of ['ex-admin', 'late', 'squatter']) {
+    assert.ok(auth.calls.order.indexOf(`revoke:${uid}`) < auth.calls.order.indexOf(`claims:${uid}`), `${uid}: revoke must come first`)
+  }
+})
+
+test('one account failing does not stop the sweep, and the failure is reported with the claim left in place', async () => {
+  process.env.ADMIN_EMAILS = ADMIN
+  const auth = fakeAuth({
+    users: {
+      a: { email: 'a@example.com', emailVerified: true, customClaims: { admin: true } },
+      b: { email: 'b@example.com', emailVerified: true, customClaims: { admin: true } },
+      c: { email: 'c@example.com', emailVerified: true, customClaims: { admin: true } },
+    },
+    failRevoke: ['b'],
+    failSetClaims: ['c'],
+  })
+  const out = await sweepAdminClaims(auth, { apply: true })
+  assert.deepEqual(out.cleared, ['a'])
+  assert.deepEqual(out.failed.map((f) => f.uid), ['b', 'c'])
+  assert.match(out.failed[0].error, /revokeRefreshTokens failed/)
+  assert.equal(auth.accounts.get('b').customClaims.admin, true, 'revoke failed first, so the claim is still there for a retry')
+})
+
+test('the sweep prints the Firebase project id before it acts, and exits non-zero on failures', () => {
+  const src = stripComments(read('scripts/sweep-admin-claims.mjs'))
+  const projectAt = src.indexOf('Firebase project:')
+  assert.ok(projectAt > 0, 'the project id must be printed')
+  assert.ok(projectAt < src.indexOf('await sweepAdminClaims(adminAuth()'), 'before the sweep starts')
+  assert.match(src, /process\.exitCode = 1/)
 })

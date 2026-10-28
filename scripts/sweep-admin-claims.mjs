@@ -21,6 +21,7 @@
 // administrator.
 
 import { pathToFileURL } from 'node:url'
+import { getApp } from 'firebase-admin/app'
 import { adminAuth, credentialProblem } from '../api/_lib/firebase-admin.js'
 import { adminEmails, isAdminEmail } from '../api/_lib/adminEmails.js'
 
@@ -28,15 +29,21 @@ import { adminEmails, isAdminEmail } from '../api/_lib/adminEmails.js'
 export const isCurrentAdmin = (user) => !!user.email && user.emailVerified === true && isAdminEmail(user.email)
 
 /**
- * Walk every account. Returns `{ scanned, stale, cleared }` where `stale` lists
- * the accounts holding the claim without being on the allowlist, and `cleared`
- * those actually changed (always empty unless `apply`).
+ * Walk every account. Returns `{ scanned, stale, cleared, failed }` where
+ * `stale` lists the accounts holding the claim without being on the allowlist,
+ * `cleared` those actually changed (always empty unless `apply`), and `failed`
+ * the `{ uid, error }` of each account whose change threw.
+ *
+ * Each account is its own try/catch, so one failure does not abort the run. A
+ * failed account keeps its claim unless only the second step failed, and a
+ * second run picks it up again.
  *
  * `auth` is the Admin Auth instance; `log` receives one line per stale account.
  */
 export async function sweepAdminClaims(auth, { apply = false, isAdmin = isCurrentAdmin, log = () => {} } = {}) {
   const stale = []
   const cleared = []
+  const failed = []
   let scanned = 0
   let pageToken
   do {
@@ -47,14 +54,20 @@ export async function sweepAdminClaims(auth, { apply = false, isAdmin = isCurren
       stale.push({ uid: user.uid, email: user.email || '' })
       log(`${apply ? 'clearing' : 'would clear'}: ${user.uid} ${user.email || '(no email)'}`)
       if (!apply) continue
-      const { admin: _removed, ...kept } = user.customClaims
-      await auth.setCustomUserClaims(user.uid, kept)
-      await auth.revokeRefreshTokens(user.uid)
-      cleared.push(user.uid)
+      try {
+        // Revoke FIRST: a failure between the two calls then leaves the claim
+        // in place, so the account is still found as stale on the next run.
+        await auth.revokeRefreshTokens(user.uid)
+        const { admin: _removed, ...kept } = user.customClaims
+        await auth.setCustomUserClaims(user.uid, kept)
+        cleared.push(user.uid)
+      } catch (err) {
+        failed.push({ uid: user.uid, error: err?.message || String(err) })
+      }
     }
     pageToken = page.pageToken
   } while (pageToken)
-  return { scanned, stale, cleared }
+  return { scanned, stale, cleared, failed }
 }
 
 async function main() {
@@ -68,9 +81,18 @@ async function main() {
     console.error('Firebase credentials are not usable:', problem)
     process.exit(1)
   }
+  // Which Firebase project the key points at, printed before anything is
+  // changed, so a wrong key (staging, an old project) is seen first. The id is
+  // not a secret.
+  console.log(`Firebase project: ${getApp().options.projectId || '(unknown)'}`)
   console.log(apply ? 'APPLY: claims will be cleared and tokens revoked.' : 'DRY RUN: nothing will be changed. Pass --apply to make the changes.')
-  const { scanned, stale, cleared } = await sweepAdminClaims(adminAuth(), { apply, log: (line) => console.log(line) })
-  console.log(`${scanned} accounts scanned, ${stale.length} stale admin claim(s) found, ${cleared.length} cleared.`)
+  const { scanned, stale, cleared, failed } = await sweepAdminClaims(adminAuth(), { apply, log: (line) => console.log(line) })
+  console.log(`${scanned} accounts scanned, ${stale.length} stale admin claim(s) found, ${cleared.length} cleared, ${failed.length} failed.`)
+  if (failed.length > 0) {
+    for (const f of failed) console.error(`failed: ${f.uid} ${f.error}`)
+    console.error('Run the sweep again to retry the failed accounts.')
+    process.exitCode = 1
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

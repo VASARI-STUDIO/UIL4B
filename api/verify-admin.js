@@ -111,10 +111,13 @@ export default async function handler(req, res) {
     // and acting on it would strip every administrator's claim at once.
     if (!isAdmin && decoded.admin === true && adminEmails().length > 0) {
       try {
+        // Revoke FIRST. If the process dies between the two calls, the claim is
+        // still on the account, so the next call here finds it and retries; the
+        // other order could leave the claim cleared with the old tokens live.
+        await adminAuth().revokeRefreshTokens(decoded.uid)
         // setCustomUserClaims replaces the whole object, so keep the others.
         const { admin: _removed, ...kept } = (await adminAuth().getUser(decoded.uid)).customClaims || {}
         await adminAuth().setCustomUserClaims(decoded.uid, kept)
-        await adminAuth().revokeRefreshTokens(decoded.uid)
         claimUpdated = true
       } catch (err) {
         console.error('verify-admin: could not clear the stale admin claim', { uid: decoded.uid, error: err?.message })
