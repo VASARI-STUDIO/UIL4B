@@ -2,7 +2,7 @@
 // on every view, the ratio strip on narrow screens, and two-colour painting.
 //
 // Interface is the first view; Specimen is the last. Article and Landing page
-// arrive in part 2, so every test that needs them is test.fixme with a note.
+// sit between them, and every test below loops over all four.
 //
 //   N1  the first view is Interface, with no click
 //   N3  the page is exactly as tall for every view and every verdict (1440, 390)
@@ -29,9 +29,10 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
-const BUILT = [{ id: 'interface', name: 'Interface' }, { id: 'specimen', name: 'Specimen' }]
-// Part 2 adds { id: 'article', name: 'Article' } and { id: 'landing', name: 'Landing page' } here.
-const PART_TWO = [{ id: 'article', name: 'Article' }, { id: 'landing', name: 'Landing page' }]
+const BUILT = [
+  { id: 'interface', name: 'Interface' }, { id: 'article', name: 'Article' },
+  { id: 'landing', name: 'Landing page' }, { id: 'specimen', name: 'Specimen' },
+]
 const VERDICT_FG = ['#000000', '#767676', '#949494', '#AAAAAA']
 
 async function open(browser, { width, height, phone = false, query = '' }) {
@@ -63,10 +64,9 @@ test.describe('Contrast Checker · the first view', () => {
     const group = views(page)
     await expect(group.getByRole('button', { name: 'Interface', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.cc-pv[data-scene="interface"]')).toHaveCount(1)
-    // The first option is Interface and the last is Specimen; part 2 puts Article and Landing page between.
+    // Interface first, Specimen last, Article and Landing page between them.
     const names = await group.getByRole('button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')))
-    expect(names[0]).toBe('Interface')
-    expect(names.at(-1)).toBe('Specimen')
+    expect(names).toEqual(['Interface', 'Article', 'Landing page', 'Specimen'])
   })
 })
 
@@ -91,11 +91,6 @@ test.describe('Contrast Checker · the fixed frame keeps the page still', () => 
       await ctx.close()
     })
   }
-
-  test.fixme('N3 (part 2): the same holds with Article and Landing page in the loop', async () => {
-    // Part 2: add PART_TWO to BUILT above and delete this test.
-    expect(PART_TWO).toHaveLength(2)
-  })
 
   for (const [width, want] of [[1440, 520], [1024, 520], [768, 480], [390, 440]]) {
     test(`the frame is ${want}px tall at ${width}, for every view`, async ({ browser }) => {
@@ -163,11 +158,6 @@ test.describe('Contrast Checker · two colours, no entrance, no internal labels'
     }
   })
 
-  test.fixme('N5 (part 2): the same for Article and Landing page', async () => {
-    // Part 2: add PART_TWO to BUILT and delete this test.
-    expect(PART_TWO).toHaveLength(2)
-  })
-
   test('N6: no view prints an internal slot label', async ({ page }) => {
     watch(page, 'a designer reading every word of every view')
     await go(page, '/create/contrast')
@@ -183,7 +173,7 @@ test.describe('Contrast Checker · two colours, no entrance, no internal labels'
     watch(page, 'someone flipping between views quickly')
     await go(page, '/create/contrast?fg=777777&bg=FFFFFF')
     await pick(page, BUILT[0])
-    for (const view of [BUILT[1], BUILT[0], BUILT[1]]) {
+    for (const view of [...BUILT.slice(1), BUILT[0]]) { // every view is switched to, the first one last
       await pick(page, view)
       // The 150ms outline fade on a mark is a transition and stays; a keyframe
       // animation (an entrance) is what must not run.
@@ -311,6 +301,51 @@ test.describe('Contrast Checker · Interface on a phone', () => {
       expect(read.footPast, 'the buttons end past the frame').toBeLessThanOrEqual(0)
       expect(read.emailCut, 'the email address is cut').toBeLessThanOrEqual(0)
       expect(read.emailPast, 'the email address runs past its box').toBeLessThanOrEqual(0)
+      await ctx.close()
+    })
+  }
+})
+
+// R2 for the views built in part 2: the whole view sits in the frame on a phone, no
+// line of text is cut by its own box, and the headline and the buttons are whole.
+// MUTATION: add 40px of padding-bottom to `.bs` in Article.css, or `.tw` in Landing.css.
+test.describe('Contrast Checker · Article and Landing page on a phone', () => {
+  for (const [width, height] of [[390, 844], [375, 667], [360, 740], [320, 568]]) {
+    test(`R2: Article and Landing page sit whole inside the frame at ${width}`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width, height, phone: true })
+      watch(page, `a phone ${width}px wide`)
+      await page.evaluate(() => document.fonts.ready)
+      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: a touch context').toBe(true)
+      for (const view of BUILT.filter((v) => v.id === 'article' || v.id === 'landing')) {
+        const pv = await pick(page, view)
+        await page.evaluate(() => document.fonts.ready)
+        const read = await pv.evaluate((root) => {
+          const box = root.getBoundingClientRect()
+          const shown = [...root.querySelectorAll('*')].filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+          const named = (el) => String(el.className.baseVal ?? el.className).slice(0, 28) || el.tagName
+          return {
+            over: root.scrollHeight - root.clientHeight,
+            wide: root.scrollWidth - root.clientWidth,
+            past: shown.filter((el) => { const r = el.getBoundingClientRect(); return r.height > 0 && (r.bottom > box.bottom + 1 || r.right > box.right + 1) }).map(named),
+            cut: shown.filter((el) => !(el instanceof SVGElement) && el.children.length === 0 && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1).map(named),
+            // Two sections laid over each other: the direct children of the view's root.
+            laid: (() => {
+              const kids = [...root.firstElementChild.children].filter((k) => k.getClientRects().length)
+              const hit = []
+              for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
+                const a = kids[i].getBoundingClientRect(); const b = kids[j].getBoundingClientRect()
+                if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) hit.push(`${named(kids[i])}/${named(kids[j])}`)
+              }
+              return hit
+            })(),
+          }
+        })
+        expect(read.over, `${view.name}: ${read.over}px taller than its frame`).toBeLessThanOrEqual(0)
+        expect(read.wide, `${view.name}: scrolls sideways`).toBeLessThanOrEqual(0)
+        expect(read.past, `${view.name}: parts past the frame edge`).toEqual([])
+        expect(read.cut, `${view.name}: text cut by its own box`).toEqual([])
+        expect(read.laid, `${view.name}: sections laid over each other`).toEqual([])
+      }
       await ctx.close()
     })
   }

@@ -417,6 +417,9 @@
 }
 @media (max-width: 359px) {
   .cc .cc-pair-grid { grid-template-columns: 1fr; }
+  /* Four view pills sit at their narrowest here; 8px sides leave room for a
+     font that sets a little wider than the one they were measured in. */
+  .cc .cc-views .tl-pill { padding-inline: 8px; }
 }
 
 :where(html[data-reduced-motion="true"]) .cc .cc-pair { transition: none !important; }
