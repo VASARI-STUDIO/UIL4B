@@ -64,8 +64,9 @@
 }
 .plb .plb-collapsed + .plb-vision { margin-top: 8px; }
 @keyframes plb-vision-in { from { opacity: 0; } to { opacity: 1; } }
+html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  .plb .plb-vision { animation: none; }
+  html:not([data-reduced-motion="false"]) .plb .plb-vision { animation: none; }
 }
 .plb .plb-vision-ico { flex: none; }
 .plb .plb-vision-ico--sm { display: none; }
