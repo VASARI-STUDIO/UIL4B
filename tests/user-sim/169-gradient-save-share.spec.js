@@ -31,7 +31,7 @@
 // MUTATIONS (each is made in a THROWAWAY copy of src, never in the lane; the
 // test named must go red):
 //   GradientGenerator.jsx doSave: replace `setPendingSave(name)` with
-//     `saveProject(name); closeSave('item'); toast?.('Saved to your account'); return`
+//     `saveProject(name); closeSave('item'); toast?.('Project saved'); return`
 //       -> "a visitor who signs in at the gate gets the gradient saved once, with no reload"
 //   PaletteBuilder.jsx doSave: replace `setPendingSave(name)` with
 //     `saveProject(name); setSaveOpen(false); toast?.('Project saved'); return`
@@ -179,7 +179,7 @@ test.describe('saving a gradient to the account', () => {
     await menuOf(page).getByLabel('Project name').fill('Harbour dusk')
     await menuOf(page).getByRole('button', { name: 'Save', exact: true }).click()
 
-    await expect(toastOf(page)).toContainText('Saved to your account')
+    await expect(toastOf(page)).toContainText('Project saved')
     await expect(menuOf(page)).toHaveCount(0)
     await expect(saveButton(page)).toBeFocused()
     const saved = await storedProjects(page)
@@ -196,7 +196,7 @@ test.describe('saving a gradient to the account', () => {
     await saveButton(page).click()
     await menuOf(page).getByLabel('Project name').fill('Enter saves')
     await page.keyboard.press('Enter')
-    await expect(toastOf(page)).toContainText('Saved to your account')
+    await expect(toastOf(page)).toContainText('Project saved')
     expect((await storedProjects(page)).map((p) => p.name)).toEqual(['Enter saves'])
   })
 
@@ -231,7 +231,7 @@ test.describe('saving a gradient to the account', () => {
     expect(before).toHaveLength(1)
     await menuOf(page).locator('.plb-scrolllist .plb-menu-item').first().click()
 
-    await expect(toastOf(page)).toContainText('Saved to your account')
+    await expect(toastOf(page)).toContainText('Updated: Seeded Project 1')
     await expect(menuOf(page)).toHaveCount(0)
     const after = await storedProjects(page)
     expect(after, 'overwriting must not add a project').toHaveLength(1)
@@ -249,7 +249,7 @@ test.describe('saving a gradient to the account', () => {
     await menuOf(page).getByRole('button', { name: 'Save', exact: true }).click()
     await logInAtTheGate(page)
 
-    await expect(toastOf(page), 'the save that was waiting on the account never ran').toContainText('Saved to your account')
+    await expect(toastOf(page), 'the save that was waiting on the account never ran').toContainText('Project saved')
     await expect(page.getByTestId('gradient-save-refusal')).toHaveCount(0)
     await expect(menuOf(page)).toHaveCount(0)
     // The toast is up: the effect has run. Let one more frame land so a second,
@@ -476,7 +476,7 @@ test.describe('share and export rows on the gradient', () => {
     await saveButton(page).click()
     const row = menuOf(page).getByRole('button', { name: /Download SVG/ })
     // Signed out, the row says up front that a file needs a free account.
-    await expect(row).toContainText('Free account')
+    await expect(row).toContainText('Needs a free account')
     await row.click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
     await expect(page.getByRole('dialog', { name: /create your free account/i })).toContainText('download this gradient as an SVG')
@@ -600,6 +600,9 @@ test.describe('gradient gallery · Your submissions', () => {
 
     const ask = page.getByRole('group', { name: 'Gradients from this browser' })
     await expect(ask).toContainText('1 gradient from this browser is waiting. Keep it with this account?')
+    // The question has its own heading; "Your submissions" is for what the account holds.
+    await expect(page.getByRole('heading', { name: 'Left in this browser' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Your submissions' })).toHaveCount(0)
     // Asked, not moved: the account holds nothing yet and the browser still has it.
     await expect(submissionsOf(page).locator('.grg-queue-item')).toHaveCount(0)
     await expect(toastOf(page)).toHaveCount(0)
@@ -613,6 +616,23 @@ test.describe('gradient gallery · Your submissions', () => {
     await expect(section).toContainText('Pending review')
     await expect(ask).toHaveCount(0)
     await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), LEGACY_KEY)).toBeNull()
+  })
+
+  // MUTATION: useGradientSubmissionMigration.js drop `|| inFlight.has(user.uid)` AND the
+  // button's `disabled={busy}`: the second press starts a second run.
+  test('a double press on Keep keeps the gradient once and says so once', async ({ page }) => {
+    watch(page, 'member double-pressing Keep')
+    await seedLegacy(page)
+    await signIn(page, { plan: 'free' })
+    await go(page, '/discover/gradients')
+    const ask = page.getByRole('group', { name: 'Gradients from this browser' })
+    await ask.getByRole('button', { name: 'Keep' }).dblclick()
+    await expect(toastOf(page)).toContainText('Kept 1 gradient from this browser with your account')
+    await expect(submissionsOf(page).locator('.grg-queue-item')).toHaveCount(1)
+    // A second run would end in "already with your account" and replace the toast.
+    await page.waitForTimeout(600) // negative check: nothing further may happen, so there is nothing to wait for
+    await expect(toastOf(page)).not.toContainText('already')
+    await expect(submissionsOf(page).locator('.grg-queue-item')).toHaveCount(1)
   })
 
   test('"Not mine" moves nothing and puts the question away', async ({ page }) => {
@@ -941,4 +961,270 @@ test.describe('Save or share menu geometry on the gradient', () => {
       }
     })
   }
+})
+
+/* ── 8 · Fix round 2 ─────────────────────────────────────────────────────── */
+
+// A free account sees the lock note and the Pro prompt on a library hand-off;
+// a Pro one never does, so these run as a free member and as a signed-out visitor.
+const LOCK_NOTE = '.grd-note'
+const STOP_SWATCH = '.grd-stop-swatch'
+const PRO_PROMPT = 'Editing gallery gradients is Pro'
+const PALETTE_URL = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
+const paletteMenuOf = (page) => page.getByRole('dialog', { name: 'Save, share and export this palette' })
+
+test.describe('copied links open editable, library hand-offs stay locked', () => {
+  // MUTATION: GradientGenerator.jsx `setFromLibrary(!incoming.link)` -> `setFromLibrary(true)`
+  //   -> "opening a copied link (src=link) gets an editable gradient" (the lock note comes back)
+  for (const who of ['a free member', 'a signed-out visitor']) {
+    test(`${who} opening a copied link (src=link) gets an editable gradient with no lock note`, async ({ page }) => {
+      watch(page, `${who} opening a gradient link someone copied`)
+      if (who === 'a free member') await signIn(page, { plan: 'free' })
+      await go(page, `${HANDOFF}&src=link`)
+      await expect(page.locator('.grd-canvas')).toBeVisible()
+      await expect(page.locator(LOCK_NOTE)).toHaveCount(0)
+      // Behaviour, not just the note: touching a stop does not raise the Pro prompt.
+      await page.locator(STOP_SWATCH).first().click()
+      await expect(page.getByText(PRO_PROMPT)).toHaveCount(0)
+      // The hand-off keys are tidied out of the address bar, src included.
+      await expect.poll(() => new URL(page.url()).search).toBe('')
+    })
+
+    test(`${who} opening a library hand-off (no src) still gets the lock note and the Pro prompt`, async ({ page }) => {
+      watch(page, `${who} opening a gradient from the library`)
+      if (who === 'a free member') await signIn(page, { plan: 'free' })
+      await go(page, HANDOFF)
+      await expect(page.locator(LOCK_NOTE)).toContainText('Gallery gradient')
+      // A locked swatch is aria-disabled (Playwright will not click it) but still answers a press with the Pro prompt.
+      await page.locator(STOP_SWATCH).first().click({ force: true })
+      await expect(page.getByText(PRO_PROMPT)).toBeVisible()
+    })
+  }
+
+  test('a src that is not "link" is a library hand-off and stays locked', async ({ page }) => {
+    watch(page, 'visitor opening a hand-off with a src that is not link')
+    await signIn(page, { plan: 'free' })
+    await go(page, `${HANDOFF}&src=gallery`)
+    await expect(page.locator(LOCK_NOTE)).toContainText('Gallery gradient')
+  })
+
+  // MUTATION: GradientGenerator.jsx copyLink `src: fromLibrary ? undefined : 'link'` -> `src: undefined`
+  //   -> "a link copied from the person's own gradient carries src=link and opens editable"
+  test('a link copied from the person’s own gradient carries src=link and opens editable', async ({ page }) => {
+    watch(page, 'member copying a link to a gradient they made')
+    await grantClipboard(page)
+    await signIn(page, { plan: 'free' })
+    await go(page, HANDOFF)
+    await expect(page.locator(LOCK_NOTE)).toHaveCount(1)
+    // Random starts an editable gradient of their own and lifts the lock.
+    await page.getByRole('button', { name: /^Random/ }).first().click()
+    await expect(page.locator(LOCK_NOTE)).toHaveCount(0)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: 'Copy link to this gradient' }).click()
+    await expect(toastOf(page)).toContainText('Link copied')
+    const link = await readClipboard(page)
+    expect(new URL(link).searchParams.get('src')).toBe('link')
+
+    // Opening that link, as someone else would, is editable.
+    await go(page, link)
+    await expect(page.locator(LOCK_NOTE)).toHaveCount(0)
+    await page.locator(STOP_SWATCH).first().click()
+    await expect(page.getByText(PRO_PROMPT)).toHaveCount(0)
+  })
+
+  test('a link copied while the gradient is still the library’s carries no src', async ({ page }) => {
+    watch(page, 'member copying a link to an unchanged library gradient')
+    await grantClipboard(page)
+    await signIn(page, { plan: 'free' })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: 'Copy link to this gradient' }).click()
+    await expect(toastOf(page)).toContainText('Link copied')
+    expect(await readClipboard(page)).not.toContain('src=')
+  })
+})
+
+test.describe('the legacy-gradients prompt does not move the editor', () => {
+  // MUTATION: GradientGenerator.jsx: move the `.grd-keep` block back above `{editLocked && ...}`
+  //   inside <ToolMain>. The canvas then drops by the prompt's height.
+  for (const screen of [{ w: 1440, h: 900 }, { w: 390, h: 844 }]) {
+    test(`at ${screen.w}px the canvas and code well stay put when the prompt mounts after the account answers`, async ({ page }) => {
+      watch(page, `member with browser-held gradients at ${screen.w}px`)
+      await page.setViewportSize({ width: screen.w, height: screen.h })
+      await seedLegacy(page)
+      await signIn(page, { plan: 'free', authDelay: 2500 })
+      await go(page, HANDOFF)
+
+      const top = (sel) => page.locator(sel).first().evaluate((el) => Math.round((el.getBoundingClientRect().top + scrollY) * 10) / 10)
+      const SPOTS = ['.grd-canvas', '.grd-code', '.grd-stage']
+      const before = {}
+      for (const s of SPOTS) before[s] = await top(s)
+      // POSITIVE CONTROL: this really is the window before the account is known.
+      await expect(page.locator('.grd-keep')).toHaveCount(0)
+
+      await expect(page.locator('.grd-keep')).toBeVisible({ timeout: 10000 })
+      const after = {}
+      for (const s of SPOTS) after[s] = await top(s)
+      expect(after, 'something above the prompt moved when it mounted').toEqual(before)
+
+      // It sits after the editor and before the presets, as its own strip.
+      const keep = await page.locator('.grd-keep').boundingBox()
+      const code = await page.locator('.grd-code').boundingBox()
+      const presets = await page.locator('.grd-presets').boundingBox()
+      expect(keep.y, 'below the code well').toBeGreaterThan(code.y + code.height - 1)
+      expect(keep.y + keep.height, 'above the presets').toBeLessThanOrEqual(presets.y + 1)
+      await expect(page.locator('.grd-keep').getByRole('group', { name: 'Gradients from this browser' })).toBeVisible()
+    })
+  }
+})
+
+test.describe('Save waits for the account', () => {
+  const tools = [
+    { tool: 'gradient', url: HANDOFF, dialog: menuOf },
+    { tool: 'palette', url: PALETTE_URL, dialog: paletteMenuOf },
+  ]
+  for (const t of tools) {
+    // MUTATION: SaveShareMenu.jsx remove `disabled={busy}` and the `if (busy) return`
+    test(`on the ${t.tool}, Save is disabled and busy until the signed-in account answers, and a press before then does nothing`, async ({ page }) => {
+      watch(page, `member pressing Save on the ${t.tool} before the account has answered`)
+      await signIn(page, { plan: 'free', authDelay: 2500 })
+      await go(page, t.url)
+      await saveButton(page).click()
+      const menu = t.dialog(page)
+      const save = menu.getByRole('button', { name: 'Save', exact: true })
+      await expect(save).toBeVisible()
+      await expect(save, 'still checking the account').toBeDisabled()
+      await expect(save).toHaveAttribute('aria-busy', 'true')
+
+      // Enter in the field is the other way to press Save; it must not reach the
+      // sign-in prompt a signed-in person would never have met.
+      await menu.getByLabel('Project name').fill('Too early')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('#ui-login-title')).toHaveCount(0)
+      expect(await storedProjects(page)).toHaveLength(0)
+
+      // The account answers: Save is live and saves without any sign-in.
+      await expect(save).toBeEnabled({ timeout: 10000 })
+      await expect(save).not.toHaveAttribute('aria-busy', /.*/)
+      await save.click()
+      await expect(toastOf(page)).toContainText('Project saved')
+      await expect(page.locator('#ui-login-title')).toHaveCount(0)
+      expect((await storedProjects(page)).map((p) => p.name)).toEqual(['Too early'])
+    })
+  }
+
+  test('a visitor who is really signed out is not held: Save is enabled and goes to the sign-in', async ({ page }) => {
+    watch(page, 'signed-out visitor pressing Save')
+    await signIn(page, { plan: 'free', lateSignIn: true, returning: false })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    const save = menuOf(page).getByRole('button', { name: 'Save', exact: true })
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+  })
+})
+
+test.describe('a repeat Save with an empty name', () => {
+  // MUTATION: SaveShareMenu.jsx remove the `if (nameError) { inputRef...focus(); setPressed(...) }` block
+  //   -> focus stays on the Save button, and the alert node is the same one
+  for (const t of [
+    { tool: 'gradient', url: HANDOFF, dialog: menuOf },
+    { tool: 'palette', url: PALETTE_URL, dialog: paletteMenuOf },
+  ]) {
+    test(`on the ${t.tool}, pressing Save again returns focus to the field and announces the refusal again`, async ({ page }) => {
+      watch(page, `member pressing Save twice with no name on the ${t.tool}`)
+      await signIn(page, { plan: 'free' })
+      await go(page, t.url)
+      await saveButton(page).click()
+      const menu = t.dialog(page)
+      const field = menu.getByLabel('Project name')
+      const save = menu.getByRole('button', { name: 'Save', exact: true })
+      await field.fill('')
+      await save.click()
+      const alert = menu.getByRole('alert')
+      await expect(alert).toHaveText('Name the project to save it.')
+      await expect(field, 'the first refusal sends focus to the field').toBeFocused()
+
+      // Keep a handle on this very alert: a screen reader reads a NEW one.
+      const first = await alert.elementHandle()
+      // The person moves on to the button again; the same refusal is already showing.
+      await save.click()
+      await expect(field, 'the repeat press sends focus back to the field').toBeFocused()
+      await expect(alert).toHaveText('Name the project to save it.')
+      expect(await first.evaluate((n) => n.isConnected), 'the old alert was replaced by a new one').toBe(false)
+      expect(await storedProjects(page)).toHaveLength(0)
+
+      // And again by keyboard: Enter in the field remounts it too.
+      const second = await alert.elementHandle()
+      await page.keyboard.press('Enter')
+      await expect.poll(() => second.evaluate((n) => n.isConnected)).toBe(false)
+      await expect(alert).toHaveCount(1)
+    })
+  }
+})
+
+test.describe('the save sheet on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  // MUTATION: save-share-menu.css remove both `box-shadow: 0 -8px 40px ...` lines in the sheet rules
+  test('the bottom sheet casts its shadow upward', async ({ page }) => {
+    watch(page, 'phone designer opening the Save sheet')
+    await signIn(page, { plan: 'free' })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await expect(menuOf(page)).toBeVisible()
+    await menuOf(page).evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+    const shadow = await menuOf(page).evaluate((el) => getComputedStyle(el).boxShadow)
+    // rgba(0, 0, 0, 0.28) 0px -8px 40px 0px: a negative y offset, so it falls above the sheet.
+    expect(shadow).toMatch(/0px -8px 40px/)
+  })
+})
+
+test.describe('the sign-up stash', () => {
+  const stash = (page) => page.evaluate(() => JSON.parse(sessionStorage.getItem('vs-pending-save') || 'null'))
+  for (const t of [
+    { tool: 'gradient', url: HANDOFF, dialog: menuOf },
+    { tool: 'palette', url: PALETTE_URL, dialog: paletteMenuOf },
+  ]) {
+    // MUTATION: drop `clearPendingSave()` from the waiting-save effect (or from the cancelled-sign-in line).
+    test(`on the ${t.tool}, the typed name is held while the sign-in is open and gone once it is saved or cancelled`, async ({ page }) => {
+      watch(page, `visitor signing in part-way through saving a ${t.tool}`)
+      await signIn(page, { plan: 'free', lateSignIn: true, returning: false })
+      await go(page, t.url)
+      await saveButton(page).click()
+      await t.dialog(page).getByLabel('Project name').fill('Held name')
+      await t.dialog(page).getByRole('button', { name: 'Save', exact: true }).click()
+      await expect(page.locator('#ui-login-title')).toBeVisible()
+      expect(await stash(page), 'the name is stashed before the account is asked for').toMatchObject({ tool: t.tool, name: 'Held name' })
+
+      // Cancelled: nothing may be left to reopen a menu the person walked away from.
+      await page.keyboard.press('Escape')
+      await expect(page.locator('#ui-login-title')).toHaveCount(0)
+      expect(await stash(page), 'a cancelled sign-in drops it').toBeNull()
+
+      // Signed in at the gate: the save runs, and the stash goes with it.
+      await t.dialog(page).getByRole('button', { name: 'Save', exact: true }).click()
+      await logInAtTheGate(page)
+      await expect(toastOf(page)).toContainText('Project saved')
+      expect(await stash(page), 'a save that ran leaves nothing to reopen').toBeNull()
+    })
+  }
+})
+
+test.describe('the sign-up stash when the save is refused', () => {
+  // MUTATION: drop `clearPendingSave()` from the waiting-save effect in GradientGenerator.jsx. A refused
+  // save keeps the menu open, so closeSave never runs and only the effect can drop the stash.
+  test('a save refused at the free cap still leaves nothing stashed', async ({ page }) => {
+    watch(page, 'visitor at the free cap signing in part-way through saving a gradient')
+    await signIn(page, { plan: 'free', projects: 3, lateSignIn: true, returning: false })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByLabel('Project name').fill('One too many')
+    await menuOf(page).getByRole('button', { name: 'Save', exact: true }).click()
+    await logInAtTheGate(page)
+    await expect(page.getByTestId('gradient-save-refusal')).toContainText('Free plan saves up to 3 projects')
+    await expect(menuOf(page), 'the refusal keeps the menu open').toBeVisible()
+    expect(await page.evaluate(() => sessionStorage.getItem('vs-pending-save'))).toBeNull()
+  })
 })

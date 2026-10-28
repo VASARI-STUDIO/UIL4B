@@ -118,7 +118,15 @@ test('the sign-in resolving no longer clears the stash; a save, a cancel or a cl
     assert.match(doSave, /if \(!saveOpenRef\.current\) \{ clearPendingSave\(\)/, `${file}: a closed menu clears it`)
   }
   const gradient = read('src/pages/GradientGenerator.jsx')
-  assert.match(gradient.slice(gradient.indexOf('const closeSave = useCallback')), /clearPendingSave\(\)/)
+  // Inside closeSave itself, not anywhere after it in the file.
+  const closeSave = gradient.slice(gradient.indexOf('const closeSave = useCallback'), gradient.indexOf('saveTriggerRef.current?.focus()'))
+  assert.match(closeSave, /clearPendingSave\(\)/, 'closing the gradient menu drops the stash')
+  // The save that runs once the account is known clears it before it saves (browser: spec 169, "the sign-up stash").
+  for (const file of ['src/pages/GradientGenerator.jsx', 'src/pages/PaletteBuilder.jsx']) {
+    const src = read(file)
+    const effect = src.slice(src.indexOf('if (pendingSave == null || !canSaveProjects) return'))
+    assert.match(effect.slice(0, effect.indexOf('saveProject(pendingSave)')), /clearPendingSave\(\)/, `${file}: the waiting save clears the stash as it runs`)
+  }
   const palette = read('src/pages/PaletteBuilder.jsx')
   const closers = palette.slice(palette.indexOf('const closeAllMenus = useCallback'), palette.indexOf('The rail-fit measurement'))
   assert.equal((closers.match(/setPendingSave\(null\); clearPendingSave\(\)/g) || []).length, 2, 'both palette closers drop a waiting save')
