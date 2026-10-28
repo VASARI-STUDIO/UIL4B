@@ -9,11 +9,13 @@ import { roleAt } from './contrastHandoff.js'
 
 export const JOBS = ['text', 'fill-label', 'beside']
 
-// What each job is called over its group of pair cards.
+// What each job is called over its group of pair cards. The note says what the
+// pair is shown as, never a ratio: a pair in this group can still clear 4.5:1, and a
+// "3:1" note would then contradict its own card's mark.
 export const JOB_GROUPS = {
   text: { title: 'Text on background' },
   'fill-label': { title: 'Labels on fills' },
-  beside: { title: 'Colour beside colour', note: 'UI parts only, 3:1' },
+  beside: { title: 'Colour beside colour', note: 'Shown side by side as UI parts' },
 }
 
 const NEUTRAL_ROLES = new Set(['canvas', 'white', 'near-black'])

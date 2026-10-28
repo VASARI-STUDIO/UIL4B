@@ -7,7 +7,7 @@ import {
 } from '../components/tool/ToolLayout'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
-import { parseHandoff, roleAt } from '../utils/contrastHandoff'
+import { parseHandoff, roleAt, WHITE, NEAR_BLACK } from '../utils/contrastHandoff'
 import { groupPairs, pairJob, roleName } from '../utils/contrastStrip'
 import { derivePaletteRoles } from '../utils/palettePreviewRoles'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
@@ -354,8 +354,22 @@ export default function ContrastChecker({ onCopy }) {
 
   // A side keeps the role it arrived with only while it still holds the colour
   // that came with it; once it is changed it is no longer that palette colour.
-  const fgRole = fg === seed.fg ? handoff.fgRole : null
-  const bgRole = bg === seed.bg ? handoff.bgRole : null
+  // An address is only a claim, so a role is believed only when this palette backs it:
+  // a palette of the person's own, and the slot's colour is the one in the address
+  // (white, canvas and near black are checked against their fixed hex). A pasted or
+  // stale link then names nothing, and the fallbacks below take over.
+  const trustRole = (hex, role) => {
+    if (!role || !hasPalette) return null
+    const same = (a, b) => String(a).toUpperCase() === String(b).toUpperCase()
+    if (role === 'white' || role === 'canvas') return same(hex, WHITE) ? role : null
+    if (role === 'near-black') return same(hex, NEAR_BLACK) ? role : null
+    const slot = kit.find((c) => c.role === role)
+    return slot && same(slot.hex, hex) ? role : null
+  }
+  const seedFgRole = trustRole(seed.fg, handoff.fgRole)
+  const seedBgRole = trustRole(seed.bg, handoff.bgRole)
+  const fgRole = fg === seed.fg ? seedFgRole : null
+  const bgRole = bg === seed.bg ? seedBgRole : null
   // What a fix row calls a side: the role it arrived with while it is unchanged,
   // otherwise the strip colour with exactly its hex (palette only), otherwise the
   // side's own word. A direct visit with no palette keeps "text" and "background".
@@ -392,7 +406,7 @@ export default function ContrastChecker({ onCopy }) {
   // a live row never wraps further than the reserve does.
   const reserveNames = [
     ...(hasPalette ? swatches.map((s) => s.name) : []),
-    ...[handoff.fgRole, handoff.bgRole].map((r) => (r ? roleName(r, harmony) : null)),
+    ...[seedFgRole, seedBgRole].map((r) => (r ? roleName(r, harmony) : null)),
   ].filter(Boolean)
   const reserveWord = (side) => [side, ...reserveNames].reduce((a, w) => (w.length > a.length ? w : a))
   // Opened from the Palette Builder: the toolbar's way back names the palette
@@ -575,7 +589,7 @@ export default function ContrastChecker({ onCopy }) {
           </div>
 
           <section className="cc-pairs" aria-labelledby="cc-pairs-title">
-            <h2 id="cc-pairs-title" className="tl-sec-label">Pairs to check in your palette</h2>
+            <h2 id="cc-pairs-title" className="tl-sec-label">{hasPalette ? 'Pairs to check in your palette' : 'Pairs to check'}</h2>
             <p className="cc-lede">
               {hasPalette ? 'Pick one to check it.' : 'From the colours your base generates. Build a palette to check your own.'}
             </p>

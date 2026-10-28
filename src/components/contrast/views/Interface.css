@@ -129,6 +129,10 @@
 /* A shift is the pair next to the page: a pair-coloured block with a label in it. */
 .pvs[data-ctx="on"] .ro .ro-shift{border-color:var(--pv-border-strong)}
 .pvs[data-ctx="on"] .ro .ro-shift[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}
+/* Shifts sit 4px apart, so a 2px outline outside each one would meet its neighbour's
+   and read as one dashed rule. The mark goes inside the block instead, 1px clear of
+   the block's own border, so every shift keeps its own edge. */
+.pvs[data-ctx="on"] .ro .ro-shift:is([data-hit="on"],[data-fail="on"]){outline-offset:-4px}
 /* The tag beside the meta line (two brand colours only). Its row is the meta
    line's own height, and the meta line gives way with an ellipsis before the tag
    or the frame's edge does. Under 340px the meta line is gone, and a row of its
