@@ -266,3 +266,20 @@ test('the Overview shows Opened and Used per tool', () => {
   assert.match(src, /data-col="used"/)
   assert.doesNotMatch(src, /title="Top Tools"/, 'the old single-number tools list is back')
 })
+
+// ── T7: the daily field cap ─────────────────────────────────────────────────
+
+test('a device names at most 8 distinct icons a day; the rest still count in the totals and the pack', async () => {
+  // firestore.rules caps a day document at 500 fields and each distinct icon is
+  // one field, so the writer bounds how many one device can add.
+  const a = await loadAnalytics()
+  for (let i = 0; i < 12; i++) a.trackIconCopy('lucide', `icon-${i}`)
+  a.trackIconCopy('lucide', 'icon-0')
+  flush()
+  const day = store.get(DAY)
+  const named = Object.keys(day).filter(f => f.startsWith('icon__'))
+  assert.equal(named.length, 8, 'only the first eight distinct icons get a field of their own')
+  assert.equal(day['icon__lucide:icon-0'], 2, 'an icon already named keeps counting')
+  assert.equal(day['icon-copies'], 13, 'the headline total counts every copy')
+  assert.equal(day['ipack__lucide'], 13, 'the pack tally counts every copy')
+})

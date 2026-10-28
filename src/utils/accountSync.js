@@ -166,6 +166,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-first-win-started': { scope: 'device', why: 'Time-to-value timer for local analytics' },
   'vs-analytics': { scope: 'device', why: 'In-browser usage counters' },
   'vs-sessions': { scope: 'device', why: 'In-browser session history' },
+  'vs-icon-names': { scope: 'device', why: 'Icons this device already named in today\'s shared analytics' },
   'vs-design-analytics': { scope: 'device', why: 'In-browser design counters' },
   'vs-feedback': { scope: 'device', why: 'Local copies of feedback sent from this browser' },
   'vs-admin-unlocked': { scope: 'device', why: 'Admin screen unlock on this browser' },

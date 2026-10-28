@@ -523,6 +523,25 @@ export function trackToolOpen(toolId) {
   recordAggregateOpen(toolId)
 }
 
+// A day document holds at most 500 fields (firestore.rules), and every distinct
+// icon copied adds one. A device therefore names at most this many distinct
+// icons per day; a copy past that still counts in `icon-copies` and in its pack
+// tally, which stays bounded by the number of packs. The list is kept in
+// localStorage, per day, so a reload does not reset it. It bounds honest
+// traffic; a hostile client ignores it, which the rules cannot close.
+const ICON_NAMES_PER_DEVICE_DAY = 8
+const ICON_NAMES_KEY = 'vs-icon-names'
+
+function mayNameIcon(iconKey) {
+  const day = todayStr()
+  const stored = load(ICON_NAMES_KEY, {})
+  const names = stored.day === day && Array.isArray(stored.names) ? stored.names : []
+  if (names.includes(iconKey)) return true
+  if (names.length >= ICON_NAMES_PER_DEVICE_DAY) return false
+  save(ICON_NAMES_KEY, { day, names: [...names, iconKey] })
+  return true
+}
+
 // Icon copies — most-copied icons and packs. Locally in the design-analytics
 // blob; cross-user via per-icon / per-pack fields on the daily aggregate doc.
 export function trackIconCopy(pack, name) {
@@ -535,8 +554,8 @@ export function trackIconCopy(pack, name) {
   if (pack) data.packCopies[pack] = (data.packCopies[pack] || 0) + 1
   saveDesignAnalytics(data)
   bumpAggregate('icon-copies', 1)
-  bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
-  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, pack), 1)
+  if (mayNameIcon(iconKey)) bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
+  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, String(pack).slice(0, 40)), 1)
 }
 
 export function getDesignAnalytics() {

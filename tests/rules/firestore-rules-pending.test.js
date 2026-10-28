@@ -258,7 +258,7 @@ test('a signed-out client still cannot create a prompt', async () => {
 // buildQueueRecord (utils/communityQueue.js) plus the three real payloads from
 // Community.jsx, GradientGenerator.jsx and PaletteBuilder.jsx.
 const PAYLOADS = {
-  gradient: { type: 'linear', angle: 90, stops: [{ color: '#0F172A', pos: 0 }, { color: '#38BDF8', pos: 100 }] },
+  gradient: { type: 'Linear', angle: 90, stops: [{ color: '#0F172A', position: 0 }, { color: '#38BDF8', position: 100 }] },
   design: { author: 'Alice', category: 'Branding', url: 'https://example.com/a', c1: '#0F172A', c2: '#38BDF8' },
   palette: { colors: ['#0F172A', '#38BDF8', '#F8FAFC'], category: 'Branding', url: 'https://example.com/p', author: 'alice' },
 }
