@@ -450,6 +450,8 @@ function ShuffleBody({ filters, setFilters }) {
           selection falls back to Plain, goes here. */}
       <FilterGroup label="Type" options={[ANY, ...GRAD_TYPES]} value={filters.types} coarse={coarse} onChange={(types) => setFilters((f) => ({ ...f, types }))} />
       <FilterGroup label="Stops" options={COUNT_OPTIONS} value={filters.counts} coarse={coarse} onChange={(counts) => setFilters((f) => ({ ...f, counts }))} />
+      {/* The hint belongs to the pill rows above it, not to Keep the angle. */}
+      <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
       <button
         type="button"
         className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
@@ -459,7 +461,6 @@ function ShuffleBody({ filters, setFilters }) {
         <ToolIcon name={filters.keepAngle ? 'lock-simple' : 'lock-simple-open'} size={13} />
         <span>Keep the angle</span>
       </button>
-      <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
       <div className="sr-only" role="status">{summary}</div>
     </div>
   )
@@ -610,7 +611,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [picked, setPicked] = useState([])
   const [selMode, setSelMode] = useState(false)
   const anchorRef = useRef(0)
-  const coarse = useMediaQuery('(pointer: coarse)')
+  const stopListRef = useRef(null) // the stop list's scrolling window (see syncStopScroll)
+  const coarse =useMediaQuery('(pointer: coarse)')
   const multi = picked.length >= 2
   // The stops a colour, lock or delete acts on: the selection, or the active stop.
   const targets = useMemo(() => (multi ? picked : [activeStop]), [multi, picked, activeStop])
@@ -992,7 +994,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setChipPicks(next)
     say(next.length >= 2 ? `Shuffle from ${next.length} picked colours` : next.length === 1 ? '1 colour picked. Pick another to shuffle from picks.' : 'Picks cleared')
   }, [livePicks, say])
-  const clearPicks = useCallback(() => { setChipPicks([]); say('Picks cleared') }, [say])
+  // The Clear picks button leaves the row once pressed, so focus goes on to the
+  // first colour rather than falling to the page.
+  const clearPicks = useCallback(() => {
+    setChipPicks([])
+    say('Picks cleared')
+    requestAnimationFrame(() => document.querySelector('.grd-avail .grd-chip')?.focus({ preventScroll: true }))
+  }, [say])
   const canRandomFromPalette = pool.length >= 2
   const shuffleHint = usingPicks ? `Shuffle from ${livePicks.length} picked colours` : SHUFFLE_PALETTE_NEEDS
   // Pressing Shuffle from palette with nothing to draw from says why in a toast
@@ -1237,7 +1245,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       const run = rangeOf(stops, anchorRef.current, i)
       setActiveStop(i)
       setPicked(run.length >= 2 ? run : [])
-      if (run.length >= 2) say(`${run.length} stops selected`)
+      if (run.length >= 2) {
+        say(`${run.length} stops selected`)
+        // The window shows three rows: bring the run's first row into it, so a
+        // Shift-click from the rail does not select rows the list never shows.
+        const list = stopListRef.current
+        const row = list?.querySelector(`.grd-stop-select[data-stop="${Math.min(...run)}"]`)?.closest('.grd-stop')
+        if (list && row) {
+          const l = list.getBoundingClientRect()
+          const r = row.getBoundingClientRect()
+          if (r.top < l.top) list.scrollTop += r.top - l.top
+          else if (r.bottom > l.bottom) list.scrollTop += r.bottom - l.bottom
+        }
+      }
       return
     }
     if (e?.ctrlKey || e?.metaKey || selMode) {
@@ -1274,6 +1294,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The Select button in the Stops head: the same mode a long press starts,
   // for a finger that has not found the long press. The active stop is the first
   // one in it.
+  // Clear and Done leave the head row once pressed: focus goes to the active
+  // stop's row (the first row when there is none), not to the page.
+  const endSelection = useCallback(() => {
+    clearSelection()
+    requestAnimationFrame(() => {
+      const list = stopListRef.current
+      const to = list?.querySelector(`.grd-stop-select[data-stop="${activeStop}"]`) || list?.querySelector('.grd-stop-select')
+      to?.focus({ preventScroll: true })
+    })
+  }, [clearSelection, activeStop])
   const startSelecting = useCallback(() => {
     setSelMode(true)
     setPicked([])
@@ -1331,7 +1361,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // (and the page) is the same height at 2 stops and at 12. `stopScroll` says
   // which edges have more rows past them (the CSS fades and rules that edge) and
   // `first`, the top visible row, for the "1–3 of 12" count in the header.
-  const stopListRef = useRef(null)
   // After a keyboard remove, focus lands on the active row's ×, or on its label
   // button when the × has just gone inert at two stops. A pointer remove leaves
   // focus alone.
@@ -1714,7 +1743,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 {multi || selMode ? (
                   <>
                     <span className="grd-sel-count">{targets.length} selected</span>
-                    <button type="button" className="grd-sel-clear" onClick={() => clearSelection()}>{selMode ? 'Done' : 'Clear'}</button>
+                    <button type="button" className="grd-sel-clear" onClick={endSelection}>{selMode ? 'Done' : 'Clear'}</button>
                   </>
                 ) : (
                   <>

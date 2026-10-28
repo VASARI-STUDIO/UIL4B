@@ -200,6 +200,10 @@
   cursor: pointer;
 }
 .grd .grd-sel-clear:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-sel-clear:active { background: var(--tl-wash-on); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-sel-clear:hover { background: var(--tl-wash-2); }
+}
 .grd .grd-stop {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) 26px 26px;
@@ -791,7 +795,7 @@
 .grd-shuf-body .grd-shuf-keep.is-on { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
 .grd-shuf-body .grd-shuf-keep:focus-visible,
 .grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-.grd-shuf-body .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+.grd-shuf-body .grd-shuf-hint { margin: -6px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
 @media (pointer: coarse) {
   .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
   .grd-shuf-body .grd-shuf-keep { min-height: 44px; }
