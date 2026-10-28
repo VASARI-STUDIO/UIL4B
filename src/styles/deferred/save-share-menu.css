@@ -35,7 +35,35 @@
   :is(.plb, .grd) .plb-menu-row input { font-size: 16px; }
 }
 
+/* The gradient's menu is a bottom sheet below 768 (the palette's stays at 640).
+   Same sheet as above, from a wider cut-off. */
+@media (max-width: 767px) {
+  .grd .plb-float--sheet768 { top: auto; right: 0; bottom: 0; left: 0; }
+  .grd .plb-float--sheet768 > .plb-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: 80dvh;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .grd .plb-float--sheet768 .plb-menu-row input { font-size: 16px; }
+}
+
+/* A popover under its button has no sheet to drag and nothing to slide up from:
+   the handle and the slide-up belong to the sheet state only. */
+@media (min-width: 641px) {
+  :is(.plb, .grd) .plb-float:not(.plb-float--sheet768) > .plb-savemenu { animation: none; }
+  :is(.plb, .grd) .plb-float:not(.plb-float--sheet768) > .plb-savemenu::before { display: none; }
+}
+@media (min-width: 768px) {
+  .grd .plb-float--sheet768 > .plb-savemenu { animation: none; }
+  .grd .plb-float--sheet768 > .plb-savemenu::before { display: none; }
+}
+
 @media (pointer: coarse) {
+  .plb-savemenu .plb-menu-row .btn,
+  .plb-savemenu .plb-menu-row input { min-height: 44px; }
   :is(.plb, .grd) .plb-float .plb-menu-item,
   :is(.plb, .grd) .plb-float .plb-varrow-main,
   :is(.plb, .grd) .plb-float button.plb-varrow { min-height: 44px; }
@@ -52,6 +80,19 @@
   font-size: var(--fs-caption, 12px);
   line-height: 1.5;
   color: var(--err-strong);
+}
+/* A line of context under the field, and a short hint at the end of a row. */
+.plb-savemenu .plb-menu-note {
+  margin: var(--s-2) 2px 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--t2);
+}
+.plb-savemenu .plb-menu-hint {
+  float: right;
+  padding-left: var(--s-3);
+  font-size: var(--fs-caption);
+  color: var(--t2);
 }
 /* A row that cannot work for this gradient: it keeps its place and says why in
    text, so the reason is never a tooltip alone. */

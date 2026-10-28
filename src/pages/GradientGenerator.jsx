@@ -30,6 +30,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
+import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
 // tool-shell.css is the shared tool shell the other tool pages load too.
@@ -480,7 +481,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
   const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
   // asked whether to keep them with the account (never moved unasked).
@@ -587,7 +588,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [saveNameError, setSaveNameError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [pendingSave, setPendingSave] = useState(null)
+  const [saveNote, setSaveNote] = useState('')
   const saveTriggerRef = useRef(null)
+  // doSave waits on the sign-in popup; these say what became of the tool meanwhile.
+  const mountedRef = useRef(true)
+  const saveOpenRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+  useEffect(() => { saveOpenRef.current = saveOpen }, [saveOpen])
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
   // The code well's Copy button swaps to "Copied" for a beat after a press.
   const [copied, setCopied] = useState(false)
@@ -676,7 +686,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       selectOnly(0)
       // A library gradient is drawn in sRGB there, so it opens in sRGB here —
       // the preview matches the card it came from until the person changes it.
-      setSpace('srgb')
+      setSpace(incoming.space || 'srgb')
       setFromLibrary(true)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
@@ -685,7 +695,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
     }
     const next = new URLSearchParams(searchParams)
-    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn'].forEach(k => next.delete(k))
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1055,6 +1065,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   const closeSave = useCallback((reason) => {
     setSaveOpen(false)
+    setSaveNote('')
+    setSaveNameError('')
     setPendingSave(null)
     // Keyboard and the row actions hand focus back to the button; a press outside
     // is already somewhere else.
@@ -1065,8 +1077,23 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSaveName(defaultSaveName)
     setSaveNameError('')
     setSaveError('')
+    setSaveNote('')
     setSaveOpen(true)
   }
+  // Back from onboarding after signing up to save: reopen the menu with the name
+  // typed before, and let the person press Save. Decided once per mount, when
+  // the account is first known.
+  const restoreCheckedRef = useRef(false)
+  useEffect(() => {
+    if (authLoading || restoreCheckedRef.current) return
+    restoreCheckedRef.current = true
+    if (!user) return
+    const stashed = takePendingSave('gradient')
+    if (stashed == null) return
+    setSaveName(stashed || defaultSaveName)
+    setSaveNote('You’re signed in. Press Save to finish.')
+    setSaveOpen(true)
+  }, [authLoading, user, defaultSaveName])
 
   // Copy CSS and Copy Tailwind class go through onExport so the activation count
   // is unchanged; it writes the clipboard and toasts.
@@ -1101,7 +1128,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const copyLink = async () => {
     closeSave('item')
     // No name yet (it comes with the generated name), so `gn` is left off.
-    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops })}`
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space })}`
     try {
       await navigator.clipboard.writeText(url)
       toast?.('Link copied')
@@ -1129,8 +1156,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // about the name.
   const doSave = async () => {
     if (!canSaveProjects) {
+      // A new account is sent to onboarding, which unmounts this page; the stash
+      // lets the page reopen the menu with the name when it comes back.
+      stashPendingSave('gradient', saveName.trim())
       const signedIn = await requireLogin('save this gradient to your account', { free: true, signup: true })
-      if (!signedIn) return
+      if (!mountedRef.current) return
+      clearPendingSave()
+      if (!signedIn) { setPendingSave(null); return }
+      // Closed while the sign-in was open: nothing to finish.
+      if (!saveOpenRef.current) return
     }
     const name = saveName.trim()
     if (!name) { setSaveNameError('Name the project to save it.'); return }
@@ -1534,6 +1568,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
           onSave={doSave}
           nameError={saveNameError}
+          note={saveNote}
+          sheetBelow={768}
           saveError={saveError}
           refusalTestId="gradient-save-refusal"
           projects={projects}
@@ -1558,6 +1594,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 onClick={downloadSvg}
                 disabled={type === 'Conic'}
                 reason="SVG can't draw a conic gradient"
+                hint={user ? undefined : 'Free account'}
               >
                 Download SVG
               </SaveShareItem>

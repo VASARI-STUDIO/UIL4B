@@ -30,12 +30,13 @@ export function gradientCss(type, angle, stops) {
 //
 // `gn` (the name) is left off when there is no name. The style keys are written
 // only when the gradient has them, so a plain gradient's link is the short one:
+//   gi  interpolation space (oklch or srgb); a link without it opens in sRGB
 //   st  style family      sp  its parameters
 //   sd  seed              fx  finishes
 // Callers do not pass them yet; the decoder reads none of them yet either.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  const optional = [['gn', g.name], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx]]
+  const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx]]
     .filter(([, v]) => v != null && v !== '')
     .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
     .join('')
@@ -59,5 +60,7 @@ export function decodeGradientParams(params) {
   const type = { linear: 'Linear', radial: 'Radial', conic: 'Conic' }[(params.get('gt') || 'linear').toLowerCase()] || 'Linear'
   const angle = Math.min(360, Math.max(0, parseInt(params.get('ga'), 10) || 0))
   const name = (params.get('gn') || '').slice(0, 60) || null
-  return { type, angle, stops, name }
+  const gi = (params.get('gi') || '').toLowerCase()
+  const space = gi === 'oklch' || gi === 'srgb' ? gi : null
+  return { type, angle, stops, name, space }
 }

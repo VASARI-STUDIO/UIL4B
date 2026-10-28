@@ -15,6 +15,9 @@ import '../../styles/deferred/save-share-menu.css'
 //   onNameChange   (value) => void
 //   onSave         called on Save and on Enter in the field
 //   nameError      a plain refusal held under the field (an empty name)
+//   note           a plain line under the field (a save that is waiting for Save)
+//   sheetBelow     640 (default) or 768: below this width the menu is a bottom
+//                  sheet; from it up, a popover under the button
 //   saveError      the free cap's refusal, shown with its link to the plans page
 //   refusalTestId  data-testid for that refusal
 //   projects       the saved projects; the newest five are offered to overwrite
@@ -33,7 +36,7 @@ import '../../styles/deferred/save-share-menu.css'
 //                  replaces a prefilled name
 export default function SaveShareMenu({
   label,
-  name, onNameChange, onSave, nameError, saveError, refusalTestId,
+  name, onNameChange, onSave, nameError, note, sheetBelow = 640, saveError, refusalTestId,
   projects = [], onOverwrite,
   onClose,
   share, exports, after,
@@ -53,6 +56,11 @@ export default function SaveShareMenu({
       inputRef.current?.select()
     }
   }, [focusOnOpen])
+
+  // A refused name sends the person back to the field to fix it.
+  useEffect(() => {
+    if (nameError) inputRef.current?.focus({ preventScroll: true })
+  }, [nameError])
 
   useEffect(() => {
     if (!dismiss) return undefined
@@ -78,7 +86,7 @@ export default function SaveShareMenu({
   }, [dismiss, triggerRef])
 
   return (
-    <div className="plb-menuwrap plb-float">
+    <div className={`plb-menuwrap plb-float${sheetBelow === 768 ? ' plb-float--sheet768' : ''}`}>
       <div className="plb-menu plb-savemenu" role="dialog" aria-label={label} tabIndex={-1} ref={dialogRef} data-lenis-prevent>
         <div className="plb-float-head">
           <div className="plb-menu-title">Save to a project</div>
@@ -101,6 +109,7 @@ export default function SaveShareMenu({
           />
           <button type="button" className="btn btn-s btn-accent" onClick={() => onSave?.()}>Save</button>
         </div>
+        {note && !nameError && <p className="plb-menu-note" role="status">{note}</p>}
         {nameError && <p className="plb-menu-error" id="ssm-name-error" role="alert">{nameError}</p>}
         {saveError && <SaveRefusal message={saveError} testId={refusalTestId} />}
         {projects.length > 0 && (
@@ -129,7 +138,7 @@ export default function SaveShareMenu({
 // One row of the menu. `disabled` is aria-disabled, not the attribute, so the
 // row stays reachable by keyboard and its reason is read with it: the reason is
 // shown as text under the row, never a tooltip alone.
-export function SaveShareItem({ icon, onClick, disabled = false, reason, children }) {
+export function SaveShareItem({ icon, onClick, disabled = false, reason, hint, children }) {
   const reasonId = reason ? `ssm-reason-${String(children).replace(/\W+/g, '-').toLowerCase()}` : undefined
   return (
     <>
@@ -141,6 +150,7 @@ export function SaveShareItem({ icon, onClick, disabled = false, reason, childre
         onClick={disabled ? undefined : onClick}
       >
         {icon === 'download' ? <DownloadIcon /> : <CopyIcon />} {children}
+        {hint && <span className="plb-menu-hint">{hint}</span>}
       </button>
       {disabled && reason && <p className="plb-menu-reason" id={reasonId}>{reason}</p>}
     </>
