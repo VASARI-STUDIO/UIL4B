@@ -448,25 +448,27 @@ export default function ContrastChecker({ onCopy }) {
           <ToolSection label="Nearest passing colours" className="cc-fixes-sec">
             {/* The section is always as tall as its fullest state (two fixes under a
                 two-line lede): a hidden copy of that state shares the cell with
-                what is showing, so the page does not move when the pair changes. */}
+                what is showing, so the page does not move when the pair changes.
+                Its words are CSS generated content, so they are in no one's
+                page text: not a screen reader's, a find, or a test's. */}
             <div className="cc-fixes-body">
               <div className="cc-fixes-ghost" aria-hidden="true">
-                <p className="cc-lede">To reach AA (4.5:1) for body text, change one colour:</p>
+                <p className="cc-lede" data-t="To reach AA (4.5:1) for body text, change one colour:" />
                 <div className="cc-fixes">
                   <div className="cc-fixg">
-                    <span className="cc-fix-chip" />
+                    <span className="cc-fixg-chip" />
                     <span className="cc-fix-desc">
-                      <span className="cc-fix-line">Darken background to <strong>#FFFFFF</strong></span>
-                      <span className="cc-fix-ratio">4.50:1</span>
+                      <span className="cc-fixg-line" data-t="Darken background to #FFFFFF" />
+                      <span className="cc-fixg-ratio" data-t="4.50:1" />
                     </span>
                     <span className="cc-fixg-use" />
                     <span className="cc-fixg-copy" />
                   </div>
                   <div className="cc-fixg">
-                    <span className="cc-fix-chip" />
+                    <span className="cc-fixg-chip" />
                     <span className="cc-fix-desc">
-                      <span className="cc-fix-line">Darken background to <strong>#FFFFFF</strong></span>
-                      <span className="cc-fix-ratio">4.50:1</span>
+                      <span className="cc-fixg-line" data-t="Darken background to #FFFFFF" />
+                      <span className="cc-fixg-ratio" data-t="4.50:1" />
                     </span>
                     <span className="cc-fixg-use" />
                     <span className="cc-fixg-copy" />

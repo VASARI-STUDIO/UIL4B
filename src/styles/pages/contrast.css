@@ -294,6 +294,8 @@
 .cc .cc-fixes-live { grid-area: 1 / 1; align-self: start; display: grid; gap: 10px; min-width: 0; }
 .cc .cc-fixg-use { width: 52px; height: 34px; }
 .cc .cc-fixg-copy { width: 34px; height: 34px; }
+.cc .cc-fixg-chip { width: 40px; height: 40px; }
+.cc .cc-fixes-ghost [data-t]::before { content: attr(data-t); }
 .cc .cc-fix,
 .cc .cc-fixg {
   display: grid;
@@ -314,9 +316,11 @@
   font-weight: 600;
 }
 .cc .cc-fix-desc { display: grid; gap: 2px; min-width: 0; }
-.cc .cc-fix-line { font-size: 13px; line-height: 1.35; color: var(--tl-ink); }
+.cc .cc-fix-line,
+.cc .cc-fixg-line { font-size: 13px; line-height: 1.35; color: var(--tl-ink); }
 .cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
-.cc .cc-fix-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cc .cc-fix-ratio,
+.cc .cc-fixg-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 /* ── Palette swatches ───────────────────────────────────────────────────── */
 .cc .cc-colours { gap: 11px; }

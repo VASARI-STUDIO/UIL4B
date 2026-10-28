@@ -484,7 +484,9 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       }))
     // POSITIVE CONTROL: swap, the Text/Background pair, both fields, the pairs.
     expect(radii.length).toBeGreaterThan(8)
-    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair/.test(x.cls))
+    // The legend chips are multi-line toggle cards, like the pair cards, not
+    // action buttons. They show on the first view now that it is Interface.
+    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair|cc-lg-chip/.test(x.cls))
     expect(buttons.length, 'no buttons were measured').toBeGreaterThan(2)
     expect(buttons.filter((x) => x.r + 0.5 < Math.min(x.w, x.h) / 2), 'buttons that are not pills').toEqual([])
     expect(radii.filter((x) => x.tag === 'INPUT' && x.r >= 20 && x.w > x.h + 4), 'fields drawn as pills').toEqual([])
