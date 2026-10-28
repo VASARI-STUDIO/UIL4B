@@ -24,7 +24,7 @@
 // MUTATIONS (each turns the tests named red):
 //   engineFilters returns no types                    -> "Type = Radial only ..." and the 360 More-menu test
 //   engineFilters returns no counts                   -> "Stops = 4 or 5 ..."
-//   randomise sets the angle even with keepAngle      -> "Keep the angle holds the angle ..."
+//   randomise sets the angle even with the angle lock -> "the angle lock in Geometry holds the angle ..."
 //   FilterGroup tabIndex always 0                     -> "roving tabindex"
 //   FilterGroup arrow keys not handled                -> "roving tabindex"
 //   Shift/Ctrl no longer adds in a filter group       -> "Shift-click adds ..." and the touch tap test
@@ -49,7 +49,12 @@
 // built, served on 4960); every one turned the named tests red and the lane's src was not touched.
 //
 // Added with the logic-review fixes (same throwaway-build method):
-//   rollStops does not close a conic seam round a locked stop     -> the two "a locked stop and a conic roll" tests
+//   rollStops does not close a conic seam round a locked stop     -> the three "a locked stop and a conic roll" tests
+//   (G2) those tests read the PAINTED ramp (the canvas CSS, sorted by position), not the list order: the seed puts
+//   stop 5 last in the list but fourth on the ramp, so a seam closed on list index 0 and n-1 fails them.
+//   (G2) RANDOM_DRAWS_SPACE = true (interpolation lock back)      -> "the locks sit beside the controls ..."
+//   (G2) the angle lock label drops the value                     -> "the angle lock in Geometry holds ...", the 390 and 360 44px tests,
+//                                                                    "a filters entry saved before the pool existed", "the page does not move" (1440)
 //   the controls panel has no Escape handler                      -> "Escape in the hex input", "Escape on a palette chip",
 //                                                                    "Escape inside the open colour picker ..."
 //   the hex input swallows Escape (stopPropagation)               -> "Escape in the hex input ..."
@@ -222,45 +227,44 @@ test.describe('Shuffle settings at 1440px', () => {
     }
   })
 
-  test('Keep the angle holds the angle through Random and Shuffle; off, Random moves it', async ({ page }) => {
+  test('the angle lock in Geometry holds the angle through Random and Shuffle; off, Random moves it', async ({ page }) => {
     await seed(page, { gradient: null })
     await open(page)
     const field = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
     await field.fill('77')
     await field.press('Enter')
     await expect(field).toHaveValue('77')
-    const scope = await openSettings(page)
     // Linear only, so the angle field is always drawn and always read.
+    const scope = await openSettings(page)
     await option(scope, 'Type', 'Linear').click()
-    const keep = scope.getByRole('button', { name: 'Keep the angle' })
+    await page.keyboard.press('Escape')
+    // The label carries the value: "Keep the angle (77°) when you press Random".
+    const keep = page.getByRole('button', { name: 'Keep the angle (77°) when you press Random' })
     await off(keep)
     await keep.click()
-    await on(keep)
+    const kept = page.getByRole('button', { name: /^The angle \(77°\) is kept/ })
+    await on(kept)
     for (let i = 0; i < 8; i++) {
       await toolbarAction(page, /^Random$/)
       await expect(field, `Random ${i + 1}`).toHaveValue('77')
       await toolbarAction(page, /^Shuffle from palette$/)
       await expect(field, `Shuffle ${i + 1}`).toHaveValue('77')
     }
-    // Pressing Random or Shuffle closed the popover (a press outside it); open it again.
-    const again = await openSettings(page)
-    const keepAgain = again.getByRole('button', { name: 'Keep the angle' })
-    await on(keepAgain)
-    await keepAgain.click()
-    await off(keepAgain)
+    await kept.click()
+    await off(page.getByRole('button', { name: 'Keep the angle (77°) when you press Random' }))
     let moved = false
     for (let i = 0; i < 20 && !moved; i++) {
       await toolbarAction(page, /^Random$/)
       moved = (await field.inputValue()) !== '77'
     }
-    expect(moved, 'with Keep the angle off, twenty Randoms never moved the angle').toBe(true)
+    expect(moved, 'with the angle lock off, twenty Randoms never moved the angle').toBe(true)
   })
-
-  test('the old type, angle and stop-count locks are gone from the panel', async ({ page }) => {
+  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for the selected stop colour and position, type and angle (no interpolation lock yet)', async ({ page }) => {
     await open(page)
-    await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(0)
-    await expect(panelOf(page).getByRole('button', { name: /lock the (type|angle|stop count)/i })).toHaveCount(0)
-    await expect(page.locator('.grd-lock')).toHaveCount(await stopRows(page).count()) // only the per-stop locks remain
+    await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(1)
+    // + Selected stop's colour and position, Type, Angle. Interpolation has none: Random does not draw it yet.
+    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 4)
+    await expect(page.getByRole('button', { name: /the interpolation/i }), 'no interpolation lock while Random leaves the interpolation alone').toHaveCount(0)
   })
 })
 
@@ -277,8 +281,23 @@ test.describe('a locked stop and a conic roll at 1440px', () => {
     await on(option(scope, 'Type', 'Conic'))
   })
 
-  // `lockIdx` is the list position of the locked stop; its colour is in SEED.
-  async function rollsKeepSeam(page, lockIdx) {
+  /**
+   * The ramp as painted: the colours of the canvas's own CSS, in the order the browser
+   * draws them. The stop array is NOT the ramp (the seed puts its stops out of order, and
+   * Flip or a drag moves a position without moving the stop), so "first" and "last" are
+   * read here, from the lowest and highest position, never from the list order.
+   */
+  const painted = (page) => page.evaluate(() => {
+    const css = document.querySelector('.grd-canvas').style.background
+    const hex = (c) => (c[0] === '#' ? c.toUpperCase()
+      : `#${c.match(/\d+/g).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase()}`)
+    return [...css.matchAll(/(#[0-9a-fA-F]{6}|rgb\([^)]*\))\s+(\d+(?:\.\d+)?)%/g)].map((m) => ({ hex: hex(m[1]), at: Number(m[2]) }))
+  })
+
+  // `lockIdx` is the list position of the locked stop (its colour is in SEED) and `rank` its
+  // place on the ramp by position: SEED's positions 0, 60, 100, 30, 80 put the stops in the
+  // order 1, 4, 2, 5, 3, so stop 1 is rank 0 (the first colour), stop 3 rank 4 (the last).
+  async function rollsKeepSeam(page, lockIdx, rank) {
     const locked = SEED.stops[lockIdx].color
     await page.locator('.grd-stop-lock').nth(lockIdx).click()
     await expect(page.locator('.grd-stop-lock').nth(lockIdx)).toHaveAttribute('aria-pressed', 'true')
@@ -289,17 +308,28 @@ test.describe('a locked stop and a conic roll at 1440px', () => {
         const h = await hexes(page)
         expect(h.length, 'the lock keeps all five stops').toBe(5)
         expect(h[lockIdx], `${label} ${i + 1}: the locked stop keeps its colour`).toBe(locked)
-        expect(h[h.length - 1], `${label} ${i + 1}: the seam is open on ${h}`).toBe(h[0])
+        const ramp = await painted(page)
+        const colours = ramp.map((r) => r.hex)
+        expect(ramp.length, `${label} ${i + 1}: the painted gradient has all five stops`).toBe(5)
+        expect(ramp.map((r) => r.at), `${label} ${i + 1}: the painted stops run in position order`).toEqual([...ramp.map((r) => r.at)].sort((a, b) => a - b))
+        expect(colours[rank], `${label} ${i + 1}: the locked colour keeps its place on the ramp (${colours})`).toBe(locked)
+        expect(colours[colours.length - 1], `${label} ${i + 1}: the seam is open on ${colours}`).toBe(colours[0])
       }
     }
   }
 
-  test('the first stop locked: Random and Shuffle end on the locked colour', async ({ page }) => {
-    await rollsKeepSeam(page, 0)
+  test('the first stop locked (lowest position): Random and Shuffle end on the locked colour', async ({ page }) => {
+    await rollsKeepSeam(page, 0, 0)
   })
 
-  test('the last stop locked: Random and Shuffle start on the locked colour', async ({ page }) => {
-    await rollsKeepSeam(page, 4)
+  test('the last stop locked (highest position): Random and Shuffle start on the locked colour', async ({ page }) => {
+    await rollsKeepSeam(page, 2, 4)
+  })
+
+  // Stop 5 is last in the list but fourth on the ramp (80%), so it is not an end: the free ends
+  // close the seam on each other and the locked colour stays where it is.
+  test('a locked stop in the middle of the ramp: the free ends still meet, and the locked colour stays inside', async ({ page }) => {
+    await rollsKeepSeam(page, 4, 3)
   })
 })
 
@@ -389,15 +419,15 @@ for (const w of [390, 360]) {
       const scope = await openSettings(page)
       await expect(scope.locator('.grd-shuf-title')).toHaveText('What Random and Shuffle make')
       for (const g of ['Type', 'Stops']) await expect(group(scope, g)).toBeVisible()
-      await expect(scope.getByRole('button', { name: 'Keep the angle' })).toBeVisible()
+      await expect(scope.getByRole('button', { name: 'Keep the angle' })).toHaveCount(0)
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
     })
 
-    test('Keep the angle in the More menu is a 44px touch target', async ({ page }) => {
+    test('the angle lock in Geometry is a 44px touch target', async ({ page }) => {
       await open(page)
-      const scope = await openSettings(page)
-      const box = await scope.getByRole('button', { name: 'Keep the angle' }).boundingBox()
-      expect(box.height, 'Keep the angle is 44px tall').toBeGreaterThanOrEqual(44)
+      const box = await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).boundingBox()
+      expect(box.height, 'the angle lock is 44px tall').toBeGreaterThanOrEqual(44)
+      expect(box.width, 'the angle lock is 44px wide').toBeGreaterThanOrEqual(44)
     })
 
     test('the Type and Stops options are 44px tall targets in the More menu', async ({ page }) => {
@@ -531,7 +561,7 @@ test.describe('selecting several stops at 1440px', () => {
     await stopSelect(page, 1).click()
     await stopSelect(page, 3).click({ modifiers: ['Control'] })
     const locks = page.locator('.grd-stop-lock')
-    await expect(locks.nth(0)).toHaveAttribute('aria-label', 'Lock or unlock the 2 selected stops')
+    await expect(locks.nth(0)).toHaveAttribute('aria-label', "Keep the 2 selected stops' colours when you press Random")
     await locks.nth(0).click()
     const state = () => locks.evaluateAll((els) => els.map((e) => e.getAttribute('aria-pressed')))
     expect(await state()).toEqual(['true', 'false', 'true', 'false', 'false'])
@@ -1010,9 +1040,9 @@ test.describe('a filters entry saved before the pool existed', () => {
     const scope = await openSettings(page)
     await on(allPill(scope))
     await expect(pickPill(scope)).toHaveText('Pick colours…')
-    await on(scope.getByRole('button', { name: 'Keep the angle' }))
+    await expect(page.getByRole('button', { name: /^The angle \(\d+°\) is kept/ }), 'keepAngle: true became the angle lock').toHaveAttribute('aria-pressed', 'true')
     await on(option(scope, 'Type', 'Radial'))
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type and angle, not by a pool
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type, not by a pool
     await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
   })
 
@@ -1052,7 +1082,7 @@ test.describe('Shuffle settings → Colours without a palette', () => {
     await seed(page, { palette: [THIRTEEN[0]], gradient: null })
     await open(page)
     const scope = await openSettings(page)
-    await expect(scope.getByText('Keep the angle')).toBeVisible()
+    await expect(scope.getByText('Keep the angle')).toHaveCount(0) // the angle lock moved to Geometry
     await expect(poolRow(scope)).toHaveCount(0)
   })
 })
@@ -1117,7 +1147,7 @@ test.describe('the page does not move at 1440px', () => {
     await l.mark('settings open')
     await option(scope, 'Type', 'Radial').click(); await l.mark('Type = Radial')
     await option(scope, 'Stops', 4).click({ modifiers: ['Shift'] }); await l.mark('Stops = 4')
-    await scope.getByRole('button', { name: 'Keep the angle' }).click(); await l.mark('Keep the angle on')
+    await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).evaluate((el) => el.click()); await l.mark('angle lock on')
     await page.keyboard.press('Escape'); await l.mark('settings closed')
 
     await stopSelect(page, 1).click()

@@ -48,9 +48,9 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     await page.getByRole('textbox', { name: 'Stop 1 hex' }).fill('#123456')
-    const firstLock = page.getByRole('button', { name: /Lock stop 1 colour/ })
+    const firstLock = page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Keep stop 1's colour/ })
     await firstLock.click()
-    await expect(page.getByRole('button', { name: /Stop 1 locked/ })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Stop 1's colour is kept/ })).toHaveAttribute('aria-pressed', 'true')
 
     const random = page.getByRole('button', { name: /^Random$/ })
     await random.click()
@@ -305,7 +305,7 @@ test.describe('Semantic Colour system workflow', () => {
 const REST_TEXT = [
   '.cc-ratio-num', '.cc-ratio-unit', '.cc-ratio-verdict', '.cc-ratio-note',
   '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-explain', '.cc-note-link',
-  '.cc-lede', '.cc-field-k', '.cc-fix-line', '.cc-fix-ratio',
+  '.cc-lede', '.cc-field-k', '.cc-fixes-live .cc-fix-line', '.cc-fixes-live .cc-fix-ratio',
   '.cc-pair-label', '.cc-pair-ratio', '.cc-pair-mark',
 ]
 
@@ -482,11 +482,11 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     // 3.8059:1 shown floored, never rounded up to 3.81.
     await expect(page.locator('.cc-ratio-num')).toHaveText('3.80:1')
 
-    const fixes = page.locator('.cc-fix')
+    const fixes = page.locator('.cc-fixes-live .cc-fix')
     await expect(fixes).toHaveCount(2)
 
     // The hex each row names (the chip itself only reads "Aa", painted in the fixed pair).
-    const offered = await page.locator('.cc-fix-line strong').allTextContents()
+    const offered = await page.locator('.cc-fixes-live .cc-fix-line strong').allTextContents()
     const check = await page.evaluate((hexes) => {
       const lum = ([r, g, b]) => {
         const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
@@ -507,7 +507,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
 
     // Each row's "Aa" chip is painted in the pair the row promises: the new
     // text on the current background, or the current text on the new background.
-    const painted = await page.locator('.cc-fix-chip').evaluateAll((els) => {
+    const painted = await page.locator('.cc-fixes-live .cc-fix-chip').evaluateAll((els) => {
       const hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase()
       return els.map((el) => { const cs = getComputedStyle(el); return { fg: hex(cs.color), bg: hex(cs.backgroundColor) } })
     })
@@ -525,11 +525,11 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     const fixes = page.locator('.cc-fixes-sec')
     await expect(fixes).toContainText('To reach AA (4.5:1)')
 
-    await page.locator('.cc-fix').first().getByRole('button', { name: /^Use / }).click()
+    await page.locator('.cc-fixes-live .cc-fix').first().getByRole('button', { name: /^Use / }).click()
 
     await expect(page.locator('.cc-check').first()).toHaveClass(/cc-check--pass/)
     await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA for all text\./)
@@ -549,7 +549,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#808080')
     await page.fill('#cc-bg', '#7F7F7F')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     await expect(page.locator('.cc-unfixable')).toHaveCount(0)
     const section = page.locator('.cc-fixes-sec')
     await expect(section).toContainText('To reach AA (4.5:1)')
@@ -559,10 +559,10 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-fg', '#000000')
     await page.fill('#cc-bg', '#767676')
     await expect(section).toContainText('To reach AAA (7:1)')
-    await expect(page.locator('.cc-fix').first()).toBeVisible()
+    await expect(page.locator('.cc-fixes-live .cc-fix').first()).toBeVisible()
     await page.fill('#cc-bg', '#FFFFFF')
     await expect(section).toContainText('Passes every WCAG 2.2 check. Nothing to change.')
-    await expect(page.locator('.cc-fix')).toHaveCount(0)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(0)
   })
 
   // The five tests as drawn (D:1903-1906): both levels at once, each row naming
@@ -624,12 +624,12 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     expect(PALETTE).toContain(bg)
   })
 
-  // The drawn grid: the specimen (1fr) is far wider than the 336px card.
+  // The drawn grid: the preview frame (1fr) is far wider than the 336px card.
   test('the preview is given more width than the controls', async ({ page }) => {
     watch(page, 'a designer on a wide screen')
     await go(page, '/create/contrast')
-    await expect(page.locator('.cc-preview')).toBeVisible()
-    const preview = await page.locator('.cc-preview').evaluate((e) => Math.round(e.getBoundingClientRect().width))
+    await expect(page.locator('.cc-frame')).toBeVisible()
+    const preview = await page.locator('.cc-frame').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     const controls = await page.locator('.cc-panel').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     expect(controls, 'the side card is the drawn 336px').toBe(336)
     expect(preview, `preview ${preview}px is not wider than controls ${controls}px`).toBeGreaterThan(controls)

@@ -2,7 +2,7 @@
  *
  * The toolbar, the grid, the side card and its section labels come from the
  * shared tool layout (pages/tool-layout.css); this sheet is the pair bar, the
- * specimen, the pairs grid, the ratio, the tests, the fixes and the swatches.
+ * preview frame, the pairs grid, the ratio, the tests, the fixes and the swatches.
  * Scoped `.cc …` throughout.
  *
  * Verdict colours are the app's own state tokens (global.css): `-strong` for
@@ -11,9 +11,16 @@
  * verdict drawn in the failing pair is unreadable exactly when it is needed.
  *
  * Layout: the pair bar is the first thing in the main column at every width.
- * From 901px the result panel takes the right column for two rows and follows
- * the page (sticky), with the kit pairs under the specimen; below that the
- * order is pair bar, specimen, result panel, kit pairs. */
+ * From 901px the result panel takes the right column for two rows, the kit pairs
+ * under the preview; it follows the page (sticky) only on a window tall enough to
+ * hold it (980px), and never scrolls inside itself. At 900px and below
+ * the ratio is a strip under the pair bar and the order is pair bar, ratio,
+ * views, legend, preview, result panel, kit pairs.
+ *
+ * The page does not change height with the view or the pair: the preview sits in
+ * a frame of fixed height, the ratio strip is a fixed height, and the sections
+ * whose content varies (the legend lede, the nearest passing colours) reserve
+ * the room of their longest state. */
 
 .cc .cc-tone--ok { color: var(--ok-strong); }
 .cc .cc-tone--warn { color: var(--warn-strong); }
@@ -89,55 +96,42 @@
 .cc .cc-hint-ico { flex: 0 0 auto; margin-top: 2px; color: var(--err); }
 .cc .cc-lede { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
 
-/* ── Specimen: every line is the size its test measures ────────────────── */
-.cc .cc-preview {
-  display: grid;
-  gap: var(--s-4);
-  padding: var(--s-6);
-  border-radius: 18px;
+/* ── Preview frame: one height per width, whatever is inside ───────────── */
+/* The frame owns the edge (--tl-line, so a white pair on a near-white page and a
+   black one in the dark theme still have one) and the view fills it. */
+.cc .cc-frame {
+  height: var(--cc-frame-h, 520px);
+  overflow: hidden;
+  contain: layout paint;
   border: 1px solid var(--tl-line);
-  background: var(--cc-bg, #FFFFFF);
-  color: var(--cc-fg, #000000);
+  border-radius: 18px;
 }
-.cc .cc-preview p { margin: 0; }
-.cc .cc-spec-h { font-size: 40px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
-.cc .cc-spec-large { font-size: 24px; font-weight: 400; line-height: 1.35; }
-.cc .cc-spec-bold { font-size: 19px; font-weight: 700; line-height: 1.4; }
-.cc .cc-spec-body { max-width: min(60ch, 100%); font-size: 16px; font-weight: 400; line-height: 1.6; }
-.cc .cc-spec-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  justify-self: start;
-  padding: 9px 16px;
-  border-radius: 999px;
-  border: 2px solid var(--cc-fg, currentColor);
-  font-size: 14px;
-  line-height: 1.3;
-}
+@media (max-width: 1023px) { .cc .cc-frame { --cc-frame-h: 480px; } }
+@media (max-width: 767px) { .cc .cc-frame { --cc-frame-h: 440px; } }
 
-/* ── Views: the specimen or a preview example ──────────────────────────── */
+/* ── Views: pills, and the view in the frame ──────────────────────────── */
 .cc .cc-views .tl-pill { min-height: 36px; padding-block: 0; }
 .cc .cc-views-more { white-space: pre; }
-/* An example in the pair: the preview scene root, sized to the column. Its
-   outline colour (--pv-hit, --pv-error) is set per pair in PairExample, because
-   the pair's own colours can be the field. */
-.cc .cc-pv { border-radius: 18px; border-color: var(--tl-line); }
+/* A view in the pair: the preview scene root, filling the frame. The frame owns
+   the border and the corners; the scene's own entrance fade is off because a
+   view switch is a frequent action. Its outline colour (--pv-hit, --pv-error)
+   is set per pair in PairExample, because the pair's own colours can be the
+   field. */
+.cc .cc-pv { animation: none; border: 0; border-radius: 0; height: 100%; }
 /* A part brought into view by a pin clears the sticky chrome above it. */
 .cc .cc-pv [data-hit="on"] { scroll-margin-block: calc(var(--chrome-h) + 80px) 96px; }
-.cc .cc-pv-wait { min-height: 320px; border: 1px solid var(--tl-line); border-radius: 18px; }
+.cc .cc-pv-wait { height: 100%; }
 
 /* ── Where each test lands ──────────────────────────────────────────────── */
-.cc .cc-lg { display: grid; gap: var(--s-2); }
+.cc .cc-lg { display: grid; gap: 6px; }
 .cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
 .cc .cc-lg-chip {
   display: grid;
   align-content: start;
   justify-items: start;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  min-height: 64px;
-  padding: var(--s-2) var(--s-3);
+  padding: 6px var(--s-3);
   border: 1px solid var(--tl-line);
   border-radius: 12px;
   background: var(--tl-card);
@@ -150,9 +144,21 @@
 }
 .cc .cc-lg-chip[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
 .cc .cc-lg-chip.is-fail { border-color: var(--err); }
-.cc .cc-lg-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
-.cc .cc-lg-need { font: 400 12px/1.3 var(--mono); color: var(--tl-dim); }
-.cc .cc-lg-mark { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.cc .cc-lg-name { font-size: 13px; font-weight: 500; line-height: 1.2; }
+.cc .cc-lg-need { font: 400 12px/1.15 var(--mono); color: var(--tl-dim); }
+/* Under 560px the lede sits under the frame and wraps to two lines for the long
+   wording and one for the short, so it reserves both. From 560px it is one line
+   for every wording (measured at 560, 580, 600, 620, 640, 660 and 700px), so it
+   reserves nothing there. */
+.cc .cc-lg-lede { min-height: 3em; }
+.cc .cc-lg-mark { display: inline-flex; align-items: center; gap: 5px; margin-top: 1px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+/* From 560px a chip is two rows (name and need, then the mark), which keeps the
+   legend short enough for the frame below it to sit on a 900px-tall screen. */
+@media (min-width: 560px) {
+  .cc .cc-lg-chip { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px var(--s-2); min-height: 52px; }
+  .cc .cc-lg-need { justify-self: end; }
+  .cc .cc-lg-mark { grid-column: 1 / -1; }
+}
 @media (hover: hover) and (pointer: fine) {
   .cc .cc-lg-chip:hover { border-color: var(--tl-line-on); }
 }
@@ -234,6 +240,31 @@
 }
 .cc .cc-ratio-verdict .tl-ico { flex: 0 0 auto; margin-top: 3px; }
 .cc .cc-ratio-note { margin: 0; padding-left: 24px; font-size: 13px; line-height: 1.4; color: var(--tl-dim); }
+/* At 900px and below the ratio sits under the fields as a strip: the numeral on
+   the left, the verdict and its note on the right. One fixed height, taller on
+   the narrowest phones where the longest wordings take a line more. */
+.cc .cc-ratio--strip {
+  display: grid;
+  grid-template-columns: 3.7em minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  column-gap: var(--s-4);
+  row-gap: 1px;
+  height: 72px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+  font-size: 34px;
+}
+.cc .cc-ratio--strip .cc-ratio-num { grid-row: 1 / span 2; font-size: 1em; }
+.cc .cc-ratio--strip .cc-ratio-verdict { margin: 0; font-size: 14px; line-height: 1.3; }
+.cc .cc-ratio--strip .cc-ratio-verdict .tl-ico { margin-top: 1px; }
+.cc .cc-ratio--strip .cc-ratio-note { font-size: 12.5px; line-height: 1.35; }
+@media (max-width: 389px) { .cc .cc-ratio--strip { height: 80px; } }
+@media (max-width: 359px) {
+  .cc .cc-ratio--strip { height: 104px; column-gap: var(--s-3); }
+}
 
 /* ── The five tests ─────────────────────────────────────────────────────── */
 .cc .cc-tests { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
@@ -258,6 +289,13 @@
 
 /* ── Nearest passing colours ────────────────────────────────────────────── */
 .cc .cc-fixes { display: grid; gap: var(--s-3); }
+/* The reserved state sets the section's height; the live content shares its cell
+   and stays at the top. The hidden copy uses the live rows' own classes, so it
+   wraps exactly where they do. */
+.cc .cc-fixes-body { display: grid; }
+.cc .cc-fixes-ghost { grid-area: 1 / 1; display: grid; gap: 10px; min-width: 0; visibility: hidden; pointer-events: none; }
+.cc .cc-fixes-live { grid-area: 1 / 1; align-self: start; display: grid; gap: 10px; min-width: 0; }
+.cc .cc-fixes-ghost [data-t]::before { content: attr(data-t); }
 .cc .cc-fix {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto auto;
@@ -297,19 +335,27 @@
 
 /* ── Desktop: result panel on the right, following the page ─────────────── */
 @media (min-width: 901px) {
+  /* The card is as tall as its content and never scrolls inside itself: a
+     capped card cut "From your palette" off at the bottom with no cue. It is
+     shorter than the main column, so the page height is the main column's. */
   .cc .tl-panel {
     grid-column: 2;
     grid-row: 1 / span 2;
-    position: sticky;
-    top: calc(var(--chrome-h) + 64px);
-    max-height: calc(100vh - var(--chrome-h) - 80px);
-    max-height: calc(100dvh - var(--chrome-h) - 80px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    align-self: start;
   }
+  /* It follows the page only where the whole card fits under the toolbar (its
+     tallest state is about 815px): on a shorter window a pinned card would hide
+     its own bottom until the end of the page. */
+  @media (min-height: 980px) {
+    .cc .tl-panel { position: sticky; top: calc(var(--chrome-h) + 64px); }
+  }
+  /* From here the reserve is the lede and one row; the second row only counts
+     where the card is in the page flow (900px and below). */
+  .cc .cc-fixes-ghost .cc-lede { max-height: 1.5em; overflow: hidden; }
+  .cc .cc-fixes-ghost .cc-fix:nth-child(2) { display: none; }
   .cc .cc-pairs { grid-column: 1; grid-row: 2; align-self: start; }
   /* The panel spans both rows; its extra height goes to the second, so the pairs
-     sit right under the specimen and do not move as the fix list grows. */
+     sit right under the preview and do not move as the fix list grows. */
   .cc .tl-grid { grid-template-rows: auto 1fr; }
 }
 
@@ -321,6 +367,7 @@
   .cc .tl-btn.cc-swap { width: 44px; height: 44px; min-height: 44px; margin-top: 24px; }
   .cc .cc-pair { min-height: 44px; }
   .cc .cc-views .tl-pill { min-height: 44px; }
+  .cc .cc-lg-chip { min-height: 44px; }
 }
 
 /* ── Phone: fields stacked label-left, Swap down the right edge ─────────── */
@@ -361,9 +408,7 @@
   /* iOS zooms the page when a focused field is under 16px. */
   .cc .cc-hex-input { height: 44px; font-size: 16px; }
 
-  .cc .cc-preview { padding: var(--s-5); }
   .cc .cc-views-more { display: none; }
-  .cc .cc-spec-h { font-size: 32px; }
   .cc .cc-pair-grid { grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); }
 }
 @media (max-width: 380px) {
@@ -381,11 +426,11 @@
   :where(html:not([data-reduced-motion="false"])) .cc .cc-pair:active { transform: none !important; }
 }
 @media (forced-colors: active) {
-  .cc .cc-preview,
+  .cc .cc-frame,
   .cc .cc-pair-chip,
   .cc .cc-fix-chip,
   .cc .cc-swatch { forced-color-adjust: none; }
   .cc .cc-swatch.is-on { outline: 2px solid Highlight; }
   .cc .cc-pair[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
-.cc .cc-pv-fail { display: grid; place-content: center; justify-items: center; gap: var(--s-3); padding: var(--s-6); text-align: center; }
+.cc .cc-pv-fail { display: grid; place-content: center; justify-items: center; gap: var(--s-3); height: 100%; padding: var(--s-6); text-align: center; background: var(--tl-card); color: var(--tl-ink); }
