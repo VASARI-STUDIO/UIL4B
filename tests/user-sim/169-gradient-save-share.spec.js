@@ -584,7 +584,7 @@ test.describe('gradient gallery · Your submissions', () => {
 
     const harbour = section.locator('.grg-queue-item').filter({ hasText: 'Harbour fade' })
     await expect(harbour.getByRole('link', { name: 'Open' }))
-      .toHaveAttribute('href', '/create/gradient?gs=1F4B8E-0_3FA9A0-100&gt=linear&ga=90&gn=Harbour%20fade')
+      .toHaveAttribute('href', '/create/gradient?gs=1F4B8E-0_3FA9A0-100&gt=linear&ga=90&gn=Harbour%20fade&src=link')
     await harbour.getByRole('button', { name: 'Withdraw' }).click()
     await expect(toastOf(page)).toContainText('Submission withdrawn')
     await expect(section.locator('.grg-queue-item')).toHaveCount(1)
