@@ -86,9 +86,9 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .plb-vision-long { display: none; }
   .plb .plb-vision-short { display: inline; }
 }
-/* At 359px and below the name and "Bottom half: how it looks." cannot share a line (the name would be cut to a
+/* At 419px and below the name and "Bottom half: how it looks." cannot share a line (the longest name would be cut to a
    letter), so they stack: still no wrap inside either, and the strip is still one height for every mode. */
-@media (max-width: 359px) {
+@media (max-width: 419px) {
   .plb .plb-vision-text { flex-direction: column; gap: 0; line-height: 18px; }
   .plb .plb-vision-name { flex: none; }
 }
@@ -100,14 +100,16 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 
 /* The eye icon's dot is a content colour: it keeps its hue under forced colours
    while the outline follows the system text colour. */
-.vis-dot { forced-color-adjust: none; }
+.vis-dot, .vis-open, .harm-dot { forced-color-adjust: none; }
+/* The wheel in a toolbar trigger sits on the toolbar, not on a menu surface. */
+.tl-select .harm-wheel { --hw-edge: var(--bg-0); }
 
 /* ── The seed chip (D:952-955) ──────────────────────────────────────────── */
 /* Also in the phone Tools sheet, which renders outside .plb. */
 :is(.plb, .tl-sheet-layer) .plb-seedpick { display: flex; }
 .plb .plb-seedpick .cpk-pop { left: 0; right: auto; }
 :is(.plb, .tl-sheet-layer) .plb-seedchip { width: auto; gap: 9px; padding: 0 13px 0 6px; }
-:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 8px; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 50%; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
 :is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; letter-spacing: .02em; color: var(--tl-ink); }
 .plb .plb-menuwrap { position: relative; display: flex; }
 .plb .plb-menu-seed { display: flex; }

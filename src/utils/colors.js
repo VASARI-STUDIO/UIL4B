@@ -167,6 +167,23 @@ export function textColorForBg(hex) {
 function soften(s, factor) { return Math.max(10, Math.round(s * factor)) }
 function lShift(l, delta) { return Math.max(5, Math.min(95, l + delta)) }
 
+// Where each system puts its full-strength colours, in degrees of hue from the
+// seed (positive is the direction hue increases round the wheel). The wheel icons
+// in the System menu draw from this. generateHarmony keeps its offsets inline
+// beside each system's tonal steps, so tests/unit/harmony-wheel.test.js holds the
+// two together. `auto` is the tonal engine's sibling hue (HCT, +30); the
+// monochromatic system never leaves the seed's hue.
+export const HARMONY_OFFSETS = {
+  auto: [0, 30],
+  monochromatic: [0],
+  analogous: [0, -30, 30],
+  complement: [0, 180],
+  triadic: [0, 120, 240],
+  split: [0, 150, 210],
+  tetradic: [0, 90, 180, 270],
+  custom: [0, 60, 180],
+}
+
 export function generateHarmony(hex, type) {
   const [h, s, l] = hexToHsl(hex)
   const colors = [hex]
@@ -963,11 +980,18 @@ export function nearestPassingLightness(move, against, targetRatio) {
   return best
 }
 
-// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
-// applied in linear sRGB. Source: the canonical published severity table
-// (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
-// separately via Rec.709 luma. Rows are row-major [r;g;b].
+// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices (and
+// deuteranomaly at 0.6), applied in linear sRGB. Source: the authors' Table 1 of
+// pre-computed matrices (inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation), the
+// same table DaltonLens / colorspace R `simulate_cvd` carry. Achromatopsia is
+// handled separately via Rec.709 luma. Rows are row-major [r;g;b].
 const MACHADO_2009 = {
+  // Anomalous trichromacy: the deuteranomaly column at severity 0.6.
+  deuteranomaly: [
+    0.498864, 0.674741, -0.173604,
+    0.205199, 0.754872, 0.039929,
+    -0.011131, 0.030969, 0.980162,
+  ],
   protanopia: [
     0.152286, 1.052583, -0.204868,
     0.114503, 0.786281, 0.099216,
@@ -986,7 +1010,7 @@ const MACHADO_2009 = {
 }
 
 // simCvd(hex, type) — simulate colour-vision deficiency in linear sRGB.
-// type: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'.
+// type: 'normal' | 'protanopia' | 'deuteranopia' | 'deuteranomaly' | 'tritanopia' | 'achromatopsia'.
 // Never throws; returns the input hex unchanged on bad/unknown input.
 export function simCvd(hex, type) {
   try {

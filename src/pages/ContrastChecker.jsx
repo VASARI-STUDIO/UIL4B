@@ -1,5 +1,5 @@
 import { Suspense, useDeferredValue, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ExportMenu from '../components/tool/ExportMenu'
 import {
@@ -90,7 +90,7 @@ const TESTS = [
 ]
 
 const VERDICTS = {
-  aaa: { tone: 'ok', icon: 'check-circle', head: 'Passes AAA for all text.', note: '' },
+  aaa: { tone: 'ok', icon: 'check-circle', head: 'Passes AAA for all text.', note: 'Clears every WCAG 2.2 check.' },
   aa: { tone: 'ok', icon: 'check-circle', head: 'Passes AA for all text.', note: 'AAA needs 7:1.' },
   large: { tone: 'warn', icon: 'warning', head: 'Large text and UI parts only.', note: 'Body text needs 4.5:1.' },
   fail: { tone: 'err', icon: 'x-circle', head: 'Fails every WCAG check.', note: 'Text needs at least 3:1 when large.' },
@@ -411,7 +411,7 @@ export default function ContrastChecker({ onCopy }) {
               <ToolIcon name={verdict.icon} size={16} className={`cc-ico--${verdict.tone}`} />
               <span>{verdict.head}</span>
             </p>
-            {verdict.note && <p className="cc-ratio-note" aria-hidden="true">{verdict.note}</p>}
+            <p className="cc-ratio-note" aria-hidden="true">{verdict.note}</p>
           </div>
 
           <ToolSection label="WCAG 2.2" className="cc-tests-sec">
@@ -429,8 +429,18 @@ export default function ContrastChecker({ onCopy }) {
               })}
             </ul>
             <div className="cc-note">
-              <p>Large means 24px, or 19px bold. Checks follow WCAG 2.2 (1.4.3, 1.4.6 and 1.4.11).</p>
-              <Link className="cc-note-link" to="/learn/colour-contrast">How contrast is measured</Link>
+              <ul className="cc-explain">
+                <li><strong>AA</strong> is the usual target: 4.5:1 for normal text, 3:1 for large text, icons and input borders.</li>
+                <li><strong>AAA</strong> is stricter: 7:1 for normal text and 4.5:1 for large text. UI components have no AAA level.</li>
+                <li><strong>Large text</strong> is 24px and up, or 18.66px and up if bold.</li>
+              </ul>
+              {/* A plain anchor: a router Link adds nothing to a new tab. The visible
+                  words stay the accessible name, with the new-tab hint appended. */}
+              <a className="cc-note-link" href="/learn/colour-contrast" target="_blank" rel="noopener">
+                How contrast is measured
+                <ToolIcon name="arrow-square-out" size={14} />
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
             </div>
           </ToolSection>
 
