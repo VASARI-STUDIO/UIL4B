@@ -550,6 +550,9 @@
    gradient has said it has no angle. */
 .grd .grd-row--angle { height: 64px; }
 .grd .grd-angle-none { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); }
+/* The position lock is 26px beside a 24px slider: a 1px overhang each side keeps
+   the row the height it had, so adding it moves nothing (44px on touch matches). */
+.grd .grd-pos-lock { margin-block: -1px; }
 /* The lock sits at the row's top right, clear of the wheel and its number. */
 .grd .grd-angle-lock { align-self: flex-start; }
 
