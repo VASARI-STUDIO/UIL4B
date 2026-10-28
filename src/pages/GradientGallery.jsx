@@ -15,9 +15,9 @@ import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGal
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
-import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
-import { mergeSubmissions } from '../utils/communityQueue'
-import { listMySubmissions } from '../utils/communityQueueApi'
+import { readLegacyGradientSubmissions, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
+import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
+import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -43,6 +43,10 @@ import '../styles/pages/gradient-gallery.css'
 // construction rather than by copy-paste.
 
 const TYPES = ['Linear', 'Radial', 'Conic']
+
+// What the queue's status says on a submission row. 'approved' and 'rejected'
+// are a reviewer's words; anything unknown reads as pending.
+const QUEUE_STATUS_LABEL = { pending: 'Pending review', approved: 'Approved', rejected: 'Not approved' }
 
 // Filter options are built once at module scope: they are pure functions of
 // static data, and rebuilding them per render would hand LibraryFilterGroup a
@@ -96,43 +100,66 @@ export default function GradientGallery({ toast }) {
   // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.
   const [types, setTypes] = useState(['all'])
-  // Gradients this browser has queued for review. They are deliberately kept
-  // OUT of the browse grid: they are not in the library, and showing them there
-  // would imply they had been published. See utils/gradientSubmissions.js.
-  const [submissions, setSubmissions] = useState(readGradientSubmissions)
+  // "Your submissions" belongs to the ACCOUNT, not to this browser: it is read
+  // from the review queue under the signed-in uid and nowhere else.
+  //
+  // Gradients an earlier visit held in this browser are never listed here.
+  // Signed in, useGradientSubmissionMigration moves them to the account and the
+  // list picks them up; signed out, the page offers to keep them (the sign-in
+  // note below) rather than show a list that lives in one browser. Either way
+  // they stay OUT of the browse grid: they are not in the library, and showing
+  // them there would imply they had been published.
+  const [queue, setQueue] = useState({ uid: null, items: [] })
+  const [queueRefresh, setQueueRefresh] = useState(0)
+  const [withdrawingId, setWithdrawingId] = useState(null)
+  // How many an earlier visit left in this browser; read once, never written.
+  const [legacyCount] = useState(() => readLegacyGradientSubmissions().length)
+  useGradientSubmissionMigration({ toast, onMigrated: () => setQueueRefresh(n => n + 1) })
 
-  // "My pending submissions" is a property of the ACCOUNT, not of this browser.
-  //
-  // This list used to come from localStorage alone, so a gradient submitted on
-  // a phone was invisible on a laptop and vice versa — the reported symptom was
-  // "I submitted other gradients that I do not see here". They were never lost;
-  // they were simply only ever in one browser's storage, and no reviewer could
-  // see them either.
-  //
-  // The local list still renders first (instant, works offline); the account's
-  // copy merges in when it arrives. Local-only entries are KEPT and marked
-  // unsynced rather than dropped — they are real submissions that have not
-  // reached the queue yet, and hiding them would look exactly like the bug.
   useEffect(() => {
     let cancelled = false
-    if (!user?.uid) return undefined
-    listMySubmissions(user.uid, 'gradient')
+    const uid = user?.uid
+    if (!uid) return undefined
+    listMySubmissions(uid, 'gradient')
       .then((server) => {
         if (cancelled) return
-        setSubmissions(prev => mergeSubmissions(
-          server.map(s => ({
-            id: s.localId || s.id,
-            name: s.name,
-            status: s.status,
-            createdAt: s.createdAt,
-            ...(s.payload || {}),
-          })),
-          prev,
-        ))
+        const items = server
+          .filter(s => s.status !== 'withdrawn')
+          .map((s) => {
+            // The server's copy gets the same clean-up a local entry did: a
+            // document that doesn't describe a gradient is skipped, not drawn.
+            const g = sanitizeGradientSubmission({
+              id: s.id,
+              name: s.name,
+              author: s.authorName,
+              type: s.payload?.type,
+              angle: s.payload?.angle,
+              stops: s.payload?.stops,
+            })
+            return g && { ...g, docId: s.id, status: s.status, createdAt: s.createdAt }
+          })
+          .filter(Boolean)
+        setQueue({ uid, items })
       })
-      .catch(() => { /* the local list still stands; nothing is lost */ })
+      .catch(() => { /* the list stays as it was; nothing is lost */ })
     return () => { cancelled = true }
-  }, [user?.uid])
+  }, [user?.uid, queueRefresh])
+  // Another person's list never shows through after a sign-out or account switch.
+  const submissions = user?.uid && queue.uid === user.uid ? queue.items : []
+
+  const withdraw = async (s) => {
+    if (withdrawingId) return
+    setWithdrawingId(s.docId)
+    try {
+      await deleteSubmission(s.docId)
+      setQueue(q => ({ ...q, items: q.items.filter(x => x.docId !== s.docId) }))
+      toast?.(s.status === 'pending' ? 'Submission withdrawn' : 'Submission removed')
+    } catch {
+      toast?.('Couldn’t withdraw that one. Try again.', 'error')
+    } finally {
+      setWithdrawingId(null)
+    }
+  }
   const query = rawQuery.trim().toLowerCase()
 
   // THE GATE, BEFORE THE DATA IS PRODUCED — not on a control, not in CSS.
@@ -264,35 +291,55 @@ export default function GradientGallery({ toast }) {
         <section className="grg-queue" aria-labelledby="grg-queue-heading">
           <div className="section-h">
             <h2 id="grg-queue-heading">Your submissions</h2>
-            <span className="meta">Queued for review — not published</span>
+            <span className="meta">Saved with your account</span>
           </div>
           <p className="grg-queue-note">
-            These are held on this browser while shared publishing is built. A reviewer has
-            to approve a gradient before it joins the library above, so nothing here is live yet.
+            A reviewer has to approve a gradient before it joins the library above, so a
+            pending one is not live yet.
           </p>
           <ul className="grg-queue-list">
             {submissions.map(s => (
-              <li key={s.id} className="grg-queue-item">
+              <li key={s.docId} className="grg-queue-item">
                 <span className="grg-queue-swatch" style={{ background: gradientCss(s.type, s.angle, s.stops) }} aria-hidden="true" />
                 <span className="grg-queue-id">
                   <strong>{s.name}</strong>
                   <span className="meta">{s.type} · {s.stops.length} stops · by {s.author}</span>
                 </span>
-                <span className="grg-queue-status">Pending review</span>
+                <span className={`grg-queue-status${s.status === 'pending' ? '' : ' is-decided'}`}>{QUEUE_STATUS_LABEL[s.status] || 'Pending review'}</span>
                 <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name })}>Open</Link>
-                <button
-                  type="button"
-                  className="btn btn-s btn-ghost"
-                  onClick={() => {
-                    setSubmissions(withdrawGradientSubmission(s.id))
-                    toast?.('Submission withdrawn')
-                  }}
-                >
-                  Withdraw
-                </button>
+                {s.status !== 'approved' && (
+                  <button
+                    type="button"
+                    className="btn btn-s btn-ghost"
+                    disabled={withdrawingId === s.docId}
+                    onClick={() => withdraw(s)}
+                  >
+                    {s.status === 'pending' ? 'Withdraw' : 'Remove'}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Signed out with gradients left in this browser by an earlier visit. They
+          are not listed (a browser-only list is the thing this replaces); signing
+          in moves them to the account. Held back until auth has resolved, so a
+          signed-in person never sees it flash. */}
+      {!authLoading && !user && legacyCount > 0 && (
+        <section className="grg-queue" aria-labelledby="grg-queue-heading">
+          <div className="section-h">
+            <h2 id="grg-queue-heading">Your submissions</h2>
+          </div>
+          <p className="grg-queue-note">Sign in to keep these gradients with your account.</p>
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => requireLogin('keep your gradients with your account', { free: true })}
+          >
+            Sign in
+          </button>
         </section>
       )}
 
@@ -408,11 +455,8 @@ export default function GradientGallery({ toast }) {
       {proPending && <ProLibraryStatus library={pro} noun="gradient library" />}
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
-          Library: the Gradient Generator is where a gradient gets made and where
-          its own "Submit to community" button already lives, running the
-          requireLogin gate 09-auth-modal-accessibility covers. Sending a submit
-          intent ahead of the user would open that form over a gradient they had
-          not built. */}
+          Library: the Gradient Generator is where a gradient gets made, so the
+          link goes there and carries no intent ahead of the user. */}
       {/* "create and submit your
           own" is for Pro viewers only; everyone else, at the end of a capped
           result, is offered more access instead. Where the locked tease is
