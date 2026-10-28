@@ -46,7 +46,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
-import SaveRefusal from '../components/SaveRefusal'
+import SaveShareMenu from '../components/tool/SaveShareMenu'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
@@ -895,6 +895,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // outside pointerdown or Escape — handled by the shared effect below).
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [saveError, setSaveError] = useState('')   // the cap's refusal, held under the field — see doSave
+  const [saveNameError, setSaveNameError] = useState('') // an empty name's refusal, held under the field
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -1430,7 +1431,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
   }, [])
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
@@ -2492,23 +2493,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const doSave = async () => {
     // THE ACCOUNT IS ASKED FOR BEFORE THE NAME, and the order matters.
     //
-    // The name check below is a silent `return` — the Save button is never
-    // disabled, so pressing it empty does nothing and says nothing. That was
-    // unreachable while the gate sat on the menu opener, because a signed-out
-    // visitor never got as far as the button. Moving the gate down here without
-    // moving it ABOVE the name check would have handed them that dead click
-    // instead of the gate, which is a worse first answer than being asked to
-    // sign up.
-    //
-    // Asked first, the flow reads the way it did before: press Save, get asked
-    // for an account. (The empty-name silence is a separate, older defect and is
-    // left alone here rather than fixed in passing.)
+    // The Save button is never disabled, so a signed-out visitor pressing it
+    // with an empty name must meet the gate, not a refusal about the name: the
+    // account is asked for first, and an empty name then says so under the
+    // field.
     if (!canSaveProjects) {
       const user = await requireLogin('save this palette', { free: true, signup: true })
       if (!user) return
     }
     const name = saveName.trim()
-    if (!name) return
+    if (!name) { setSaveNameError('Name the project to save it.'); return }
     try {
       saveProject(name)
       setSaveName(''); setSaveError(''); setSaveOpen(false)
@@ -3340,62 +3334,44 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )}
 
       {saveOpen && (
-        <div className="plb-menuwrap plb-float">
-          <div className="plb-menu plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
-            <div className="plb-float-head">
-              <div className="plb-menu-title">Save to a project</div>
-              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
-            </div>
-            <div className="plb-menu-row">
-              <input
-                type="text"
-                value={saveName}
-                onChange={(e) => setSaveName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') doSave() }}
-                placeholder="Project name…"
-                aria-label="Project name"
-              />
-              <button type="button" className="btn btn-s btn-accent" onClick={doSave}>Save</button>
-            </div>
-            {saveError && <SaveRefusal message={saveError} testId="palette-save-refusal" />}
-            {projects.length > 0 && (
-              <>
-                <div className="plb-menu-sub">Overwrite existing</div>
-                <div className="plb-scrolllist">
-                  {projects.slice(-5).map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="plb-menu-item"
-                      onClick={() => {
-                        try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
-                        catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            <div className="plb-menu-div" role="separator" />
-            <div className="plb-menu-sub">Share</div>
+        <SaveShareMenu
+          label="Save, share and export this palette"
+          name={saveName}
+          onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
+          onSave={doSave}
+          nameError={saveNameError}
+          saveError={saveError}
+          refusalTestId="palette-save-refusal"
+          projects={projects}
+          onOverwrite={(p) => {
+            try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
+            catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
+          }}
+          onClose={closeAllMenus}
+          share={(
             <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
-            <div className="plb-menu-sub">Export</div>
-            <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
-            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
-            <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
-            <div className="plb-menu-sub">Community</div>
-            <button
-              type="button"
-              className="plb-menu-item"
-              onClick={openSubmit}
-              disabled={authLoading}
-              aria-busy={authLoading || undefined}
-              title={authLoading ? 'Checking your account…' : undefined}
-            ><IcoUsers /> Submit to the community…</button>
-          </div>
-        </div>
+          )}
+          exports={(
+            <>
+              <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
+              <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
+              <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
+            </>
+          )}
+          after={(
+            <>
+              <div className="plb-menu-sub">Community</div>
+              <button
+                type="button"
+                className="plb-menu-item"
+                onClick={openSubmit}
+                disabled={authLoading}
+                aria-busy={authLoading || undefined}
+                title={authLoading ? 'Checking your account…' : undefined}
+              ><IcoUsers /> Submit to the community…</button>
+            </>
+          )}
+        />
       )}
 
       {/* ── Image picker modal ──
