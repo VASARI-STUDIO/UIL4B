@@ -4462,7 +4462,17 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .menu-select-desc{max-width:34ch;font-size:12px;font-weight:400;line-height:1.4;color:var(--t2);white-space:normal;text-wrap:pretty}
 .menu-select-option[aria-selected="true"] .menu-select-check{visibility:visible}
-@media(pointer:coarse){.menu-select-option{min-height:44px}}
+/* Rich rows (an option with an icon): icon, name over one-line hint, check. The
+   hint never wraps; the width below is what keeps the longest one whole. */
+.pop.menu-select-list.menu-select-list--rich{min-width:min(360px,calc(100vw - 16px))}
+.menu-select-option.menu-select-option--rich{display:grid;grid-template-columns:20px minmax(0,1fr) 16px;column-gap:12px;align-items:center;min-height:52px;padding:9px 10px}
+.menu-select-icon{display:flex;width:20px;height:20px}
+.menu-select-option--rich .menu-select-text{font-size:13px;line-height:18px}
+.menu-select-option--rich .menu-select-desc{max-width:none;font-size:12px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-wrap:nowrap}
+.menu-select-option--divider{position:relative;margin-top:9px}
+.menu-select-option--divider::before{content:'';position:absolute;inset-inline:0;top:-5px;border-top:1px solid var(--border)}
+.menu-select-foot{max-width:34ch;margin:0;padding:8px 10px 4px;font-size:11px;line-height:15px;color:var(--t2)}
+@media(pointer:coarse){.menu-select-option{min-height:44px}.menu-select-option.menu-select-option--rich{min-height:56px}}
 @media(max-width:960px){
   .menu-select-option{min-height:44px}
 }
