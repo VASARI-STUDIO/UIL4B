@@ -219,14 +219,29 @@ test('the deferred stylesheets exist, are substantial, and are imported by lazy 
   const sheets = fs.readdirSync(dir).filter((f) => f.endsWith('.css'))
   assert.ok(sheets.length >= 5, `expected the deferred families, found ${sheets.length}`)
   const pages = fs.readdirSync(path.join(ROOT, 'src', 'pages')).filter((f) => f.endsWith('.jsx'))
-  const components = fs.readdirSync(path.join(ROOT, 'src', 'components')).filter((f) => f.endsWith('.jsx'))
+  // Components live in sub-folders too (components/tool/SaveShareMenu.jsx owns
+  // its own sheet), so walk the whole tree rather than only the top level.
+  const componentFiles = []
+  const walkComponents = (rel) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, rel), { withFileTypes: true })) {
+      const next = path.join(rel, entry.name)
+      if (entry.isDirectory()) walkComponents(next)
+      else if (entry.name.endsWith('.jsx')) componentFiles.push(next)
+    }
+  }
+  walkComponents(path.join('src', 'components'))
   const importers = [
     ...pages.map((f) => read(path.join('src', 'pages', f))),
-    ...components.map((f) => read(path.join('src', 'components', f))),
+    ...componentFiles.map((f) => read(f)),
   ].join('\n')
+  // The default floor guards a family being emptied back into global.css. A
+  // sheet that is small on purpose (one component's own rules, not a page
+  // family) names its own, still real, floor here instead of lowering everyone's.
+  const FLOOR = { 'save-share-menu.css': 2000 }
   for (const sheet of sheets) {
     const bytes = fs.statSync(path.join(dir, sheet)).size
-    assert.ok(bytes > 5000, `src/styles/deferred/${sheet} is ${bytes} bytes — has it been emptied back into global.css?`)
+    const floor = FLOOR[sheet] ?? 5000
+    assert.ok(bytes > floor, `src/styles/deferred/${sheet} is ${bytes} bytes — has it been emptied back into global.css?`)
     assert.ok(
       importers.includes(`styles/deferred/${sheet}`),
       `src/styles/deferred/${sheet} is imported by no page or component, so it ships to nobody`,

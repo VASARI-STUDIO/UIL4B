@@ -47,7 +47,7 @@ const TOOLS = [
     selects: ['Colour system', 'Colour vision check'],
     menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
-  { route: '/create/gradient', actions: ['Random', 'Shuffle from palette', 'Reset', 'Submit for review'], primary: /^Copy /, title: 'Gradient' },
+  { route: '/create/gradient', actions: ['Random', 'Shuffle from palette', 'Reset'], primary: /^Save or share/, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker' },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint' },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.

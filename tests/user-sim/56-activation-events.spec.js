@@ -162,10 +162,21 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:gradient:export'], 'nothing recorded yet').toBe(undefined)
 
-    const copy = page.locator('.grd .tl-primary .tl-btn')
+    // THE DISCRIMINATION. The toolbar primary is Save or share now. Opening it
+    // and copying a link is not an export: the counter must stay unset.
+    await page.getByRole('button', { name: 'Save or share' }).click()
+    await page.getByRole('button', { name: 'Copy link to this gradient' }).click()
+    await clipboard(page).toMatch(/\/create\/gradient\?gs=/)
+    expect(
+      (await usage(page))['activation:gradient:export'],
+      'copying a link is not a finished piece of work',
+    ).toBe(undefined)
+
+    // THE EXPORT. The code well's Copy button writes the CSS.
+    const copy = page.locator('.grd-copy')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
-    await clipboard(page).toMatch(/gradient/i)
+    await clipboard(page).toMatch(/^background: .*gradient/i)
 
     await counter(page, 'activation:gradient:export').toBe(1)
   })
