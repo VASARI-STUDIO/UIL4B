@@ -1,8 +1,18 @@
 /* /projects/:id/export, the export gallery. Flat colour and hairlines only. */
-.pxg{--pxg-bar-h:88px;--pxg-tab-h:0px;isolation:isolate;max-width:1480px;margin:0 auto;padding:var(--s-6) clamp(16px,3.2vw,64px) calc(max(var(--pxg-bar-h),var(--pxg-bar-live,0px)) + var(--pxg-tab-h) + var(--s-6));color:var(--t0)}
+.pxg{--pxg-bar-h:88px;--pxg-tab-h:0px;isolation:isolate;width:100%;margin:0;padding:var(--s-6) var(--page-inline) calc(max(var(--pxg-bar-h),var(--pxg-bar-live,0px)) + var(--pxg-tab-h) + var(--s-6));color:var(--t0)}
+/* THE PAGE AND THE BAR SHARE ONE COLUMN. The shell's <main class="app-page"> is 1240 wide with its own
+   inset, which left the content at x=182 while the fixed bar (viewport wide) started at x=46. The gallery
+   takes the whole width, and the page and the bar both read --page-inline, so they share a left edge. */
+.app-page:has(>.pxg){max-width:none;padding-inline:0}
 .pxg-saved{margin:0 0 var(--s-3);font-size:var(--fs-body-s);color:var(--t2)}
 .pxg-saved a,.pxg-link{color:var(--accent-text);text-decoration:underline;text-underline-offset:3px;min-height:24px}
 .pxg-link{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.pxg-saved .pxg-link{display:inline-flex;align-items:center;min-height:25px}
+.pxg-rename{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2);margin:0 0 var(--s-3)}
+.pxg-rename input{flex:1 1 220px;max-width:360px;min-width:0;min-height:40px;padding:0 var(--s-3);font-weight:600}
+.pxg-rename-btn{min-height:32px;padding:0 var(--s-4);border:1px solid var(--border);border-radius:999px;background:var(--bg-1);color:var(--t0);font:inherit;font-size:var(--fs-body-s);cursor:pointer}
+.pxg-rename-btn.is-primary{background:var(--accent-fill);border-color:transparent;color:var(--accent-ink);font-weight:600}
+.pxg-rename-btn:focus-visible,.pxg-rename input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pxg-h1{margin:0 0 var(--s-2);font-size:clamp(28px,4vw,44px);line-height:1.1;font-weight:600;overflow-wrap:anywhere}
 .pxg-lede{margin:0 0 var(--s-6);max-width:62ch;color:var(--t2);line-height:1.5}
 .pxg-h2{margin:var(--s-6) 0 var(--s-1);font-size:var(--fs-body);font-weight:600}
@@ -11,61 +21,90 @@
 .pxg-formats{display:grid;gap:var(--s-3)}
 .pxg-card,.pxg-fm{position:relative;display:flex;flex-direction:column;gap:var(--s-2);cursor:pointer;min-width:0}
 .pxg-card--book{--ar:1.5}.pxg-card--guidelines{--ar:1.9}.pxg-card--kit{--ar:1.4}
-.pxg-frame{display:block;width:100%;aspect-ratio:var(--ar,1.5);overflow:hidden;border-radius:var(--radius-l);background:var(--bg-2);isolation:isolate}
+/* THE FRAME is a ground of its own (--bg-3, distinct from the page) with a 1px inset edge, so a pale page or
+   a pale kit never melts into the background. The edge is an overlay, so the kit preview, which fills the
+   frame, does not cover it. The frame is a size container: the pages are sized from its box (cqw/cqh) so they
+   fill it, whole, centred, at their own shape. */
+.pxg-frame{position:relative;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:var(--ar,1.5);container-type:size;overflow:hidden;border-radius:var(--radius-l);background:var(--bg-3);isolation:isolate;transition:box-shadow 150ms var(--ease-out)}
+.pxg-frame::after{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--bh);pointer-events:none}
 .pxg-frame .exp-preview{margin:0}
 .pxg-frame .exp-preview-caption{display:none}
-/* The card frame is the box: the pages share it, whole, at their own shape, so the three frames match. */
-.pxg-frame .exp-preview.is-fit{height:100%}
-.pxg-frame .exp-preview.is-fit .exp-preview-stage{width:100%;height:100%}
-.pxg-frame .exp-preview.is-fit .exp-preview-strip{height:100%;margin:0;padding:var(--s-3);gap:var(--s-2);box-sizing:border-box;align-items:center;overflow:hidden;border-radius:0}
-.pxg-frame .exp-preview.is-fit .exp-thumb{flex:1 1 0;min-width:0;width:auto;height:auto;max-height:100%;aspect-ratio:auto;object-fit:contain}
-.pxg-frame .exp-preview.is-fit .exp-thumb-wait{aspect-ratio:1 / 1.414}
-.pxg-frame .exp-preview.is-guidelines.is-fit .exp-thumb-wait{aspect-ratio:16 / 9}
+.pxg-frame .exp-preview.is-fit{width:100%;height:100%}
+.pxg-frame .exp-preview.is-fit .exp-preview-stage{width:100%;max-width:none;height:100%}
+.pxg-frame .exp-preview.is-fit .exp-preview-strip{height:100%;margin:0;padding:var(--s-3);gap:var(--s-2);box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:0}
+.pxg-frame .exp-preview.is-fit .exp-thumb{flex:0 0 auto;box-sizing:border-box;min-width:0;object-fit:contain}
+/* The book shows its cover beside the colour page; the guidelines show their first slide, whole. The other
+   pictures stay in the DOM, hidden (so they are not announced), and the preview component is unchanged. */
+.pxg-frame .exp-preview.is-book.is-fit .exp-thumb{width:auto;aspect-ratio:120 / 170;height:min(100cqh - 2 * var(--s-3),(100cqw - 2 * var(--s-3) - var(--s-2)) / 2 * 1.4167)}
+.pxg-frame .exp-preview.is-book.is-fit .exp-thumb:nth-child(n+3){display:none}
+.pxg-frame .exp-preview.is-guidelines.is-fit .exp-thumb{width:auto;aspect-ratio:16 / 9;height:min(100cqh - 2 * var(--s-3),(100cqw - 2 * var(--s-3)) * .5625)}
+.pxg-frame .exp-preview.is-guidelines.is-fit .exp-thumb:nth-child(n+2){display:none}
 .pxg-frame .exp-preview.is-fit .exp-preview-strip[data-state="failed"]{display:none}
 .pxg-frame .exp-preview-failed{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-2);padding:var(--s-3);text-align:center;color:var(--t2);font-size:var(--fs-body-s)}
 .pxg-frame .exp-preview-failed p{margin:0}
 .pxg-frame .exp-preview-retry{min-height:32px;padding:0 var(--s-3);border:1px solid var(--border);border-radius:999px;background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out)}
 .pxg-frame .exp-preview-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pxg-card.is-on .pxg-frame{box-shadow:0 0 0 2px var(--bg-0),0 0 0 4px var(--accent)}
-.pxg-meta{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3)}
+.pxg-meta{display:flex;align-items:center;gap:var(--s-2)}
+.pxg-meta .pxg-tier{margin-left:auto}
 .pxg-name{font-weight:600;font-size:var(--fs-body)}
 .pxg-tier{font-size:var(--fs-caption);font-weight:500;color:var(--t2)}
 .pxg-tier.is-pro{color:var(--accent-text);font-weight:600}
+/* The radio you can see: a ring, filled with a dot when chosen. The native radio is hidden and still does the keyboard work. */
+.pxg-radio{position:relative;flex:none;width:16px;height:16px;box-sizing:border-box;border:2px solid var(--t3);border-radius:50%;transition:border-color 150ms var(--ease-out)}
+.pxg-radio::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--accent);opacity:0;transition:opacity 150ms var(--ease-out)}
+.is-on>.pxg-meta .pxg-radio{border-color:var(--accent)}
+.is-on>.pxg-meta .pxg-radio::after{opacity:1}
 .pxg-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5;max-width:60ch}
 .pxg-facts{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
-.pxg-fm{padding:var(--s-4);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);transition:border-color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
+.pxg-card>.pxg-desc,.pxg-card>.pxg-facts,.pxg-fm>.pxg-desc{padding-left:calc(16px + var(--s-2))}
+.pxg-fm{padding:var(--s-4);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
 .pxg-fm.is-on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .pxg-card:has(input:focus-visible) .pxg-frame{outline:2px solid var(--t0);outline-offset:7px}
 .pxg-fm:has(input:focus-visible){outline:2px solid var(--t0);outline-offset:3px}
 .pxg-note{margin:var(--s-6) 0 0;max-width:70ch;font-size:var(--fs-body-s);color:var(--t2)}
-.pxg-kit{aspect-ratio:1.4;background:var(--bg-0);display:flex;flex-direction:column;font-size:var(--fs-body-s)}
-.pxg-kit-bar{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--border)}
+/* The UI kit is drawn live and fills its frame; its rows sit centred, so a tall frame has no empty lower half. */
+.pxg-kit{width:100%;height:100%;background:var(--bg-0);display:flex;flex-direction:column;font-size:var(--fs-body-s)}
+.pxg-kit-bar{display:flex;flex:none;gap:6px;padding:10px;border-bottom:1px solid var(--border)}
 .pxg-kit-bar i{width:8px;height:8px;border-radius:50%;background:var(--bg-3)}
-.pxg-kit-body{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-4)}
+.pxg-kit-body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:var(--s-3);padding:var(--s-4)}
+.pxg-kit-body strong{font-size:var(--fs-body)}
 .pxg-kit-tints,.pxg-kit-btns{display:flex;gap:var(--s-2)}
-.pxg-kit-tints span{flex:1;height:28px;border-radius:4px}
+.pxg-kit-tints span{flex:1;height:32px;border-radius:4px}
+.pxg-kit-field{height:28px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--bg-1)}
 .pxg-kit-btns span{width:56px;height:20px;border-radius:999px}
 
 /* The decision bar: the only floating element. It sits above the phone tab bar. */
-.pxg-bar{position:fixed;left:0;right:0;bottom:var(--pxg-tab-h);z-index:20;min-height:var(--pxg-bar-h);display:grid;grid-template-columns:1fr auto;grid-template-areas:"sum not" "price price" "cta cta";align-items:center;align-content:center;gap:var(--s-2) var(--s-4);padding:var(--s-3) clamp(16px,3.2vw,64px);background:var(--bg-1);border-top:1px solid var(--border)}
-.pxg-sum{grid-area:sum;min-width:0;overflow-wrap:anywhere}
-.pxg-not{grid-area:not;display:inline-flex;align-items:center;min-height:36px;padding:0 var(--s-3);color:var(--t1);text-decoration:underline;text-underline-offset:3px;font-size:var(--fs-body-s)}
+.pxg-bar{position:fixed;left:0;right:0;bottom:var(--pxg-tab-h);z-index:20;min-height:var(--pxg-bar-h);display:grid;grid-template-columns:1fr auto;grid-template-areas:"sum not" "price price" "cta cta";align-items:center;align-content:center;gap:var(--s-2) var(--s-4);padding:var(--s-3) var(--page-inline);background:var(--bg-1);border-top:1px solid var(--border)}
+.pxg-sum{grid-area:sum;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--s-2)}
+.pxg-sum-pick{white-space:nowrap}
+.pxg-not{grid-area:not;display:inline-flex;align-items:center;min-height:36px;padding:0 var(--s-3);color:var(--t1);text-decoration:underline;text-underline-offset:3px;font-size:var(--fs-body-s);white-space:nowrap}
 .pxg-price{grid-area:price;margin:0;min-width:0;font-size:var(--fs-body-s);color:var(--t2);line-height:1.4}
 .pxg-price strong{color:var(--t0)}
 .pxg-cta{grid-area:cta;min-height:48px;min-width:min(300px,100%);padding:0 var(--s-5);border:0;border-radius:999px;background:var(--accent-fill);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer;transition:background-color var(--dur-1) var(--ease-out),transform var(--dur-1) var(--ease-out)}
 .pxg-cta:active:not(:disabled){transform:scale(.97)}
 .pxg-cta:focus-visible,.pxg-not:focus-visible,.pxg-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pxg-cta:disabled{background:var(--bg-3);color:var(--t3);cursor:default}
-@media (hover:hover){.pxg-cta:hover:not(:disabled){background:var(--accent-fill-hover,var(--accent-fill))}.pxg-frame .exp-preview-retry:hover{border-color:var(--t3)}}
+@media (hover:hover){
+  .pxg-cta:hover:not(:disabled){background:var(--accent-fill-hover,var(--accent-fill))}
+  .pxg-frame .exp-preview-retry:hover{border-color:var(--t3)}
+  .pxg-card:not(.is-on):hover .pxg-frame{box-shadow:0 0 0 3px var(--bh)}
+  .pxg-card:not(.is-on):hover .pxg-radio{border-color:var(--t1)}
+  .pxg-fm:not(.is-on):hover{border-color:var(--bh)}
+}
 
 @media (max-width:639px){
   .pxg{--pxg-bar-h:168px;--pxg-tab-h:var(--tabbar-h,61px)}
+  /* "Not now, open project" is "Not now" on a phone (the link keeps its full accessible name). The tier sits on its own line. */
+  .pxg-not-more{display:none}
+  .pxg-sum{flex-direction:column;align-items:flex-start;gap:2px}
 }
 @media (min-width:640px){
   .pxg{--pxg-bar-h:116px}
   .pxg-bar{grid-template-columns:1fr minmax(0,1fr) auto;grid-template-areas:"sum sum not" "price price cta"}
-  .pxg-formats{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .pxg-card{display:grid;grid-template-columns:minmax(0,58%) 1fr;column-gap:var(--s-5);align-items:start}
+  /* As many columns as there are files for this design, so there are none left empty. */
+  .pxg-formats{grid-template-columns:repeat(var(--n,3),minmax(0,420px))}
+  .pxg-card{display:grid;grid-template-columns:minmax(0,58%) 1fr;grid-template-rows:auto auto auto 1fr;column-gap:var(--s-5);align-items:start}
   .pxg-card .pxg-frame{grid-row:1 / span 4}
 }
 @media (min-width:1024px){
@@ -73,14 +112,14 @@
   .pxg-designs{display:flex;gap:var(--s-5)}
   .pxg-card{display:flex;flex:1 1 0}
   .pxg-card--book{flex-grow:1.5}.pxg-card--guidelines{flex-grow:1.9}.pxg-card--kit{flex-grow:1.4}
-  .pxg-bar{grid-template-columns:1fr auto minmax(0,300px) auto;grid-template-areas:"sum not price cta"}
+  .pxg-bar{grid-template-columns:1fr auto minmax(0,clamp(300px,30vw,420px)) auto;grid-template-areas:"sum not price cta"}
   .pxg-price{text-align:right}
 }
 /* Reduced motion: the in-app choice and the OS preference, as a pair (the house pattern). */
-html[data-reduced-motion="true"] .pxg-cta,html[data-reduced-motion="true"] .pxg-fm,html[data-reduced-motion="true"] .pxg-frame .exp-preview-retry{transition:none}
+html[data-reduced-motion="true"] .pxg-cta,html[data-reduced-motion="true"] .pxg-fm,html[data-reduced-motion="true"] .pxg-frame,html[data-reduced-motion="true"] .pxg-radio,html[data-reduced-motion="true"] .pxg-radio::after,html[data-reduced-motion="true"] .pxg-frame .exp-preview-retry{transition:none}
 html[data-reduced-motion="true"] .pxg-cta:active:not(:disabled){transform:none}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .pxg-cta,html:not([data-reduced-motion="false"]) .pxg-fm,html:not([data-reduced-motion="false"]) .pxg-frame .exp-preview-retry{transition:none}
+  html:not([data-reduced-motion="false"]) .pxg-cta,html:not([data-reduced-motion="false"]) .pxg-fm,html:not([data-reduced-motion="false"]) .pxg-frame,html:not([data-reduced-motion="false"]) .pxg-radio,html:not([data-reduced-motion="false"]) .pxg-radio::after,html:not([data-reduced-motion="false"]) .pxg-frame .exp-preview-retry{transition:none}
   html:not([data-reduced-motion="false"]) .pxg-cta:active:not(:disabled){transform:none}
 }
 

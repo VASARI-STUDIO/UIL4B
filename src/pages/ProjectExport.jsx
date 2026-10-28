@@ -69,6 +69,7 @@ function KitPreview({ colours, name }) {
       <div className="pxg-kit-bar"><i /><i /><i /></div>
       <div className="pxg-kit-body">
         <strong>{name}</strong>
+        <div className="pxg-kit-field" />
         <div className="pxg-kit-tints">{colours.slice(0, 5).map((h, i) => <span key={`${h}-${i}`} style={{ background: h }} />)}</div>
         <div className="pxg-kit-btns"><span style={{ background: a }} /><span style={{ background: b }} /><span style={{ background: c }} /></div>
       </div>
@@ -252,7 +253,7 @@ function ProjectExport({ id }) {
                 ? <KitPreview colours={colours} name={name} />
                 : <ExportProPreview kind={d.id} template={readExportTemplates(working)[d.id]} design={design} projectName={name} blurred={!isPro} showLock={false} fit />}
             </span>
-            <span className="pxg-meta"><span className="pxg-name">{d.name}</span><span className={d.pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{d.pro ? 'Pro' : 'Free'}</span></span>
+            <span className="pxg-meta"><span className="pxg-radio" aria-hidden="true" /><span className="pxg-name">{d.name}</span><span className={d.pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{d.pro ? 'Pro' : 'Free'}</span></span>
             <span className="pxg-desc">{DESIGN_COPY[d.id]}</span>
             <span className="pxg-facts">{d.shape}</span>
           </label>
@@ -261,11 +262,12 @@ function ProjectExport({ id }) {
 
       <h2 className="pxg-h2" id="pxg-formats">File format</h2>
       <p className="pxg-sub">For {current.name}</p>
-      <div className="pxg-formats" role="radiogroup" aria-labelledby="pxg-formats">
+      <div className="pxg-formats" role="radiogroup" aria-labelledby="pxg-formats" style={{ '--n': current.formats.length }}>
         {current.formats.map((f) => (
           <label key={f} className={`pxg-fm${pick.format === f ? ' is-on' : ''}`}>
             <input type="radio" name="pxg-format" className="sr-only" checked={pick.format === f} onChange={() => choose(normalisePick({ ...pick, format: f }))} />
-            <span className="pxg-meta"><span className="pxg-name">{GALLERY_FORMATS[f].label}</span><span className={current.pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{current.pro ? 'Pro' : 'Free'}</span></span>
+            {/* The tier is said once, in the bar; a format card does not repeat it. */}
+            <span className="pxg-meta"><span className="pxg-radio" aria-hidden="true" /><span className="pxg-name">{GALLERY_FORMATS[f].label}</span></span>
             <span className="pxg-desc">{GALLERY_FORMATS[f].blurb}</span>
           </label>
         ))}
@@ -277,8 +279,8 @@ function ProjectExport({ id }) {
       </p>
 
       <div className="pxg-bar" ref={watchBar} role="region" aria-label="Your pick">
-        <div className="pxg-sum"><strong>{current.name} · {GALLERY_FORMATS[pick.format].label}</strong> <span className={pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{pro ? 'Pro' : 'Free'}</span></div>
-        <Link className="pxg-not" to={`/projects/${id}`} aria-label={`Not now, open the ${name} project`}>Not now, open project</Link>
+        <div className="pxg-sum"><strong className="pxg-sum-pick">{current.name} · {GALLERY_FORMATS[pick.format].label}</strong><span className={pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{pro ? 'Pro' : 'Free'}</span></div>
+        <Link className="pxg-not" to={`/projects/${id}`} aria-label={`Not now, open the ${name} project`}>Not now<span className="pxg-not-more">, open project</span></Link>
         <p className="pxg-price" aria-live="polite">{priceLine}</p>
         <button type="button" className="pxg-cta" onClick={onCta} disabled={ctaDisabled}>{ctaLabel}</button>
       </div>
