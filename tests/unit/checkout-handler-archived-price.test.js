@@ -102,7 +102,7 @@ async function checkout(body = { interval: 'monthly', currency: 'usd' }) {
     json(payload) { res.body = payload; return res },
     end() { return res },
   }
-  await handler({ method: 'POST', headers: { authorization: 'Bearer test-token' }, body }, res)
+  await handler({ method: 'POST', headers: { authorization: 'Bearer test-token', 'x-forwarded-for': '198.51.100.20' }, body }, res)
   return res
 }
 

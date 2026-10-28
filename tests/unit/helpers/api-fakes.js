@@ -100,11 +100,16 @@ export function fakeDb(seed = {}) {
         return { id: `auto${autoId}` }
       },
     }),
+    // Writes are buffered and applied after the body returns, as a real
+    // commit does, so a failing write rejects the whole transaction.
     async runTransaction(fn) {
-      return fn({
+      const writes = []
+      const out = await fn({
         get: (r) => r.get(),
-        set: (r, data, opts) => r.set(data, opts),
+        set: (r, data, opts) => { writes.push(() => r.set(data, opts)) },
       })
+      for (const w of writes) await w()
+      return out
     },
   }
 }
