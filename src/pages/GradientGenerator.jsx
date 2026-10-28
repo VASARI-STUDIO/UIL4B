@@ -11,7 +11,7 @@ import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
-import { GRAD_TYPE_WEIGHTS, STYLE_FAMILIES, rollGradient, pickFromPool } from '../utils/gradientRandom'
+import { GRAD_TYPE_WEIGHTS, rollGradient, pickPaletteLook } from '../utils/gradientRandom'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
 import usePopover from '../hooks/usePopover'
@@ -815,15 +815,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }
     if (keepFocus) focusRemovedRowRef.current = true
     setStops(prev => prev.length - remove.length >= MIN_STOPS ? prev.filter((_, i) => !remove.includes(i)) : prev)
-    setActiveStop(a => {
-      const shift = remove.filter((r) => r < a).length
-      return remove.includes(a) ? Math.min(a - shift, stops.length - remove.length - 1) : a - shift
-    })
+    const shift = remove.filter((r) => r < activeStop).length
+    const next = remove.includes(activeStop) ? Math.min(activeStop - shift, stops.length - remove.length - 1) : activeStop - shift
+    setActiveStop(next)
+    // A later Shift-click ranges from the stop that is active now, not from an
+    // index the delete moved.
+    anchorRef.current = next
     setPicked([])
     setSelMode(false)
     if (blocked) say('A gradient needs at least two stops.')
     else if (remove.length > 1) say(`${remove.length} stops removed`)
-  }, [guardEdit, stops.length, toast, say])
+  }, [guardEdit, stops.length, activeStop, toast, say])
 
   const flip = useCallback(() => {
     if (!guardEdit()) return
@@ -876,14 +878,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // keeps the same number, and any stop marked `.locked` keeps its colour +
   // position while the rest are re-rolled. `sample(i)` supplies the colour for
   // an unlocked slot (random hex, or a palette pick) so both randomisers share
-  // this logic.
-  const rollStops = useCallback((sample, count) => {
+  // this logic. `closeSeam` is set for a conic roll: locked stops and the cycling
+  // of `sample` can leave the last colour off the first, so it is made the first
+  // again (or the first made the last, when only the last is locked).
+  const rollStops = useCallback((sample, count, closeSeam = false) => {
     // A locked stop must always survive, even when the rolled count is smaller
     // than its index — so if ANY stop is locked we keep the current length
     // rather than shrinking to the rolled count and dropping locked stops.
     const hasStopLock = stops.some(s => s.locked)
     const n = hasStopLock ? stops.length : count
-    return Array.from({ length: n }, (_, i) => {
+    const out = Array.from({ length: n }, (_, i) => {
       const ex = stops[i]
       if (ex?.locked) return { color: ex.color, position: ex.position, locked: true }
       return {
@@ -892,13 +896,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         locked: false,
       }
     })
+    if (closeSeam && hasStopLock && n >= 3) {
+      const last = out[n - 1]
+      if (!last.locked) last.color = out[0].color
+      else if (!out[0].locked) out[0].color = last.color
+    }
+    return out
   }, [stops])
 
   // Random: colours are chosen in OKLCH under the quality rules in
   // utils/gradientRandom, so the ends are related and the middle is never grey.
   const randomise = useCallback(() => {
     const g = rollGradient(Math.random, engineFilters(filters))
-    setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length))
+    setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length, g.type === 'Conic'))
     setType(g.type)
     if (!filters.keepAngle) setAngle(g.angle)
     selectOnly(0)
@@ -960,10 +970,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // The type, count and angle come from the same roll as Random; only the
     // colours differ. A two-colour pick has to differ in lightness or hue, and
     // the pool cycles if there are more stops than colours.
-    const g = rollGradient(Math.random, engineFilters(filters))
-    const picks = pickFromPool(pool, g.stops.length, Math.random)
-    setStops(rollStops((i) => picks[i % picks.length], g.stops.length))
-    setType(g.type)
+    const engine = engineFilters(filters)
+    // The roll's own radial gate judges colours that are thrown away here, so it
+    // is off and the gate runs on the palette colours instead.
+    const g = rollGradient(Math.random, { ...engine, radialGate: false })
+    const { type: lookType, colours: picks } = pickPaletteLook(pool, g.stops.length, g.type, engine.types, Math.random)
+    setStops(rollStops((i) => picks[i % picks.length], g.stops.length, lookType === 'Conic'))
+    setType(lookType)
     if (!filters.keepAngle) setAngle(g.angle)
     selectOnly(0)
     setFromLibrary(false)
@@ -1182,7 +1195,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       if (run.length >= 2) say(`${run.length} stops selected`)
       return
     }
-    if (e?.ctrlKey || e?.metaKey || (coarse && selMode)) {
+    if (e?.ctrlKey || e?.metaKey || selMode) {
       const next = toggleIn(multi ? picked : [activeStop], i)
       if (!next.length) return
       anchorRef.current = i
@@ -1224,10 +1237,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     e.preventDefault()
     e.stopPropagation()
     // Modifier presses and touch selection mode select instead of dragging.
-    if (e.shiftKey || e.ctrlKey || e.metaKey || (coarse && selMode)) { pressStop(idx, e); return }
+    if (e.shiftKey || e.ctrlKey || e.metaKey || selMode) { pressStop(idx, e); return }
     if (!guardEdit()) return
     beginStopDrag(idx)
-  }, [beginStopDrag, guardEdit, pressStop, coarse, selMode])
+  }, [beginStopDrag, guardEdit, pressStop, selMode])
 
   // Press empty rail to drop a stop right where you press — on POINTERDOWN, not
   // on the click that ends the gesture. That is the whole fix: the handle exists
@@ -1354,17 +1367,27 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }
   const fmtLabel = EXPORT_FORMATS.find((f) => f.id === effFmt)?.label || 'CSS'
 
-  // Keys inside the stop list. Escape clears the selection; Ctrl/Cmd+A selects
-  // every stop; Shift+Up/Down on a row moves to the next row and extends the
-  // run to it; Delete/Backspace removes a selection.
+  // Escape anywhere in the controls panel (stop list, hex input, chips) clears
+  // the selection. Something open in front of it closes first: a popover or menu
+  // the key came from, or a picker whose button holds focus. The picker's popover
+  // is a portal, and React events bubble out of it, so the target must also sit
+  // inside the panel's own DOM.
+  const onPanelKey = (e) => {
+    if (e.key !== 'Escape' || !(multi || selMode)) return
+    if (!e.currentTarget.contains(e.target)) return
+    if (e.target.closest?.('[role="dialog"], [role="menu"], [aria-expanded="true"]')) return
+    e.preventDefault()
+    clearSelection()
+  }
+
+  // Keys inside the stop list. Ctrl/Cmd+A selects every stop; Shift+Up/Down on a
+  // row moves to the next row and extends the run to it; Delete/Backspace
+  // removes a selection.
   const onStopListKey = (e) => {
     // The colour picker's popover is a portal, and React events bubble out of it.
     if (!stopListRef.current?.contains(e.target)) return
     const row = e.target.closest?.('.grd-stop-select')
-    if (e.key === 'Escape' && (multi || selMode)) {
-      e.preventDefault()
-      clearSelection()
-    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) {
       e.preventDefault()
       if (stops.length < 2) return
       setPicked(stops.map((_, i) => i))
@@ -1563,7 +1586,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </div>
         </ToolMain>
 
-        <ToolPanel label="Gradient controls" className="grd-panel">
+        <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
           {/* AVAILABLE COLOURS. Every colour in the palette, one press from the
               selected stop, then its shades when the project's ramp is current.
               With no palette the ten starter colours stand in. */}

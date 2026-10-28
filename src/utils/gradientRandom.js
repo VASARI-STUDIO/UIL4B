@@ -228,7 +228,8 @@ function drawCount(counts, rand) {
 /**
  * Roll a whole gradient.
  *
- * filters: { types: [] (empty = Any), counts: [] (empty = Any), styles: ['Plain'] }
+ * filters: { types: [] (empty = Any), counts: [] (empty = Any), styles: ['Plain'],
+ *   radialGate: false to skip the radial gate when the colours are replaced afterwards }
  * Returns { type, angle, stops: [{ color, position }], style, harmony, tone } with
  * colours as upper-case hex. `style` is always Plain until a family is built.
  */
@@ -242,10 +243,10 @@ export function rollGradient(rand = Math.random, filters = {}) {
   let first = firstColour(tone, rand)
   let second = secondColour(first, harmony, tone, rand)
 
-  if (type === 'Radial') {
+  if (type === 'Radial' && filters.radialGate !== false) {
     // Up to three tries to find a pair that reads as a light or a vignette. A
-    // filter that asks for Radial alone keeps the best of the three rather
-    // than falling back to Linear.
+    // filter that leaves Linear out keeps the best of the three rather than
+    // falling back to a type the person excluded.
     let best = { first, second }
     for (let tries = 0; tries < 3 && !radialGatePasses(first, second); tries++) {
       const gap = (p) => Math.abs(p.first.L - p.second.L)
@@ -256,7 +257,9 @@ export function rollGradient(rand = Math.random, filters = {}) {
       if (gap({ first, second }) > gap(best)) best = { first, second }
     }
     if (!radialGatePasses(best.first, best.second)) {
-      if (types.length === 1 && types[0] === 'Radial') ({ first, second } = best)
+      // Linear is the fallback only when the filter lets it through; a filter
+      // without it keeps Radial with the best of the tries.
+      if (types.length && !types.includes('Linear')) ({ first, second } = best)
       else type = 'Linear'
     } else ({ first, second } = best)
   }
@@ -305,4 +308,42 @@ export function pickFromPool(pool, count, rand = Math.random) {
     if (apart(next)) return next
   }
   return first
+}
+
+/**
+ * Type and colours for Shuffle from palette. The type and count come from a roll;
+ * the radial gate and the conic seam are judged on the colours actually drawn,
+ * not on the random ones they replace.
+ *
+ * Radial: up to three more draws for a pair that reads as a light or a vignette,
+ * then the widest lightness gap stands; Linear takes over only when the filter
+ * (`types`, empty = Any) allows it. Conic with three or more pool colours ends on
+ * its first colour so the seam closes.
+ * Returns { type, colours }.
+ */
+export function pickPaletteLook(pool, count, type, types = [], rand = Math.random) {
+  let colours = pickFromPool(pool, count, rand)
+  if (type === 'Radial') {
+    const ends = (c) => [hexToOklchRaw(c[0]), hexToOklchRaw(c[c.length - 1])]
+    const passes = (c) => {
+      const [a, b] = ends(c)
+      return radialGatePasses({ L: a[0], C: a[1] }, { L: b[0], C: b[1] })
+    }
+    const gap = (c) => {
+      const [a, b] = ends(c)
+      return Math.abs(a[0] - b[0])
+    }
+    let best = colours
+    for (let tries = 0; tries < 3 && !passes(colours); tries++) {
+      colours = pickFromPool(pool, count, rand)
+      if (gap(colours) > gap(best)) best = colours
+    }
+    if (passes(colours)) best = colours
+    colours = best
+    if (!passes(colours) && (!types.length || types.includes('Linear'))) type = 'Linear'
+  }
+  if (type === 'Conic' && pool.length >= 3 && colours.length >= 3) {
+    colours = [...colours.slice(0, -1), colours[0]]
+  }
+  return { type, colours }
 }
