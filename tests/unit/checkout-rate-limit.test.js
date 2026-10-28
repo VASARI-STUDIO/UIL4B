@@ -3,7 +3,7 @@
 //
 // A free account costs nothing to make, and every checkout call can create a
 // Stripe customer and a Checkout session. The route now counts each signed-in
-// call against 10 an hour per account and 30 an hour per address, using the same
+// call against 10 an hour per account and 60 an hour per address, using the same
 // Firestore-backed limiter /api/support uses, and answers 429 with Retry-After.
 // The real route and the real limiter run against an in-memory Admin SDK and a
 // recording Stripe fake (helpers/api-stub-loader.mjs); nothing here touches
@@ -38,7 +38,7 @@ function fakeStripe() {
 }
 
 /** Accounts `u0..u{n-1}`, each with its own bearer token `t{i}`. */
-function world(accounts = 60) {
+function world(accounts = 80) {
   const tokens = {}
   for (let i = 0; i < accounts; i += 1) tokens[`t${i}`] = { uid: `u${i}`, email: `u${i}@example.com`, email_verified: true }
   const db = fakeDb()
@@ -83,7 +83,7 @@ test('many accounts from one address are stopped by the address limit', async ()
   const refused = await call(`t${IP_LIMIT}`)
   assert.equal(refused.statusCode, 429, 'a new account from the same address must be refused')
   assert.equal(stripe.sessions.length, IP_LIMIT)
-  assert.equal((await call('t59', '203.0.113.99')).statusCode, 200, 'a different address is unaffected')
+  assert.equal((await call('t79', '203.0.113.99')).statusCode, 200, 'a different address is unaffected')
 })
 
 test('the window rolls: the allowance returns after an hour', async () => {
@@ -108,4 +108,60 @@ test('an unsigned or invalid call is a 401 and is not counted', async () => {
   const res = await call('not-a-token')
   assert.equal(res.statusCode, 401)
   assert.deepEqual([...db.docs.keys()].filter((k) => k.startsWith('rate-limits/')), [])
+})
+
+/* ── Fix round 2: items 2 and 9 ───────────────────────────────────────────── */
+
+async function callWith({ bearer = 't0', headers = {}, body = { interval: 'monthly', currency: 'usd' } } = {}) {
+  const res = fakeRes()
+  await checkout({ method: 'POST', headers: { authorization: `Bearer ${bearer}`, ...headers }, body }, res)
+  return res
+}
+
+const rateDocs = (db) => [...db.docs.keys()].filter((k) => k.startsWith('rate-limits/'))
+
+test('the per-address allowance is 60 an hour and the per-account one stays 10', () => {
+  assert.equal(CHECKOUT_LIMITS.perIp.limit, 60)
+  assert.equal(CHECKOUT_LIMITS.perUid.limit, 10)
+})
+
+test('a malformed body is a 400 and does not use up the buyer\'s allowance', async () => {
+  const { db, stripe } = world()
+  for (let i = 0; i < UID_LIMIT + 3; i += 1) {
+    const bad = await callWith({ headers: { 'x-forwarded-for': '198.51.100.7' }, body: { interval: 'fortnightly', currency: 'usd' } })
+    assert.equal(bad.statusCode, 400)
+  }
+  const badCurrency = await callWith({ headers: { 'x-forwarded-for': '198.51.100.7' }, body: { interval: 'monthly', currency: 'zzz' } })
+  assert.equal(badCurrency.statusCode, 400)
+  assert.deepEqual(rateDocs(db), [], 'a refused body was counted')
+  assert.equal((await callWith({ headers: { 'x-forwarded-for': '198.51.100.7' } })).statusCode, 200, 'the buyer still has the whole allowance')
+  assert.equal(stripe.sessions.length, 1)
+})
+
+test('a request with no address is refused, nothing is counted and no session is made', async () => {
+  const { db, stripe } = world()
+  const res = await callWith({ headers: {} })
+  assert.equal(res.statusCode, 400)
+  assert.match(res.body.error, /No payment session was created/)
+  assert.deepEqual(rateDocs(db), [], 'a refused request was counted')
+  assert.equal(stripe.sessions.length, 0)
+})
+
+test('x-vercel-forwarded-for is the address that is limited, not a spoofable x-forwarded-for', async () => {
+  const { db } = world()
+  await callWith({ bearer: 't0', headers: { 'x-vercel-forwarded-for': '203.0.113.5', 'x-forwarded-for': '1.1.1.1' } })
+  await callWith({ bearer: 't1', headers: { 'x-vercel-forwarded-for': '203.0.113.5', 'x-forwarded-for': '2.2.2.2' } })
+  const ipDocs = [...db.docs.entries()].filter(([k]) => k.startsWith('rate-limits/checkout-ip_'))
+  assert.equal(ipDocs.length, 1, 'two different x-forwarded-for values split one real address into two buckets')
+  assert.equal(ipDocs[0][1].count, 2)
+})
+
+test('a counter that cannot be updated under contention is a 429, not a free checkout', async () => {
+  const { db, stripe } = world()
+  const aborted = Object.assign(new Error('aborted'), { code: 10 })
+  db.runTransaction = async () => { throw aborted }
+  const res = await callWith({ headers: { 'x-forwarded-for': '198.51.100.7' } })
+  assert.equal(res.statusCode, 429)
+  assert.ok(Number(res.headers['Retry-After']) >= 1)
+  assert.equal(stripe.sessions.length, 0)
 })

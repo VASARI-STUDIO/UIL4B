@@ -19,9 +19,11 @@ import { clientIp, consume } from './_lib/rateLimit.js'
 // throwaway accounts could otherwise create Stripe objects without limit. The
 // per-account limit stops one login looping; the per-address limit stops many
 // logins from one machine. A real buyer opens a checkout a handful of times.
+// The per-address figure is higher because an office, a school or a mobile
+// carrier puts many real buyers behind one address.
 export const CHECKOUT_LIMITS = Object.freeze({
   perUid: Object.freeze({ limit: 10, windowMs: 60 * 60 * 1000 }),
-  perIp: Object.freeze({ limit: 30, windowMs: 60 * 60 * 1000 }),
+  perIp: Object.freeze({ limit: 60, windowMs: 60 * 60 * 1000 }),
 })
 
 /**
@@ -29,8 +31,15 @@ export const CHECKOUT_LIMITS = Object.freeze({
  * or `{ retryAfter }` (whole seconds) for the first limit that is spent. The
  * account is checked first, so a refused account does not use up the shared
  * address allowance.
+ *
+ * A request with no address at all is REFUSED (`{ noAddress: true }`), not
+ * counted against the account alone: consume() skips an empty key, so passing
+ * one through would exempt the request from the per-address limit. Vercel
+ * always supplies an address, so a blank one is not a real buyer's request.
+ * Nothing is counted for it.
  */
 export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
+  if (!ip) return { noAddress: true, retryAfter: 0 }
   const uidVerdict = await consume(db, { bucket: 'checkout-uid', key: uid, ...CHECKOUT_LIMITS.perUid, now })
   if (!uidVerdict.allowed) return { retryAfter: uidVerdict.retryAfter }
   const ipVerdict = await consume(db, { bucket: 'checkout-ip', key: ip, ...CHECKOUT_LIMITS.perIp, now })
@@ -262,9 +271,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
   }
 
-  // After the token check, so only signed-in calls are counted, and before any
-  // Stripe work.
+  // After the body checks above and the token check, so a malformed or unsigned
+  // call never uses up anyone's allowance, and before any Stripe work.
   const limited = await checkoutRateLimit(adminDb(), { uid, ip: clientIp(req) })
+  if (limited?.noAddress) {
+    return res.status(400).json({ error: 'Your connection could not be identified, so checkout cannot open. No payment session was created.' })
+  }
   if (limited) {
     res.setHeader('Retry-After', String(limited.retryAfter))
     return res.status(429).json({

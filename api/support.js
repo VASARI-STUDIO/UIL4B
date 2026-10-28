@@ -153,7 +153,10 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     if (!verdict.allowed) {
       res.setHeader('Retry-After', String(verdict.retryAfter))
       return res.status(429).json({
-        error: 'Too many messages from this connection. Try again shortly — or email support directly.',
+        // `contended` is a burst that could not be counted, not a spent allowance.
+        error: verdict.contended
+          ? 'The support form is busy. Try again in a few seconds — or email support directly.'
+          : 'Too many messages from this connection. Try again shortly — or email support directly.',
         retryAfter: verdict.retryAfter,
       })
     }

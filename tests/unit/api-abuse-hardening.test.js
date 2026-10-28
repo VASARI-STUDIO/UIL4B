@@ -237,13 +237,18 @@ test('the salt still comes from the environment when it is set', async () => {
 // ── the limiter itself ───────────────────────────────────────────────────────
 
 /** The smallest Firestore that can run `consume` — a Map with a transaction. */
-function fakeDb({ failing = false } = {}) {
+function fakeDb({ failing = false, error = null, retries = 0 } = {}) {
   const docs = new Map()
   return {
     docs,
     collection: () => ({ doc: (id) => ({ id }) }),
     runTransaction: async (fn) => {
-      if (failing) throw new Error('firestore unavailable')
+      // `retries`: the body is run that many times first, as Firestore does when
+      // another writer changed the document, and then the transaction gives up.
+      for (let i = 0; i < retries; i++) {
+        await fn({ get: async () => ({ exists: false, data: () => undefined }), set: () => {} })
+      }
+      if (failing) throw error || new Error('firestore unavailable')
       return fn({
         get: async ({ id }) => ({ exists: docs.has(id), data: () => docs.get(id) }),
         set: ({ id }, value, opts) => docs.set(id, opts?.merge ? { ...docs.get(id), ...value } : value),
@@ -286,9 +291,61 @@ test('two keys do not share a budget', async () => {
 // wobbles turns an availability blip into total loss of the channel users
 // report it on. The trade is deliberate and is asserted so it stays deliberate.
 test('the limiter fails OPEN when Firestore is unreachable', async () => {
+  for (const code of [14, 4, 'unavailable', 'deadline-exceeded']) {
+    const error = Object.assign(new Error('firestore unavailable'), { code })
+    const verdict = await consume(fakeDb({ failing: true, error }), { ...WINDOW, now: 1000 })
+    assert.equal(verdict.allowed, true, `code ${code} is an outage`)
+    assert.equal(verdict.degraded, true)
+  }
+})
+
+// A burst against one counter makes Firestore abort and retry the transaction,
+// and when it gives up the error is not an outage. Allowing that through would
+// let exactly the requests the limiter exists for walk past it.
+test('the limiter fails CLOSED when the transaction is aborted by contention', async () => {
+  const aborted = Object.assign(new Error('Too much contention on these documents'), { code: 10 })
+  const verdict = await consume(fakeDb({ failing: true, error: aborted }), { ...WINDOW, now: 1000 })
+  assert.equal(verdict.allowed, false)
+  assert.equal(verdict.contended, true)
+  assert.ok(verdict.retryAfter >= 1, 'a refusal says when to try again')
+})
+
+test('the limiter fails CLOSED when a retried transaction ends in an outage-looking error', async () => {
+  const unavailable = Object.assign(new Error('unavailable'), { code: 14 })
+  const verdict = await consume(fakeDb({ failing: true, error: unavailable, retries: 2 }), { ...WINDOW, now: 1000 })
+  assert.equal(verdict.allowed, false, 'a transaction that already retried was contended, not an outage')
+})
+
+test('an error with no code is not an outage: the limiter fails closed', async () => {
   const verdict = await consume(fakeDb({ failing: true }), { ...WINDOW, now: 1000 })
-  assert.equal(verdict.allowed, true)
-  assert.equal(verdict.degraded, true)
+  assert.equal(verdict.allowed, false)
+})
+
+test('the support route answers a contended counter with a 429 and Retry-After, not a message sent through', async () => {
+  const { handleSupport } = await import('../../api/support.js')
+  const aborted = Object.assign(new Error('aborted'), { code: 10 })
+  const db = fakeDb({ failing: true, error: aborted })
+  const res = {
+    statusCode: 200, headers: {}, body: undefined,
+    status(c) { this.statusCode = c; return this },
+    json(p) { this.body = p; return this },
+    setHeader(k, v) { this.headers[k] = v },
+    end() { return this },
+  }
+  await handleSupport(
+    { method: 'POST', headers: { 'x-forwarded-for': '203.0.113.7' }, body: { type: 'bug', message: 'hello there', email: 'a@b.co' } },
+    res,
+    { getDb: () => db, defer: () => {} },
+  )
+  assert.equal(res.statusCode, 429)
+  assert.ok(Number(res.headers['Retry-After']) >= 1)
+  assert.match(res.body.error, /busy/i)
+})
+
+test('x-vercel-forwarded-for wins over x-forwarded-for', () => {
+  assert.equal(clientIp({ headers: { 'x-vercel-forwarded-for': '203.0.113.7', 'x-forwarded-for': '198.51.100.1, 10.0.0.1' } }), '203.0.113.7')
+  assert.equal(clientIp({ headers: { 'x-vercel-forwarded-for': ['203.0.113.7'], 'x-forwarded-for': '198.51.100.1' } }), '203.0.113.7')
+  assert.equal(clientIp({ headers: { 'x-vercel-forwarded-for': '', 'x-forwarded-for': '198.51.100.1' } }), '198.51.100.1')
 })
 
 test('an unknown client is not silently given its own private bucket', async () => {
