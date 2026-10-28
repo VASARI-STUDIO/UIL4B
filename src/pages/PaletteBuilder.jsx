@@ -3641,7 +3641,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               defaultValue={0}
               // As drawn (D:2171-2174): degrees on Hue, a bare signed number
               // on the others; the percentage is spoken, not printed.
-              display={`${v > 0 ? '+' : ''}${v}${f.unit === '°' ? '°' : ''}`}
+              // The degree sign hangs past the value column's right edge
+              // (.plb-deg), so every row's digits end on one line.
+              display={f.unit === '°'
+                ? <>{`${v > 0 ? '+' : ''}${v}`}<span className="plb-deg">°</span></>
+                : `${v > 0 ? '+' : ''}${v}`}
               track={trackGradients?.[f.key] || ADJUST_TRACKS[f.key]}
               ariaLabel={`${f.label} adjustment`}
               ariaValueText={`${v > 0 ? '+' : ''}${v}${f.unit || ''}`}

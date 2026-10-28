@@ -389,9 +389,13 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "title fields actions";
   }
+  /* Capped so the 2x2 tracks stay near 240px instead of stretching to ~395px
+     and then dropping to ~122px when the row goes four across at 1380. The
+     slack falls between the fields and Copy CSS. */
+  .plb .plb-adjust-fields { max-width: 760px; }
 }
 @container plb-adjust (width >= 1380px) {
-  .plb .plb-adjust-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .plb .plb-adjust-fields { max-width: none; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @container plb-adjust (width < 480px) {
   /* Stacked, the sliders sit above the buttons: nothing under the pointer moves,
@@ -449,6 +453,9 @@
   color: color-mix(in srgb, var(--t0) 80%, var(--bg-0));
 }
 .plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
+/* The degree sign hangs outside the digit column: zero width, drawn past the
+   right edge into the gap, so Hue's digits end where the other values' do. */
+.plb .plb-adjust .plb-deg { display: inline-block; width: 0; overflow: visible; }
 /* Laid out while idle so the bar does not reflow on the first nudge. */
 .plb .plb-adjust-reset.is-idle { visibility: hidden; }
 .plb .plb-copycss {
