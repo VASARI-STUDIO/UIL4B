@@ -128,7 +128,8 @@ test('the page applies a preset\'s interpolation space and paints its tile in it
 
 test('the first-visit gradient and Reset come from the first preset, not a fixed type', () => {
   assert.match(src, /design\?\.gradient\?\.type \|\| PRESETS\[0\]\.type/)
-  assert.match(src, /const reset = useCallback\(\(\) => applyPreset\(PRESETS\[0\]\)/)
+  // Reset also clears the geometry locks now, so the body is a block; the preset still comes first.
+  assert.match(src, /const reset = useCallback\(\(\) => \{ applyPreset\(PRESETS\[0\]\);/)
 })
 
 test('the starter grid steps 2, 4, 6 columns, which all divide twelve, and holds only the starters', () => {

@@ -182,6 +182,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-gradient-keep-dismissed': { scope: 'session', why: 'Keep-these-gradients question answered "Not mine" for this tab session (vs-gradient-keep-dismissed:<uid>)' },
   'vs-pending-save': { scope: 'session', why: 'A save waiting on sign-up (tool and project name), so the Save menu can reopen after onboarding; this tab only' },
   'vs-gradient-shuffle-filters': { scope: 'session', why: 'Gradient Shuffle settings (types, stop counts, Keep the angle), this tab only' },
+  'vs-gradient-locks': { scope: 'session', why: 'Gradient geometry locks (type, angle, interpolation space) for Random and Shuffle, this tab only' },
   'vs-sync-meta': { scope: 'bookkeeping', why: 'Owner, per-key stamps and fingerprints for this module' },
   'vs-sync-updatedAt': { scope: 'bookkeeping', why: 'Legacy device clock; migrated into vs-sync-meta and removed' },
   'vs-nav-open': { scope: 'unused', why: 'No writer in src/' },

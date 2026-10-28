@@ -105,6 +105,7 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },
   'vs-chunk-reload': { purpose: 'Guard against a reload loop after a deploy', pii: 'no' },
   'vs-gradient-shuffle-filters': { purpose: 'Gradient Shuffle settings for this tab session', pii: 'no' },
+  'vs-gradient-locks': { purpose: 'Gradient type and angle locks for this tab session', pii: 'no' },
   'vs-billing-dismissed': { purpose: 'Billing notices dismissed this session', pii: 'no' },
   'vs-recent-exports': { purpose: 'Files you exported recently (name, type, size, tool, time), synced to your account', pii: 'local' },
   'vs-sync-meta': { purpose: 'Which account this browser’s copy belongs to, and when each setting last changed', pii: 'no' },
