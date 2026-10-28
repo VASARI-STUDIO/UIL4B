@@ -424,7 +424,7 @@ function ColourChip({ hex, label, on, unavailable = false, onPick }) {
       style={{ background: hex }}
       aria-pressed={on}
       aria-disabled={unavailable || undefined}
-      aria-describedby={unavailable ? 'grd-avail-status' : undefined}
+      aria-describedby={unavailable ? 'grd-avail-locked' : undefined}
       aria-label={name}
       title={name}
       onClick={() => onPick(hex, label)}
@@ -446,7 +446,7 @@ function StarterPair({ pair, unavailable = false, onApply }) {
       aria-label={name}
       title={name}
       aria-disabled={unavailable || undefined}
-      aria-describedby={unavailable ? 'grd-avail-status' : undefined}
+      aria-describedby={unavailable ? 'grd-avail-locked' : undefined}
       onClick={() => onApply(pair)}
     >
       <span className="grd-pair-half" style={{ background: pair.left }} aria-hidden="true" />
@@ -2086,6 +2086,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             )}
             </div>
             <div className="grd-avail-foot">
+              {/* What the inert chips and pairs are described by. It is outside the live
+                  region, so it is read on focus, before any press, and never announced. */}
+              {allLocked && <span id="grd-avail-locked" className="sr-only">Every colour is locked.</span>}
               <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
                 {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
               </p>
