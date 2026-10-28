@@ -36,15 +36,15 @@
 //   removeStops stops announcing the reason           -> "... announced reason"
 //   shiftGroup not clamped as a group                 -> "arrows move the selection together"
 //   Escape no longer clears                           -> "Escape clears"
-//   randomiseFromPalette ignores the picks            -> "picked colours drive Shuffle from palette"
-//   Clear picks does not clear                        -> "Clear picks"
-//   the Clear picks aside given a changing height     -> "the page does not move"
 //   the Available colours head-row min-height removed -> "the page does not move" (1440 and 390)
 //   .grd-sel-clear made 60px tall (head row grows)    -> "the page does not move" (1440 and 390)
 //   the shuffle-settings More-menu item dropped       -> the 390 and 360 "More menu" and tap tests
-//   chip press-and-hold 450 -> 4500                   -> "press and hold picks a chip"
 //   toggleStopLock acts on one stop                   -> "the lock on a selected row"
 //   Ctrl+A selects two stops only                     -> "Ctrl+A selects every stop"
+// (Four lines about the Shuffle pool on the chips - Clear picks, the picks driving Shuffle, the chip
+// long-press - were removed in G1: the pool moved to Shuffle settings, and those tests went with it.)
+// G1: openPoolSettings' focus call `row.focus()` -> `row.blur()` turns all six "Choose colours for Shuffle"
+// tests red (1440, 768 and 390, opening and already open). Throwaway src edit on its own build, undone.
 // All 22 were run on a throwaway build (a copy of src under .claude/scratch/grads3/mut, patched,
 // built, served on 4960); every one turned the named tests red and the lane's src was not touched.
 //

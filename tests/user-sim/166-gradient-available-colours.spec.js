@@ -21,6 +21,18 @@
 //   one "From palette" left in a title or a label     -> "no visible or accessible From palette"
 //   MAX_CHIPS 13 -> 14 (or 99)                         -> "the chip cap" tests
 //   pickColour drops its `setPickNote('')`             -> "pressing the same chip again announces again"
+// Added with v2 (G1). Each was a throwaway src edit on a separate build (dist-gradg1m, port 4967),
+// run against the tests named, and undone (git diff --stat src empty); every one turned them red:
+//   pickColour: next = activeStop (no advance)         -> "three presses paint ...", "target follows position", "skips a locked stop"
+//   MiniRamp onKeyDown never calls onTarget            -> "the keyboard path ...", "Home and End"
+//   MiniRamp `targets.length > 1` -> `> 99`             -> "with two stops selected the arrows only move focus"
+//   useRoving: every item tabIndex 0                   -> "the ramp has one tab stop", "one chip takes Tab"
+//   allColoursLocked returns false                     -> "with every colour locked the chips refuse", "... a pair is refused too"
+//   applyPair drops selectOnly(0)                      -> "one press on a pair ... goes back to stop 1"
+//   .grd-avail-status--two min-height 32px -> 0         -> the two "status line, full width and two lines tall" tests
+//   aria-describedby='grd-avail-locked' dropped         -> the same two locked tests as above
+// The "Choose colours for Shuffle" focus mutation is in spec 167. The ramp ring, hover, snap, 24px dot,
+// shade-size, sparse-layout and From a project tests were not mutated (see the commit message).
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 
