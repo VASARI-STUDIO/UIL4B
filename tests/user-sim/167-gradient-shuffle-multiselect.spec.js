@@ -918,6 +918,85 @@ test.describe('Shuffle settings → Colours at 1440px', () => {
   })
 })
 
+// ── "Choose colours for Shuffle": the way from the colours to the pool ───────
+// The link under Available colours opens Shuffle settings (the toolbar button's
+// popover, or the More menu where the toolbar has no room) and puts focus on the
+// first pill of the Colours row. It does not toggle an already-open menu shut.
+const poolLink = (page) => page.getByRole('button', { name: 'Choose colours for Shuffle' })
+const focusedIsFirstPoolPill = (page) => page.evaluate(() => {
+  const a = document.activeElement
+  return !!a && a.hasAttribute('data-pool-first') && a.textContent === 'All palette colours'
+})
+/** Where the settings are showing: the popover dialog, or the More menu's inline copy. */
+const settingsShown = async (page) => {
+  const dialog = page.getByRole('dialog', { name: 'Shuffle settings' })
+  if (await dialog.isVisible().catch(() => false)) return 'popover'
+  if (await page.locator('.grd-shuf-inline').isVisible().catch(() => false)) return 'more'
+  return null
+}
+
+for (const [label, use, expected] of [
+  ['1440px', { viewport: { width: 1440, height: 900 } }, 'popover'],
+  ['768px touch', { viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true }, null],
+  ['390px touch', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, 'more'],
+]) {
+  test.describe(`Choose colours for Shuffle at ${label}`, () => {
+    test.use(use)
+    test.beforeEach(async ({ page }) => {
+      watch(page, 'someone choosing the colours Shuffle draws from')
+      await seed(page, { gradient: null })
+      await open(page)
+    })
+
+    test('opens Shuffle settings and puts focus on the first Colours pill', async ({ page }) => {
+      expect(await settingsShown(page), 'POSITIVE CONTROL: nothing is open yet').toBeNull()
+      await poolLink(page).scrollIntoViewIfNeeded()
+      await poolLink(page).click()
+      await expect.poll(() => settingsShown(page), 'the settings opened').not.toBeNull()
+      if (expected) expect(await settingsShown(page)).toBe(expected)
+      await expect.poll(() => focusedIsFirstPoolPill(page), 'and focus is on All palette colours').toBe(true)
+      // Not on the link it came from, and the pool row it names is the one in view.
+      await expect(poolLink(page)).not.toBeFocused()
+    })
+
+    test('with the settings already open it keeps them open and still moves focus', async ({ page }) => {
+      const scope = await openSettings(page)
+      const shown = await settingsShown(page)
+      expect(shown, 'POSITIVE CONTROL: the settings are open before the link is used').not.toBeNull()
+      await expect(poolRow(scope)).toBeVisible()
+      // A click made by assistive tech, with the menu in front of the link: no pointer needed.
+      await poolLink(page).evaluate((el) => el.click())
+      await expect.poll(() => focusedIsFirstPoolPill(page)).toBe(true)
+      expect(await settingsShown(page), 'it did not toggle the open settings shut').toBe(shown)
+      await expect(poolRow(scope)).toBeVisible()
+    })
+  })
+}
+
+test.describe('Shuffle settings → Colours · picks the palette no longer holds', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  const GONE = '#123456' // a valid colour that is not in the palette
+
+  test('ticking a colour keeps a stored pick the palette lacks, and unticking removes only that colour', async ({ page }) => {
+    watch(page, 'someone whose saved pool names a colour that has left the palette')
+    await page.addInitScript(([k, gone, a]) => {
+      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], keepAngle: false, pool: [a, gone] }))
+    }, [FILTER_KEY, GONE, A])
+    await seed(page, { gradient: null })
+    await open(page)
+    const scope = await openSettings(page)
+    // POSITIVE CONTROL: the stored pool still has both before anything is touched.
+    expect(await storedPool(page)).toEqual([A, GONE])
+    await expect(pickPill(scope), 'one live pick is not yet a pool').toHaveText('Pick colours…')
+    await pickPill(scope).click()
+    await tick(scope, 'Colour 8 500').check()
+    expect(await storedPool(page), 'the stale pick is still stored beside the new one').toEqual([A, GONE, B])
+    await expect(pickPill(scope)).toHaveText('2 colours')
+    await tick(scope, 'Colour 8 500').uncheck()
+    expect(await storedPool(page), 'unticking takes out only the colour unticked').toEqual([A, GONE])
+  })
+})
+
 test.describe('a filters entry saved before the pool existed', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 

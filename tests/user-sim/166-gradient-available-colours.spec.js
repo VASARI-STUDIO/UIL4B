@@ -1290,6 +1290,62 @@ test.describe('Available colours · From a project', () => {
     await expect(pairs(page)).toHaveCount(6)
     await expect(section(page).getByRole('button', { name: /From a project/ })).toHaveCount(0)
   })
+
+  // The From a project row is held while the account's projects can still arrive (so
+  // they move nothing when they do), and not drawn once it is known there are none.
+  // A late answer is made with slowReads on the projects document; the first-paint
+  // session hint (vs-session, written by signIn) holds the row before auth answers.
+  const fromRow = (page) => page.locator('.grd-avail-from')
+  const availHeight = (page) => page.evaluate(() => document.querySelector('.grd-avail').getBoundingClientRect().height)
+
+  test('signed in with projects: the row is there while they load and stays, with the section the same height', async ({ page }) => {
+    watch(page, 'a signed-in designer whose projects arrive late')
+    await signIn(page, { plan: 'free', projects: [PROJECT], slowReads: [{ path: 'sync/projects', ms: 4000 }] })
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(fromRow(page), 'held while the projects load').toHaveCount(1)
+    const held = await availHeight(page)
+    await expect(fromSelect(page), 'and the select is there once they are').toBeVisible({ timeout: 10_000 })
+    // A fixed wait on purpose: the claim is that nothing moves after the late answer, and there is
+    // nothing to observe for "nothing happened" but time (the answer is due at 4s).
+    await page.waitForTimeout(4000)
+    await expect(fromRow(page)).toHaveCount(1)
+    await expect(fromSelect(page)).toBeVisible()
+    expect(await availHeight(page), 'the section did not change height').toBe(held)
+  })
+
+  test('signed in with no projects: the row is held while they load, then dropped when it is known there are none', async ({ page }) => {
+    watch(page, 'a new signed-in account whose projects are slow to answer')
+    await signIn(page, { plan: 'free', projects: 0, slowReads: [{ path: 'sync/projects', ms: 4000 }] })
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(fromRow(page), 'held while the projects load').toHaveCount(1)
+    expect(await fromRow(page).evaluate((e) => e.getBoundingClientRect().height), 'with room kept for the select').toBeGreaterThanOrEqual(32)
+    const held = await availHeight(page)
+    await expect(fromRow(page), 'dropped once loading has finished with none').toHaveCount(0, { timeout: 10_000 })
+    expect(await availHeight(page), 'the section is shorter by the row').toBeLessThan(held)
+    await expect(pairs(page), 'the rest of the section is as it was').toHaveCount(6)
+    await expect(chips(page)).toHaveCount(10)
+  })
+
+  test('signed in, before auth has answered: the session hint holds the row, then it goes if there is nothing to pick', async ({ page }) => {
+    watch(page, 'a returning designer on first paint')
+    await signIn(page, { plan: 'free', projects: 0, authDelay: 4000 })
+    await seed(page, { colors: [] })
+    await open(page)
+    expect(await page.evaluate(() => localStorage.getItem('vs-session')), 'POSITIVE CONTROL: the hint is set').toBe('1')
+    await expect(fromRow(page), 'held on the hint alone').toHaveCount(1)
+    await expect(fromRow(page), 'and gone when auth and the projects have answered').toHaveCount(0, { timeout: 10_000 })
+  })
+
+  test('signed out: no row, and a stale session hint does not keep one once auth says signed out', async ({ page }) => {
+    watch(page, 'a visitor whose last session has ended')
+    await page.addInitScript(() => localStorage.setItem('vs-session', '1'))
+    await seed(page, { colors: [] })
+    await open(page)
+    await expect(pairs(page)).toHaveCount(6)
+    await expect(fromRow(page)).toHaveCount(0)
+  })
 })
 
 test.describe('Available colours · the old Shuffle tip is gone', () => {

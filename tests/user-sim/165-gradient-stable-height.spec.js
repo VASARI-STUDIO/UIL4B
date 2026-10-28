@@ -316,6 +316,133 @@ for (const screen of SCREENS) {
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
+    // T-A8 (spec gradient-generation-v2 §10): the section's height is decided by its
+    // state and never moves in a session. Each sequence is one state, and every step
+    // is a press that changes content only: the target, a colour, a lock, a status sentence.
+    const dotOf = (page, n) => page.locator(`.grd-avail .grd-ramp-dot[data-stop="${n - 1}"]`)
+    const lock = (page, n) => stopRows(page).nth(n - 1).locator('.grd-lock')
+
+    test('palette state: chips, target moves, ramp keys, locks and every status sentence change nothing', async ({ page }) => {
+      watch(page, 'a designer painting from a full palette')
+      await withFullPalette(page)
+      await open(page)
+      const l = ledger(page)
+      await l.mark('start')
+      // Paint round the gradient twice: each press moves the target and rewrites the status line.
+      for (const [i, name] of ['Primary 500', 'Secondary 500', 'Accent 500', 'Highlight 500', 'Primary 300', 'Colour 8 500'].entries()) {
+        await chipNamed(page, name).click()
+        await l.mark(`press ${i + 1}: ${name}`)
+      }
+      // Press a colour a stop already has: the "already" sentence.
+      await dotOf(page, 1).click()
+      await chipNamed(page, 'Colour 8 500').click()
+      await chipNamed(page, 'Colour 8 500').click()
+      await l.mark('already sentence')
+      // The ramp: a dot, then the keys that aim the paint.
+      await dotOf(page, 3).click()
+      await l.mark('dot 3')
+      await dotOf(page, 3).focus()
+      for (const key of ['Home', 'ArrowRight', 'End', 'ArrowLeft']) {
+        await page.keyboard.press(key)
+        await l.mark(`ramp ${key}`)
+      }
+      // A multi-selection: its own head and sentence.
+      await stopRows(page).nth(0).locator('.grd-stop-select').click()
+      await stopRows(page).nth(2).locator('.grd-stop-select').click({ modifiers: ['Control'] })
+      await l.mark('two stops selected')
+      await chipNamed(page, 'Surface 500').click()
+      await l.mark('two stops painted')
+      await stopRows(page).nth(0).locator('.grd-stop-select').click()
+      // Locks: one, then every stop (the longest sentence, "Every colour is locked. Unlock a stop to paint it."), then back.
+      await lock(page, 2).click()
+      await l.mark('one lock')
+      await chipNamed(page, 'Primary 500').click()
+      await l.mark('press with a locked stop')
+      await lock(page, 1).click()
+      await lock(page, 3).click()
+      await expect(page.locator('.grd-avail-tip')).toHaveText('Every colour is locked')
+      await l.mark('every colour locked')
+      await chipNamed(page, 'Primary 500').evaluate((el) => el.click())
+      await l.mark('refused press')
+      for (const n of [1, 2, 3]) await lock(page, n).click()
+      await l.mark('unlocked')
+      // Random, which rewrites the stops and so the status line's idle text.
+      for (let i = 1; i <= 5; i++) {
+        await toolbarAction(page, /^Random/)
+        await l.mark(`Random #${i}`)
+      }
+      expect(l.count).toBe(25)
+      expect(l.drift(), l.drift().join('\n')).toEqual([])
+    })
+
+    test('no palette: pair presses, starter colours, target moves, locks and every sentence change nothing', async ({ page }) => {
+      watch(page, 'someone with no palette starting from pairs')
+      // A fresh visit holds one seed colour; an empty palette is the no-palette state.
+      await page.addInitScript(() => localStorage.setItem('vs-current-design', JSON.stringify({
+        palette: { base: '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: [] },
+      })))
+      await open(page)
+      const pairBtn = (name) => page.locator('.grd-avail').getByRole('button', { name: new RegExp(`^${name}, #`) })
+      await expect(page.locator('.grd-avail-note')).toHaveText('No palette yet. Start from a pair or a starter colour, or make a palette.')
+      await expect(page.locator('.grd-avail .grd-pair')).toHaveCount(6)
+      const l = ledger(page)
+      await l.mark('start')
+      for (const name of ['Harbour night', 'Ember', 'Sea glass', 'Citrus', 'Fog', 'Plum']) {
+        await pairBtn(name).click()
+        await l.mark(`pair ${name}`)
+      }
+      for (const name of ['Starter blue', 'Starter paper']) {
+        await chipNamed(page, name).click()
+        await l.mark(`starter ${name}`)
+      }
+      await dotOf(page, 2).click()
+      await l.mark('dot 2')
+      await dotOf(page, 2).focus()
+      for (const key of ['End', 'Home']) {
+        await page.keyboard.press(key)
+        await l.mark(`ramp ${key}`)
+      }
+      await lock(page, 2).click()
+      await pairBtn('Ember').click()
+      await l.mark('pair with the middle locked')
+      await lock(page, 1).click()
+      await lock(page, 3).click()
+      await expect(page.locator('.grd-avail-tip')).toHaveText('Every colour is locked')
+      await l.mark('every colour locked')
+      await pairBtn('Plum').evaluate((el) => el.click())
+      await l.mark('refused pair')
+      await chipNamed(page, 'Starter blue').evaluate((el) => el.click())
+      await l.mark('refused starter')
+      for (const n of [1, 2, 3]) await lock(page, n).click()
+      await l.mark('unlocked')
+      for (let i = 1; i <= 5; i++) {
+        await toolbarAction(page, /^Random/)
+        await l.mark(`Random #${i}`)
+      }
+      expect(l.count).toBe(22)
+      expect(l.drift(), l.drift().join('\n')).toEqual([])
+    })
+
+    test('one colour: the same presses change nothing either', async ({ page }) => {
+      watch(page, 'someone with a one-colour palette starting from a pair')
+      await page.addInitScript(() => localStorage.setItem('vs-current-design', JSON.stringify({
+        palette: { base: '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: ['#0051FF'] },
+      })))
+      await open(page)
+      await expect(page.locator('.grd-avail-note')).toHaveText('Add a second colour in Palette Builder to shuffle from it.')
+      const l = ledger(page)
+      await l.mark('start')
+      await page.locator('.grd-avail').getByRole('button', { name: /^Citrus, #/ }).click()
+      await l.mark('pair')
+      await chipNamed(page, 'Primary 500').click()
+      await l.mark('its one colour')
+      await dotOf(page, 3).click()
+      await l.mark('dot 3')
+      for (const n of [1, 2, 3]) await lock(page, n).click()
+      await l.mark('every colour locked')
+      expect(l.drift(), l.drift().join('\n')).toEqual([])
+    })
+
     test('the longest role names fit their cell on every row, at twelve stops', async ({ page }) => {
       watch(page, 'a designer reading role labels')
       await withFullPalette(page)
