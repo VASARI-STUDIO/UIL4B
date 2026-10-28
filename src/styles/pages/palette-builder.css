@@ -100,7 +100,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 
 /* The eye icon's dot is a content colour: it keeps its hue under forced colours
    while the outline follows the system text colour. */
-.vis-dot, .harm-dot { forced-color-adjust: none; }
+.vis-dot, .vis-open, .harm-dot { forced-color-adjust: none; }
 /* The wheel in a toolbar trigger sits on the toolbar, not on a menu surface. */
 .tl-select .harm-wheel { --hw-edge: var(--bg-0); }
 

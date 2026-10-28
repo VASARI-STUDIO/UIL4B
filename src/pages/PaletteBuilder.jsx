@@ -200,7 +200,7 @@ const HARMONIES = [
   { id: 'monochromatic', label: 'Monochromatic', free: true, desc: 'One hue in lighter and darker shades.' },
   { id: 'analogous', label: 'Analogous', free: false, desc: 'Neighbouring hues, calm and cohesive.' },
   { id: 'complement', label: 'Complementary', free: false, desc: 'Opposite hues, for maximum contrast.' },
-  { id: 'triadic', label: 'Triadic', free: false, desc: 'Three evenly spaced hues, vibrant but balanced.' },
+  { id: 'triadic', label: 'Triadic', free: false, desc: 'Three evenly spaced hues, balanced.' },
   { id: 'split', label: 'Split', free: false, desc: 'Your hue plus the two beside its opposite.' },
   { id: 'tetradic', label: 'Tetradic', free: false, desc: 'Four hues at 90°, rich variety.' },
   { id: 'custom', label: 'Custom', free: false, desc: 'Your hue, one 60° on, and its opposite.' },
@@ -595,39 +595,27 @@ const IcoExplore = ({ size = 14 }) => (
 const IcoSystem = ({ size = 13 }) => (
   <Ico size={size}><circle cx="12" cy="12" r="3" /><circle cx="12" cy="4" r="1.5" /><circle cx="19" cy="8.5" r="1.5" /><circle cx="19" cy="15.5" r="1.5" /><circle cx="12" cy="20" r="1.5" /><circle cx="5" cy="15.5" r="1.5" /><circle cx="5" cy="8.5" r="1.5" /></Ico>
 )
-// A distinct little wheel glyph per harmony type, echoing Image 2's option pills.
-const HARM_GLYPHS = {
-  auto: <><circle cx="12" cy="12" r="2.2" /><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" /></>,
-  monochromatic: <><circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" /></>,
-  analogous: <><circle cx="7" cy="15" r="1.5" /><circle cx="12" cy="9" r="1.5" /><circle cx="17" cy="15" r="1.5" /></>,
-  complement: <><circle cx="6" cy="12" r="1.7" /><circle cx="18" cy="12" r="1.7" /><path d="M8 12h8" /></>,
-  triadic: <><circle cx="12" cy="5" r="1.6" /><circle cx="6" cy="17" r="1.6" /><circle cx="18" cy="17" r="1.6" /></>,
-  split: <><circle cx="12" cy="5" r="1.5" /><circle cx="6" cy="16" r="1.5" /><circle cx="18" cy="16" r="1.5" /><path d="M12 6.5v4M12 10.5 7.5 14.5M12 10.5l4.5 4" /></>,
-  tetradic: <><circle cx="7" cy="7" r="1.5" /><circle cx="17" cy="7" r="1.5" /><circle cx="7" cy="17" r="1.5" /><circle cx="17" cy="17" r="1.5" /></>,
-  custom: <><path d="M4 20h16" /><path d="M6 15.5 14 7.5l2.5 2.5-8 8H6z" /></>,
-}
-const HarmonyGlyph = ({ id, size = 14 }) => <Ico size={size}>{HARM_GLYPHS[id] || HARM_GLYPHS.auto}</Ico>
 // An eye whose pupil is a dot in the hue that mode loses (a hollow ring for no
 // colour, the text colour for normal). The outline follows currentColor. Each
 // size has its own geometry so the strokes land on whole pixels. The mild mode's
-// dot is half-filled: a hue ring (`half` thick, flush with the full dot's edge)
-// round a hue left half, so it reads as the green-blind dot at half strength and
-// keeps the full hue's contrast in light and dark (a faded dot would not).
+// pupil is a bigger open ring in the hue with only its left half filled, so it
+// cannot be read as the green-blind dot (solid, smaller) at 16px, and it keeps the
+// full hue's contrast in light and dark (a faded dot would not). `open` is the
+// ring's centre-line radius and `lip` its stroke width.
 const VISION_EYE = {
-  20: { d: 'M1.75 10C3.6 6.4 6.6 4.5 10 4.5s6.4 1.9 8.25 5.5C16.4 13.6 13.4 15.5 10 15.5S3.6 13.6 1.75 10Z', stroke: 1.5, c: 10, dot: 3.25, ring: 2.75, half: 1.25 },
-  16: { d: 'M1.5 8C2.95 5.15 4.95 3.6 8 3.6s5.05 1.55 6.5 4.4C13.05 10.85 11.05 12.4 8 12.4S2.95 10.85 1.5 8Z', stroke: 1.25, c: 8, dot: 2.6, ring: 2.2, half: 1 },
+  20: { d: 'M1.75 10C3.6 6.4 6.6 4.5 10 4.5s6.4 1.9 8.25 5.5C16.4 13.6 13.4 15.5 10 15.5S3.6 13.6 1.75 10Z', stroke: 1.5, c: 10, dot: 3.25, ring: 2.75, open: 3.45, lip: 1.25 },
+  16: { d: 'M1.5 8C2.95 5.15 4.95 3.6 8 3.6s5.05 1.55 6.5 4.4C13.05 10.85 11.05 12.4 8 12.4S2.95 10.85 1.5 8Z', stroke: 1.25, c: 8, dot: 2.6, ring: 2.2, open: 2.7, lip: 1 },
 }
 const VisionIcon = ({ mode, size = 20, className }) => {
   const g = VISION_EYE[size]
   const hue = VISION_HUES[mode] || 'currentColor'
-  const hr = g.dot - g.half / 2
   return (
     <svg className={className} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" stroke="currentColor" strokeWidth={g.stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path className="vis-eye" d={g.d} />
       {mode === 'achromatopsia' && <circle className="vis-ring" cx={g.c} cy={g.c} r={g.ring} />}
       {mode === 'deuteranomaly' && <>
-        <circle className="vis-dot" cx={g.c} cy={g.c} r={hr} stroke={hue} strokeWidth={g.half} />
-        <path className="vis-dot" d={`M${g.c} ${g.c - hr}A${hr} ${hr} 0 0 0 ${g.c} ${g.c + hr}Z`} stroke="none" fill={hue} />
+        <circle className="vis-open" cx={g.c} cy={g.c} r={g.open} stroke={hue} strokeWidth={g.lip} />
+        <path className="vis-dot" d={`M${g.c} ${g.c - g.open}A${g.open} ${g.open} 0 0 0 ${g.c} ${g.c + g.open}Z`} stroke="none" fill={hue} />
       </>}
       {mode !== 'achromatopsia' && mode !== 'deuteranomaly' && <circle className="vis-dot" cx={g.c} cy={g.c} r={g.dot} stroke="none" fill={hue} />}
     </svg>
@@ -2596,7 +2584,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Each system carries its wheel (the rich row) and a 16px one for the toolbar trigger.
   // `note` is a quiet word beside the name in the menu row only; the trigger stays "Auto".
   const systemOptions = HARMONIES.map(h => ({
-    value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro', note: h.id === 'auto' ? 'Recommended' : '',
+    value: h.id, label: h.label, desc: h.desc, mark: h.free || isPro ? '' : 'Pro', note: h.id === 'auto' ? 'recommended' : '',
     icon: <HarmonyWheel system={h.id} size={20} />, triggerIcon: <HarmonyWheel system={h.id} size={16} />,
   }))
   // `desc` is the one-line hint under each name; the divider sets Normal apart
