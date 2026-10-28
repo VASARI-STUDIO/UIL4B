@@ -441,7 +441,7 @@ function ShuffleBody({ filters, setFilters }) {
   const coarse = useMediaQuery('(pointer: coarse)')
   const summary = `Random makes ${sentence(filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type'])}, ${sentence(filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops'])}`
   return (
-    <>
+    <div className="grd-shuf-body">
       {/* STYLE_FAMILIES is empty until a family is built. The Style row,
           a FilterGroup over [Plain, ...STYLE_FAMILIES] whose empty
           selection falls back to Plain, goes here. */}
@@ -458,7 +458,7 @@ function ShuffleBody({ filters, setFilters }) {
       </button>
       <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
       <div className="sr-only" role="status">{summary}</div>
-    </>
+    </div>
   )
 }
 

@@ -338,14 +338,7 @@ for (const w of [390, 360]) {
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
     })
 
-    // KNOWN PRODUCT DEFECT, held as an expected failure (test.fail) until it is fixed:
-    // the More menu is portalled into .tl-sheet-layer, outside .grd, so the
-    // `.grd .grd-shuf-keep` rules in gradient.css (and the 44px touch rule) never
-    // reach the inline copy. Measured 107x21 at 390 and 360: an unstyled browser
-    // button. When the CSS is scoped to reach the menu, this goes green-as-failed:
-    // delete the test.fail line then.
     test('Keep the angle in the More menu is a 44px touch target', async ({ page }) => {
-      test.fail(true, 'gradient.css scopes .grd-shuf-keep under .grd; the More menu renders outside it')
       await open(page)
       const scope = await openSettings(page)
       const box = await scope.getByRole('button', { name: 'Keep the angle' }).boundingBox()

@@ -179,6 +179,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-verify-dismissed': { scope: 'session', why: 'Verify-your-email bar dismissed for this tab session (vs-verify-dismissed:<uid>)' },
   'vs-resume-after-onboarding': { scope: 'session', why: 'Where to go after onboarding, this tab only' },
   'vs-chunk-reload': { scope: 'session', why: 'Reload-loop guard after a deploy' },
+  'vs-gradient-shuffle-filters': { scope: 'session', why: 'Gradient Shuffle settings (types, stop counts, Keep the angle), this tab only' },
   'vs-sync-meta': { scope: 'bookkeeping', why: 'Owner, per-key stamps and fingerprints for this module' },
   'vs-sync-updatedAt': { scope: 'bookkeeping', why: 'Legacy device clock; migrated into vs-sync-meta and removed' },
   'vs-nav-open': { scope: 'unused', why: 'No writer in src/' },

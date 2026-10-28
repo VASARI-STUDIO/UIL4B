@@ -190,7 +190,7 @@
   height: 26px;
   padding: 0 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--btn-radius);
   background: transparent;
   font: inherit;
   font-size: 12px;
@@ -250,6 +250,9 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
@@ -314,6 +317,9 @@
   border-radius: 50%;
   color: oklch(0.98 0 0);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
 .grd .grd-chip:active { transform: scale(0.97); }
@@ -719,7 +725,7 @@
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
-  .grd .grd-stop-select { min-height: 44px; -webkit-touch-callout: none; user-select: none; }
+  .grd .grd-stop-select { min-height: 44px; }
   .grd .grd-wheel { width: 76px; height: 76px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
@@ -748,25 +754,30 @@
 }
 
 /* ── Shuffle settings: a popover from 768px, a bottom sheet below ──────────
-   The wrapper anchors the popover to its button. Pills reuse the tool's own. */
+   The wrapper anchors the popover to its button. Pills reuse the tool's own.
+   The body is shared by the popover and the More menu's copy, and the sheet
+   copy renders in .tl-sheet-layer outside .grd, so everything inside the body
+   is scoped by .grd-shuf-body (and the title / inline wrapper by their own
+   classes), never by .grd. */
 .grd .grd-shuf-wrap { position: relative; display: inline-flex; }
 .grd .tl-pop.grd-shuf { width: 320px; right: auto; left: 0; display: grid; gap: 12px; padding: 12px; }
-.grd .grd-shuf-inline { display: grid; gap: 12px; padding: 8px 12px 12px; }
+.grd-shuf-inline { display: grid; gap: 12px; padding: 8px 12px 12px; }
+.grd-shuf-body { display: grid; gap: 12px; }
 .grd .grd-shuf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.grd .grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
-.grd .grd-shuf-row { display: grid; gap: 6px; }
-.grd .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
-.grd .grd-shuf .tl-pills { flex-wrap: wrap; }
-.grd .grd-shuf-keep {
+.grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
+.grd-shuf-body .grd-shuf-row { display: grid; gap: 6px; }
+.grd-shuf-body .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
+.grd-shuf-body .tl-pills { flex-wrap: wrap; }
+.grd-shuf-body .grd-shuf-keep {
   display: inline-flex; align-items: center; gap: 8px; justify-self: start;
   min-height: 32px; padding: 0 10px; border: 1px solid var(--tl-line); border-radius: var(--btn-radius);
   background: transparent; color: var(--tl-ink); font: inherit; font-size: 12.5px; cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-.grd .grd-shuf-keep.is-on { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
-.grd .grd-shuf-keep:focus-visible,
-.grd .grd-shuf .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-.grd .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+.grd-shuf-body .grd-shuf-keep.is-on { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.grd-shuf-body .grd-shuf-keep:focus-visible,
+.grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd-shuf-body .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
 @media (max-width: 767px) {
   .grd .tl-pop.grd-shuf {
     position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); top: auto;
@@ -774,11 +785,11 @@
   }
 }
 @media (pointer: coarse) {
-  .grd .grd-shuf .tl-pill { min-height: 44px; }
-  .grd .grd-shuf-keep { min-height: 44px; }
+  .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
+  .grd-shuf-body .grd-shuf-keep { min-height: 44px; }
   .grd .grd-shuf-x { width: 44px; height: 44px; }
 }
-:where(html[data-reduced-motion="true"]) .grd .grd-shuf-keep { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .grd-shuf-body .grd-shuf-keep { transition: none !important; }
 
 /* The Available colours head row is the height of its tallest possible content
    (the "Clear picks" button), so picking colours never makes the panel taller. */
