@@ -100,6 +100,10 @@ const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 // message is still stored and the sender still sees success, but no email goes.
 export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
 
+// One "the cap was reached" email an hour, so a spent cap is visible to the
+// founder instead of silent. Counted separately and never against MAIL_CAP.
+export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -123,6 +127,33 @@ function isAlreadyExists(err) {
 
 // Bounds each outbound call so one slow service cannot hold the invocation open.
 const OUTBOUND_TIMEOUT_MS = 5000
+
+// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
+// wrote. Resolves to whether Resend took it; never rejects.
+async function sendCapNotice({ resendKey, notifyEmail }) {
+  try {
+    const sent = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
+      body: JSON.stringify({
+        from: mailFrom(),
+        reply_to: REPLY_TO,
+        to: [notifyEmail],
+        subject: '[UIL4B] Support email cap reached',
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
+          </div>
+        `,
+      }),
+    })
+    return sent.ok
+  } catch (err) {
+    console.error('Cap notice email failed:', err.message)
+    return false
+  }
+}
 
 export default function handler(req, res) {
   return handleSupport(req, res)
@@ -233,11 +264,24 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   // The cap applies only to a stored message. An unstored one has the email as
   // its only copy (see below), so that email is never held back.
   let mailAllowed = Boolean(resendKey && notifyEmail)
+  let capNotice = null
   if (mailAllowed && stored) {
     const verdict = await consume(db, MAIL_CAP)
     if (!verdict.allowed) {
       mailAllowed = false
-      console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+      if (verdict.contended) {
+        // The counter could not be read or updated (an outage, contention, or a
+        // missing salt in production): the allowance is not known to be spent,
+        // so this is neither logged as the cap nor announced to the founder.
+        console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
+      } else {
+        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+        // The cap itself must not hide that messages are arriving unseen, so the
+        // founder gets one notice an hour. It is exempt from MAIL_CAP and holds
+        // no user content.
+        const notice = await consume(db, MAIL_CAP_NOTICE)
+        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail })
+      }
     }
   }
 
@@ -280,7 +324,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     }
   })() : null
 
-  const notifications = Promise.all([mirrored, mailed])
+  const notifications = Promise.all([mirrored, mailed, capNotice])
 
   // A stored message is already safe, and the notifications are best-effort
   // extras, so the reply does not wait for them: they finish after the response

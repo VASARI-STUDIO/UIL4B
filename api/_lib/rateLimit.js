@@ -59,9 +59,13 @@ function saltMissingInProduction() {
  */
 export function normaliseIp(raw) {
   const original = String(raw || '').trim()
+  // The longest real spelling (a bracketed address, zone and port) is well under
+  // this; anything longer is not an address and is not worth parsing.
+  if (original.length > 100) return original
   let ip = original
+  // A bracketed host, with or without a port after it: `[2001:db8::1]:443`.
   if (ip.startsWith('[') && ip.includes(']')) ip = ip.slice(1, ip.indexOf(']'))
-  if (!ip.includes(':')) return original
+  if (!ip.includes(':')) return ip
   const zone = ip.indexOf('%')
   if (zone !== -1) ip = ip.slice(0, zone)
 

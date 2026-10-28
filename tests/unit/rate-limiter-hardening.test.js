@@ -10,7 +10,7 @@
 // tests/unit/checkout-rate-limit.test.js the checkout route's use of failOpen.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { clientIp, consume } from '../../api/_lib/rateLimit.js'
+import { clientIp, consume, normaliseIp } from '../../api/_lib/rateLimit.js'
 import { handleSupport, MAIL_CAP } from '../../api/support.js'
 
 /** A Firestore stand-in with the transaction shape the limiter uses. */
@@ -199,16 +199,31 @@ function supportDb() {
   const db = {
     docs,
     failFeedback: false,
+    // When set, the email cap's counter aborts under contention.
+    abortCap: false,
     stored: () => [...docs.keys()].filter((k) => k.startsWith('feedback/')).length,
+    // How many emails the site-wide cap has counted.
+    capCount: () => [...docs.entries()].find(([k]) => k.startsWith('rl/support-mail-global_'))?.[1].count || 0,
     collection: (name) => ({
-      doc: (id) => ({ id }),
+      doc: (id) => ({
+        id,
+        // Fails on an existing id, as Firestore's create() does.
+        create: async (value) => {
+          if (db.failFeedback) throw new Error('firestore unavailable')
+          if (docs.has(`${name}/${id}`)) throw Object.assign(new Error('6 ALREADY_EXISTS'), { code: 6 })
+          docs.set(`${name}/${id}`, value)
+        },
+      }),
       add: async (value) => {
         if (db.failFeedback) throw new Error('firestore unavailable')
         docs.set(`${name}/auto-${docs.size}`, value)
       },
     }),
     runTransaction: async (fn) => fn({
-      get: async ({ id }) => ({ exists: docs.has(`rl/${id}`), data: () => docs.get(`rl/${id}`) }),
+      get: async ({ id }) => {
+        if (db.abortCap && id.startsWith('support-mail-global_')) throw Object.assign(new Error('aborted'), { code: 10 })
+        return { exists: docs.has(`rl/${id}`), data: () => docs.get(`rl/${id}`) }
+      },
       set: ({ id }, value) => docs.set(`rl/${id}`, value),
     }),
   }
@@ -224,11 +239,19 @@ function withEmail(t) {
   process.env.SUPPORT_NOTIFY_EMAIL = 'notify@example.test'
   t.after(() => names.forEach((n, i) => { if (saved[i] === undefined) delete process.env[n]; else process.env[n] = saved[i] }))
   const fetchMock = t.mock.method(globalThis, 'fetch', async () => ({ ok: true }))
-  return { emails: () => fetchMock.mock.calls.filter((c) => String(c.arguments[0]).includes('resend')).length }
+  const resend = () => fetchMock.mock.calls
+    .filter((c) => String(c.arguments[0]).includes('resend'))
+    .map((c) => JSON.parse(c.arguments[1].body))
+  const isNotice = (mail) => /cap reached/.test(mail.subject)
+  return {
+    // Emails about a visitor's message, and the "cap reached" notices, kept apart.
+    emails: () => resend().filter((m) => !isNotice(m)).length,
+    notices: () => resend().filter(isNotice),
+  }
 }
 
 /** One POST from its own address, so the per-address limits are not what is under test. */
-async function send(db, n) {
+async function send(db, n, overrides = {}) {
   const res = {
     code: 0, body: null,
     setHeader() {},
@@ -240,7 +263,7 @@ async function send(db, n) {
   const req = {
     method: 'POST',
     headers: { 'x-vercel-forwarded-for': `203.0.113.${n}` },
-    body: { type: 'bug', subject: `Report ${n}`, message: `Something broke, report ${n}.`, email: '', source: 'inline' },
+    body: { type: 'bug', subject: `Report ${n}`, message: `Something broke, report ${n}.`, email: '', source: 'inline', ...overrides },
   }
   await handleSupport(req, res, { getDb: () => db, defer: (p) => pending.push(p) })
   await Promise.all(pending)
@@ -252,20 +275,111 @@ test('the cap is 30 emails an hour for the whole site', () => {
   assert.equal(MAIL_CAP.windowMs, 60 * 60 * 1000)
 })
 
-test('the 31st support message in an hour is stored and confirmed but not emailed', async (t) => {
+test('the 31st and 32nd support messages in an hour are stored and confirmed but not emailed, and one notice goes out', async (t) => {
   const warnings = t.mock.method(console, 'warn', () => {})
   const mail = withEmail(t)
   const db = supportDb()
 
   const replies = []
-  for (let n = 1; n <= 31; n += 1) replies.push(await send(db, n))
+  for (let n = 1; n <= 32; n += 1) replies.push(await send(db, n))
 
   assert.deepEqual([...new Set(replies.map((r) => r.code))], [200], 'every sender must still see success')
   assert.ok(replies.every((r) => r.body.ok === true))
-  assert.equal(db.stored(), 31, 'a message past the cap was not stored')
-  assert.equal(mail.emails(), 30, 'the founder got more (or fewer) than 30 emails')
-  const skipped = warnings.mock.calls.filter((c) => /email skipped/.test(String(c.arguments[0])))
-  assert.equal(skipped.length, 1, 'the skipped email was not logged')
+  assert.equal(db.stored(), 32, 'a message past the cap was not stored')
+  assert.equal(mail.emails(), 30, 'a message past the cap was emailed, or an earlier one was not')
+  assert.equal(db.capCount(), 30, 'the notice spent the email cap')
+  const skipped = warnings.mock.calls.filter((c) => /cap reached/.test(String(c.arguments[0])))
+  assert.equal(skipped.length, 2, 'each skipped email must be logged as the cap')
+
+  const notices = mail.notices()
+  assert.equal(notices.length, 1, 'the founder must get exactly one notice an hour, not one per message')
+  assert.deepEqual(notices[0].to, ['notify@example.test'])
+  assert.match(notices[0].html, /feedback/)
+  assert.match(notices[0].html, /30/)
+  // Nothing a visitor wrote may reach the notice.
+  assert.doesNotMatch(JSON.stringify(notices[0]), /Report 3[12]|Something broke/)
+})
+
+test('the notice is sent once per hour, not once per refused message', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+  for (let n = 1; n <= 40; n += 1) await send(db, n)
+  assert.equal(mail.notices().length, 1)
+  assert.equal(mail.emails(), 30)
+})
+
+test('a duplicate request id does not spend the email cap', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+  const requestId = 'dup-request-id-0123456789'
+
+  const first = await send(db, 1, { requestId })
+  const second = await send(db, 2, { requestId })
+  const third = await send(db, 3, { requestId })
+
+  assert.equal(first.code, 200)
+  assert.equal(second.body.duplicate, true)
+  assert.equal(third.body.duplicate, true)
+  assert.equal(db.stored(), 1)
+  assert.equal(mail.emails(), 1)
+  assert.equal(db.capCount(), 1, 'a retry of a stored message used up the allowance')
+})
+
+test('a rejected (400) body does not spend the email cap', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+
+  for (let n = 1; n <= 5; n += 1) assert.equal((await send(db, n, { message: '' })).code, 400)
+  assert.equal((await send(db, 6, { message: 'x'.repeat(5001) })).code, 400)
+
+  assert.equal(db.capCount(), 0, 'a rejected body used up the allowance')
+  assert.equal(db.stored(), 0)
+  assert.equal(mail.emails(), 0)
+  assert.equal(mail.notices().length, 0)
+})
+
+test('a counter that cannot be used is logged as that, sends no notice, and still holds the email back', async (t) => {
+  const warnings = t.mock.method(console, 'warn', () => {})
+  t.mock.method(console, 'error', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+  db.abortCap = true
+
+  const res = await send(db, 1)
+
+  assert.equal(res.code, 200, 'the sender still sees success')
+  assert.equal(db.stored(), 1)
+  assert.equal(mail.emails(), 0, 'the send/skip decision for an unusable counter changed')
+  assert.equal(mail.notices().length, 0, 'an unusable counter was announced as a spent cap')
+  const logged = warnings.mock.calls.map((c) => String(c.arguments[0]))
+  assert.ok(logged.some((m) => /counter could not be used/.test(m)), 'the real cause was not logged')
+  assert.ok(!logged.some((m) => /cap reached/.test(m)), 'an unusable counter was logged as "cap reached"')
+})
+
+// ── normaliseIp edge cases ───────────────────────────────────────────────────
+
+test('bracketed, ported and zoned spellings reduce to the expected address or /64', () => {
+  assert.equal(normaliseIp('[1.2.3.4]'), '1.2.3.4')
+  assert.equal(normaliseIp('[2001:db8::1]:443'), '2001:db8:0:0::/64')
+  assert.equal(normaliseIp('[2001:db8:1:2:3:4:5:6]:443'), '2001:db8:1:2::/64')
+  assert.equal(normaliseIp('[fe80::1%eth0]'), 'fe80:0:0:0::/64')
+  assert.equal(normaliseIp('fe80::1%eth0'), 'fe80:0:0:0::/64')
+  assert.equal(normaliseIp('[::ffff:1.2.3.4]:443'), '1.2.3.4')
+})
+
+test('malformed and oversized input never throws', () => {
+  const hostile = [':::', '::::', '[', ']', '[]', '[:', '[::', ':', '%', '1::2::3', 'g::1', '::ffff:1.2.3', '1:2:3:4:5:6:7:8:9',
+    'x'.repeat(10000), ':'.repeat(10000), '1:'.repeat(5000), '[' + 'a'.repeat(10000) + ']', undefined, null, 42]
+  for (const input of hostile) {
+    assert.doesNotThrow(() => normaliseIp(input), `threw on ${String(input).slice(0, 20)}`)
+    assert.equal(typeof normaliseIp(input), 'string')
+  }
+  assert.equal(normaliseIp(':::'), ':::')
+  assert.equal(normaliseIp('x'.repeat(10000)), 'x'.repeat(10000))
+  assert.equal(normaliseIp(undefined), '')
 })
 
 test('an unstored message is still emailed past the cap, because the email is its only copy', async (t) => {
