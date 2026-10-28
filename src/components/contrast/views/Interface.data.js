@@ -44,7 +44,7 @@ export const FORM = {
   lead: { label: 'Remind staff', value: '2 hours before' },
   email: {
     label: 'Reply-to email',
-    value: 'rosters@thegrindcafe.com.au',
+    value: 'rosters@grindcafe.example',
     help: 'Staff replies go here, not to Rostra.',
   },
   digest: 'Also email the weekly roster on Sunday at 6 pm',
