@@ -15,9 +15,10 @@ import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGal
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
-import { readLegacyGradientSubmissions, sanitizeGradientSubmission } from '../utils/gradientSubmissions'
+import { readLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -104,17 +105,18 @@ export default function GradientGallery({ toast }) {
   // from the review queue under the signed-in uid and nowhere else.
   //
   // Gradients an earlier visit held in this browser are never listed here.
-  // Signed in, useGradientSubmissionMigration moves them to the account and the
-  // list picks them up; signed out, the page offers to keep them (the sign-in
-  // note below) rather than show a list that lives in one browser. Either way
-  // they stay OUT of the browse grid: they are not in the library, and showing
-  // them there would imply they had been published.
+  // Signed in, the page asks whether they are this account's (Keep moves them
+  // and the list picks them up; they are never moved unasked, as a shared
+  // machine's browser can hold someone else's). Signed out, the page offers to
+  // keep them (the sign-in note below) rather than show a list that lives in one
+  // browser. Either way they stay OUT of the browse grid: they are not in the
+  // library, and showing them there would imply they had been published.
   const [queue, setQueue] = useState({ uid: null, items: [] })
   const [queueRefresh, setQueueRefresh] = useState(0)
   const [withdrawingId, setWithdrawingId] = useState(null)
   // How many an earlier visit left in this browser; read once, never written.
   const [legacyCount] = useState(() => readLegacyGradientSubmissions().length)
-  useGradientSubmissionMigration({ toast, onMigrated: () => setQueueRefresh(n => n + 1) })
+  const keepGradients = useGradientSubmissionMigration({ toast, onMigrated: () => setQueueRefresh(n => n + 1) })
 
   useEffect(() => {
     let cancelled = false
@@ -136,7 +138,7 @@ export default function GradientGallery({ toast }) {
               angle: s.payload?.angle,
               stops: s.payload?.stops,
             })
-            return g && { ...g, docId: s.id, status: s.status, createdAt: s.createdAt }
+            return g && { ...g, docId: s.id, localId: s.localId, status: s.status, createdAt: s.createdAt }
           })
           .filter(Boolean)
         setQueue({ uid, items })
@@ -151,6 +153,9 @@ export default function GradientGallery({ toast }) {
     if (withdrawingId) return
     setWithdrawingId(s.docId)
     try {
+      // Forget the browser-held copy first, so a withdrawn gradient can never
+      // be found there and published again.
+      removeLegacyGradientSubmission(s.localId)
       await deleteSubmission(s.docId)
       setQueue(q => ({ ...q, items: q.items.filter(x => x.docId !== s.docId) }))
       toast?.(s.status === 'pending' ? 'Submission withdrawn' : 'Submission removed')
@@ -287,6 +292,20 @@ export default function GradientGallery({ toast }) {
         )}
       />
 
+      {user && keepGradients.waiting > 0 && (
+        <section className="grg-queue" aria-labelledby="grg-keep-heading">
+          <div className="section-h">
+            <h2 id="grg-keep-heading">Your submissions</h2>
+          </div>
+          <LegacyGradientsPrompt
+            count={keepGradients.waiting}
+            busy={keepGradients.busy}
+            onKeep={keepGradients.keep}
+            onDismiss={keepGradients.notMine}
+          />
+        </section>
+      )}
+
       {submissions.length > 0 && (
         <section className="grg-queue" aria-labelledby="grg-queue-heading">
           <div className="section-h">
@@ -332,7 +351,10 @@ export default function GradientGallery({ toast }) {
           <div className="section-h">
             <h2 id="grg-queue-heading">Your submissions</h2>
           </div>
-          <p className="grg-queue-note">Sign in to keep these gradients with your account.</p>
+          <p className="grg-queue-note">
+            {legacyCount} {legacyCount === 1 ? 'gradient' : 'gradients'} from this browser {legacyCount === 1 ? 'is' : 'are'} waiting.
+            {' '}Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account.
+          </p>
           <button
             type="button"
             className="btn btn-accent"

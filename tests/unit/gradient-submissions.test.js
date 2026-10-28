@@ -299,3 +299,105 @@ test('an emptied list is cleared without a round trip', async () => {
   assert.equal(out.cleared, true)
   assert.equal(s.has(), false)
 })
+
+/* ── asked first, one document per entry, withdrawn stays withdrawn ─────── */
+
+const { queueDocId, removeLegacyGradientSubmission, countLegacyGradientSubmissions,
+  readMigrationDismissed, writeMigrationDismissed } = mod
+
+// A stand-in for sessionStorage.
+function sessionMemory() {
+  const map = new Map()
+  return { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, String(v)), map }
+}
+
+test('an entry stored without an id gets the same id every time, from what the gradient is', () => {
+  const a = sanitizeGradientSubmission(draft({ id: undefined }))
+  const b = sanitizeGradientSubmission(draft({ id: undefined }))
+  assert.equal(a.id, b.id, 'not a clock reading: two reads agree')
+  assert.ok(!/^g\d{10,}$/.test(a.id), 'not Date.now()')
+  const other = sanitizeGradientSubmission(draft({ id: undefined, angle: 91 }))
+  assert.notEqual(a.id, other.id, 'a different gradient is a different entry')
+  const renamed = sanitizeGradientSubmission(draft({ id: undefined, name: 'Other name' }))
+  assert.notEqual(a.id, renamed.id)
+})
+
+test('the account document id is fixed by owner and entry, and is safe as an id', () => {
+  assert.equal(queueDocId('u1', 'g77'), 'u1_g77')
+  assert.equal(queueDocId('u1', 'g77'), queueDocId('u1', 'g77'))
+  assert.notEqual(queueDocId('u1', 'g77'), queueDocId('u2', 'g77'))
+  assert.ok(!queueDocId('u1', 'a/b c').includes('/'), 'Firestore ids may not hold a slash')
+})
+
+test('each entry is published at its fixed document id', async () => {
+  const s = memoryStorage([draft({ id: 'g1', name: 'One' }), draft({ id: undefined, name: 'Two' })])
+  const ids = []
+  const q = fakeQueue()
+  const publish = async (record, opts) => { ids.push(opts?.id); return q.publish(record) }
+  await migrateGradientSubmissions({ user: USER, storage: s, list: q.list, publish })
+  const twoId = sanitizeGradientSubmission(draft({ id: undefined, name: 'Two' })).id
+  assert.deepEqual(ids.sort(), [queueDocId('u1', 'g1'), queueDocId('u1', twoId)].sort())
+})
+
+test('a publish that finds the document already there counts as already published', async () => {
+  // Two tabs, or a retry: the second write is refused by the rules, and the API
+  // says created: false rather than throwing.
+  const s = memoryStorage([draft({ id: 'a' }), draft({ id: 'b', name: 'Fresh' })])
+  const out = await migrateGradientSubmissions({
+    user: USER, storage: s,
+    list: async () => [],
+    publish: async (record) => (record.localId === 'a' ? { id: 'x', created: false } : { id: 'y', created: true }),
+  })
+  assert.equal(out.published, 1)
+  assert.equal(out.skipped, 1)
+  assert.equal(out.failed, 0)
+  assert.equal(s.has(), false, 'already there is not a failure, so the key goes')
+})
+
+test('a document id already in the account listing is skipped without a write', async () => {
+  const s = memoryStorage([draft({ id: 'a' })])
+  const q = fakeQueue({ existing: [{ id: queueDocId('u1', 'a') }] })
+  const out = await migrateGradientSubmissions({ user: USER, storage: s, list: q.list, publish: q.publish })
+  assert.equal(q.published.length, 0)
+  assert.equal(out.skipped, 1)
+})
+
+test('withdrawing removes just that entry from the browser key, so it is never published again', async () => {
+  const s = memoryStorage([draft({ id: 'keep', name: 'Keep' }), draft({ id: 'gone', name: 'Gone' })])
+  assert.equal(removeLegacyGradientSubmission('gone', s), true)
+  assert.deepEqual(readLegacyGradientSubmissions(s).map(x => x.id), ['keep'])
+  const q = fakeQueue()
+  await migrateGradientSubmissions({ user: USER, storage: s, list: q.list, publish: q.publish })
+  assert.deepEqual(q.published.map(r => r.localId), ['keep'])
+})
+
+test('removing the last entry removes the key; an unknown id changes nothing', () => {
+  const s = memoryStorage([draft({ id: 'only' })])
+  assert.equal(removeLegacyGradientSubmission('nope', s), false)
+  assert.equal(s.calls.set, 0)
+  assert.equal(removeLegacyGradientSubmission('only', s), true)
+  assert.equal(s.has(), false)
+  assert.equal(removeLegacyGradientSubmission('only', s), false, 'nothing left to remove')
+})
+
+test('only waiting entries are counted for the question', () => {
+  const s = memoryStorage([draft({ id: 'a' }), draft({ id: 'b', status: 'withdrawn' }), 'rubbish'])
+  assert.equal(countLegacyGradientSubmissions(s), 1)
+})
+
+test('"Not mine" is remembered per account for the tab session', () => {
+  const ss = sessionMemory()
+  assert.equal(readMigrationDismissed('u1', ss), false)
+  writeMigrationDismissed('u1', ss)
+  assert.equal(readMigrationDismissed('u1', ss), true)
+  assert.equal(readMigrationDismissed('u2', ss), false, 'another account on the same machine is still asked')
+  assert.equal(readMigrationDismissed(null, ss), false)
+})
+
+test('the hook asks first: it counts and waits, and moves nothing on its own', async () => {
+  const fs = await import('node:fs')
+  const src = fs.readFileSync('src/hooks/useGradientSubmissionMigration.js', 'utf8')
+  const effect = src.slice(src.indexOf('useEffect('), src.indexOf('const keep'))
+  assert.ok(!effect.includes('migrateGradientSubmissions'), 'the mount effect never runs the migration')
+  assert.match(src, /publish: publishToQueueOnce/)
+})

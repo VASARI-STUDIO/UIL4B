@@ -307,3 +307,27 @@ test('a submission from the wire is sanitised like one from this browser', () =>
   const src = read('src/pages/Community.jsx')
   assert.match(src, /sanitizeCommunitySubmission\(\{/)
 })
+
+test('the migration publishes at a fixed document id and treats a refused repeat as already there', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  const body = src.slice(src.indexOf('export async function publishToQueueOnce'), src.indexOf('export async function listMySubmissions'))
+  assert.match(body, /setDoc\(ref, record\)/, 'a write at a chosen id, not addDoc')
+  assert.match(body, /permission-denied/, 'the rules refuse a second write to an existing document')
+  assert.match(body, /getDoc\(ref\)\)\.exists\(\)/, 'and the owner reading it back is what proves it is there')
+  assert.match(body, /created: false/)
+  assert.match(body, /throw err/, 'any other refusal still surfaces')
+})
+
+test('the rules let the owner only withdraw, so a repeat write at the same id cannot overwrite', () => {
+  const rules = read('firestore.rules')
+  const update = rules.slice(rules.indexOf('allow update: if isReviewer()'), rules.indexOf('allow delete: if isReviewer()'))
+  assert.match(update, /request\.resource\.data\.status == 'withdrawn'/)
+  assert.match(update, /hasOnly\(\['status'\]\)/)
+})
+
+test('the listing can ask for a bigger page than the 100 the gallery shows', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  assert.match(src, /listMySubmissions\(uid, kind = null, max = 100\)/)
+  assert.match(src, /limit\(max\)/)
+  assert.match(read('src/hooks/useGradientSubmissionMigration.js'), /listMySubmissions\(uid, kind, LIST_MAX\)/)
+})

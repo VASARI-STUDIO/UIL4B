@@ -29,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
 // tool-shell.css is the shared tool shell the other tool pages load too.
@@ -481,8 +482,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user } = useAuth()
   const { requireLogin } = useLoginPrompt()
-  // Gradients an earlier visit queued in this browser move to the account on sign-in.
-  useGradientSubmissionMigration({ toast })
+  // Gradients an earlier visit queued in this browser: a signed-in person is
+  // asked whether to keep them with the account (never moved unasked).
+  const keepGradients = useGradientSubmissionMigration({ toast })
   const requireExportAccount = useExportGate()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
@@ -1565,6 +1567,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       )}
       <ToolGrid>
         <ToolMain>
+          {keepGradients.waiting > 0 && (
+            <LegacyGradientsPrompt
+              count={keepGradients.waiting}
+              busy={keepGradients.busy}
+              onKeep={keepGradients.keep}
+              onDismiss={keepGradients.notMine}
+            />
+          )}
           {editLocked && (
             <p className="grd-note">
               <ToolIcon name="lock-simple" size={13} />
