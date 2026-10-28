@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { readPick } from '../utils/kitGalleryPick'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -15,6 +16,8 @@ export default function CheckoutReturn() {
   const { user } = useAuth()
   const { getCheckoutStatus } = useSubscription()
 
+  // Set by the export gallery just before checkout; read once, here, on success.
+  const [galleryPick] = useState(() => readPick())
   const sessionId = params.get('session_id')
   // Missing session id is an error state from the start — no effect needed.
   const [state, setState] = useState(sessionId ? 'loading' : 'error') // loading | success | error
@@ -97,7 +100,9 @@ export default function CheckoutReturn() {
                   anonymous sales page. So the moment of highest goodwill, right
                   after someone paid, ended on the page trying to acquire them,
                   being told about the free tier they had just moved off. */}
-              <NavLink to="/projects" className="btn btn-accent">Start building</NavLink>
+              {/* A buyer who came from the export gallery goes back to the pick they made. */}
+              {galleryPick && <NavLink to={`/projects/${encodeURIComponent(galleryPick.projectId)}/export`} className="btn btn-accent">Back to your export</NavLink>}
+              <NavLink to="/projects" className={galleryPick ? 'btn' : 'btn btn-accent'}>Start building</NavLink>
               <NavLink to="/settings" className="btn">{checkoutMode === 'payment' ? 'View account details' : 'Manage subscription'}</NavLink>
             </div>
           </div>

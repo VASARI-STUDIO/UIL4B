@@ -17,7 +17,7 @@ import {
 import { trackActivation } from '../utils/analytics'
 import {
   DEFAULT_PICK, GALLERY_CHECKOUT, GALLERY_DESIGNS, GALLERY_FORMATS,
-  chooseDesign, exportLabel, isProPick, normalisePick, readPick, storePick, trialLabel,
+  chooseDesign, clearPick, exportLabel, isProPick, normalisePick, readPick, storePick, trialLabel,
 } from '../utils/kitGalleryPick'
 import ExportProPreview from '../components/ExportProPreview'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -94,6 +94,8 @@ function ProjectExport({ id }) {
   const [more, setMore] = useState(false)
   const exporting = useRef(false)
   const loaded = useRef(false)
+  // The stored pick has been applied above; it is used once.
+  useEffect(() => { if (readPick()?.projectId === id) clearPick() }, [id])
 
   useEffect(() => {
     if (project && !loaded.current) { loaded.current = true; loadProject(project.id) }

@@ -61,3 +61,35 @@ test('a stale, future-dated, malformed or blocked store reads as no pick', () =>
 test('the checkout address is the trial plan with the gallery marker', () => {
   assert.equal(GALLERY_CHECKOUT, '/checkout?plan=yearly&from=kit-gallery')
 })
+
+// The named exception to "every upgrade goes through /plans": the gallery's own
+// trial button. It is the only source file that sends anyone to the gallery's
+// checkout address, and the export panel's Pro gate still goes to /plans.
+import fs from 'node:fs'
+import path from 'node:path'
+import { cleanProps } from '../../src/utils/productEvents.js'
+
+const walkSrc = (dir, out = []) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name)
+    if (e.isDirectory()) walkSrc(p, out)
+    else if (/\.(jsx?|tsx?)$/.test(e.name)) out.push(p)
+  }
+  return out
+}
+
+test('only the gallery page sends anyone to the gallery checkout address', () => {
+  const users = walkSrc(path.join(process.cwd(), 'src'))
+    .filter((p) => /GALLERY_CHECKOUT|from=kit-gallery/.test(fs.readFileSync(p, 'utf8')))
+    .map((p) => path.basename(p))
+    .sort()
+  // The page, the helper that defines the address, and the panel comment naming the exception.
+  assert.deepEqual(users, ['ExportPanel.jsx', 'ProjectExport.jsx', 'kitGalleryPick.js'])
+  const panel = fs.readFileSync(path.join(process.cwd(), 'src/components/ExportPanel.jsx'), 'utf8')
+  assert.match(panel, /navigate\('\/plans'\)/, 'the export panel gate still goes to /plans')
+})
+
+test('the checkout event carries where the buyer came from, and nothing unsafe', () => {
+  assert.deepEqual(cleanProps({ plan: 'yearly', from: 'kit-gallery' }), { plan: 'yearly', from: 'kit-gallery' })
+  assert.deepEqual(cleanProps({ from: 'someone@x.test' }), {})
+})

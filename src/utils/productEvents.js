@@ -28,7 +28,8 @@ export const EVENTS = Object.freeze({
   upgradeGateShown: 'upgrade_gate_shown',
 })
 
-const ALLOWED_KEYS = Object.freeze(['tool', 'kind', 'plan', 'gate'])
+// `from` names the surface a checkout was opened from (the export gallery).
+const ALLOWED_KEYS = Object.freeze(['tool', 'kind', 'plan', 'gate', 'from'])
 const MAX_LEN = 48
 
 /** Only allowlisted keys, only short primitive values, never an address. */
