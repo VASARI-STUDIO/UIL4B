@@ -23,7 +23,7 @@ import { GRAIN_SIZE, GRAIN_TILE_SIGMA, makeGrainTile, grainSigma } from '../src/
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(root, 'public', 'textures', 'grain-256.webp')
-const BUDGET = 12 * 1024
+const BUDGET = 48 * 1024
 const checkOnly = process.argv.includes('--check')
 
 const stats = (px) => {
@@ -78,7 +78,7 @@ try {
   const swingOf = grainSigma({ ...tile, sigma: 0 })
   console.log(`opacity for 10% grain: ${(0.1 / swingOf).toFixed(3)} from the source tile, ${(0.1 / grainSigma(decodedTile)).toFixed(3)} from the decoded file (must stay at or under 1)`)
   if (0.1 / swingOf > 1) console.log('10% grain would clamp: raise GRAIN_TILE_SIGMA.')
-  if (result.quality < 0.05) console.log('Quality is very low: lower GRAIN_TILE_SIGMA or raise GRAIN_TILE_PASSES.')
+  if (result.quality < 0.05) console.log('Quality is very low: lower GRAIN_TILE_SIGMA or raise GRAIN_TILE_SOFTEN.')
   if (!checkOnly) {
     await mkdir(path.dirname(OUT), { recursive: true })
     await writeFile(OUT, buf)

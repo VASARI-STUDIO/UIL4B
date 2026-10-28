@@ -57,7 +57,7 @@ const ROWS = [
   },
   {
     id: 'dusty-rose', ref: 'Dusty Rose', refNote: 'Muted rose with soft vintage film grain', crop: card(3, 0),
-    style: 'mesh', stops: ['#fed4d9', '#f1587c'], params: { points: 4, softness: 70, drift: 40, layout: 12 }, finishes: { grain: 4.5 }, sample: AXIS_UP,
+    style: 'mesh', stops: ['#fdd6db', '#ee4772'], params: { points: 4, softness: 70, drift: 25, layout: 12 }, finishes: { grain: 4.5 }, sample: AXIS_UP,
   },
   {
     id: 'aurora-nova', ref: 'Aurora Nova', refNote: 'No colours measured yet', crop: card(0, 1),
@@ -65,11 +65,11 @@ const ROWS = [
   },
   {
     id: 'aurora-borealis', ref: 'Aurora Borealis', refNote: 'Layered emerald and cyan aurora curtains', crop: card(1, 1),
-    style: 'curtains', stops: ['#0a0b0a', '#9dbabe'], params: { bands: 3, tilt: -12, length: 65, sky: 30 }, finishes: { grain: 4.5 }, sample: AXIS_UP,
+    style: 'curtains', stops: ['#0a0b0a', '#9dbabe'], params: { bands: 3, tilt: -24, length: 70, sky: 25 }, finishes: { grain: 4.5 }, sample: AXIS_UP,
   },
   {
     id: 'aurora-beams', ref: 'Aurora Beams', refNote: 'Diagonal repeating light beams, heavily blurred', crop: card(2, 1),
-    style: 'beams', stops: ['#111111', '#45474a'], params: { angle: 115, width: 9, softness: 70, base: 50 }, sample: AXIS_UP,
+    style: 'beams', stops: ['#0c0d0d', '#86a3a3'], params: { angle: 65, width: 9, softness: 38, base: 60 }, sample: AXIS_UP,
   },
   {
     id: 'midnight-horizon', ref: 'Midnight Horizon', refNote: 'Deep space blue to a bright sunrise band', crop: card(3, 1),
@@ -313,18 +313,32 @@ const FINISHES = [
   { label: 'Glass bars', finishes: { glass: {} } },
 ]
 
+// Glass shows most over a gradient that changes sideways, so it is also shown
+// over the Dusty Rose mesh and the Midnight Horizon sky.
+const GLASS_ON = ['dusty-rose', 'midnight-horizon']
+
 function FinishStrip() {
   const row = ROWS.find((r) => r.id === 'golden-hour')
   const rec = useMemo(() => recipe(row.style, row.stops, row.params, 1), [row])
+  const others = useMemo(() => GLASS_ON.map((id) => {
+    const r = ROWS.find((x) => x.id === id)
+    return { row: r, rec: recipe(r.style, r.stops, r.params, 1) }
+  }), [])
   return (
     <section className="gpoc-section" aria-labelledby="gpoc-finishes">
       <h2 id="gpoc-finishes">Finishes, on Golden Hour</h2>
-      <p className="gpoc-sub">The same gradient three ways, so the finishes are judged in the same pass.</p>
+      <p className="gpoc-sub">The same gradient three ways, so the finishes are judged in the same pass. The last two frames put Glass bars over other gradients.</p>
       <div className="gpoc-strip">
         {FINISHES.map((f) => (
           <figure key={f.label} className="gpoc-cell">
             <Ours rec={rec} finishes={f.finishes} crop={row.crop} label={`Golden Hour, ${f.label}`} />
             <figcaption className="gpoc-cap">{f.label}</figcaption>
+          </figure>
+        ))}
+        {others.map(({ row: r, rec: rc }) => (
+          <figure key={r.id} className="gpoc-cell">
+            <Ours rec={rc} finishes={{ glass: {} }} crop={r.crop} label={`${r.ref}, Glass bars`} />
+            <figcaption className="gpoc-cap">Glass bars on {r.ref}</figcaption>
           </figure>
         ))}
       </div>

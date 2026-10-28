@@ -168,7 +168,7 @@ export const PARAM_ROWS = {
   beams: [
     slider('angle', 'Angle', 0, 359, 115, '°'),
     slider('width', 'Width', 4, 24, 9, '%'),
-    slider('softness', 'Softness', 0, 100, 70),
+    slider('softness', 'Softness', 0, 100, 40),
     slider('base', 'Base light', 0, 100, 50),
   ],
   steps: [
@@ -343,7 +343,29 @@ function horizonLayers(st, p) {
   ]
 }
 
-const MESH_ANCHORS = [[18, 22], [82, 18], [20, 82], [80, 80], [50, 50]]
+// The first two points sit on the diagonal (first stop top left, last stop
+// bottom right) so the mesh always has a clear light-to-deep direction; the
+// rest fill the other corners and the middle.
+const MESH_ANCHORS = [[18, 20], [82, 80], [82, 18], [20, 82], [50, 50]]
+
+// A falloff that eases out to transparent (smoothstep), so a point's edge never
+// shows as a ring. Plain linear fades band visibly on a large blob.
+const easedFade = (hex, shoulder, peak = 1) => {
+  const pts = [[peak, 0], [0.85 * peak, shoulder]]
+  for (let k = 1; k <= 6; k++) {
+    const u = k / 6
+    pts.push([0.85 * peak * (1 - u * u * (3 - 2 * u)), shoulder + (100 - shoulder) * u])
+  }
+  return fade(hex, ...pts)
+}
+
+// A bell that falls to transparent: the soft edge of a light, with no corner.
+const bellFade = (hex, peak) => {
+  const pts = []
+  for (let k = 0; k < 8; k++) pts.push([peak * Math.exp(-3.5 * (k / 8) ** 2), (k / 8) * 100])
+  pts.push([0, 100])
+  return fade(hex, ...pts)
+}
 
 function meshLayers(st, p, seed) {
   const rng = mulberry32(seed * 7919 + p.layout * 104729)
@@ -355,10 +377,12 @@ function meshLayers(st, p, seed) {
     const x = clamp(ax + (rng() - 0.5) * 2 * p.drift * 0.35, 5, 95)
     const y = clamp(ay + (rng() - 0.5) * 2 * p.drift * 0.35, 5, 95)
     const src = st[i % st.length]
-    const c = i < st.length ? src : shiftColour(src, { dL: i % 2 ? 0.08 : -0.08 })
-    layers.push(radial(x, y, r, r, fade(c, [1, 0], [0.85, shoulder], [0, 100])))
+    // Extra points are the stop pushed a step deeper (and a touch richer) or
+    // lighter, never a new hue.
+    const c = i < st.length ? src : shiftColour(src, i % 2 ? { dL: 0.07, dC: -0.025 } : { dL: -0.05, dC: 0.025 })
+    layers.push(radial(x, y, r, r, easedFade(c, shoulder)))
   }
-  layers.push(linear(135 + Math.round((rng() - 0.5) * 40), evenStops(st)))
+  layers.push(linear(135 + Math.round((rng() - 0.5) * 20), evenStops(st)))
   return layers
 }
 
@@ -368,33 +392,79 @@ function curtainColours(st) {
 }
 export { curtainColours }
 
+// Curtains: layered, blurred ribbons of light over a dark sky. Each band is
+// three lights of one hue: a wide dim glow (the haze the curtain throws), a
+// ribbon (the body) and a thin bright core. They are blurred by different
+// amounts and each ribbon fans a few degrees off the tilt, so the bands overlap
+// at different depths instead of stacking as flat blobs. The colours are the
+// curtain stop deepened (body) and lightened (core), never a new hue.
 function curtainsLayers(st, p, seed) {
   const rng = mulberry32(seed * 6151 + p.bands * 31)
   const bh = hexToOk(st[0])
   const base = okToHex(0.08 + (p.sky / 100) * 0.17, Math.min(bh.C, 0.04), bh.H)
   const [c1, c2] = curtainColours(st)
-  const ellipses = []
+  const body = [shiftColour(c1, { dL: -0.2, dC: 0.04 }), shiftColour(c2, { dL: -0.24, dC: 0.04 })]
+  const core = [shiftColour(c1, { dL: 0.05, dC: -0.02 }), shiftColour(c2, { dL: 0.04, dC: -0.02 })]
+  const glows = []
+  const groups = []
+  const ribbons = []
+  const cores = []
   for (let i = 0; i < p.bands; i++) {
-    const x = 18 + (64 * (p.bands === 1 ? 0.5 : i / (p.bands - 1))) + (rng() - 0.5) * 8
-    const colour = i % 2 ? c2 : c1
-    ellipses.push(radial(x, p.length / 2 + 4, 11 + rng() * 4, p.length, fade(colour, [0.85, 0], [0.35, 55], [0, 100])))
+    const t = p.bands === 1 ? 0.5 : i / (p.bands - 1)
+    const x = 22 + 56 * t + (rng() - 0.5) * 10
+    const y = 54 + (rng() - 0.5) * 12
+    const fan = (t - 0.5) * 12
+    const rot = p.tilt + fan
+    const ribbon = radial(x, y, 9 + rng() * 3, p.length, bellFade(body[i % 2], 0.9))
+    const bright = radial(x, y + 5, 3.4 + rng() * 1.6, p.length * 0.7, bellFade(core[i % 2], 0.95))
+    glows.push(radial(x, y, 24 + rng() * 6, p.length * 1.05, bellFade(body[i % 2], 0.5)))
+    ribbons.push(ribbon)
+    cores.push(bright)
+    groups.push({ layers: [ribbon], blur: 5, rotate: rot }, { layers: [bright], blur: 2, rotate: rot })
   }
+  groups.unshift({ layers: glows, blur: 9, rotate: p.tilt })
   const flat = linear(180, evenStops([base, base]))
-  return { layers: [...ellipses, flat], soft: { layers: ellipses, under: flat, blur: 6, scale: 4, rotate: p.tilt } }
+  return {
+    // The plain-CSS fallback: the same lights, upright and unblurred.
+    layers: [...cores, ...ribbons, ...glows, flat],
+    soft: { layers: [...glows, ...ribbons, ...cores], under: flat, groups, scale: 4 },
+  }
+}
+
+// Beams: shafts of light from one end of the frame, fading as they travel.
+// Each shaft has a crisp leading edge and a soft trailing one (a lopsided bell,
+// so the direction reads); a second, wider rhythm sits under the first so the
+// shafts are not evenly spaced; a falloff in the base colour dims them with
+// distance and a glow sits at the source. Pure gradients, so it needs no blur.
+function beamProfile(hex, peak, period, centre, sigma) {
+  const sigL = sigma * 0.55
+  const sigR = Math.min(sigma * 1.45, period / 6)
+  const at = (pos, a) => [hex, a, clamp(pos, 0, period)]
+  const stops = [[hex, 0, 0]]
+  for (const z of [3, 2.2, 1.6, 1.1, 0.65, 0.3]) stops.push(at(centre - z * sigL, peak * Math.exp(-0.5 * z * z)))
+  stops.push(at(centre, peak))
+  for (const z of [0.3, 0.65, 1.1, 1.6, 2.2, 3]) stops.push(at(centre + z * sigR, peak * Math.exp(-0.5 * z * z)))
+  stops.push([hex, 0, period])
+  return stops
 }
 
 function beamsLayers(st, p) {
   const base = st[0]
   const beam = st[st.length - 1]
-  const period = p.width * 2.4
   const soft = p.softness / 100
-  const c = period / 2
-  const outer = c * (0.55 + 0.45 * soft)
-  const mid = outer * 0.5
-  const ramp = [[beam, 0, 0], [beam, 0, c - outer], [beam, 0.4, c - mid], [beam, 1, c], [beam, 0.4, c + mid], [beam, 0, c + outer], [beam, 0, period]]
+  const along = (p.angle + 270) % 360
+  const toSource = (along + 180) % 360
+  const sx = clamp(50 + 55 * Math.sin(toSource * RAD), 0, 100)
+  const sy = clamp(50 - 55 * Math.cos(toSource * RAD), 0, 100)
+  const period = p.width * 2.4
+  const sigma = period * (0.035 + 0.13 * soft)
+  const period2 = period * 1.618
+  const lit = shiftColour(beam, { dL: 0.06 })
   return [
-    { k: 'repeat', angle: p.angle, stops: ramp, space: 'oklch' },
-    radial(50, 100, 95, 80, fade(beam, [0.6 * (p.base / 100), 0], [0, 100])),
+    { k: 'linear', angle: along, stops: [[base, 0, 0], [base, 0, 8], [base, 0.3, 40], [base, 0.72, 72], [base, 0.94, 100]], space: 'oklch' },
+    { k: 'repeat', angle: p.angle, stops: beamProfile(lit, 0.45, period2, period2 * 0.38, sigma * 0.9), space: 'oklch' },
+    { k: 'repeat', angle: p.angle, stops: beamProfile(lit, 0.8, period, period * 0.47, sigma), space: 'oklch' },
+    radial(sx, sy, 95, 80, easedFade(beam, 0, 0.7 * (p.base / 100))),
     linear(180, evenStops([base, base])),
   ]
 }
@@ -577,28 +647,29 @@ export const GRAIN_SIZE = 256
 // The tile's spread, as a share of the full range. It has to be big enough
 // that the largest View amount (10%) is reachable at an opacity of 1 or less
 // (soft-light turns a tile spread of s into about 0.41 s on mid grey, and the
-// 8-bit clip trims the tails), and small enough that the WebP fits 12 KB.
+// 8-bit clip trims the tails), and small enough that the WebP stays near 48 KB (fine, barely-softened noise compresses far worse than the lumpy noise it replaced).
 // 0.25 gives a mid-grey swing of 0.108, so 10% asks for an opacity of 0.93.
 export const GRAIN_TILE_SIGMA = 0.25
-export const GRAIN_TILE_PASSES = 2
+// How much of one 3x3 blur is mixed back into the raw noise. Film grain is
+// near pixel-sized: a full blur makes it lumpy (it reads as dirt), none leaves
+// it digital and sharp. About a third keeps neighbouring pixels only weakly
+// related.
+export const GRAIN_TILE_SOFTEN = 0.3
 
-// The shared noise tile, made from a seed: grey noise, smoothed by two 3x3
-// blurs that wrap (so the tile repeats without a seam), centred on mid grey.
-// Smoother noise also encodes smaller, which is what pays for the larger
-// spread. scripts/make-grain-tile.mjs encodes exactly this to the WebP, and
-// the image painter reads these pixels directly.
+// The shared noise tile, made from a seed: fine grey noise with a touch of
+// softening, wrapped at the edges (so the tile repeats without a seam) and
+// centred on mid grey. scripts/make-grain-tile.mjs encodes exactly this to the
+// WebP, and the image painter reads these pixels directly.
 export function makeGrainTile(size = GRAIN_SIZE, seed = 0x6d2b79f5) {
   const rng = mulberry32(seed)
-  let sm = new Float32Array(size * size)
-  for (let i = 0; i < sm.length; i++) sm[i] = rng() + rng() + rng() + rng() - 2
-  for (let pass = 0; pass < GRAIN_TILE_PASSES; pass++) {
-    const raw = sm
-    sm = new Float32Array(raw.length)
-    const at = (x, y) => raw[((y + size) % size) * size + ((x + size) % size)]
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        sm[y * size + x] = (4 * at(x, y) + 2 * (at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1)) + at(x - 1, y - 1) + at(x + 1, y - 1) + at(x - 1, y + 1) + at(x + 1, y + 1)) / 16
-      }
+  const raw = new Float32Array(size * size)
+  for (let i = 0; i < raw.length; i++) raw[i] = rng() + rng() + rng() + rng() - 2
+  const sm = new Float32Array(raw.length)
+  const at = (x, y) => raw[((y + size) % size) * size + ((x + size) % size)]
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const blur = (4 * at(x, y) + 2 * (at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1)) + at(x - 1, y - 1) + at(x + 1, y - 1) + at(x - 1, y + 1) + at(x + 1, y + 1)) / 16
+      sm[y * size + x] = raw[y * size + x] * (1 - GRAIN_TILE_SOFTEN) + blur * GRAIN_TILE_SOFTEN
     }
   }
   let sum = 0
@@ -673,9 +744,32 @@ export function ditherPixels(rgba, seed = 1) {
 /* ── Glass bars ──────────────────────────────────────────────────────── */
 
 export const GLASS_DEFAULTS = { bars: 12, orient: 'vertical', frost: 50 }
-const GLASS_GAP = 0.06
+// The seam between two flutes, as a share of one bar's period.
+const GLASS_GAP = 0.03
+// How many bar-widths of the scene each flute gathers into itself. A flute is a
+// small cylindrical lens: it shows the scene around it squeezed into its own
+// width and flipped, which is what makes the colour jump at every bar edge.
+const GLASS_REFRACT = 2.4
 
-export const glassBlur = (frost) => (clamp(frost, 0, 100) / 100) * 8
+// The frost, in CSS px of blur on the lens layer (2px at the default 50).
+export const glassBlur = (frost) => (clamp(frost, 0, 100) / 100) * 4
+
+// The light on one flute across its period (fractions of the period): a dark
+// seam, a hairline highlight on the leading edge, a soft sheen that falls off
+// over the first half, then a shadow gathering toward the trailing edge.
+const SEAM = GLASS_GAP / 2
+export const GLASS_SHADE = [
+  [0, 'rgba(0,0,0,0.12)'],
+  [SEAM, 'rgba(255,255,255,0.55)'],
+  [SEAM + 0.035, 'rgba(255,255,255,0.22)'],
+  [0.32, 'rgba(255,255,255,0.08)'],
+  [0.58, 'rgba(255,255,255,0)'],
+  [0.78, 'rgba(0,0,0,0)'],
+  [1 - SEAM - 0.014, 'rgba(0,0,0,0.16)'],
+  [1 - SEAM, 'rgba(0,0,0,0.34)'],
+  [1 - SEAM, 'rgba(0,0,0,0.12)'],
+  [1, 'rgba(0,0,0,0.12)'],
+]
 
 export function glassRecipe(over = {}) {
   const g = { ...GLASS_DEFAULTS, ...over }
@@ -686,47 +780,65 @@ export function glassRecipe(over = {}) {
 
 const FILL = { position: 'absolute', inset: 0 }
 
+// Each flute is its own window onto a full copy of the scene: the copy is
+// placed so the flute sits over its own part of the picture, then squeezed
+// about the flute's centre and flipped. The copy is the scene's own tree, so
+// every family, including Steps and Curtains, gets the same glass.
+function glassNodes(sceneNodes, g) {
+  const v = g.orient === 'vertical'
+  const period = 100 / g.bars
+  const size = period * (1 - GLASS_GAP)
+  const bars = []
+  for (let i = 0; i < g.bars; i++) {
+    const pos = i * period + (period * GLASS_GAP) / 2
+    const centre = pos + size / 2
+    const inner = v
+      ? { position: 'absolute', top: 0, height: '100%', left: `${fmt((-pos / size) * 100)}%`, width: `${fmt(10000 / size)}%`, transformOrigin: `${fmt(centre)}% 50%`, transform: `scaleX(${fmt(-1 / GLASS_REFRACT)})` }
+      : { position: 'absolute', left: 0, width: '100%', top: `${fmt((-pos / size) * 100)}%`, height: `${fmt(10000 / size)}%`, transformOrigin: `50% ${fmt(centre)}%`, transform: `scaleY(${fmt(-1 / GLASS_REFRACT)})` }
+    bars.push({
+      style: v
+        ? { position: 'absolute', top: 0, height: '100%', left: `${fmt(pos)}%`, width: `${fmt(size)}%`, overflow: 'hidden' }
+        : { position: 'absolute', left: 0, width: '100%', top: `${fmt(pos)}%`, height: `${fmt(size)}%`, overflow: 'hidden' },
+      children: [{ style: inner, children: sceneNodes }],
+    })
+  }
+  const shade = `repeating-linear-gradient(${v ? 90 : 180}deg, ${GLASS_SHADE.map(([at, c]) => `${c} ${fmt(at * period)}%`).join(', ')})`
+  return [
+    { style: { ...FILL, filter: g.frost > 0 ? `blur(${fmt(glassBlur(g.frost))}px)` : undefined }, children: bars },
+    { style: { ...FILL, background: shade } },
+  ]
+}
+
+// The soft-light groups of Curtains: a small copy of each light, blurred, then
+// scaled up. Blurring a quarter-size layer and enlarging it gives the wide blur
+// at a sixteenth of the pixels.
+function softNodes(s) {
+  return [
+    { style: { ...FILL, background: layerCss(s.under) } },
+    ...s.groups.map((g) => ({
+      style: { ...FILL, transform: `rotate(${fmt(g.rotate)}deg) scale(1.2)` },
+      children: [{
+        style: { position: 'absolute', left: 0, top: 0, width: '25%', height: '25%', transformOrigin: '0 0', transform: `scale(${s.scale})`, filter: `blur(${g.blur}px)`, background: g.layers.map(layerCss).join(', ') },
+      }],
+    })),
+  ]
+}
+
+// `finishes.grain` is a percent here (4.5 is 4.5%); `paint()` takes the same
+// amount as a fraction (0.045), like applyGrain.
 // A tree of absolutely positioned layers a page can render: `{ style,
 // children?, svg? }`. The same recipe, with the filters CSS can do live.
 export function liveTree(rec, finishes = {}, { grainUrl = GRAIN_URL } = {}) {
   let nodes
-  if (rec.style === 'steps') {
-    nodes = [{ style: FILL, svg: toSvg(rec, { w: 100, h: 100 }) }]
-  } else if (rec.soft) {
-    const s = rec.soft
-    nodes = [
-      { style: { ...FILL, background: layerCss(s.under) } },
-      {
-        style: { ...FILL, transform: `rotate(${s.rotate}deg) scale(1.2)` },
-        children: [{
-          style: { position: 'absolute', left: 0, top: 0, width: '25%', height: '25%', transformOrigin: '0 0', transform: `scale(${s.scale})`, filter: `blur(${s.blur}px)`, background: s.layers.map(layerCss).join(', ') },
-        }],
-      },
-    ]
-  } else {
-    nodes = [{ style: { ...FILL, background: toCss(rec) } }]
-  }
-  if (finishes.glass) {
-    const g = glassRecipe(finishes.glass)
-    const v = g.orient === 'vertical'
-    const P = 100 / g.bars
-    const dir = v ? 90 : 180
-    const mask = `repeating-linear-gradient(${dir}deg, #000 0, #000 ${fmt(P * (1 - GLASS_GAP))}%, transparent ${fmt(P * (1 - GLASS_GAP))}%, transparent ${fmt(P)}%)`
-    const stripe = `repeating-linear-gradient(${dir}deg, rgb(255 255 255 / .18) 0, rgb(255 255 255 / .18) ${fmt(P * 0.02)}%, rgb(255 255 255 / .10) ${fmt(P * 0.02)}%, rgb(255 255 255 / 0) ${fmt(P * 0.3)}%, rgb(0 0 0 / .08) ${fmt(P * (1 - GLASS_GAP))}%, rgb(0 0 0 / 0) ${fmt(P * (1 - GLASS_GAP))}%, rgb(0 0 0 / 0) ${fmt(P)}%)`
-    nodes.push({
-      style: { ...FILL, maskImage: mask, WebkitMaskImage: mask },
-      children: [{
-        style: { position: 'absolute', left: 0, top: 0, width: '25%', height: '25%', transformOrigin: '0 0', transform: 'scale(4)', filter: `blur(${fmt(glassBlur(g.frost) / 4)}px)` },
-        children: liveTree(rec, {}, { grainUrl }),
-      }],
-    }, { style: { ...FILL, background: stripe } })
-  }
+  if (rec.style === 'steps') nodes = [{ style: FILL, svg: toSvg(rec, { w: 100, h: 100 }) }]
+  else if (rec.soft) nodes = softNodes(rec.soft)
+  else nodes = [{ style: { ...FILL, background: toCss(rec) } }]
+  if (finishes.glass) nodes = [...nodes, ...glassNodes(nodes, glassRecipe(finishes.glass))]
   if (finishes.grain > 0) {
-    nodes.push({ style: { ...FILL, backgroundImage: `url(${grainUrl})`, backgroundSize: '128px', mixBlendMode: 'soft-light', opacity: grainOpacity(finishes.grain) } })
+    nodes.push({ style: { ...FILL, backgroundImage: `url(${grainUrl})`, backgroundSize: '128px', mixBlendMode: 'soft-light', opacity: grainOpacity(finishes.grain / 100) } })
   }
   return nodes
 }
-
 /* ── canvas painter (image export) ───────────────────────────────────── */
 
 const rgba = (c, a) => { const [r, g, b] = hexToRgb(c); return `rgba(${r},${g},${b},${fmt(a)})` }
@@ -827,17 +939,21 @@ export async function paint(ctx, w, h, rec, opts = {}) {
     await drawSvg(ctx, toSvg(rec, { w, h }), w, h)
   } else if (rec.soft) {
     drawLayer(ctx, rec.soft.under, w, h)
-    const small = makeCanvas(sw, sh)
-    drawLayers(small.getContext('2d'), rec.soft.layers, sw, sh)
-    const blurred = blurredSmall(small, sw, sh, rec.soft.blur * k, makeCanvas)
-    ctx.save()
-    ctx.translate(w / 2, h / 2)
-    ctx.rotate(rec.soft.rotate * RAD)
-    ctx.scale(1.2, 1.2)
-    ctx.translate(-w / 2, -h / 2)
-    ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(blurred, 0, 0, w, h)
-    ctx.restore()
+    // Each group is a small copy of its lights, blurred and enlarged, rotated
+    // about the middle: the same steps the screen takes.
+    for (const g of rec.soft.groups) {
+      const small = makeCanvas(sw, sh)
+      drawLayers(small.getContext('2d'), g.layers, sw, sh)
+      const blurred = blurredSmall(small, sw, sh, g.blur * k, makeCanvas)
+      ctx.save()
+      ctx.translate(w / 2, h / 2)
+      ctx.rotate(g.rotate * RAD)
+      ctx.scale(1.2, 1.2)
+      ctx.translate(-w / 2, -h / 2)
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(blurred, 0, 0, w, h)
+      ctx.restore()
+    }
   } else {
     drawLayers(ctx, rec.layers, w, h)
   }
@@ -848,25 +964,28 @@ export async function paint(ctx, w, h, rec, opts = {}) {
     const span = v ? w : h
     const period = span / g.bars
     const bar = period * (1 - GLASS_GAP)
-    ctx.save()
-    ctx.beginPath()
-    for (let i = 0; i < g.bars; i++) ctx.rect(v ? i * period : 0, v ? 0 : i * period, v ? bar : w, v ? h : bar)
-    ctx.clip()
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(frosted, 0, 0, w, h)
-    ctx.restore()
     for (let i = 0; i < g.bars; i++) {
-      const s0 = i * period
-      const grad = v ? ctx.createLinearGradient(s0, 0, s0 + bar, 0) : ctx.createLinearGradient(0, s0, 0, s0 + bar)
-      grad.addColorStop(0, 'rgba(255,255,255,0.10)')
-      grad.addColorStop(0.3, 'rgba(255,255,255,0)')
-      grad.addColorStop(1, 'rgba(0,0,0,0.08)')
+      const s0 = i * period + (period * GLASS_GAP) / 2
+      const centre = s0 + bar / 2
+      // Each flute: clip to its window, then draw the whole scene squeezed
+      // about the flute's centre and flipped.
+      ctx.save()
+      ctx.beginPath()
+      if (v) ctx.rect(s0, 0, bar, h)
+      else ctx.rect(0, s0, w, bar)
+      ctx.clip()
+      if (v) { ctx.translate(centre, 0); ctx.scale(-1 / GLASS_REFRACT, 1); ctx.translate(-centre, 0) }
+      else { ctx.translate(0, centre); ctx.scale(1, -1 / GLASS_REFRACT); ctx.translate(0, -centre) }
+      ctx.drawImage(frosted, 0, 0, w, h)
+      ctx.restore()
+      // The light across the whole period, seams included.
+      const p0 = i * period
+      const grad = v ? ctx.createLinearGradient(p0, 0, p0 + period, 0) : ctx.createLinearGradient(0, p0, 0, p0 + period)
+      for (const [at, c] of GLASS_SHADE) grad.addColorStop(at, c)
       ctx.fillStyle = grad
-      if (v) ctx.fillRect(s0, 0, bar, h)
-      else ctx.fillRect(0, s0, w, bar)
-      ctx.fillStyle = 'rgba(255,255,255,0.18)'
-      if (v) ctx.fillRect(s0, 0, Math.max(1, k), h)
-      else ctx.fillRect(0, s0, w, Math.max(1, k))
+      if (v) ctx.fillRect(p0, 0, period, h)
+      else ctx.fillRect(0, p0, w, period)
     }
   }
   const img = ctx.getImageData(0, 0, w, h)
