@@ -236,9 +236,12 @@ test('the four rules-audit fixes (M1-M4) each land their rule, and the route hal
     'a key allowlist on users/{uid} would refuse the keys the server writes')
   assert.match(route, /location: profileText\(d\.location, 200\)/)
   assert.match(route, /company: profileText\(d\.company, 200\)/)
-  // M4 · angle is a number, every stop index up to the cap is checked, and one join types and bounds the palette.
+  // M4 · angle is a number, every stop index up to the 12-stop cap is checked,
+  // and one join types and bounds the palette.
   assert.match(rules, /p\.angle is number/)
-  assert.match(rules, /s\[31\]\.position is number/)
+  assert.match(rules, /payload\.stops\.size\(\) <= 12\)\)/)
+  assert.match(rules, /s\[11\]\.position is number/)
+  assert.doesNotMatch(rules, /s\[12\]/)
   assert.match(rules, /p\.colors\.join\(''\)\.size\(\) <= 1024/)
   assert.match(rules, /&& submissionPayloadOk\(\)\s*&& payloadElementsOk\(\)/)
 })

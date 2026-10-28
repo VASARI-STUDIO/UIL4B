@@ -148,6 +148,7 @@ test('M4 (the bug): gradient stops are { color, position } with a short colour',
   await assertFails(setDoc(queue(aliceDb(), 's2'), gradient({ stops: [stop({ blob: 'x'.repeat(5000) })] })))
   await assertFails(setDoc(queue(aliceDb(), 's3'), gradient({ stops: [stop({ color: '#' + '0'.repeat(16) })] })))
   await assertFails(setDoc(queue(aliceDb(), 's4'), gradient({ stops: [stop({ position: '50' })] })))
+  await assertFails(setDoc(queue(aliceDb(), 's6'), gradient({ stops: [stop({ color: 5 })] })))
   await assertSucceeds(setDoc(queue(aliceDb(), 's5'), gradient({ stops: [stop({ color: '#' + '0'.repeat(15) })] })))
 })
 
@@ -171,12 +172,13 @@ test('M2 (KNOWN GAP): a non-admin can still lower an individual counter such as 
   await assertSucceeds(setDoc(dayDoc(aliceDb()), { day: DAY, view__home: 1 }, { merge: true }))
 })
 
-test('M4: a gradient with 32 stops is accepted, and a 33rd is refused', async () => {
-  // 32 is the list cap; accepting it proves the rule's expression budget holds at
-  // its widest, not only at the 12 stops the earlier case uses.
+test('M4: a gradient with 12 stops is accepted, and a 13th is refused', async () => {
+  // 12 is the app's MAX_STOPS (GradientGenerator.jsx, gradientGallery.js) and so
+  // the rule's list cap; accepting it proves the expression budget holds at the
+  // widest real gradient, and the 13th proves the cap itself.
   const stops = (n) => Array.from({ length: n }, (_, i) => stop({ position: i }))
-  await assertSucceeds(setDoc(queue(aliceDb(), 'g32'), gradient({ stops: stops(32) })))
-  await assertFails(setDoc(queue(aliceDb(), 'g33'), gradient({ stops: stops(33) })))
+  await assertSucceeds(setDoc(queue(aliceDb(), 'g12w'), gradient({ stops: stops(12) })))
+  await assertFails(setDoc(queue(aliceDb(), 'g13'), gradient({ stops: stops(13) })))
 })
 
 test('M3: a photo URL of about 20 KB (a data URL) is accepted, and one of 100,001 characters is refused', async () => {
