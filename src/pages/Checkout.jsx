@@ -11,6 +11,7 @@ import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 import { verifyErrorText } from '../utils/emailVerification'
+import { checkoutErrorText, plainError } from '../utils/checkoutError'
 import useMediaQuery from '../hooks/useMediaQuery'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -97,14 +98,14 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
     let instance = null
     // Only the instance on screen reports a failure: a request for a period
     // the buyer has already left fails quietly and leaves the new one alone.
-    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout', e?.code) }
+    const fail = (e) => { if (live) onFail(e) }
     const created = embedQueue.then(async () => {
       if (!live) return
       let stripe
       try {
         stripe = await getStripe()
       } catch {
-        throw new Error(STRIPE_LOAD_ERROR)
+        throw plainError(STRIPE_LOAD_ERROR)
       }
       if (!stripe || !live) return
       instance = await stripe.createEmbeddedCheckoutPage({
@@ -126,7 +127,7 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
       }
     })
     embedQueue = created.catch(() => {})
-    const timer = setTimeout(() => fail(new Error(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
+    const timer = setTimeout(() => fail(plainError(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
     created.then(() => clearTimeout(timer), (e) => { clearTimeout(timer); fail(e) })
     return () => {
       live = false
@@ -219,9 +220,11 @@ export default function Checkout() {
   // One failure can report twice (the fetch wrapper, then Stripe's own
   // rejection), so a later call without a code keeps the code already set.
   // Every path that clears the error clears the code with it.
-  const failCheckout = useCallback((message, code) => {
-    setError(message)
-    setErrorCode((prev) => code || prev)
+  const failCheckout = useCallback((err) => {
+    // The buyer reads a sentence of this page's own; the raw text stays here.
+    console.warn('checkout: the payment session failed:', err?.message, { code: err?.code, status: err?.status })
+    setError(checkoutErrorText(err))
+    setErrorCode((prev) => err?.code || prev)
   }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
@@ -518,12 +521,6 @@ export default function Checkout() {
                 <>
                   <strong className="checkout-error-h">Checkout unavailable</strong>
                   <span className="checkout-error-p">{error}</span>
-                  {error.includes('Server configuration') && (
-                    <p className="checkout-error-note">
-                      This usually means the Firebase service account key isn't configured on the server.
-                      If you're the site owner, check Vercel environment variables.
-                    </p>
-                  )}
                   <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
                 </>
               )}

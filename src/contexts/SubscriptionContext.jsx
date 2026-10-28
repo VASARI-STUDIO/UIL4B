@@ -28,6 +28,10 @@ function billingError(data, status, fallback) {
   // The server's machine-readable reason (e.g. 'email-unverified'), so a page
   // can offer the right next step instead of only showing the sentence.
   if (data?.code) error.code = data.code
+  // The HTTP status and reference id, so a page can word the failure itself
+  // instead of showing the server's text.
+  error.status = status
+  if (data?.correlationId) error.correlationId = data.correlationId
   return error
 }
 
