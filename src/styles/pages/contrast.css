@@ -247,9 +247,13 @@
 .cc .cc-check-name { font-size: 13px; line-height: 1.35; color: var(--tl-soft); }
 .cc .cc-check-need { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; text-align: right; }
 .cc .cc-check-mark { font-size: 12px; font-weight: 500; text-align: right; }
+/* The AA/AAA explainer: static copy, so its height never moves with the colours. */
 .cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
-.cc .cc-note p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
-.cc .cc-note-link { justify-self: start; display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; line-height: 1.5; color: var(--tl-link); }
+.cc .cc-explain { display: grid; gap: var(--s-1); margin: 0; padding-left: 1.1em; list-style: disc; font-size: 12.5px; line-height: 1.5; color: var(--tl-soft); }
+.cc .cc-explain strong { font-weight: 600; color: var(--tl-ink); }
+.cc .cc-note-link { display: inline-flex; align-items: center; gap: 4px; justify-self: start; min-height: 24px; font-size: 13px; line-height: 1.5; color: var(--tl-link); }
+.cc .cc-note-link:visited { color: var(--tl-link); }
+@media (hover: hover) { .cc .cc-note-link:hover { text-decoration: underline; } }
 @media (pointer: coarse) { .cc .cc-note-link { min-height: 44px; } }
 
 /* ── Nearest passing colours ────────────────────────────────────────────── */

@@ -304,7 +304,7 @@ test.describe('Semantic Colour system workflow', () => {
 // would still pass here. The failing-pair test below is the one that catches it.
 const REST_TEXT = [
   '.cc-ratio-num', '.cc-ratio-unit', '.cc-ratio-verdict', '.cc-ratio-note',
-  '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-note p', '.cc-note-link',
+  '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-explain', '.cc-note-link',
   '.cc-lede', '.cc-field-k', '.cc-fix-line', '.cc-fix-ratio',
   '.cc-pair-label', '.cc-pair-ratio', '.cc-pair-mark',
 ]
