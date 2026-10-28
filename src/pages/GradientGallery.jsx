@@ -457,15 +457,14 @@ export default function GradientGallery({ toast }) {
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made, so the
           link goes there and carries no intent ahead of the user. */}
-      {/* "create and submit your
-          own" is for Pro viewers only; everyone else, at the end of a capped
+      {/* "Make your own" is for Pro viewers only; everyone else, at the end of a capped
           result, is offered more access instead. Where the locked tease is
           already on screen it IS that offer, so the close does not repeat it. */}
       {isPro === true ? (
         <GalleryCloseCta
           className="grg-cta"
-          detail="Build one in the Gradient Generator — then submit it to the community from there."
-          action="Create and submit your own"
+          detail="Make your own in the Gradient Generator and save it to your account."
+          action="Make your own"
           to="/create/gradient"
         />
       ) : !teaseVisible && !proPending && lockedCount > 0 ? (

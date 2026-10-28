@@ -187,6 +187,18 @@ const EXPORT_FORMATS = [
   { id: 'svg', label: 'SVG' },
 ]
 
+// One face of the code well's Copy button: an icon and a label. The button stacks
+// several in one grid cell (see .grd-copy-stack), so its width is the widest face
+// and never moves between "Copy CSS", "Copy Tailwind", "Copy SVG" and "Copied".
+function CopyFace({ icon, className, children }) {
+  return (
+    <span className={`grd-copy-face${className ? ` ${className}` : ''}`}>
+      <ToolIcon name={icon} size={14} />
+      <span>{children}</span>
+    </span>
+  )
+}
+
 // Build a standalone, paste-ready SVG for a linear or radial gradient. The CSS
 // angle (0deg = up, 90deg = right, clockwise) is converted to the gradient
 // vector SVG wants. Conic isn't representable as an SVG gradient, so callers
@@ -575,6 +587,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [pendingSave, setPendingSave] = useState(null)
   const saveTriggerRef = useRef(null)
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
+  // The code well's Copy button swaps to "Copied" for a beat after a press.
+  const [copied, setCopied] = useState(false)
+  const copiedTimer = useRef(0)
+  useEffect(() => () => clearTimeout(copiedTimer.current), [])
   // Interpolation space — the design's GEOMETRY control. OKLCH is its default
   // (D:1306, gSpace: 0). A saved gradient keeps the space it was saved in; one
   // saved before this control existed was drawn in sRGB, so it stays sRGB.
@@ -1056,6 +1072,27 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     closeSave('item')
     return onExport?.(value)
   }, [onExport, closeSave])
+
+  // The code well's Copy button and Ctrl/Cmd+C. Straight to onExport, the same
+  // path as the menu rows, so activation counting is unchanged. It does not go
+  // through copyExport: that hands focus back to the Save button, which would
+  // pull a keyboard user out of the well. Only a refused clipboard (false) skips
+  // the "Copied" swap; the toast carries that error.
+  const copyCode = useCallback(async () => {
+    const ok = await onExport?.(exportCode)
+    if (ok === false) return
+    clearTimeout(copiedTimer.current)
+    setCopied(true)
+    copiedTimer.current = setTimeout(() => setCopied(false), 1400)
+  }, [onExport, exportCode])
+  const onCodeKeyDown = (e) => {
+    // Ctrl/Cmd+C with nothing selected copies the whole snippet. With a text
+    // selection the browser's own copy runs untouched.
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.repeat || e.key.toLowerCase() !== 'c') return
+    if (window.getSelection()?.toString()) return
+    e.preventDefault()
+    copyCode()
+  }
 
   // Free, no account. Written to the clipboard here rather than through onExport:
   // a link is not an export.
@@ -1601,18 +1638,38 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
           </div>
 
-          <div className="grd-code">
-            <div className="grd-fmt" role="tablist" aria-label="Export format">
-              {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
-                <button
-                  key={f.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={effFmt === f.id}
-                  className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
-                  onClick={() => setFmt(f.id)}
-                >{f.label}</button>
-              ))}
+          <div className="grd-code" onKeyDown={onCodeKeyDown}>
+            <div className="grd-fmt">
+              <div className="grd-fmt-tabs" role="tablist" aria-label="Export format">
+                {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={effFmt === f.id}
+                    className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                    onClick={() => { setFmt(f.id); clearTimeout(copiedTimer.current); setCopied(false) }}
+                  >{f.label}</button>
+                ))}
+              </div>
+              {/* Seam: the "+ finishes" toggle (spec 11.2) goes here, just left of
+                  Copy. Copy's margin-left:auto keeps it at the right edge either way. */}
+              <button
+                type="button"
+                className={`grd-copy${copied ? ' is-copied' : ''}`}
+                onClick={copyCode}
+                aria-label={copied ? 'Copied' : `Copy ${fmtLabel}`}
+              >
+                <span className="grd-copy-stack" aria-hidden="true">
+                  <CopyFace icon="copy" className="grd-copy-idle">Copy<span className="grd-copy-fmt"> {fmtLabel}</span></CopyFace>
+                  <CopyFace icon="check" className="grd-copy-done">Copied</CopyFace>
+                  {/* Hidden faces that hold the width at the widest label. */}
+                  {EXPORT_FORMATS.map((f) => (
+                    <CopyFace key={f.id} icon="copy" className="grd-copy-size">Copy<span className="grd-copy-fmt"> {f.label}</span></CopyFace>
+                  ))}
+                  <CopyFace icon="check" className="grd-copy-size">Copied</CopyFace>
+                </span>
+              </button>
             </div>
             <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}${effFmt === 'css' ? ' grd-code-text--wrap' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
           </div>
