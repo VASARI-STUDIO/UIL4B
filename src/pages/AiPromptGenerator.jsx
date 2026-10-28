@@ -7,6 +7,8 @@ import QuotaMeter from '../components/QuotaMeter'
 import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
+import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
 import { RULE_CATEGORIES, PRESETS, buildPromptJson, buildPromptText } from '../data/promptRules'
 
@@ -38,6 +40,9 @@ export default function AiPromptGenerator({ toast }) {
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Which request /api/ai refused for an unverified email: 'scan' or 'generate'
+  // (null when none). It picks the action to repeat once the address is verified.
+  const [verifyFor, setVerifyFor] = useState(null)
   const textareaRef = useRef(null)
   const { plan, isPro } = useSubscription()
   const dailyLimit = plan?.limits?.[TOOL_ID] ?? AI_LIMITS.free.daily
@@ -74,6 +79,7 @@ export default function AiPromptGenerator({ toast }) {
     if (!refImage) return
     setScanning(true)
     setScannedRules([])
+    setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to scan photos')
@@ -90,6 +96,10 @@ export default function AiPromptGenerator({ toast }) {
         body: JSON.stringify({ task: 'scan-photo', image: base64, mimeType: refImage.type }),
       })
       const data = await r.json().catch(() => ({}))
+      if (isEmailUnverifiedReply(r.status, data)) {
+        setVerifyFor('scan')
+        return
+      }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       const rules = data.rules || []
       setScannedRules(rules)
@@ -151,6 +161,7 @@ export default function AiPromptGenerator({ toast }) {
     }
     setBusy(true)
     setError(null)
+    setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to use AI features')
@@ -169,6 +180,10 @@ export default function AiPromptGenerator({ toast }) {
         }),
       })
       const data = await r.json().catch(() => ({}))
+      if (isEmailUnverifiedReply(r.status, data)) {
+        setVerifyFor('generate')
+        return
+      }
       // Authoritative counts ride on every response, 429s included.
       quota.absorb(data)
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
@@ -203,6 +218,14 @@ export default function AiPromptGenerator({ toast }) {
     }
   }
 
+  // The address is verified and the token is fresh: repeat what was refused.
+  const retryAfterVerify = () => {
+    const what = verifyFor
+    setVerifyFor(null)
+    if (what === 'scan') scanPhoto()
+    else if (what === 'generate') generate()
+  }
+
   const removeResult = (id) => setResults(prev => prev.filter(r => r.id !== id))
   const platformLabel = (id) => PLATFORMS.find(p => p.id === id)?.label || id
 
@@ -225,6 +248,7 @@ export default function AiPromptGenerator({ toast }) {
 
       <AuthGate featureLabel="generate AI image prompts">
         <QuotaMeter quota={quota} className="quota--tool" />
+        {verifyFor && <VerifyEmailPrompt onVerified={retryAfterVerify} />}
         {/* Mode toggle */}
         <div className="aipg-mode-toggle">
           <button type="button" className={`aipg-mode-btn${mode === 'builder' ? ' active' : ''}`} onClick={() => setMode('builder')}>

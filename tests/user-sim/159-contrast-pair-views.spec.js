@@ -29,10 +29,14 @@ const FG = '#777777'
 const BG = '#ffffff'
 const FG_RGB = 'rgb(119, 119, 119)'
 const BG_RGB = 'rgb(255, 255, 255)'
+// Part 1 of the views rework builds Interface; Article and Landing page arrive in part 2
+// (PART_TWO, used by the test.fixme tests below). Specimen is covered in 171.
 const VIEWS = [
-  { id: 'editorial', name: 'Editorial' },
-  { id: 'product', name: 'Product page' },
-  { id: 'card', name: 'Card' },
+  { id: 'interface', name: 'Interface' },
+]
+const PART_TWO = [
+  { id: 'article', name: 'Article' },
+  { id: 'landing', name: 'Landing page' },
 ]
 const LEGEND = [
   { label: 'Body text', mark: 'Fail' },
@@ -95,7 +99,7 @@ test.describe('the Contrast Checker views', () => {
   test('the legend reads Body text Fail, Large text Pass and UI parts Pass at 4.48:1', async ({ page }) => {
     watch(page, 'designer reading where each test lands')
     await openPair(page)
-    await pickView(page, 'Editorial')
+    await pickView(page, 'Interface')
     const legend = page.getByRole('group', { name: 'Tests' })
     await expect(page.getByRole('heading', { name: 'Where each test lands' })).toBeVisible()
     await expect(legend.getByRole('button')).toHaveCount(3)
@@ -144,14 +148,16 @@ test.describe('the Contrast Checker views', () => {
     })
   }
 
-  test('the Editorial headline is larger than its body text', async ({ page }) => {
-    watch(page, 'designer reading the Editorial view')
+  // PART 2: needs the Article view (.bs-head is its headline). Delete .fixme then.
+  test.fixme('the Article headline is larger than its body text', async ({ page }) => {
+    watch(page, 'designer reading the Article view')
+    expect(PART_TWO[0].id).toBe('article')
     await openPair(page)
-    const pv = await pickView(page, 'Editorial')
+    const pv = await pickView(page, 'Article')
     await settle(page)
     const sizes = await pv.evaluate((root) => {
       const px = (sel) => { const el = root.querySelector(sel); return el ? parseFloat(getComputedStyle(el).fontSize) : null }
-      return { head: px('.sw-head'), body: Math.min(...[...root.querySelectorAll('p, li, span')].filter((e) => e.children.length === 0 && e.textContent.trim().length > 20).map((e) => parseFloat(getComputedStyle(e).fontSize))) }
+      return { head: px('.bs-head'), body: Math.min(...[...root.querySelectorAll('p, li, span')].filter((e) => e.children.length === 0 && e.textContent.trim().length > 20).map((e) => parseFloat(getComputedStyle(e).fontSize))) }
     })
     expect(sizes.head, 'the headline was found').not.toBeNull()
     expect(sizes.body, 'body text was found').toBeLessThan(40)
@@ -163,16 +169,22 @@ test.describe('the Contrast Checker views', () => {
 test.describe('the Contrast Checker views on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
-  test('the Product button reads "Product", the other buttons keep their names, and nothing runs sideways', async ({ page }) => {
+  // PART 2: needs the Landing page view. Delete .fixme then.
+  test.fixme('the Landing button reads "Landing", the other buttons keep their names', async ({ page }) => {
     watch(page, 'designer on a phone choosing a view')
+    expect(PART_TWO[1].name).toBe('Landing page')
     await openPair(page)
     const group = page.getByRole('group', { name: 'Preview the pair on' })
-    const product = group.getByRole('button', { name: 'Product page', exact: true })
-    const label = await product.evaluate((b) => b.innerText.trim())
-    expect(label, 'the narrow label drops " page"').toBe('Product')
-    for (const name of ['Specimen', 'Editorial', 'Card']) {
+    const landing = group.getByRole('button', { name: 'Landing page', exact: true })
+    expect(await landing.evaluate((b) => b.innerText.trim()), 'the narrow label drops " page"').toBe('Landing')
+    for (const name of ['Interface', 'Article', 'Specimen']) {
       expect(await group.getByRole('button', { name, exact: true }).evaluate((b) => b.innerText.trim())).toBe(name)
     }
+  })
+
+  test('no view scrolls sideways at 390px', async ({ page }) => {
+    watch(page, 'designer on a phone choosing a view')
+    await openPair(page)
     for (const v of VIEWS) {
       await pickView(page, v.name)
       await settle(page)
@@ -183,12 +195,13 @@ test.describe('the Contrast Checker views on a phone', () => {
     }
   })
 
-  test('the Product button keeps its whole name on a wide screen', async ({ page }) => {
+  // PART 2: needs the Landing page view. Delete .fixme then.
+  test.fixme('the Landing button keeps its whole name on a wide screen', async ({ page }) => {
     watch(page, 'designer on a desktop choosing a view')
     await page.setViewportSize({ width: 1440, height: 900 })
     await openPair(page)
-    const product = page.getByRole('group', { name: 'Preview the pair on' }).getByRole('button', { name: 'Product page', exact: true })
-    expect(await product.evaluate((b) => b.innerText.trim())).toBe('Product page')
+    const landing = page.getByRole('group', { name: 'Preview the pair on' }).getByRole('button', { name: 'Landing page', exact: true })
+    expect(await landing.evaluate((b) => b.innerText.trim())).toBe('Landing page')
   })
 })
 
@@ -225,11 +238,11 @@ test.describe('the Contrast Checker marks, outline colour and layout', () => {
   test('the outline is near-black for a mid-grey pair and blue for black on white, never the pair\'s own colour', async ({ page }) => {
     watch(page, 'designer checking the outline colour')
     await openPair(page)
-    const pv = await pickView(page, 'Editorial')
+    const pv = await pickView(page, 'Interface')
     // #111111 scores 4.2:1 on #777777, where the usual blue scores 1.3.
     expect(await pv.evaluate((el) => getComputedStyle(el).getPropertyValue('--pv-hit').trim().toLowerCase())).toBe('#111111')
     await go(page, '/create/contrast?fg=000000&bg=FFFFFF')
-    const pv2 = await pickView(page, 'Editorial')
+    const pv2 = await pickView(page, 'Interface')
     expect(await pv2.evaluate((el) => getComputedStyle(el).getPropertyValue('--pv-hit').trim().toLowerCase())).toBe('#1d63d1')
   })
 
@@ -242,14 +255,5 @@ test.describe('the Contrast Checker marks, outline colour and layout', () => {
       const exampleTop = await pv.evaluate((el) => el.getBoundingClientRect().top)
       expect(legendBottom, `${v.name}: the legend ends above where the example starts`).toBeLessThanOrEqual(exampleTop + 1)
     }
-  })
-
-  test('the Card view leaves no day heading over an empty list', async ({ page }) => {
-    watch(page, 'designer reading the Card view')
-    await openPair(page)
-    const pv = await pickView(page, 'Card')
-    const days = await pv.locator('.ty-day').evaluateAll((els) => els.map((d) => ({ name: d.querySelector('.ty-dayname')?.textContent, rows: d.querySelectorAll('.ty-tx').length })))
-    expect(days.length, 'the days were found').toBeGreaterThan(0)
-    expect(days.filter((d) => d.rows === 0), 'a day with a heading and no rows').toEqual([])
   })
 })

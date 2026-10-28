@@ -1,24 +1,20 @@
-// A Contrast Checker pair painted on one of the preview examples (Editorial,
-// Product page, Card). The pair is two colours, not a palette, and the picture
-// exists to prove the verdict: pairRoles() builds roles that correct nothing, so
-// a failing pair looks as bad here as it is.
+// A Contrast Checker pair painted on one of the pair views (Interface,
+// Specimen; src/components/contrast/views). The pair is two colours, not a
+// palette, and the picture exists to prove the verdict: a view paints only
+// --pv-text and --pv-canvas, so a failing pair looks as bad here as it is.
 //
 // The legend of this view is "Where each test lands": every piece of the example
 // is sorted at runtime into body text, large text or a UI part (data-size), the
 // same way the Palette Builder's legend sorts by role (data-role). At rest the
 // largest part of each class the pair fails is outlined; choosing a legend chip
 // outlines every part of that class.
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { contrastRatio } from '../../utils/colors'
 import { pairRoles, pvVars } from '../../utils/palettePreviewRoles'
 import { PAIR_VIEWS, UI_PARTS, failingSizes, pickOutlineColour, textSizeClass } from '../../utils/palettePairSizes'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
-import { EXAMPLES } from './examples/registry'
+import { PAIR_EXAMPLES, retryPairExample } from '../contrast/views/registry'
 import '../../styles/pages/palette-preview.css'
-
-// The names the pair's swatches and labels carry in an example that names its
-// five brand slots.
-const SLOT_LABELS = ['Text', '70% text', '45% text', '20% text', 'Text']
 
 const ownTextNodes = (el) => [...el.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue.trim())
 const shown = (el) => el.getClientRects().length > 0
@@ -113,7 +109,7 @@ function markSizes(root, uiSelector, highlight, failing) {
 }
 
 /**
- * @param {{viewId: 'editorial'|'product'|'card', fg: string, bg: string,
+ * @param {{viewId: 'interface'|'specimen', fg: string, bg: string,
  *   highlight?: string|null, pinned?: string|null}} props fg and bg are
  *   #rrggbb; highlight is a size class to outline; pinned is the class a click
  *   or tap holds, whose first part is brought into view
@@ -122,16 +118,22 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
   const roles = useMemo(() => pairRoles(fg, bg), [fg, bg])
   const outline = useMemo(() => pickOutlineColour(bg, fg), [bg, fg])
   const view = PAIR_VIEWS.find((v) => v.id === viewId)
-  const Body = EXAMPLES[viewId]
+  const Body = PAIR_EXAMPLES[viewId]
   const rootRef = useRef(null)
   const failKey = failingSizes(contrastRatio(fg, bg)).join(',')
+  // A view whose chunk failed shows a stub with a Try again button. It reports
+  // itself here, so the frame stops presenting itself as a picture (a button
+  // inside role="img" is hidden from a screen reader) and nothing is marked.
+  const [failed, setFailed] = useState(false)
+  const [, setTries] = useState(0)
+  const retryView = useCallback(() => { retryPairExample(viewId); setTries((n) => n + 1) }, [viewId])
 
   // Re-marked when the pair or the chosen class changes, when the example
   // finishes loading (its nodes arrive after this effect) and when the width
   // changes (a container query can move a piece across a size boundary).
   useEffect(() => {
     const root = rootRef.current
-    if (!root) return undefined
+    if (!root || failed) return undefined
     const failing = failKey ? failKey.split(',') : []
     let frame = 0
     const run = () => {
@@ -144,7 +146,7 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(run)
     ro?.observe(root)
     return () => { cancelAnimationFrame(frame); mo.disconnect(); ro?.disconnect() }
-  }, [viewId, failKey, highlight, roles])
+  }, [viewId, failKey, highlight, roles, failed])
 
   // A pinned class can sit below the fold of a tall example: bring its first
   // visible part into view (instantly under reduced motion), and leave the page
@@ -166,11 +168,11 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
       data-scene={viewId}
       data-mode={roles.mode}
       data-pair="true"
-      role="img"
-      aria-label={`${view.name} example painted in your text and background colours`}
+      role={failed ? undefined : 'img'}
+      aria-label={failed ? undefined : `${view.name} example painted in your text and background colours`}
     >
       <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-        <Body roles={roles} labels={SLOT_LABELS} />
+        <Body onRetry={retryView} onFailed={setFailed} />
       </Suspense>
     </div>
   )

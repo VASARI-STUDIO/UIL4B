@@ -18,6 +18,26 @@ export function needsEmailVerification(user, emailVerified = user?.emailVerified
 }
 
 /**
+ * Re-read the account and, when it is verified, mint an ID token that says so.
+ * `A` is the loaded auth SDK and `user` the signed-in Firebase user.
+ *
+ * Resolves true or false, or null when the account changed while this was
+ * reading. A failed read or a failed token refresh REJECTS: answering "verified"
+ * on a token that still says otherwise would send the caller's retry out with
+ * the stale claim, and the server would refuse it again.
+ */
+export async function reloadVerified(A, user) {
+  await A.reload(user)
+  if (user !== A.auth.currentUser) return null
+  const verified = user.emailVerified === true
+  if (verified) {
+    await user.getIdToken(true)
+    if (user !== A.auth.currentUser) return null
+  }
+  return verified
+}
+
+/**
  * Where a verification link brings the person back to. Settings reads the
  * `verified` flag, re-reads the account and says so. Both send calls pass this,
  * so the link no longer ends on the auth server's own page.

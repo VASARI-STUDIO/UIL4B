@@ -132,32 +132,37 @@ test.describe('Contrast Checker · the displayed number agrees with the verdict'
 })
 
 test.describe('Contrast Checker · the first screen of a phone', () => {
-  // Fields, specimen and ratio all sit above the tab bar at 390x844, in that
-  // order. The colour fields used to sit about 1,200px down the page.
+  // The fields, then the ratio, then at least the top 300px of the preview all
+  // sit above the tab bar at 390x844, in that order. The colour fields used to
+  // sit about 1,200px down the page. (Also held, with more cases, in 171.)
   //
   // MUTATION: in contrast.css give .cc .cc-pairbar `order: 2` (the fields drop
-  // below the specimen); the order assertion goes red.
-  test('the two fields, the specimen and the ratio are all in view at 390x844', async ({ browser }) => {
+  // below the preview); the order assertion goes red.
+  test('the fields, the ratio and the top 300px of the preview are in view at 390x844, in that order', async ({ browser }) => {
     const { ctx, page } = await phone(browser, 390)
     watch(page, 'someone checking a pair on their phone')
     await go(page, '/create/contrast')
     await expect(page.locator('.cc-ratio-num')).toBeVisible()
+    // The view is a lazy chunk: measure once it has drawn, not while it loads.
+    await expect(page.locator('.cc-pv')).toBeVisible()
     const read = await page.evaluate(() => {
       const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom) } }
       const tabs = document.querySelector('.pnav-tabs')
       return {
-        fg: box('#cc-fg'), bg: box('#cc-bg'), specimen: box('.cc-preview'), ratio: box('.cc-ratio-num'),
+        fg: box('#cc-fg'), bg: box('#cc-bg'), pv: box('.cc-pv'), ratio: box('.cc-ratio-num'),
         pairbar: box('.cc-pairbar'),
         floor: Math.round(tabs ? tabs.getBoundingClientRect().top : window.innerHeight),
         vh: window.innerHeight,
       }
     })
     expect(read.vh, 'the context is the 390x844 phone').toBe(844)
-    expect(read.pairbar.top, 'the fields come first, above the specimen').toBeLessThan(read.specimen.top)
-    for (const name of ['fg', 'bg', 'specimen', 'ratio']) {
+    expect(read.pairbar.top, 'the fields come first, above the ratio').toBeLessThan(read.ratio.top)
+    expect(read.ratio.bottom, 'the ratio comes above the preview').toBeLessThanOrEqual(read.pv.top)
+    for (const name of ['fg', 'bg', 'ratio']) {
       expect(read[name].top, `${name} starts on screen`).toBeGreaterThanOrEqual(0)
       expect(read[name].bottom, `${name} ends above the tab bar (${read.floor}px)`).toBeLessThanOrEqual(read.floor)
     }
+    expect(read.floor - read.pv.top, 'the top 300px of the preview are above the tab bar').toBeGreaterThanOrEqual(300)
     await ctx.close()
   })
 })
@@ -300,7 +305,7 @@ test.describe('Contrast Checker · Use applies a fix', () => {
     await bgInput(page).fill('#FFFFFF')
     await expect(page.locator('.cc-ratio-verdict')).toHaveText('Large text and UI parts only.')
 
-    const fix = page.locator('.cc-fix').first()
+    const fix = page.locator('.cc-fixes-live .cc-fix').first()
     await expect(fix.locator('.cc-fix-line')).toContainText('Darken text to')
     const offered = (await fix.locator('.cc-fix-line strong').textContent()).toUpperCase()
     expect(ratioOf(offered, '#FFFFFF'), `the offered ${offered} must clear 4.5:1`).toBeGreaterThanOrEqual(4.5)
@@ -317,7 +322,7 @@ test.describe('Contrast Checker · Use applies a fix', () => {
     await go(page, '/create/contrast')
     await fgInput(page).fill('#000099')
     await bgInput(page).fill('#009900')
-    const fix = page.locator('.cc-fix').nth(1)
+    const fix = page.locator('.cc-fixes-live .cc-fix').nth(1)
     await expect(fix.locator('.cc-fix-line')).toContainText('background to')
     const offered = (await fix.locator('.cc-fix-line strong').textContent()).toUpperCase()
 
@@ -496,17 +501,17 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
     // A failing pair, so the fix rows (Use, Copy) are on the page too.
     await go(page, '/create/contrast')
     await fgInput(page).fill('#777777')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     const read = await page.evaluate(() => ({
       coarse: matchMedia('(pointer: coarse)').matches,
       boxes: [
-        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch',
-        '.tl-export-btn', '.cc-note-link',
+        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch',
+        '.tl-export-btn', '.cc-note-link', '.cc-lg-chip',
       ].flatMap((sel) => [...document.querySelectorAll(sel)].map((el, i) => {
         const r = el.getBoundingClientRect()
         return { sel: `${sel}[${i}]`, w: Math.round(r.width), h: Math.round(r.height) }
       })),
-      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fix-use', '.cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link']
+      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link', '.cc-lg-chip']
         .map((sel) => [sel, document.querySelectorAll(sel).length]),
     }))
     expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
@@ -519,14 +524,15 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
   // At 320 the pair bar is the tightest it gets: a 72px label, a 44px picker, a
   // hex field and the 44px Swap, in 296px.
   //
-  // MUTATION: in contrast.css add `white-space: nowrap` to .cc .cc-spec-body; the
-  // specimen line stops wrapping and the pair bar and page run past the edge.
+  // MUTATION: in contrast.css add `white-space: nowrap` to .cc .cc-explain; the
+  // explainer lines stop wrapping and the page runs past the edge. (The old target,
+  // .cc-spec-body, is no longer on screen: Interface is the first view.)
   test('nothing runs sideways at 320, with a hint showing and two fixes listed', async ({ browser }) => {
     const { ctx, page } = await phone(browser, 320, 568)
     watch(page, 'someone on the narrowest phone')
     await go(page, '/create/contrast')
     await fgInput(page).fill('#777777')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     await bgInput(page).fill('#12345Z')
     await expect(page.locator('#cc-bg-hint')).not.toHaveText('')
 

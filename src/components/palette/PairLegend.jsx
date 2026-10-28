@@ -5,14 +5,15 @@
 // (PairExample), so the chips add the choice of which class to look at, and all
 // of its parts.
 import { ToolIcon } from '../tool/ToolLayout'
-import { SIZE_CLASSES } from '../../utils/palettePairSizes'
+import { SIZE_CLASSES, legendLede } from '../../utils/palettePairSizes'
 
 /**
  * @param {{ratio: number, pinned: string|null, onPin: (id: string|null) => void,
- *   onHover: (id: string|null) => void}} props ratio is the unrounded ratio
+ *   onHover: (id: string|null) => void, lede?: boolean}} props ratio is the
+ *   unrounded ratio; lede false leaves the help line to the caller (the page
+ *   puts it under the frame on a phone)
  */
-export default function PairLegend({ ratio, pinned, onPin, onHover }) {
-  const anyFail = SIZE_CLASSES.some((c) => ratio < c.min)
+export default function PairLegend({ ratio, pinned, onPin, onHover, lede = true }) {
   return (
     <section className="cc-lg" aria-labelledby="cc-lg-title">
       <h2 id="cc-lg-title" className="tl-sec-label">Where each test lands</h2>
@@ -47,11 +48,7 @@ export default function PairLegend({ ratio, pinned, onPin, onHover }) {
           )
         })}
       </div>
-      <p className="cc-lede">
-        {anyFail
-          ? 'The largest part that misses its test is outlined. Pick a test to outline every part.'
-          : 'Every test passes. Pick a test to outline every part.'}
-      </p>
+      {lede && <p className="cc-lede">{legendLede(ratio)}</p>}
     </section>
   )
 }

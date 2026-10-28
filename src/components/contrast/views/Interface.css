@@ -1,0 +1,110 @@
+/* Rostra (Interface.jsx): the Interface view of a Contrast Checker pair.
+ *
+ * Colour is only --pv-text and --pv-canvas, the pair itself: no tint, no
+ * opacity, no shadow, so hierarchy comes from size, weight and space. Every
+ * rule is scoped under .ro (specificity above the scene reset in
+ * palette-preview.css, which loads in either order).
+ *
+ * Layout is a container query on .pvs, the view's root, so it follows the width
+ * the frame gives it and not the window: 800px and up is a rail beside the page,
+ * 560 to 799 a top bar over it with the card in two columns, and under 560 one
+ * column with the week strip dropped. Every layout fits the fixed frame (520,
+ * 480 or 440px tall) with nothing clipped, so the page stretches with
+ * space-between instead of scrolling. */
+
+.ro{display:flex;flex-direction:column;height:100%;min-height:0;font-size:14px;line-height:1.4;color:var(--pv-text)}
+
+/* ── Rail and top bar ─────────────────────────────────────────────────────── */
+.ro .ro-brand{font-size:19px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+.ro .ro-rail{display:none;flex:none;flex-direction:column;gap:var(--s-5);width:176px;padding:var(--s-5) var(--s-4)}
+.ro .ro-nav{display:flex;flex-direction:column;gap:var(--s-1)}
+.ro .ro-navitem{position:relative;display:flex;align-items:center;gap:var(--s-3);height:36px;padding-left:var(--s-3);font-size:14px}
+.ro .ro-navitem.is-on{font-weight:600}
+.ro .ro-navbar{position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:1px;background:var(--pv-text)}
+.ro .ro-navico,.ro .ro-menuico,.ro .ro-chev{flex:none}
+.ro .ro-bar{display:flex;align-items:center;justify-content:space-between;flex:none;padding:var(--s-2) var(--s-4) 0}
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.ro .ro-main{display:flex;flex:1;flex-direction:column;justify-content:space-between;gap:var(--s-3);min-width:0;min-height:0;padding:var(--s-3) var(--s-4) var(--s-4)}
+.ro .ro-title{font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
+.ro .ro-meta{margin-top:var(--s-1);font-size:12px;line-height:1.5}
+
+/* The week strip: seven days, each shift an outline. Dropped under 560px. */
+.ro .ro-week{display:none}
+.ro .ro-weeklab{margin-bottom:var(--s-2);font-size:12px;font-weight:600;line-height:1.5}
+.ro .ro-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s-2)}
+.ro .ro-day{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.ro .ro-dayname{font-size:12px;line-height:1.5}
+.ro .ro-shift{display:flex;align-items:center;justify-content:center;height:22px;padding:0 var(--s-1);border:1px solid var(--pv-text);border-radius:4px}
+.ro .ro-shift>span{font-size:12px;line-height:1;white-space:nowrap}
+
+/* ── The form card ────────────────────────────────────────────────────────── */
+.ro .ro-card{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-3);padding:var(--s-3) var(--s-4);border:1px solid var(--pv-text);border-radius:12px}
+.ro .ro-col{display:flex;flex-direction:column;gap:var(--s-3);min-width:0}
+.ro .ro-field{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.ro .ro-fhead{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3)}
+.ro .ro-lab{font-size:14px;font-weight:500;line-height:1.4}
+.ro .ro-lab--big{font-size:16px;font-weight:600;line-height:1.3}
+.ro .ro-help{font-size:14px;line-height:1.4}
+.ro :is(.ro-lab,.ro-help){text-wrap:pretty}
+/* Under 560px the select sits beside its label to save a row; under 340px there is no room for that. */
+.ro .ro-field--lead{flex-direction:row;align-items:center;justify-content:space-between;gap:var(--s-3)}
+.ro .ro-field--lead .ro-select{flex:1;max-width:190px}
+.ro .ro-help--small{font-size:12px;line-height:1.5}
+
+/* Toggle, on: the track is the text colour and the knob the background. */
+.ro .ro-toggle{position:relative;flex:none;width:40px;height:24px;border-radius:999px;background:var(--pv-text)}
+.ro .ro-knob{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:var(--pv-canvas)}
+
+.ro .ro-select{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);min-width:0;height:34px;padding:0 var(--s-3);border:1px solid var(--pv-text);border-radius:8px}
+.ro .ro-selv{font-size:14px;line-height:1.2;white-space:nowrap}
+
+/* The focus ring is a 2px border on a wrapper with a 2px gap inside it. */
+.ro .ro-focus{display:block;padding:2px;border:2px solid var(--pv-text);border-radius:10px}
+.ro .ro-input{display:flex;align-items:center;height:30px;padding:0 var(--s-3);border:1px solid var(--pv-text);border-radius:6px}
+.ro .ro-inv{min-width:0;font-size:14px;line-height:1.2;white-space:nowrap}
+
+.ro .ro-checkrow{display:flex;align-items:flex-start;gap:var(--s-2)}
+.ro .ro-check{display:grid;place-items:center;flex:none;width:18px;height:18px;margin-top:1px;border-radius:4px;background:var(--pv-text);color:var(--pv-canvas)}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.ro .ro-foot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-2)}
+.ro .ro-btn{display:flex;align-items:center;justify-content:center;height:34px;padding:0 var(--s-4);border:1px solid var(--pv-text);border-radius:8px}
+.ro .ro-btn>span{font-size:14px;line-height:1;white-space:nowrap}
+.ro .ro-btn--outline>span{font-weight:500}
+.ro .ro-btn--fill{background:var(--pv-text);color:var(--pv-canvas)}
+.ro .ro-btn--fill>span{font-weight:600}
+
+/* ── 560 to 799px: two columns in the card, the week strip back ───────────── */
+@container pvs (min-width:560px){
+  .ro .ro-week{display:block}
+  .ro .ro-main{padding:var(--s-3) var(--s-5) var(--s-4)}
+  .ro .ro-bar{padding:var(--s-3) var(--s-5) 0}
+  .ro .ro-card{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:var(--s-5);padding:var(--s-4)}
+  .ro .ro-col{gap:var(--s-4)}
+  .ro .ro-field--lead{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--s-1)}
+  .ro .ro-field--lead .ro-select{flex:none;max-width:none}
+  .ro .ro-shift{height:28px}
+  .ro .ro-foot{display:flex;justify-content:flex-end}
+  .ro .ro-btn{height:36px}
+}
+
+/* ── 800px and up: the rail replaces the top bar ──────────────────────────── */
+@container pvs (min-width:800px){
+  .ro{flex-direction:row}
+  .ro .ro-bar{display:none}
+  .ro .ro-rail{display:flex}
+  .ro .ro-main{padding:var(--s-5) var(--s-5) var(--s-5) var(--s-3)}
+}
+
+/* ── Under 340px: the header keeps its title and drops the meta line ──────── */
+@container pvs (max-width:339px){
+  .ro .ro-meta{display:none}
+  .ro .ro-field--lead{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--s-1)}
+  .ro .ro-field--lead .ro-select{flex:none;max-width:none}
+}
+
+/* ── Under 360px: less padding, so the buttons stay whole in the 440px frame ─ */
+@container pvs (max-width:359px){
+  .ro .ro-main{gap:var(--s-2);padding:var(--s-2) var(--s-4) var(--s-3)}
+}
