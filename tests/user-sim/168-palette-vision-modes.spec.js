@@ -179,7 +179,11 @@ for (const width of WIDTHS) {
     // (Redo then brings the mode back without saying so).
     test(`Undo that removes the strip keeps focus on the toolbar, and Redo says the mode is back (${width})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
-      // A board change first, so Undo has a step that was taken before the mode was chosen.
+      // Undo steps back to a board the page has written to its history, and that log is written 900 ms after the
+      // board last changed (a Randomise inside that window replaces it, so Undo stays disabled). Wait for the
+      // opening board to be logged, then change the board, so Undo has a step that predates the mode.
+      const logged = () => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('vs-palette-history') || '[]').length } catch { return 0 } })
+      await expect.poll(logged, { message: 'the opening board is in the palette history' }).toBeGreaterThan(0)
       await page.getByRole('button', { name: /^Randomise/ }).first().click()
       await expect(page.locator('button.plb-undo:not(:disabled)')).toBeVisible()
       await chooseMode(page, 'protanopia')
@@ -192,11 +196,20 @@ for (const width of WIDTHS) {
       await expect(strip).toHaveCount(0)
       await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label') || ''), { message: 'focus is back on the toolbar' })
         .toMatch(/^(Colour vision check|Extra tools)/)
-      if (await page.locator('button.plb-redo:not(:disabled)').count()) {
+      // Undo brought back the board from before the mode, so Redo has the one it left.
+      // Redo is on the row at 768 and up; on a phone it has moved into Extra tools.
+      if (await page.locator('[data-tool-toolbar] button.plb-redo').count()) {
+        await expect(page.locator('button.plb-redo:not(:disabled)')).toHaveCount(1)
         await page.evaluate(() => document.querySelector('button.plb-redo:not(:disabled)').click())
-        await expect(strip).toBeVisible()
-        await expect(page.locator('p.sr-only[aria-live="polite"]')).toContainText('Colour vision check on: red-blind (protanopia).')
+      } else {
+        await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
+        const panel = page.getByRole('dialog', { name: 'Extra tools' })
+        const redo = panel.getByRole('button', { name: 'Redo', exact: true })
+        await expect(redo).toBeEnabled()
+        await redo.click()
       }
+      await expect(strip).toBeVisible()
+      await expect(page.locator('p.sr-only[aria-live="polite"]')).toContainText('Colour vision check on: red-blind (protanopia).')
       await ctx.close()
     })
 
