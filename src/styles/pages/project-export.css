@@ -63,4 +63,10 @@
   .pxg-bar{grid-template-columns:1fr auto minmax(0,300px) auto;grid-template-areas:"sum not price cta"}
   .pxg-price{text-align:right}
 }
-@media (prefers-reduced-motion:reduce){.pxg-cta,.pxg-fm{transition:none}.pxg-cta:active:not(:disabled){transform:none}}
+/* Reduced motion: the in-app choice and the OS preference, as a pair (the house pattern). */
+html[data-reduced-motion="true"] .pxg-cta,html[data-reduced-motion="true"] .pxg-fm{transition:none}
+html[data-reduced-motion="true"] .pxg-cta:active:not(:disabled){transform:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .pxg-cta,html:not([data-reduced-motion="false"]) .pxg-fm{transition:none}
+  html:not([data-reduced-motion="false"]) .pxg-cta:active:not(:disabled){transform:none}
+}
