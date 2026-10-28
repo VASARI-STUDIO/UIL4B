@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
+import { passwordIsWeak, cleanDisplayName, NAME_MAX, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
 
 // The log-in / sign-up / reset / switch form, shared by the modal (and, later,
@@ -105,13 +106,16 @@ export default function AuthForm({
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (offline) return
+    // Refused before any request: a password of spaces satisfies the input's
+    // own minLength, and the server would accept it.
+    if (mode === 'signup' && passwordIsWeak(password)) { fail('weakPassword'); return }
     setError(null)
     setBusy('submit')
     try {
       if (mode === 'reset') {
         await sendReset()
       } else if (mode === 'signup') {
-        const cred = await signup(email, password, displayName)
+        const cred = await signup(email, password, cleanDisplayName(displayName))
         onSuccess(cred?.user)
         return
       } else {
@@ -189,7 +193,7 @@ export default function AuthForm({
   const emailField = (
     <div className="auth-field">
       <label htmlFor="ui-login-email">{t('auth.email')}</label>
-      <input id="ui-login-email" type="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
+      <input id="ui-login-email" type="email" name="email" maxLength={EMAIL_MAX} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
     </div>
   )
 
@@ -240,7 +244,7 @@ export default function AuthForm({
                 {mode === 'signup' && (
                   <div className="auth-field">
                     <label htmlFor="ui-login-name">{t('auth.name')}</label>
-                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" disabled={disabled} />
+                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" maxLength={NAME_MAX} disabled={disabled} />
                   </div>
                 )}
                 {emailField}
