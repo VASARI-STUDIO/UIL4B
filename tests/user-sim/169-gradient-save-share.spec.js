@@ -75,7 +75,6 @@ const storedProjects = (page) => page.evaluate(
 )
 const readClipboard = (page) => page.evaluate(() => navigator.clipboard.readText())
 const grantClipboard = (page) => page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
-const completeSignIn = (page) => page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
 
 // The fixture cannot mint an account from the create-account form, so the
 // visitor logs in instead (the same step spec 137 takes at the export gate).
