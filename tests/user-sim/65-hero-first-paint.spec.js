@@ -69,7 +69,7 @@
 // script's header gives. What is asserted is geometry, ordering and the
 // identity of the LCP element — all exact, all machine-independent.
 import { test, expect } from './base.js'
-import { go, ready, watch } from './helpers.js'
+import { go, goHoldingApp, ready, watch } from './helpers.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 
 // One `.sp-w` per word of the headline. DERIVED, and the selectors below are
@@ -201,7 +201,16 @@ test('a cold homepage load paints the whole headline, and does not animate it in
 test('the headline is the LCP element of a homepage load, recorded at its full size', async ({ page }) => {
   await page.addInitScript({ content: PROBE })
   watch(page, 'a first-time visitor whose largest paint should be the headline')
-  await go(page, '/')
+  // The app's script is held until the shell's first LCP candidate has been
+  // RECORDED. An entry's `element` reads null once its node has left the
+  // document, and React's createRoot replaces the shell, so on a slow runner the
+  // observer callback ran after the swap and the headline's own paint read as
+  // "(none)". See goHoldingApp in helpers.js. Every later candidate is still
+  // observed live, after hydration.
+  await goHoldingApp(page, '/', () => expect.poll(
+    () => page.evaluate(() => window.__lcpEntries.length),
+    { message: 'the served shell never produced a largest-contentful-paint entry', timeout: 15000 },
+  ).toBeGreaterThan(0))
 
   // Settled on the animation layer, not a stopwatch — and on the hero's own
   // entrances only: the page runs infinite decorative loops whose `finished`
