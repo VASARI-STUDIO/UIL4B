@@ -24,7 +24,11 @@ const BILLING_INTERVALS = new Set(['monthly', 'yearly'])
 // quote it to support and the founder can find the exact log line.
 function billingError(data, status, fallback) {
   const base = data?.error || `${fallback} (server returned ${status})`
-  return new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
+  const error = new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
+  // The server's machine-readable reason (e.g. 'email-unverified'), so a page
+  // can offer the right next step instead of only showing the sentence.
+  if (data?.code) error.code = data.code
+  return error
 }
 
 // Free-tier save allowance — the single source of truth for BOTH enforcement

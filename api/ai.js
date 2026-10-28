@@ -1,6 +1,7 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/plans.js'
 import { requireAdmin } from './_lib/admin.js'
+import { emailGateBody } from './_lib/emailGate.js'
 import { serveUsage, usageDayKey, usageMonthKey } from './_lib/aiUsage.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
@@ -1261,13 +1262,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Authentication required' })
   }
 
-  let uid, email
+  let uid, email, emailVerified
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
     // Only trust the email for entitlements when Firebase has verified it —
     // an unverified signup could otherwise claim someone else's address.
     email = decoded.email_verified ? decoded.email : null
+    emailVerified = decoded.email_verified === true
   } catch {
     // This 500 reports the state of FIREBASE_SERVICE_ACCOUNT_KEY to a caller who
     // has not proved anything, and that is deliberate rather than an oversight
@@ -1311,17 +1313,19 @@ export default async function handler(req, res) {
   // The response carries the count back so the UI can show what is left
   // without ever reading the collection itself.
   if (task.quota === 'generation') {
-    let plan
+    let plan, subscription, lifetimeEntitlement
     try {
       const snap = await fireDb.doc(`users/${uid}`).get()
-      plan = planForUser({
-        subscription: snap.data()?.subscription || null,
-        lifetimeEntitlement: snap.data()?.lifetimeEntitlement || null,
-        email,
-      })
+      subscription = snap.data()?.subscription || null
+      lifetimeEntitlement = snap.data()?.lifetimeEntitlement || null
+      plan = planForUser({ subscription, lifetimeEntitlement, email })
     } catch (e) {
       return res.status(500).json({ error: `Could not read your plan from Firestore (${String(e?.message || e).slice(0, 140)}).` })
     }
+
+    // Before the meter is touched, so a refused request reserves nothing.
+    const unverified = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
+    if (unverified) return res.status(403).json(unverified)
 
     const bucket = generationBucket(plan.id, monthStr())
     const ref = fireDb.doc(`daily-usage/${uid}_${bucket.suffix}`)
@@ -1365,19 +1369,22 @@ export default async function handler(req, res) {
 
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
   const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
-  let plan, limit, monthLimit
+  let plan, limit, monthLimit, subscription, lifetimeEntitlement
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
-    plan = planForUser({
-      subscription: userSnap.data()?.subscription || null,
-      lifetimeEntitlement: userSnap.data()?.lifetimeEntitlement || null,
-      email,
-    })
+    subscription = userSnap.data()?.subscription || null
+    lifetimeEntitlement = userSnap.data()?.lifetimeEntitlement || null
+    plan = planForUser({ subscription, lifetimeEntitlement, email })
     limit = dailyLimitFor(plan, toolId)
     monthLimit = monthlyLimitFor(plan, toolId)
   } catch (e) {
     return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
   }
+
+  // Free use of a paid task needs a verified email; see _lib/emailGate.js. It
+  // runs before the meters so a refused request reserves nothing.
+  const blocked = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
+  if (blocked) return res.status(403).json(blocked)
 
   // BOTH ceilings are reserved in ONE transaction, month first. The order is the
   // reporting order: whichever is reached first is the one the message names,

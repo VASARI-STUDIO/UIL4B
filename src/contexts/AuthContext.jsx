@@ -30,7 +30,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
-import { needsEmailVerification, sendVerificationLink } from '../utils/emailVerification'
+import { needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
 import { createAccountRetry } from '../utils/accountRetry'
 
 const AuthContext = createContext()
@@ -483,18 +483,21 @@ export function AuthProvider({ children }) {
 
   // The link is opened in another tab or on another device, so the flag here
   // only changes when the account is re-read. Returns the fresh value, or null
-  // when the account changed mid-read.
+  // when the account changed mid-read. A failed read, or a failed refresh of
+  // the ID token, rejects: every caller already catches, and the AI tools'
+  // verify prompt must not retry a request on a token that still says the
+  // address is unverified.
   const refreshEmailVerified = useCallback(async () => {
     if (!firebaseUser) return false
     const A = await loadAuthSdk()
-    await A.reload(firebaseUser)
+    // Roles and the server's gate read the ID token, which carries its own copy
+    // of the flag, so reloadVerified mints a fresh token as soon as the address
+    // is verified. The flag below flips only once that has worked: anything
+    // that reacts to "verified" then finds a token that agrees with it.
+    const verified = await reloadVerified(A, firebaseUser)
     // The account changed while this was reading: nothing to report.
-    if (firebaseUser !== A.auth.currentUser) return null
-    const verified = firebaseUser.emailVerified === true
+    if (verified === null) return null
     setEmailVerified(verified)
-    // Roles are read from the ID token, which carries its own copy of the
-    // flag, so a fresh token is minted as soon as the address is verified.
-    if (verified) await firebaseUser.getIdToken(true).catch(() => {})
     return verified
   }, [firebaseUser])
 

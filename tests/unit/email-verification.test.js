@@ -245,7 +245,8 @@ test('signing in from the signed-out landing re-reads the account and says the a
   assert.match(settings, /if \(!finishAfterSignIn \|\| !user\) return\s*setFinishAfterSignIn\(false\)\s*refreshEmailVerified\(\)\.then/)
   // An account that changed mid-read answers null, which says nothing.
   const refresh = callbackBody(stripComments(read('src/contexts/AuthContext.jsx')), 'refreshEmailVerified')
-  assert.match(refresh, /firebaseUser !== A\.auth\.currentUser\) return null/)
+  assert.match(refresh, /reloadVerified\(A, firebaseUser\)/)
+  assert.match(refresh, /if \(verified === null\) return null/)
   assert.equal(verifiedLandingMessage({ signedIn: true, verified: null }), null)
 })
 

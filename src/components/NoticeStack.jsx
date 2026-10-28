@@ -3,9 +3,10 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import useOnline from '../hooks/useOnline'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
+import useVerifyResend from '../hooks/useVerifyResend'
 import {
-  verifyBarVisible, verifyErrorText, readVerifyDismissed, writeVerifyDismissed,
-  VERIFY_RESEND_COOLDOWN_S, verifyResendLabel, verifyResendBlocked,
+  verifyBarVisible, readVerifyDismissed, writeVerifyDismissed,
+  verifyResendLabel, verifyResendBlocked,
 } from '../utils/emailVerification'
 import OfflineBanner from './OfflineBanner'
 import SyncNotice from './SyncNotice'
@@ -122,25 +123,21 @@ function VerifyNotice() {
   const uid = user?.uid
   const email = user?.email
 
-  const [state, setState] = useState('idle') // idle | sending | sent | failed
-  const [error, setError] = useState('')
-  // What the bar was saying when a send began, so "Sending…" (which lives on the
-  // button) does not make the sentence flip back to its first wording.
-  const [prior, setPrior] = useState('idle')
+  // idle | sending | sent | failed, and the cooldown, shared with the AI tools'
+  // verify prompt so a link sent from either shows the same seconds in both.
+  // `prior` is what the bar was saying when a send began, so "Sending…" (which
+  // lives on the button) does not make the sentence flip back to its first
+  // wording.
+  const { state, prior, error, left, resend: sendLink } = useVerifyResend(uid, sendVerificationEmail)
   const [dismissedUid, setDismissedUid] = useState(null)
   // The uid whose address was just verified here, so the bar can say so for a
   // moment instead of vanishing. Signing out also ends the debt, which is not
   // a verification, so it only counts while the same account is still in.
   const [verifiedUid, setVerifiedUid] = useState(null)
-  // After a send, Resend waits out a short cooldown (`until` is the clock time
-  // it ends, `left` the whole seconds to show) and then offers itself again.
-  const [until, setUntil] = useState(0)
-  const [left, setLeft] = useState(0)
   const [seen, setSeen] = useState({ uid, owed })
   if (seen.uid !== uid || seen.owed !== owed) {
     setSeen({ uid, owed })
     if (uid && seen.uid === uid && seen.owed && !owed) setVerifiedUid(uid)
-    if (seen.uid !== uid) { setState('idle'); setError(''); setUntil(0); setLeft(0) }
   }
 
   useEffect(() => {
@@ -148,17 +145,6 @@ function VerifyNotice() {
     const timer = setTimeout(() => setVerifiedUid(null), VERIFIED_HOLD_MS)
     return () => clearTimeout(timer)
   }, [verifiedUid])
-
-  useEffect(() => {
-    if (!until) return undefined
-    const tick = () => {
-      const seconds = Math.ceil((until - Date.now()) / 1000)
-      setLeft(Math.max(0, seconds))
-      if (seconds <= 0) setUntil(0)
-    }
-    const timer = setInterval(tick, 1000)
-    return () => clearInterval(timer)
-  }, [until])
 
   const dismissRef = useRef(null)
 
@@ -170,21 +156,6 @@ function VerifyNotice() {
   if (!confirmed && (dismissedUid === uid || readVerifyDismissed(uid))) return null
 
   const blocked = verifyResendBlocked(state, left)
-
-  const resend = async () => {
-    if (blocked) return
-    setPrior(state)
-    setState('sending')
-    try {
-      await sendVerificationEmail()
-      setState('sent')
-      setLeft(VERIFY_RESEND_COOLDOWN_S)
-      setUntil(Date.now() + VERIFY_RESEND_COOLDOWN_S * 1000)
-    } catch (e) {
-      setError(verifyErrorText(e))
-      setState('failed')
-    }
-  }
 
   const dismiss = () => {
     writeVerifyDismissed(uid)
@@ -233,7 +204,7 @@ function VerifyNotice() {
       </p>
       <div className="sync-notice-actions">
         {!confirmed && (
-          <ResendButton dismissRef={dismissRef} aria-disabled={blocked || undefined} onClick={resend}>
+          <ResendButton dismissRef={dismissRef} aria-disabled={blocked || undefined} onClick={sendLink}>
             {verifyResendLabel(state, left)}
           </ResendButton>
         )}

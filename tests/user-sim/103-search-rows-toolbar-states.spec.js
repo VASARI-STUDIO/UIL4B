@@ -7,8 +7,10 @@
 //   2. The Palette toolbar stays on one line across screen widths.
 //   3. Gradient "Shuffle from palette" with fewer than two palette colours says
 //      so: the Available colours section holds the note and a link to the
-//      Palette Builder, a press scrolls the note into view and gives it focus,
-//      and a toast and the button's own description say the same thing.
+//      Palette Builder (on the Colours label row), the starter pairs and starter
+//      colours stand in, a press scrolls the note into view and gives it focus,
+//      and a toast and the button's own description say the same thing. From two
+//      colours up the sparse layout goes and "Choose colours for Shuffle" appears.
 //   4. The workspace is one target and one label everywhere it is offered: the
 //      header icon, the account popover and the phone menu sheet.
 //   5. A search row for a Learn guide carries no Documentation pill.
@@ -21,7 +23,9 @@
 // the sheet row in PillNav.jsx back at '/discover/palettes', or give a Learn
 // guide row in toolIndex.js a category again, or drop the scroll/focus effect
 // from the Available colours note, or take the aria-describedby off the
-// Shuffle from palette button: the matching test below goes red.
+// Shuffle from palette button, or (G1) set `sparse` to `chips.length < 1`, hide
+// the "Choose colours for Shuffle" button, name the no-colour link "Open Palette
+// Builder", or empty STARTER_PAIRS in the sparse section: the matching test goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -226,9 +230,12 @@ test.describe('Palette Builder toolbar fits on one line', () => {
 
 const NEEDS = 'Needs a palette with two or more colours'
 const ONE_COLOUR_NOTE = 'Add a second colour in Palette Builder to shuffle from it.'
-const NO_PALETTE_NOTE = 'No palette yet. Colours you build in Palette Builder show up here.'
+const NO_PALETTE_NOTE = 'No palette yet. Start from a pair or a starter colour, or make a palette.'
 const shuffleButton = (page) => page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^Shuffle from palette/ })
 const availNote = (page) => page.locator('.grd .grd-avail-note')
+// The way to the Palette Builder sits on the Colours label row of the sparse section,
+// beside the note rather than after it. With no colour at all it reads "Make a palette".
+const builderLink = (page, name = 'Open Palette Builder') => page.locator('.grd .grd-avail-subrow').getByRole('link', { name })
 
 // Phone: open More, wait for the sheet to come to rest, press Shuffle from palette.
 async function fromPaletteViaMore(page) {
@@ -287,8 +294,8 @@ test.describe('Gradient · Shuffle from palette without a usable palette says so
     await expect(page.locator('.toast.show'), 'the press says why').toContainText(NEEDS)
     await expect(note, 'focus did not move to the note').toBeFocused()
 
-    const link = note.locator('xpath=following-sibling::a[1]')
-    await expect(link).toHaveAccessibleName('Open Palette Builder')
+    const link = builderLink(page)
+    await expect(link).toHaveCount(1)
     await expect(link).toHaveAttribute('href', '/create/palette')
     await link.click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
@@ -303,9 +310,12 @@ test.describe('Gradient · Shuffle from palette without a usable palette says so
     await expect(note).toBeVisible()
     await expect(note).toHaveText(NO_PALETTE_NOTE)
     await expect(note).toBeFocused()
-    await expect(page.locator('.grd').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
-    // POSITIVE CONTROL: the section is not an empty box, the ten starter colours are in it.
-    await expect(page.getByRole('group', { name: 'Starter colours' }).getByRole('button')).toHaveCount(10)
+    // With no colour the link offers to make one, not to open a builder that is empty.
+    await expect(builderLink(page, 'Make a palette')).toHaveAttribute('href', '/create/palette')
+    await expect(builderLink(page, 'Open Palette Builder')).toHaveCount(0)
+    // POSITIVE CONTROL: the section is not an empty box, the ten starter colours and the six pairs are in it.
+    await expect(page.getByRole('group', { name: 'Colours', exact: true }).getByRole('button')).toHaveCount(10)
+    await expect(page.getByRole('group', { name: 'Pairs', exact: true }).getByRole('button')).toHaveCount(6)
   })
 
   test('with one colour the note says what is needed, not that there is no palette', async ({ page }) => {
@@ -318,7 +328,11 @@ test.describe('Gradient · Shuffle from palette without a usable palette says so
     await expect(note).toHaveText(ONE_COLOUR_NOTE)
     await expect(note, 'a one-colour palette is not "no palette"').not.toContainText('No palette yet')
     await expect(note).toBeFocused()
-    await expect(page.locator('.grd').getByRole('link', { name: 'Open Palette Builder' })).toHaveAttribute('href', '/create/palette')
+    await expect(builderLink(page)).toHaveAttribute('href', '/create/palette')
+    await expect(builderLink(page, 'Make a palette'), 'one colour is a palette to open, not one to make').toHaveCount(0)
+    // POSITIVE CONTROL: the one colour is a chip, and the pairs stand beside it.
+    await expect(page.getByRole('group', { name: 'Colours', exact: true }).getByRole('button')).toHaveCount(1)
+    await expect(page.getByRole('group', { name: 'Pairs', exact: true }).getByRole('button')).toHaveCount(6)
   })
 
   for (const width of [320, 390]) {
@@ -332,7 +346,8 @@ test.describe('Gradient · Shuffle from palette without a usable palette says so
       const box = await note.boundingBox()
       expect(box.x, 'the note starts inside the screen').toBeGreaterThanOrEqual(0)
       expect(box.x + box.width, `the note runs past the ${width}px screen`).toBeLessThanOrEqual(width)
-      const link = await note.locator('xpath=following-sibling::a[1]').boundingBox()
+      const link = await builderLink(page).boundingBox()
+      expect(link.x, 'the link starts inside the screen').toBeGreaterThanOrEqual(0)
       expect(link.x + link.width, 'the link runs past the screen').toBeLessThanOrEqual(width)
       expect(await page.evaluate(() => document.documentElement.scrollWidth), 'the page scrolls sideways').toBeLessThanOrEqual(width)
     })
@@ -368,8 +383,12 @@ test.describe('Gradient · Shuffle from palette without a usable palette says so
     await expect(page.locator('.toast.show')).toContainText('from your palette')
     await expect(page.locator('.toast.show')).not.toContainText(NEEDS)
     await expect(availNote(page)).toHaveCount(0)
+    await expect(page.locator('.grd .grd-sparse'), 'a palette of two or more leaves the sparse layout').toHaveCount(0)
     await expect(shuffleButton(page)).not.toHaveAttribute('aria-disabled', /.*/)
     // POSITIVE CONTROL: the three chips are there, so "no note" is not "no section".
-    await expect(page.getByRole('group', { name: 'Available colours' }).getByRole('button')).toHaveCount(3)
+    await expect(page.getByRole('group', { name: 'Palette colours' }).getByRole('button')).toHaveCount(3)
+    // A palette has a Shuffle pool to choose; the starter pairs have gone.
+    await expect(page.getByRole('button', { name: 'Choose colours for Shuffle' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Pairs', exact: true })).toHaveCount(0)
   })
 })

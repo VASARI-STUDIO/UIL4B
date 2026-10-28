@@ -20,12 +20,16 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
+import { allColoursLocked, nextPaintTarget, applyStarterPair } from '../utils/gradientPaint'
+import { STARTER_PAIRS } from '../data/gradientStarterPairs'
+import MenuSelect from '../components/tool/MenuSelect'
 import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
 import { useAuth } from '../contexts/AuthContext'
+import { readSessionHint } from '../utils/sessionHint'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
@@ -56,12 +60,19 @@ const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 const FILTER_KEY = 'vs-gradient-shuffle-filters'
 const ANY = 'Any'
 const COUNT_OPTIONS = [ANY, 2, 3, 4, 5]
-const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], keepAngle: false }
+// `pool` is the colours Shuffle from palette draws from, as upper-case hexes. Empty
+// means every palette colour. An entry saved before the pool existed has none and
+// reads as empty.
+const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], keepAngle: false, pool: [] }
+const HEX_6 = /^#[0-9A-F]{6}$/
 function readFilters() {
   try {
     const f = JSON.parse(sessionStorage.getItem(FILTER_KEY) || 'null')
     const ok = (arr, allowed) => Array.isArray(arr) && arr.length > 0 && arr.every((v) => allowed.includes(v))
-    if (f && ok(f.types, [ANY, ...GRAD_TYPES]) && ok(f.counts, COUNT_OPTIONS)) return { ...DEFAULT_FILTERS, ...f, keepAngle: !!f.keepAngle }
+    if (f && ok(f.types, [ANY, ...GRAD_TYPES]) && ok(f.counts, COUNT_OPTIONS)) {
+      const pool = Array.isArray(f.pool) ? [...new Set(f.pool.filter((h) => typeof h === 'string' && HEX_6.test(h)))] : []
+      return { ...DEFAULT_FILTERS, ...f, keepAngle: !!f.keepAngle, pool }
+    }
   } catch { /* storage blocked or unreadable: the defaults stand */ }
   return DEFAULT_FILTERS
 }
@@ -70,8 +81,16 @@ const engineFilters = (f) => ({
   types: f.types.includes(ANY) ? [] : f.types,
   counts: f.counts.includes(ANY) ? [] : f.counts,
 })
+// The pool colours that are still on offer, in the order they were picked. A colour
+// the palette no longer holds is ignored rather than deleted, so coming back to the
+// same palette finds the pick again.
+const livePool = (pool, colours) => {
+  const offered = new Set(colours.map((c) => c.hex.toUpperCase()))
+  return (pool || []).filter((h) => offered.has(h))
+}
 // True when any setting narrows what Random and Shuffle may make from the default.
-const isNarrowed = (f) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle
+// Picked colours count from two up, the same rule Shuffle from palette uses.
+const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.keepAngle || livePool(f.pool, colours).length >= 2
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
@@ -278,43 +297,168 @@ const STARTER_COLOURS = [
 // last place, so the row never takes more room than thirteen colours do.
 const MAX_CHIPS = 13
 
+// One tab stop for a row of buttons inside `rootRef`. The item last focused takes
+// tabindex 0 (else `start(items)`, else the first) and the rest -1; Left, Right,
+// Home and End move focus. Tabindex is written to the DOM after each render, so a
+// row whose items come and go needs no bookkeeping. Unless `remember` is set,
+// leaving the row forgets the last item, so the next Tab in lands on `start` again.
+function useRoving(rootRef, selector, start, remember = false) {
+  const last = useRef(null)
+  const items = useCallback(() => [...(rootRef.current?.querySelectorAll(selector) || [])], [rootRef, selector])
+  const apply = useCallback(() => {
+    const list = items()
+    if (!list.length) return
+    const stop = list.includes(last.current) ? last.current : (start?.(list) || list[0])
+    list.forEach((el) => { el.tabIndex = el === stop ? 0 : -1 })
+  }, [items, start])
+  useEffect(apply)
+  const onFocus = (e) => {
+    const el = e.target.closest?.(selector)
+    if (!el) return
+    last.current = el
+    apply()
+  }
+  const onBlur = (e) => {
+    if (remember || rootRef.current?.contains(e.relatedTarget)) return
+    last.current = null
+    apply()
+  }
+  const onKeyDown = (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    const el = e.target.closest?.(selector)
+    if (!el) return
+    const list = items()
+    const at = list.indexOf(el)
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: list.length - 1 }[e.key]
+    if (to === undefined) return
+    e.preventDefault()
+    list[Math.max(0, Math.min(list.length - 1, to))]?.focus()
+  }
+  return { onFocus, onBlur, onKeyDown }
+}
+
+// The target dot is where the next press lands, so it is the ramp's tab stop.
+const rampStart = (list) => list.find((el) => el.getAttribute('aria-pressed') === 'true')
+
+// The gradient being painted, small, with one dot per stop. Each dot is a button
+// that makes its stop the target; the targeted dot(s) wear a ring. The bar paints
+// the same 90deg ramp as the rail. Its height is fixed, so nothing a press changes
+// can move the section.
+function MiniRamp({ stops, railCss, targets, onTarget }) {
+  const trackRef = useRef(null)
+  const hintId = `grd-ramp-hint-${useId().replace(/:/g, '')}`
+  const roving = useRoving(trackRef, '.grd-ramp-dot', rampStart)
+  const order = stops.map((s, i) => ({ s, i })).sort((a, b) => a.s.position - b.s.position || a.i - b.i)
+  // Selection follows focus: an arrow key (or Home or End) that lands on a dot makes
+  // its stop the target. With several stops selected the keys only move focus, so a
+  // multi-selection is not cleared by walking along the ramp.
+  const onKeyDown = (e) => {
+    roving.onKeyDown(e)
+    if (!e.defaultPrevented || targets.length > 1) return
+    const dot = document.activeElement?.closest?.('.grd-ramp-dot')
+    if (dot && trackRef.current?.contains(dot) && Number(dot.dataset.stop) !== targets[0]) onTarget(Number(dot.dataset.stop))
+  }
+  const press = (e, i) => {
+    let to = i
+    const track = trackRef.current
+    // Close stops have overlapping hit areas, so a pointer press goes to the dot
+    // nearest it by x. A key press (detail 0) is always the focused dot, and so is a
+    // synthetic click with no position (a screen reader's), as openTintMenu treats it.
+    if (e.detail > 0 && (e.clientX || e.clientY) && track) {
+      const box = track.getBoundingClientRect()
+      const x = e.clientX - box.left
+      const dist = (j) => Math.abs(x - (box.width * stops[j].position) / 100)
+      let best = dist(i)
+      stops.forEach((_, j) => {
+        const d = dist(j)
+        if (d < best - 0.5) { best = d; to = j }
+      })
+    }
+    onTarget(to)
+    if (to !== i) track.querySelector(`[data-stop="${to}"]`)?.focus({ preventScroll: true })
+  }
+  return (
+    <div className="grd-ramp">
+      <div
+        ref={trackRef}
+        className="grd-ramp-track"
+        role="toolbar"
+        aria-label="Stop to paint"
+        aria-orientation="horizontal"
+        aria-describedby={hintId}
+        title="Choose which stop to paint"
+        {...roving}
+        onKeyDown={onKeyDown}
+      >
+        <span id={hintId} className="sr-only">Choose which stop to paint</span>
+        <div className="grd-ramp-bar" style={{ background: railCss }} aria-hidden="true" />
+        {order.map(({ s, i }) => (
+          <button
+            key={i}
+            type="button"
+            className="grd-ramp-dot"
+            data-stop={i}
+            style={{ left: `${s.position}%` }}
+            aria-pressed={targets.includes(i)}
+            aria-label={`Stop ${i + 1}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%`}
+            onClick={(e) => press(e, i)}
+          >
+            <span className="grd-ramp-dot-vis" style={{ backgroundColor: s.color }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // A round colour chip that sets the selected stop(s). The chosen state is a ring
 // and a tick, so it never rests on colour alone; the tick takes white or
-// near-black ink by the chip's own lightness. A colour picked as part of the
-// Shuffle pool wears a dashed ring in that same ink. Shift, Ctrl or Cmd+click
-// picks or unpicks it without applying it; on touch a press and hold does.
-function ColourChip({ hex, label, on, picked, onPick, onTogglePick }) {
+// near-black ink by the chip's own lightness.
+function ColourChip({ hex, label, on, unavailable = false, onPick }) {
   const light = useMemo(() => hexToOklch(hex)[0] >= 60, [hex])
-  const hold = useRef({ timer: 0, fired: false })
-  useEffect(() => () => clearTimeout(hold.current.timer), [])
-  const name = `${label}, ${hex}${picked ? ', picked for shuffle' : ''}`
+  const name = `${label}, ${hex}${on ? ', in this gradient' : ''}`
   return (
     <button
       type="button"
-      className={`grd-chip${on ? ' is-on' : ''}${picked ? ' is-picked' : ''}${light ? ' is-light' : ''}`}
+      className={`grd-chip${on ? ' is-on' : ''}${light ? ' is-light' : ''}`}
       style={{ background: hex }}
       aria-pressed={on}
+      aria-disabled={unavailable || undefined}
+      aria-describedby={unavailable ? 'grd-avail-locked' : undefined}
       aria-label={name}
       title={name}
-      onPointerDown={(e) => {
-        hold.current.fired = false
-        if (e.pointerType !== 'touch') return
-        hold.current.timer = setTimeout(() => { hold.current.fired = true; onTogglePick(hex, label) }, 450)
-      }}
-      onPointerUp={() => clearTimeout(hold.current.timer)}
-      onPointerCancel={() => clearTimeout(hold.current.timer)}
-      onPointerLeave={() => clearTimeout(hold.current.timer)}
-      onContextMenu={(e) => { if (e.pointerType === 'touch' || hold.current.fired) e.preventDefault() }}
-      onClick={(e) => {
-        if (hold.current.fired) { hold.current.fired = false; return }
-        if (e.shiftKey || e.ctrlKey || e.metaKey) onTogglePick(hex, label)
-        else onPick(hex, label)
-      }}
+      onClick={() => onPick(hex, label)}
     >
       {on && <ToolIcon name="check" size={12} />}
     </button>
   )
 }
+
+// A starter pair: two flat halves in one pill. One press sets the gradient's first
+// and last stop. The halves are two elements, not a hard-stop gradient, so the
+// pill is flat colour like the chips.
+function StarterPair({ pair, unavailable = false, onApply }) {
+  const name = `${pair.name}, ${pair.left} to ${pair.right}`
+  return (
+    <button
+      type="button"
+      className="grd-pair"
+      aria-label={name}
+      title={name}
+      aria-disabled={unavailable || undefined}
+      aria-describedby={unavailable ? 'grd-avail-locked' : undefined}
+      onClick={() => onApply(pair)}
+    >
+      <span className="grd-pair-half" style={{ background: pair.left }} aria-hidden="true" />
+      <span className="grd-pair-half" style={{ background: pair.right }} aria-hidden="true" />
+    </button>
+  )
+}
+
+// What the status line's last sentence was about: the target stop(s) and every
+// stop's colour. Once either changes the sentence is stale and the line goes back
+// to saying what the next press will do.
+const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}`
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
@@ -386,7 +530,66 @@ const LockBtn = ({ on, onClick, label, className = '', unavailable = false, desc
 // row would offer nothing to choose, so it is left out.
 // The settings themselves, shared by the popover and the toolbar's More menu
 // (where the button has no room, the same controls sit inline in that menu).
-function ShuffleBody({ filters, setFilters }) {
+// The Colours row: which palette colours Shuffle from palette draws from. "All"
+// is the empty pool; "Pick colours…" opens a checklist, and two or more ticks make
+// the pool. It only has a choice to offer when the palette (or the starter set)
+// holds two colours or more.
+function PoolRow({ colours, filters, setFilters }) {
+  const uid = useId().replace(/:/g, '')
+  const [listOpen, setListOpen] = useState(false)
+  const live = livePool(filters.pool, colours)
+  const n = live.length
+  const picking = listOpen || n >= 2
+  const toggle = (hex) => {
+    const h = hex.toUpperCase()
+    // Against the stored pool, not the live one: a pick the palette no longer holds
+    // stays in storage (livePool only hides it), so it is there if the colour returns.
+    setFilters((f) => {
+      const cur = f.pool || []
+      return { ...f, pool: cur.includes(h) ? cur.filter((x) => x !== h) : [...cur, h] }
+    })
+  }
+  if (colours.length < 2) return null
+  return (
+    <div className="grd-shuf-row">
+      <span className="grd-shuf-k" id={`grd-pool-k-${uid}`}>Colours</span>
+      <div className="tl-pills" role="group" aria-labelledby={`grd-pool-k-${uid}`}>
+        <button
+          type="button"
+          className={`tl-pill${picking ? '' : ' is-on'}`}
+          data-pool-first=""
+          aria-pressed={!picking}
+          onClick={() => { setListOpen(false); setFilters((f) => ({ ...f, pool: [] })) }}
+        >All palette colours</button>
+        <button
+          type="button"
+          className={`tl-pill${picking ? ' is-on' : ''}`}
+          aria-pressed={picking}
+          aria-expanded={listOpen}
+          aria-controls={`grd-pool-list-${uid}`}
+          onClick={() => setListOpen((o) => !o)}
+        >{n >= 2 ? `${n} colours` : 'Pick colours…'}</button>
+      </div>
+      {listOpen && (
+        <div id={`grd-pool-list-${uid}`} className="grd-pool" role="group" aria-label="Colours to shuffle from">
+          {colours.map((c) => {
+            const on = live.includes(c.hex.toUpperCase())
+            return (
+              <label key={c.hex} className="grd-pool-opt">
+                <input type="checkbox" checked={on} onChange={() => toggle(c.hex)} />
+                <span className="grd-pool-dot" style={{ background: c.hex }} aria-hidden="true" />
+                <span className="grd-pool-name">{c.label}</span>
+              </label>
+            )
+          })}
+          <p className="grd-pool-count" role="status">{n >= 2 ? `Shuffle from ${n} colours.` : 'Tick two or more colours.'}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ShuffleBody({ filters, setFilters, colours }) {
   const coarse = useMediaQuery('(pointer: coarse)')
   const summary = `Random makes ${sentence(filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type'])}, ${sentence(filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops'])}`
   return (
@@ -398,6 +601,7 @@ function ShuffleBody({ filters, setFilters }) {
       <FilterGroup label="Stops" options={COUNT_OPTIONS} value={filters.counts} coarse={coarse} onChange={(counts) => setFilters((f) => ({ ...f, counts }))} />
       {/* The hint belongs to the pill rows above it, not to Keep the angle. */}
       <p className="grd-shuf-hint">{coarse ? 'Tap to add or remove.' : 'Shift-click to pick more than one.'}</p>
+      <PoolRow colours={colours} filters={filters} setFilters={setFilters} />
       <button
         type="button"
         className={`grd-shuf-keep${filters.keepAngle ? ' is-on' : ''}`}
@@ -415,9 +619,9 @@ function ShuffleBody({ filters, setFilters }) {
 const PHONE_QUERY = '(max-width: 767px)'
 const SHUFFLE_TITLE = 'What Random and Shuffle make'
 
-function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
+function ShuffleSettings({ open, onOpen, onClose, filters, setFilters, colours }) {
   const phone = useMediaQuery(PHONE_QUERY)
-  const narrowed = isNarrowed(filters)
+  const narrowed = isNarrowed(filters, colours)
   const sheetId = `grd-shuf-sheet-${useId().replace(/:/g, '')}`
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose, { portalled: phone })
   // Turning the screen across 768px swaps popover and sheet: close rather than
@@ -447,7 +651,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
             <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
             <button type="button" className="grd-iconbtn grd-shuf-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={14} /></button>
           </div>
-          <ShuffleBody filters={filters} setFilters={setFilters} />
+          <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} />
         </div>
       )}
       {/* Below 768px the same settings are a bottom sheet in the shared sheet
@@ -466,7 +670,7 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
               <span className="tl-sheet-title">{SHUFFLE_TITLE}</span>
               <button type="button" className="tl-sheet-x" onClick={closeToTrigger} aria-label="Close"><ToolIcon name="x" size={16} /></button>
             </div>
-            <ShuffleBody filters={filters} setFilters={setFilters} />
+            <ShuffleBody filters={filters} setFilters={setFilters} colours={colours} />
           </div>
         </div>,
         document.body,
@@ -480,8 +684,20 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
+  const { design, setGradient, projects, projectsLoading, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user, loading: authLoading } = useAuth()
+  // Whether to hold the "From a project" slot in Available colours. A person who was
+  // signed in last time is treated as signed in until auth answers, so the slot does
+  // not appear after first paint.
+  const [hadSession] = useState(readSessionHint)
+  const signedIn = user != null || (authLoading && hadSession)
+  // The From a project row is drawn while auth or the projects can still arrive. Once it
+  // has been, and then goes (an account with none), the panel keeps the row's height at
+  // desktop widths (.grd-panel--held), so the preview, which fills the panel's height
+  // beside it, and the code box under it stay where they were.
+  const rowHeld = signedIn && (authLoading || projectsLoading)
+  const [rowWasHeld, setRowWasHeld] = useState(false)
+  if (rowHeld && !rowWasHeld) setRowWasHeld(true)
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
   // asked whether to keep them with the account (never moved unasked).
@@ -562,6 +778,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // elsewhere) announces twice; an unchanged string would not.
   const [pickNote, setPickNote] = useState('')
   const pickNoteTimer = useRef(0)
+  // The Available colours status line: the last press's sentence and the key that
+  // says which stops and colours it describes. `n` flips an invisible character on
+  // an identical sentence so a screen reader says it again.
+  const [paintNote, setPaintNote] = useState(null)
+  const paintCount = useRef(0)
+  // Every colour chip in Available colours (the palette, the starters, a project's
+  // colours, the shades) is one tab stop; arrows move between them.
+  const chipsRef = useRef(null)
+  const chipRoving = useRoving(chipsRef, '.grd-chip', undefined, true)
   useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
   const say = useCallback((text) => {
     setPickNote('')
@@ -935,29 +1160,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
   const paletteHexes = useMemo(() => chips.map((c) => c.hex), [chips])
-  // Colours picked (Shift-click) as the Shuffle pool. They only count while they
-  // are still on offer, and from two up: one pick is just a mark.
-  const [chipPicks, setChipPicks] = useState([])
-  const offered = useMemo(() => new Set([
-    ...(chips.length ? chips : STARTER_COLOURS).map((c) => c.hex.toUpperCase()),
-    ...(shades ? shades.items.map((c) => c.hex.toUpperCase()) : []),
-  ]), [chips, shades])
-  const livePicks = useMemo(() => chipPicks.filter((h) => offered.has(h)), [chipPicks, offered])
+  // The Shuffle pool lives in Shuffle settings (filters.pool). The colours on offer
+  // there are the palette's, or the ten starter colours while there is no palette.
+  // The pool counts from two colours up: one tick is just a mark.
+  const poolColours = useMemo(() => (chips.length ? chips : STARTER_COLOURS.map((c) => ({ hex: c.hex, label: c.name }))), [chips])
+  const livePicks = useMemo(() => livePool(filters.pool, poolColours), [filters.pool, poolColours])
   const usingPicks = livePicks.length >= 2
   const pool = usingPicks ? livePicks : paletteHexes
-  const togglePick = useCallback((hex) => {
-    const h = hex.toUpperCase()
-    const next = livePicks.includes(h) ? livePicks.filter((x) => x !== h) : [...livePicks, h]
-    setChipPicks(next)
-    say(next.length >= 2 ? `Shuffle from ${next.length} picked colours` : next.length === 1 ? '1 colour picked. Pick another to shuffle from picks.' : 'Picks cleared')
-  }, [livePicks, say])
-  // The Clear picks button leaves the row once pressed, so focus goes on to the
-  // first colour rather than falling to the page.
-  const clearPicks = useCallback(() => {
-    setChipPicks([])
-    say('Picks cleared')
-    requestAnimationFrame(() => document.querySelector('.grd-avail .grd-chip')?.focus({ preventScroll: true }))
-  }, [say])
   const canRandomFromPalette = pool.length >= 2
   const shuffleHint = usingPicks ? `Shuffle from ${livePicks.length} picked colours` : SHUFFLE_PALETTE_NEEDS
   // Pressing Shuffle from palette with nothing to draw from says why in a toast
@@ -1003,6 +1212,30 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     randomiseFromPalette()
   }, [canRandomFromPalette, randomiseFromPalette, toast])
 
+  // "Choose colours for Shuffle": opens Shuffle settings and puts focus on its Colours
+  // row. Where the toolbar has room the settings are the button's popover (or its
+  // sheet on a phone); where it has not they sit inline in the More menu, so that
+  // opens instead. Focus waits until the row has been in the page for a few frames:
+  // the popover moves focus to its first control on its own frame, and this lands after.
+  const openPoolSettings = useCallback(() => {
+    const trigger = document.querySelector('.grd-shuf-btn')
+    const more = document.querySelector('[data-tl-more] > button')
+    if (trigger) {
+      if (trigger.getAttribute('aria-expanded') !== 'true') setShuffleOpen(true)
+    } else if (more && more.getAttribute('aria-expanded') !== 'true') {
+      more.click()
+    }
+    let frames = 0
+    let seen = 0
+    const tick = () => {
+      const row = document.querySelector('[data-pool-first]')
+      seen = row ? seen + 1 : 0
+      if (seen >= 3) row.focus()
+      else if (++frames < 60) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [])
+
   // The note is in the panel, which the sticky toolbar can leave off screen on a
   // phone scrolled down: bring it into view and move focus to it. Focus goes
   // first with preventScroll so the one scroll is the animated one.
@@ -1014,12 +1247,43 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [paletteMissing])
 
-  // A chip sets the colour of every selected stop, or of the active one.
+  // A chip paints the selected stops, or the target stop; then the target moves on
+  // to the next stop whose colour is not locked, so two presses make a whole
+  // gradient. A selection stays where it is. Pressing a colour a stop already has
+  // changes nothing but still moves the target, so pressing through a palette in
+  // order never stalls.
   const pickColour = useCallback((hex, name) => {
     if (!guardEdit()) return
-    setStops((prev) => prev.map((s, i) => (targets.includes(i) ? { ...s, color: hex } : s)))
-    say(targets.length > 1 ? `${targets.length} stops set to ${name}` : `Stop ${targets[0] + 1} set to ${name}`)
-  }, [guardEdit, targets, say])
+    if (allColoursLocked(stops)) {
+      setPaintNote({ text: 'Every colour is locked.', key: paintKey(targets, stops), n: ++paintCount.current })
+      return
+    }
+    const upper = hex.toUpperCase()
+    const same = targets.every((i) => stops[i]?.color?.toUpperCase() === upper)
+    const painted = same ? stops : stops.map((st, i) => (targets.includes(i) ? { ...st, color: hex } : st))
+    if (!same) setStops(painted)
+    const next = multi ? activeStop : nextPaintTarget(painted, activeStop)
+    if (next !== activeStop) { setActiveStop(next); anchorRef.current = next }
+    let text
+    if (multi) text = `${targets.length} selected stops ${same ? 'are already' : 'set to'} ${name}.`
+    else if (same) text = `Stop ${activeStop + 1} is already ${name}.`
+    else text = `Stop ${activeStop + 1} set to ${name}.${next !== activeStop ? ` Next: stop ${next + 1}.` : ''}`
+    setPaintNote({ text, key: paintKey(multi ? targets : [next], painted), n: ++paintCount.current })
+  }, [guardEdit, targets, stops, multi, activeStop])
+
+  // A starter pair sets the first and last stop in one press (the stops between are
+  // re-mixed), and the target goes back to stop 1 so the next press starts over.
+  const applyPair = useCallback((pair) => {
+    if (!guardEdit()) return
+    if (allColoursLocked(stops)) {
+      setPaintNote({ text: 'Every colour is locked.', key: paintKey(targets, stops), n: ++paintCount.current })
+      return
+    }
+    const painted = applyStarterPair(stops, pair)
+    setStops(painted)
+    selectOnly(0)
+    setPaintNote({ text: `Stops set to ${pair.name}.`, key: paintKey([0], painted), n: ++paintCount.current })
+  }, [guardEdit, stops, targets, selectOnly])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
 
@@ -1040,6 +1304,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }
     return list
   }, [design?.palette?.colors, projects])
+
+  // "From a project" in the sparse Available colours states: saved projects only
+  // (the current palette is what is missing there). The choice lasts the session.
+  const projectSources = useMemo(() => importSources.filter((s) => s.key.startsWith('proj-')), [importSources])
+  const [fromKey, setFromKey] = useState('')
+  const fromProject = projectSources.find((s) => s.key === fromKey) || null
 
   // ── Presets built from the user's own palettes/projects ──
   // Each import source becomes a ready-made gradient (colours spread evenly
@@ -1417,7 +1687,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
   const selected = stops[activeStop] || stops[0]
-  const selectedHex = selected?.color?.toUpperCase()
+  // A chip is on when any stop uses its colour; the ringed dot on the ramp, not the
+  // chip, says where the next press lands.
+  const usedHexes = new Set(stops.map((st) => st.color.toUpperCase()))
+  const allLocked = allColoursLocked(stops)
+  // Fewer than two palette colours: Available colours offers starting points instead.
+  const sparse = chips.length < 2
+  const noteNow = paintNote && paintNote.key === paintKey(targets, stops) ? paintNote : null
+  const availHead = allLocked ? 'Every colour is locked' : multi ? `Painting ${targets.length} selected stops` : `Painting stop ${activeStop + 1} of ${stops.length}`
+  const availIdle = allLocked ? 'Every colour is locked. Unlock a stop to paint it.' : multi ? `Press a colour to paint the ${targets.length} selected stops.` : `Press a colour to paint stop ${activeStop + 1}.`
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
   // chosen space whatever the gradient's type — the design paints the gradient
   // itself there, which for a radial or conic would put no stop where its
@@ -1515,9 +1793,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="grd-shuf-inline">
               <div className="grd-shuf-inline-head">
                 <span className="grd-shuf-title">{SHUFFLE_TITLE}</span>
-                {isNarrowed(filters) && <span className="grd-shuf-state">Narrowed</span>}
+                {isNarrowed(filters, poolColours) && <span className="grd-shuf-state">Narrowed</span>}
               </div>
-              <ShuffleBody filters={filters} setFilters={setFilters} />
+              <ShuffleBody filters={filters} setFilters={setFilters} colours={poolColours} />
             </div>
           ),
           render: () => (
@@ -1527,6 +1805,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               onClose={() => setShuffleOpen(false)}
               filters={filters}
               setFilters={setFilters}
+              colours={poolColours}
             />
           ),
         },
@@ -1728,7 +2007,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </div>
         </ToolMain>
 
-        <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
+        <ToolPanel label="Gradient controls" className={rowWasHeld && !rowHeld && projectSources.length === 0 ? 'grd-panel grd-panel--held' : 'grd-panel'} onKeyDown={onPanelKey}>
           {/* AVAILABLE COLOURS. Every colour in the palette, one press from the
               selected stop, then its shades when the project's ramp is current.
               With no palette the ten starter colours stand in. */}
@@ -1736,36 +2015,65 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Available colours"
             labelId="grd-avail-label"
             className="grd-avail"
-            aside={livePicks.length > 0
-              ? (
-                <span className="grd-sec-tools">
-                  <span className="grd-sel-count">{livePicks.length} picked</span>
-                  <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button>
-                </span>
-              )
-              :<span className="grd-avail-tip" aria-hidden="true">{coarse ? 'Hold to pick for Shuffle' : 'Shift-click to pick for Shuffle'}</span>}
+            aside={<span className="grd-avail-tip">{availHead}</span>}
           >
-            <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. From the keyboard, press Shift with Enter or Space on a colour. On a touch screen, press and hold.</span>
-            <div className="sr-only" role="status">{pickNote}</div>
-            {chips.length === 0 && (
-              <div className="grd-avail-help">
-                <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>No palette yet. Colours you build in Palette Builder show up here.</p>
-                <Link to="/create/palette" className="grd-avail-link">Open Palette Builder</Link>
-              </div>
-            )}
-            {chips.length === 0 ? (
-              <>
-                <span className="grd-avail-sub" id="grd-starter-label">Starter colours</span>
-                <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label" aria-describedby="grd-picks-hint">
-                  {STARTER_COLOURS.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
-                  ))}
+            <MiniRamp stops={stops} railCss={railCss} targets={targets} onTarget={selectOnly} />
+            <div className="grd-avail-zone" ref={chipsRef} {...chipRoving}>
+            {sparse ? (
+              <div className="grd-sparse">
+                <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>
+                  {chips.length === 0 ? 'No palette yet. Start from a pair or a starter colour, or make a palette.' : 'Add a second colour in Palette Builder to shuffle from it.'}
+                </p>
+                <div className="grd-sparse-body">
+                  <div className="grd-avail-block">
+                    <span className="grd-avail-sub" id="grd-pairs-label">Pairs</span>
+                    <div className="grd-pairs" role="group" aria-labelledby="grd-pairs-label">
+                      {STARTER_PAIRS.map((pair) => (
+                        <StarterPair key={pair.id} pair={pair} unavailable={allLocked} onApply={applyPair} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grd-avail-block">
+                    {/* The way to the Palette Builder sits on this label row, so the
+                        section needs no row of its own for it. */}
+                    <div className="grd-avail-subrow">
+                      <span className="grd-avail-sub" id="grd-colours-label">{fromProject ? `Colours from ${fromProject.name}` : 'Colours'}</span>
+                      <Link to="/create/palette" className="grd-avail-link">{chips.length === 0 ? 'Make a palette' : 'Open Palette Builder'}</Link>
+                    </div>
+                    {/* Two rows of five whatever fills them (ten starters, a palette of
+                        one, a project's five at most), so the block never changes height. */}
+                    <div className="grd-chips grd-chips--slot" role="group" aria-labelledby="grd-colours-label">
+                      {fromProject ? fromProject.colors.map((hex, i) => (
+                        <ColourChip key={`${hex}-${i}`} hex={hex.toUpperCase()} label={`${fromProject.name} colour ${i + 1}`} on={usedHexes.has(hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      )) : chips.length === 0 ? STARTER_COLOURS.map((c) => (
+                        <ColourChip key={c.hex} hex={c.hex} label={c.name} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      )) : chips.map((c) => (
+                        <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </>
+                {/* Held only while it can still fill: while auth or the account's projects
+                    are loading (so projects arriving move nothing), or once there are some.
+                    Signed out, or loaded with none, it is not drawn at all. */}
+                {(projectSources.length > 0 || rowHeld) && (
+                  <div className="grd-avail-from">
+                    {projectSources.length > 0 && (
+                      <MenuSelect
+                        className="grd-from-select"
+                        ariaLabel="From a project"
+                        value={fromProject ? fromProject.key : ''}
+                        options={[{ value: '', label: 'From a project' }, ...projectSources.map((s) => ({ value: s.key, label: s.name }))]}
+                        onChange={setFromKey}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="grd-chips" role="group" aria-label="Palette colours" aria-describedby="grd-picks-hint">
+              <div className="grd-chips" role="group" aria-label="Palette colours">
                 {shownChips.map((c) => (
-                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
+                  <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
                 ))}
                 {hiddenChips > 0 && (
                   <Link to="/create/palette" className="grd-chips-more">
@@ -1774,22 +2082,32 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 )}
               </div>
             )}
-            {chips.length === 1 && (
-              <div className="grd-avail-help">
-                <p className="grd-avail-note" ref={paletteNoteRef} tabIndex={-1}>Add a second colour in Palette Builder to shuffle from it.</p>
-                <Link to="/create/palette" className="grd-avail-link">Open Palette Builder</Link>
-              </div>
-            )}
             {shades && (
               <div className="grd-shades">
                 <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
-                <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label" aria-describedby="grd-picks-hint">
+                <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label">
                   {shades.items.map((c) => (
-                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} picked={livePicks.includes(c.hex.toUpperCase())} onPick={pickColour} onTogglePick={togglePick} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
                   ))}
                 </div>
               </div>
             )}
+            </div>
+            <div className="grd-avail-foot">
+              {/* What the inert chips and pairs are described by. It is outside the live
+                  region, so it is read on focus, before any press, and never announced. */}
+              {allLocked && <span id="grd-avail-locked" className="sr-only">Every colour is locked.</span>}
+              <p id="grd-avail-status" className={sparse ? 'grd-avail-status' : 'grd-avail-status grd-avail-status--two'} role="status" aria-live="polite" aria-atomic="true">
+                {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
+              </p>
+              {/* The Shuffle pool lives in Shuffle settings; this is the way to it from
+                  the colours it is chosen from. Only a palette has a pool to choose. */}
+              {!sparse && (
+                <button type="button" className="grd-avail-link grd-avail-pool" aria-haspopup="dialog" onClick={openPoolSettings}>
+                  Choose colours for Shuffle
+                </button>
+              )}
+            </div>
           </ToolSection>
 
           <ToolSection
@@ -1817,6 +2135,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </span>
             )}
           >
+            {/* The page's one spoken region for stop edits and selections. Available
+                colours has only its own visible status line, so no press is said twice. */}
+            <div className="sr-only" role="status">{pickNote}</div>
             <div
               ref={stopListRef}
               className={`grd-stops${stopScroll.above ? ' is-above' : ''}${stopScroll.below ? ' is-below' : ''}`}

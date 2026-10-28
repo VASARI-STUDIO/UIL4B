@@ -81,7 +81,7 @@ function setup(t, { configured, prices = {}, lookup = {}, honoursActiveFilter = 
     return { client_secret: 'cs_secret_test' }
   })
 
-  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.com' }))
+  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.com', email_verified: true }))
   const db = adminDb()
   const userDoc = { get: async () => ({ exists: false, data: () => undefined }) }
   t.mock.method(db, 'collection', () => ({ doc: () => userDoc }))
@@ -102,7 +102,7 @@ async function checkout(body = { interval: 'monthly', currency: 'usd' }) {
     json(payload) { res.body = payload; return res },
     end() { return res },
   }
-  await handler({ method: 'POST', headers: { authorization: 'Bearer test-token' }, body }, res)
+  await handler({ method: 'POST', headers: { authorization: 'Bearer test-token', 'x-forwarded-for': '198.51.100.20' }, body }, res)
   return res
 }
 
