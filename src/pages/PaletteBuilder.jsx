@@ -896,6 +896,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [saveError, setSaveError] = useState('')   // the cap's refusal, held under the field — see doSave
   const [saveNameError, setSaveNameError] = useState('') // an empty name's refusal, held under the field
+  const [pendingSave, setPendingSave] = useState(null) // a save waiting for the account to reach ProjectContext (see doSave)
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -1064,6 +1065,25 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
+  // The save runs here, not in doSave: right after the sign-in resolves, doSave's
+  // closure still holds the signed-out `saveProject`, which throws "Sign in to
+  // save projects". This effect re-runs with the fresh one once the account has
+  // reached ProjectContext.
+  useEffect(() => {
+    if (pendingSave == null || !canSaveProjects) return
+    setPendingSave(null)
+    try {
+      saveProject(pendingSave)
+      setSaveName(''); setSaveError(''); setSaveOpen(false)
+      toast?.('Project saved')
+    } catch (err) {
+      // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
+      // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
+      // the field it refused, in ProjectContext's words, with the way forward
+      // as a link — the treatment /projects already gives the same refusal.
+      setSaveError(err?.message || 'Couldn’t save')
+    }
+  }, [pendingSave, canSaveProjects, saveProject, toast])
   const [submitName, setSubmitName] = useState('')
   // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
   // preview, a name field + dice generator, and a one-time handle gate.
@@ -2503,17 +2523,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     const name = saveName.trim()
     if (!name) { setSaveNameError('Name the project to save it.'); return }
-    try {
-      saveProject(name)
-      setSaveName(''); setSaveError(''); setSaveOpen(false)
-      toast?.('Project saved')
-    } catch (err) {
-      // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
-      // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
-      // the field it refused, in ProjectContext's words, with the way forward
-      // as a link — the treatment /projects already gives the same refusal.
-      setSaveError(err?.message || 'Couldn’t save')
-    }
+    setPendingSave(name)
   }
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)

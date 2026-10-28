@@ -12,6 +12,7 @@ import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
+import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
 import { GRAD_TYPE_WEIGHTS, rollGradient, pickPaletteLook } from '../utils/gradientRandom'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
@@ -19,7 +20,7 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
-import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
+import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
@@ -30,6 +31,7 @@ import { publishToQueue } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useModalDialog from '../hooks/useModalDialog'
+import useExportGate from '../hooks/useExportGate'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
@@ -537,9 +539,10 @@ const SUBMIT_SURFACE = 'gradient'
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects } = useProject()
+  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
   const { user, userProfile, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
+  const requireExportAccount = useExportGate()
   // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
   const uid = user?.uid || null
   const { isPro } = useSubscription()
@@ -636,7 +639,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSelMode(false)
     if (announce) say('Selection cleared')
   }, [say])
-  const [copied, setCopied] = useState(false)
+  // The Save or share menu (SaveShareMenu). `pendingSave` is a save waiting for the
+  // account to reach ProjectContext — see doSave.
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const [saveNameError, setSaveNameError] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [pendingSave, setPendingSave] = useState(null)
+  const saveTriggerRef = useRef(null)
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
   // Interpolation space — the design's GEOMETRY control. OKLCH is its default
   // (D:1306, gSpace: 0). A saved gradient keeps the space it was saved in; one
@@ -1097,20 +1107,98 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }))
   }, [importSources])
 
-  const copyCode = useCallback(async () => {
+  // ── Save or share ──
+  // The name the field opens with. No generated name exists yet, so the type
+  // stands in; the naming step swaps this one line.
+  const defaultSaveName = `${type} gradient`
+
+  const closeSave = useCallback((reason) => {
+    setSaveOpen(false)
+    setPendingSave(null)
+    // Keyboard and the row actions hand focus back to the button; a press outside
+    // is already somewhere else.
+    if (reason !== 'outside') saveTriggerRef.current?.focus()
+  }, [])
+  const toggleSave = () => {
+    if (saveOpen) { closeSave('button'); return }
+    setSaveName(defaultSaveName)
+    setSaveNameError('')
+    setSaveError('')
+    setSaveOpen(true)
+  }
+
+  // Copy CSS and Copy Tailwind class go through onExport so the activation count
+  // is unchanged; it writes the clipboard and toasts.
+  const copyExport = useCallback((value) => {
+    closeSave('item')
+    return onExport?.(value)
+  }, [onExport, closeSave])
+
+  // Free, no account. Written to the clipboard here rather than through onExport:
+  // a link is not an export.
+  const copyLink = async () => {
+    closeSave('item')
+    // No name yet (it comes with the generated name), so `gn` is left off.
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops })}`
     try {
-      const result = await onExport?.(exportCode)
-      if (result === false) {
-        setCopied(false)
-        return
-      }
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1400)
+      await navigator.clipboard.writeText(url)
+      toast?.('Link copied')
     } catch {
-      setCopied(false)
-      toast?.('Copy failed — select the code and copy it manually')
+      toast?.('Couldn’t copy the link', 'error')
     }
-  }, [exportCode, onExport, toast])
+  }
+
+  // A file, so it needs a free account (useExportGate). Conic has no SVG form.
+  const downloadSvg = async () => {
+    if (type === 'Conic') return
+    if (!(await requireExportAccount('download this gradient as an SVG'))) return
+    closeSave('item')
+    const blob = new Blob([gradientSvg(type, angle, stops, space)], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'uil4b-gradient.svg'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 4000)
+  }
+
+  // The account is asked for BEFORE the name, as on the palette: a signed-out
+  // visitor pressing Save with an empty name meets the sign-in, not a refusal
+  // about the name.
+  const doSave = async () => {
+    if (!canSaveProjects) {
+      const signedIn = await requireLogin('save this gradient to your account', { free: true, signup: true })
+      if (!signedIn) return
+    }
+    const name = saveName.trim()
+    if (!name) { setSaveNameError('Name the project to save it.'); return }
+    // The save runs in the effect below. Right after the sign-in resolves this
+    // closure still holds the signed-out `saveProject`, which throws "Sign in to
+    // save projects"; the effect re-runs with the fresh one once the account has
+    // reached ProjectContext.
+    setPendingSave(name)
+  }
+  useEffect(() => {
+    if (pendingSave == null || !canSaveProjects) return
+    setPendingSave(null)
+    try {
+      saveProject(pendingSave)
+      closeSave('item')
+      toast?.('Saved to your account')
+    } catch (err) {
+      // The free cap's refusal stays under the field, with the way forward as a link.
+      setSaveError(err?.message || 'Couldn’t save')
+    }
+  }, [pendingSave, canSaveProjects, saveProject, closeSave, toast])
+  const overwriteWith = (project) => {
+    try {
+      overwriteProject(project.id)
+      closeSave('item')
+      toast?.('Saved to your account')
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save', 'error')
+    }
+  }
 
   // Queue the current gradient for review. Local-first, exactly like the
   // Community Hub's design submission: it lands in this browser's queue with a
@@ -1569,11 +1657,57 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         },
       ]}
       primary={(
-        <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyCode}>
-          {copied ? 'Copied' : `Copy ${fmtLabel}`}
+        <ToolButton
+          ref={saveTriggerRef}
+          variant="accent"
+          icon="bookmark-simple"
+          iconSize={14}
+          aria-haspopup="dialog"
+          aria-expanded={saveOpen}
+          onClick={toggleSave}
+        >
+          Save or share
         </ToolButton>
       )}
     >
+      {saveOpen && (
+        <SaveShareMenu
+          label="Save, share and export this gradient"
+          name={saveName}
+          onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
+          onSave={doSave}
+          nameError={saveNameError}
+          saveError={saveError}
+          refusalTestId="gradient-save-refusal"
+          projects={projects}
+          onOverwrite={overwriteWith}
+          onClose={closeSave}
+          dismiss
+          triggerRef={saveTriggerRef}
+          focusOnOpen
+          selectOnFocus
+          share={(
+            <SaveShareItem onClick={copyLink}>Copy link to this gradient</SaveShareItem>
+          )}
+          exports={(
+            <>
+              {/* Seams, no rows yet: "Copy CSS with finishes" (a finish is on),
+                  Curtains and Beams (their own CSS and the SVG refusal), and
+                  "Download image" (Pro). */}
+              <SaveShareItem onClick={() => copyExport(`background: ${css};`)}>Copy CSS</SaveShareItem>
+              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>Copy Tailwind class</SaveShareItem>
+              <SaveShareItem
+                icon="download"
+                onClick={downloadSvg}
+                disabled={type === 'Conic'}
+                reason="SVG can't draw a conic gradient"
+              >
+                Download SVG
+              </SaveShareItem>
+            </>
+          )}
+        />
+      )}
       <ToolGrid>
         <ToolMain>
           {editLocked && (

@@ -27,9 +27,19 @@ export function gradientCss(type, angle, stops) {
 
 // Build the Gradient Generator hand-off URL — ?gs=RRGGBB-pos_RRGGBB-pos with the
 // type and angle alongside, decoded by decodeGradientParams below.
+//
+// `gn` (the name) is left off when there is no name. The style keys are written
+// only when the gradient has them, so a plain gradient's link is the short one:
+//   st  style family      sp  its parameters
+//   sd  seed              fx  finishes
+// Callers do not pass them yet; the decoder reads none of them yet either.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}&gn=${encodeURIComponent(g.name)}`
+  const optional = [['gn', g.name], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx]]
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
+    .join('')
+  return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}${optional}`
 }
 
 // Parse a gallery hand-off out of the tool's search params. Returns
