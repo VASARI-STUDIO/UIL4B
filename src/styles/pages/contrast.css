@@ -249,7 +249,7 @@
 .cc .cc-check-mark { font-size: 12px; font-weight: 500; text-align: right; }
 /* The AA/AAA explainer: static copy, so its height never moves with the colours. */
 .cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
-.cc .cc-explain { display: grid; gap: var(--s-1); margin: 0; padding-left: 1.1em; list-style: disc; font-size: 12.5px; line-height: 1.5; color: var(--tl-soft); text-wrap: pretty; }
+.cc .cc-explain { display: grid; gap: 2px; margin: 0; padding-left: 1.1em; list-style: disc; font-size: 12.5px; line-height: 1.4; color: var(--tl-soft); text-wrap: pretty; }
 .cc .cc-explain strong { font-weight: 600; color: var(--tl-ink); }
 .cc .cc-note-link { position: relative; display: inline-flex; align-items: center; gap: 4px; justify-self: start; min-height: 24px; font-size: 13px; line-height: 1.5; color: var(--tl-link); }
 .cc .cc-note-link:visited { color: var(--tl-link); }
