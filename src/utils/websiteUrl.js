@@ -2,7 +2,7 @@
 // one day be rendered as an href, so the only schemes it may hold are http and
 // https: `javascript:` and `data:` URLs run script when followed.
 
-const ERROR_TEXT = 'Enter a web address that starts with http:// or https://.'
+const ERROR_TEXT = 'Enter a web address, like https://yoursite.com.'
 
 // A scheme: letters, digits, "+", "." or "-" then a colon, where the colon is
 // not a port ("example.com:8080" is a host with a port, not a scheme).

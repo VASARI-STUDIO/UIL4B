@@ -40,7 +40,7 @@ test('script-running and other schemes are refused', () => {
   ]) {
     const r = checkWebsite(bad)
     assert.equal(r.ok, false, `${JSON.stringify(bad)} should be refused`)
-    assert.match(r.error, /http:\/\/ or https:\/\//)
+    assert.equal(r.error, 'Enter a web address, like https://yoursite.com.')
   }
 })
 

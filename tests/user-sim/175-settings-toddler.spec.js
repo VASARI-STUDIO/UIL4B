@@ -27,6 +27,10 @@
 //   `<form onSubmit>` around the email steps removed                 -> "Enter in the email flow ..."
 //   EMAIL_SHAPE check removed from handleNext                        -> "Enter in the email flow ..." (the typo reaches the password step)
 //   the Escape handler on the DeleteAccount form removed             -> "Escape closes Delete account ..."
+//   `.settings-row--field` nowrap/flex-start rules dropped          -> "a 3,000-character name wraps ..." at 390 (Edit drops below the value)
+//   `currentRef.current?.focus()` removed from PasswordChange        -> "after a wrong current password the focus is on that field ..."
+//   the cleared-name toast text changed                              -> "clearing the display name says ..."
+//   the Escape handler on the email forms removed                    -> "Enter in the email flow ..." (Escape step)
 //   the Escape handler on the Confirm clear pair removed             -> "Escape backs out of Confirm clear"
 //   `checkWebsite` removed from saveWebsite                          -> "javascript: is refused ..."
 //   `initialOf` back to `(name || email || 'U')[0]` in Settings      -> "an emoji-only name ..."
@@ -89,6 +93,13 @@ for (const width of [390, 1440]) {
       expect(rowSpill, 'the Display name value runs past its box').toBeLessThanOrEqual(1)
       const edit = await row.getByRole('button', { name: 'Edit', exact: true }).boundingBox()
       expect(edit.x + edit.width).toBeLessThanOrEqual(card.x + card.width + 0.5)
+      // Edit stays top-right beside the label, at every width: level with the
+      // label row and to the right of the value, not dropped below it.
+      const label = await row.locator('.settings-row-label').boundingBox()
+      expect(Math.abs(edit.y - label.y), 'Edit is not level with the label row').toBeLessThan(12)
+      expect(edit.x, 'Edit is not to the right of the value').toBeGreaterThanOrEqual(label.x + label.width - 0.5)
+      const valueBox = await value.boundingBox()
+      expect(edit.x).toBeGreaterThanOrEqual(valueBox.x + valueBox.width - 0.5)
     })
   })
 }
@@ -112,13 +123,45 @@ test.describe('settings, password change', () => {
 
     // While it runs the form says so and cannot be pressed again.
     await expect(section.getByRole('button', { name: 'Updating…' })).toBeDisabled()
-    await expect(section.getByLabel('New password', { exact: true })).toBeDisabled()
+    await expect(section.getByLabel('New password', { exact: true })).toHaveAttribute('aria-disabled', 'true')
+    await expect(section.getByLabel('New password', { exact: true })).toHaveJSProperty('readOnly', true)
 
     await expect(section.locator('.settings-field-ok')).toHaveCount(1)
     await expect(section.locator('.settings-field-ok')).toContainText('Password updated successfully')
     await expect(section.locator('.settings-field-err')).toHaveCount(0)
     const calls = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.calls.filter((c) => c === 'updatePassword').length)
     expect(calls, 'Firebase was asked to change the password more than once').toBe(1)
+  })
+})
+
+test.describe('settings, errors and focus', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('after a wrong current password the focus is on that field and the error is linked to it', async ({ page }) => {
+    watch(page, 'a person who mistyped their current password')
+    const section = await openAccount(page, { authFail: { updatePassword: 'auth/wrong-password' } })
+    await section.getByRole('button', { name: 'Change', exact: true }).last().click()
+    const current = section.getByLabel('Current password')
+    await current.fill('wrong-one')
+    await section.getByLabel('New password', { exact: true }).fill('new-pass-22')
+    await section.getByLabel('Confirm new password').fill('new-pass-22')
+    await section.getByRole('button', { name: 'Update password' }).click()
+    const alert = section.getByRole('alert')
+    await expect(alert).toContainText('Current password is incorrect')
+    await expect(current, 'focus fell away from the form').toBeFocused()
+    await expect(current).toHaveAttribute('aria-invalid', 'true')
+    const id = await alert.getAttribute('id')
+    await expect(current).toHaveAttribute('aria-describedby', id)
+  })
+
+  test('clearing the display name says the start of the email shows instead', async ({ page }) => {
+    watch(page, 'a person blanking their display name')
+    const section = await openAccount(page)
+    await section.getByRole('button', { name: 'Edit', exact: true }).first().click()
+    const field = section.getByPlaceholder('Enter your display name')
+    await field.fill('')
+    await field.press('Enter')
+    await expect(page.getByText('Display name cleared. The start of your email shows instead.')).toBeVisible()
   })
 })
 
@@ -136,6 +179,9 @@ test.describe('settings, keys', () => {
     await expect(section.getByRole('alert')).toContainText('not a valid email')
     await expect(email, 'a typo got past Next').toBeVisible()
 
+    await email.press('Escape')
+    await expect(section.getByRole('button', { name: 'Edit', exact: true }).nth(1), 'Escape did not return focus to Edit').toBeFocused()
+    await section.getByRole('button', { name: 'Edit', exact: true }).nth(1).click()
     await email.fill('new.address@uil4b.test')
     await email.press('Enter')
     const password = section.getByPlaceholder('Enter your password to confirm')
@@ -190,7 +236,7 @@ test.describe('settings, website and avatar', () => {
 
     await field.fill('javascript:alert(1)')
     await field.press('Enter')
-    await expect(row.getByRole('alert')).toContainText('http://')
+    await expect(row.getByRole('alert')).toContainText('Enter a web address, like https://yoursite.com.')
     await expect(page.getByText('Website updated'), 'a script URL was saved').toHaveCount(0)
     await expect(field, 'the field closed on a refused value').toBeVisible()
 

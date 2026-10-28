@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
@@ -79,6 +79,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [hi, setHi] = useState(-1)
+  const errId = useId()
 
   // Suggestions only exist while the user is typing: the list opens on input,
   // never on focus, and an exact match (i.e. a just-picked option) yields none.
@@ -144,12 +145,12 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
       if (e.key === 'Escape' && listOpen) return
     }
     if (e.key === 'Enter') { e.preventDefault(); handleSave() }
-    else if (e.key === 'Escape') { setEditing(false); setError('') }
+    else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
   }
 
   if (!editing) {
     return (
-      <div className={`settings-row${(value || '').length > 90 ? ' settings-row--tall' : ''}`}>
+      <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">{label}</div>
           <div className="settings-row-value">{value || <span className="settings-row-empty">—</span>}</div>
@@ -172,6 +173,9 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
             onBlur={options ? () => { setSuggestOpen(false); setHi(-1) } : undefined}
             placeholder={placeholder}
             autoFocus
+            readOnly={saving}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errId : undefined}
             role={options ? 'combobox' : undefined}
             aria-expanded={options ? matches.length > 0 : undefined}
             aria-autocomplete={options ? 'list' : undefined}
@@ -200,7 +204,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
         <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
         <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
       </div>
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -312,6 +316,10 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
   // panel that is being used again or sets state on an unmounted one.
   const closeTimer = useRef(0)
   const aliveRef = useRef(true)
+  const currentRef = useRef(null)
+  const nextRef = useRef(null)
+  const confirmRef = useRef(null)
+  const errId = useId()
   useEffect(() => {
     aliveRef.current = true
     return () => { aliveRef.current = false; clearTimeout(closeTimer.current) }
@@ -322,8 +330,8 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
     clearTimeout(closeTimer.current)
     setError('')
     setSuccess(false)
-    if (next.length < 6) { setError('New password must be at least 6 characters'); return }
-    if (next !== confirm) { setError('Passwords do not match'); return }
+    if (next.length < 6) { setError('New password must be at least 6 characters'); nextRef.current?.focus(); return }
+    if (next !== confirm) { setError('Passwords do not match'); confirmRef.current?.focus(); return }
     busyRef.current = true
     setBusy(true)
     try {
@@ -338,6 +346,9 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
       else if (e.code === 'auth/weak-password') setError('Choose a longer password')
       else if (e.code === 'auth/too-many-requests') setError('Too many attempts. Wait a few minutes and try again.')
       else setError('Your password could not be changed. Nothing was changed. Please try again.')
+      // The disabled submit held focus, which fell to <body>; the person's next
+      // move is the first field, so that is where it goes.
+      currentRef.current?.focus()
     } finally {
       busyRef.current = false
       if (aliveRef.current) setBusy(false)
@@ -379,16 +390,16 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
       <div className="settings-row-label">Change password</div>
       <form noValidate onSubmit={(e) => { e.preventDefault(); handleSave() }}>
         <div className="settings-edit-stack">
-          <input type="password" placeholder="Current password" aria-label="Current password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} disabled={busy} autoFocus />
-          <input type="password" placeholder="New password (min. 6 characters)" aria-label="New password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} disabled={busy} />
-          <input type="password" placeholder="Confirm new password" aria-label="Confirm new password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} disabled={busy} />
+          <input ref={currentRef} type="password" placeholder="Current password" aria-label="Current password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} autoFocus />
+          <input ref={nextRef} type="password" placeholder="New password (min. 6 characters)" aria-label="New password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} />
+          <input ref={confirmRef} type="password" placeholder="Confirm new password" aria-label="Confirm new password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} />
         </div>
         <div className="settings-edit-actions">
           <button type="submit" className="btn btn-accent btn-s" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</button>
           <button type="button" className="btn btn-s" onClick={() => { clearTimeout(closeTimer.current); setOpen(false); setError(''); setSuccess(false) }} disabled={busy}>Cancel</button>
         </div>
       </form>
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       {success && <div className="settings-field-ok" role="status">Password updated successfully</div>}
       <div className="settings-reset">
         <button type="button" className="settings-linkbtn" onClick={sendReset} disabled={resetState === 'sending'}>
@@ -465,6 +476,17 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
   // address until that link is opened, so the row says so instead of showing
   // the new one early.
   const [pendingEmail, setPendingEmail] = useState('')
+  const errId = useId()
+  // Closing the field (Escape, Cancel, or a saved change) unmounts the Edit
+  // button's replacement, so focus goes back to Edit once it is drawn again.
+  const editRef = useRef(null)
+  const focusEditOwed = useRef(false)
+  useEffect(() => {
+    if (editing || !focusEditOwed.current) return
+    focusEditOwed.current = false
+    editRef.current?.focus()
+  }, [editing])
+  const closeField = () => { focusEditOwed.current = true; setEditing(false); setError('') }
 
   const handleNext = () => {
     const typed = email.trim()
@@ -482,6 +504,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
     try {
       await onSave(email, password)
       setPendingEmail(email)
+      focusEditOwed.current = true
       setEditing(false)
       setStep('email')
       setPassword('')
@@ -510,7 +533,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
 
   if (!editing) {
     return (
-      <div className="settings-row">
+      <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
           <div className="settings-row-value">{value || '—'}</div>
@@ -523,7 +546,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
             </div>
           )}
         </div>
-        <button className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
       </div>
     )
   }
@@ -537,19 +560,19 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
           between steps, which hands autofocus to the new field. `noValidate`
           keeps the browser's own bubble off: the message is ours, inline. */}
       {step === 'email' ? (
-        <form key="email" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleNext() }}>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" aria-label="New email address" aria-invalid={!!error} autoComplete="email" autoFocus />
+        <form key="email" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleNext() }} onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); closeField() } }}>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" aria-label="New email address" aria-invalid={!!error} aria-describedby={error ? errId : undefined} autoComplete="email" autoFocus />
           <button type="submit" className="btn btn-accent btn-s">Next</button>
-          <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
+          <button type="button" className="btn btn-s" onClick={closeField}>Cancel</button>
         </form>
       ) : (
-        <form key="confirm" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleSave() }}>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" aria-label="Your password" autoComplete="current-password" autoFocus />
+        <form key="confirm" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleSave() }} onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); setPassword(''); closeField() } }}>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" aria-label="Your password" aria-invalid={!!error} aria-describedby={error ? errId : undefined} autoComplete="current-password" autoFocus />
           <button type="submit" className="btn btn-accent btn-s" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
           <button type="button" className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }} disabled={busy}>Back</button>
         </form>
       )}
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -678,6 +701,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
             value={password}
             onChange={e => setPassword(e.target.value)}
             aria-invalid={!!error}
+            aria-describedby={error ? 'del-confirm-err' : undefined}
           />
         </>
       )}
@@ -690,7 +714,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
           Cancel
         </button>
       </div>
-      {error && <div className="danger-confirm-err" role="alert">{error}</div>}
+      {error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
     </form>
   )
 }
@@ -877,7 +901,7 @@ export default function Settings({ toast }) {
   }
   // The profile write is awaited before anything is announced, so the toast
   // never claims a save that failed; a failure keeps the field open with the
-  // reason and raises an error toast. A blank name is not refused: the
+  // reason. A blank name is not refused: the
   // account's name then shows as the part of the email before the "@" (see
   // AuthContext's userProfile), and the toast says so.
   const saveDisplayName = async (raw) => {
@@ -885,10 +909,9 @@ export default function Settings({ toast }) {
     try {
       await updateProfile({ displayName: name })
     } catch {
-      toast('Display name could not be saved. Nothing was changed.', 'error')
       throw new Error('Your display name could not be saved. Nothing was changed. Please try again.')
     }
-    toast(name ? 'Display name updated' : 'Display name cleared. Your email name shows instead')
+    toast(name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
   }
   // Only http(s) addresses are kept (src/utils/websiteUrl.js); a refusal is the
   // EditField's inline message, and nothing is written.

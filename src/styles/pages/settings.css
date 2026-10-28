@@ -107,9 +107,12 @@
    --t2, which holds 5:1 on --card in both themes. */
 .stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
 .stg .settings-row:last-child { border-bottom: none; }
-/* A long value (a bio) makes the row tall: the action stays at the top beside
-   the label instead of floating mid-paragraph, below the first screen. */
-.stg .settings-row--tall { align-items: flex-start; }
+/* A profile field row (value + Edit): the action stays top-right beside the
+   label at every width, so a long bio never leaves it floating mid-paragraph or
+   dropped below the value. The 4px nudge puts a one-line row's button where
+   centring put it. */
+.stg .settings-row--field { align-items: flex-start; }
+.stg .settings-row--field > .btn { margin-top: 4px; }
 .stg .settings-row-main { flex: 1 1 auto; min-width: 0; }
 /* The words give way, the action does not: a button that shares a row with a
    paragraph shrinks to its longest word ("Export / JSON") unless it is held at
@@ -365,6 +368,7 @@
   .stg .toggle-row { flex-wrap: wrap; gap: 10px; }
   .stg .toggle-row .theme-seg { flex: 1 1 100%; width: auto; }
   .stg .settings-row { flex-wrap: wrap; }
+  .stg .settings-row--field { flex-wrap: nowrap; }
   /* An open edit row: the field on its own line, then Save and Cancel as an
      equal pair. At 334px the field (220) + Save + Cancel is 356, which left
      Cancel alone on a second line. The wider gap keeps "Permanently delete"

@@ -179,6 +179,8 @@ export function reload(user) {
 export function updatePassword(user, newPassword) {
   if (!isFakeUser(user)) return realUpdatePassword(user, newPassword)
   fakeAuth.calls.push('updatePassword')
+  const refused = authFailFor('updatePassword')
+  if (refused) return Promise.reject(refused)
   const wait = fakeAuth.delays.updatePassword || 0
   return wait ? new Promise((resolve) => setTimeout(resolve, wait)) : Promise.resolve()
 }
