@@ -691,6 +691,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // not appear after first paint.
   const [hadSession] = useState(readSessionHint)
   const signedIn = user != null || (authLoading && hadSession)
+  // The From a project row is drawn while auth or the projects can still arrive. Once it
+  // has been, and then goes (an account with none), the panel keeps the row's height at
+  // desktop widths (.grd-panel--held), so the preview, which fills the panel's height
+  // beside it, and the code box under it stay where they were.
+  const rowHeld = signedIn && (authLoading || projectsLoading)
+  const [rowWasHeld, setRowWasHeld] = useState(false)
+  if (rowHeld && !rowWasHeld) setRowWasHeld(true)
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
   // asked whether to keep them with the account (never moved unasked).
@@ -2000,7 +2007,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </div>
         </ToolMain>
 
-        <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
+        <ToolPanel label="Gradient controls" className={rowWasHeld && !rowHeld && projectSources.length === 0 ? 'grd-panel grd-panel--held' : 'grd-panel'} onKeyDown={onPanelKey}>
           {/* AVAILABLE COLOURS. Every colour in the palette, one press from the
               selected stop, then its shades when the project's ramp is current.
               With no palette the ten starter colours stand in. */}
@@ -2049,7 +2056,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 {/* Held only while it can still fill: while auth or the account's projects
                     are loading (so projects arriving move nothing), or once there are some.
                     Signed out, or loaded with none, it is not drawn at all. */}
-                {(projectSources.length > 0 || (signedIn && (authLoading || projectsLoading))) && (
+                {(projectSources.length > 0 || rowHeld) && (
                   <div className="grd-avail-from">
                     {projectSources.length > 0 && (
                       <MenuSelect

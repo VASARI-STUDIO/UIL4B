@@ -70,6 +70,14 @@
   .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
   .grd .tl-main > * { flex-shrink: 0; }
   .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 900px; }
+  /* The From a project row was held while the account loaded, then dropped because it
+     has no projects. The preview was sized to the panel with the row in it, so the panel
+     keeps that height (the row and its 8px gap, as padding at the card's foot) and the
+     preview and code box do not jump up when the account answers. */
+  .grd .grd-panel--held { padding-bottom: 40px; }
+}
+@media (min-width: 901px) and (pointer: coarse) {
+  .grd .grd-panel--held { padding-bottom: 52px; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
