@@ -327,12 +327,24 @@ test('fonts: after the hour it is fetched again', async (t) => {
   assert.equal(urls.length, 2, 'the cache never expires')
 })
 
-test('fonts: a failed fetch is not cached', async (t) => {
-  const urls = fontsSetup(t, { fail: true })
+const upstreamDown = async () => ({ ok: false, status: 503, statusText: 'Service Unavailable', json: async () => ({}), text: async () => '' })
+
+test('fonts: a good catalogue past its hour is refreshed, and a failed refresh answers the 502 an uncached request gets, not the stale copy', async (t) => {
+  const urls = fontsSetup(t)
+  const good = await getFonts({})
+  assert.equal(good.statusCode, 200)
+  assert.equal(urls.length, 1)
+
+  clock += 61 * 60 * 1000
+  global.fetch = async (url) => { urls.push(String(url)); return upstreamDown() }
   const failed = await getFonts({})
-  assert.equal(failed.statusCode, 502)
+  assert.ok(urls.length > 1, 'the expired cache was not refreshed')
+  assert.equal(failed.statusCode, 502, 'a stale catalogue was served after the hour, with nothing saying so')
+  assert.deepEqual(failed.body, { error: 'Unable to load font catalog' })
+  assert.equal(failed.body.fonts, undefined)
+
+  // And the failure itself is not remembered: upstream recovers, the next call asks again.
   const afterFailure = urls.length
-  // Upstream recovers inside the hour: the next call must ask again.
   global.fetch = async (url) => {
     urls.push(String(url))
     return {
@@ -346,6 +358,64 @@ test('fonts: a failed fetch is not cached', async (t) => {
   const recovered = await getFonts({})
   assert.equal(recovered.statusCode, 200)
   assert.ok(urls.length > afterFailure, 'a failed catalogue was remembered for the hour')
+})
+
+test('fonts: the thin WebFonts catalogue is kept five minutes, not an hour, so the rich one returns quickly', async (t) => {
+  // The key is read when the module loads, so this uses its own copy of the
+  // module (and its own cache) loaded with a key set.
+  const realKey = process.env.GOOGLE_FONTS_API_KEY
+  process.env.GOOGLE_FONTS_API_KEY = 'unit-test-key-not-real'
+  let thinHandler
+  try {
+    ;({ default: thinHandler } = await import('../../api/fonts.js?thin-catalogue'))
+  } finally {
+    if (realKey === undefined) delete process.env.GOOGLE_FONTS_API_KEY; else process.env.GOOGLE_FONTS_API_KEY = realKey
+  }
+
+  clock += TWO_HOURS
+  t.mock.method(Date, 'now', () => clock)
+  t.mock.method(console, 'error', () => {})
+  const calls = []
+  let metadataUp = false
+  const realFetch = global.fetch
+  t.after(() => { global.fetch = realFetch })
+  global.fetch = async (url) => {
+    const u = String(url)
+    calls.push(u.includes('fonts.google.com/metadata') ? 'metadata' : 'webfonts')
+    if (u.includes('fonts.google.com/metadata')) {
+      if (!metadataUp) return upstreamDown()
+      return {
+        ok: true, status: 200, statusText: 'OK',
+        text: async () => ")]}'" + JSON.stringify({
+          familyMetadataList: [{ family: 'Inter', category: 'Sans Serif', popularity: 1, fonts: { 400: {} }, designers: ['Rasmus Andersson'] }],
+        }),
+      }
+    }
+    return { ok: true, status: 200, statusText: 'OK', json: async () => ({ items: [{ family: 'Inter', category: 'sans-serif', variants: ['regular', '700'] }] }) }
+  }
+  const ask = async () => { const res = fakeRes(); await thinHandler({ method: 'GET', query: {} }, res); return res }
+
+  const thin = await ask()
+  assert.equal(thin.statusCode, 200)
+  assert.deepEqual(calls, ['metadata', 'webfonts'], 'the thin catalogue did not come from the WebFonts fallback')
+  assert.equal(thin.body.fonts[0].designers, undefined, 'this is not the thin catalogue, so the test proves nothing')
+
+  clock += 4 * 60 * 1000
+  await ask()
+  assert.equal(calls.length, 2, 'the thin catalogue was not cached at all inside five minutes')
+
+  // Past five minutes, with the metadata endpoint back, the rich catalogue replaces it.
+  clock += 2 * 60 * 1000
+  metadataUp = true
+  const rich = await ask()
+  assert.ok(calls.length > 2, 'the thin catalogue was kept for longer than five minutes')
+  assert.deepEqual(rich.body.fonts[0].designers, ['Rasmus Andersson'])
+
+  // The rich one then holds for the hour.
+  const before = calls.length
+  clock += 30 * 60 * 1000
+  await ask()
+  assert.equal(calls.length, before)
 })
 
 test('fonts: the only caller in src/ asks for the bare URL', () => {
