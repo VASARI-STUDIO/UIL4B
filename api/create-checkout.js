@@ -12,6 +12,31 @@ import { ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
+import { clientIp, consume } from './_lib/rateLimit.js'
+
+// Opening a checkout creates a Stripe customer on first use and a session every
+// time, and a free account costs nothing to make, so a script with a stream of
+// throwaway accounts could otherwise create Stripe objects without limit. The
+// per-account limit stops one login looping; the per-address limit stops many
+// logins from one machine. A real buyer opens a checkout a handful of times.
+export const CHECKOUT_LIMITS = Object.freeze({
+  perUid: Object.freeze({ limit: 10, windowMs: 60 * 60 * 1000 }),
+  perIp: Object.freeze({ limit: 30, windowMs: 60 * 60 * 1000 }),
+})
+
+/**
+ * Counts this request against both limits. Returns null when it may go ahead,
+ * or `{ retryAfter }` (whole seconds) for the first limit that is spent. The
+ * account is checked first, so a refused account does not use up the shared
+ * address allowance.
+ */
+export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
+  const uidVerdict = await consume(db, { bucket: 'checkout-uid', key: uid, ...CHECKOUT_LIMITS.perUid, now })
+  if (!uidVerdict.allowed) return { retryAfter: uidVerdict.retryAfter }
+  const ipVerdict = await consume(db, { bucket: 'checkout-ip', key: ip, ...CHECKOUT_LIMITS.perIp, now })
+  if (!ipVerdict.allowed) return { retryAfter: ipVerdict.retryAfter }
+  return null
+}
 
 // Resolved price ids, per interval, for a few minutes. Short enough that a
 // price archived in Stripe stops being sold on the next refresh; only a
@@ -235,6 +260,17 @@ export default async function handler(req, res) {
     email = decoded.email || null
   } catch (e) {
     return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
+  }
+
+  // After the token check, so only signed-in calls are counted, and before any
+  // Stripe work.
+  const limited = await checkoutRateLimit(adminDb(), { uid, ip: clientIp(req) })
+  if (limited) {
+    res.setHeader('Retry-After', String(limited.retryAfter))
+    return res.status(429).json({
+      error: 'Too many checkout attempts. Try again later, or contact support if you need help. No payment session was created.',
+      retryAfter: limited.retryAfter,
+    })
   }
 
   try {
