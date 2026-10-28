@@ -324,6 +324,13 @@ function AppHeader() {
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
   const onDashboard = path === '/projects'
+  // Manage plan from the menu while Settings is already open. A phone's Settings
+  // keeps the open section in the history entry, so a push here would stack a
+  // second section entry on the first and the bar's Back would loop between them.
+  // It replaces the entry instead, and keeps `fromList` so the entry behind (the
+  // list) is still what the bar steps back to.
+  const onSettings = path === '/settings'
+  const planState = { section: 'support', ...(onSettings && location.state?.fromList ? { fromList: true } : null) }
   // Below 900px the labels are hidden, so the icon buttons carry a title.
   const iconOnly = useMediaQuery('(max-width: 899px)')
 
@@ -818,7 +825,7 @@ function AppHeader() {
                       <GearIcon />
                       <span>Account &amp; settings</span>
                     </Link>
-                    <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
+                    <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? planState : undefined} replace={isPro && onSettings} onClick={closeAll}>
                       <TagIcon />
                       <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
                     </Link>

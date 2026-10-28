@@ -357,10 +357,17 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
         await expect(current).toHaveText(/Account/)
         await page.locator('#settab-support').click()
         await expect(page.locator('#set-support')).toBeVisible()
-        await go(page, '/settings')
+        // An open section is a history entry, so a reload keeps it open; Back
+        // then shows the list with it as the current row.
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#set-support'), 'a reload keeps the open section').toBeVisible()
+        await page.goBack()
+        await expect(page.locator('.settings-nav')).toBeVisible()
         await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
-        await page.locator('#settab-support').click()
-        await expect(page.locator('#set-support')).toBeVisible()
+        // A fresh visit opens on the list, with the remembered row current.
+        await go(page, '/settings?fresh=1')
+        await expect(page.locator('.settings-nav')).toBeVisible()
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
         await context.close()
         return
       }

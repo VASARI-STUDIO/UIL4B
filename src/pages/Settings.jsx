@@ -7,6 +7,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice, usePrices, refreshPrices } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
+import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
@@ -682,9 +683,70 @@ export default function Settings({ toast }) {
   // the shape of every phone settings screen (Blue Apron, Givingli, Lifesum on
   // Mobbin) — instead of six tabs wrapped into a grid above the content.
   const isPhone = useMediaQuery('(max-width: 720px)')
-  const [phoneView, setPhoneView] = useState(() => (location.state?.section ? 'section' : 'list'))
-  const pickSection = (id) => { setActive(id); rememberSection(id); setPhoneView('section') }
+  // The tiers only stack at 640 (settings.css), so this is not `isPhone`:
+  // between 641 and 720 they are still two columns and Free stays on the left.
+  // The Language tiles turn into rows at the same line.
+  const tiersStacked = useMediaQuery('(max-width: 640px)')
+  const navigate = useNavigate()
+  // Which view a phone shows lives in the history entry, not in component
+  // state: opening a section is a push, so the browser's Back (and the phone's
+  // back gesture) returns to the list instead of leaving /settings. A deep
+  // link (Plans, the account menu) carries `state.section` and opens the same
+  // view; it has no `fromList` flag because there is no list entry behind it.
+  // The account menu, from inside Settings, replaces the current entry and passes
+  // the flag on (PillNav), so it never stacks a second section entry.
+  const phoneView = location.state?.section ? 'section' : 'list'
+  // Read from callbacks that outlive the render that made them (the sign-in
+  // toast action below), which would otherwise navigate to a stale URL.
+  const locationRef = useRef(location)
+  useEffect(() => { locationRef.current = location })
+  // The toast outlives this page, so its callbacks also ask whether Settings is
+  // still the page before touching the history.
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+  const showSection = (id, { replace = false } = {}) => {
+    const here = locationRef.current
+    navigate({ pathname: here.pathname, search: here.search, hash: here.hash }, { replace, state: { section: id, fromList: !replace } })
+  }
+  const pickSection = (id) => {
+    setActive(id)
+    rememberSection(id)
+    if (!isPhone) return
+    showSection(id)
+    // The list may be scrolled; a new view starts at its top. Lenis owns the
+    // scroll when it is running, so the reset goes through it.
+    const lenis = getLenis()
+    if (lenis) lenis.scrollTo(0, { immediate: true })
+    else window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }
+  // Back to the list. A section opened from the list has the list as the entry
+  // behind it, so Back is a pop. A deep-linked one does not (behind it is Plans
+  // or whichever page linked), so the bar replaces its entry with the list; the
+  // browser's Back from the list then still leaves for that page, rather than
+  // passing through the section again.
+  const closeSection = () => {
+    if (location.state?.fromList) { navigate(-1); return }
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, { replace: true, state: null })
+  }
   const [confirmClear, setConfirmClear] = useState(false)
+  // Pressing "Clear data" unmounts that button for the Confirm / Cancel pair,
+  // and focus went with it (to <body>). The pair opens on Cancel, never on
+  // "Confirm clear": Enter on a freshly focused destructive button would be a
+  // one-keystroke wipe. When the pair closes, focus goes back to the trigger,
+  // unless the person has already moved it elsewhere. Nothing moves until the
+  // first press, so landing on the Data section does not take focus.
+  const clearTriggerRef = useRef(null)
+  const clearCancelRef = useRef(null)
+  const clearFocusOwed = useRef(false)
+  useEffect(() => {
+    if (!clearFocusOwed.current) return
+    if (confirmClear) { clearCancelRef.current?.focus(); return }
+    const held = document.activeElement
+    if (!held || held === document.body) clearTriggerRef.current?.focus()
+  }, [confirmClear])
   const [exporting, setExporting] = useState(false)
   // Counted from storage, not from the length of a hand-written list. The old
   // page reported "15 items" whatever was actually there — including for a
@@ -763,7 +825,7 @@ export default function Settings({ toast }) {
   // column just moved the page for no reason.
   useEffect(() => {
     const section = location.state?.section
-    if (section) { setActive(section); setPhoneView('section') }
+    if (section) setActive(section)
   }, [location.state])
 
   // Back from the verification link. Both link sends point it at
@@ -775,7 +837,6 @@ export default function Settings({ toast }) {
   // toast says the link was opened and offers Sign in. A different, unverified
   // account is told so plainly. Waits for auth to settle, then removes the
   // parameter so a reload or a back-step does not repeat it.
-  const navigate = useNavigate()
   const { requireLogin } = useLoginPrompt()
   const verifiedReturn = useRef(false)
   useEffect(() => {
@@ -784,7 +845,10 @@ export default function Settings({ toast }) {
     verifiedReturn.current = true
     params.delete('verified')
     const search = params.toString()
-    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: location.state })
+    // Signed in, the replace carries the section too: on a phone the section
+    // view is the history state, so a replace that dropped it would land on the
+    // list instead of the Account section.
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true, state: user ? { section: 'account', ...(location.state?.fromList ? { fromList: true } : null) } : location.state })
     const say = (landing) => {
       if (!landing) return
       const action = landing.signIn
@@ -794,9 +858,13 @@ export default function Settings({ toast }) {
               requireLogin('finish verifying your email').then((signedIn) => {
                 // Signed in: land on the account and re-read it (the effect
                 // below), so "Sign in to finish" ends with an answer.
-                if (signedIn) {
+                // Only while this page is still the one on screen: the toast
+                // outlives it, and a replace from here would overwrite whatever
+                // the person went on to.
+                const here = locationRef.current
+                if (signedIn && mountedRef.current && window.location.pathname === here.pathname) {
                   setActive('account')
-                  setPhoneView('section')
+                  navigate({ pathname: here.pathname, search: here.search, hash: here.hash }, { replace: true, state: { section: 'account', ...(here.state?.fromList ? { fromList: true } : null) } })
                   setFinishAfterSignIn(true)
                 }
                 // The toast that held the button is gone; keep focus on the page.
@@ -814,7 +882,6 @@ export default function Settings({ toast }) {
       return
     }
     setActive('account')
-    setPhoneView('section')
     refreshEmailVerified().then((verified) => {
       say(verifiedLandingMessage({ signedIn: true, verified }))
     }).catch(() => {})
@@ -949,6 +1016,81 @@ export default function Settings({ toast }) {
     selectTab(keys[event.key])
   }
 
+  // Focus follows the view on a phone. Opening a section hides the list, so
+  // focus would fall to the page; it goes to the section's heading instead
+  // (which names the new view), and on the way back to the row that was opened.
+  // Only a change of view moves it: first render (a deep link, a reload) and a
+  // resize across the 720 line leave focus alone. A deep link changes the view
+  // one render before `chosen` catches up to it, and the section that was
+  // showing before is the one on screen until then, so the move waits for it.
+  const shownView = useRef(phoneView)
+  const focusOwed = useRef('')
+  const sectionInState = location.state?.section
+  useEffect(() => {
+    if (shownView.current !== phoneView) {
+      shownView.current = phoneView
+      focusOwed.current = isPhone ? phoneView : ''
+    }
+    if (!focusOwed.current) return
+    if (focusOwed.current === 'section') {
+      if (sectionInState && sectionInState !== chosen) return
+      document.querySelector(`#set-${active} h2`)?.focus({ preventScroll: true })
+    } else {
+      document.getElementById(`settab-${active}`)?.focus()
+    }
+    focusOwed.current = ''
+  }, [phoneView, isPhone, chosen, active, sectionInState])
+
+  // The two plan blocks, held apart so a narrow screen can put Pro first.
+  const tierFree = (
+    <div className="sub-tier sub-tier-free">
+      <div className="sub-tier-head">
+        <div className="sub-tier-name">Free</div>
+        <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
+      </div>
+      <ul className="sub-tier-list">
+        {FREE_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
+        <li className="sub-tier-minus"><Minus /> {FREE_EXCLUSION}</li>
+      </ul>
+      <p className="sub-tier-current">Your current plan</p>
+    </div>
+  )
+  const tierPro = (
+    <div className="sub-tier sub-tier-pro">
+      <div className="sub-tier-head">
+        <div className="sub-tier-name">Pro</div>
+        <div className="sub-tier-price">
+          {/* `loaded` means the fetch SETTLED, not that a price is
+              known — so every state is checked, and a missing
+              amount says so rather than printing a blank. */}
+          <span className={`sub-tier-amount${proPrice.loaded && !offer?.amountLabel ? ' is-word' : ''}`}>
+            {!proPrice.loaded ? '—' : offer?.amountLabel || 'Unavailable'}
+          </span>
+          {offer?.amountLabel && <span className="sub-tier-per">per month</span>}
+        </div>
+        <div className="sub-tier-sub">
+          {!proPrice.loaded ? 'Checking live price…'
+            : priceServiceDown ? 'Live pricing is unreachable · no price can be shown right now'
+              : !offer?.amountLabel ? `No ${proPrice.currencyLabel} price for this billing period right now`
+                : offer.billedNote}
+        </div>
+        {priceServiceDown && (
+          <button type="button" className="btn btn-s sub-price-retry" onClick={() => refreshPrices()}>Retry live pricing</button>
+        )}
+      </div>
+      <ul className="sub-tier-list">
+        {PRO_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
+      </ul>
+      {offer?.amountLabel && !subLoading ? (
+        <Link className="btn btn-accent sub-tier-btn" to={`/checkout?plan=${offer.checkoutPlan}`}>Upgrade to Pro</Link>
+      ) : (
+        <button type="button" className="btn btn-accent sub-tier-btn" disabled>
+          {proPrice.loaded && !offer?.amountLabel ? 'Pricing unavailable right now' : 'Upgrade to Pro'}
+        </button>
+      )}
+    </div>
+  )
+
   return (
     <div className="sec stg" data-phone-view={isPhone ? phoneView : undefined}>
       {/* THE APP'S PAGE HEAD, NOT A DISPLAY TITLE. The design's App file has no big page
@@ -957,7 +1099,7 @@ export default function Settings({ toast }) {
           bar carries the way back to the list. */}
       <div className="stg-bar">
         {isPhone && phoneView === 'section' && (
-          <button type="button" className="stg-back" onClick={() => setPhoneView('list')}>
+          <button type="button" className="stg-back" onClick={closeSection}>
             <Chevron back />
             <span>All settings</span>
           </button>
@@ -1008,7 +1150,7 @@ export default function Settings({ toast }) {
           {/* Subscription */}
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
-              <h2>Subscription</h2>
+              <h2 tabIndex={-1}>Subscription</h2>
               <p>{isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
@@ -1104,52 +1246,13 @@ export default function Settings({ toast }) {
                   ))}
                 </div>
 
+                {/* Where the tiers stack (640 and below) Pro comes first: the
+                    cadence toggle then sits over the price it changes, and
+                    "Upgrade to Pro" is on the first screen instead of two down.
+                    DOM order, not CSS order, so keyboard and screen-reader
+                    order follow what is on screen. */}
                 <div className="sub-tiers">
-                  <div className="sub-tier sub-tier-free">
-                    <div className="sub-tier-head">
-                      <div className="sub-tier-name">Free</div>
-                      <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
-                    </div>
-                    <ul className="sub-tier-list">
-                      {FREE_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
-                      <li className="sub-tier-minus"><Minus /> {FREE_EXCLUSION}</li>
-                    </ul>
-                    <p className="sub-tier-current">Your current plan</p>
-                  </div>
-
-                  <div className="sub-tier sub-tier-pro">
-                    <div className="sub-tier-head">
-                      <div className="sub-tier-name">Pro</div>
-                      <div className="sub-tier-price">
-                        {/* `loaded` means the fetch SETTLED, not that a price is
-                            known — so every state is checked, and a missing
-                            amount says so rather than printing a blank. */}
-                        <span className={`sub-tier-amount${proPrice.loaded && !offer?.amountLabel ? ' is-word' : ''}`}>
-                          {!proPrice.loaded ? '—' : offer?.amountLabel || 'Unavailable'}
-                        </span>
-                        {offer?.amountLabel && <span className="sub-tier-per">per month</span>}
-                      </div>
-                      <div className="sub-tier-sub">
-                        {!proPrice.loaded ? 'Checking live price…'
-                          : priceServiceDown ? 'Live pricing is unreachable · no price can be shown right now'
-                            : !offer?.amountLabel ? `No ${proPrice.currencyLabel} price for this billing period right now`
-                              : offer.billedNote}
-                      </div>
-                      {priceServiceDown && (
-                        <button type="button" className="btn btn-s sub-price-retry" onClick={() => refreshPrices()}>Retry live pricing</button>
-                      )}
-                    </div>
-                    <ul className="sub-tier-list">
-                      {PRO_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
-                    </ul>
-                    {offer?.amountLabel && !subLoading ? (
-                      <Link className="btn btn-accent sub-tier-btn" to={`/checkout?plan=${offer.checkoutPlan}`}>Upgrade to Pro</Link>
-                    ) : (
-                      <button type="button" className="btn btn-accent sub-tier-btn" disabled>
-                        {proPrice.loaded && !offer?.amountLabel ? 'Pricing unavailable right now' : 'Upgrade to Pro'}
-                      </button>
-                    )}
-                  </div>
+                  {tiersStacked ? <>{tierPro}{tierFree}</> : <>{tierFree}{tierPro}</>}
                 </div>
               </div>
             )}
@@ -1158,7 +1261,7 @@ export default function Settings({ toast }) {
           {/* Accessibility */}
           <section id="set-accessibility" className="settings-section" role="tabpanel" aria-labelledby="settab-accessibility" hidden={active !== 'accessibility'}>
             <div className="settings-section-h">
-              <h2>Accessibility</h2>
+              <h2 tabIndex={-1}>Accessibility</h2>
               <p>Choose a theme and reduce motion for a calmer, distraction-free interface. Both are also in the menu at the top of every page.</p>
             </div>
             <div className="settings-card">
@@ -1176,12 +1279,24 @@ export default function Settings({ toast }) {
                   </div>
                   <ThemeChoice />
                 </div>
+                {/* A switch, not a pressed button: it announces "on" / "off", and
+                    the words beside it are its label, so a tap on them flips it
+                    (the way a phone settings row with a switch behaves). */}
                 <div className="toggle-row">
-                  <div className="toggle-row-info">
-                    <div className="toggle-row-label">Reduced motion</div>
-                    <div className="toggle-row-meta">Minimise animations and transitions</div>
-                  </div>
-                  <button className={`toggle-switch${reducedMotion ? ' on' : ''}`} onClick={() => setReducedMotion(!reducedMotion)} aria-label="Toggle reduced motion" aria-pressed={reducedMotion} />
+                  <label className="toggle-row-info" htmlFor="set-reduced-motion">
+                    <span className="toggle-row-label" id="set-rm-label">Reduced motion</span>
+                    <span className="toggle-row-meta" id="set-rm-meta">Minimise animations and transitions</span>
+                  </label>
+                  <button
+                    id="set-reduced-motion"
+                    type="button"
+                    role="switch"
+                    aria-checked={reducedMotion}
+                    aria-labelledby="set-rm-label"
+                    aria-describedby="set-rm-meta"
+                    className={`toggle-switch${reducedMotion ? ' on' : ''}`}
+                    onClick={() => setReducedMotion(!reducedMotion)}
+                  />
                 </div>
               </div>
             </div>
@@ -1190,7 +1305,7 @@ export default function Settings({ toast }) {
           {/* Language */}
           <section id="set-language" className="settings-section" role="tabpanel" aria-labelledby="settab-language" hidden={active !== 'language'}>
             <div className="settings-section-h">
-              <h2>Language</h2>
+              <h2 tabIndex={-1}>Language</h2>
               <p>UIL4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
             </div>
             <div className="settings-card">
@@ -1208,7 +1323,10 @@ export default function Settings({ toast }) {
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
-                        <span className="lang-tile-code">{l.label}</span>
+                        {/* "English (AU)" over "English (AU)": where the tiles are
+                            rows (640 and below, with `tiersStacked`) the repeat
+                            is dropped. The wider tiles keep both lines. */}
+                        {(!tiersStacked || l.native !== l.label) && <span className="lang-tile-code">{l.label}</span>}
                       </div>
                       {lang === l.code && (
                         <svg className="lang-tile-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1226,7 +1344,7 @@ export default function Settings({ toast }) {
           {user && (
             <section id="set-account" className="settings-section" role="tabpanel" aria-labelledby="settab-account" hidden={active !== 'account'}>
               <div className="settings-section-h">
-                <h2>Account</h2>
+                <h2 tabIndex={-1}>Account</h2>
                 <p>Manage your profile, email, and password.</p>
               </div>
               <div className="settings-card">
@@ -1310,7 +1428,7 @@ export default function Settings({ toast }) {
           {/* Data */}
           <section id="set-data" className="settings-section" role="tabpanel" aria-labelledby="settab-data" hidden={active !== 'data'}>
             <div className="settings-section-h">
-              <h2>Your data</h2>
+              <h2 tabIndex={-1}>Your data</h2>
               {/* This used to read "Everything UIL4B stores lives in your
                   browser", which is simply false for a signed-in account —
                   the profile and the synced design live in Firestore. */}
@@ -1336,7 +1454,7 @@ export default function Settings({ toast }) {
                   We don&rsquo;t sell your data or use third-party trackers.
                 </p>
                 <div className="settings-row settings-row--pad">
-                  <div>
+                  <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
                       A JSON copy of everything — every key in this browser
@@ -1348,7 +1466,7 @@ export default function Settings({ toast }) {
                   </button>
                 </div>
                 <div className="settings-row">
-                  <div>
+                  <div className="settings-row-main">
                     <div className="settings-row-label">Clear local data</div>
                     <div className="settings-row-meta">
                       Removes everything stored in this browser except your sign-in.
@@ -1358,10 +1476,10 @@ export default function Settings({ toast }) {
                   {confirmClear ? (
                     <div className="settings-edit-actions settings-edit-actions--tight">
                       <button className="btn btn-s settings-danger-go" onClick={deleteAllData}>Confirm clear</button>
-                      <button className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
+                      <button ref={clearCancelRef} className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
                     </div>
                   ) : (
-                    <button className="btn btn-s settings-danger" onClick={() => setConfirmClear(true)}>Clear data</button>
+                    <button ref={clearTriggerRef} className="btn btn-s settings-danger" onClick={() => { clearFocusOwed.current = true; setConfirmClear(true) }}>Clear data</button>
                   )}
                 </div>
               </div>
@@ -1371,7 +1489,7 @@ export default function Settings({ toast }) {
           {/* Privacy */}
           <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
-              <h2>Privacy &amp; legal</h2>
+              <h2 tabIndex={-1}>Privacy &amp; legal</h2>
               <p>How we handle (and don't handle) your information.</p>
             </div>
             <div className="settings-card">
