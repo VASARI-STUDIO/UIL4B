@@ -21,6 +21,11 @@ export function textSizeClass(px, weight) {
   return 'body'
 }
 
+/** The help line under the legend chips, for this unrounded ratio. */
+export const legendLede = (ratio) => (failingSizes(ratio).length
+  ? 'The largest part that misses its test is outlined. Pick a test to outline every part.'
+  : 'Every test passes. Pick a test to outline every part.')
+
 /** The class ids a pair of this ratio fails. Compares the unrounded ratio. */
 export function failingSizes(ratio) {
   return SIZE_CLASSES.filter((c) => ratio < c.min).map((c) => c.id)

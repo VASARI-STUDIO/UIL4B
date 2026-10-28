@@ -624,12 +624,12 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     expect(PALETTE).toContain(bg)
   })
 
-  // The drawn grid: the specimen (1fr) is far wider than the 336px card.
+  // The drawn grid: the preview frame (1fr) is far wider than the 336px card.
   test('the preview is given more width than the controls', async ({ page }) => {
     watch(page, 'a designer on a wide screen')
     await go(page, '/create/contrast')
-    await expect(page.locator('.cc-preview')).toBeVisible()
-    const preview = await page.locator('.cc-preview').evaluate((e) => Math.round(e.getBoundingClientRect().width))
+    await expect(page.locator('.cc-frame')).toBeVisible()
+    const preview = await page.locator('.cc-frame').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     const controls = await page.locator('.cc-panel').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     expect(controls, 'the side card is the drawn 336px').toBe(336)
     expect(preview, `preview ${preview}px is not wider than controls ${controls}px`).toBeGreaterThan(controls)

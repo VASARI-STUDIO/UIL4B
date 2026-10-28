@@ -9,23 +9,23 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
 import { roleLabel } from '../utils/paletteRoles'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
-import { PAIR_VIEWS } from '../utils/palettePairSizes'
+import { PAIR_VIEWS, legendLede } from '../utils/palettePairSizes'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
-import { preloadExample } from '../components/palette/examples/registry'
+import { preloadPairExample } from '../components/contrast/views/registry'
 import { trackExampleLoad } from '../components/palette/examples/loading'
 import PairLegend from '../components/palette/PairLegend'
 // The page's own sheet; every rule is scoped under `.cc`, the page root.
 import '../styles/pages/contrast.css'
 
-// The example views (Editorial, Product page, Card) load only when picked, and
-// so does the preview stylesheet they share.
+// The pair views (Interface, Specimen) load only when picked, and so does the
+// preview stylesheet they share.
 const loadPair = () => import('../components/palette/PairExample')
 
 // Shown where the picture would be when its chunk fails to download. The page
 // around it, the colour fields and the numbers all keep working.
 function PairUnavailable({ onRetry }) {
   return (
-    <div className="cc-pv cc-pv-wait cc-pv-fail" role="status">
+    <div className="cc-pv-fail" role="status">
       <p className="cc-lede">{"This view didn't load."}</p>
       <ToolButton onClick={onRetry}>Try again</ToolButton>
     </div>
@@ -42,9 +42,11 @@ let PairExample = makePairExample()
 
 // Contrast Checker — /create/contrast.
 // A sticky tool toolbar with the Copy menu; a pair bar (the two colour fields
-// and Swap) above the pair painted on a specimen card; "Common pairs in this
-// kit"; and one side card holding the ratio, the five WCAG tests, the nearest
-// passing colours and the palette swatches.
+// and Swap) above the pair painted on a view in a fixed-height frame; "Common
+// pairs in this kit"; and one side card holding the ratio, the five WCAG tests,
+// the nearest passing colours and the palette swatches. At 900px and below the
+// ratio leaves the card and sits under the fields, so the number is on screen
+// with the first part of the preview.
 //
 // TRUTH OVER THE MOCK, and where: the design's eight "common pairs" and nine
 // swatches are invented brand values. Here both are read from the person's OWN
@@ -223,15 +225,17 @@ export default function ContrastChecker({ onCopy }) {
   const [bgInput, setBgInput] = useState(seed.bg)
   const [bg, setBg] = useState(seed.bg)
   const [target, setTarget] = useState('text') // which side the swatches set
-  // The picture the pair is painted on: the specimen, or one of the preview
-  // examples. `shown` trails `view` while an example loads, so the picture on
-  // screen stays until the next one is ready.
-  const [view, setViewRaw] = useState('specimen')
+  // The picture the pair is painted on. `shown` trails `view` while a view
+  // loads, so the picture on screen stays until the next one is ready.
+  const [view, setViewRaw] = useState('interface')
   const shown = useDeferredValue(view)
   const [pinned, setPinned] = useState(null) // a size class a tap or click holds
   const [hovered, setHovered] = useState(null) // a size class under the pointer or focus
   const setView = (id) => { setViewRaw(id); setPinned(null); setHovered(null) }
   const stacked = useMediaQuery('(max-width: 559px)')
+  // One ratio block, rendered in one place: under the fields up to 900px, and
+  // at the top of the result card beyond it, so there is one live region.
+  const ratioInStrip = useMediaQuery('(max-width: 900px)')
 
   const fgValid = normaliseHex(fgInput) != null
   const bgValid = normaliseHex(bgInput) != null
@@ -251,7 +255,7 @@ export default function ContrastChecker({ onCopy }) {
   // shared preview stylesheet goes first: an example's own sheet must load after
   // it, or the shared reset (`font:inherit`) overrides the example's type sizes.
   const prefetchViews = () => {
-    loadPair().then(() => PAIR_VIEWS.forEach((v) => { if (v.id !== 'specimen') preloadExample(v.id) }), () => {})
+    loadPair().then(() => PAIR_VIEWS.forEach((v) => preloadPairExample(v.id)), () => {})
   }
 
   const ratio = useMemo(() => contrastRatio(fg, bg), [fg, bg])
@@ -321,6 +325,21 @@ export default function ContrastChecker({ onCopy }) {
     { id: 'link', label: 'Copy link', icon: 'link', onSelect: () => onCopy?.(linkText()) },
   ]
 
+  // One sentence per change for a screen reader; the visible numeral, verdict
+  // and note are hidden from it so nothing is read twice. The unit is a quieter
+  // span INSIDE the numeral, so the element's text is one token ("4.83:1").
+  const ratioBlock = (
+    <div className={ratioInStrip ? 'cc-ratio cc-ratio--strip' : 'tl-sec cc-ratio'}>
+      <span className="sr-only" aria-live="polite">{`${ratioText} to 1. ${verdict.head}`}</span>
+      <span className={`cc-ratio-num cc-tone--${verdict.tone}`} aria-hidden="true">{ratioText}<span className="cc-ratio-unit">:1</span></span>
+      <p className="cc-ratio-verdict" aria-hidden="true">
+        <ToolIcon name={verdict.icon} size={16} className={`cc-ico--${verdict.tone}`} />
+        <span>{verdict.head}</span>
+      </p>
+      <p className="cc-ratio-note" aria-hidden="true">{verdict.note}</p>
+    </div>
+  )
+
   return (
     <ToolLayout
       className="cc"
@@ -355,8 +374,10 @@ export default function ContrastChecker({ onCopy }) {
             />
           </div>
 
-          {/* What the pair is painted on. The three examples fill the pair as given
-              and never correct it, so a failing pair looks as bad as it is. */}
+          {ratioInStrip && ratioBlock}
+
+          {/* What the pair is painted on. Every view fills the pair as given and
+              never corrects it, so a failing pair looks as bad as it is. */}
           <div className="cc-views-wrap" onPointerOver={prefetchViews} onFocus={prefetchViews}>
             <ToolPills
               label="Preview the pair on"
@@ -373,46 +394,26 @@ export default function ContrastChecker({ onCopy }) {
           </div>
 
           {/* The legend sits above the picture it marks, so choosing a test and seeing
-              its parts need no scroll between them. */}
-          {shown !== 'specimen' && <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} />}
+              its parts need no scroll between them. It is there for every view, so
+              the page does not change height as the view does. Stacked, its lede
+              moves under the frame to keep the picture high on the screen. */}
+          <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} />
 
-          {/* The pair, on a specimen. Each line is the size its test measures, at
-              a fixed px, so the preview proves the verdict. It is a picture of
-              text, so it is a depiction rather than a heading outline. */}
-          {/* One boundary round both pictures, mounted from the start, so a switch
-              to an example that is still loading keeps the current picture. */}
-          <Suspense fallback={<div className="cc-pv cc-pv-wait" style={{ background: bg }} aria-hidden="true" />}>
-            {shown === 'specimen' ? (
-              <section className="cc-preview" ref={pairRef(fg, bg)} aria-label="Preview of the pair">
-                <p className="cc-spec-h">Headings read first</p>
-                <p className="cc-spec-large">Large text at 24px needs 3:1.</p>
-                <p className="cc-spec-bold">Bold text at 19px counts as large too.</p>
-                <p className="cc-spec-body">Body text at 16px needs 4.5:1. Paragraphs, form labels and table cells sit at this size, so this line decides whether the pair works for reading.</p>
-                <span className="cc-spec-btn">
-                  <ToolIcon name="check" size={16} />
-                  <span>Button border and icon, 3:1</span>
-                </span>
-              </section>
-            ) : (
+          {/* The frame is a fixed height at each width and holds whatever is in it
+              (the view, the loading placeholder or the failure message), so a
+              switch moves nothing around it. One boundary round every view, mounted
+              from the start, so a switch to a view that is still loading keeps the
+              current picture. */}
+          <div className="cc-frame" style={{ background: bg }}>
+            <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
               <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} onRetry={retryPair} />
-            )}
-          </Suspense>
+            </Suspense>
+          </div>
+          {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio)}</p>}
         </ToolMain>
 
         <ToolPanel label="Contrast result" className="cc-panel">
-          <div className="tl-sec cc-ratio">
-            {/* One sentence per change for a screen reader; the visible numeral,
-                verdict and note are hidden from it so nothing is read twice. */}
-            <span className="sr-only" aria-live="polite">{`${ratioText} to 1. ${verdict.head}`}</span>
-            {/* The unit is a quieter span INSIDE the numeral, so the element's
-                text is one token ("4.83:1"). */}
-            <span className={`cc-ratio-num cc-tone--${verdict.tone}`} aria-hidden="true">{ratioText}<span className="cc-ratio-unit">:1</span></span>
-            <p className="cc-ratio-verdict" aria-hidden="true">
-              <ToolIcon name={verdict.icon} size={16} className={`cc-ico--${verdict.tone}`} />
-              <span>{verdict.head}</span>
-            </p>
-            <p className="cc-ratio-note" aria-hidden="true">{verdict.note}</p>
-          </div>
+          {!ratioInStrip && ratioBlock}
 
           <ToolSection label="WCAG 2.2" className="cc-tests-sec">
             <ul className="cc-tests">
@@ -445,35 +446,65 @@ export default function ContrastChecker({ onCopy }) {
           </ToolSection>
 
           <ToolSection label="Nearest passing colours" className="cc-fixes-sec">
-            {goal ? (
-              fixes.length > 0 ? (
-                <>
-                  <p className="cc-lede">
-                    {goal.level === 'AA' ? 'To reach AA (4.5:1) for body text, change one colour:' : 'To reach AAA (7:1), change one colour:'}
-                  </p>
-                  <div className="cc-fixes">
-                    {fixes.map((fix) => (
-                      <div key={fix.key} className="cc-fix">
-                        <span className="cc-fix-chip" ref={pairRef(fix.fg, fix.bg)} aria-hidden="true">Aa</span>
-                        <span className="cc-fix-desc">
-                          <span className="cc-fix-line">{fix.verb} {fix.side} to <strong>{fix.hex}</strong></span>
-                          <span className="cc-fix-ratio cc-tone--ok">{ratioStr(fix.ratio)}:1</span>
-                        </span>
-                        <ToolButton variant="quiet" className="cc-fix-use" aria-label={`Use ${fix.hex} for the ${fix.side}`} onClick={() => applyFix(fix)}>Use</ToolButton>
-                        <ToolButton variant="square" icon="copy" className="cc-fix-copy" aria-label={`Copy ${fix.hex}`} title={`Copy ${fix.hex}`} onClick={() => onCopy?.(fix.hex)} />
-                      </div>
-                    ))}
+            {/* The section is always as tall as its fullest state (two fixes under a
+                two-line lede): a hidden copy of that state shares the cell with
+                what is showing, so the page does not move when the pair changes. */}
+            <div className="cc-fixes-body">
+              <div className="cc-fixes-ghost" aria-hidden="true">
+                <p className="cc-lede">To reach AA (4.5:1) for body text, change one colour:</p>
+                <div className="cc-fixes">
+                  <div className="cc-fixg">
+                    <span className="cc-fix-chip" />
+                    <span className="cc-fix-desc">
+                      <span className="cc-fix-line">Darken background to <strong>#FFFFFF</strong></span>
+                      <span className="cc-fix-ratio">4.50:1</span>
+                    </span>
+                    <span className="cc-fixg-use" />
+                    <span className="cc-fixg-copy" />
                   </div>
-                </>
-              ) : (
-                <p className="cc-hint cc-unfixable">
-                  Neither colour can reach {goal.min}:1 on its own here: they sit
-                  too close in lightness. Change both, or start from a kit pair.
-                </p>
-              )
-            ) : (
-              <p className="cc-hint cc-nothing">Passes every WCAG 2.2 check. Nothing to change.</p>
-            )}
+                  <div className="cc-fixg">
+                    <span className="cc-fix-chip" />
+                    <span className="cc-fix-desc">
+                      <span className="cc-fix-line">Darken background to <strong>#FFFFFF</strong></span>
+                      <span className="cc-fix-ratio">4.50:1</span>
+                    </span>
+                    <span className="cc-fixg-use" />
+                    <span className="cc-fixg-copy" />
+                  </div>
+                </div>
+              </div>
+              <div className="cc-fixes-live">
+                {goal ? (
+                  fixes.length > 0 ? (
+                    <>
+                      <p className="cc-lede">
+                        {goal.level === 'AA' ? 'To reach AA (4.5:1) for body text, change one colour:' : 'To reach AAA (7:1), change one colour:'}
+                      </p>
+                      <div className="cc-fixes">
+                        {fixes.map((fix) => (
+                          <div key={fix.key} className="cc-fix">
+                            <span className="cc-fix-chip" ref={pairRef(fix.fg, fix.bg)} aria-hidden="true">Aa</span>
+                            <span className="cc-fix-desc">
+                              <span className="cc-fix-line">{fix.verb} {fix.side} to <strong>{fix.hex}</strong></span>
+                              <span className="cc-fix-ratio cc-tone--ok">{ratioStr(fix.ratio)}:1</span>
+                            </span>
+                            <ToolButton variant="quiet" className="cc-fix-use" aria-label={`Use ${fix.hex} for the ${fix.side}`} onClick={() => applyFix(fix)}>Use</ToolButton>
+                            <ToolButton variant="square" icon="copy" className="cc-fix-copy" aria-label={`Copy ${fix.hex}`} title={`Copy ${fix.hex}`} onClick={() => onCopy?.(fix.hex)} />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="cc-hint cc-unfixable">
+                      Neither colour can reach {goal.min}:1 on its own here: they sit
+                      too close in lightness. Change both, or start from a kit pair.
+                    </p>
+                  )
+                ) : (
+                  <p className="cc-hint cc-nothing">Passes every WCAG 2.2 check. Nothing to change.</p>
+                )}
+              </div>
+            </div>
           </ToolSection>
 
           <ToolSection label="From your palette" className="cc-colours">
