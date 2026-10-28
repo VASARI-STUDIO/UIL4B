@@ -111,7 +111,7 @@ export function textAreaScore(samples) {
   const lums = best.idx.map((i) => lumOf(samples[i]))
   const onDark = Math.min(...lums.map((l) => ratio(l, LUM_DARK)))
   const onLight = Math.min(...lums.map((l) => ratio(l, LUM_LIGHT)))
-  return clamp01((Math.max(onDark, onLight) - 3) / 1.5)
+  return clamp01((Math.max(onDark, onLight) - 4) / 0.5)
 }
 
 /**
