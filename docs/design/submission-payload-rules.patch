@@ -1,54 +1,116 @@
 diff --git a/firestore.rules b/firestore.rules
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -129,6 +129,46 @@ service cloud.firestore {
+@@ -129,6 +129,110 @@ service cloud.firestore {
        function isSignedIn() { return request.auth != null; }
        function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
  
 +      // The elements of the two payload lists. A rule cannot loop, so each
-+      // index up to the 32-entry list cap is checked on its own, and an index
-+      // past the end of a shorter list passes. A gradient stop is the
++      // index up to the 32-entry list cap is checked in turn. Each rung tests
++      // the length first and only then the element, so the work follows the
++      // real list length: a 2-entry list stops at its third rung. The list is
++      // passed in rather than re-read from the request, which would cost a
++      // fresh path lookup at every rung. A gradient stop is the
 +      // { color, position } pair gradientSubmissions.js sanitises to; a palette
 +      // colour is a hex string.
-+      function stopAt(i) {
-+        let stops = request.resource.data.payload.stops;
-+        return stops.size() <= i
-+          || (stops[i] is map
-+              && stops[i].keys().hasOnly(['color', 'position'])
-+              && stops[i].color is string
-+              && stops[i].color.size() <= 16
-+              && stops[i].position is number);
++      function stopOk(e) {
++        return e is map
++          && e.keys().hasOnly(['color', 'position'])
++          && e.color is string
++          && e.color.size() <= 16
++          && e.position is number;
 +      }
 +
-+      function colorAt(i) {
-+        let colors = request.resource.data.payload.colors;
-+        return colors.size() <= i
-+          || (colors[i] is string && colors[i].size() <= 32);
++      function colorOk(e) {
++        return e is string && e.size() <= 32;
++      }
++
++      // The ladders nest as operators inside one function body, so the call
++      // depth stays at three (payloadElementsOk, then a ladder, then an element
++      // check) however long the list is.
++      function stopsOk(list) {
++        return list.size() <= 0 || (stopOk(list[0]) && (
++          list.size() <= 1 || (stopOk(list[1]) && (
++          list.size() <= 2 || (stopOk(list[2]) && (
++          list.size() <= 3 || (stopOk(list[3]) && (
++          list.size() <= 4 || (stopOk(list[4]) && (
++          list.size() <= 5 || (stopOk(list[5]) && (
++          list.size() <= 6 || (stopOk(list[6]) && (
++          list.size() <= 7 || (stopOk(list[7]) && (
++          list.size() <= 8 || (stopOk(list[8]) && (
++          list.size() <= 9 || (stopOk(list[9]) && (
++          list.size() <= 10 || (stopOk(list[10]) && (
++          list.size() <= 11 || (stopOk(list[11]) && (
++          list.size() <= 12 || (stopOk(list[12]) && (
++          list.size() <= 13 || (stopOk(list[13]) && (
++          list.size() <= 14 || (stopOk(list[14]) && (
++          list.size() <= 15 || (stopOk(list[15]) && (
++          list.size() <= 16 || (stopOk(list[16]) && (
++          list.size() <= 17 || (stopOk(list[17]) && (
++          list.size() <= 18 || (stopOk(list[18]) && (
++          list.size() <= 19 || (stopOk(list[19]) && (
++          list.size() <= 20 || (stopOk(list[20]) && (
++          list.size() <= 21 || (stopOk(list[21]) && (
++          list.size() <= 22 || (stopOk(list[22]) && (
++          list.size() <= 23 || (stopOk(list[23]) && (
++          list.size() <= 24 || (stopOk(list[24]) && (
++          list.size() <= 25 || (stopOk(list[25]) && (
++          list.size() <= 26 || (stopOk(list[26]) && (
++          list.size() <= 27 || (stopOk(list[27]) && (
++          list.size() <= 28 || (stopOk(list[28]) && (
++          list.size() <= 29 || (stopOk(list[29]) && (
++          list.size() <= 30 || (stopOk(list[30]) && (
++          list.size() <= 31 || stopOk(list[31])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
++      }
++
++      function colorsOk(list) {
++        return list.size() <= 0 || (colorOk(list[0]) && (
++          list.size() <= 1 || (colorOk(list[1]) && (
++          list.size() <= 2 || (colorOk(list[2]) && (
++          list.size() <= 3 || (colorOk(list[3]) && (
++          list.size() <= 4 || (colorOk(list[4]) && (
++          list.size() <= 5 || (colorOk(list[5]) && (
++          list.size() <= 6 || (colorOk(list[6]) && (
++          list.size() <= 7 || (colorOk(list[7]) && (
++          list.size() <= 8 || (colorOk(list[8]) && (
++          list.size() <= 9 || (colorOk(list[9]) && (
++          list.size() <= 10 || (colorOk(list[10]) && (
++          list.size() <= 11 || (colorOk(list[11]) && (
++          list.size() <= 12 || (colorOk(list[12]) && (
++          list.size() <= 13 || (colorOk(list[13]) && (
++          list.size() <= 14 || (colorOk(list[14]) && (
++          list.size() <= 15 || (colorOk(list[15]) && (
++          list.size() <= 16 || (colorOk(list[16]) && (
++          list.size() <= 17 || (colorOk(list[17]) && (
++          list.size() <= 18 || (colorOk(list[18]) && (
++          list.size() <= 19 || (colorOk(list[19]) && (
++          list.size() <= 20 || (colorOk(list[20]) && (
++          list.size() <= 21 || (colorOk(list[21]) && (
++          list.size() <= 22 || (colorOk(list[22]) && (
++          list.size() <= 23 || (colorOk(list[23]) && (
++          list.size() <= 24 || (colorOk(list[24]) && (
++          list.size() <= 25 || (colorOk(list[25]) && (
++          list.size() <= 26 || (colorOk(list[26]) && (
++          list.size() <= 27 || (colorOk(list[27]) && (
++          list.size() <= 28 || (colorOk(list[28]) && (
++          list.size() <= 29 || (colorOk(list[29]) && (
++          list.size() <= 30 || (colorOk(list[30]) && (
++          list.size() <= 31 || colorOk(list[31])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
 +      }
 +
 +      // Without these, `angle` took any type and `stops` and `colors` took any
 +      // elements, so a document could still reach 1 MiB inside the list caps.
 +      function payloadElementsOk() {
-+        return (!('angle' in request.resource.data.payload)
-+                || request.resource.data.payload.angle is number)
-+          && (!('stops' in request.resource.data.payload)
-+              || (
-+                  stopAt(0) && stopAt(1) && stopAt(2) && stopAt(3) && stopAt(4) && stopAt(5) && stopAt(6) && stopAt(7)
-+                  && stopAt(8) && stopAt(9) && stopAt(10) && stopAt(11) && stopAt(12) && stopAt(13) && stopAt(14) && stopAt(15)
-+                  && stopAt(16) && stopAt(17) && stopAt(18) && stopAt(19) && stopAt(20) && stopAt(21) && stopAt(22) && stopAt(23)
-+                  && stopAt(24) && stopAt(25) && stopAt(26) && stopAt(27) && stopAt(28) && stopAt(29) && stopAt(30) && stopAt(31)))
-+          && (!('colors' in request.resource.data.payload)
-+              || (
-+                  colorAt(0) && colorAt(1) && colorAt(2) && colorAt(3) && colorAt(4) && colorAt(5) && colorAt(6) && colorAt(7)
-+                  && colorAt(8) && colorAt(9) && colorAt(10) && colorAt(11) && colorAt(12) && colorAt(13) && colorAt(14) && colorAt(15)
-+                  && colorAt(16) && colorAt(17) && colorAt(18) && colorAt(19) && colorAt(20) && colorAt(21) && colorAt(22) && colorAt(23)
-+                  && colorAt(24) && colorAt(25) && colorAt(26) && colorAt(27) && colorAt(28) && colorAt(29) && colorAt(30) && colorAt(31)));
++        let p = request.resource.data.payload;
++        return (!('angle' in p) || p.angle is number)
++          && (!('stops' in p) || stopsOk(p.stops))
++          && (!('colors' in p) || colorsOk(p.colors));
 +      }
 +
        // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
        // key allowlist and a size cap on every field.
        function submissionPayloadOk() {
-@@ -185,7 +225,8 @@ service cloud.firestore {
+@@ -185,7 +289,8 @@ service cloud.firestore {
            && request.resource.data.authorName.size() <= 60
            && request.resource.data.createdAt is string
            && request.resource.data.createdAt.size() <= 40
