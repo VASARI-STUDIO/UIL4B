@@ -473,3 +473,40 @@ test('GradientGenerator applies the rolled space and shows the interpolation loc
   assert.match(src, /setSpace\(g\.space\)/, 'a roll no longer sets the interpolation')
   assert.match(src, /const RANDOM_DRAWS_SPACE = true/)
 })
+
+// ── Fix round 1: the space is drawn on the ramp that ships ───────────────────
+// Mutation: rollCandidate calls drawSpace before withStopLocks (the old order)  -> "Standard on a locked ramp ..."
+// Mutation: endsOfRamp keeps the seam stop for Conic (ends = first + last)       -> "Conic ends ..."
+import { hueGap, endsOfRamp } from '../../src/utils/gradientScore.js'
+
+test('Standard on a locked ramp still keeps the middle clean and stays under 140 degrees of hue gap', () => {
+  const stops = [
+    { color: '#E03030', position: 0, lockColour: true, lockPosition: false },
+    { color: '#336699', position: 100, lockColour: false, lockPosition: false },
+  ]
+  let standard = 0
+  for (let i = 0; i < 2000; i++) {
+    const g = rollGradient(mulberry32(9000 + i), { stops })
+    assert.equal(g.stops.find((s) => s.lockColour).color, '#E03030')
+    if (g.space !== 'srgb') continue
+    standard++
+    assert.ok(standardStaysClean(g.stops), `Standard, dirty middle: ${g.stops.map((s) => s.color)}`)
+    const [a, b] = endsOf(g).map(hexToOklchRaw)
+    assert.ok(hueGap(a, b) < 140, `Standard on a ${hueGap(a, b)} degree gap: ${g.stops.map((s) => s.color)}`)
+  }
+  assert.ok(standard > 100, `Standard was drawn only ${standard} times: the test checks nothing`)
+})
+
+test('Conic ends are scored on the first stop and the stop before the seam', () => {
+  const A = '#1A2A6C'
+  const B = '#F5E27A'
+  const conic = { type: 'Conic', space: 'oklch', stops: [{ color: A, position: 0 }, { color: B, position: 50 }, { color: A, position: 100 }] }
+  assert.deepEqual(endsOf(conic), [A, B])
+  assert.deepEqual(endsOfRamp(conic.stops, 'Conic'), [A, B])
+  // The ends drive the pair terms, so the conic scores like the open A-to-B ramp, not like A-to-A.
+  const open = { type: 'Linear', space: 'oklch', stops: [{ color: A, position: 0 }, { color: B, position: 100 }] }
+  const c = scoreGradient(conic).terms
+  const l = scoreGradient(open).terms
+  for (const k of ['valueStep', 'chromaBalance', 'hueRelation', 'anchor', 'notSeen']) assert.equal(c[k], l[k], k)
+  assert.ok(c.valueStep > 0, 'a dark-to-light pair has a value step; A-to-A would have none')
+})

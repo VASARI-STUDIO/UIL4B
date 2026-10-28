@@ -424,7 +424,7 @@ export function rollCandidate(rand = Math.random, filters = {}, shape = null) {
   const positions = rollPositions(n, rand)
   const drawnAngle = pickAngle(rand(), rand())
   const spaceRoll = rand()
-  const g = {
+  const rolled = {
     type,
     angle: locks.angle ?? drawnAngle,
     style: PLAIN,
@@ -432,6 +432,9 @@ export function rollCandidate(rand = Math.random, filters = {}, shape = null) {
     tone,
     stops: colours.map((color, i) => ({ color, position: positions[i] })),
   }
+  // The person's stop locks go on before the space is drawn: the clean-middle check
+  // and the hue-gap guard must judge the ramp that ships, locked colours and all.
+  const g = withStopLocks(rolled, filters.stops)
   g.space = locks.space ?? drawSpace(g, spaceRoll, !filters.palette && harmony === 'Complementary')
   return g
 }
@@ -452,8 +455,8 @@ function withStopLocks(g, prev) {
 }
 
 /**
- * Roll the eight candidates and score them. Each candidate has the locks applied
- * before it is scored, so the score is of what the person would see.
+ * Roll the eight candidates and score them. rollCandidate lays the stop locks on
+ * before it draws the space, so the score is of what the person would see.
  * filters adds { stops: the current stops with their locks, recent: the session's
  * last results as [firstHex, lastHex] pairs } to rollCandidate's.
  * Returns [{ g, score }] in roll order.
@@ -462,7 +465,7 @@ export function rollCandidates(rand = Math.random, filters = {}) {
   const ctx = scoreContext(filters.recent)
   const shape = rollShape(filters, rand)
   return Array.from({ length: CANDIDATES }, () => {
-    const g = withStopLocks(rollCandidate(rand, filters, shape), filters.stops)
+    const g = rollCandidate(rand, filters, shape)
     return { g, score: scoreGradient(g, ctx).total }
   })
 }
