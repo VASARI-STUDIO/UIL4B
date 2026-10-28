@@ -219,8 +219,18 @@ export async function migrateGradientSubmissions({ user, storage, list, publish 
   // publish by this module uses, so both generations count as already there.
   const seen = new Set(queued.flatMap(s => [s?.localId, s?.id]).filter(Boolean))
 
+  // The list took a network round trip: another tab may have published, withdrawn
+  // or cleared entries meanwhile, so what is published is what the key holds now.
+  const current = readRawLegacy(target)
+  if (!current) return result
+  if (current.length === 0) {
+    clearGradientSubmissions(target)
+    result.cleared = true
+    return result
+  }
+
   // Oldest first, so the queue's own timestamps keep the order they were made in.
-  for (const item of [...raw].reverse()) {
+  for (const item of [...current].reverse()) {
     const entry = sanitizeGradientSubmission(item)
     const docId = entry && queueDocId(user.uid, entry.id)
     if (!entry || entry.status === 'withdrawn' || seen.has(entry.id) || seen.has(docId)) {

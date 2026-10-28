@@ -1076,6 +1076,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   useEffect(() => {
     if (pendingSave == null || !canSaveProjects) return
     setPendingSave(null)
+    // The save is being attempted, so a remount has nothing left to reopen.
+    clearPendingSave()
     try {
       saveProject(pendingSave)
       setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false)
@@ -1475,10 +1477,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
     setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    // A closed menu has no save waiting on the account and nothing to reopen on a remount.
+    setPendingSave(null); clearPendingSave()
   }, [])
   // A row in the Save or share menu closing it: the refusal under the field goes too.
   const closeSaveMenu = useCallback(() => {
     setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
+    setPendingSave(null); clearPendingSave()
   }, [])
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
@@ -2549,11 +2554,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // lets the page reopen the menu with the name when it comes back.
       stashPendingSave('palette', saveName.trim())
       const signedIn = await requireLogin('save this palette', { free: true, signup: true })
+      // Unmounted: a new account was sent to onboarding. The stash stays for the
+      // remount to find. It is cleared only once the save has run, or when the
+      // sign-in is cancelled or the menu closed (closeAllMenus, closeSaveMenu).
       if (!mountedRef.current) return
-      clearPendingSave()
-      if (!signedIn) { setPendingSave(null); return }
+      if (!signedIn) { clearPendingSave(); setPendingSave(null); return }
       // Closed while the sign-in was open: nothing to finish.
-      if (!saveOpenRef.current) return
+      if (!saveOpenRef.current) { clearPendingSave(); return }
     }
     const name = saveName.trim()
     if (!name) { setSaveNameError('Name the project to save it.'); return }
@@ -3383,6 +3390,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           name={saveName}
           onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
           onSave={doSave}
+          busy={authLoading}
           nameError={saveNameError}
           note={saveNote}
           saveError={saveError}

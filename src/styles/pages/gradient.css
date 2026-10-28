@@ -32,6 +32,18 @@
   color: var(--tl-dim);
 }
 
+/* ── The "keep these gradients?" question ───────────────────────────────────
+   Its own strip under the editor, in the code well's skin, so it reads as part
+   of the tool and not as loose text. It sits after the grid, so its arrival moves
+   only the preset strip below it. */
+.grd .grd-keep {
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+}
+
 /* ── Canvas (D:627) ─────────────────────────────────────────────────────────
    The stage is the canvas's slot: a fixed minimum height the canvas fills, and
    the anchor for anything laid over it. isolation keeps the layers inside from

@@ -23,9 +23,9 @@ export async function publishToQueue(record) {
  * firestore.rules lets a client create a document under any id it likes, but a
  * second write to an existing one is an update, and the owner may only update
  * `status` to 'withdrawn': the repeat is refused with permission-denied. That
- * refusal is only taken to mean "already there" when the owner can read the
- * document back (the rules deny the read of a missing document), so a genuine
- * refusal still throws.
+ * refusal is only taken to mean "already there" when the document read back
+ * carries this author's uid: an id someone else created first (ids are free to
+ * choose) must not count as ours. Anything else still throws.
  */
 export async function publishToQueueOnce(record, { id }) {
   const ref = doc(db, QUEUE_COLLECTION, id)
@@ -35,7 +35,11 @@ export async function publishToQueueOnce(record, { id }) {
   } catch (err) {
     if (err?.code === 'permission-denied') {
       let there = false
-      try { there = (await getDoc(ref)).exists() } catch { /* not readable: not ours */ }
+      try {
+        const snap = await getDoc(ref)
+        const uid = record?.authorUid
+        there = Boolean(uid) && snap.exists() && snap.data()?.authorUid === uid
+      } catch { /* not readable: not ours */ }
       if (there) return { id, created: false }
     }
     throw err

@@ -687,7 +687,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // A library gradient is drawn in sRGB there, so it opens in sRGB here —
       // the preview matches the card it came from until the person changes it.
       setSpace(incoming.space || 'srgb')
-      setFromLibrary(true)
+      // A link copied from the tool is someone's own gradient; only a library
+      // hand-off (no src marker) opens locked.
+      setFromLibrary(!incoming.link)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
       const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
@@ -695,7 +697,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
     }
     const next = new URLSearchParams(searchParams)
-    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi'].forEach(k => next.delete(k))
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1068,6 +1070,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSaveNote('')
     setSaveNameError('')
     setPendingSave(null)
+    // A closed menu has nothing to reopen on a remount.
+    clearPendingSave()
     // Keyboard and the row actions hand focus back to the button; a press outside
     // is already somewhere else.
     if (reason !== 'outside') saveTriggerRef.current?.focus()
@@ -1129,8 +1133,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // a link is not an export.
   const copyLink = async () => {
     closeSave('item')
-    // No name yet (it comes with the generated name), so `gn` is left off.
-    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space })}`
+    // No name yet (it comes with the generated name), so `gn` is left off. A
+    // gradient of the person's own carries src=link so it opens editable; one still
+    // sourced from the library stays a library hand-off and opens locked.
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, src: fromLibrary ? undefined : 'link' })}`
     try {
       await navigator.clipboard.writeText(url)
       toast?.('Link copied')
@@ -1162,11 +1168,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // lets the page reopen the menu with the name when it comes back.
       stashPendingSave('gradient', saveName.trim())
       const signedIn = await requireLogin('save this gradient to your account', { free: true, signup: true })
+      // Unmounted: a new account was sent to onboarding. The stash stays for the
+      // remount to find. It is cleared only once the save has run, or when the
+      // sign-in is cancelled or the menu closed (closeSave).
       if (!mountedRef.current) return
-      clearPendingSave()
-      if (!signedIn) { setPendingSave(null); return }
+      if (!signedIn) { clearPendingSave(); setPendingSave(null); return }
       // Closed while the sign-in was open: nothing to finish.
-      if (!saveOpenRef.current) return
+      if (!saveOpenRef.current) { clearPendingSave(); return }
     }
     const name = saveName.trim()
     if (!name) { setSaveNameError('Name the project to save it.'); return }
@@ -1179,10 +1187,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   useEffect(() => {
     if (pendingSave == null || !canSaveProjects) return
     setPendingSave(null)
+    // The save is being attempted, so a remount has nothing left to reopen.
+    clearPendingSave()
     try {
       saveProject(pendingSave)
       closeSave('item')
-      toast?.('Saved to your account')
+      toast?.('Project saved')
     } catch (err) {
       // The free cap's refusal stays under the field, with the way forward as a link.
       setSaveError(err?.message || 'Couldn’t save')
@@ -1192,7 +1202,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     try {
       overwriteProject(project.id)
       closeSave('item')
-      toast?.('Saved to your account')
+      toast?.('Updated: ' + project.name)
     } catch (err) {
       toast?.(err?.message || 'Couldn’t save', 'error')
     }
@@ -1569,6 +1579,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           name={saveName}
           onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
           onSave={doSave}
+          busy={authLoading}
           nameError={saveNameError}
           note={saveNote}
           sheetBelow={768}
@@ -1596,7 +1607,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 onClick={downloadSvg}
                 disabled={type === 'Conic'}
                 reason="SVG can't draw a conic gradient"
-                hint={user ? undefined : 'Free account'}
+                hint={user ? undefined : 'Needs a free account'}
               >
                 Download SVG
               </SaveShareItem>
@@ -1606,14 +1617,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       )}
       <ToolGrid>
         <ToolMain>
-          {keepGradients.waiting > 0 && (
-            <LegacyGradientsPrompt
-              count={keepGradients.waiting}
-              busy={keepGradients.busy}
-              onKeep={keepGradients.keep}
-              onDismiss={keepGradients.notMine}
-            />
-          )}
           {editLocked && (
             <p className="grd-note">
               <ToolIcon name="lock-simple" size={13} />
@@ -1998,6 +2001,20 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </ToolSection>
         </ToolPanel>
       </ToolGrid>
+
+      {/* The question about gradients this browser holds comes last in the editor,
+          after the code well and the controls: it mounts once the account is known,
+          so anywhere above would push the canvas or the panel down mid-edit. */}
+      {keepGradients.waiting > 0 && (
+        <div className="grd-keep">
+          <LegacyGradientsPrompt
+            count={keepGradients.waiting}
+            busy={keepGradients.busy}
+            onKeep={keepGradients.keep}
+            onDismiss={keepGradients.notMine}
+          />
+        </div>
+      )}
 
       {/* START FROM A PRESET. The person's own palettes come first (one-tap
           gradients of their saved colours), then the curated set. */}

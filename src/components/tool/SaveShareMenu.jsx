@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SaveRefusal from '../SaveRefusal'
 // The base menu rules (.plb-menu, .plb-menu-item, ...) and the floating-panel
 // rules this menu sits in.
@@ -14,6 +14,8 @@ import '../../styles/deferred/save-share-menu.css'
 //   name           the project name field's value (controlled)
 //   onNameChange   (value) => void
 //   onSave         called on Save and on Enter in the field
+//   busy           true while the account is still being checked: Save is disabled, as a
+//                  press would meet the sign-in prompt for someone who is signed in
 //   nameError      a plain refusal held under the field (an empty name)
 //   note           a plain line under the field (a save that is waiting for Save)
 //   sheetBelow     640 (default) or 768: below this width the menu is a bottom
@@ -36,7 +38,7 @@ import '../../styles/deferred/save-share-menu.css'
 //                  replaces a prefilled name
 export default function SaveShareMenu({
   label,
-  name, onNameChange, onSave, nameError, note, sheetBelow = 640, saveError, refusalTestId,
+  name, onNameChange, onSave, busy = false, nameError, note, sheetBelow = 640, saveError, refusalTestId,
   projects = [], onOverwrite,
   onClose,
   share, exports, after,
@@ -61,6 +63,19 @@ export default function SaveShareMenu({
   useEffect(() => {
     if (nameError) inputRef.current?.focus({ preventScroll: true })
   }, [nameError])
+
+  // Every press of Save. When the same refusal is already showing, the effect
+  // above sees no change, so the press itself returns focus to the field and
+  // remounts the message (a new alert, which a screen reader reads again).
+  const [pressed, setPressed] = useState(0)
+  const press = () => {
+    if (busy) return
+    if (nameError) {
+      inputRef.current?.focus({ preventScroll: true })
+      setPressed(n => n + 1)
+    }
+    onSave?.()
+  }
 
   useEffect(() => {
     if (!dismiss) return undefined
@@ -99,7 +114,7 @@ export default function SaveShareMenu({
             value={name}
             onChange={(e) => onNameChange?.(e.target.value)}
             onFocus={selectOnFocus ? (e) => e.target.select() : undefined}
-            onKeyDown={(e) => { if (e.key === 'Enter') onSave?.() }}
+            onKeyDown={(e) => { if (e.key === 'Enter') press() }}
             placeholder="Project name…"
             aria-label="Project name"
             aria-invalid={nameError ? true : undefined}
@@ -107,10 +122,17 @@ export default function SaveShareMenu({
             autoCapitalize="words"
             enterKeyHint="done"
           />
-          <button type="button" className="btn btn-s btn-accent" onClick={() => onSave?.()}>Save</button>
+          <button
+            type="button"
+            className="btn btn-s btn-accent"
+            onClick={press}
+            disabled={busy}
+            aria-busy={busy || undefined}
+            title={busy ? 'Checking your account…' : undefined}
+          >Save</button>
         </div>
         {note && !nameError && <p className="plb-menu-note" role="status">{note}</p>}
-        {nameError && <p className="plb-menu-error" id="ssm-name-error" role="alert">{nameError}</p>}
+        {nameError && <p className="plb-menu-error" id="ssm-name-error" role="alert" key={pressed}>{nameError}</p>}
         {saveError && <SaveRefusal message={saveError} testId={refusalTestId} />}
         {projects.length > 0 && (
           <>

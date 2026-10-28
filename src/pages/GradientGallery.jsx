@@ -15,7 +15,7 @@ import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGal
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
-import { readLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
+import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
@@ -114,8 +114,8 @@ export default function GradientGallery({ toast }) {
   const [queue, setQueue] = useState({ uid: null, items: [] })
   const [queueRefresh, setQueueRefresh] = useState(0)
   const [withdrawingId, setWithdrawingId] = useState(null)
-  // How many an earlier visit left in this browser; read once, never written.
-  const [legacyCount] = useState(() => readLegacyGradientSubmissions().length)
+  // How many an earlier visit left in this browser (withdrawn ones are not counted); read once, never written.
+  const [legacyCount] = useState(() => countLegacyGradientSubmissions())
   const keepGradients = useGradientSubmissionMigration({ toast, onMigrated: () => setQueueRefresh(n => n + 1) })
 
   useEffect(() => {
@@ -156,6 +156,7 @@ export default function GradientGallery({ toast }) {
       // Forget the browser-held copy first, so a withdrawn gradient can never
       // be found there and published again.
       removeLegacyGradientSubmission(s.localId)
+      keepGradients.recount()
       await deleteSubmission(s.docId)
       setQueue(q => ({ ...q, items: q.items.filter(x => x.docId !== s.docId) }))
       toast?.(s.status === 'pending' ? 'Submission withdrawn' : 'Submission removed')
@@ -295,7 +296,7 @@ export default function GradientGallery({ toast }) {
       {user && keepGradients.waiting > 0 && (
         <section className="grg-queue" aria-labelledby="grg-keep-heading">
           <div className="section-h">
-            <h2 id="grg-keep-heading">Your submissions</h2>
+            <h2 id="grg-keep-heading">Left in this browser</h2>
           </div>
           <LegacyGradientsPrompt
             count={keepGradients.waiting}

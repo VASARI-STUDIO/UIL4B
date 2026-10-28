@@ -29,7 +29,7 @@ const listAll = (uid, kind) => listMySubmissions(uid, kind, LIST_MAX)
  * @param {object}   opts
  * @param {Function} [opts.toast]       page toast; says what happened after Keep
  * @param {Function} [opts.onMigrated]  called with the result when a Keep run settles
- * @returns {{ waiting: number, busy: boolean, keep: Function, notMine: Function }}
+ * @returns {{ waiting: number, busy: boolean, keep: Function, notMine: Function, recount: Function }}
  */
 export default function useGradientSubmissionMigration({ toast, onMigrated } = {}) {
   const { user } = useAuth()
@@ -69,5 +69,8 @@ export default function useGradientSubmissionMigration({ toast, onMigrated } = {
     setAnswered(n => n + 1)
   }, [uid])
 
-  return { waiting, busy, keep, notMine }
+  // Read the count again, for a page that removed a browser-held entry itself.
+  const recount = useCallback(() => setAnswered(n => n + 1), [])
+
+  return { waiting, busy, keep, notMine, recount }
 }

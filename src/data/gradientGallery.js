@@ -33,10 +33,12 @@ export function gradientCss(type, angle, stops) {
 //   gi  interpolation space (oklch or srgb); a link without it opens in sRGB
 //   st  style family      sp  its parameters
 //   sd  seed              fx  finishes
-// Callers do not pass them yet; the decoder reads none of them yet either.
+//   src 'link' on a link someone copied from the tool, so it opens as their own
+//       editable gradient; a library hand-off leaves it off
+// Callers do not pass st, sp, sd or fx yet; the decoder reads none of them yet either.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx]]
+  const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx], ['src', g.src]]
     .filter(([, v]) => v != null && v !== '')
     .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
     .join('')
@@ -47,7 +49,7 @@ export function gradientToolUrl(g) {
 const MAX_STOPS = 12
 
 // Parse a gallery hand-off out of the tool's search params. Returns
-// { type, angle, stops, name } or null when there is no (valid) hand-off —
+// { type, angle, stops, name, space, link } or null when there is no (valid) hand-off —
 // every field is validated so a mangled URL can never produce broken stops.
 export function decodeGradientParams(params) {
   const gs = params.get('gs')
@@ -62,5 +64,6 @@ export function decodeGradientParams(params) {
   const name = (params.get('gn') || '').slice(0, 60) || null
   const gi = (params.get('gi') || '').toLowerCase()
   const space = gi === 'oklch' || gi === 'srgb' ? gi : null
-  return { type, angle, stops, name, space }
+  const link = params.get('src') === 'link'
+  return { type, angle, stops, name, space, link }
 }
