@@ -93,3 +93,9 @@ test('the checkout event carries where the buyer came from, and nothing unsafe',
   assert.deepEqual(cleanProps({ plan: 'yearly', from: 'kit-gallery' }), { plan: 'yearly', from: 'kit-gallery' })
   assert.deepEqual(cleanProps({ from: 'someone@x.test' }), {})
 })
+
+test('the pick carries the account that made it, when one is given', () => {
+  const storage = memory()
+  storePick('abc123', DEFAULT_PICK, { storage, now: 1000, uid: 'u-1' })
+  assert.equal(readPick({ storage, now: 2000 }).uid, 'u-1')
+})
