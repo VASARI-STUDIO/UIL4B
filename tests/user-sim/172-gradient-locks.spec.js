@@ -169,7 +169,8 @@ test.describe('the locks at 1440', () => {
     await expect(dialog.getByText('Type is locked to Radial. Unlock it in Geometry to use this.')).toBeVisible()
     // Pills stay visible, and a press on one changes nothing.
     await expect(row.getByRole('button', { name: 'Conic', exact: true })).toBeVisible()
-    await row.getByRole('button', { name: 'Linear', exact: true }).click()
+    // Playwright reads aria-disabled on the group as not enabled, so force the press a mouse would make.
+    await row.getByRole('button', { name: 'Linear', exact: true }).click({ force: true })
     await expect(row.getByRole('button', { name: 'Conic', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(row.getByRole('button', { name: 'Linear', exact: true })).toHaveAttribute('aria-pressed', 'false')
     await page.keyboard.press('Escape')

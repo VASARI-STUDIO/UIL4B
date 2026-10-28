@@ -527,7 +527,7 @@ test.describe('selecting several stops at 1440px', () => {
     await stopSelect(page, 1).click()
     await stopSelect(page, 3).click({ modifiers: ['Control'] })
     const locks = page.locator('.grd-stop-lock')
-    await expect(locks.nth(0)).toHaveAttribute('aria-label', 'Lock or unlock the 2 selected stops')
+    await expect(locks.nth(0)).toHaveAttribute('aria-label', "Keep the 2 selected stops' colours when you press Random")
     await locks.nth(0).click()
     const state = () => locks.evaluateAll((els) => els.map((e) => e.getAttribute('aria-pressed')))
     expect(await state()).toEqual(['true', 'false', 'true', 'false', 'false'])
