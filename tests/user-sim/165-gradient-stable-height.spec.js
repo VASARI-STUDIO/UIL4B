@@ -21,6 +21,10 @@
 //   .grd .grd-code { height: auto }               -> the CSS > Tailwind > SVG sequence
 //   the palette note back in the flow             -> the "no palette" sequence
 //   popClassName dropped from ColorPickerPop      -> the picker popover swatches
+//   removeStop ends in setActiveStop(0)           -> the four "removing ..." selection tests
+//   LockBtn ignores `unavailable` (click, or aria) -> "on a Radial gradient the angle lock ..."
+//   Add/Remove back to the disabled attribute     -> "at twelve stops Add ..." / "at two stops Remove ..."
+//   the "N of 12" count dropped                   -> "the Stops header counts the visible rows ..."
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -479,6 +483,244 @@ test.describe('the buttons that change the stop count stay drawn', () => {
     await removeButtons(panel).last().click()
     await expect(panel.getByRole('button', { name: 'Add a stop', exact: true })).toBeEnabled()
   })
+})
+
+// The stop-count limits and what removing a stop does to the selection. At twelve
+// stops the Add button, and at two the Remove buttons, are aria-disabled rather than
+// disabled: still focusable, so the reason can be reached, and a press does nothing.
+// Playwright treats aria-disabled as not-enabled, so presses use force.
+//
+// Hand-checked sizes: rows are 40px (56px on touch) with a 2px gap, so the window
+// scrolls in steps of 42px (58px on touch).
+test.describe('the stop-count limits and the selection when a stop is removed', () => {
+  for (const screen of [SCREENS[0], SCREENS[2]]) {
+    test.describe(`at ${screen.w}px${screen.touch ? ' (touch)' : ''}`, () => {
+      test.use({
+        viewport: { width: screen.w, height: screen.h },
+        hasTouch: screen.touch,
+        isMobile: screen.touch,
+        reducedMotion: 'reduce',
+      })
+
+      const pitch = (screen.touch ? 56 : 40) + 2
+      const countOf = (panel) => panel.locator('.grd-stops-count')
+      const grow = async (page, n) => {
+        const panel = panelOf(page)
+        while ((await stopRows(page).count()) < n) await addButton(panel).click()
+        await expect(stopRows(page)).toHaveCount(n)
+      }
+      /** Which "Select stop n" buttons are pressed (1-based), and every row's hex. */
+      const selection = (page) => page.evaluate(() => {
+        const btns = [...document.querySelectorAll('.grd-stop-select')]
+        return {
+          pressed: btns.map((b, i) => (b.getAttribute('aria-pressed') === 'true' ? i + 1 : 0)).filter(Boolean),
+          hexes: btns.map((b) => b.querySelector('.grd-stop-hex').textContent),
+        }
+      })
+      const select = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) }).click()
+      const remove = (page, n) => panelOf(page).getByRole('button', { name: `Remove stop ${n}`, exact: true }).click()
+      const windowScroll = (page) => page.locator('.grd-stops').evaluate((el) => el.scrollTop)
+
+      test('the Stops header counts the visible rows once there are more than three, and follows the scroll', async ({ page }) => {
+        watch(page, 'a designer with a long list')
+        await open(page)
+        const panel = panelOf(page)
+        await reduceTo(page, 3)
+        await expect(countOf(panel), 'three stops all fit, so there is nothing to count').toHaveCount(0)
+
+        await grow(page, MAX_STOPS)
+        // The newest stop is active, so the window has scrolled to the foot.
+        await expect(countOf(panel)).toHaveText('10–12 of 12')
+        await page.locator('.grd-stops').evaluate((el) => { el.scrollTop = 0 })
+        await expect(countOf(panel)).toHaveText('1–3 of 12')
+        await page.locator('.grd-stops').evaluate((el, step) => { el.scrollTop = step * 3 }, pitch)
+        await expect(countOf(panel)).toHaveText('4–6 of 12')
+        await page.locator('.grd-stops').evaluate((el) => { el.scrollTop = el.scrollHeight })
+        await expect(countOf(panel)).toHaveText('10–12 of 12')
+      })
+
+      test('at twelve stops Add is aria-disabled, focusable, says why, and a press adds nothing', async ({ page }) => {
+        watch(page, 'a designer at the stop limit')
+        await open(page)
+        const panel = panelOf(page)
+        await grow(page, MAX_STOPS - 1)
+        const live = panel.getByRole('button', { name: 'Add a stop', exact: true })
+        await expect(live, 'below the limit it is a live button').not.toHaveAttribute('aria-disabled', /.*/)
+        await live.click()
+        await expect(stopRows(page)).toHaveCount(MAX_STOPS)
+
+        const full = panel.getByRole('button', { name: '12 stops is the most', exact: true })
+        await expect(full).toHaveAttribute('aria-disabled', 'true')
+        await expect(full, 'aria-disabled, not the disabled attribute').not.toHaveAttribute('disabled', /.*/)
+        await full.focus()
+        await expect(full, 'still reachable by keyboard').toBeFocused()
+
+        await full.click({ force: true })
+        await expect(stopRows(page)).toHaveCount(MAX_STOPS)
+        await full.focus()
+        await page.keyboard.press('Enter')
+        await page.keyboard.press('Space')
+        await expect(stopRows(page)).toHaveCount(MAX_STOPS)
+        await expect(removeButtons(panel)).toHaveCount(MAX_STOPS)
+        await expect(full, 'the label is unchanged by the presses').toBeVisible()
+      })
+
+      test('at two stops Remove is aria-disabled, points at its reason, and a click or a key removes nothing', async ({ page }) => {
+        watch(page, 'a designer at the stop minimum')
+        await open(page)
+        const panel = panelOf(page)
+        await reduceTo(page, 3)
+        for (const b of await removeButtons(panel).all()) {
+          await expect(b, 'at three stops Remove is live').not.toHaveAttribute('aria-disabled', /.*/)
+          await expect(b).not.toHaveAttribute('aria-describedby', /.*/)
+        }
+        await remove(page, 1)
+        await expect(stopRows(page)).toHaveCount(2)
+        await expect(page.locator('#grd-stop-min-hint')).toHaveText('A gradient needs at least two stops')
+
+        const before = (await selection(page)).hexes
+        for (const b of await removeButtons(panel).all()) {
+          await expect(b).toHaveAttribute('aria-disabled', 'true')
+          await expect(b).toHaveAttribute('aria-describedby', 'grd-stop-min-hint')
+          await expect(b).not.toHaveAttribute('disabled', /.*/)
+        }
+        const first = removeButtons(panel).first()
+        await first.click({ force: true })
+        await expect(stopRows(page)).toHaveCount(2)
+        await first.focus()
+        await expect(first, 'still reachable by keyboard').toBeFocused()
+        await page.keyboard.press('Enter')
+        await page.keyboard.press('Space')
+        await expect(stopRows(page)).toHaveCount(2)
+        await removeButtons(panel).last().click({ force: true })
+        await expect(stopRows(page)).toHaveCount(2)
+        expect((await selection(page)).hexes, 'the same two stops are left').toEqual(before)
+
+        // Back to three and the hint and the aria-disabled go away.
+        await addButton(panel).click()
+        await expect(page.locator('#grd-stop-min-hint')).toHaveCount(0)
+        await expect(removeButtons(panel).first()).not.toHaveAttribute('aria-disabled', /.*/)
+      })
+
+      test('removing the active middle row leaves the row that slid into its place selected', async ({ page }) => {
+        watch(page, 'a designer deleting the selected stop')
+        await open(page)
+        await grow(page, 5)
+        await select(page, 2)
+        const was = await selection(page)
+        expect(was.pressed).toEqual([2])
+        await remove(page, 2)
+        await expect(stopRows(page)).toHaveCount(4)
+        await expect.poll(async () => (await selection(page)).pressed, { message: 'row 2 is still the selected one' }).toEqual([2])
+        // It is the old row 3 that now sits in row 2.
+        expect((await selection(page)).hexes).toEqual(was.hexes.filter((_, i) => i !== 1))
+      })
+
+      test('removing a row above the active one keeps the same stop selected, now one row up', async ({ page }) => {
+        watch(page, 'a designer deleting a stop above the selected one')
+        await open(page)
+        await grow(page, 5)
+        await select(page, 3)
+        const was = await selection(page)
+        expect(was.pressed).toEqual([3])
+        await remove(page, 1)
+        await expect(stopRows(page)).toHaveCount(4)
+        await expect.poll(async () => (await selection(page)).pressed).toEqual([2])
+        expect((await selection(page)).hexes[1], 'row 2 is the stop that was row 3').toBe(was.hexes[2])
+      })
+
+      test('removing a row below the active one leaves the selection where it was', async ({ page }) => {
+        watch(page, 'a designer deleting a stop below the selected one')
+        await open(page)
+        await grow(page, 5)
+        await select(page, 1)
+        await remove(page, 4)
+        await expect(stopRows(page)).toHaveCount(4)
+        await expect.poll(async () => (await selection(page)).pressed).toEqual([1])
+      })
+
+      test('removing the active last row selects the new last row, and the window does not jump to the top', async ({ page }) => {
+        watch(page, 'a designer deleting the newest stop on a long list')
+        await open(page)
+        await grow(page, MAX_STOPS)
+        // The newest stop is active and the window sits at the foot.
+        const atFoot = () => page.locator('.grd-stops').evaluate((el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1)
+        await expect.poll(atFoot, { message: 'the window has scrolled to the last row' }).toBe(true)
+        const was = await selection(page)
+        expect(was.pressed).toEqual([MAX_STOPS])
+        expect(await windowScroll(page)).toBeGreaterThanOrEqual(pitch * 8)
+
+        await remove(page, MAX_STOPS)
+        await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
+        await expect.poll(async () => (await selection(page)).pressed).toEqual([MAX_STOPS - 1])
+        expect((await selection(page)).hexes[MAX_STOPS - 2]).toBe(was.hexes[MAX_STOPS - 2])
+        await settle(page)
+        // Still down the list, with the selected row inside the window.
+        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 7)
+        const inView = await page.locator('.grd-stops').evaluate((win) => {
+          const w = win.getBoundingClientRect()
+          const r = win.children[win.children.length - 1].getBoundingClientRect()
+          return r.top >= w.top - 1 && r.bottom <= w.bottom + 1
+        })
+        expect(inView, 'the selected last row is inside the window').toBe(true)
+      })
+
+      test('removing the active row deep in a long list keeps the window and the selection in place', async ({ page }) => {
+        watch(page, 'a designer deleting a selected stop in the middle of a long list')
+        await open(page)
+        await grow(page, MAX_STOPS)
+        await select(page, 8)
+        const was = await selection(page)
+        expect(was.pressed).toEqual([8])
+        await remove(page, 8)
+        await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
+        await expect.poll(async () => (await selection(page)).pressed).toEqual([8])
+        expect((await selection(page)).hexes[7], 'old row 9 slid into row 8').toBe(was.hexes[8])
+        await settle(page)
+        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 5)
+      })
+
+      test('on a Radial gradient the angle lock is aria-disabled, explained, and does not toggle', async ({ page }) => {
+        watch(page, 'a designer on a radial gradient')
+        await open(page)
+        const panel = panelOf(page)
+        const lock = page.locator('.grd-row--angle .grd-lock')
+
+        // Linear: a live toggle (so the Radial checks below are not vacuous).
+        await expect(lock).not.toHaveAttribute('aria-disabled', /.*/)
+        await expect(lock).toHaveAttribute('aria-pressed', 'false')
+        await lock.click()
+        await expect(lock).toHaveAttribute('aria-pressed', 'true')
+
+        await panel.getByRole('button', { name: 'Radial', exact: true }).click()
+        await expect(lock).toHaveAttribute('aria-disabled', 'true')
+        await expect(lock).toHaveAttribute('aria-describedby', 'grd-angle-none')
+        await expect(page.locator('#grd-angle-none')).toContainText('A radial gradient has no angle')
+        await expect(lock).not.toHaveAttribute('disabled', /.*/)
+        await lock.focus()
+        await expect(lock, 'still reachable by keyboard').toBeFocused()
+        // Locked going in, and a click or a key leaves it locked.
+        await lock.click({ force: true })
+        await expect(lock).toHaveAttribute('aria-pressed', 'true')
+        await page.keyboard.press('Enter')
+        await page.keyboard.press('Space')
+        await expect(lock).toHaveAttribute('aria-pressed', 'true')
+
+        // Back to Linear: still locked, live again, and it unlocks.
+        await panel.getByRole('button', { name: 'Linear', exact: true }).click()
+        await expect(lock).not.toHaveAttribute('aria-disabled', /.*/)
+        await expect(lock).not.toHaveAttribute('aria-describedby', /.*/)
+        await expect(lock).toHaveAttribute('aria-pressed', 'true')
+        await lock.click()
+        await expect(lock).toHaveAttribute('aria-pressed', 'false')
+
+        // Unlocked going in: a press on Radial does not lock it.
+        await panel.getByRole('button', { name: 'Radial', exact: true }).click()
+        await lock.click({ force: true })
+        await expect(lock).toHaveAttribute('aria-pressed', 'false')
+      })
+    })
+  }
 })
 
 // A pixel radius at or past half the side, or a percentage of 50 or more, draws a circle.
