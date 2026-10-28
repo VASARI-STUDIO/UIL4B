@@ -411,12 +411,9 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
   })
 }
 
-// DEFECT (product, not fixed here): at 360px on touch, twelve stops squeeze the rows to
-// 52px, because the grid `.grd-stop` lost `flex: 0 0 var(--grd-row)` (gradient.css, the
-// stop row rule) and 4px padding at <=360px lets the rows shrink to their content in the
-// fixed-height stop window. At 390px the 6px padding makes the content 56px, so it holds.
-// `test.fail` keeps the run green while the defect stands and goes red the day it is
-// fixed: delete the `test.fail` line then.
+// At 360px on touch, twelve stops must not squeeze the rows below 56px. The grid
+// `.grd-stop` keeps `flex: 0 0 var(--grd-row)` for this: without it the 4px padding at
+// <=360px lets the rows shrink to their content (52px) in the fixed-height stop window.
 test.describe('touch at 360px, twelve stops', () => {
   test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
   test('every stop row stays 56px tall', async ({ page }) => {
