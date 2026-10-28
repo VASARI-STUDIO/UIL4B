@@ -81,16 +81,34 @@ const sentence = (vals) => {
 // and Shift+Enter add or remove from the keyboard.
 function FilterGroup({ label, options, value, onChange, coarse, onAnnounce }) {
   const { select, isOn } = useShiftSelect({ value, onChange, any: options.includes(ANY) ? ANY : null, fallback: options.includes(ANY) ? ANY : options[0], coarse })
+  // Roving tabindex: the group is one Tab stop, on the first pressed option (or
+  // the one the arrows last reached). ←/→ move focus, Home/End jump to the ends.
+  const [rove, setRove] = useState(null)
+  const firstOn = Math.max(0, options.findIndex((o) => isOn(o)))
+  const stop = rove != null && rove < options.length ? rove : firstOn
+  const onKeyDown = (e) => {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+    let to = null
+    if (e.key in keys) to = (stop + keys[e.key] + options.length) % options.length
+    else if (e.key === 'Home') to = 0
+    else if (e.key === 'End') to = options.length - 1
+    if (to == null) return
+    e.preventDefault()
+    setRove(to)
+    e.currentTarget.querySelectorAll('button')[to]?.focus()
+  }
   return (
     <div className="grd-shuf-row">
       <span className="grd-shuf-k" id={`grd-shuf-${label}`}>{label}</span>
-      <div className="tl-pills" role="group" aria-labelledby={`grd-shuf-${label}`}>
-        {options.map((o) => (
+      <div className="tl-pills" role="group" aria-labelledby={`grd-shuf-${label}`} onKeyDown={onKeyDown}>
+        {options.map((o, i) => (
           <button
             key={String(o)}
             type="button"
             className={`tl-pill${isOn(o) ? ' is-on' : ''}`}
             aria-pressed={isOn(o)}
+            tabIndex={i === stop ? 0 : -1}
+            onFocus={() => setRove(i)}
             onClick={(e) => { select(o, e); onAnnounce?.(label) }}
           >{String(o)}</button>
         ))}
