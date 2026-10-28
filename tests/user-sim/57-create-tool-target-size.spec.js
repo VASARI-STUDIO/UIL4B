@@ -131,7 +131,7 @@ test.describe('the small in-page controls that actually do something', () => {
     // Not listed: '.snapv-value — the value beside a slider'. The drawn
     // Adjust bar's value is a readout (D:1043), not a click-to-type control,
     // so it is no longer a target; its alignment is held below.
-    ['/create/gradient', '.grd .tl-primary .tl-btn', 'the CSS copy button'],
+    ['/create/gradient', '.grd-copy', 'the code well Copy button'],
     ['/create/gradient', '.grd-wheel', 'the angle wheel'],
     ['/create/gradient', '.grd-angle-input', 'the angle number field'],
   ]

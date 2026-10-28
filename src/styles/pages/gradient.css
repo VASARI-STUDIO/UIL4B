@@ -32,6 +32,18 @@
   color: var(--tl-dim);
 }
 
+/* ── The "keep these gradients?" question ───────────────────────────────────
+   Its own strip under the editor, in the code well's skin, so it reads as part
+   of the tool and not as loose text. It sits after the grid, so its arrival moves
+   only the preset strip below it. */
+.grd .grd-keep {
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+}
+
 /* ── Canvas (D:627) ─────────────────────────────────────────────────────────
    The stage is the canvas's slot: a fixed minimum height the canvas fills, and
    the anchor for anything laid over it. isolation keeps the layers inside from
@@ -133,7 +145,58 @@
   background: var(--tl-card);
   overflow: hidden;
 }
-.grd .grd-fmt { display: flex; gap: 5px; flex-wrap: wrap; flex: 0 0 auto; padding: 10px 12px 0; }
+.grd .grd-fmt { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 10px 12px 0; }
+.grd .grd-fmt-tabs { display: flex; gap: 5px; min-width: 0; }
+/* Copy: a quiet button at the row's right edge (the "+ finishes" toggle will sit
+   just left of it). Every label it can show is stacked in one grid cell and only
+   one is visible, so the width is the widest label's and never jumps between
+   Copy CSS, Copy Tailwind, Copy SVG and Copied. */
+.grd .grd-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--tl-line);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-dim);
+  font-family: var(--font);
+  font-size: 12.5px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .14s var(--tl-ease), background-color .16s ease, color .16s ease;
+}
+.grd .grd-copy:active { transform: scale(.97); }
+.grd .grd-copy:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-copy.is-copied { color: var(--tl-ink); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-copy:hover { background: var(--tl-wash); color: var(--tl-ink); }
+}
+.grd .grd-copy-stack { display: grid; }
+.grd .grd-copy-face {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.grd .grd-copy-size { visibility: hidden; }
+.grd .grd-copy-idle,
+.grd .grd-copy-done { transition: opacity 150ms var(--ease-standard); }
+.grd .grd-copy-done,
+.grd .grd-copy.is-copied .grd-copy-idle { opacity: 0; }
+.grd .grd-copy.is-copied .grd-copy-done { opacity: 1; }
+/* On a narrow phone the tabs and a full label do not share a row (320 to 360),
+   so the format drops out of the visible label; the name still carries it. */
+@media (max-width: 380px) {
+  .grd .grd-copy-fmt { display: none; }
+}
 .grd .grd-code-text {
   flex: 1 1 0;
   min-height: 0;
@@ -688,9 +751,6 @@
   .grd-tintmenu-item:focus-visible { outline-color: Highlight; }
 }
 
-/* ── The submit modal's preview strip ───────────────────────────────────── */
-.grd-submit-preview { height: 88px; margin-bottom: var(--s-4); border-radius: 12px; border: 1px solid var(--border); }
-
 /* ── Coarse pointers: 44px on every stop control, 16px in the hex field so
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {
@@ -727,6 +787,7 @@
   .grd .grd-hex { height: 44px; font-size: 16px; }
   .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }
   .grd .grd-fmt-btn { min-height: 44px; }
+  .grd .grd-copy { height: 44px; min-height: 44px; padding: 0 12px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; }
   .grd .grd-stop-select { min-height: 44px; }
@@ -737,7 +798,15 @@
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
 :where(html[data-reduced-motion="true"]) .grd .grd-chip:active { transform: none; }
+:where(html[data-reduced-motion="true"]) .grd .grd-copy,
+:where(html[data-reduced-motion="true"]) .grd .grd-copy-idle,
+:where(html[data-reduced-motion="true"]) .grd .grd-copy-done { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .grd .grd-copy:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-copy,
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-copy-idle,
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-copy-done { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-copy:active { transform: none; }
   :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
   :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .grd .grd-chip:active { transform: none; }

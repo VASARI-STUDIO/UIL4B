@@ -27,18 +27,34 @@ export function gradientCss(type, angle, stops) {
 
 // Build the Gradient Generator hand-off URL — ?gs=RRGGBB-pos_RRGGBB-pos with the
 // type and angle alongside, decoded by decodeGradientParams below.
+//
+// `gn` (the name) is left off when there is no name. The style keys are written
+// only when the gradient has them, so a plain gradient's link is the short one:
+//   gi  interpolation space (oklch or srgb); a link without it opens in sRGB
+//   st  style family      sp  its parameters
+//   sd  seed              fx  finishes
+//   src 'link' on a link someone copied from the tool, so it opens as their own
+//       editable gradient; a library hand-off leaves it off
+// Callers do not pass st, sp, sd or fx yet; the decoder reads none of them yet either.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}&gn=${encodeURIComponent(g.name)}`
+  const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx], ['src', g.src]]
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
+    .join('')
+  return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}${optional}`
 }
 
+// Most stops a link may carry; the generator's own limit.
+const MAX_STOPS = 12
+
 // Parse a gallery hand-off out of the tool's search params. Returns
-// { type, angle, stops, name } or null when there is no (valid) hand-off —
+// { type, angle, stops, name, space, link } or null when there is no (valid) hand-off —
 // every field is validated so a mangled URL can never produce broken stops.
 export function decodeGradientParams(params) {
   const gs = params.get('gs')
   if (!gs) return null
-  const stops = gs.split('_').map(part => {
+  const stops = gs.split('_').slice(0, MAX_STOPS).map(part => {
     const m = /^([0-9a-f]{6})-(\d{1,3})$/i.exec(part)
     return m ? { color: `#${m[1].toUpperCase()}`, position: Math.min(100, +m[2]) } : null
   })
@@ -46,5 +62,8 @@ export function decodeGradientParams(params) {
   const type = { linear: 'Linear', radial: 'Radial', conic: 'Conic' }[(params.get('gt') || 'linear').toLowerCase()] || 'Linear'
   const angle = Math.min(360, Math.max(0, parseInt(params.get('ga'), 10) || 0))
   const name = (params.get('gn') || '').slice(0, 60) || null
-  return { type, angle, stops, name }
+  const gi = (params.get('gi') || '').toLowerCase()
+  const space = gi === 'oklch' || gi === 'srgb' ? gi : null
+  const link = params.get('src') === 'link'
+  return { type, angle, stops, name, space, link }
 }

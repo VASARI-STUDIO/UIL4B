@@ -245,44 +245,22 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
   })
 })
 
-/* ── 5 · Submitting a gradient degrades honestly ──────────────────────────── */
+/* ── 5 · The gradient tool no longer offers "Submit for review" ───────────────
+ * Submitting moved to the account (Save or share, then the community queue
+ * from the gallery). The old toolbar item, its dialog and the browser-held
+ * queue write are gone; the sign-in and save paths are covered by
+ * 169-gradient-save-share.spec.js. */
 
-test.describe('Gradient Generator · submit for review', () => {
-  test('a signed-out creator is asked to sign in before the review form exists', async ({ page }) => {
-    watch(page, 'signed-out designer sharing a gradient')
+test.describe('Gradient Generator · no Submit for review', () => {
+  test('the toolbar has no Submit for review button and nothing is queued in the browser', async ({ page }) => {
+    watch(page, 'designer looking for the old submit button')
     await go(page, '/create/gradient')
+    // Positive control: the toolbar rendered and its primary is the new one,
+    // so the absences below are not "the page never loaded".
+    await expect(page.getByRole('button', { name: 'Save or share' })).toBeVisible()
 
-    const submit = page.getByRole('button', { name: 'Submit for review' })
-    await submit.click()
-    // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". The log-in
-    // title would be the defect here: the gate is only
-    // reached when there is no uid, so everybody who sees it is somebody with
-    // no account, and it was greeting them with a form for one they have never
-    // made. `signup: true` now opens it on the create-account form, matching
-    // PaletteBuilder's save and the export gate. Nobody is stranded — the
-    // dialog's own toggle reads "Already have an account? Sign in".
-    const login = page.getByRole('dialog', { name: /create your free account/i })
-    await expect(login).toBeVisible()
-    // What the gate is really for is unchanged and still checked: it names the
-    // action, it states the review promise, and the review form does not exist
-    // behind it.
-    await expect(login).toContainText('submit a gradient to the community library')
-    await expect(login).toContainText('reviewed before it appears')
-    await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
-  })
-
-  test('dismissing the sign-in gate queues nothing and returns focus to submit', async ({ page }) => {
-    watch(page, 'designer dismissing community sign-in')
-    await go(page, '/create/gradient')
-    const submit = page.getByRole('button', { name: 'Submit for review' })
-    await submit.click()
-    await page.keyboard.press('Escape')
-
-    // The create-account title, matching the gate above. Left as the log-in
-    // title this would pass on a locator that matches nothing, which is a
-    // dismissal test that stopped checking the dismissal.
-    await expect(page.getByRole('dialog', { name: /create your free account/i })).toBeHidden()
-    await expect(submit).toBeFocused()
+    await expect(page.getByRole('button', { name: /submit for review/i })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: /submit for review/i })).toHaveCount(0)
     await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
     await expect.poll(() => page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()
   })

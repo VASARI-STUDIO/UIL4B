@@ -47,7 +47,8 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
-import SaveRefusal from '../components/SaveRefusal'
+import SaveShareMenu from '../components/tool/SaveShareMenu'
+import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
@@ -945,6 +946,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // outside pointerdown or Escape — handled by the shared effect below).
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [saveError, setSaveError] = useState('')   // the cap's refusal, held under the field — see doSave
+  const [saveNameError, setSaveNameError] = useState('') // an empty name's refusal, held under the field
+  const [saveNote, setSaveNote] = useState('') // a line under the name field (a save waiting for Save)
+  const mountedRef = useRef(true)   // doSave waits on the sign-in popup; these say what became of the tool meanwhile
+  const saveOpenRef = useRef(false)
+  const [pendingSave, setPendingSave] = useState(null) // a save waiting for the account to reach ProjectContext (see doSave)
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -1113,6 +1119,46 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
+  // The save runs here, not in doSave: right after the sign-in resolves, doSave's
+  // closure still holds the signed-out `saveProject`, which throws "Sign in to
+  // save projects". This effect re-runs with the fresh one once the account has
+  // reached ProjectContext.
+  useEffect(() => {
+    if (pendingSave == null || !canSaveProjects) return
+    setPendingSave(null)
+    // The save is being attempted, so a remount has nothing left to reopen.
+    clearPendingSave()
+    try {
+      saveProject(pendingSave)
+      setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false)
+      toast?.('Project saved')
+    } catch (err) {
+      // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
+      // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
+      // the field it refused, in ProjectContext's words, with the way forward
+      // as a link — the treatment /projects already gives the same refusal.
+      setSaveError(err?.message || 'Couldn’t save')
+    }
+  }, [pendingSave, canSaveProjects, saveProject, toast])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+  useEffect(() => { saveOpenRef.current = saveOpen }, [saveOpen])
+  // Back from onboarding after signing up to save: reopen the menu with the name
+  // typed before, and let the person press Save. Decided once per mount, when
+  // the account is first known.
+  const restoreCheckedRef = useRef(false)
+  useEffect(() => {
+    if (authLoading || restoreCheckedRef.current) return
+    restoreCheckedRef.current = true
+    if (!user) return
+    const stashed = takePendingSave('palette')
+    if (stashed == null) return
+    setSaveName(stashed)
+    setSaveNote('You’re signed in. Press Save to finish.')
+    setSaveOpen(true)
+  }, [authLoading, user])
   const [submitName, setSubmitName] = useState('')
   // Community submit popup (Wave 5 items 20–22): a proper modal with a palette
   // preview, a name field + dice generator, and a one-time handle gate.
@@ -1480,7 +1526,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    // A closed menu has no save waiting on the account and nothing to reopen on a remount.
+    setPendingSave(null); clearPendingSave()
+  }, [])
+  // A row in the Save or share menu closing it: the refusal under the field goes too.
+  const closeSaveMenu = useCallback(() => {
+    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
+    setPendingSave(null); clearPendingSave()
   }, [])
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
@@ -2406,7 +2459,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         a.click()
         setTimeout(() => URL.revokeObjectURL(url), 4000)
       })
-      setSaveOpen(false)
+      closeSaveMenu()
     } catch {
       toast?.('Couldn’t render the image')
     }
@@ -2419,11 +2472,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // says plainly why an account is needed.
   const openSubmitForm = useCallback(() => {
     consumeSubmitIntent()
-    setSaveOpen(false)
+    closeSaveMenu()
     setSubmitErr('')
     setSubmitName(n => n.trim() || randomPaletteName(adjusted))
     setSubmitOpen(true)
-  }, [adjusted])
+  }, [adjusted, closeSaveMenu])
 
   const openSubmit = useCallback(async () => {
     // Auth still resolving — we know neither answer, so show neither prompt.
@@ -2542,34 +2595,27 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const doSave = async () => {
     // THE ACCOUNT IS ASKED FOR BEFORE THE NAME, and the order matters.
     //
-    // The name check below is a silent `return` — the Save button is never
-    // disabled, so pressing it empty does nothing and says nothing. That was
-    // unreachable while the gate sat on the menu opener, because a signed-out
-    // visitor never got as far as the button. Moving the gate down here without
-    // moving it ABOVE the name check would have handed them that dead click
-    // instead of the gate, which is a worse first answer than being asked to
-    // sign up.
-    //
-    // Asked first, the flow reads the way it did before: press Save, get asked
-    // for an account. (The empty-name silence is a separate, older defect and is
-    // left alone here rather than fixed in passing.)
+    // The Save button is never disabled, so a signed-out visitor pressing it
+    // with an empty name must meet the gate, not a refusal about the name: the
+    // account is asked for first, and an empty name then says so under the
+    // field.
     if (!canSaveProjects) {
-      const user = await requireLogin('save this palette', { free: true, signup: true })
-      if (!user) return
+      // A new account is sent to onboarding, which unmounts this page; the stash
+      // lets the page reopen the menu with the name when it comes back.
+      stashPendingSave('palette', saveName.trim())
+      const signedIn = await requireLogin('save this palette', { free: true, signup: true })
+      // Unmounted: a new account was sent to onboarding. The stash stays for the
+      // remount to find. It is cleared only once the save has run, or when the
+      // sign-in is cancelled or the menu closed (closeAllMenus, closeSaveMenu).
+      if (!mountedRef.current) return
+      if (!signedIn) { clearPendingSave(); setPendingSave(null); return }
+      // Closed while the sign-in was open: nothing to finish.
+      if (!saveOpenRef.current) { clearPendingSave(); return }
     }
     const name = saveName.trim()
-    if (!name) return
-    try {
-      saveProject(name)
-      setSaveName(''); setSaveError(''); setSaveOpen(false)
-      toast?.('Project saved')
-    } catch (err) {
-      // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
-      // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
-      // the field it refused, in ProjectContext's words, with the way forward
-      // as a link — the treatment /projects already gives the same refusal.
-      setSaveError(err?.message || 'Couldn’t save')
-    }
+    // Refused here with the page still open: nothing is waiting to be reopened.
+    if (!name) { clearPendingSave(); setSaveNameError('Name the project to save it.'); return }
+    setPendingSave(name)
   }
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
@@ -3418,62 +3464,46 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )}
 
       {saveOpen && (
-        <div className="plb-menuwrap plb-float">
-          <div className="plb-menu plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
-            <div className="plb-float-head">
-              <div className="plb-menu-title">Save to a project</div>
-              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
-            </div>
-            <div className="plb-menu-row">
-              <input
-                type="text"
-                value={saveName}
-                onChange={(e) => setSaveName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') doSave() }}
-                placeholder="Project name…"
-                aria-label="Project name"
-              />
-              <button type="button" className="btn btn-s btn-accent" onClick={doSave}>Save</button>
-            </div>
-            {saveError && <SaveRefusal message={saveError} testId="palette-save-refusal" />}
-            {projects.length > 0 && (
-              <>
-                <div className="plb-menu-sub">Overwrite existing</div>
-                <div className="plb-scrolllist">
-                  {projects.slice(-5).map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="plb-menu-item"
-                      onClick={() => {
-                        try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
-                        catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            <div className="plb-menu-div" role="separator" />
-            <div className="plb-menu-sub">Share</div>
-            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
-            <div className="plb-menu-sub">Export</div>
-            <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
-            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
-            <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
-            <div className="plb-menu-sub">Community</div>
-            <button
-              type="button"
-              className="plb-menu-item"
-              onClick={openSubmit}
-              disabled={authLoading}
-              aria-busy={authLoading || undefined}
-              title={authLoading ? 'Checking your account…' : undefined}
-            ><IcoUsers /> Submit to the community…</button>
-          </div>
-        </div>
+        <SaveShareMenu
+          label="Save, share and export this palette"
+          name={saveName}
+          onNameChange={(v) => { setSaveName(v); setSaveNameError('') }}
+          onSave={doSave}
+          busy={authLoading}
+          nameError={saveNameError}
+          note={saveNote}
+          saveError={saveError}
+          refusalTestId="palette-save-refusal"
+          projects={projects}
+          onOverwrite={(p) => {
+            try { overwriteProject(p.id); closeSaveMenu(); toast?.('Updated: ' + p.name) }
+            catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
+          }}
+          onClose={closeAllMenus}
+          share={(
+            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); closeSaveMenu() }}><IcoCopy /> Copy link to this palette</button>
+          )}
+          exports={(
+            <>
+              <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); closeSaveMenu() }}><IcoCopy /> Copy CSS variables</button>
+              <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); closeSaveMenu() }}><IcoCopy /> Copy hex values</button>
+              <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
+            </>
+          )}
+          after={(
+            <>
+              <div className="plb-menu-sub">Community</div>
+              <button
+                type="button"
+                className="plb-menu-item"
+                onClick={openSubmit}
+                disabled={authLoading}
+                aria-busy={authLoading || undefined}
+                title={authLoading ? 'Checking your account…' : undefined}
+              ><IcoUsers /> Submit to the community…</button>
+            </>
+          )}
+        />
       )}
 
       {/* ── Image picker modal ──
