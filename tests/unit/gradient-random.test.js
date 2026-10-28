@@ -309,7 +309,9 @@ const lchOf = (g) => g.stops.map((s) => hexToOklchRaw(s.color))
 
 test('Standard share is at most 30%, and Standard really is drawn', () => {
   const share = V2.filter((g) => g.space === 'srgb').length / V2.length
-  assert.ok(share <= STANDARD_SHARE, `Standard share ${share}`)
+  // The spec's 30% as a literal, not the exported constant: a constant raised to 0.6 must fail here.
+  assert.ok(share <= 0.3, `Standard share ${share}`)
+  assert.equal(STANDARD_SHARE, 0.3)
   assert.ok(share >= 0.1, `Standard share ${share}: Standard is never drawn`)
   assert.ok(V2.every((g) => g.space === 'srgb' || g.space === 'oklch'))
 })
@@ -344,6 +346,16 @@ test('the mud zone is never produced, and its edges are where the spec puts them
   for (const g of V2) for (const [L, C, H] of lchOf(g)) assert.ok(!inMudZone({ L, C, H }), `mud ${L} ${C} ${H}`)
   const cands = Array.from({ length: 400 }, (_, i) => rollCandidate(mulberry32(i)))
   assert.ok(cands.every((g) => lchOf(g).every(([L, C, H]) => !inMudZone({ L, C, H }))))
+})
+
+test('a draw that lands in the mud zone on every retry is drained of colour, not shipped', () => {
+  // A constant rand repeats the same draw on all six tries, so only the drain after the
+  // retries can keep it out of the zone. Without the drain, 16% of these 1000 draws are mud.
+  for (let k = 0; k < 1000; k++) {
+    const v = k / 1000
+    const g = rollCandidate(() => v)
+    for (const [L, C, H] of lchOf(g)) assert.ok(!inMudZone({ L, C, H }), `mud at constant rand ${v}: ${L} ${C} ${H}`)
+  }
 })
 
 test('chroma never goes above 0.17 in clear tones (hex rounding allows 0.002)', () => {
