@@ -109,7 +109,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 :is(.plb, .tl-sheet-layer) .plb-seedpick { display: flex; }
 .plb .plb-seedpick .cpk-pop { left: 0; right: auto; }
 :is(.plb, .tl-sheet-layer) .plb-seedchip { width: auto; gap: 9px; padding: 0 13px 0 6px; }
-:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 8px; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 50%; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
 :is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; letter-spacing: .02em; color: var(--tl-ink); }
 .plb .plb-menuwrap { position: relative; display: flex; }
 .plb .plb-menu-seed { display: flex; }
