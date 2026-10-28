@@ -40,7 +40,7 @@
 .tw .tw-link-u{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--pv-text)}
 
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
-.tw .tw-hero{grid-area:hero;align-self:start;display:flex;flex-direction:column;min-width:0}
+.tw .tw-hero{grid-area:hero;align-self:center;display:flex;flex-direction:column;min-width:0}
 .tw .tw-h{font-size:36px;font-weight:600;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
 .tw .tw-sub{max-width:44ch;margin-top:var(--s-2);font-size:18px;line-height:1.45;text-wrap:pretty}
 .tw .tw-cta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2) var(--s-4);margin-top:var(--s-3)}
@@ -78,7 +78,7 @@
     grid-template-areas:"nav nav" "hero card";
     padding:var(--s-4) var(--s-5);column-gap:var(--s-5);row-gap:var(--s-4)}
   .tw .tw-links{display:flex}
-  .tw .tw-hero,.tw .tw-card{align-self:center}
+  .tw .tw-card{align-self:center}
   .tw .tw-h{font-size:40px}
   .tw .tw-cta{margin-top:var(--s-4)}
   .tw .tw-card{gap:0;padding:var(--s-4)}
@@ -93,7 +93,7 @@
     grid-template-areas:"nav nav nav" "hero receipt card";
     padding:var(--s-5) var(--s-6);column-gap:var(--s-6)}
   .tw .tw-h{font-size:48px;line-height:1.08}
-  .tw .tw-receipt{display:flex;align-self:center}
+  .tw .tw-receipt{display:flex;align-self:end}
 }
 
 /* ── Under 340px: the same page, tighter ──────────────────────────────────── */
@@ -101,5 +101,4 @@
   .tw{padding:var(--s-3)}
   .tw .tw-h{font-size:32px}
   .tw .tw-sub{font-size:16px}
-  .tw .tw-help{display:none}
 }

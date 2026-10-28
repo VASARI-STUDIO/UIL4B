@@ -173,7 +173,7 @@ test.describe('Contrast Checker · two colours, no entrance, no internal labels'
     watch(page, 'someone flipping between views quickly')
     await go(page, '/create/contrast?fg=777777&bg=FFFFFF')
     await pick(page, BUILT[0])
-    for (const view of [BUILT[1], BUILT[0], BUILT[1]]) {
+    for (const view of [...BUILT.slice(1), BUILT[0]]) { // every view is switched to, the first one last
       await pick(page, view)
       // The 150ms outline fade on a mark is a transition and stays; a keyframe
       // animation (an entrance) is what must not run.

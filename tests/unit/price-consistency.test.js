@@ -175,6 +175,13 @@ const NOT_A_PLAN_PRICE = [
       + 'breaks the icon code peek at its attributes. It is regex syntax, not an amount.',
   },
   {
+    file: 'src/components/contrast/views/Landing.data.js',
+    context: /Sole trader|Officeworks/,
+    why: 'Copy for Tidewell, the invented bookkeeping product the Landing pair view '
+      + 'is drawn from: its "Sole trader" plan price and a sample Officeworks '
+      + 'receipt. They are the invented product\'s own figures, not tiers of UIL4B.',
+  },
+  {
     file: 'src/components/UiSystemLab.jsx',
     context: /uis-checkout-grid|Order summary|Canvas field bag|Studio notebook|Standard delivery/,
     why: 'CommerceScene renders a fake checkout so the generated UI system can be '

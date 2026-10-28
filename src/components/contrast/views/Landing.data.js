@@ -23,7 +23,7 @@ export const PLAN = {
   name: 'Sole trader',
   price: '$19',
   per: '/month, GST included',
-  features: ['Bank feeds from your bank', 'BAS worksheet, ready to lodge', 'Receipts matched by photo'],
+  features: ['Live feeds from your bank accounts', 'BAS worksheet, ready to lodge', 'Receipts matched by photo'],
   choose: 'Choose Sole trader',
   fine: 'Prices in AUD.',
 }
