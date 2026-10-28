@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
@@ -472,17 +472,8 @@ const SHUFFLE_TITLE = 'What Random and Shuffle make'
 function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
   const phone = useMediaQuery(PHONE_QUERY)
   const narrowed = isNarrowed(filters)
-  // A press on the scrim (or Tab leaving the sheet) closes it. When focus is
-  // still inside the sheet it goes back to the button first, so a sheet closed
-  // by a press does not drop focus to the page.
-  const dismissRef = useRef(null)
-  const { triggerRef, popRef, closeToTrigger } = usePopover(open, () => dismissRef.current?.(), { portalled: phone })
-  useEffect(() => {
-    dismissRef.current = () => {
-      if (phone && popRef.current?.contains(document.activeElement)) triggerRef.current?.focus?.({ preventScroll: true })
-      onClose()
-    }
-  })
+  const sheetId = `grd-shuf-sheet-${useId().replace(/:/g, '')}`
+  const { triggerRef, popRef, closeToTrigger } = usePopover(open, onClose, { portalled: phone })
   // Turning the screen across 768px swaps popover and sheet: close rather than
   // leave the open one wired to the other's element.
   const wasPhone = useRef(phone)
@@ -519,8 +510,11 @@ function ShuffleSettings({ open, onOpen, onClose, filters, setFilters }) {
           inside it, so a fixed sheet drawn here hung off the toolbar. */}
       {open && phone && createPortal(
         <div className="tl-sheet-layer">
-          <div className="tl-sheet-scrim" aria-hidden="true" onClick={closeToTrigger} />
-          <div ref={popRef} className="tl-sheet" role="dialog" aria-label="Shuffle settings" tabIndex={-1}>
+          {/* data-pop-scrim keeps the popover hook from closing on the press
+              itself: the click below closes it and hands focus back to the button
+              (a close on the press loses it to the page). */}
+          <div className="tl-sheet-scrim" aria-hidden="true" data-pop-scrim={sheetId} onClick={closeToTrigger} />
+          <div id={sheetId} ref={popRef} className="tl-sheet" role="dialog" aria-label="Shuffle settings" tabIndex={-1}>
             <span className="tl-sheet-grab" aria-hidden="true" />
             <div className="tl-sheet-head">
               <span className="tl-sheet-title">{SHUFFLE_TITLE}</span>
