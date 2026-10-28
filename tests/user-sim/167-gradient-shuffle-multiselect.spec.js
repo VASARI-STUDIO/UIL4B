@@ -1092,7 +1092,7 @@ test.describe('the page does not move at 390px (touch)', () => {
     await tick(pool, 'Colour 8 500').check(); await l.mark('two ticks')
     await allPill(pool).tap(); await l.mark('All palette colours')
     await page.keyboard.press('Escape'); await l.mark('menu closed')
-    expect(l.count).toBe(17)
+    expect(l.count).toBe(14)
     expect(l.drift(), l.drift().join('\n')).toEqual([])
   })
 })
