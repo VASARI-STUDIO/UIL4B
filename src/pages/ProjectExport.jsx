@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -79,9 +79,10 @@ function KitPreview({ colours, name }) {
 
 function ProjectExport({ id }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { loading: authLoading, user } = useAuth()
   const { isPro, planKnown } = useSubscription()
-  const { projects, canSaveProjects, projectsLoading, loadProject, design: working } = useProject()
+  const { projects, canSaveProjects, projectsLoading, loadProject, renameProject, design: working } = useProject()
   const design = useExportDesign()
   const project = projects.find((p) => p.id === id)
   const proPrice = useProPrice()
@@ -89,11 +90,17 @@ function ProjectExport({ id }) {
   // A file needs an account; the gallery is signed-in only, so this resolves at once.
   const gate = useExportGate()
 
-  // A pick stored before a trip to checkout is applied when it is this project's.
+  // A pick made before a trip to checkout is applied when it is this project's and this account's. It
+  // arrives from the checkout page's "Back to your export" link (router state), or from the stored copy.
   const [pick, setPick] = useState(() => {
     const back = readPick()
-    return back && back.projectId === id ? normalisePick(back) : { ...DEFAULT_PICK }
+    if (back && back.projectId === id && (!back.uid || !user?.uid || back.uid === user.uid)) return normalisePick(back)
+    const carried = location.state?.kitPick
+    return carried ? normalisePick(carried) : { ...DEFAULT_PICK }
   })
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const renameBtn = useRef(null)
   const [status, setStatus] = useState('idle') // idle | exporting | done | failed | offline
   const [more, setMore] = useState(false)
   const exporting = useRef(false)
@@ -152,15 +159,26 @@ function ProjectExport({ id }) {
   const trialDays = PLAN_LADDER.find((e) => e.id === 'yearly')?.trialDays || 0
   const price = yearly?.available ? formatPrice(yearly.total, proPrice.currency) : null
   const trialEnd = new Date(Date.now() + trialDays * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
-  const priceReady = proPrice.loaded && Boolean(price) && trialDays > 0
 
+  // The project's own rename (ProjectContext.renameProject), the same one the project page uses.
+  const closeRename = () => {
+    setRenaming(false)
+    requestAnimationFrame(() => renameBtn.current?.focus())
+  }
+  const saveRename = (e) => {
+    e.preventDefault()
+    if (draftName.trim()) renameProject(id, draftName.trim())
+    closeRename()
+  }
   const choose = (next) => { setPick(next); setStatus('idle') }
 
   const runExport = async () => {
     if (exporting.current) return
     exporting.current = true
     setStatus('exporting')
-    let win = null
+    // The print window is reserved inside the click, before any await (utils/exportDocument.js): a window
+    // opened after the gate or the server round trip is blocked by Safari.
+    let win = pick.design !== 'kit' && pick.format === 'pdf' ? reservePrintWindow() : null
     try {
       if (!(await gate('export this design'))) { setStatus('idle'); return }
       const projectName = design?.name || name
@@ -175,7 +193,6 @@ function ProjectExport({ id }) {
         download(blob, filename)
         trackActivation('ui-kit', 'export')
       } else {
-        if (pick.format === 'pdf') win = reservePrintWindow()
         labelPrintWindow(win, 'Preparing your document…')
         const answer = await requestExportDocument(
           { format: pick.design, design, projectName, template: readExportTemplates(working)[pick.design] },
@@ -209,7 +226,7 @@ function ProjectExport({ id }) {
   const onCta = () => {
     if (needsTrial) {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { setStatus('offline'); return }
-      storePick(id, pick)
+      storePick(id, pick, { uid: user?.uid })
       navigate(GALLERY_CHECKOUT)
       return
     }
@@ -230,15 +247,32 @@ function ProjectExport({ id }) {
   else if (status === 'done') priceLine = 'Downloaded. Find it in your downloads folder.'
   else if (checking) priceLine = 'Checking your plan…'
   else if (needsTrial) {
-    if (priceReady) priceLine = <><strong>{trialDays} days free</strong>, then {price} a year until you cancel. Cancel before {trialEnd} and you pay nothing.</>
-    else if (!proPrice.loaded) priceLine = 'Loading price'
-    else priceLine = <><strong>{trialDays} days free</strong>, then billed yearly until you cancel. Checkout shows the price before you pay.</>
+    // The cancel-before promise needs a date and no price, so it is always stated when there is a trial;
+    // only the "then {price}" part waits for the price lookup.
+    if (trialDays > 0) {
+      const then = price ? `, then ${price} a year until you cancel.` : proPrice.loaded ? ', then billed yearly until you cancel.' : '.'
+      priceLine = <><strong>{trialDays} {trialDays === 1 ? 'day' : 'days'} free</strong>{then} Cancel before {trialEnd} and you pay nothing.{proPrice.loaded && !price ? ' Checkout shows the price before you pay.' : ''}</>
+    } else priceLine = 'Checkout shows the price before you pay.'
   } else if (pro) priceLine = <><strong>Included in Pro.</strong> Your file has no watermark.</>
   else priceLine = <><strong>Free.</strong> The file carries a small “Made with UIL4B” mark.</>
 
   return (
     <div className="pxg">
-      <p className="pxg-saved">Saved to your projects as <strong>{name}</strong> · <Link to={`/projects/${id}`}>Open project</Link></p>
+      {renaming ? (
+        <form className="pxg-rename" onSubmit={saveRename}>
+          <input
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') closeRename() }}
+            aria-label={`Rename ${name}`}
+            autoFocus
+          />
+          <button type="submit" className="pxg-rename-btn is-primary">Save</button>
+          <button type="button" className="pxg-rename-btn" onClick={closeRename}>Cancel</button>
+        </form>
+      ) : (
+        <p className="pxg-saved">Saved to your projects as <strong>{name}</strong> · <button type="button" className="pxg-link" ref={renameBtn} onClick={() => { setDraftName(name); setRenaming(true) }}>Rename</button></p>
+      )}
       <h1 className="pxg-h1">Choose a design for {name}</h1>
       <p className="pxg-lede">Every preview is set in your own colours and fonts. Pick a design, then the file you want.</p>
 
