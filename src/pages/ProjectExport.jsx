@@ -105,9 +105,16 @@ function ProjectExport({ id }) {
   const watchBar = useCallback((el) => {
     barWatch.current?.disconnect()
     barWatch.current = null
+    // The global Feedback bubble sits outside this page, so the bar's top edge is
+    // also published on <html>; project-export.css lifts the bubble above it.
+    if (!el) document.documentElement.style.removeProperty('--pxg-bubble-lift')
     const root = el?.closest('.pxg')
     if (!el || !root || typeof ResizeObserver === 'undefined') return
-    const sync = () => root.style.setProperty('--pxg-bar-live', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+    const sync = () => {
+      const box = el.getBoundingClientRect()
+      root.style.setProperty('--pxg-bar-live', `${Math.ceil(box.height)}px`)
+      document.documentElement.style.setProperty('--pxg-bubble-lift', `${Math.ceil(window.innerHeight - box.top + 12)}px`)
+    }
     sync()
     barWatch.current = new ResizeObserver(sync)
     barWatch.current.observe(el)

@@ -83,3 +83,7 @@ html[data-reduced-motion="true"] .pxg-cta:active:not(:disabled){transform:none}
   html:not([data-reduced-motion="false"]) .pxg-cta,html:not([data-reduced-motion="false"]) .pxg-fm,html:not([data-reduced-motion="false"]) .pxg-frame .exp-preview-retry{transition:none}
   html:not([data-reduced-motion="false"]) .pxg-cta:active:not(:disabled){transform:none}
 }
+
+/* The fixed decision bar would sit under the global Feedback bubble; lift the
+   bubble clear of the bar's top edge while the gallery is open. */
+html:has(.pxg-bar) body .global-feedback-btn{bottom:max(var(--pxg-bubble-lift,180px),env(safe-area-inset-bottom,0px))}
