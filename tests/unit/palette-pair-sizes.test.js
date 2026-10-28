@@ -6,7 +6,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   BOLD_WEIGHT, LARGE_BOLD_PX, LARGE_PX, OUTLINE_CANDIDATES, PAIR_VIEWS, SIZE_CLASSES, UI_PARTS,
-  failingSizes, pickOutlineColour, textSizeClass,
+  failingSizes, legendLede, pickOutlineColour, textSizeClass,
 } from '../../src/utils/palettePairSizes.js'
 
 test('the thresholds are the ones WCAG states: 24px, or 18.66px in bold', () => {
@@ -49,15 +49,17 @@ test('the three classes are body 4.5, large 3 and UI parts 3, in that order', ()
   assert.deepEqual(SIZE_CLASSES.map((c) => [c.id, c.min]), [['body', 4.5], ['large', 3], ['ui', 3]])
 })
 
-test('the four views are listed in control order and only Product page has a part to drop on a phone', () => {
-  assert.deepEqual(PAIR_VIEWS.map((v) => v.id), ['specimen', 'editorial', 'product', 'card'])
+// Part 1 of the views rework builds Interface and Specimen; part 2 adds Article and
+// Landing page between them (and 'landing' becomes the one view with a part to drop).
+test('the views are listed in control order, Interface first and Specimen last', () => {
+  const ids = PAIR_VIEWS.map((v) => v.id)
+  assert.equal(ids[0], 'interface')
+  assert.equal(ids.at(-1), 'specimen')
   for (const v of PAIR_VIEWS) assert.equal(v.label + (v.more || ''), v.name, `${v.id}: label plus the dropped part is the name`)
-  assert.deepEqual(PAIR_VIEWS.filter((v) => v.more).map((v) => v.id), ['product'])
-  assert.equal(PAIR_VIEWS.find((v) => v.id === 'product').label, 'Product')
 })
 
-test('every view that paints an example has a UI-part selector, and the specimen has none', () => {
-  assert.deepEqual(Object.keys(UI_PARTS).sort(), ['card', 'editorial', 'product'])
+test('every view has a UI-part selector, because the legend runs on every view', () => {
+  assert.deepEqual(Object.keys(UI_PARTS).sort(), PAIR_VIEWS.map((v) => v.id).sort())
   for (const [id, selector] of Object.entries(UI_PARTS)) assert.match(selector, /\S/, `${id} has an empty selector`)
 })
 
@@ -82,4 +84,18 @@ test('the pick is always one of the candidates, and the first wins a tie', () =>
   }
   assert.equal(pickOutlineColour('#ffffff', '#000000', ['#1D63D1', '#1d63d1']), '#1D63D1', 'equal scores keep the earlier one')
   assert.equal(pickOutlineColour('#ffffff', '#000000', ['#abcdef']), '#abcdef')
+})
+
+// The legend's three tests are the AA ones (4.5, 3, 3), so "every test" is only
+// true once the pair also clears AAA (7:1). Boundary values, worked by hand.
+test('the legend line says "Every AA test passes" until the pair also clears AAA', () => {
+  assert.match(legendLede(4.5), /^Every AA test passes\./, '4.5:1 clears AA, not AAA')
+  assert.match(legendLede(6.99), /^Every AA test passes\./, 'just under 7:1')
+  assert.match(legendLede(7), /^Every test passes\./, '7:1 clears AAA too')
+  assert.match(legendLede(21), /^Every test passes\./)
+  assert.match(legendLede(4.49), /^The largest part that misses its test is outlined\./, 'under 4.5:1 body text fails')
+})
+
+test('the Interface view lists the input box inside the focus ring as a UI part', () => {
+  assert.match(UI_PARTS.interface, /(^|, )\.ro-input(,|$)/)
 })
