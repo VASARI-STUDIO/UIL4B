@@ -336,3 +336,90 @@ test.describe('The Your palette strip', () => {
     })
   }
 })
+
+// THE PREVIEWS PAINTED WITH THE PALETTE (slice 3, part B2). With a palette the
+// views show its roles and only the parts that do the pair's job take the pair.
+// The pairs are worked out from the palette above, not read from the page:
+//
+//   Primary #1E3A8A on Accent #0F766E   two brand colours (tones 27 and 44): "beside"
+//   Near black #0B0C0E on Secondary #F59E0B   a dark label on a fill: "fill-label"
+//                                             (rgb 11,12,14 on rgb 245,158,11)
+//
+// MUTATIONS (each turns the tests named red):
+//   Interface renders the tag whatever the job                       -> "P5 two brand colours"
+//   PairLegend ignores `lead` (chips stay body, large, UI)           -> "P5 two brand colours"
+//   part() never adds data-pair-part                                 -> "P5 two brand colours", "B2 the switch"
+//   PairExample sets paletteRoles to null when a palette exists      -> "B2 the switch" (fill stays near black)
+//   the caption clamp and its 3em reserve are removed                -> "B2 the switch" at 390
+//   the switch is rendered with no palette                           -> "B2 with no palette"
+const BESIDE = '/create/contrast?fg=1E3A8A&bg=0F766E&from=palette&fgRole=primary&bgRole=accent'
+const FILL_LABEL = '/create/contrast?fg=0B0C0E&bg=F59E0B&from=palette&fgRole=near-black&bgRole=secondary'
+
+test.describe('B2 previews painted with the palette', () => {
+  test('P5 two brand colours show the tag and chart parts in the pair, and the legend leads with UI parts', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const page = await ctx.newPage()
+    watch(page, 'someone checking two brand colours from their palette')
+    await seed(page)
+    await go(page, BESIDE)
+    const pv = page.locator('.cc-pv')
+    await expect(pv).toHaveAttribute('data-ctx', 'on')
+    await expect(pv).toHaveAttribute('data-job', 'beside')
+    // The week strip is gone under 560px, so the tag carries the pair.
+    await expect(page.locator('.ro-tag[data-pair-part]')).toHaveText('Closing shift')
+    await expect(page.locator('.cc-lg-chip').first()).toContainText('UI parts')
+    await expect(page.getByText('Two brand colours: shown as chart lines and a tag. Text on this pair needs 4.5:1.')).toBeVisible()
+    await page.getByRole('button', { name: 'Article', exact: true }).click()
+    await expect(page.locator('.bs-chart-axis[data-pair-part]')).toBeVisible()
+    // The pair is not in the other views' text, so their text is not a pair part.
+    await expect(page.locator('.bs-head[data-pair-part]')).toHaveCount(0)
+    await ctx.close()
+  })
+
+  for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 390, height: 844, phone: true }]) {
+    test(`B2 the switch changes the painted roles, not the page height, at ${vp.width}`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.phone, hasTouch: vp.phone })
+      const page = await ctx.newPage()
+      watch(page, `a window ${vp.width}px wide`)
+      await seed(page)
+      await go(page, FILL_LABEL)
+      await page.evaluate(() => document.fonts.ready)
+      const sw = page.getByRole('switch', { name: 'Show my palette around it' })
+      const fill = () => page.locator('.ro-btn--fill').evaluate((el) => getComputedStyle(el).backgroundColor)
+      const height = () => page.evaluate(() => document.documentElement.scrollHeight)
+      const cap = page.locator('.cc-ctx-cap')
+
+      await expect(sw).toHaveAttribute('aria-checked', 'true')
+      await expect(cap).toHaveText(/^Your palette, with Near black on .+ under test$/)
+      expect(await fill(), 'the pair is the button fill').toBe('rgb(245, 158, 11)')
+      const canvasOn = await page.locator('.cc-pv').evaluate((el) => getComputedStyle(el).backgroundColor)
+      expect(canvasOn, 'the page round the pair is the palette\'s').not.toBe('rgb(245, 158, 11)')
+      const on = await height()
+
+      await sw.click()
+      await expect(sw).toHaveAttribute('aria-checked', 'false')
+      await expect(cap).toHaveText('Painted in your two colours only')
+      await expect(page.locator('.cc-pv')).toHaveAttribute('data-ctx', 'off')
+      expect(await fill(), 'two colours: the fill is the text colour').toBe('rgb(11, 12, 14)')
+      expect(await page.locator('.cc-pv').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(245, 158, 11)')
+      expect(Math.abs((await height()) - on), 'page height with the switch on and off').toBeLessThanOrEqual(1)
+
+      if (vp.phone) {
+        // The picture keeps the first screen: the caption and switch sit under the frame.
+        const [frame, bar] = await Promise.all([page.locator('.cc-frame').boundingBox(), page.locator('.cc-ctxbar').boundingBox()])
+        expect(bar.y, 'the bar is under the frame on a phone').toBeGreaterThanOrEqual(frame.y + frame.height - 1)
+        expect((await sw.boundingBox()).height, 'the switch is a 44px target on touch').toBeGreaterThanOrEqual(44)
+      }
+      await ctx.close()
+    })
+  }
+
+  test('B2 with no palette there is no switch, no caption and no pair parts', async ({ page }) => {
+    watch(page, 'someone opening the checker from the tools list')
+    await go(page, '/create/contrast?fg=AAAAAA&bg=FFFFFF')
+    await expect(page.locator('.cc-pv')).toHaveAttribute('data-ctx', 'off')
+    await expect(page.getByRole('switch')).toHaveCount(0)
+    await expect(page.locator('.cc-ctxbar')).toHaveCount(0)
+    await expect(page.locator('.cc-pv [data-pair-part]')).toHaveCount(0)
+  })
+})
