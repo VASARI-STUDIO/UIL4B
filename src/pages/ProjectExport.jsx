@@ -5,6 +5,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportDesign from '../hooks/useExportDesign'
+import useExportGate from '../hooks/useExportGate'
 import { usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { resolveOffers } from '../config/planFacts'
 import { PLAN_LADDER } from '../config/planLadder'
@@ -84,6 +85,8 @@ function ProjectExport({ id }) {
   const project = projects.find((p) => p.id === id)
   const proPrice = useProPrice()
   const { prices } = usePrices()
+  // A file needs an account; the gallery is signed-in only, so this resolves at once.
+  const gate = useExportGate()
 
   // A pick stored before a trip to checkout is applied when it is this project's.
   const [pick, setPick] = useState(() => {
@@ -136,6 +139,7 @@ function ProjectExport({ id }) {
     setStatus('exporting')
     let win = null
     try {
+      if (!(await gate('export this design'))) { setStatus('idle'); return }
       const projectName = design?.name || name
       const slug = slugOf(projectName)
       if (pick.design === 'kit') {
@@ -191,8 +195,10 @@ function ProjectExport({ id }) {
 
   const ctaLabel = status === 'exporting'
     ? 'Exporting…'
-    : needsTrial ? trialLabel(trialDays) : status === 'done' ? 'Export again' : exportLabel(pick)
-  const ctaDisabled = status === 'exporting' || checking || (needsTrial && !priceReady)
+    : needsTrial ? (trialDays > 0 ? trialLabel(trialDays) : 'Continue to checkout') : status === 'done' ? 'Export again' : exportLabel(pick)
+  // The price never holds the button: checkout shows it again before anyone pays,
+  // so a price that cannot load only changes the line beside the button.
+  const ctaDisabled = status === 'exporting' || checking
 
   let priceLine
   if (status === 'offline') priceLine = 'You’re offline. Your project is saved; try again when you’re back online.'
@@ -201,9 +207,9 @@ function ProjectExport({ id }) {
   else if (status === 'done') priceLine = 'Downloaded. Find it in your downloads folder.'
   else if (checking) priceLine = 'Checking your plan…'
   else if (needsTrial) {
-    priceLine = priceReady
-      ? <><strong>{trialDays} days free</strong>, then {price} a year until you cancel. Cancel before {trialEnd} and you pay nothing.</>
-      : 'Loading price'
+    if (priceReady) priceLine = <><strong>{trialDays} days free</strong>, then {price} a year until you cancel. Cancel before {trialEnd} and you pay nothing.</>
+    else if (!proPrice.loaded) priceLine = 'Loading price'
+    else priceLine = <><strong>{trialDays} days free</strong>, then billed yearly until you cancel. Checkout shows the price before you pay.</>
   } else if (pro) priceLine = <><strong>Included in Pro.</strong> Your file has no watermark.</>
   else priceLine = <><strong>Free.</strong> The file carries a small “Made with UIL4B” mark.</>
 
