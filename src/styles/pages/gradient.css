@@ -948,24 +948,23 @@
 .grd .grd-avail-tip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--tl-dim); }
 @media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
 
-/* Available colours: "Painting stop 1 of 2" in the head, and the one-line status
-   under the chips. The status line is always drawn at one line's height, so a press
-   changes its words and never the section's height. */
+/* Available colours: "Painting stop 1 of 2" in the head, and the status under the
+   chips. The status takes the section's full width and is never cut. With a palette
+   it is always drawn at two lines' height, so a press changes its words and never the
+   section's height; the Shuffle link sits on its own row below it. */
 .grd .grd-avail-tip { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
-.grd .grd-avail-foot { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.grd .grd-avail-foot .grd-avail-pool { flex: 0 0 auto; margin-left: auto; }
+.grd .grd-avail-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .grd .grd-avail-status {
-  flex: 1 1 auto;
+  align-self: stretch;
   min-width: 0;
   margin: 0;
   min-height: 16px;
   font-size: 12px;
   line-height: 16px;
   color: var(--tl-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
+.grd .grd-avail-status--two { min-height: 32px; }
 .grd .grd-avail-idle { color: var(--tl-dim); }
 .grd .grd-chip[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 

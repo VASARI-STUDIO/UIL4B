@@ -2089,7 +2089,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               {/* What the inert chips and pairs are described by. It is outside the live
                   region, so it is read on focus, before any press, and never announced. */}
               {allLocked && <span id="grd-avail-locked" className="sr-only">Every colour is locked.</span>}
-              <p id="grd-avail-status" className="grd-avail-status" role="status" aria-live="polite" aria-atomic="true">
+              <p id="grd-avail-status" className={sparse ? 'grd-avail-status' : 'grd-avail-status grd-avail-status--two'} role="status" aria-live="polite" aria-atomic="true">
                 {noteNow ? noteNow.text + (noteNow.n % 2 ? '\u200B' : '') : <span className="grd-avail-idle" aria-hidden="true">{availIdle}</span>}
               </p>
               {/* The Shuffle pool lives in Shuffle settings; this is the way to it from
