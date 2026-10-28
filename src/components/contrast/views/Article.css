@@ -74,6 +74,9 @@
 /* ── Under 560px: masthead, headline block and chart ──────────────────────── */
 .bs{padding:var(--s-3) var(--s-4);row-gap:var(--s-3)}
 .bs .bs-fig{margin-top:var(--s-1)}
+/* Under 330px the brand, issue and section links fill the row with no room for a
+   font that sets wider; the issue line is the one the masthead can do without. */
+@container pvs (max-width:329px){.bs .bs-issue{display:none}}
 
 /* ── 560 to 959px: the first paragraph beside the chart ───────────────────── */
 @container pvs (min-width:560px){
