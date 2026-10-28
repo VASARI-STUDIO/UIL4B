@@ -1,0 +1,103 @@
+/* verify-ai-prompt.css — the "Verify your email to use AI tools" block.
+ *
+ * One block in the flow of the tool, on a hairline, with the two actions
+ * beneath the sentence. Scoped under `.verify-ai` so it can sit in any of the
+ * three AI tools without borrowing their page scope. */
+
+.verify-ai {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+
+/* Focus lands here programmatically; a frame around the whole block would be
+   noise, and the buttons inside carry the visible focus. */
+.verify-ai:focus { outline: none; }
+
+.verify-ai-title {
+  margin: 0;
+  font-size: var(--fs-h5);
+  font-weight: 560;
+  line-height: 1.35;
+  color: var(--t0);
+}
+
+.verify-ai-text {
+  max-width: 62ch;
+  margin: 4px 0 0;
+  font-size: var(--fs-body-s);
+  line-height: 1.55;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}
+
+.verify-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.verify-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 540;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) cubic-bezier(.23, 1, .32, 1);
+}
+
+.verify-ai-btn:hover:not([aria-disabled="true"]) { background: var(--hvr); border-color: var(--bh); }
+
+.verify-ai-btn:active:not([aria-disabled="true"]) { transform: scale(.98); }
+
+.verify-ai-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* aria-disabled rather than disabled, so the button keeps focus while a send is
+   in flight or the cooldown runs. */
+.verify-ai-btn[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+
+.verify-ai-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
+
+.verify-ai-btn--primary:hover:not([aria-disabled="true"]) { background: var(--accent-fill-hover); border-color: transparent; }
+
+.verify-ai-note {
+  margin: 12px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--t1);
+}
+
+.verify-ai-note--error { color: var(--err); }
+
+/* An empty live region takes no room and no margin. */
+.verify-ai-note:empty { margin: 0; }
+
+@media (max-width: 520px) {
+  .verify-ai-actions { width: 100%; }
+  .verify-ai-btn { flex: 1 1 140px; }
+}
+
+@media (pointer: coarse) {
+  .verify-ai-btn { min-height: 44px; }
+}
+
+html[data-reduced-motion="true"] .verify-ai-btn:active:not([aria-disabled="true"]) { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .verify-ai-btn:active:not([aria-disabled="true"]) { transform: none; }
+}
