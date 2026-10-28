@@ -49,6 +49,9 @@ export const ANGLE_WEIGHTS = [
 /** The least chroma the middle of a generated ramp may have, so it never goes grey. */
 export const MIN_MIDPOINT_CHROMA = 0.025
 
+/** The most the chroma of a ramp's two ends may differ by. */
+export const MAX_CHROMA_GAP = 0.08
+
 export const MAX_STOPS = 5
 export const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
@@ -165,7 +168,25 @@ export function secondColour(first, harmony, tone, rand) {
     const quieter = first.C <= second.C ? first : second
     if (quieter.C > 0.12) { quieter.C = 0.12 }
   }
+  settleChroma(first, second)
   return second
+}
+
+// Dark and very light colours fit less chroma in sRGB, and a near-black hex has
+// so few steps that it lands well off the chroma it was drawn at. Either can
+// leave one end far more vivid than the other. Measure the ends as hexes (what
+// the person sees) and pull the more chromatic one down, 0.01 at a time, until
+// the gap is within MAX_CHROMA_GAP. Lower chroma stays inside the gamut.
+function settleChroma(a, b) {
+  const chromaOf = (c) => hexToOklchRaw(hexOf(c))[1]
+  for (let i = 0; i < 30; i++) {
+    const ca = chromaOf(a)
+    const cb = chromaOf(b)
+    if (Math.abs(ca - cb) <= MAX_CHROMA_GAP) return
+    const loud = ca > cb ? a : b
+    if (loud.C <= 0) return
+    loud.C = Math.max(0, +(loud.C - 0.01).toFixed(3))
+  }
 }
 
 /** Stops between two OKLCH ends, stepping along the hue path with a little hue jitter. */
