@@ -5,7 +5,9 @@
 // turns every request into a miss. Each miss on /api/share builds and deflates
 // a 1200x630 PNG; on /api/ai?palettePreview it builds a PNG; on /api/fonts it
 // downloads and parses the Google catalogue; on /api/get-prices it asks Stripe.
-// Each route now answers 400 for a key it does not use.
+// Each route now answers 400 for a key it does not use, except /api/share: its
+// links are shared on social media, which appends fbclid and utm_*, so it sends
+// those on with a cacheable 308 to the clean URL instead.
 //
 // WHAT KEEPS THIS HONEST. "Refuses unknown keys" is easy to satisfy with a
 // route that refuses everything, so each route also has its real callers
@@ -93,28 +95,83 @@ test('the guard refuses a key outside the allow-list, a repeated key, and nothin
 
 const CODE = '4338E0,7C6CF0'
 
-test('share: an unknown query key is a 400 and builds nothing', () => {
-  for (const query of [{ c: CODE, x: '1' }, { c: CODE, img: '1', cb: 'abc' }, { c: CODE, utm_source: 'a' }]) {
-    const res = fakeRes()
-    shareHandler({ method: 'GET', query, headers: {} }, res)
-    assert.equal(res.statusCode, 400, JSON.stringify(query))
-    assert.equal(res.sent, undefined, 'a refused request still produced a document')
-    assert.equal(res.headers['Cache-Control'], 'no-store')
-  }
-})
-
-test('share: img has one legal value, because every other value is another cache entry for the same PNG', () => {
-  for (const img of ['2', '0', 'true', '', ['1', '1']]) {
-    const res = fakeRes()
-    shareHandler({ method: 'GET', query: { c: CODE, img }, headers: {} }, res)
-    assert.equal(res.statusCode, 400, `img=${JSON.stringify(img)}`)
-  }
-})
-
-test('share: a repeated c is refused, not read as a comma list', () => {
+/** Asks the share handler and returns the response. */
+const askShare = (query) => {
   const res = fakeRes()
-  shareHandler({ method: 'GET', query: { c: ['4338E0', '7C6CF0'] }, headers: {} }, res)
+  shareHandler({ method: 'GET', query, headers: {} }, res)
+  return res
+}
+
+test('share: a tracking key is sent on with a 308 to the clean /p/<code> URL, building nothing', () => {
+  for (const extra of [{ fbclid: 'IwAR0abc' }, { utm_source: 'x', utm_medium: 'social' }, { cb: 'abc' }, { fbclid: ['a', 'b'] }]) {
+    const res = askShare({ c: CODE, ...extra })
+    assert.equal(res.statusCode, 308, JSON.stringify(extra))
+    assert.equal(res.headers.Location, `/p/${CODE}`)
+    assert.equal(res.headers['Cache-Control'], 'public, s-maxage=86400', 'the redirect must be cacheable')
+    assert.equal(res.sent, undefined, 'a redirect still produced a page or a PNG')
+  }
+})
+
+test('share: a tracking key on the image URL redirects to the clean image URL', () => {
+  const res = askShare({ c: CODE, img: '1', fbclid: 'IwAR0abc' })
+  assert.equal(res.statusCode, 308)
+  assert.equal(res.headers.Location, `/api/share?c=${CODE}&img=1`)
+  assert.equal(res.sent, undefined)
+})
+
+test('share: a wrong img value redirects to the page URL, never to an image URL', () => {
+  for (const img of ['2', '0', 'true', '', ['1', '1']]) {
+    const res = askShare({ c: CODE, img })
+    assert.equal(res.statusCode, 308, `img=${JSON.stringify(img)}`)
+    assert.equal(res.headers.Location, `/p/${CODE}`)
+  }
+})
+
+test('share: the redirect target has no query string beyond what the rewrite gives', () => {
+  // /p/<code> is rewritten to /api/share?c=<code>, which is served as it stands.
+  // The image form carries exactly the two keys the handler writes into its page.
+  const page = new URL(askShare({ c: CODE, fbclid: 'x' }).headers.Location, 'https://uil4b.com')
+  assert.equal(page.pathname, `/p/${CODE}`)
+  assert.equal(page.search, '')
+  const image = new URL(askShare({ c: CODE, img: '1', fbclid: 'x' }).headers.Location, 'https://uil4b.com')
+  assert.deepEqual([...image.searchParams.keys()].sort(), ['c', 'img'])
+
+  // And following it lands on a served answer, not on another redirect.
+  const served = askShare(Object.fromEntries(new URL(`https://uil4b.com/api/share?c=${CODE}&img=1`).searchParams))
+  assert.equal(served.statusCode, 200)
+})
+
+test('share: nothing from the request but a validated code reaches Location', () => {
+  const hostile = [
+    `${CODE}\r\nSet-Cookie: a=b`, `${CODE}\nX-Evil: 1`, `${CODE}%0d%0aX-Evil: 1`, `${CODE}/../..//evil.example`,
+    '//evil.example', 'https://evil.example', `${CODE}\n`, `${CODE},`, 'ZZZZZZ', '', undefined,
+  ]
+  for (const c of hostile) {
+    // With a tracking key present, so a redirect is the tempting answer.
+    const res = askShare({ c, fbclid: 'x' })
+    assert.equal(res.statusCode, 400, `c=${JSON.stringify(c)} was not refused`)
+    assert.equal(res.headers.Location, undefined, `c=${JSON.stringify(c)} reached Location`)
+  }
+  // The injected key names and values are never echoed either.
+  const res = askShare({ c: CODE, 'x\r\nSet-Cookie: a': 'b\r\nX-Evil: 1' })
+  assert.equal(res.statusCode, 308)
+  assert.equal(res.headers.Location, `/p/${CODE}`)
+  assert.ok(!/[\r\n]/.test(res.headers.Location))
+})
+
+test('share: a repeated c is still a 400, not read as a comma list and not redirected', () => {
+  const res = askShare({ c: ['4338E0', '7C6CF0'], fbclid: 'x' })
   assert.equal(res.statusCode, 400)
+  assert.equal(res.headers.Location, undefined)
+  assert.equal(askShare({ c: ['4338E0', '7C6CF0'] }).statusCode, 400)
+})
+
+test('share: a bad or missing code keeps the error it always gave', () => {
+  for (const query of [{}, { c: 'nope' }, { img: '1' }]) {
+    const res = askShare(query)
+    assert.equal(res.statusCode, 400, JSON.stringify(query))
+    assert.match(res.body.error, /^c must be 1-12/)
+  }
 })
 
 test('share: the /p/:code rewrite and the og:image URL the page writes are both accepted', () => {
