@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
@@ -97,6 +97,21 @@ function ProjectExport({ id }) {
   const [more, setMore] = useState(false)
   const exporting = useRef(false)
   const loaded = useRef(false)
+  // The page reserves room under its content for the fixed bar. The bar's height
+  // moves with the price line (two lines at one width, three at another, more with
+  // large text), so the real height is measured and handed to the page as a custom
+  // property; the CSS token is the floor.
+  const barWatch = useRef(null)
+  const watchBar = useCallback((el) => {
+    barWatch.current?.disconnect()
+    barWatch.current = null
+    const root = el?.closest('.pxg')
+    if (!el || !root || typeof ResizeObserver === 'undefined') return
+    const sync = () => root.style.setProperty('--pxg-bar-live', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+    sync()
+    barWatch.current = new ResizeObserver(sync)
+    barWatch.current.observe(el)
+  }, [])
   // The stored pick has been applied above; it is used once.
   useEffect(() => { if (readPick()?.projectId === id) clearPick() }, [id])
 
@@ -228,7 +243,7 @@ function ProjectExport({ id }) {
             <span className="pxg-frame">
               {d.id === 'kit'
                 ? <KitPreview colours={colours} name={name} />
-                : <ExportProPreview kind={d.id} template={readExportTemplates(working)[d.id]} design={design} projectName={name} blurred={!isPro} showLock={false} />}
+                : <ExportProPreview kind={d.id} template={readExportTemplates(working)[d.id]} design={design} projectName={name} blurred={!isPro} showLock={false} fit />}
             </span>
             <span className="pxg-meta"><span className="pxg-name">{d.name}</span><span className={d.pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{d.pro ? 'Pro' : 'Free'}</span></span>
             <span className="pxg-desc">{DESIGN_COPY[d.id]}</span>
@@ -254,7 +269,7 @@ function ProjectExport({ id }) {
         {' '}and in the project at any time.
       </p>
 
-      <div className="pxg-bar" role="region" aria-label="Your pick">
+      <div className="pxg-bar" ref={watchBar} role="region" aria-label="Your pick">
         <div className="pxg-sum"><strong>{current.name} · {GALLERY_FORMATS[pick.format].label}</strong> <span className={pro ? 'pxg-tier is-pro' : 'pxg-tier'}>{pro ? 'Pro' : 'Free'}</span></div>
         <Link className="pxg-not" to={`/projects/${id}`} aria-label={`Not now, open the ${name} project`}>Not now, open project</Link>
         <p className="pxg-price" aria-live="polite">{priceLine}</p>
