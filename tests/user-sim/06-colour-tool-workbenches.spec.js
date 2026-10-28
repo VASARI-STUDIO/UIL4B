@@ -48,9 +48,9 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     await page.getByRole('textbox', { name: 'Stop 1 hex' }).fill('#123456')
-    const firstLock = page.getByRole('button', { name: /Keep stop 1's colour/ })
+    const firstLock = page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Keep stop 1's colour/ })
     await firstLock.click()
-    await expect(page.getByRole('button', { name: /Stop 1's colour is kept/ })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Stop 1's colour is kept/ })).toHaveAttribute('aria-pressed', 'true')
 
     const random = page.getByRole('button', { name: /^Random$/ })
     await random.click()

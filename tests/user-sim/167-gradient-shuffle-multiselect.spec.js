@@ -24,7 +24,7 @@
 // MUTATIONS (each turns the tests named red):
 //   engineFilters returns no types                    -> "Type = Radial only ..." and the 360 More-menu test
 //   engineFilters returns no counts                   -> "Stops = 4 or 5 ..."
-//   randomise sets the angle even with keepAngle      -> "Keep the angle holds the angle ..."
+//   randomise sets the angle even with the angle lock -> "the angle lock in Geometry holds the angle ..."
 //   FilterGroup tabIndex always 0                     -> "roving tabindex"
 //   FilterGroup arrow keys not handled                -> "roving tabindex"
 //   Shift/Ctrl no longer adds in a filter group       -> "Shift-click adds ..." and the touch tap test
@@ -222,45 +222,41 @@ test.describe('Shuffle settings at 1440px', () => {
     }
   })
 
-  test('Keep the angle holds the angle through Random and Shuffle; off, Random moves it', async ({ page }) => {
+  test('the angle lock in Geometry holds the angle through Random and Shuffle; off, Random moves it', async ({ page }) => {
     await seed(page, { gradient: null })
     await open(page)
     const field = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
     await field.fill('77')
     await field.press('Enter')
     await expect(field).toHaveValue('77')
-    const scope = await openSettings(page)
     // Linear only, so the angle field is always drawn and always read.
+    const scope = await openSettings(page)
     await option(scope, 'Type', 'Linear').click()
-    const keep = scope.getByRole('button', { name: 'Keep the angle' })
+    await page.keyboard.press('Escape')
+    const keep = page.getByRole('button', { name: 'Keep the angle when you press Random' })
     await off(keep)
     await keep.click()
-    await on(keep)
+    const kept = page.getByRole('button', { name: /^The angle is kept/ })
+    await on(kept)
     for (let i = 0; i < 8; i++) {
       await toolbarAction(page, /^Random$/)
       await expect(field, `Random ${i + 1}`).toHaveValue('77')
       await toolbarAction(page, /^Shuffle from palette$/)
       await expect(field, `Shuffle ${i + 1}`).toHaveValue('77')
     }
-    // Pressing Random or Shuffle closed the popover (a press outside it); open it again.
-    const again = await openSettings(page)
-    const keepAgain = again.getByRole('button', { name: 'Keep the angle' })
-    await on(keepAgain)
-    await keepAgain.click()
-    await off(keepAgain)
+    await kept.click()
+    await off(page.getByRole('button', { name: 'Keep the angle when you press Random' }))
     let moved = false
     for (let i = 0; i < 20 && !moved; i++) {
       await toolbarAction(page, /^Random$/)
       moved = (await field.inputValue()) !== '77'
     }
-    expect(moved, 'with Keep the angle off, twenty Randoms never moved the angle').toBe(true)
+    expect(moved, 'with the angle lock off, twenty Randoms never moved the angle').toBe(true)
   })
-
-  test('the old type, angle and stop-count locks are gone from the panel', async ({ page }) => {
+  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for position, type, angle and interpolation', async ({ page }) => {
     await open(page)
-    await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(0)
-    await expect(panelOf(page).getByRole('button', { name: /lock the (type|angle|stop count)/i })).toHaveCount(0)
-    await expect(page.locator('.grd-lock')).toHaveCount(await stopRows(page).count()) // only the per-stop locks remain
+    await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(1)
+    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 5) // + Selected stop's colour and position, Type, Angle, Interpolation
   })
 })
 
@@ -389,15 +385,15 @@ for (const w of [390, 360]) {
       const scope = await openSettings(page)
       await expect(scope.locator('.grd-shuf-title')).toHaveText('What Random and Shuffle make')
       for (const g of ['Type', 'Stops']) await expect(group(scope, g)).toBeVisible()
-      await expect(scope.getByRole('button', { name: 'Keep the angle' })).toBeVisible()
+      await expect(scope.getByRole('button', { name: 'Keep the angle' })).toHaveCount(0)
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
     })
 
-    test('Keep the angle in the More menu is a 44px touch target', async ({ page }) => {
+    test('the angle lock in Geometry is a 44px touch target', async ({ page }) => {
       await open(page)
-      const scope = await openSettings(page)
-      const box = await scope.getByRole('button', { name: 'Keep the angle' }).boundingBox()
-      expect(box.height, 'Keep the angle is 44px tall').toBeGreaterThanOrEqual(44)
+      const box = await page.getByRole('button', { name: 'Keep the angle when you press Random' }).boundingBox()
+      expect(box.height, 'the angle lock is 44px tall').toBeGreaterThanOrEqual(44)
+      expect(box.width, 'the angle lock is 44px wide').toBeGreaterThanOrEqual(44)
     })
 
     test('the Type and Stops options are 44px tall targets in the More menu', async ({ page }) => {
@@ -1010,9 +1006,9 @@ test.describe('a filters entry saved before the pool existed', () => {
     const scope = await openSettings(page)
     await on(allPill(scope))
     await expect(pickPill(scope)).toHaveText('Pick colours…')
-    await on(scope.getByRole('button', { name: 'Keep the angle' }))
+    await expect(page.getByRole('button', { name: /^The angle is kept/ }), 'keepAngle: true became the angle lock').toHaveAttribute('aria-pressed', 'true')
     await on(option(scope, 'Type', 'Radial'))
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type and angle, not by a pool
+    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type, not by a pool
     await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
   })
 
@@ -1052,7 +1048,7 @@ test.describe('Shuffle settings → Colours without a palette', () => {
     await seed(page, { palette: [THIRTEEN[0]], gradient: null })
     await open(page)
     const scope = await openSettings(page)
-    await expect(scope.getByText('Keep the angle')).toBeVisible()
+    await expect(scope.getByText('Keep the angle')).toHaveCount(0) // the angle lock moved to Geometry
     await expect(poolRow(scope)).toHaveCount(0)
   })
 })
@@ -1117,7 +1113,7 @@ test.describe('the page does not move at 1440px', () => {
     await l.mark('settings open')
     await option(scope, 'Type', 'Radial').click(); await l.mark('Type = Radial')
     await option(scope, 'Stops', 4).click({ modifiers: ['Shift'] }); await l.mark('Stops = 4')
-    await scope.getByRole('button', { name: 'Keep the angle' }).click(); await l.mark('Keep the angle on')
+    await page.getByRole('button', { name: 'Keep the angle when you press Random' }).evaluate((el) => el.click()); await l.mark('angle lock on')
     await page.keyboard.press('Escape'); await l.mark('settings closed')
 
     await stopSelect(page, 1).click()

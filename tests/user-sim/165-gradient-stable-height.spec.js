@@ -25,7 +25,7 @@
 //   .grd-chip back to a square at 8px              -> "the Available colours chips are round"
 //   popClassName dropped from ColorPickerPop      -> the picker popover swatches
 //   removeStop ends in setActiveStop(0)           -> the four "removing ..." selection tests
-//   Keep the angle ignored by Random                  -> "Radial says it has no angle ... Keep the angle holds the angle"
+//   the angle lock ignored by Random                  -> "Radial says it has no angle ... the angle lock holds the angle"
 //   Add/Remove back to the disabled attribute     -> "at twelve stops Add ..." / "at two stops Remove ..."
 //   the "N of 12" count dropped                   -> "the Stops header counts the visible rows ..."
 import { test, expect } from './base.js'
@@ -110,16 +110,6 @@ async function toolbarAction(page, name, { force = false } = {}) {
   else await row.click()
 }
 
-/** Opens Shuffle settings (its popover, or the inline copy in the More menu when the toolbar is too narrow) and returns the Keep the angle button. */
-async function openShuffleKeep(page) {
-  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })
-  if ((await trigger.count()) && (await trigger.first().isVisible())) {
-    await trigger.first().click()
-    return page.getByRole('dialog', { name: 'Shuffle settings' }).getByRole('button', { name: 'Keep the angle' })
-  }
-  await page.locator('[data-tl-more] button').first().click()
-  return page.locator('.grd-shuf-inline').getByRole('button', { name: 'Keep the angle' })
-}
 
 /** With no palette, "Shuffle from palette" is aria-disabled but still answers a press (a toast, and focus on the note). */
 const shuffleFromPalette = (page) => toolbarAction(page, /^Shuffle from palette/, { force: true })
@@ -902,18 +892,18 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 5)
       })
 
-      // The angle has no lock of its own any more: "Keep the angle" in Shuffle
-      // settings holds it through Random. A Radial gradient says it has no angle
-      // in the angle row, and offers no lock there.
-      test('Radial says it has no angle and the angle row holds no lock; Keep the angle holds the angle through Random', async ({ page }) => {
+      // The angle lock sits at the top right of the angle row and holds the angle
+      // through Random. A Radial gradient says it has no angle in the same row, and
+      // the lock stays drawn there (the row never changes).
+      test('Radial says it has no angle and the angle row keeps its lock; the angle lock holds the angle through Random', async ({ page }) => {
         watch(page, 'a designer on a radial gradient')
         await open(page)
         const panel = panelOf(page)
 
-        await expect(page.locator('.grd-row--angle .grd-lock'), 'the angle lock was removed').toHaveCount(0)
+        await expect(page.locator('.grd-row--angle .grd-lock'), 'the angle lock is drawn').toHaveCount(1)
         await panel.getByRole('button', { name: 'Radial', exact: true }).click()
         await expect(page.locator('#grd-angle-none')).toContainText('Radial gradients have no angle')
-        await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(0)
+        await expect(page.locator('.grd-row--angle .grd-lock'), 'the lock stays on Radial').toHaveCount(1)
         await panel.getByRole('button', { name: 'Linear', exact: true }).click()
 
         // Put the angle at 77, a value the roll is very unlikely to land on, then hold it.
@@ -921,11 +911,10 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await field.fill('77')
         await field.press('Enter')
         await expect(field).toHaveValue('77')
-        const keep = await openShuffleKeep(page)
+        const keep = page.locator('.grd-row--angle .grd-lock')
         await expect(keep).toHaveAttribute('aria-pressed', 'false')
         await keep.click()
         await expect(keep).toHaveAttribute('aria-pressed', 'true')
-        await page.keyboard.press('Escape')
         for (let i = 0; i < 12; i++) {
           await toolbarAction(page, /^Random$/)
           // Radial has no angle field; only a type that draws one is read.
@@ -935,18 +924,16 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await panel.getByRole('button', { name: 'Linear', exact: true }).click()
         await expect(field).toHaveValue('77')
 
-        // The control: with Keep the angle off, Random does move the angle.
-        const keepAgain = await openShuffleKeep(page)
-        await keepAgain.click()
-        await expect(keepAgain).toHaveAttribute('aria-pressed', 'false')
-        await page.keyboard.press('Escape')
+        // The control: with the angle lock off, Random does move the angle.
+        await keep.click()
+        await expect(keep).toHaveAttribute('aria-pressed', 'false')
         let moved = false
         for (let i = 0; i < 30 && !moved; i++) {
           await toolbarAction(page, /^Random$/)
           await panel.getByRole('button', { name: 'Linear', exact: true }).click()
           moved = (await field.inputValue()) !== '77'
         }
-        expect(moved, 'with Keep the angle off, thirty Randoms never moved the angle').toBe(true)
+        expect(moved, 'with the angle lock off, thirty Randoms never moved the angle').toBe(true)
       })
     })
   }
