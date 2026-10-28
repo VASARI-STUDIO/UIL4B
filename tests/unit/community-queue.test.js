@@ -216,18 +216,24 @@ test('the admin custom claim is actually granted somewhere', () => {
   assert.match(src, /claimUpdated/, 'the client needs to know to refresh its token')
 })
 
-test('the submission flow never claims a review it did not queue', () => {
+test('the gradient tool has no browser-held submission path left', () => {
+  // Gradient submissions are account-connected. The tool must not write the
+  // old browser key or offer a submit form; the migration is the only thing
+  // that touches it, and only to move it to the account.
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /Sign in to submit it for review/, 'a signed-out save says what it is')
-  assert.match(src, /could not reach the review queue/, 'a failed publish says so')
-  assert.ok(/appendGradientSubmission\(record\)/.test(src),
-    'the local copy is kept regardless, so nothing the user made is lost')
+  assert.ok(!/appendGradientSubmission|SubmitGradientModal|submitForReview/.test(src),
+    'the browser-queue submit path is gone')
+  assert.ok(!/Submit for review/.test(src), 'and so is its toolbar item')
+  assert.match(src, /useGradientSubmissionMigration\(/, 'the old key is moved to the account on sign-in')
 })
 
-test('the gallery reads the account, not just this browser', () => {
+test('the gallery reads the account only, and withdraws from the account', () => {
   const src = read('src/pages/GradientGallery.jsx')
-  assert.match(src, /listMySubmissions\(user\.uid, 'gradient'\)/)
-  assert.match(src, /mergeSubmissions\(/)
+  assert.match(src, /listMySubmissions\(uid, 'gradient'\)/)
+  assert.match(src, /deleteSubmission\(s\.docId\)/)
+  assert.ok(!/mergeSubmissions\(/.test(src), 'no merge with a browser-held list')
+  assert.match(src, /Sign in to keep these gradients with your account\./)
+  assert.match(src, /useGradientSubmissionMigration\(/)
 })
 
 // ── The other two kinds ─────────────────────────────────────────────────────
