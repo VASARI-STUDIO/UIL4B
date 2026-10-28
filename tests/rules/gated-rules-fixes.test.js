@@ -159,3 +159,37 @@ test('M4 (the bug): palette colours are short strings, including the last index'
   await assertFails(setDoc(queue(aliceDb(), 'c4'), palette({ colors: [...last.slice(0, 31), 'x'.repeat(5000)] })))
   await assertFails(setDoc(queue(aliceDb(), 'c5'), palette({ colors: [...last, '#000000'] })))
 })
+
+// ── Extra cases from the security review ────────────────────────────────────
+
+test('M2 (KNOWN GAP): a non-admin can still lower an individual counter such as view__home', async () => {
+  // The rules protect deletion and the two grand totals only. Lowering a per-page,
+  // per-tool or per-icon counter cannot be told apart from a first write of a
+  // smaller number without a server route. When one exists this flips to
+  // assertFails, and this test should be changed with it.
+  await seedDay()
+  await assertSucceeds(setDoc(dayDoc(aliceDb()), { day: DAY, view__home: 1 }, { merge: true }))
+})
+
+test('M4: a gradient with 32 stops is accepted, and a 33rd is refused', async () => {
+  // 32 is the list cap; accepting it proves the rule's expression budget holds at
+  // its widest, not only at the 12 stops the earlier case uses.
+  const stops = (n) => Array.from({ length: n }, (_, i) => stop({ position: i }))
+  await assertSucceeds(setDoc(queue(aliceDb(), 'g32'), gradient({ stops: stops(32) })))
+  await assertFails(setDoc(queue(aliceDb(), 'g33'), gradient({ stops: stops(33) })))
+})
+
+test('M3: a photo URL of about 20 KB (a data URL) is accepted, and one of 100,001 characters is refused', async () => {
+  const dataUrl = (n) => 'data:image/png;base64,' + 'A'.repeat(n - 'data:image/png;base64,'.length)
+  await assertSucceeds(setDoc(user(aliceDb()), { photoURL: dataUrl(20000) }, { merge: true }))
+  await assertSucceeds(setDoc(user(aliceDb()), { photoURL: dataUrl(100000) }, { merge: true }))
+  await assertFails(setDoc(user(aliceDb()), { photoURL: dataUrl(100001) }, { merge: true }))
+})
+
+test('M3: an account with the old onboarding record { role, use, source } can still complete onboarding', async () => {
+  await seed(['users', ALICE], { displayName: 'Alice', onboarding: { role: 'designer', use: 'client work', source: 'search' } })
+  // Onboarding.jsx merges { ...extra, completedAt }, so the stored map keeps its three old keys.
+  await assertSucceeds(setDoc(user(aliceDb()), { onboarding: { firstWin: 'palette', completedAt: 1700000000000 } }, { merge: true }))
+  // The old keys are still held to the text cap.
+  await assertFails(setDoc(user(aliceDb()), { onboarding: { role: 'x'.repeat(101) } }, { merge: true }))
+})

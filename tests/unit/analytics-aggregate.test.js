@@ -283,3 +283,25 @@ test('a device names at most 8 distinct icons a day; the rest still count in the
   assert.equal(day['icon-copies'], 13, 'the headline total counts every copy')
   assert.equal(day['ipack__lucide'], 13, 'the pack tally counts every copy')
 })
+
+test('two different project ids record the same page field', async () => {
+  // A route with a :param is one field, not one per id: every distinct id would
+  // otherwise add a field to the 500-field day document.
+  const a = await loadAnalytics()
+  a.trackPageView('/projects/abc123')
+  a.trackPageView('/projects/zzz999')
+  a.trackPageView('/projects/zzz999/')
+  a.trackPageView('/projects')
+  a.trackPageView('/learn/color-theory')
+  a.trackPageView('/learn/spacing')
+  a.trackPageView('/learn/help')
+  flush()
+  const day = store.get(DAY)
+  const views = Object.keys(day).filter(f => f.startsWith('view__')).sort()
+  assert.deepEqual(views, [
+    'view__learn_:slug', 'view__learn_help', 'view__projects', 'view__projects_:id',
+  ])
+  assert.equal(day['view__projects_:id'], 3)
+  assert.equal(day['view__learn_:slug'], 2)
+  assert.equal(day.views, 7, 'the headline total still counts every view')
+})

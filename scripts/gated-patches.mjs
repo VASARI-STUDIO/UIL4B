@@ -310,12 +310,13 @@ export const GATED_PATCHES = [
   },
   {
     id: 'analytics-counters',
-    title: 'Analytics counters cannot be erased',
+    title: 'Analytics counters and grand totals protected',
     source: 'docs/design/analytics-counters-rules.patch',
     grants:
-      'a signed-in account can no longer delete or lower the usage counters on a day '
-      + 'document (only your admin sign-in can, which is what the reset button uses); '
-      + 'adding and increasing counters works as before',
+      'a signed-in account can no longer delete counters or lower the two grand totals '
+      + '(views and icon copies); it can still change an individual page, tool or icon '
+      + 'counter. Only your admin sign-in can delete counters or lower the totals, which is what '
+      + 'the reset button uses',
     files: ['firestore.rules'],
     parts: [
       {
@@ -359,9 +360,9 @@ export const GATED_PATCHES = [
     title: 'Submission payload bounded',
     source: 'docs/design/submission-payload-rules.patch',
     grants:
-      'a community submission has to carry a number for its angle, gradient stops that '
-      + 'are colour and position pairs, and short text for each palette colour, so one '
-      + 'submission can no longer be a megabyte inside the list-length limits',
+      'a community submission that has an angle must give it as a number, any gradient '
+      + 'stops must be colour and position pairs, and any palette colours must be short '
+      + 'text, so one submission can no longer be a megabyte inside the list-length limits',
     files: ['firestore.rules'],
     parts: [
       {
