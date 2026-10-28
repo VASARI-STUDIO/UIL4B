@@ -1177,7 +1177,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       if (!saveOpenRef.current) { clearPendingSave(); return }
     }
     const name = saveName.trim()
-    if (!name) { setSaveNameError('Name the project to save it.'); return }
+    // Refused here with the page still open: nothing is waiting to be reopened.
+    if (!name) { clearPendingSave(); setSaveNameError('Name the project to save it.'); return }
     // The save runs in the effect below. Right after the sign-in resolves this
     // closure still holds the signed-out `saveProject`, which throws "Sign in to
     // save projects"; the effect re-runs with the fresh one once the account has

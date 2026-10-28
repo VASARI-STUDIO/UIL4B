@@ -326,7 +326,7 @@ export default function GradientGallery({ toast }) {
                   <span className="meta">{s.type} · {s.stops.length} stops · by {s.author}</span>
                 </span>
                 <span className={`grg-queue-status${s.status === 'pending' ? '' : ' is-decided'}`}>{QUEUE_STATUS_LABEL[s.status] || 'Pending review'}</span>
-                <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name })}>Open</Link>
+                <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name, src: 'link' })}>Open</Link>
                 {s.status !== 'approved' && (
                   <button
                     type="button"

@@ -2563,7 +2563,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       if (!saveOpenRef.current) { clearPendingSave(); return }
     }
     const name = saveName.trim()
-    if (!name) { setSaveNameError('Name the project to save it.'); return }
+    // Refused here with the page still open: nothing is waiting to be reopened.
+    if (!name) { clearPendingSave(); setSaveNameError('Name the project to save it.'); return }
     setPendingSave(name)
   }
 

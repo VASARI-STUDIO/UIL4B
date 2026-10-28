@@ -150,3 +150,15 @@ test('a repeat Save with the refusal showing refocuses the field and remounts th
   assert.match(press, /setPressed/)
   assert.match(menu, /role="alert" key=\{pressed\}/)
 })
+
+test('a name refusal with the page open drops the sign-up stash, on both tools', () => {
+  for (const file of ['src/pages/GradientGenerator.jsx', 'src/pages/PaletteBuilder.jsx']) {
+    const src = fs.readFileSync(file, 'utf8')
+    assert.match(src, /if \(!name\) \{ clearPendingSave\(\); setSaveNameError\(/, file)
+  }
+})
+
+test('Open on your own submission hands off as a copied link, so it opens editable', () => {
+  const src = fs.readFileSync('src/pages/GradientGallery.jsx', 'utf8')
+  assert.match(src, /gradientToolUrl\(\{ \.\.\.s, name: s\.name, src: 'link' \}\)/)
+})
