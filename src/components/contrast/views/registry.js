@@ -16,6 +16,8 @@ import { trackExampleLoad } from '../../palette/examples/loading.js'
 // view id -> () => import('./<File>.jsx'). Each default-exports the view.
 const LOADERS = {
   interface: () => import('./Interface.jsx'),
+  article: () => import('./Article.jsx'),
+  landing: () => import('./Landing.jsx'),
   specimen: () => import('./Specimen.jsx'),
 }
 

@@ -1,6 +1,7 @@
-// /create/contrast: the pair painted on an Editorial, Product page or Card view,
-// and "Where each test lands". The pair is under test, so the views are painted
-// with it as given: a failing pair has to look as bad as it is.
+// /create/contrast: the pair painted on the Interface, Article and Landing page
+// views, and "Where each test lands". The pair is under test, so the views are
+// painted with it as given: a failing pair has to look as bad as it is. (Specimen
+// is covered in 171.)
 //
 // The pair here is #777777 on #FFFFFF, 4.48:1 (worked by hand from the WCAG
 // formula: 0.1845 luminance, 1.05 / 0.2345). It misses body text by 0.02 and
@@ -8,20 +9,20 @@
 //
 //   1. each view renders and is the one that was picked
 //   2. every text node in the view computes to exactly the text colour or the
-//      background, whatever else the example would normally paint
+//      background, whatever else the view would normally paint
 //   3. the legend reads Body text Fail, Large text Pass, UI parts Pass
-//   4. each of the three classes has at least one element in each view
-//   5. hovering or focusing a legend chip outlines the parts of that class
-//   6. the Editorial headline is larger than the body text (the example's own
-//      stylesheet loaded after the page's, so its sizes are the ones that apply)
-//   7. at 390px the Product button reads "Product" and the page does not scroll sideways
-//   8. at rest one part carries the failing test's mark; a chosen test outlines every part of it
-//   9. the outline colour is picked per pair; the legend sits above the example; no empty Card day
+//   4. each of the three classes has at least one element in each view, and
+//      hovering or focusing a legend chip outlines the parts of that class
+//   5. the Article headline is larger than its body paragraph (.bs-p)
+//   6. at 390px the Landing button reads "Landing" and no view scrolls sideways
+//   7. at rest one part carries the failing test's mark; a chosen test outlines every part of it
+//   8. the outline colour is picked per pair; the legend sits above the view
 //
-// To make each go red: 2 set a text colour in HaleOkoro.css/Tally.css/OrraWorkroom.css to a
-// literal (#444); 3 change a threshold in palettePairSizes.js SIZE_CLASSES; 4 drop UI_PARTS.card;
-// 5 stop PairLegend calling onHover; 6 import the example's css before contrast.css's page
-// rules or delete the .sw-head size; 7 remove `.cc .cc-views-more { display: none }`.
+// To make each go red: 2 set a text colour in Interface.css, Article.css or Landing.css to a
+// literal (#444); 3 change a threshold in palettePairSizes.js SIZE_CLASSES; 4 drop a
+// data-size mark from a view or stop PairLegend calling onHover; 5 make .bs-head 18px or
+// smaller in Article.css; 6 stop hiding `.cc-views-more` on a phone or give a view a fixed width
+// wider than 390px; 7 mark a second part as failing; 8 change the --pv-hit pick.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -29,12 +30,9 @@ const FG = '#777777'
 const BG = '#ffffff'
 const FG_RGB = 'rgb(119, 119, 119)'
 const BG_RGB = 'rgb(255, 255, 255)'
-// Part 1 of the views rework builds Interface; Article and Landing page arrive in part 2
-// (PART_TWO, used by the test.fixme tests below). Specimen is covered in 171.
+// The three product views; Specimen is covered in 171.
 const VIEWS = [
   { id: 'interface', name: 'Interface' },
-]
-const PART_TWO = [
   { id: 'article', name: 'Article' },
   { id: 'landing', name: 'Landing page' },
 ]
@@ -148,19 +146,17 @@ test.describe('the Contrast Checker views', () => {
     })
   }
 
-  // PART 2: needs the Article view (.bs-head is its headline). Delete .fixme then.
-  test.fixme('the Article headline is larger than its body text', async ({ page }) => {
+  test('the Article headline is larger than its body text', async ({ page }) => {
     watch(page, 'designer reading the Article view')
-    expect(PART_TWO[0].id).toBe('article')
     await openPair(page)
     const pv = await pickView(page, 'Article')
     await settle(page)
     const sizes = await pv.evaluate((root) => {
       const px = (sel) => { const el = root.querySelector(sel); return el ? parseFloat(getComputedStyle(el).fontSize) : null }
-      return { head: px('.bs-head'), body: Math.min(...[...root.querySelectorAll('p, li, span')].filter((e) => e.children.length === 0 && e.textContent.trim().length > 20).map((e) => parseFloat(getComputedStyle(e).fontSize))) }
+      return { head: px('.bs-head'), body: px('.bs-p') }
     })
     expect(sizes.head, 'the headline was found').not.toBeNull()
-    expect(sizes.body, 'body text was found').toBeLessThan(40)
+    expect(sizes.body, 'the body paragraph (.bs-p) was found').not.toBeNull()
     expect(sizes.head, `the headline is ${sizes.head}px beside ${sizes.body}px body text`).toBeGreaterThan(sizes.body * 1.5)
     expect(sizes.head, 'the headline is large text').toBeGreaterThanOrEqual(24)
   })
@@ -169,10 +165,8 @@ test.describe('the Contrast Checker views', () => {
 test.describe('the Contrast Checker views on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
-  // PART 2: needs the Landing page view. Delete .fixme then.
-  test.fixme('the Landing button reads "Landing", the other buttons keep their names', async ({ page }) => {
+  test('the Landing button reads "Landing", the other buttons keep their names', async ({ page }) => {
     watch(page, 'designer on a phone choosing a view')
-    expect(PART_TWO[1].name).toBe('Landing page')
     await openPair(page)
     const group = page.getByRole('group', { name: 'Preview the pair on' })
     const landing = group.getByRole('button', { name: 'Landing page', exact: true })
@@ -195,8 +189,7 @@ test.describe('the Contrast Checker views on a phone', () => {
     }
   })
 
-  // PART 2: needs the Landing page view. Delete .fixme then.
-  test.fixme('the Landing button keeps its whole name on a wide screen', async ({ page }) => {
+  test('the Landing button keeps its whole name on a wide screen', async ({ page }) => {
     watch(page, 'designer on a desktop choosing a view')
     await page.setViewportSize({ width: 1440, height: 900 })
     await openPair(page)

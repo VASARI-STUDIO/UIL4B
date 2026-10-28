@@ -194,7 +194,9 @@ await ready(page)
 
     const panel = page.locator('#set-accessibility')
     await expect(panel.locator(SEG)).toBeVisible()
-    await expect(panel.locator('[aria-label="Toggle reduced motion"]')).toBeVisible()
+    // A switch named by the words beside it (it was a pressed button whose
+    // aria-label said "Toggle reduced motion").
+    await expect(panel.getByRole('switch', { name: 'Reduced motion' })).toBeVisible()
 
     await panel.locator(btn('dark')).click()
     await expect.poll(() => themeOf(page), { message: '/settings could not switch the theme' }).toBe('dark')

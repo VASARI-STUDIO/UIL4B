@@ -11,6 +11,7 @@ import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 import { verifyErrorText } from '../utils/emailVerification'
+import useMediaQuery from '../hooks/useMediaQuery'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -203,6 +204,9 @@ export default function Checkout() {
   const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
   const { requireLogin } = useLoginPrompt()
+  // The features list is open beside the form and folded on a phone. The
+  // breakpoint is the sheet's one-column break.
+  const wide = useMediaQuery('not all and (max-width: 760px)')
 
   const requestedPlan = params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
@@ -464,14 +468,15 @@ export default function Checkout() {
                 copy is hidden at that width. */}
             {!loading && !user && <SignInToPay className="checkout-signin--inline" cadence={plan.cadence} onClick={signInToPay} />}
 
-            <ul className="checkout-features">
-              {FEATURES.map(f => (
-                <li key={f}><Check /> {f}</li>
-              ))}
-            </ul>
+            <details className="checkout-included" open={wide}>
+              <summary>What’s included</summary>
+              <ul className="checkout-features">
+                {FEATURES.map(f => (
+                  <li key={f}><Check /> {f}</li>
+                ))}
+              </ul>
+            </details>
           </div>
-
-          {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
         </aside>
 
         {/* Embedded Stripe checkout */}
@@ -550,6 +555,11 @@ export default function Checkout() {
             </>
           )}
         </div>
+
+        {/* After the payment panel, so the tab order is the reading order on a
+            phone, where it stacks last. From 761px the sheet puts it back
+            under the summary card by grid area. */}
+        {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
       </div>
     </div>
   )

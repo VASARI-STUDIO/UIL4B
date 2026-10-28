@@ -1812,7 +1812,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 
 /* ─── Onboarding ─── */
-.onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg-0)}
+.onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));background:var(--bg-0)}
 /* The app file's panel: 18px radius over a hairline, no lift. */
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
@@ -1842,13 +1842,18 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 main[tabindex="-1"]:focus-visible{outline:none}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
-.onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
-.onb-option:hover{border-color:var(--bh);background:var(--hvr)}
+.onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background-color var(--dur-2) var(--ease-out);text-align:left}
+.onb-option:active{background:var(--hvr)}
 .onb-option-arrow{color:var(--t3);transition:color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
+@media (hover:hover){
+  .onb-option:hover{border-color:var(--bh);background:var(--hvr)}
+  .onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
+}
 
-.onb-back{display:inline-flex;align-items:center;gap:6px;margin-top:18px;background:none;border:none;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;padding:8px 0;transition:color var(--dur-2) var(--ease-standard)}
-.onb-back:hover{color:var(--t0)}
+.onb-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:16px;padding:0;background:none;border:none;color:var(--t1);font-size:14px;font-family:var(--font);cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
+@media (hover:hover){
+  .onb-back:hover{color:var(--t0)}
+}
 .onb-back:disabled{opacity:.4;cursor:default}
 
 /* The first-win step, where the pricing table used to be. Three real
@@ -1859,17 +1864,24 @@ main[tabindex="-1"]:focus-visible{outline:none}
 .onb-firstwin-option{align-items:flex-start;padding:16px}
 .onb-firstwin-text{display:flex;flex-direction:column;gap:4px;min-width:0}
 .onb-firstwin-label{font-size:15px;font-weight:600;color:var(--t0);letter-spacing:-.01em}
-.onb-firstwin-blurb{font-size:12.5px;font-weight:400;line-height:1.5;color:var(--t2)}
+.onb-firstwin-blurb{font-size:13px;font-weight:400;line-height:1.5;color:var(--t2)}
 .onb-firstwin-option .onb-option-arrow{flex:none;margin-top:3px}
 /* The tier truth, kept as one line rather than a table in front of someone
    who has not made anything yet. */
-.onb-firstwin-foot{margin:18px 0 0;font-size:12px;color:var(--t3)}
+.onb-firstwin-foot{margin:18px 0 0;font-size:13px;color:var(--t3)}
 .onb-firstwin-foot a{color:var(--t1);text-decoration:underline;text-underline-offset:2px}
-.onb-firstwin-foot a:hover{color:var(--accent-mid)}
+@media (hover:hover){
+  .onb-firstwin-foot a:hover{color:var(--accent-mid)}
+}
 
 
+/* On a phone the options are the only panels: no card around them, so the
+   blurbs get the width and nothing clips the focus rings. */
 @media(max-width:520px){
-  .onb-card{padding:24px 20px}
+  .onb{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right))}
+  .onb-card{padding:0;border:0;border-radius:0;background:transparent;overflow:visible}
+  .onb-sub{font-size:14px}
+  .onb-back{display:flex;width:100%;min-height:48px;padding:0 16px;border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t0);font-weight:500}
 }
 
 /* ─── UI Builder: Code tabs ─── */
