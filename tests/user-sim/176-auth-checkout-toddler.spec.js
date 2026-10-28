@@ -241,7 +241,10 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
           }
           const s = submit.getBoundingClientRect()
           if (name === 'submit at the foot' && (s.top < 0 || s.bottom > window.innerHeight)) out.offScreen.push(name)
-          for (const x of [s.left + 8, s.left + s.width / 2, s.right - 8]) {
+          // Only a submit that is on screen can be hit-tested; off screen it is
+          // reached by scrolling, which the 'submit at the foot' step covers.
+          const onScreen = s.top >= 0 && s.bottom <= window.innerHeight
+          for (const x of onScreen ? [s.left + 8, s.left + s.width / 2, s.right - 8] : []) {
             const hit = document.elementFromPoint(x, s.top + s.height / 2)
             if (!hit || !(hit === submit || submit.contains(hit))) out.submitBlocked.push(`${name} at x=${Math.round(x)}`)
           }
