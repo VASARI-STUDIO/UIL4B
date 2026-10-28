@@ -307,6 +307,7 @@ const REST_TEXT = [
   '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-explain', '.cc-note-link',
   '.cc-lede', '.cc-field-k', '.cc-fixes-live .cc-fix-line', '.cc-fixes-live .cc-fix-ratio',
   '.cc-pair-label', '.cc-pair-ratio', '.cc-pair-mark',
+  '.cc-swatch-name', '.cc-pair-group-title', '.cc-pair-group-note',
 ]
 
 test.describe('The Contrast Checker meets the standard it enforces', () => {
@@ -591,14 +592,14 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA for all text.')
   })
 
-  // TRUTH: "Common pairs in this kit" and the swatches are the person's own
+  // TRUTH: "Pairs to check in your palette" and the swatches are the person's own
   // palette (the design's are invented brand values). Seed a palette and both
   // follow it; a pair applies both sides.
   //
   // MUTATION: make kitFrom() in ContrastChecker.jsx ignore palette.colors —
   // the swatch assertion goes red on the first seeded hex.
-  test('the common pairs and swatches come from the person’s own palette', async ({ page }) => {
-    watch(page, 'a designer checking their own kit')
+  test('the pairs to check and the swatches come from the person’s own palette', async ({ page }) => {
+    watch(page, 'a designer checking their own palette')
     const PALETTE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
     await page.addInitScript((colors) => {
       try {
@@ -609,10 +610,10 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
     const swatches = await page.locator('.cc-swatch').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label').match(/#[0-9A-F]{6}/i) || [''])[0].toUpperCase()))
-    for (const hex of PALETTE) expect(swatches, `the kit swatches are missing the palette's ${hex}`).toContain(hex)
+    for (const hex of PALETTE) expect(swatches, `the strip swatches are missing the palette's ${hex}`).toContain(hex)
 
     const pairs = page.locator('.cc-pair')
-    expect(await pairs.count(), 'the kit offered no pairs').toBeGreaterThan(2)
+    expect(await pairs.count(), 'the palette offered no pairs').toBeGreaterThan(2)
     // Named by the palette's roles, never the design's "Brand on ink".
     await expect(pairs.first()).toContainText(/Primary|Secondary|Accent|Subtle|Deep/)
     await expect(page.locator('.cc-pairs')).not.toContainText('Brand on ink')

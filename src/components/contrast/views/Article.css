@@ -106,3 +106,21 @@
   .bs .bs-stand{font-size:16px}
   .bs .bs-cap{display:none}
 }
+
+/* ── Palette context ──────────────────────────────────────────────────────────
+ * Only with data-ctx="on" on the root (PairExample); see Interface.css. The parts
+ * marked data-pair-part are painted in the pair, the rest in the palette's roles:
+ * the primary fills the button and draws the first line, the accent the rule and
+ * the dashed line, the strong border the axes. */
+.pvs[data-ctx="on"] .bs [data-pair-part]{color:var(--pv-pair-fg)}
+.pvs[data-ctx="on"] .bs .bs-link:not([data-pair-part]){color:var(--pv-primary-ink)}
+.pvs[data-ctx="on"] .bs .bs-link-u{background:currentColor}
+.pvs[data-ctx="on"] .bs .bs-quote-rule{border-left-color:var(--pv-accent)}
+.pvs[data-ctx="on"] .bs .bs-sub:not([data-pair-part]){border-color:var(--pv-primary);background:var(--pv-primary);color:var(--pv-on-primary)}
+.pvs[data-ctx="on"] .bs .bs-sub[data-pair-part]{border-color:var(--pv-pair-bg);background:var(--pv-pair-bg)}
+.pvs[data-ctx="on"] .bs .bs-chart-axis{border-color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .bs .bs-chart-line{stroke:var(--pv-primary)}
+.pvs[data-ctx="on"] .bs .bs-chart-line--dash{stroke:var(--pv-accent)}
+/* Two brand colours: both lines in the pair's text colour (one dashed) over a plot area in its background. */
+.pvs[data-ctx="on"] .bs .bs-chart-axis[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}
+.pvs[data-ctx="on"] .bs .bs-chart-axis[data-pair-part] .bs-chart-line{stroke:currentColor}

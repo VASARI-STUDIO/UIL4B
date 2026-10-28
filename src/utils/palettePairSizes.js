@@ -21,10 +21,15 @@ export function textSizeClass(px, weight) {
   return 'body'
 }
 
+/** The legend's help line for two brand colours side by side (a chart line, a
+ *  tag), where UI parts is the test the pair is chosen for. */
+export const BESIDE_NOTE = 'Two brand colours: shown as chart lines and a tag. Text on this pair needs 4.5:1.'
+
 /** The help line under the legend chips, for this unrounded ratio. The three
  *  tests are the AA ones, so a pair that clears them but not AAA (7:1) says
- *  "Every AA test passes", not "Every test". */
-export const legendLede = (ratio) => {
+ *  "Every AA test passes", not "Every test". `beside` swaps in BESIDE_NOTE. */
+export const legendLede = (ratio, beside = false) => {
+  if (beside) return BESIDE_NOTE
   if (failingSizes(ratio).length) return 'The largest part that misses its test is outlined. Pick a test to outline every part.'
   return `Every ${ratio >= 7 ? '' : 'AA '}test passes. Pick a test to outline every part.`
 }
@@ -47,13 +52,16 @@ export const OUTLINE_CANDIDATES = ['#1d63d1', '#c8260e', '#ffffff', '#111111']
  * @param {string} bg #rrggbb background
  * @param {string} fg #rrggbb text colour
  * @param {string[]} [candidates] #rrggbb colours, in order of preference
+ * @param {string[]} [grounds] #rrggbb colours the outline also sits on besides
+ *   the pair (the palette's own canvas, when parts are painted round the pair)
  * @returns {string} one of candidates
  */
-export function pickOutlineColour(bg, fg, candidates = OUTLINE_CANDIDATES) {
+export function pickOutlineColour(bg, fg, candidates = OUTLINE_CANDIDATES, grounds = []) {
+  const on = [bg, fg, ...grounds]
   let best = candidates[0]
   let bestMin = -1
   for (const c of candidates) {
-    const m = Math.min(contrastRatio(c, bg), contrastRatio(c, fg))
+    const m = Math.min(...on.map((g) => contrastRatio(c, g)))
     if (m > bestMin + 1e-9) { best = c; bestMin = m }
   }
   return best
@@ -76,7 +84,7 @@ export const PAIR_VIEWS = [
 // wrapper and the words in a span inside it: the marking skips a box that has
 // text of its own, so a labelled button is measured as a UI part and as text.
 export const UI_PARTS = {
-  interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-input, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill',
+  interface: '.ro-navico, .ro-navbar, .ro-menuico, .ro-card, .ro-toggle, .ro-select, .ro-chev, .ro-focus, .ro-input, .ro-check, .ro-shift, .ro-btn--outline, .ro-btn--fill, .ro-tag',
   article: '.bs-sub, .bs-quote-rule, .bs-link-u, .bs-chart-axis, .bs-chart-line',
   landing: '.tw-btn--fill, .tw-btn--outline, .tw-link-u, .tw-card, .tw-check, .tw-receipt, .tw-torn, .tw-badge',
   specimen: '.sp-btn, .sp-btn svg',

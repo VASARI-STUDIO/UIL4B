@@ -434,7 +434,7 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       // a heading, not an h2. The legend's own heading is the page's, so it is listed.
       expect(read.specimenTags, `${theme}: no preview row is a heading`).not.toContain('H2')
       expect(read.inViewHeadings, `${theme}: no heading inside the preview`).toBe(0)
-      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Common pairs in this kit'])
+      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Pairs to check'])
 
       // The claim the founder retired, and the tagline beside it.
       expect(read.body, `${theme}`).not.toContain('Free while in beta')
@@ -484,9 +484,9 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       }))
     // POSITIVE CONTROL: swap, the Text/Background pair, both fields, the pairs.
     expect(radii.length).toBeGreaterThan(8)
-    // The legend chips are multi-line toggle cards, like the pair cards, not
+    // A palette swatch is its chip with the role name under it. The legend chips are multi-line toggle cards, like the pair cards, not
     // action buttons. They show on the first view now that it is Interface.
-    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair|cc-lg-chip/.test(x.cls))
+    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair|cc-lg-chip|cc-swatch/.test(x.cls))
     expect(buttons.length, 'no buttons were measured').toBeGreaterThan(2)
     expect(buttons.filter((x) => x.r + 0.5 < Math.min(x.w, x.h) / 2), 'buttons that are not pills').toEqual([])
     expect(radii.filter((x) => x.tag === 'INPUT' && x.r >= 20 && x.w > x.h + 4), 'fields drawn as pills').toEqual([])

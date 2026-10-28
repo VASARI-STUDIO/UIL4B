@@ -237,7 +237,7 @@ test.describe('Contrast Checker · the ratio on a narrow screen', () => {
 //   R1  a view whose chunk fails to load can be tried again, and then it renders
 //   R2  the Interface frame holds the whole view on a phone (390, 375, 360, 320)
 //   R3  the fixes reserve is the same height as the fullest live state, so the
-//       swatches below it do not move when the wording is the longest
+//       bottom of the panel does not move when the wording is the longest
 //
 // MUTATIONS:
 //   R1  make retryPairExample() a no-op in views/registry.js (the stub stays cached)
@@ -352,7 +352,7 @@ test.describe('Contrast Checker · Article and Landing page on a phone', () => {
 })
 
 test.describe('Contrast Checker · the fixes reserve', () => {
-  test('R3: the page never changes height at 1440 and 390, and at 390 the reserve holds the fullest state so the swatches stay still', async ({ browser }) => {
+  test('R3: the page never changes height at 1440 and 390, and at 390 the reserve holds the fullest state so the bottom of the panel stays still', async ({ browser }) => {
     for (const vp of [{ width: 1440, height: 900, phone: false }, { width: 390, height: 844, phone: true }]) {
       const { ctx, page } = await open(browser, vp)
       watch(page, `a window ${vp.width}px wide`)
@@ -372,7 +372,7 @@ test.describe('Contrast Checker · the fixes reserve', () => {
           return {
           ghost,
           live: document.querySelector('.cc-fixes-live').getBoundingClientRect().height,
-          swatches: Math.round(document.querySelector('.cc-swatches').getBoundingClientRect().top + scrollY),
+          panelEnd: Math.round(document.querySelector('.cc-panel').getBoundingClientRect().bottom + scrollY),
           page: document.documentElement.scrollHeight,
           }
         })
@@ -382,7 +382,7 @@ test.describe('Contrast Checker · the fixes reserve', () => {
         tops.push({ fg, ...read })
       }
       if (vp.width < 901) {
-        const ys = tops.map((t) => t.swatches)
+        const ys = tops.map((t) => t.panelEnd)
         expect(Math.max(...ys) - Math.min(...ys), JSON.stringify(tops)).toBeLessThanOrEqual(1)
       }
       const pages = tops.map((t) => t.page)
@@ -391,17 +391,17 @@ test.describe('Contrast Checker · the fixes reserve', () => {
     }
   })
 
-  test('the panel at 1440x900 is as tall as its content, so "From your palette" is whole', async ({ browser }) => {
+  test('the panel at 1440x900 is as tall as its content, so its last section is whole', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 1440, height: 900 })
     watch(page, 'someone on a laptop')
     await page.evaluate(() => document.fonts.ready)
     const read = await page.evaluate(() => {
       const panel = document.querySelector('.cc-panel')
-      return { clip: panel.scrollHeight - panel.clientHeight, overflowY: getComputedStyle(panel).overflowY, swatches: document.querySelector('.cc-swatches').getBoundingClientRect().bottom, panel: panel.getBoundingClientRect().bottom }
+      return { clip: panel.scrollHeight - panel.clientHeight, overflowY: getComputedStyle(panel).overflowY, last: document.querySelector('.cc-fixes-sec').getBoundingClientRect().bottom, panel: panel.getBoundingClientRect().bottom }
     })
     expect(read.clip, 'the panel scrolls inside itself').toBeLessThanOrEqual(0)
     expect(read.overflowY).toBe('visible')
-    expect(read.swatches, 'the swatches end inside the panel').toBeLessThanOrEqual(read.panel)
+    expect(read.last, 'the last section ends inside the panel').toBeLessThanOrEqual(read.panel)
     await ctx.close()
   })
 })

@@ -9,16 +9,18 @@ import { SIZE_CLASSES, legendLede } from '../../utils/palettePairSizes'
 
 /**
  * @param {{ratio: number, pinned: string|null, onPin: (id: string|null) => void,
- *   onHover: (id: string|null) => void, lede?: boolean}} props ratio is the
- *   unrounded ratio; lede false leaves the help line to the caller (the page
- *   puts it under the frame on a phone)
+ *   onHover: (id: string|null) => void, lede?: boolean, lead?: string|null}} props
+ *   ratio is the unrounded ratio; lede false leaves the help line to the caller
+ *   (the page puts it under the frame on a phone); lead is the test shown first,
+ *   for a pair whose job is one test (two brand colours: 'ui')
  */
-export default function PairLegend({ ratio, pinned, onPin, onHover, lede = true }) {
+export default function PairLegend({ ratio, pinned, onPin, onHover, lede = true, lead = null }) {
+  const classes = lead ? [...SIZE_CLASSES].sort((a, b) => (b.id === lead) - (a.id === lead)) : SIZE_CLASSES
   return (
     <section className="cc-lg" aria-labelledby="cc-lg-title">
       <h2 id="cc-lg-title" className="tl-sec-label">Where each test lands</h2>
-      <div className="cc-lg-chips" role="group" aria-label="Tests">
-        {SIZE_CLASSES.map((c) => {
+      <div className="cc-lg-chips" role="group" aria-label="Tests" data-lead={lead || undefined}>
+        {classes.map((c) => {
           const pass = ratio >= c.min
           return (
             <button
@@ -48,7 +50,7 @@ export default function PairLegend({ ratio, pinned, onPin, onHover, lede = true 
           )
         })}
       </div>
-      {lede && <p className="cc-lede">{legendLede(ratio)}</p>}
+      {lede && <p className="cc-lede">{legendLede(ratio, lead === 'ui')}</p>}
     </section>
   )
 }

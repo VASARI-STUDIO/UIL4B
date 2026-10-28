@@ -2,8 +2,8 @@
  *
  * The toolbar, the grid, the side card and its section labels come from the
  * shared tool layout (pages/tool-layout.css); this sheet is the pair bar, the
- * preview frame, the pairs grid, the ratio, the tests, the fixes and the swatches.
- * Scoped `.cc …` throughout.
+ * preview frame, the ratio, the tests, the fixes, and the "Your palette" strip
+ * (swatches, then the pair cards by job). Scoped `.cc …` throughout.
  *
  * Verdict colours are the app's own state tokens (global.css): `-strong` for
  * words (AA text on the card in both themes), the base token for icons and
@@ -11,11 +11,12 @@
  * verdict drawn in the failing pair is unreadable exactly when it is needed.
  *
  * Layout: the pair bar is the first thing in the main column at every width.
- * From 901px the result panel takes the right column for two rows, the kit pairs
- * under the preview; it follows the page (sticky) only on a window tall enough to
+ * From 901px the result panel takes the right column for two rows, the palette
+ * strip under the preview; it follows the page (sticky) only on a window tall enough to
  * hold it (980px), and never scrolls inside itself. At 900px and below
  * the ratio is a strip under the pair bar and the order is pair bar, ratio,
- * views, legend, preview, result panel, kit pairs.
+ * views, legend, preview, caption and switch, palette strip, result panel: the
+ * strip follows the picture it changes.
  *
  * The page does not change height with the view or the pair: the preview sits in
  * a frame of fixed height, the ratio strip is a fixed height, and the sections
@@ -45,6 +46,11 @@
   color: var(--tl-dim);
 }
 .cc .cc-field-short { display: none; }
+/* The role after the word ("Text colour · Deep") on one line that gives way with
+   an ellipsis, so a long name never adds a row. A phone puts it under the word. */
+@media (min-width: 560px) {
+  .cc .cc-field-k:has(.cc-field-role) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 .cc .cc-field-row { display: flex; gap: var(--s-2); min-width: 0; }
 .cc .cc-field .cpk-wrap { flex: 0 0 auto; }
 .cc .cc-picker {
@@ -122,6 +128,50 @@
 .cc .cc-pv [data-hit="on"] { scroll-margin-block: calc(var(--chrome-h) + 80px) 96px; }
 .cc .cc-pv-wait { height: 100%; }
 
+/* ── Palette context: the caption and the "Show my palette around it" switch ──
+   Under the frame at every width. One line high at 560px and up (the caption
+   gives way with an ellipsis); on a phone the caption is held to two lines and
+   reserves both, so neither state moves the page. */
+.cc .cc-ctxbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-width: 0; }
+.cc .cc-ctx-cap { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+.cc .cc-switch { display: flex; flex: none; align-items: center; gap: var(--s-2); min-height: 24px; padding: 0; border: 0; background: none; color: var(--tl-ink); font: inherit; font-size: 13px; line-height: 1.2; text-align: left; cursor: pointer; touch-action: manipulation; }
+.cc .cc-switch-track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border: 1px solid var(--tl-line-on);
+  border-radius: 999px;
+  transition: background-color .16s ease, border-color .16s ease;
+}
+.cc .cc-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--tl-dim);
+  transition: transform .16s ease, background-color .16s ease;
+}
+.cc .cc-switch[aria-checked="true"] .cc-switch-track { border-color: var(--tl-ink); background: var(--tl-ink); }
+.cc .cc-switch[aria-checked="true"] .cc-switch-track::after { transform: translateX(16px); background: var(--tl-card); }
+@media (max-width: 559px) {
+  .cc .cc-ctxbar { flex-direction: column; align-items: stretch; gap: var(--s-1); }
+  .cc .cc-ctx-cap { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; min-height: 3em; white-space: normal; }
+  .cc .cc-switch { justify-content: space-between; }
+}
+@media (pointer: coarse) {
+  .cc .cc-switch { min-height: 44px; }
+}
+:where(html[data-reduced-motion="true"]) .cc .cc-switch-track,
+:where(html[data-reduced-motion="true"]) .cc .cc-switch-track::after { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-switch-track,
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-switch-track::after { transition: none; }
+}
+
 /* ── Where each test lands ──────────────────────────────────────────────── */
 .cc .cc-lg { display: grid; gap: 6px; }
 .cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
@@ -163,8 +213,44 @@
   .cc .cc-lg-chip:hover { border-color: var(--tl-line-on); }
 }
 
-/* ── Common pairs in this kit ───────────────────────────────────────────── */
-.cc .cc-pairs { display: grid; gap: var(--s-2); min-width: 0; }
+/* ── Your palette: swatches that set a side, then the pairs to check ───── */
+.cc .cc-strip { display: grid; gap: var(--s-5); min-width: 0; }
+.cc .cc-strip-pick { display: grid; gap: var(--s-2); min-width: 0; }
+.cc .cc-swatches { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+/* The swatch is the chip with its role name under it. The button keeps a 44px
+   target on every pointer; the chip itself is 32px (44px on a coarse pointer). */
+.cc .cc-swatch {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--s-1);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px var(--s-1) var(--s-1);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tl-dim);
+  font-family: var(--font);
+  cursor: pointer;
+}
+.cc .cc-swatch-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
+  background: var(--cc-sw, transparent);
+}
+/* The chosen swatch: the ink border, and a ring outside it with a 2px gap in the
+   page's own ground, so a chip as dark as the ink still shows which is on. */
+.cc .cc-swatch.is-on .cc-swatch-chip { border-color: var(--t0); box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--t0); }
+.cc .cc-swatch.is-on { color: var(--tl-ink); }
+.cc .cc-swatch-name { max-width: 9em; font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+.cc .cc-pairs { display: grid; gap: var(--s-3); min-width: 0; }
+.cc .cc-pair-group { display: grid; gap: var(--s-2); min-width: 0; }
+.cc .cc-pair-group-title { margin: 0; font-size: 12.5px; font-weight: 500; line-height: 1.4; color: var(--tl-soft); }
+.cc .cc-pair-group-note { margin-left: var(--s-2); font-weight: 400; color: var(--tl-dim); }
+.cc .cc-pairs-more { justify-self: start; }
 .cc .cc-pair-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
@@ -319,24 +405,16 @@
 .cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
 .cc .cc-fix-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* ── Palette swatches ───────────────────────────────────────────────────── */
-.cc .cc-colours { gap: 11px; }
-.cc .cc-swatches { display: flex; flex-wrap: wrap; gap: var(--s-2); }
-.cc .cc-swatch {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
-  background: var(--cc-sw, transparent);
-  cursor: pointer;
+/* The Text / Background target is two pills; from 901px a wide column would
+   stretch each to half of it. */
+@media (min-width: 901px) {
+  .cc .cc-strip-pick .tl-pills { max-width: 360px; }
 }
-.cc .cc-swatch.is-on { border-color: var(--t0); }
 
 /* ── Desktop: result panel on the right, following the page ─────────────── */
 @media (min-width: 901px) {
   /* The card is as tall as its content and never scrolls inside itself: a
-     capped card cut "From your palette" off at the bottom with no cue. It is
+     capped card cut its last section off at the bottom with no cue. It is
      shorter than the main column, so the page height is the main column's. */
   .cc .tl-panel {
     grid-column: 2;
@@ -353,15 +431,16 @@
      where the card is in the page flow (900px and below). */
   .cc .cc-fixes-ghost .cc-lede { max-height: 1.5em; overflow: hidden; }
   .cc .cc-fixes-ghost .cc-fix:nth-child(2) { display: none; }
-  .cc .cc-pairs { grid-column: 1; grid-row: 2; align-self: start; }
-  /* The panel spans both rows; its extra height goes to the second, so the pairs
-     sit right under the preview and do not move as the fix list grows. */
+  .cc .cc-strip { grid-column: 1; grid-row: 2; align-self: start; }
+  /* The panel spans both rows; its extra height goes to the second, so the strip
+     sits right under the preview and does not move as the fix list grows. */
   .cc .tl-grid { grid-template-rows: auto 1fr; }
 }
 
 /* ── Touch: every control reaches 44px ──────────────────────────────────── */
 @media (pointer: coarse) {
-  .cc .cc-swatch { width: 44px; height: 44px; }
+  .cc .cc-swatch-chip { width: 44px; height: 44px; }
+  .cc .cc-pairs-more { min-height: 44px; }
   .cc .cc-picker { width: 44px; height: 44px; min-height: 44px; }
   .cc .cc-hex-input { height: 44px; font-size: 16px; }
   .cc .tl-btn.cc-swap { width: 44px; height: 44px; min-height: 44px; margin-top: 24px; }
@@ -392,6 +471,11 @@
   .cc .cc-field { grid-template-columns: 88px minmax(0, 1fr); column-gap: var(--s-1); align-items: center; }
   .cc .cc-field-k { margin: 0; font-size: 13px; }
   .cc .cc-field-short { display: inline; }
+  /* The role goes under the word, held to two lines: both fit in the 44px the
+     control takes, so a role or a long name never changes the field's height. */
+  .cc .cc-field-k:has(.cc-field-role) { line-height: 1.2; }
+  .cc .cc-field-role { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 11.5px; line-height: 1.15; overflow-wrap: anywhere; }
+  .cc .cc-field-sep { display: none; }
   /* The full label stays the input's name for a screen reader. */
   .cc .cc-field-full {
     position: absolute;
@@ -432,8 +516,8 @@
   .cc .cc-frame,
   .cc .cc-pair-chip,
   .cc .cc-fix-chip,
-  .cc .cc-swatch { forced-color-adjust: none; }
-  .cc .cc-swatch.is-on { outline: 2px solid Highlight; }
+  .cc .cc-swatch-chip { forced-color-adjust: none; }
+  .cc .cc-swatch.is-on .cc-swatch-chip { outline: 2px solid Highlight; }
   .cc .cc-pair[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
 .cc .cc-pv-fail { display: grid; place-content: center; justify-items: center; gap: var(--s-3); height: 100%; padding: var(--s-6); text-align: center; background: var(--tl-card); color: var(--tl-ink); }

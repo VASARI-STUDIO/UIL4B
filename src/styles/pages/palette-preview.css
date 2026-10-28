@@ -146,6 +146,10 @@
 /* Text of a Contrast Checker example is outlined outside its box even when its role is neutral; the inset used for a fill would sit on the glyphs. */
 .pvs [data-size]:not([data-size="ui"]):is([data-hit="on"],[data-fail="on"]){outline-offset:2px}
 .pvs [data-hit="off"]{opacity:.4}
+/* In the Contrast Checker's palette context the parts are the pair itself, and the
+ * labels inside them are the pair's own text, so a lit test never dims them: a
+ * "6-2" on its block or the tag's word would be a pair you cannot read. */
+.pvs[data-ctx="on"] :is([data-pair-part],[data-pair-part] *)[data-hit="off"]{opacity:1}
 /* Chromium draws an outline on an SVG shape as its bounding box, which on a
  * stretched chart is a heavy bar across the whole drawing. So an SVG part drops
  * the outline and is stroked instead: dashed for "where this colour lands",

@@ -35,6 +35,7 @@ import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 import { BrandLockup, BrandSymbol } from './BrandLogo'
+import { initialsOf } from '../utils/initials.js'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -249,11 +250,7 @@ function ThemeSeg() {
 }
 
 function initials(profile, user) {
-  const src = profile?.displayName || user?.email || ''
-  const parts = src.trim().split(/[\s@.]+/).filter(Boolean)
-  const first = parts[0]?.[0] || 'U'
-  const second = parts.length > 1 ? parts[1][0] : ''
-  return (first + second).toUpperCase()
+  return initialsOf(profile?.displayName, user?.email)
 }
 
 // THE CREATE PANE'S PICTURE — a page of what an export looks like, set inside

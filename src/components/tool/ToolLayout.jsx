@@ -76,7 +76,8 @@ export function ToolLayout({
 // title        the tool's name — the h1 and the 15px label
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
-// back         { to, label } | false. Default /projects, "Back to workspace".
+// back         { to, label, text, hint, history } | false (see ToolBack).
+//              Default /projects, "Back to workspace".
 //              A tool that wants the back button to collapse on a phone passes
 //              false and adds <ToolBack/> as an item instead.
 // items        the tool's actions, in row order:
@@ -302,7 +303,7 @@ export function ToolToolbar({
       className={cx('tl-toolbar', needsMeasure && 'is-measuring', className)}
       data-tool-toolbar=""
     >
-      {backProps && <span data-tl-fixed="" className="tl-fixed"><ToolBack to={backProps.to} label={backProps.label} /></span>}
+      {backProps && <span data-tl-fixed="" className="tl-fixed"><ToolBack {...backProps} /></span>}
       <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>
       {inlineItems}
       {showMore && (
@@ -346,7 +347,10 @@ export function ToolToolbar({
 // passes `history={false}`.
 const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
 
-export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true }) {
+// `text` draws the destination's name beside the arrow (the 36px hairline pill
+// instead of the square), and `hint` replaces the tooltip that repeats `label`
+// with a sentence a screen reader gets as the description.
+export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true, text, hint }) {
   const navigate = useNavigate()
   // history.state is read on every render; subscribing to the location makes
   // each navigation render this again.
@@ -360,8 +364,15 @@ export function ToolBack({ to = '/projects', label = 'Back to workspace', histor
     navigate(-1)
   }
   return (
-    <Link to={to} className="tl-btn tl-btn--square" aria-label={name} title={name} onClick={onClick}>
-      <ToolIcon name="arrow-left" size={15} />
+    <Link
+      to={to}
+      className={text ? 'tl-btn tl-btn--quiet tl-btn--back' : 'tl-btn tl-btn--square'}
+      aria-label={name}
+      title={hint || name}
+      onClick={onClick}
+    >
+      <ToolIcon name="arrow-left" size={15} className={text ? 'tl-btn-ico' : undefined} />
+      {text && <span className="tl-btn-label">{text}</span>}
     </Link>
   )
 }

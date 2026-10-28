@@ -8,6 +8,7 @@ import { hexToRgb, contrastRatio } from './colors.js'
 import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { tintLabelsFor } from './tintLabels.js'
 import { PALETTE_LABELS } from './paletteRoles.js'
+import { initialOf } from './initials.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -411,7 +412,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
   <button class="sg-theme-toggle" onclick="(function(b){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;b.textContent=t==='dark'?'Light':'Dark'})(this)">${isDark ? 'Light' : 'Dark'}</button>
   <aside class="sg-sidebar">
     <div class="sg-brand">
-      <div class="sg-brand-mark">${projectName.charAt(0).toUpperCase()}</div>
+      <div class="sg-brand-mark">${initialOf(projectName)}</div>
       <h1>${projectName}</h1>
       <span class="sg-brand-sub">Style Guide</span>
       <span class="sg-brand-date">${date}</span>

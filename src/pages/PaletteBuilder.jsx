@@ -62,6 +62,7 @@ import useExportGate from '../hooks/useExportGate'
 // The measured collapse for the action rail — the rule, the measurements that
 // found the band nobody had reported, and why one band is exempt.
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
+import { columnPair, handoffUrl, readingPair } from '../utils/contrastHandoff'
 // What a fresh board and a Reset open on, plus the ?c= > hand-off > saved >
 // random precedence — kept pure so the free-settings default and “a shared link
 // beats the random draw” can be tested exhaustively without a DOM.
@@ -2354,9 +2355,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
   }
 
-  // The Contrast Checker reads the project's palette. The board is written
-  // first so an edit still inside the 200ms save delay above goes with it.
-  const openInContrast = () => {
+  // The Contrast Checker reads the project's palette, and the pair to open on
+  // travels in the address (utils/contrastHandoff) so a reload keeps it. The
+  // board is written first so an edit still inside the 200ms save delay above
+  // goes with it. With no column it opens on the palette's reading pair; with
+  // one, on that colour paired by what it is most often used for.
+  const openInContrast = (column = null) => {
     closeAllMenus()
     setPalette({
       ...persistedPalette(colors, adjust),
@@ -2366,8 +2370,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       locked: [...locked],
       activeIdx: 0,
     })
-    setLiveMsg('Opening your palette in the Contrast Checker')
-    navigate('/create/contrast')
+    const pair = column == null ? readingPair(adjusted) : columnPair(adjusted, column)
+    setLiveMsg(column == null
+      ? 'Opening your palette in the Contrast Checker'
+      : `Checking ${roleLabel(harmony, column).toLowerCase()} in the Contrast Checker`)
+    navigate(handoffUrl(pair))
   }
 
   const openInTint = (hex) => {
@@ -2769,7 +2776,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
-    { id: 'contrast', inline: false, menu: { label: 'Check in Contrast Checker', icon: 'check-circle', onSelect: openInContrast } },
+    { id: 'contrast', inline: false, menu: { label: 'Check contrast', icon: 'check-circle', onSelect: () => openInContrast() } },
     { id: 'history', inline: false, menu: { label: 'History', icon: 'arrow-counter-clockwise', onSelect: () => { closeAllMenus(); setHistOpen(true) } } },
     { id: 'reset', inline: false, menu: { label: 'Reset palette', icon: 'arrow-clockwise', onSelect: resetPalette } },
   ]
@@ -3205,6 +3212,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('values', ctxMenu.i)}><ToolIcon name="swatches" size={14} /> Colour values</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('match', ctxMenu.i)}><ToolIcon name="tag" size={14} /> Nearest named colours{planKnown && !isPro && <span className="plb-ctx-pro">Pro</span>}</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openInContrast(ctxMenu.i)}><ToolIcon name="check-circle" size={14} /> Check contrast</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); closeCtxMenu(ctxMenu.i) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>

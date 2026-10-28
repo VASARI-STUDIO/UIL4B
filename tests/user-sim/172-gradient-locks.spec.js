@@ -20,7 +20,8 @@
 //   the EVERY_COLOUR_LOCKED toast dropped from randomise      -> "when every colour is locked ..."
 //   LockMark returns null                                     -> "a locked stop wears a mark on the rail and the ramp"
 //   the persist effect writes {color, position} only          -> "the stop locks are kept in the shared design", "... comes back from another tool ..."
-//   RANDOM_DRAWS_SPACE set true (or the guard removed)        -> "the angle lock names the angle it keeps, and the interpolation lock is not offered"
+//   RANDOM_DRAWS_SPACE set false (or the guard added back)    -> "the angle lock names the angle it keeps, and the interpolation lock is offered"
+//   the page ignores g.space from the roll                    -> "Random draws the interpolation, and a locked interpolation is kept"
 //   keepLabel for the angle loses its value                   -> "the angle lock names the angle it keeps ..."
 //   .grd .grd-iconbtn { width: 44px } removed from coarse     -> "the lock buttons are 44px on a finger"
 //   a lock row given its own height (a new row)               -> "toggling every lock does not change the page height"  (also the 768 case)
@@ -68,10 +69,10 @@ const settingsDialog = async (page) => {
   return d
 }
 
-/** The four lock buttons in Selected stop and Geometry, as [scope, what they keep]. The interpolation lock is hidden until G3. */
+/** The five lock buttons in Selected stop and Geometry, as [scope, what they keep]. */
 const LOCK_PLACES = (page) => [
   [selectedSection(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"],
-  [geometry(page), 'the type'], [geometry(page), 'the angle'],
+  [geometry(page), 'the type'], [geometry(page), 'the angle'], [geometry(page), 'the interpolation'],
 ]
 /** Locking each one in turn moves neither the page, the panel nor Available colours. */
 async function expectLocksKeepHeight(page) {
@@ -100,6 +101,7 @@ test.describe('the locks at 1440', () => {
       ['stop 1\'s colour', stopList(page)],
       ['the type', geometry(page)],
       ['the angle', geometry(page)],
+      ['the interpolation', geometry(page)],
     ]
     for (const [thing, scope] of places) {
       const btn = lockIn(scope, thing)
@@ -240,14 +242,39 @@ test.describe('the locks at 1440', () => {
     expect(sizes).toEqual([12, 12])
   })
 
-  test('the angle lock names the angle it keeps, and the interpolation lock is not offered', async ({ page }) => {
+  test('the angle lock names the angle it keeps, and the interpolation lock is offered', async ({ page }) => {
     await open(page)
     await expect(geometry(page).getByRole('button', { name: 'Keep the angle (160°) when you press Random' })).toBeVisible()
     await lockIn(geometry(page), 'the angle').click()
     await expect(geometry(page).getByRole('button', { name: 'The angle (160°) is kept. Press to let Random change it.' })).toHaveAttribute('aria-pressed', 'true')
-    // Random does not draw the interpolation space until G3, so there is no lock to press.
-    await expect(geometry(page).getByRole('button', { name: /interpolation/i })).toHaveCount(0)
+    // Random draws the interpolation space, so it can be kept. The lock sits outside the two pills.
+    await expect(geometry(page).getByRole('button', { name: 'Keep the interpolation when you press Random' })).toBeVisible()
     await expect(geometry(page).getByRole('group', { name: 'Interpolation' }).getByRole('button')).toHaveCount(2)
+  })
+
+  test('Random draws the interpolation, and a locked interpolation is kept', async ({ page }) => {
+    await open(page)
+    const pill = (name) => geometry(page).getByRole('button', { name })
+    const perceived = pill('Perceived (OKLCH)')
+    const standard = pill('Standard (sRGB)')
+    // Unlocked, Standard comes up on some presses (about 1 in 4), and Perceived on most.
+    const seen = new Set()
+    for (let i = 0; i < 60 && seen.size < 2; i++) {
+      await random(page).click()
+      seen.add((await standard.getAttribute('aria-pressed')) === 'true' ? 'srgb' : 'oklch')
+    }
+    expect([...seen].sort(), 'sixty presses drew both spaces').toEqual(['oklch', 'srgb'])
+    // Locked on Standard, every press keeps it.
+    await standard.click()
+    await lockIn(geometry(page), 'the interpolation').click()
+    for (let i = 0; i < 10; i++) {
+      await random(page).click()
+      await expect(standard, `Random ${i + 1}`).toHaveAttribute('aria-pressed', 'true')
+      await expect(perceived).toHaveAttribute('aria-pressed', 'false')
+    }
+    // A hand edit still works under the lock.
+    await perceived.click()
+    await expect(perceived).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('the stop locks are kept in the shared design, so they survive a trip to another tool', async ({ page }) => {
@@ -312,7 +339,7 @@ test.describe('the locks on a finger (390, touch)', () => {
       const r = e.getBoundingClientRect()
       return { name: e.getAttribute('aria-label'), w: Math.round(r.width), h: Math.round(r.height) }
     }))
-    expect(boxes.length, '3 stop rows + the selected stop colour and position + type + angle; no interpolation lock yet').toBe(7)
+    expect(boxes.length, '3 stop rows + the selected stop colour and position + type + angle + interpolation').toBe(8)
     for (const b of boxes) {
       expect(b.w, `${b.name} width`).toBeGreaterThanOrEqual(44)
       expect(b.h, `${b.name} height`).toBeGreaterThanOrEqual(44)

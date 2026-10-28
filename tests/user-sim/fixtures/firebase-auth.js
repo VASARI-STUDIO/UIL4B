@@ -172,9 +172,17 @@ export function reload(user) {
   return Promise.resolve()
 }
 
+/* Every call is counted in `fakeAuth.calls` (read from a spec as
+ * `window.__UIL4B_TEST_AUTH__.calls`), and `delays.updatePassword` holds the
+ * answer back that many ms, so a spec can click again while the first call is
+ * still in flight. Both are inert unless a spec sets them. */
 export function updatePassword(user, newPassword) {
   if (!isFakeUser(user)) return realUpdatePassword(user, newPassword)
-  return Promise.resolve()
+  fakeAuth.calls.push('updatePassword')
+  const refused = authFailFor('updatePassword')
+  if (refused) return Promise.reject(refused)
+  const wait = fakeAuth.delays.updatePassword || 0
+  return wait ? new Promise((resolve) => setTimeout(resolve, wait)) : Promise.resolve()
 }
 
 /* Reauthentication SUCCEEDS for a declared session, and that is a decision.
