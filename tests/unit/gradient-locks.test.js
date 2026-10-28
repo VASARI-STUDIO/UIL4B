@@ -295,7 +295,9 @@ test('an interpolation lock comes back from the roll', () => {
     const got = run(15, (rand) => press(rand, three(), { locks, current: { type: 'Linear', angle: 90, space } }).g.space)
     assert.ok(got.every((s) => s === space))
   }
-  assert.equal(press(mulberry32(15), three()).g.space, undefined, 'unlocked, the roll leaves the space alone')
+  // Control: unlocked, Random draws the space itself, so the lock is what held it above.
+  const free = new Set(run(15, (rand) => press(rand, three()).g.space))
+  assert.deepEqual([...free].sort(), ['oklch', 'srgb'])
 })
 
 test('geometryHolds names the value to keep only for a lock that is on', () => {

@@ -8,12 +8,24 @@
 //   stops   2 at 75% · 3 at 25%  (4 and 5 only when the Stops filter asks)
 //   harmony Analogous 60% · Monochrome 25% · Complementary 15%
 //   tone    Clear 70% · Muted 15% · Deep 15%
+//   space   Perceived (OKLCH) 70% · Standard (sRGB) 30%, Standard only where it stays clean
+//
+// Random is best of eight (spec gradient-generation-v2 §3): `rollGradient` rolls
+// eight candidates with the narrowed ranges below, scores each (utils/gradientScore)
+// and ships one of the best three at random. A locked part is applied to every
+// candidate before it is scored, so the scorer can rank colours that go with a
+// locked stop but can never change the lock.
 //
 // Every picker takes its roll as an argument, and `rollGradient` takes a
 // `rand` function, so the distributions can be asserted with a seeded sequence
 // and no stub of a global.
 
 import { oklchToHex, oklchInGamut, hexToOklchRaw } from '../components/tool/oklch.js'
+import { rebuildStops } from './gradientLocks.js'
+import {
+  CANDIDATES, ANCHOR_DARK, ANCHOR_LIGHT, scoreContext, scoreGradient, chooseAmongTop,
+  endsOf, hueGap, standardStaysClean,
+} from './gradientScore.js'
 
 export const GRAD_TYPE_WEIGHTS = [
   ['Linear', 0.8],
@@ -129,8 +141,9 @@ function toGamut(c) {
   return { L: c.L, C, H: wrapHue(c.H) }
 }
 
+// Clear chroma tops out at 0.17: above that sRGB greens and magentas read as neon.
 const TONE_RANGES = {
-  Clear: { L: [0.45, 0.85], C: [0.08, 0.2] },
+  Clear: { L: [0.45, 0.85], C: [0.08, 0.17] },
   Muted: { L: [0.55, 0.85], C: [0.03, 0.08] },
   Deep: { L: [0.15, 0.35], C: [0.06, 0.16] },
 }
@@ -163,6 +176,7 @@ export function secondColour(first, harmony, tone, rand) {
   if (Math.abs(L - first.L) < dLmin) L = first.L + (first.L - lo >= hi - first.L ? -1 : 1) * dLmin
   L = clamp(L, lo, hi)
   let C = clamp(first.C * lerp(0.8, 1.15, rand()), Math.max(0, first.C - 0.08), first.C + 0.08)
+  C = Math.min(C, TONE_RANGES[tone].C[1])
   const second = toGamut({ L, C, H: first.H + dH })
   if (harmony === 'Complementary') {
     const quieter = first.C <= second.C ? first : second
@@ -225,32 +239,109 @@ function drawCount(counts, rand) {
   return uniformPick(counts, rand())
 }
 
-/**
- * Roll a whole gradient.
- *
- * filters: { types: [] (empty = Any), counts: [] (empty = Any), styles: ['Plain'],
- *   radialGate: false to skip the radial gate when the colours are replaced afterwards,
- *   locks: { type, angle, space } }
- * `locks` holds the geometry the person keeps, each a value or null. A locked type
- * replaces the Type filter, and a locked Radial never falls back to Linear: the
- * colours are re-rolled instead. A locked angle and space come back unchanged.
- * The angle is drawn even when it is locked, so a seeded run stays in step.
- * Returns { type, angle, stops: [{ color, position }], style, harmony, tone } with
- * colours as upper-case hex, plus `space` when it is locked. `style` is always
- * Plain until a family is built.
- */
-export function rollGradient(rand = Math.random, filters = {}) {
-  const locks = filters.locks || {}
-  const types = locks.type ? [locks.type] : (filters.types || [])
-  const counts = filters.counts || []
-  let type = drawType(types, rand)
-  let n = drawCount(counts, rand)
-  const harmony = pickHarmony(rand())
-  const tone = pickTone(rand())
-  let first = firstColour(tone, rand)
-  let second = secondColour(first, harmony, tone, rand)
+// ── Narrowed ranges: mud, anchor, positions ────────────────────────────────
 
-  if (type === 'Radial' && filters.radialGate !== false) {
+/** Dark olive and khaki: hue 85-135, lightness under 0.55, chroma over 0.04. Never drawn, in any stop. */
+export const MUD = Object.freeze({ H: [85, 135], L: 0.55, C: 0.04 })
+
+/**
+ * Whether an OKLCH colour sits in the mud zone. `slack` widens the zone a little
+ * (3 degrees, 0.01 of L, 0.005 of C) so a colour just outside it still reads as
+ * outside once the hex rounds.
+ */
+export function inMudZone({ L, C, H }, slack = false) {
+  const s = slack ? 1 : 0
+  const h = wrapHue(H)
+  return h >= MUD.H[0] - 3 * s && h <= MUD.H[1] + 3 * s && L < MUD.L + 0.01 * s && C > MUD.C - 0.005 * s
+}
+
+const isMudHex = (hex, slack) => {
+  const [L, C, H] = hexToOklchRaw(hex)
+  return inMudZone({ L, C, H }, slack)
+}
+
+// A candidate whose draw keeps landing in the mud zone is rolled again this many
+// times, then its muddy stops are drained of colour (chroma 0.03 is under the zone).
+const MUD_TRIES = 6
+const clearMud = (hex) => {
+  if (!isMudHex(hex, true)) return hex
+  const [L, , H] = hexToOklchRaw(hex)
+  return oklchToHex(L, 0.03, H)
+}
+
+/** Share of candidates that force one end to be a dark or a light anchor. */
+export const ANCHOR_SHARE = 0.5
+
+// Make one end dark (L 0.14-0.27) or light (0.89-0.92) and put the other end 0.2-0.42
+// of L away from it, so the pair has an anchor and a value step. The hue and the
+// chroma of each end stay as drawn, brought back into the gamut.
+function anchorPair(first, second, tone, rand) {
+  const anchorFirst = rand() < 0.5
+  const darkRoll = rand()
+  const step = lerp(0.2, 0.42, rand())
+  const anchorRoll = rand()
+  const dark = tone === 'Deep' || darkRoll < 0.55
+  const lo = tone === 'Deep' ? 0.05 : 0.12
+  const hi = tone === 'Deep' ? 0.5 : 0.92
+  const aL = dark ? lerp(0.14, ANCHOR_DARK - 0.01, anchorRoll) : lerp(ANCHOR_LIGHT + 0.01, 0.92, anchorRoll)
+  const oL = clamp(dark ? aL + step : aL - step, lo, hi)
+  const [a, o] = anchorFirst ? [first, second] : [second, first]
+  const anchored = toGamut({ L: aL, C: a.C, H: a.H })
+  const other = toGamut({ L: oL, C: o.C, H: o.H })
+  const pair = anchorFirst ? [anchored, other] : [other, anchored]
+  settleChroma(pair[0], pair[1])
+  return pair
+}
+
+/** The two ends of a ramp: related by `harmony`, and anchored in half of the draws. */
+function drawPair(tone, harmony, rand) {
+  const first = firstColour(tone, rand)
+  const second = secondColour(first, harmony, tone, rand)
+  return rand() < ANCHOR_SHARE ? anchorPair(first, second, tone, rand) : [first, second]
+}
+
+/** Share of two-stop gradients whose ends are pulled in to 8 and 92. */
+export const SOFT_ENDS_SHARE = 0.3
+/** Where the middle stop of a three-stop gradient sits (not always 50). */
+export const MIDDLE_POSITIONS = [45, 55, 62]
+
+/** Stop positions for `n` stops: 0/100 or 8/92 for two, a drawn middle for three, even beyond that. */
+export function rollPositions(n, rand) {
+  const ends = rand()
+  const middle = rand()
+  if (n === 2) return ends < SOFT_ENDS_SHARE ? [8, 92] : [0, 100]
+  if (n === 3) return [0, uniformPick(MIDDLE_POSITIONS, middle), 100]
+  return Array.from({ length: n }, (_, i) => Math.round((i / (n - 1)) * 100))
+}
+
+// ── The interpolation draw ─────────────────────────────────────────────────
+
+/** Share of rolls that try Standard (sRGB); the rest are Perceived (OKLCH). */
+export const STANDARD_SHARE = 0.3
+// Ends this far apart in hue are complementary-ish: Standard is never used there.
+const COMPLEMENTARY_FROM = 140
+
+/**
+ * The interpolation space for a rolled gradient `g`, from a roll in [0, 1).
+ * Standard needs the roll, and then it must keep the middle of the ramp clean
+ * (standardStaysClean) and must not be a complementary pair; otherwise Perceived.
+ * `complementary` is set when the roll knows its harmony; the ends' hues are
+ * checked either way, which is what a palette pick relies on.
+ */
+export function drawSpace(g, roll, complementary = false) {
+  if (roll >= STANDARD_SHARE || complementary) return 'oklch'
+  const [a, b] = endsOf(g).map(hexToOklchRaw)
+  if (hueGap(a, b) >= COMPLEMENTARY_FROM) return 'oklch'
+  return standardStaysClean(g.stops) ? 'srgb' : 'oklch'
+}
+
+// The ramp for one candidate: the two ends, the stops between, the radial gate, the
+// colours as hexes. Returns the type and count too, which the gate and a conic
+// gradient's three-stop minimum can change.
+function drawColours({ type, n, harmony, tone, types, radialGate }, rand) {
+  let [first, second] = drawPair(tone, harmony, rand)
+
+  if (type === 'Radial' && radialGate !== false) {
     // Up to three tries to find a pair that reads as a light or a vignette. A
     // filter that leaves Linear out keeps the best of the three rather than
     // falling back to a type the person excluded.
@@ -258,8 +349,7 @@ export function rollGradient(rand = Math.random, filters = {}) {
     for (let tries = 0; tries < 3 && !radialGatePasses(first, second); tries++) {
       const gap = (p) => Math.abs(p.first.L - p.second.L)
       if (gap({ first, second }) > gap(best)) best = { first, second }
-      first = firstColour(tone, rand)
-      second = secondColour(first, harmony, tone, rand)
+      ;[first, second] = drawPair(tone, harmony, rand)
       if (radialGatePasses(first, second)) { best = { first, second }; break }
       if (gap({ first, second }) > gap(best)) best = { first, second }
     }
@@ -273,20 +363,118 @@ export function rollGradient(rand = Math.random, filters = {}) {
 
   if (type === 'Conic' && n < 3) n = 3
   const ramp = [first, ...between(first, second, n - 2, rand), second]
-  const colours = ramp.map(hexOf)
-  // A conic gradient closes its seam: the last stop is the first colour again.
-  if (type === 'Conic') colours[colours.length - 1] = colours[0]
+  return { type, n, colours: ramp.map(hexOf) }
+}
+
+/**
+ * The type and stop count of a press, from the weights and the filters. Random
+ * draws them once for all eight candidates: the scorer ranks colours, not types,
+ * and a type drawn per candidate would let the scorer tilt the 80/15/5 weights
+ * (a Radial that passes its gate scores a little higher than the average Linear).
+ */
+export function rollShape(filters, rand) {
+  const locks = filters.locks || {}
+  const types = locks.type ? [locks.type] : (filters.types || [])
+  return { type: drawType(types, rand), n: drawCount(filters.counts || [], rand) }
+}
+
+/**
+ * Roll ONE candidate gradient.
+ *
+ * `shape` is { type, n } from rollShape; without it the candidate draws its own.
+ * filters: { types: [] (empty = Any), counts: [] (empty = Any), styles: ['Plain'],
+ *   radialGate: false to skip the radial gate when the colours are replaced afterwards,
+ *   palette: hexes to draw the colours from instead of rolling them (Shuffle from palette),
+ *   locks: { type, angle, space } }
+ * `locks` holds the geometry the person keeps, each a value or null. A locked type
+ * replaces the Type filter, and a locked Radial never falls back to Linear: the
+ * colours are re-rolled instead. A locked angle and space come back unchanged.
+ * The angle and the space are drawn even when locked, so a seeded run stays in step.
+ * Returns { type, angle, space, stops: [{ color, position }], style, harmony, tone }
+ * with colours as upper-case hex. `style` is always Plain until a family is built.
+ */
+export function rollCandidate(rand = Math.random, filters = {}, shape = null) {
+  const locks = filters.locks || {}
+  const types = locks.type ? [locks.type] : (filters.types || [])
+  const { type: drawnType, n: drawnCount } = shape || rollShape(filters, rand)
+  const harmony = pickHarmony(rand())
+  const tone = pickTone(rand())
+
+  let type
+  let n
+  let colours
+  if (filters.palette) {
+    // The colours are the person's own, so the mud and anchor rules do not touch them.
+    n = drawnType === 'Conic' && drawnCount < 3 ? 3 : drawnCount
+    const look = pickPaletteLook(filters.palette, n, drawnType, types, rand)
+    type = look.type
+    colours = look.colours
+  } else {
+    let drawn
+    for (let tries = 0; tries < MUD_TRIES; tries++) {
+      drawn = drawColours({ type: drawnType, n: drawnCount, harmony, tone, types, radialGate: filters.radialGate }, rand)
+      if (!drawn.colours.some((c) => isMudHex(c, true))) break
+    }
+    ;({ type, n } = drawn)
+    colours = drawn.colours.map(clearMud)
+    // A conic gradient closes its seam: the last stop is the first colour again.
+    if (type === 'Conic') colours[colours.length - 1] = colours[0]
+  }
+
+  const positions = rollPositions(n, rand)
   const drawnAngle = pickAngle(rand(), rand())
-  const angle = locks.angle ?? drawnAngle
-  return {
+  const spaceRoll = rand()
+  const g = {
     type,
-    angle,
-    ...(locks.space ? { space: locks.space } : {}),
+    angle: locks.angle ?? drawnAngle,
     style: PLAIN,
     harmony,
     tone,
-    stops: colours.map((color, i) => ({ color, position: Math.round((i / (n - 1)) * 100) })),
+    stops: colours.map((color, i) => ({ color, position: positions[i] })),
   }
+  g.space = locks.space ?? drawSpace(g, spaceRoll, !filters.palette && harmony === 'Complementary')
+  return g
+}
+
+/**
+ * Lay the person's stop locks over a candidate. `prev` is the page's current stops
+ * (with `lockColour` and `lockPosition`); a locked colour or position comes back
+ * as it was, and the count follows the locked stops (rebuildStops). Without `prev`
+ * the candidate is returned as rolled.
+ */
+function withStopLocks(g, prev) {
+  if (!prev) return g
+  const ramp = g.stops
+  return {
+    ...g,
+    stops: rebuildStops(prev, (r) => ramp[r % ramp.length].color, ramp.length, g.type === 'Conic', ramp.map((s) => s.position)),
+  }
+}
+
+/**
+ * Roll the eight candidates and score them. Each candidate has the locks applied
+ * before it is scored, so the score is of what the person would see.
+ * filters adds { stops: the current stops with their locks, recent: the session's
+ * last results as [firstHex, lastHex] pairs } to rollCandidate's.
+ * Returns [{ g, score }] in roll order.
+ */
+export function rollCandidates(rand = Math.random, filters = {}) {
+  const ctx = scoreContext(filters.recent)
+  const shape = rollShape(filters, rand)
+  return Array.from({ length: CANDIDATES }, () => {
+    const g = withStopLocks(rollCandidate(rand, filters, shape), filters.stops)
+    return { g, score: scoreGradient(g, ctx).total }
+  })
+}
+
+/**
+ * Roll a whole gradient: eight candidates, one of the best three at random.
+ * Takes rollCandidate's filters and rollCandidates' extras. With `filters.stops`
+ * the stops come back as the page keeps them (lock flags, the current array
+ * order); without, as { color, position } in ramp order.
+ */
+export function rollGradient(rand = Math.random, filters = {}) {
+  return chooseAmongTop(rollCandidates(rand, filters), rand)
 }
 
 /**

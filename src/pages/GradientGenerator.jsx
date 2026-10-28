@@ -13,7 +13,8 @@ import {
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
-import { GRAD_TYPE_WEIGHTS, rollGradient, pickPaletteLook } from '../utils/gradientRandom'
+import { GRAD_TYPE_WEIGHTS, rollGradient } from '../utils/gradientRandom'
+import { pushRecent } from '../utils/gradientScore'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
 import usePopover from '../hooks/usePopover'
@@ -21,7 +22,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget, applyStarterPair } from '../utils/gradientPaint'
-import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions, rebuildStops } from '../utils/gradientLocks'
+import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions } from '../utils/gradientLocks'
 import { STARTER_PAIRS } from '../data/gradientStarterPairs'
 import MenuSelect from '../components/tool/MenuSelect'
 import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
@@ -69,9 +70,9 @@ const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], pool: [] }
 // the filters. An older filters entry's `keepAngle: true` becomes the angle lock
 // on load (parseGeometryLocks), and the filters no longer carry it.
 const LOCKS_KEY = 'vs-gradient-locks'
-// Random does not draw the interpolation space yet, so a lock on it would keep
-// nothing. G3 makes Random draw it and flips this on, which shows the lock again.
-const RANDOM_DRAWS_SPACE = false
+// Random draws the interpolation space (Perceived 70%, Standard 30% where it stays
+// clean), so the interpolation lock keeps something and is shown.
+const RANDOM_DRAWS_SPACE = true
 function readLocks() {
   try { return parseGeometryLocks(sessionStorage.getItem(LOCKS_KEY), sessionStorage.getItem(FILTER_KEY)) } catch { /* storage blocked */ }
   return parseGeometryLocks(null, null)
@@ -1170,31 +1171,39 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     })
   }, [openProModal])
 
-  // Build a fresh set of stops that honours each stop's colour and position locks
-  // (the rules live in utils/gradientLocks). `sample(r)` supplies the colour for the stop at ramp place r, a
-  // free one (random hex, or a palette pick), so both randomisers share them.
-  const rollStops = useCallback((sample, count, closeSeam = false) => rebuildStops(stops, sample, count, closeSeam), [stops])
+  // The last ten results of Random and of Shuffle from palette, kept for this visit
+  // only. The roll scores a candidate down for sitting close to any of them.
+  const recentRolls = useRef({ random: [], palette: [] })
 
   // The options for one roll: the Shuffle filters, with the person's locks laid
   // over them (a type lock replaces the Type filter, a stop lock fixes the count).
+  // The roll also gets the stops, because it lays the stop locks over each of its
+  // candidates before scoring them (utils/gradientRandom), and the recent results.
   const rollOptions = useCallback(
-    () => lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops),
+    (kind) => ({ ...lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops), stops, recent: recentRolls.current[kind] }),
     [filters, locks, type, angle, space, stops],
   )
 
-  // Random: colours are chosen in OKLCH under the quality rules in
-  // utils/gradientRandom, so the ends are related and the middle is never grey.
-  // Locked geometry comes back from the roll as it was (a locked Radial is
-  // re-rolled in colour, never turned into a Linear).
-  const randomise = useCallback(() => {
-    const g = rollGradient(Math.random, rollOptions())
-    setStops(rollStops((i) => g.stops[i % g.stops.length].color, g.stops.length, g.type === 'Conic'))
+  // Put a rolled gradient on the page. The roll's stops already honour the stop
+  // locks, and its type, angle and space already honour the geometry locks.
+  const applyRoll = useCallback((g, kind) => {
+    setStops(g.stops)
     setType(g.type)
     setAngle(g.angle)
+    setSpace(g.space)
+    recentRolls.current[kind] = pushRecent(recentRolls.current[kind], g)
     selectOnly(0)
     setFromLibrary(false)
+  }, [selectOnly])
+
+  // Random: eight candidates are rolled in OKLCH under the quality rules in
+  // utils/gradientRandom and scored in utils/gradientScore; one of the best three
+  // is shown. Locked geometry comes back from the roll as it was (a locked Radial
+  // is re-rolled in colour, never turned into a Linear).
+  const randomise = useCallback(() => {
+    applyRoll(rollGradient(Math.random, rollOptions('random')), 'random')
     if (allColoursLocked(stops)) toast?.(EVERY_COLOUR_LOCKED)
-  }, [rollStops, rollOptions, selectOnly, stops, toast])
+  }, [applyRoll, rollOptions, stops, toast])
 
   // ── Available colours ──
   // The palette's colours (de-duplicated without regard to case, in palette
@@ -1239,24 +1248,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const randomiseFromPalette = useCallback(() => {
     if (pool.length < 2) { randomise(); return }
     const everyColourKept = allColoursLocked(stops)
-    // The type, count and angle come from the same roll as Random; only the
-    // colours differ. A two-colour pick has to differ in lightness or hue, and
-    // the pool cycles if there are more stops than colours.
-    const engine = rollOptions()
-    // The roll's own radial gate judges colours that are thrown away here, so it
-    // is off and the gate runs on the palette colours instead. A locked type
-    // leaves `engine.types` out of the gate's fallback, so a locked Radial keeps
-    // the best of its draws rather than becoming Linear.
-    const g = rollGradient(Math.random, { ...engine, radialGate: false })
-    const gateTypes = engine.locks.type ? [engine.locks.type] : engine.types
-    const { type: lookType, colours: picks } = pickPaletteLook(pool, g.stops.length, g.type, gateTypes, Math.random)
-    setStops(rollStops((i) => picks[i % picks.length], g.stops.length, lookType === 'Conic'))
-    setType(lookType)
-    setAngle(g.angle)
-    selectOnly(0)
-    setFromLibrary(false)
+    // The type, count and angle come from the same roll as Random, and the same
+    // scorer picks the best of eight palette draws; only the colours differ. A
+    // two-colour pick has to differ in lightness or hue, the pool cycles if there
+    // are more stops than colours, and the radial gate runs on the palette colours
+    // (a locked Radial keeps the best of its draws rather than becoming Linear).
+    applyRoll(rollGradient(Math.random, { ...rollOptions('palette'), palette: pool }), 'palette')
     toast?.(everyColourKept ? EVERY_COLOUR_LOCKED : usingPicks ? `Random gradient from ${pool.length} picked colours` : 'Random gradient from your palette')
-  }, [pool, usingPicks, randomise, rollStops, rollOptions, toast, selectOnly, stops])
+  }, [pool, usingPicks, randomise, applyRoll, rollOptions, toast, stops])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
