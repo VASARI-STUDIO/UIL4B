@@ -15,7 +15,8 @@
  * strip under the preview; it follows the page (sticky) only on a window tall enough to
  * hold it (980px), and never scrolls inside itself. At 900px and below
  * the ratio is a strip under the pair bar and the order is pair bar, ratio,
- * views, legend, preview, result panel, palette strip.
+ * views, legend, preview, caption and switch, palette strip, result panel: the
+ * strip follows the picture it changes.
  *
  * The page does not change height with the view or the pair: the preview sits in
  * a frame of fixed height, the ratio strip is a fixed height, and the sections
@@ -45,6 +46,11 @@
   color: var(--tl-dim);
 }
 .cc .cc-field-short { display: none; }
+/* The role after the word ("Text colour · Deep") on one line that gives way with
+   an ellipsis, so a long name never adds a row. A phone puts it under the word. */
+@media (min-width: 560px) {
+  .cc .cc-field-k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 .cc .cc-field-row { display: flex; gap: var(--s-2); min-width: 0; }
 .cc .cc-field .cpk-wrap { flex: 0 0 auto; }
 .cc .cc-picker {
@@ -123,9 +129,9 @@
 .cc .cc-pv-wait { height: 100%; }
 
 /* ── Palette context: the caption and the "Show my palette around it" switch ──
-   One line high at 560px and up (the caption gives way with an ellipsis); on a
-   phone, under the frame, the caption is held to two lines and reserves both, so
-   neither state moves the page. */
+   Under the frame at every width. One line high at 560px and up (the caption
+   gives way with an ellipsis); on a phone the caption is held to two lines and
+   reserves both, so neither state moves the page. */
 .cc .cc-ctxbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-width: 0; }
 .cc .cc-ctx-cap { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 .cc .cc-switch { display: flex; flex: none; align-items: center; gap: var(--s-2); min-height: 24px; padding: 0; border: 0; background: none; color: var(--tl-ink); font: inherit; font-size: 13px; line-height: 1.2; text-align: left; cursor: pointer; touch-action: manipulation; }
@@ -235,7 +241,9 @@
   border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
   background: var(--cc-sw, transparent);
 }
-.cc .cc-swatch.is-on .cc-swatch-chip { border-color: var(--t0); }
+/* The chosen swatch: the ink border, and a ring outside it with a 2px gap in the
+   page's own ground, so a chip as dark as the ink still shows which is on. */
+.cc .cc-swatch.is-on .cc-swatch-chip { border-color: var(--t0); box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--t0); }
 .cc .cc-swatch.is-on { color: var(--tl-ink); }
 .cc .cc-swatch-name { max-width: 9em; font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
 .cc .cc-pairs { display: grid; gap: var(--s-3); min-width: 0; }
@@ -397,6 +405,12 @@
 .cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
 .cc .cc-fix-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 
+/* The Text / Background target is two pills; from 901px a wide column would
+   stretch each to half of it. */
+@media (min-width: 901px) {
+  .cc .cc-strip-pick .tl-pills { max-width: 360px; }
+}
+
 /* ── Desktop: result panel on the right, following the page ─────────────── */
 @media (min-width: 901px) {
   /* The card is as tall as its content and never scrolls inside itself: a
@@ -457,6 +471,11 @@
   .cc .cc-field { grid-template-columns: 88px minmax(0, 1fr); column-gap: var(--s-1); align-items: center; }
   .cc .cc-field-k { margin: 0; font-size: 13px; }
   .cc .cc-field-short { display: inline; }
+  /* The role goes under the word, held to two lines: both fit in the 44px the
+     control takes, so a role or a long name never changes the field's height. */
+  .cc .cc-field-k { line-height: 1.2; }
+  .cc .cc-field-role { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 11.5px; line-height: 1.15; overflow-wrap: anywhere; }
+  .cc .cc-field-sep { display: none; }
   /* The full label stays the input's name for a screen reader. */
   .cc .cc-field-full {
     position: absolute;

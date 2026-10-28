@@ -131,11 +131,14 @@
 .pvs[data-ctx="on"] .ro .ro-shift[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}
 /* The tag beside the meta line (two brand colours only). Its row is the meta
    line's own height, and the meta line gives way with an ellipsis before the tag
-   or the frame's edge does. Under 340px the meta line is gone and the tag takes
-   its place at the left. */
+   or the frame's edge does. Under 340px the meta line is gone, and a row of its
+   own would be 24px the 440px frame has not got (it clipped Cancel and Save), so
+   the tag moves up beside the title: 156px of title and an 84px tag in the 262px
+   the header has at 320. */
 .pvs[data-ctx="on"] .ro .ro-tag{grid-column:2;align-self:center;display:flex;align-items:center;height:20px;margin:var(--s-1) 0 0 var(--s-3);padding:0 var(--s-2);border:1px solid var(--pv-pair-fg);border-radius:999px;background:var(--pv-pair-bg)}
 .pvs[data-ctx="on"] .ro .ro-tag>span{font-size:12px;line-height:1;white-space:nowrap}
 .pvs[data-ctx="on"] .ro .ro-head:has(.ro-tag) .ro-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @container pvs (max-width:339px){
-  .pvs[data-ctx="on"] .ro .ro-tag{grid-column:1;justify-self:start;margin-left:0}
+  .pvs[data-ctx="on"] .ro .ro-head:has(.ro-tag) .ro-title{grid-column:1;grid-row:1;min-width:0}
+  .pvs[data-ctx="on"] .ro .ro-tag{grid-column:2;grid-row:1;margin:0 0 0 var(--s-2)}
 }

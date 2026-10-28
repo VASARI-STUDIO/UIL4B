@@ -55,10 +55,13 @@ let PairExample = makePairExample()
 // palette (design.palette — what the Palette Builder last wrote, or the colours
 // its base and system generate), named as the Palette Builder names them.
 //
-// THE STRIP SITS BELOW THE PREVIEW, not under the pair bar. At 390x844 the
+// THE STRIP SITS UNDER THE PREVIEW, not under the pair bar. At 390x844 the
 // preview needs its top 300px above the tab bar and has about 23px to spare
 // (spec 5.1), and at 1440x900 the frame ends 8px inside the window, so a strip
-// under the fields would push the picture off the first screen.
+// under the fields would push the picture off the first screen. It is the next
+// thing after the frame, its caption and its switch at every width (the result
+// panel follows it in the page, and sits beside it from 901px), so choosing a
+// pair never changes a preview that is out of sight.
 //
 // Kept because people use them: the hex fields and the shared picker for both
 // sides, and "Nearest passing colours" — one-click fixes that move one side
@@ -176,9 +179,11 @@ function swatchRef(hex, ink) {
 // input on one row, then a hint that only appears for a finished-looking but
 // invalid value. `short` is the phone label ("Text"); the full label stays the
 // input's accessible name at every width, so it never reads as just "Text".
+// `roleText` is what the side is in the palette ("Deep"): after the word on one
+// line, or under it on a phone, never wrapping the row, so it moves nothing.
 // Focusing anything in the field (picker or hex) tells the page which side the
 // palette swatches should now fill.
-function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur, onTouch }) {
+function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, onBlur, onTouch }) {
   const hintId = `${id}-hint`
   const bad = showsHint(raw, valid)
   return (
@@ -186,6 +191,7 @@ function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur, onTo
       <label className="cc-field-k" htmlFor={id}>
         <span className="cc-field-short" aria-hidden="true">{short}</span>
         <span className="cc-field-full">{label}</span>
+        {roleText && <span className="cc-field-role">{' '}<span className="cc-field-sep" aria-hidden="true">· </span>{roleText}</span>}
       </label>
       <div className="cc-field-row">
         <ColorPickerPop
@@ -358,6 +364,9 @@ export default function ContrastChecker({ onCopy }) {
     if (!hasPalette) return word
     return swatches.find((s) => s.hex === hex)?.name || word
   }
+  // What a field's label adds after its word: the same name, or nothing where a
+  // fix row would fall back to the side's own word.
+  const sideRole = (hex, role) => sideName(hex, role, null)
   const sideNames = { text: sideName(fg, fgRole, 'text'), background: sideName(bg, bgRole, 'background') }
 
   // PALETTE CONTEXT. With a palette, the previews are painted in its roles and only
@@ -459,7 +468,7 @@ export default function ContrastChecker({ onCopy }) {
           {/* First thing on the page at every width: the two colours being checked. */}
           <div className="cc-pairbar" role="group" aria-label="Colours to check">
             <HexField
-              id="cc-fg" label="Text colour" short="Text"
+              id="cc-fg" label="Text colour" short="Text" roleText={sideRole(fg, fgRole)}
               raw={fgInput} valid={fgValid} committed={fg}
               onRaw={setSide(setFgInput, setFg)} onBlur={() => setFgInput(fg)}
               onTouch={() => setTarget('text')}
@@ -474,7 +483,7 @@ export default function ContrastChecker({ onCopy }) {
               title="Swap text and background"
             />
             <HexField
-              id="cc-bg" label="Background colour" short="Background"
+              id="cc-bg" label="Background colour" short="Background" roleText={sideRole(bg, bgRole)}
               raw={bgInput} valid={bgValid} committed={bg}
               onRaw={setSide(setBgInput, setBg)} onBlur={() => setBgInput(bg)}
               onTouch={() => setTarget('background')}
@@ -506,12 +515,6 @@ export default function ContrastChecker({ onCopy }) {
               moves under the frame to keep the picture high on the screen. */}
           <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} lead={lead} />
 
-          {/* With a palette: what the frame shows, and the switch back to the two-colour
-              picture. Above the frame, except on a phone, where the picture keeps the
-              first screen and this sits under it. Both states are one line high (the
-              caption is clamped), so the switch moves nothing. */}
-          {hasPalette && !stacked && ctxBar}
-
           {/* The frame is a fixed height at each width and holds whatever is in it
               (the view, the loading placeholder or the failure message), so a
               switch moves nothing around it. One boundary round every view, mounted
@@ -527,9 +530,100 @@ export default function ContrastChecker({ onCopy }) {
               />
             </Suspense>
           </div>
-          {hasPalette && stacked && ctxBar}
+          {/* With a palette: what the frame shows, and the switch back to the two-colour
+              picture. Under the frame at every width, so the picture sits as high as
+              it does on a direct visit and the first screen keeps it. Both states are
+              one line high (the caption is clamped), so the switch moves nothing. */}
+          {hasPalette && ctxBar}
           {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio, lead === 'ui')}</p>}
         </ToolMain>
+
+        {/* A grid child between the preview and the result panel, so on tablet and
+            phone the strip follows the frame, its caption and its switch, and the
+            result panel comes after it; on desktop it sits under the preview, beside
+            the panel. Row 1 picks a colour for a side; row 2 lists the pairs worth
+            checking, by the job each does. */}
+        <div className="cc-strip">
+          <div className="cc-strip-pick">
+            <p className="tl-sec-label">{hasPalette ? 'Your palette' : 'Generated colours'}</p>
+            <ToolPills
+              label="Swatches change the"
+              shape="block"
+              options={[{ value: 'text', label: 'Text' }, { value: 'background', label: 'Background' }]}
+              value={target}
+              onChange={setTarget}
+            />
+            <div className="cc-swatches" role="group" aria-label={`Palette colours for the ${target}`}>
+              {swatches.map((s) => {
+                const on = s.hex === current
+                return (
+                  <button
+                    key={s.hex}
+                    type="button"
+                    className={on ? 'cc-swatch is-on' : 'cc-swatch'}
+                    ref={swatchRef(s.hex)}
+                    aria-label={`${s.name}, ${s.hex}`}
+                    aria-pressed={on}
+                    onClick={() => (target === 'text' ? setFgHex(s.hex) : setBgHex(s.hex))}
+                  >
+                    <span className="cc-swatch-chip" aria-hidden="true" />
+                    <span className="cc-swatch-name" aria-hidden="true">{s.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <section className="cc-pairs" aria-labelledby="cc-pairs-title">
+            <h2 id="cc-pairs-title" className="tl-sec-label">Pairs to check in your palette</h2>
+            <p className="cc-lede">
+              {hasPalette ? 'Pick one to check it.' : 'From the colours your base generates. Build a palette to check your own.'}
+            </p>
+            {shownGroups.map((g) => (
+              <div key={g.job} className="cc-pair-group" role="group" aria-labelledby={`cc-group-${g.job}`}>
+                <p id={`cc-group-${g.job}`} className="cc-pair-group-title">
+                  {g.title}
+                  {g.note && <span className="cc-pair-group-note">{g.note}</span>}
+                </p>
+                <div className="cc-pair-grid">
+                  {g.pairs.map((p) => {
+                    const r = ratioStr(p.ratio)
+                    const isCurrent = p.fg === fg && p.bg === bg
+                    return (
+                      <button
+                        key={`${p.fg}-${p.bg}`}
+                        type="button"
+                        className="cc-pair"
+                        aria-pressed={isCurrent}
+                        onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
+                        aria-label={`Check ${p.label}, ${r} to 1, ${markOf(p.ratio)}`}
+                      >
+                        <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
+                        <span className="cc-pair-body">
+                          <span className="cc-pair-label">{p.label}</span>
+                          <span className="cc-pair-meta">
+                            <span className="cc-pair-ratio">{r}:1</span>
+                            <span className={`cc-pair-mark cc-tone--${toneOf(p.ratio)}`}>{markOf(p.ratio)}</span>
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+            {stacked && pairs.length > PAIRS_COLLAPSED && (
+              <ToolButton
+                variant="quiet"
+                className="cc-pairs-more"
+                aria-expanded={showAllPairs}
+                onClick={() => setShowAllPairs((on) => !on)}
+              >
+                {showAllPairs ? 'Show fewer pairs' : `Show all ${pairs.length} pairs`}
+              </ToolButton>
+            )}
+          </section>
+        </div>
 
         <ToolPanel label="Contrast result" className="cc-panel">
           {!ratioInStrip && ratioBlock}
@@ -631,92 +725,6 @@ export default function ContrastChecker({ onCopy }) {
             </div>
           </ToolSection>
         </ToolPanel>
-
-        {/* A third grid child so the result panel comes before the strip on tablet
-            and phone, and the strip sits under the preview, beside the panel, on
-            desktop. Row 1 picks a colour for a side; row 2 lists the pairs worth
-            checking, by the job each does. */}
-        <div className="cc-strip">
-          <div className="cc-strip-pick">
-            <p className="tl-sec-label">{hasPalette ? 'Your palette' : 'Generated colours'}</p>
-            <ToolPills
-              label="Swatches change the"
-              shape="block"
-              options={[{ value: 'text', label: 'Text' }, { value: 'background', label: 'Background' }]}
-              value={target}
-              onChange={setTarget}
-            />
-            <div className="cc-swatches" role="group" aria-label={`Palette colours for the ${target}`}>
-              {swatches.map((s) => {
-                const on = s.hex === current
-                return (
-                  <button
-                    key={s.hex}
-                    type="button"
-                    className={on ? 'cc-swatch is-on' : 'cc-swatch'}
-                    ref={swatchRef(s.hex)}
-                    aria-label={`${s.name}, ${s.hex}`}
-                    aria-pressed={on}
-                    onClick={() => (target === 'text' ? setFgHex(s.hex) : setBgHex(s.hex))}
-                  >
-                    <span className="cc-swatch-chip" aria-hidden="true" />
-                    <span className="cc-swatch-name" aria-hidden="true">{s.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <section className="cc-pairs" aria-labelledby="cc-pairs-title">
-            <h2 id="cc-pairs-title" className="tl-sec-label">Pairs to check in your palette</h2>
-            <p className="cc-lede">
-              {hasPalette ? 'Pick one to check it.' : 'From the colours your base generates. Build a palette to check your own.'}
-            </p>
-            {shownGroups.map((g) => (
-              <div key={g.job} className="cc-pair-group" role="group" aria-labelledby={`cc-group-${g.job}`}>
-                <p id={`cc-group-${g.job}`} className="cc-pair-group-title">
-                  {g.title}
-                  {g.note && <span className="cc-pair-group-note">{g.note}</span>}
-                </p>
-                <div className="cc-pair-grid">
-                  {g.pairs.map((p) => {
-                    const r = ratioStr(p.ratio)
-                    const isCurrent = p.fg === fg && p.bg === bg
-                    return (
-                      <button
-                        key={`${p.fg}-${p.bg}`}
-                        type="button"
-                        className="cc-pair"
-                        aria-pressed={isCurrent}
-                        onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
-                        aria-label={`Check ${p.label}, ${r} to 1, ${markOf(p.ratio)}`}
-                      >
-                        <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
-                        <span className="cc-pair-body">
-                          <span className="cc-pair-label">{p.label}</span>
-                          <span className="cc-pair-meta">
-                            <span className="cc-pair-ratio">{r}:1</span>
-                            <span className={`cc-pair-mark cc-tone--${toneOf(p.ratio)}`}>{markOf(p.ratio)}</span>
-                          </span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-            {stacked && pairs.length > PAIRS_COLLAPSED && (
-              <ToolButton
-                variant="quiet"
-                className="cc-pairs-more"
-                aria-expanded={showAllPairs}
-                onClick={() => setShowAllPairs((on) => !on)}
-              >
-                {showAllPairs ? 'Show fewer pairs' : `Show all ${pairs.length} pairs`}
-              </ToolButton>
-            )}
-          </section>
-        </div>
       </ToolGrid>
     </ToolLayout>
   )
