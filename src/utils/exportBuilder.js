@@ -7,6 +7,7 @@
 import { hexToRgb, contrastRatio } from './colors.js'
 import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { tintLabelsFor } from './tintLabels.js'
+import { PALETTE_LABELS } from './paletteRoles.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -45,8 +46,6 @@ function googleFontUrl(families) {
   const params = unique.map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`).join('&')
   return `https://fonts.googleapis.com/css2?${params}&display=swap`
 }
-
-const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
 
 const ROUNDING_MAP = {
   none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },

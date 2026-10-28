@@ -41,6 +41,9 @@
 //
 // DOM-free and React-free.
 
+import { TINT_LABELS, tintLabelsFor } from './tintLabels.js'
+import { activeColour, tintsCurrent } from './projectTints.js'
+
 // The tonal engine's five outputs, which the original array was written for and
 // which are accurate for it.
 const AUTO = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
@@ -101,4 +104,93 @@ export function slotLandsBook(index) {
 /** Every label for a system — used by the tests and by any summary view. */
 export function roleLabels(harmony) {
   return HARMONY_ROLE_LABELS[harmony] || AUTO
+}
+
+// ── Role and shade names for a colour in the project's palette ──────────────
+// "Primary 500", "Secondary 300": the stable slot identity (the same names the
+// exports print), not the per-system display label above. What the project
+// holds decides what can be named. `design.palette.colors` is a list of hexes,
+// and a colour's role is its place in it. `design.tints.scale` is ONE ramp
+// (50 to 950) of the active colour only, anchored so the palette colour itself
+// is its 500 step; other steps exist for the active colour alone. A colour that
+// matches neither is "Custom".
+
+const HEX_RE = /^#[0-9a-f]{6}$/i
+
+/** Role names by palette position. From the seventh colour on, "Colour 7". */
+export const PALETTE_LABELS = Object.freeze(['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight'])
+
+/** The eleven steps of a project's tint ramp. */
+export const SHADE_LABELS = TINT_LABELS[11]
+
+/** The step a palette colour itself sits at in the ramp. */
+export const BASE_SHADE = SHADE_LABELS[5]
+
+/** The role name for the palette colour at position `i` (zero-based). */
+export const roleName = (i) => PALETTE_LABELS[i] || `Colour ${i + 1}`
+
+const norm = (hex) => String(hex || '').toUpperCase()
+const paletteColours = (design) => (Array.isArray(design?.palette?.colors) ? design.palette.colors : [])
+
+// The palette position of the active colour (the one the ramp was made from).
+function activeRoleIndex(design) {
+  const colours = paletteColours(design)
+  const hex = norm(activeColour(design))
+  const idx = design?.palette?.activeIdx
+  if (Number.isInteger(idx) && norm(colours[idx]) === hex) return idx
+  const found = colours.findIndex((c) => norm(c) === hex)
+  return found >= 0 ? found : 0
+}
+
+const named = (role, shade) => ({ role, shade, label: `${role} ${shade}`, custom: false })
+
+/**
+ * What to call `hex` in this project: `{ role, shade, label, custom }`.
+ * A palette colour is "<role> 500". Otherwise, while the project's ramp is
+ * current, a ramp step of the active colour is "<role> <step>". Anything else
+ * is "Custom"; a colour close to a palette colour is not rounded to it.
+ */
+export function labelFor(hex, design) {
+  const key = norm(hex)
+  if (HEX_RE.test(key)) {
+    const i = paletteColours(design).findIndex((c) => norm(c) === key)
+    if (i >= 0) return named(roleName(i), BASE_SHADE)
+    if (tintsCurrent(design)) {
+      const scale = design.tints.scale
+      const k = scale.findIndex((c) => norm(c) === key)
+      if (k >= 0) return named(roleName(activeRoleIndex(design)), tintLabelsFor(scale.length)[k])
+    }
+  }
+  return { role: null, shade: null, label: 'Custom', custom: true }
+}
+
+/**
+ * The palette's colours as chips: valid six-digit hexes, de-duplicated, in
+ * palette order, each with the role it holds in the palette.
+ */
+export function paletteChips(design) {
+  const seen = new Set()
+  const out = []
+  paletteColours(design).forEach((c, i) => {
+    const hex = norm(c)
+    if (!HEX_RE.test(hex) || seen.has(hex)) return
+    seen.add(hex)
+    out.push({ hex, index: i, ...named(roleName(i), BASE_SHADE) })
+  })
+  return out
+}
+
+/**
+ * The active colour's shades, or null when the project has no ramp made from
+ * that colour (a stale ramp would name steps of some other colour).
+ */
+export function activeShades(design) {
+  if (!tintsCurrent(design)) return null
+  const scale = design.tints.scale
+  const steps = tintLabelsFor(scale.length)
+  const role = roleName(activeRoleIndex(design))
+  return {
+    role,
+    items: scale.map((c, k) => ({ hex: norm(c), shade: steps[k], label: `${role} ${steps[k]}` })),
+  }
 }
