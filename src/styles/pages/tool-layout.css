@@ -489,6 +489,16 @@
 @media (max-width: 767px) {
   .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
 }
+/* Under 360px the title may shorten ("Contrast Che..."), and a back pill that
+   names its destination ("Palette") is what crowds it. The arrow stays and the
+   link keeps its name ("Back to palette") from its aria-label. */
+@media (max-width: 359px) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--back { width: 36px; padding: 0; }
+  :is(.tl, .tl-sheet-layer) .tl-btn--back .tl-btn-label { display: none; }
+}
+@media (max-width: 359px) and (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--back { width: 44px; }
+}
 /* On a phone the row tightens its gaps and gutters, so a whole tool name and a
    labelled primary still share one line. At 360, with every action already in
    the overflow, back + name + More + primary are all that is left; a 6px gap

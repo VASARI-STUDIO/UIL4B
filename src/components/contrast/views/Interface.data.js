@@ -20,6 +20,8 @@ export const NAV = [
 export const HEAD = {
   title: 'Notifications',
   meta: 'Fitzroy and Collingwood \u00b7 14 people',
+  // Shown only in palette context mode for two brand colours (a tag beside the meta line).
+  tag: 'Closing shift',
 }
 
 // This week's shifts. A shift is its start and finish hour, drawn as an outline.

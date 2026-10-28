@@ -7,7 +7,9 @@ import {
 } from '../components/tool/ToolLayout'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { useProject } from '../contexts/ProjectContext'
-import { roleLabel } from '../utils/paletteRoles'
+import { parseHandoff, roleAt, WHITE, NEAR_BLACK } from '../utils/contrastHandoff'
+import { groupPairs, pairJob, roleName } from '../utils/contrastStrip'
+import { derivePaletteRoles } from '../utils/palettePreviewRoles'
 import { autoTonalFromSeed, contrastRatio, generateHarmony, nearestPassingLightness } from '../utils/colors'
 import { PAIR_VIEWS, legendLede } from '../utils/palettePairSizes'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -42,16 +44,24 @@ let PairExample = makePairExample()
 
 // Contrast Checker — /create/contrast.
 // A sticky tool toolbar with the Copy menu; a pair bar (the two colour fields
-// and Swap) above the pair painted on a view in a fixed-height frame; "Common
-// pairs in this kit"; and one side card holding the ratio, the five WCAG tests,
-// the nearest passing colours and the palette swatches. At 900px and below the
-// ratio leaves the card and sits under the fields, so the number is on screen
-// with the first part of the preview.
+// and Swap) above the pair painted on a view in a fixed-height frame; one side
+// card holding the ratio, the five WCAG tests and the nearest passing colours;
+// and the "Your palette" strip (swatches that set a side, and the pairs worth
+// checking). At 900px and below the ratio leaves the card and sits under the
+// fields, so the number is on screen with the first part of the preview.
 //
 // TRUTH OVER THE MOCK, and where: the design's eight "common pairs" and nine
 // swatches are invented brand values. Here both are read from the person's OWN
 // palette (design.palette — what the Palette Builder last wrote, or the colours
-// its base and system generate), so "in this kit" is literally true.
+// its base and system generate), named as the Palette Builder names them.
+//
+// THE STRIP SITS UNDER THE PREVIEW, not under the pair bar. At 390x844 the
+// preview needs its top 300px above the tab bar and has about 23px to spare
+// (spec 5.1), and at 1440x900 the frame ends 8px inside the window, so a strip
+// under the fields would push the picture off the first screen. It is the next
+// thing after the frame, its caption and its switch at every width (the result
+// panel follows it in the page, and sits beside it from 901px), so choosing a
+// pair never changes a preview that is out of sight.
 //
 // Kept because people use them: the hex fields and the shared picker for both
 // sides, and "Nearest passing colours" — one-click fixes that move one side
@@ -101,7 +111,6 @@ const verdictOf = (r) => VERDICTS[r >= 7 ? 'aaa' : r >= 4.5 ? 'aa' : r >= 3 ? 'l
 // The pair cards' one-word mark; its tone follows the same thresholds.
 const markOf = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? 'Large only' : 'Fails')
 const toneOf = (r) => (r >= 4.5 ? 'ok' : r >= 3 ? 'warn' : 'err')
-const title = (s) => s.charAt(0) + s.slice(1).toLowerCase()
 
 // A field shows its hint only once the raw value is invalid AND long enough to
 // be a finished attempt, so "#6B" mid-typing stays quiet.
@@ -109,21 +118,25 @@ const showsHint = (raw, valid) => !valid && (raw || '').trim().length >= 4
 
 // The kit: the person's palette, named by its role. Falls back to the colours
 // the saved base + system generate, which is what the Palette Builder would
-// show them, so the list is never empty and never invented.
+// show them, so the list is never empty and never invented. `own` says which:
+// at least two distinct valid colours of the person's own, or the generated ones.
 function kitFrom(palette) {
   const harmony = palette?.harmony || 'auto'
   const named = (list) => {
     const seen = new Set()
     return list.map(normaliseHex).slice(0, 7)
-      .map((hex, i) => ({ hex, name: title(roleLabel(harmony, i)) }))
+      .map((hex, i) => ({ hex, role: roleAt(i), name: roleName(roleAt(i), harmony) }))
       .filter((c) => c.hex && (seen.has(c.hex) ? false : (seen.add(c.hex), true)))
   }
-  const own = named(palette?.colors || [])
-  if (own.length >= 2) return own
+  const mine = named(palette?.colors || [])
+  if (mine.length >= 2) return { colours: mine, own: true }
   const base = normaliseHex(palette?.base) || '#0051FF'
   const generated = harmony === 'auto' ? autoTonalFromSeed(base) : generateHarmony(base, harmony)
-  return named(generated)
+  return { colours: named(generated), own: false }
 }
+
+// How many pair cards a phone shows before "Show all".
+const PAIRS_COLLAPSED = 4
 
 // Pairs drawn from the kit: every colour on its lightest and darkest member,
 // and the lightest on the darkest — the pairings a UI actually uses.
@@ -136,7 +149,10 @@ function pairsFrom(kit) {
   const out = []
   const push = (fg, bg) => {
     if (fg.hex === bg.hex || out.some((p) => p.fg === fg.hex && p.bg === bg.hex)) return
-    out.push({ label: `${fg.name} on ${bg.name.toLowerCase()}`, fg: fg.hex, bg: bg.hex, ratio: contrastRatio(fg.hex, bg.hex) })
+    out.push({
+      label: `${fg.name} on ${bg.name.toLowerCase()}`, fg: fg.hex, bg: bg.hex, fgRole: fg.role, bgRole: bg.role,
+      ratio: contrastRatio(fg.hex, bg.hex),
+    })
   }
   push(light, dark)
   push(dark, light)
@@ -163,9 +179,11 @@ function swatchRef(hex, ink) {
 // input on one row, then a hint that only appears for a finished-looking but
 // invalid value. `short` is the phone label ("Text"); the full label stays the
 // input's accessible name at every width, so it never reads as just "Text".
+// `roleText` is what the side is in the palette ("Deep"): after the word on one
+// line, or under it on a phone, never wrapping the row, so it moves nothing.
 // Focusing anything in the field (picker or hex) tells the page which side the
 // palette swatches should now fill.
-function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur, onTouch }) {
+function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, onBlur, onTouch }) {
   const hintId = `${id}-hint`
   const bad = showsHint(raw, valid)
   return (
@@ -173,6 +191,7 @@ function HexField({ id, label, short, raw, valid, committed, onRaw, onBlur, onTo
       <label className="cc-field-k" htmlFor={id}>
         <span className="cc-field-short" aria-hidden="true">{short}</span>
         <span className="cc-field-full">{label}</span>
+        {roleText && <span className="cc-field-role">{' '}<span className="cc-field-sep" aria-hidden="true">· </span>{roleText}</span>}
       </label>
       <div className="cc-field-row">
         <ColorPickerPop
@@ -220,6 +239,18 @@ export default function ContrastChecker({ onCopy }) {
     fg: normaliseHex(searchParams.get('fg')) || '#6B7280',
     bg: normaliseHex(searchParams.get('bg')) || '#FFFFFF',
   }))
+  // The Palette Builder adds where it came from and what each side is in the
+  // palette (utils/contrastHandoff). Read once like the pair, so a reload of the
+  // same address keeps both the pair and the way back. A role is only kept when
+  // its side's colour came in the address too, or it would name the default grey.
+  const [handoff] = useState(() => {
+    const h = parseHandoff(searchParams)
+    return {
+      ...h,
+      fgRole: normaliseHex(searchParams.get('fg')) ? h.fgRole : null,
+      bgRole: normaliseHex(searchParams.get('bg')) ? h.bgRole : null,
+    }
+  })
   const [fgInput, setFgInput] = useState(seed.fg)
   const [fg, setFg] = useState(seed.fg)
   const [bgInput, setBgInput] = useState(seed.bg)
@@ -263,10 +294,12 @@ export default function ContrastChecker({ onCopy }) {
   const verdict = verdictOf(ratio)
   const passes = (min) => ratio >= min
 
-  const kit = useMemo(() => kitFrom(design?.palette), [design?.palette])
+  const harmony = design?.palette?.harmony || 'auto'
+  const { colours: kit, own: hasPalette } = useMemo(() => kitFrom(design?.palette), [design?.palette])
   const pairs = useMemo(() => pairsFrom(kit), [kit])
-  // Nine swatches, as drawn: the kit, then the two poles every kit is read
-  // against.
+  const pairGroups = useMemo(() => groupPairs(pairs), [pairs])
+  // Nine swatches, as drawn: the kit in slot order, then the two poles every kit
+  // is read against.
   const swatches = useMemo(() => {
     const out = kit.map((c) => ({ hex: c.hex, name: c.name }))
     for (const pole of [{ hex: '#FFFFFF', name: 'White' }, { hex: '#0B0C0E', name: 'Near black' }]) {
@@ -274,6 +307,7 @@ export default function ContrastChecker({ onCopy }) {
     }
     return out.slice(0, 9)
   }, [kit])
+  const [showAllPairs, setShowAllPairs] = useState(false)
 
   // NEAREST PASSING COLOURS. The next level this pair misses: AA body (4.5:1)
   // first, then AAA body (7:1). nearestPassingLightness scans both directions
@@ -306,6 +340,100 @@ export default function ContrastChecker({ onCopy }) {
   const applyFix = (fix) => (fix.side === 'text' ? setFgHex(fix.hex) : setBgHex(fix.hex))
 
   const current = target === 'text' ? fg : bg
+
+  // On a phone only the best pairs show until "Show all". The cards that are left
+  // out are not rendered, and an emptied group loses its heading.
+  const collapsed = stacked && !showAllPairs
+  const limit = collapsed ? PAIRS_COLLAPSED : pairs.length
+  const shownGroups = pairGroups
+    .map((g, i) => {
+      const before = pairGroups.slice(0, i).reduce((n, earlier) => n + earlier.pairs.length, 0)
+      return { ...g, pairs: g.pairs.slice(0, Math.max(0, limit - before)) }
+    })
+    .filter((g) => g.pairs.length > 0)
+
+  // A side keeps the role it arrived with only while it still holds the colour
+  // that came with it; once it is changed it is no longer that palette colour.
+  // An address is only a claim, so a role is believed only when this palette backs it:
+  // a palette of the person's own, and the slot's colour is the one in the address
+  // (white, canvas and near black are checked against their fixed hex). A pasted or
+  // stale link then names nothing, and the fallbacks below take over.
+  const trustRole = (hex, role) => {
+    if (!role || !hasPalette) return null
+    const same = (a, b) => String(a).toUpperCase() === String(b).toUpperCase()
+    if (role === 'white' || role === 'canvas') return same(hex, WHITE) ? role : null
+    if (role === 'near-black') return same(hex, NEAR_BLACK) ? role : null
+    // Checked against every colour the palette holds, not only the strip's
+    // first seven: a hand-off from the 8th to 10th column names its colour too.
+    const i = (design?.palette?.colors || []).findIndex((_, k) => roleAt(k) === role)
+    return i >= 0 && same(normaliseHex(design.palette.colors[i]), hex) ? role : null
+  }
+  const seedFgRole = trustRole(seed.fg, handoff.fgRole)
+  const seedBgRole = trustRole(seed.bg, handoff.bgRole)
+  const fgRole = fg === seed.fg ? seedFgRole : null
+  const bgRole = bg === seed.bg ? seedBgRole : null
+  // What a fix row calls a side: the role it arrived with while it is unchanged,
+  // otherwise the strip colour with exactly its hex (palette only), otherwise the
+  // side's own word. A direct visit with no palette keeps "text" and "background".
+  const sideName = (hex, role, word) => {
+    if (role) return roleName(role, harmony) || word
+    if (!hasPalette) return word
+    return swatches.find((s) => s.hex === hex)?.name || word
+  }
+  // What a field's label adds after its word: the same name, or nothing where a
+  // fix row would fall back to the side's own word.
+  const sideRole = (hex, role) => sideName(hex, role, null)
+  const sideNames = { text: sideName(fg, fgRole, 'text'), background: sideName(bg, bgRole, 'background') }
+
+  // PALETTE CONTEXT. With a palette, the previews are painted in its roles and only
+  // the parts that do the pair's job take the pair; the switch turns that off. A
+  // side's role is its hand-off role while it is unchanged, else the kit role of
+  // the colour it now holds, so a strip tap is read the way the hand-off was.
+  const [aroundOn, setAroundOn] = useState(true)
+  const context = hasPalette && aroundOn
+  const roleOfHex = (hex, role) => role || kit.find((c) => c.hex.toUpperCase() === hex.toUpperCase())?.role || null
+  const job = pairJob(fg, bg, roleOfHex(fg, fgRole), roleOfHex(bg, bgRole))
+  const paletteRoles = useMemo(
+    () => (context ? derivePaletteRoles(design?.palette?.colors, { mode: 'light', harmony }) : null),
+    [context, design?.palette?.colors, harmony],
+  )
+  // Beside colour: the legend leads with UI parts, and they are outlined until a test is chosen.
+  const lead = context && job === 'beside' ? 'ui' : null
+  // What the frame caption calls a side: its role name, else the colour's own hex.
+  const captionName = (hex, role) => (role ? roleName(role, harmony) : null) || swatches.find((s) => s.hex.toUpperCase() === hex.toUpperCase())?.name || hex.toUpperCase()
+  const caption = context
+    ? `Your palette, with ${captionName(fg, fgRole)} on ${captionName(bg, bgRole)} under test`
+    : 'Painted in your two colours only'
+  // The fixes reserve is as wide as its longest possible name, so a role named in
+  // a live row never wraps further than the reserve does.
+  const reserveNames = [
+    ...(hasPalette ? swatches.map((s) => s.name) : []),
+    ...[seedFgRole, seedBgRole].map((r) => (r ? roleName(r, harmony) : null)),
+  ].filter(Boolean)
+  const reserveWord = (side) => [side, ...reserveNames].reduce((a, w) => (w.length > a.length ? w : a))
+  // Opened from the Palette Builder: the toolbar's way back names the palette
+  // and says plainly that a fix made here stays here.
+  const back = handoff.from === 'palette'
+    ? {
+        to: '/create/palette',
+        label: 'Back to palette',
+        text: 'Palette',
+        hint: "Back to your palette. Fixes here don't change it yet.",
+        history: false,
+      }
+    : undefined
+
+  // The caption and the switch above or below the frame. The switch is one button
+  // with role="switch" whose words are its name, so a tap on them flips it.
+  const ctxBar = (
+    <div className="cc-ctxbar">
+      <p className="cc-ctx-cap">{caption}</p>
+      <button type="button" role="switch" aria-checked={aroundOn} className="cc-switch" onClick={() => setAroundOn(!aroundOn)}>
+        <span>Show my palette around it</span>
+        <span className="cc-switch-track" aria-hidden="true" />
+      </button>
+    </div>
+  )
 
   // ── Taking the result away ──
   const resultText = () => [
@@ -345,6 +473,10 @@ export default function ContrastChecker({ onCopy }) {
       className="cc"
       title="Contrast Checker"
       titleId="cc-title"
+      back={back}
+      data-from={handoff.from || undefined}
+      data-fg-role={fgRole || undefined}
+      data-bg-role={bgRole || undefined}
       primary={<ExportMenu label="Copy" icon="copy" items={copyItems} />}
     >
       <ToolGrid>
@@ -352,7 +484,7 @@ export default function ContrastChecker({ onCopy }) {
           {/* First thing on the page at every width: the two colours being checked. */}
           <div className="cc-pairbar" role="group" aria-label="Colours to check">
             <HexField
-              id="cc-fg" label="Text colour" short="Text"
+              id="cc-fg" label="Text colour" short="Text" roleText={sideRole(fg, fgRole)}
               raw={fgInput} valid={fgValid} committed={fg}
               onRaw={setSide(setFgInput, setFg)} onBlur={() => setFgInput(fg)}
               onTouch={() => setTarget('text')}
@@ -367,7 +499,7 @@ export default function ContrastChecker({ onCopy }) {
               title="Swap text and background"
             />
             <HexField
-              id="cc-bg" label="Background colour" short="Background"
+              id="cc-bg" label="Background colour" short="Background" roleText={sideRole(bg, bgRole)}
               raw={bgInput} valid={bgValid} committed={bg}
               onRaw={setSide(setBgInput, setBg)} onBlur={() => setBgInput(bg)}
               onTouch={() => setTarget('background')}
@@ -397,7 +529,7 @@ export default function ContrastChecker({ onCopy }) {
               its parts need no scroll between them. It is there for every view, so
               the page does not change height as the view does. Stacked, its lede
               moves under the frame to keep the picture high on the screen. */}
-          <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} />
+          <PairLegend ratio={ratio} pinned={pinned} onPin={setPinned} onHover={setHovered} lede={!stacked} lead={lead} />
 
           {/* The frame is a fixed height at each width and holds whatever is in it
               (the view, the loading placeholder or the failure message), so a
@@ -406,11 +538,108 @@ export default function ContrastChecker({ onCopy }) {
               current picture. */}
           <div className="cc-frame" style={{ background: bg }}>
             <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-              <PairExample viewId={shown} fg={fg} bg={bg} highlight={hovered || pinned} pinned={pinned} onRetry={retryPair} />
+              <PairExample
+                viewId={shown} fg={fg} bg={bg}
+                highlight={hovered || pinned || lead} pinned={pinned}
+                paletteRoles={paletteRoles} job={job}
+                onRetry={retryPair}
+              />
             </Suspense>
           </div>
-          {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio)}</p>}
+          {/* With a palette: what the frame shows, and the switch back to the two-colour
+              picture. Under the frame at every width, so the picture sits as high as
+              it does on a direct visit and the first screen keeps it. Both states are
+              one line high (the caption is clamped), so the switch moves nothing. */}
+          {hasPalette && ctxBar}
+          {stacked && <p className="cc-lede cc-lg-lede">{legendLede(ratio, lead === 'ui')}</p>}
         </ToolMain>
+
+        {/* A grid child between the preview and the result panel, so on tablet and
+            phone the strip follows the frame, its caption and its switch, and the
+            result panel comes after it; on desktop it sits under the preview, beside
+            the panel. Row 1 picks a colour for a side; row 2 lists the pairs worth
+            checking, by the job each does. */}
+        <div className="cc-strip">
+          <div className="cc-strip-pick">
+            <p className="tl-sec-label">{hasPalette ? 'Your palette' : 'Generated colours'}</p>
+            <ToolPills
+              label="Swatches change the"
+              shape="block"
+              options={[{ value: 'text', label: 'Text' }, { value: 'background', label: 'Background' }]}
+              value={target}
+              onChange={setTarget}
+            />
+            <div className="cc-swatches" role="group" aria-label={`Palette colours for the ${target}`}>
+              {swatches.map((s) => {
+                const on = s.hex === current
+                return (
+                  <button
+                    key={s.hex}
+                    type="button"
+                    className={on ? 'cc-swatch is-on' : 'cc-swatch'}
+                    ref={swatchRef(s.hex)}
+                    aria-label={`${s.name}, ${s.hex}`}
+                    aria-pressed={on}
+                    onClick={() => (target === 'text' ? setFgHex(s.hex) : setBgHex(s.hex))}
+                  >
+                    <span className="cc-swatch-chip" aria-hidden="true" />
+                    <span className="cc-swatch-name" aria-hidden="true">{s.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <section className="cc-pairs" aria-labelledby="cc-pairs-title">
+            <h2 id="cc-pairs-title" className="tl-sec-label">{hasPalette ? 'Pairs to check in your palette' : 'Pairs to check'}</h2>
+            <p className="cc-lede">
+              {hasPalette ? 'Pick one to check it.' : 'From the colours your base generates. Build a palette to check your own.'}
+            </p>
+            {shownGroups.map((g) => (
+              <div key={g.job} className="cc-pair-group" role="group" aria-labelledby={`cc-group-${g.job}`}>
+                <p id={`cc-group-${g.job}`} className="cc-pair-group-title">
+                  {g.title}
+                  {g.note && <span className="cc-pair-group-note">{g.note}</span>}
+                </p>
+                <div className="cc-pair-grid">
+                  {g.pairs.map((p) => {
+                    const r = ratioStr(p.ratio)
+                    const isCurrent = p.fg === fg && p.bg === bg
+                    return (
+                      <button
+                        key={`${p.fg}-${p.bg}`}
+                        type="button"
+                        className="cc-pair"
+                        aria-pressed={isCurrent}
+                        onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
+                        aria-label={`Check ${p.label}, ${r} to 1, ${markOf(p.ratio)}`}
+                      >
+                        <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
+                        <span className="cc-pair-body">
+                          <span className="cc-pair-label">{p.label}</span>
+                          <span className="cc-pair-meta">
+                            <span className="cc-pair-ratio">{r}:1</span>
+                            <span className={`cc-pair-mark cc-tone--${toneOf(p.ratio)}`}>{markOf(p.ratio)}</span>
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+            {stacked && pairs.length > PAIRS_COLLAPSED && (
+              <ToolButton
+                variant="quiet"
+                className="cc-pairs-more"
+                aria-expanded={showAllPairs}
+                onClick={() => setShowAllPairs((on) => !on)}
+              >
+                {showAllPairs ? 'Show fewer pairs' : `Show all ${pairs.length} pairs`}
+              </ToolButton>
+            )}
+          </section>
+        </div>
 
         <ToolPanel label="Contrast result" className="cc-panel">
           {!ratioInStrip && ratioBlock}
@@ -450,15 +679,15 @@ export default function ContrastChecker({ onCopy }) {
                 height as the pair changes: a hidden copy of the fullest state shares
                 the cell with what is showing. Its rows use the real classes and
                 buttons at the longest real wording ("Lighten", the 4.5:1 lede, and
-                "background"), so it wraps wherever a live row wraps. From 901px
+                the longest of "background" and the palette's role names), so it
+                wraps wherever a live row wraps. From 901px
                 it holds the lede and one row (the page is as tall as its main
                 column there, so the panel does not set it); below that it holds
                 the lede and two rows, because the panel sits in the page flow.
-                Below 901px the swatches under it stay still; from 901px they move
-                down one row (about 69px) when a pair needs two fixes, and the
-                page height does not change. Two rows there would leave a blank
-                under the usual single fix and push the swatches below a 900px
-                window.
+                Below 901px the panel's bottom edge stays still; from 901px it
+                moves down one row (about 69px) when a pair needs two fixes, and
+                the page height does not change. Two rows there would leave a
+                blank under the usual single fix.
                 Its words are CSS generated content, so they are in no one's page
                 text: not a screen reader's, a find, or a test's. */}
             <div className="cc-fixes-body">
@@ -474,7 +703,7 @@ export default function ContrastChecker({ onCopy }) {
                           <div key={fix.key} className="cc-fix">
                             <span className="cc-fix-chip" ref={pairRef(fix.fg, fix.bg)} aria-hidden="true">Aa</span>
                             <span className="cc-fix-desc">
-                              <span className="cc-fix-line">{fix.verb} {fix.side} to <strong>{fix.hex}</strong></span>
+                              <span className="cc-fix-line">{fix.verb} {sideNames[fix.side]} to <strong>{fix.hex}</strong></span>
                               <span className="cc-fix-ratio cc-tone--ok">{ratioStr(fix.ratio)}:1</span>
                             </span>
                             <ToolButton variant="quiet" className="cc-fix-use" aria-label={`Use ${fix.hex} for the ${fix.side}`} onClick={() => applyFix(fix)}>Use</ToolButton>
@@ -486,7 +715,7 @@ export default function ContrastChecker({ onCopy }) {
                   ) : (
                     <p className="cc-hint cc-unfixable">
                       Neither colour can reach {goal.min}:1 on its own here: they sit
-                      too close in lightness. Change both, or start from a kit pair.
+                      too close in lightness. Change both, or start from a palette pair.
                     </p>
                   )
                 ) : (
@@ -500,7 +729,7 @@ export default function ContrastChecker({ onCopy }) {
                     <div key={side} className="cc-fix">
                       <span className="cc-fix-chip" />
                       <span className="cc-fix-desc">
-                        <span className="cc-fix-line"><span data-t={`Lighten ${side} to `} /><strong data-t="#DDDDDD" /></span>
+                        <span className="cc-fix-line"><span data-t={`Lighten ${reserveWord(side)} to `} /><strong data-t="#DDDDDD" /></span>
                         <span className="cc-fix-ratio" data-t="4.50:1" />
                       </span>
                       <ToolButton variant="quiet" className="cc-fix-use" tabIndex={-1}><span data-t="Use" /></ToolButton>
@@ -511,66 +740,7 @@ export default function ContrastChecker({ onCopy }) {
               </div>
             </div>
           </ToolSection>
-
-          <ToolSection label="From your palette" className="cc-colours">
-            <ToolPills
-              label="Swatches change the"
-              shape="block"
-              options={[{ value: 'text', label: 'Text' }, { value: 'background', label: 'Background' }]}
-              value={target}
-              onChange={setTarget}
-            />
-            <div className="cc-swatches" role="group" aria-label={`Palette colours for the ${target}`}>
-              {swatches.map((s) => {
-                const on = s.hex === current
-                return (
-                  <button
-                    key={s.hex}
-                    type="button"
-                    className={on ? 'cc-swatch is-on' : 'cc-swatch'}
-                    ref={swatchRef(s.hex)}
-                    aria-label={`${s.name}, ${s.hex}`}
-                    aria-pressed={on}
-                    title={s.name}
-                    onClick={() => (target === 'text' ? setFgHex(s.hex) : setBgHex(s.hex))}
-                  />
-                )
-              })}
-            </div>
-          </ToolSection>
         </ToolPanel>
-
-        {/* A third grid child so the result panel comes before the kit pairs on
-            tablet and phone, and sits beside them on desktop. */}
-        <section className="cc-pairs" aria-labelledby="cc-pairs-title">
-          <h2 id="cc-pairs-title" className="tl-sec-label">Common pairs in this kit</h2>
-          <p className="cc-lede">Read from your palette. Pick one to check it.</p>
-          <div className="cc-pair-grid">
-            {pairs.map((p) => {
-              const r = ratioStr(p.ratio)
-              const isCurrent = p.fg === fg && p.bg === bg
-              return (
-                <button
-                  key={`${p.fg}-${p.bg}`}
-                  type="button"
-                  className="cc-pair"
-                  aria-pressed={isCurrent}
-                  onClick={() => { setFgHex(p.fg); setBgHex(p.bg) }}
-                  aria-label={`Check ${p.label}, ${r} to 1, ${markOf(p.ratio)}`}
-                >
-                  <span className="cc-pair-chip" ref={pairRef(p.fg, p.bg)} aria-hidden="true">Aa</span>
-                  <span className="cc-pair-body">
-                    <span className="cc-pair-label">{p.label}</span>
-                    <span className="cc-pair-meta">
-                      <span className="cc-pair-ratio">{r}:1</span>
-                      <span className={`cc-pair-mark cc-tone--${toneOf(p.ratio)}`}>{markOf(p.ratio)}</span>
-                    </span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
       </ToolGrid>
     </ToolLayout>
   )

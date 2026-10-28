@@ -101,14 +101,14 @@ test.describe('Contrast Checker · the displayed number agrees with the verdict'
     await expect(page.locator('.cc-check-mark').first()).toHaveText('Pass')
   })
 
-  // The same rule on the kit pair cards: whatever number a card prints, the
+  // The same rule on the palette's pair cards: whatever number a card prints, the
   // mark beside it must be the one that number earns. With the palette seeded
   // to hold #5C7E6F against white (4.4978:1) a rounded card would read 4.50
   // beside "Large only".
   //
   // MUTATION: the same floorTo-rounds change; the card for the 4.49 pair then
   // reads 4.50 and the sweep reports it.
-  test('no kit pair card prints a number its own mark contradicts', async ({ page }) => {
+  test('no palette pair card prints a number its own mark contradicts', async ({ page }) => {
     watch(page, 'a designer reading the common pairs')
     const PALETTE = ['#5C7E6F', '#FFFFFF', '#0B0C0E', '#777777', '#767676']
     await page.addInitScript((colors) => {
@@ -492,7 +492,9 @@ test.describe('Contrast Checker · the explainer wording', () => {
 
 test.describe('Contrast Checker · a thumb on a phone', () => {
   // MUTATION: in contrast.css lower the coarse-pointer swatch to 32px
-  // (.cc .cc-swatch { width: 32px; height: 32px }); the swatches go red.
+  // (.cc .cc-swatch-chip { width: 32px; height: 32px }); the swatch chips go red.
+  // (The swatch button itself is taller than 44px whatever the chip is, because the
+  // role name sits under the chip, so the chip is measured too.)
   // Same for the measurement link: lower `.cc .cc-note-link { min-height: 44px }`
   // inside @media (pointer: coarse) to 24px and it goes red.
   test('every control is at least 44px at 390', async ({ browser }) => {
@@ -505,13 +507,13 @@ test.describe('Contrast Checker · a thumb on a phone', () => {
     const read = await page.evaluate(() => ({
       coarse: matchMedia('(pointer: coarse)').matches,
       boxes: [
-        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch',
+        '.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-swatch-chip',
         '.tl-export-btn', '.cc-note-link', '.cc-lg-chip',
       ].flatMap((sel) => [...document.querySelectorAll(sel)].map((el, i) => {
         const r = el.getBoundingClientRect()
         return { sel: `${sel}[${i}]`, w: Math.round(r.width), h: Math.round(r.height) }
       })),
-      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-note-link', '.cc-lg-chip']
+      counts: ['.cc-picker', '.cc-hex-input', '.cc-swap', '.cc-fixes-live .cc-fix-use', '.cc-fixes-live .cc-fix-copy', '.cc-pair', '.cc-swatch', '.cc-swatch-chip', '.cc-note-link', '.cc-lg-chip']
         .map((sel) => [sel, document.querySelectorAll(sel).length]),
     }))
     expect(read.coarse, 'the context must present a coarse pointer').toBe(true)

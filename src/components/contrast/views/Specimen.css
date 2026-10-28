@@ -17,3 +17,13 @@
   .sp{align-content:start;gap:var(--s-3);padding:var(--s-4)}
   .sp .sp-h{font-size:32px}
 }
+
+/* ── Palette context ──────────────────────────────────────────────────────────
+ * Only with data-ctx="on" on the root (PairExample); see Interface.css. The
+ * lines the pair's job covers take the pair; the pill takes the pair as a fill
+ * with its label, or the palette's strong border and accent icon when it is not
+ * what the pair is about. */
+.pvs[data-ctx="on"] .sp [data-pair-part]{color:var(--pv-pair-fg)}
+.pvs[data-ctx="on"] .sp .sp-btn:not([data-pair-part]){border-color:var(--pv-border-strong)}
+.pvs[data-ctx="on"] .sp .sp-btn:not([data-pair-part]) svg{color:var(--pv-accent)}
+.pvs[data-ctx="on"] .sp .sp-btn[data-pair-part]{border-color:var(--pv-pair-fg);background:var(--pv-pair-bg)}

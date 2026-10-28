@@ -3,6 +3,11 @@
 // palette, and the picture exists to prove the verdict: a view paints only
 // --pv-text and --pv-canvas, so a failing pair looks as bad here as it is.
 //
+// With the palette's roles (palette context mode) the view is painted in the
+// palette instead, and only the parts that do the pair's job (data-pair-part) are
+// painted in the pair: --pv-pair-fg on --pv-pair-bg. Marking then looks at those
+// parts alone, so no outline lands on a part painted in a palette colour.
+//
 // The legend of this view is "Where each test lands": every piece of the example
 // is sorted at runtime into body text, large text or a UI part (data-size), the
 // same way the Palette Builder's legend sorts by role (data-role). At rest the
@@ -43,12 +48,14 @@ function textArea(el, nodes) {
 // of the picture. "Largest" is by the part's own text, and a row as wide as the
 // example itself that is mostly empty (a breadcrumb) only counts when nothing
 // else of its class exists; a full-width paragraph is real text and still counts.
-function markSizes(root, uiSelector, highlight, failing) {
+function markSizes(root, uiSelector, highlight, failing, scoped = false) {
+  // In palette context only the pair's own parts are measured.
+  const inScope = (el) => !scoped || el.closest('[data-pair-part]') != null
   const plan = new Map() // element -> { size, hit, fail }
   const area = new Map() // element -> how big it reads
   for (const el of root.querySelectorAll('*')) {
     const own = ownTextNodes(el)
-    if (!own.length || !shown(el)) continue
+    if (!own.length || !shown(el) || !inScope(el)) continue
     const cs = getComputedStyle(el)
     const cls = textSizeClass(parseFloat(cs.fontSize), parseInt(cs.fontWeight, 10))
     // A box nested in a box that already carries the same class (a price and its
@@ -64,7 +71,7 @@ function markSizes(root, uiSelector, highlight, failing) {
   }
   if (uiSelector) {
     for (const el of root.querySelectorAll(uiSelector)) {
-      if (plan.has(el) || !shown(el)) continue
+      if (plan.has(el) || !shown(el) || !inScope(el)) continue
       plan.set(el, { size: 'ui', hit: null, fail: null })
       const r = el.getBoundingClientRect()
       area.set(el, r.width * r.height)
@@ -110,13 +117,29 @@ function markSizes(root, uiSelector, highlight, failing) {
 
 /**
  * @param {{viewId: 'interface'|'article'|'landing'|'specimen', fg: string, bg: string,
- *   highlight?: string|null, pinned?: string|null}} props fg and bg are
- *   #rrggbb; highlight is a size class to outline; pinned is the class a click
- *   or tap holds, whose first part is brought into view
+ *   highlight?: string|null, pinned?: string|null, paletteRoles?: object|null,
+ *   job?: 'text'|'fill-label'|'beside'|null}} props fg and bg are #rrggbb;
+ *   highlight is a size class to outline; pinned is the class a click or tap
+ *   holds, whose first part is brought into view; paletteRoles (what
+ *   derivePaletteRoles returns) turns palette context on, and job (contrastStrip's
+ *   pairJob) is what the pair does there
  */
-export default function PairExample({ viewId, fg, bg, highlight = null, pinned = null }) {
-  const roles = useMemo(() => pairRoles(fg, bg), [fg, bg])
-  const outline = useMemo(() => pickOutlineColour(bg, fg), [bg, fg])
+export default function PairExample({ viewId, fg, bg, highlight = null, pinned = null, paletteRoles = null, job = null }) {
+  const ctx = paletteRoles != null
+  // Without a palette: the pair as two colours. With one: the palette's roles, the
+  // pair on top as --pv-pair-*, and the page ground the pair's own when the pair is
+  // text on a ground (the parts that are not text then sit on it).
+  const roles = useMemo(() => {
+    if (!ctx) return pairRoles(fg, bg)
+    return job === 'text' ? { ...paletteRoles, canvas: bg, surface: bg } : paletteRoles
+  }, [ctx, paletteRoles, job, fg, bg])
+  const vars = useMemo(() => (ctx ? { ...pvVars(roles), '--pv-pair-fg': fg, '--pv-pair-bg': bg } : pvVars(roles)), [ctx, roles, fg, bg])
+  // The outline also sits on the page round the pair's parts, so it is chosen
+  // against the palette's ground as well.
+  const outline = useMemo(
+    () => pickOutlineColour(bg, fg, undefined, ctx ? [roles.canvas, roles.surface] : []),
+    [bg, fg, ctx, roles],
+  )
   const view = PAIR_VIEWS.find((v) => v.id === viewId)
   const Body = PAIR_EXAMPLES[viewId]
   const rootRef = useRef(null)
@@ -138,15 +161,15 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
     let frame = 0
     const run = () => {
       cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => markSizes(root, UI_PARTS[viewId], highlight, failing))
+      frame = requestAnimationFrame(() => markSizes(root, UI_PARTS[viewId], highlight, failing, ctx))
     }
-    markSizes(root, UI_PARTS[viewId], highlight, failing)
+    markSizes(root, UI_PARTS[viewId], highlight, failing, ctx)
     const mo = new MutationObserver(run)
     mo.observe(root, { childList: true, subtree: true })
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(run)
     ro?.observe(root)
     return () => { cancelAnimationFrame(frame); mo.disconnect(); ro?.disconnect() }
-  }, [viewId, failKey, highlight, roles, failed])
+  }, [viewId, failKey, highlight, roles, failed, ctx, job])
 
   // A pinned class can sit below the fold of a tall example: bring its first
   // visible part into view (instantly under reduced motion), and leave the page
@@ -164,15 +187,17 @@ export default function PairExample({ viewId, fg, bg, highlight = null, pinned =
     <div
       ref={rootRef}
       className="pvs cc-pv"
-      style={{ ...pvVars(roles), '--pv-hit': outline, '--pv-error': outline }}
+      style={{ ...vars, '--pv-hit': outline, '--pv-error': outline }}
       data-scene={viewId}
       data-mode={roles.mode}
       data-pair="true"
+      data-ctx={ctx ? 'on' : 'off'}
+      data-job={job || undefined}
       role={failed ? undefined : 'img'}
-      aria-label={failed ? undefined : `${view.name} example painted in your text and background colours`}
+      aria-label={failed ? undefined : `${view.name} example painted ${ctx ? 'with your palette, and your pair on the parts under test' : 'in your text and background colours'}`}
     >
       <Suspense fallback={<div className="cc-pv-wait" aria-hidden="true" />}>
-        <Body onRetry={retryView} onFailed={setFailed} />
+        <Body onRetry={retryView} onFailed={setFailed} job={ctx ? job : null} />
       </Suspense>
     </div>
   )
