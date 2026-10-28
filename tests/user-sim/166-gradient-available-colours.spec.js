@@ -16,6 +16,8 @@
 //   pickColour stops setting the stop's colour        -> the "pressing a chip" tests
 //   the row's aria-describedby dropped                -> "a stop row's accessible name ..."
 //   one "From palette" left in a title or a label     -> "no visible or accessible From palette"
+//   MAX_CHIPS 13 -> 14 (or 99)                         -> "the chip cap" tests
+//   pickColour drops its `setPickNote('')`             -> "pressing the same chip again announces again"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -410,6 +412,134 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
     })
   })
 }
+
+// ── The chip cap ──
+// Past thirteen colours the row shows twelve chips and a "+N more" link to the Palette
+// Builder in the thirteenth place, so the section is never taller than a full thirteen.
+// The heights are measured against a thirteen-colour page in the same browser, not a
+// number written down here.
+/** `n` distinct colours: the thirteen above, then more from a fixed recipe. */
+function palette(n) {
+  const out = [...THIRTEEN]
+  for (let i = 0; out.length < n; i++) {
+    const hex = '#' + [(37 * i + 20) % 256, (91 * i + 50) % 256, (53 * i + 120) % 256]
+      .map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+    if (!out.includes(hex)) out.push(hex)
+  }
+  return out
+}
+
+/** Open the page with `colors` seeded and read what the section shows and how tall things are. */
+async function cap(page, colors, phone = false) {
+  await seed(page, { colors })
+  await open(page)
+  const group = section(page).getByRole('group', { name: 'Palette colours' })
+  await expect(group.getByRole('button').first()).toBeVisible()
+  const more = group.getByRole('link')
+  const hasMore = (await more.count()) > 0
+  const r = {
+    names: await names(group.getByRole('button')),
+    moreCount: await more.count(),
+    moreName: hasMore ? await more.first().textContent() : null,
+    moreHref: hasMore ? await more.first().getAttribute('href') : null,
+    section: await page.evaluate(() => document.querySelector('.grd-avail').getBoundingClientRect().height),
+    page: await page.evaluate(() => document.documentElement.scrollHeight),
+  }
+  // Last, since opening the phone's More sheet changes the page. On a phone the
+  // button is a row in that sheet.
+  let host = page
+  if (phone) {
+    await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'More', exact: true }).click()
+    host = page.getByRole('dialog', { name: 'More' })
+    await expect(host).toBeVisible()
+  }
+  const shuffle = host.getByRole('button', { name: /^Shuffle from palette/ })
+  await expect(shuffle).toHaveCount(1)
+  r.shuffleDisabled = await shuffle.getAttribute('aria-disabled')
+  return r
+}
+
+for (const [label, use, phone] of [
+  ['1440px', { viewport: { width: 1440, height: 900 } }, false],
+  ['390px touch', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' }, true],
+]) {
+  test.describe(`Available colours · the chip cap at ${label}`, () => {
+    test.use(use)
+
+    test('thirteen colours show thirteen chips and no link (the control for the rest)', async ({ page }) => {
+      watch(page, 'someone with exactly thirteen colours')
+      const r = await cap(page, palette(13), phone)
+      expect(r.names).toEqual(THIRTEEN.map((hex, i) => `${ROLE_NAMES[i]} 500, ${hex}`))
+      expect(r.moreCount, 'thirteen fit, so no link').toBe(0)
+    })
+
+    for (const [total, hidden] of [[14, 2], [40, 28]]) {
+      test(`${total} colours: twelve chips and "+${hidden} more" to the Palette Builder, in the room thirteen take`, async ({ page, context }) => {
+        watch(page, `someone with ${total} palette colours`)
+        const colours = palette(total)
+        expect(new Set(colours).size, 'the fixture colours are distinct').toBe(total)
+
+        // The thirteen-colour page is the yardstick, opened in the same browser.
+        const base = await context.newPage()
+        const thirteen = await cap(base, palette(13), phone)
+
+        const r = await cap(page, colours, phone)
+        expect(r.names, 'the first twelve colours, in palette order, each named for its role').toEqual(
+          THIRTEEN.slice(0, 12).map((hex, i) => `${ROLE_NAMES[i]} 500, ${hex}`),
+        )
+        expect(r.moreCount, 'one link in the last place').toBe(1)
+        expect(r.moreName, 'the link says how many are left').toMatch(new RegExp(`^\\+${hidden} more`))
+        expect(r.moreName, 'and, for a screen reader, where it goes').toContain('colours in Palette Builder')
+        expect(r.moreHref).toBe('/create/palette')
+        // The thirteenth colour is one of the hidden ones: it is not drawn.
+        expect(r.names.join()).not.toContain(colours[12])
+        expect(r.section, 'the section is as tall as thirteen colours make it').toBe(thirteen.section)
+        expect(r.page, 'the page is as tall as it is with thirteen').toBe(thirteen.page)
+        expect(r.shuffleDisabled, 'the whole palette still feeds Shuffle from palette').toBeNull()
+      })
+    }
+  })
+}
+
+test.describe('Available colours · announcing a pick', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('pressing the same chip again after the colour changed elsewhere announces again', async ({ page }) => {
+    watch(page, 'a screen reader user picking the same palette colour twice')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    const status = page.locator('.grd-avail').getByRole('status')
+    // Every change to the live region's text, in order: a screen reader speaks a
+    // region when its text changes, so two spoken lines are two non-empty entries.
+    await page.evaluate(() => {
+      const el = document.querySelector('.grd-avail [role="status"]')
+      window.__said = []
+      new MutationObserver(() => window.__said.push(el.textContent))
+        .observe(el, { childList: true, characterData: true, subtree: true })
+    })
+    const said = () => page.evaluate(() => window.__said)
+
+    const secondary = chip(page, 'Secondary 500')
+    await secondary.click()
+    await expect(status).toHaveText('Stop 1 set to Secondary 500')
+    expect(await said(), 'first press: said once').toEqual(['Stop 1 set to Secondary 500'])
+
+    // The colour is changed another way, so the region still holds the old line.
+    const hex = page.locator('.grd-hex').first()
+    await hex.fill('#112233')
+    await hex.press('Enter')
+    await expect(hexOf(page, 1)).toHaveText('#112233')
+    await expect(roleOf(page, 1)).toHaveText('Custom')
+    await expect(status, 'nothing new is said for a typed colour').toHaveText('Stop 1 set to Secondary 500')
+
+    await secondary.click()
+    await expect(hexOf(page, 1)).toHaveText('#E0784E')
+    // Emptied, then filled again with the same words.
+    await expect.poll(said, { message: 'the region was emptied and refilled' }).toEqual([
+      'Stop 1 set to Secondary 500', '', 'Stop 1 set to Secondary 500',
+    ])
+  })
+})
 
 // At 360px on touch, twelve stops must not squeeze the rows below 56px. The grid
 // `.grd-stop` keeps `flex: 0 0 var(--grd-row)` for this: without it the 4px padding at
