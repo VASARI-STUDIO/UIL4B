@@ -112,7 +112,7 @@ async function toolbarAction(page, name, { force = false } = {}) {
 
 /** Opens Shuffle settings (its popover, or the inline copy in the More menu when the toolbar is too narrow) and returns the Keep the angle button. */
 async function openShuffleKeep(page) {
-  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Shuffle settings', exact: true })
+  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })
   if ((await trigger.count()) && (await trigger.first().isVisible())) {
     await trigger.first().click()
     return page.getByRole('dialog', { name: 'Shuffle settings' }).getByRole('button', { name: 'Keep the angle' })
