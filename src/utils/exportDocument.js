@@ -24,6 +24,13 @@ import { readIdentity } from './kitIdentity.js'
 
 export const EXPORT_DOCUMENT_URL = '/api/ai?export=document'
 
+// The gradient goes as colours and positions only: the lock flags are the tool's
+// own state (what Random keeps), not part of the design that is printed.
+function gradientForDocument(gradient) {
+  if (!gradient || !Array.isArray(gradient.stops)) return gradient
+  return { ...gradient, stops: gradient.stops.map((s) => (s && typeof s === 'object' ? { color: s.color, position: s.position } : s)) }
+}
+
 // What the browser sends: only the fields the documents are drawn from, and only
 // the ones that exist. The server picks the same fields again; this just keeps a
 // project's other state out of the request. Of the identity only the description
@@ -32,7 +39,7 @@ export function documentDesign(design) {
   const d = design && typeof design === 'object' ? design : {}
   const { description } = readIdentity(d)
   return {
-    palette: d.palette, gradient: d.gradient, fonts: d.fonts, typeScale: d.typeScale, logo: d.logo,
+    palette: d.palette, gradient: gradientForDocument(d.gradient), fonts: d.fonts, typeScale: d.typeScale, logo: d.logo,
     identity: description ? { description } : undefined,
   }
 }
