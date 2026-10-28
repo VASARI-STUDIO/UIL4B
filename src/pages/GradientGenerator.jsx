@@ -185,11 +185,16 @@ const STARTER_COLOURS = [
   { hex: '#0B0C0E', name: 'Starter ink' }, { hex: '#F7F7F4', name: 'Starter paper' },
 ]
 
+// The most items Available colours draws in the palette row (two rows at a fine
+// pointer). A palette past it shows one fewer colour and a "+N more" link in the
+// last place, so the row never takes more room than thirteen colours do.
+const MAX_CHIPS = 13
+
 // A round colour chip that sets the selected stop. The chosen state is a ring and
 // a tick, so it never rests on colour alone; the tick takes white or near-black
 // ink by the chip's own lightness.
 function ColourChip({ hex, label, on, onPick }) {
-  const light = hexToOklch(hex)[0] >= 60
+  const light = useMemo(() => hexToOklch(hex)[0] >= 60, [hex])
   return (
     <button
       type="button"
@@ -683,12 +688,22 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setFromLibrary(false)
   }, [rollStops, locks.type, locks.angle])
 
+  // ── Available colours ──
+  // The palette's colours (de-duplicated without regard to case, in palette
+  // order), each with the role it holds, and the active colour's shades when the
+  // project's ramp is current. The palette cannot change while this page is
+  // open, so both are settled by the first paint and the section's height does
+  // not move during a session.
+  const roleDesign = useMemo(() => ({ palette: design?.palette, tints: design?.tints }), [design?.palette, design?.tints])
+  const chips = useMemo(() => paletteChips(roleDesign), [roleDesign])
+  const shades = useMemo(() => activeShades(roleDesign), [roleDesign])
+  // The rest of a long palette is one link away in Palette Builder.
+  const shownChips = chips.length > MAX_CHIPS ? chips.slice(0, MAX_CHIPS - 1) : chips
+  const hiddenChips = chips.length - shownChips.length
+
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
-  const paletteHexes = useMemo(
-    () => [...new Set((design?.palette?.colors || []).filter(isValidHex))],
-    [design?.palette?.colors]
-  )
+  const paletteHexes = useMemo(() => chips.map((c) => c.hex), [chips])
   const canRandomFromPalette = paletteHexes.length >= 2
   // Pressing Shuffle from palette with nothing to draw from says why in a toast
   // and takes the person to the Available colours note, which holds the way to
@@ -744,19 +759,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     note.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [paletteMissing])
 
-  // ── Available colours ──
-  // The palette's colours (de-duplicated, in palette order), each with the role
-  // it holds, and the active colour's shades when the project's ramp is current.
-  // The palette cannot change while this page is open, so both are settled by
-  // the first paint and the section's height does not move during a session.
-  const roleDesign = useMemo(() => ({ palette: design?.palette, tints: design?.tints }), [design?.palette, design?.tints])
-  const chips = useMemo(() => paletteChips(roleDesign), [roleDesign])
-  const shades = useMemo(() => activeShades(roleDesign), [roleDesign])
+  // The live region is emptied and refilled a tick later, so pressing the same
+  // chip again after the colour was changed elsewhere announces again (an
+  // unchanged string would not).
   const [pickNote, setPickNote] = useState('')
+  const pickNoteTimer = useRef(0)
+  useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
   const pickColour = useCallback((hex, name) => {
     if (!guardEdit()) return
     setStops((prev) => prev.map((s, i) => (i === activeStop ? { ...s, color: hex } : s)))
-    setPickNote(`Stop ${activeStop + 1} set to ${name}`)
+    setPickNote('')
+    clearTimeout(pickNoteTimer.current)
+    pickNoteTimer.current = setTimeout(() => setPickNote(`Stop ${activeStop + 1} set to ${name}`), 60)
   }, [guardEdit, activeStop])
 
   const reset = useCallback(() => applyPreset(PRESETS[0]), [applyPreset])
@@ -1093,6 +1107,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           ),
           menu: {
             label: 'Shuffle from palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
+            describedBy: canRandomFromPalette ? undefined : 'grd-shuffle-palette-hint',
             title: canRandomFromPalette ? 'Build a random gradient from your current palette' : SHUFFLE_PALETTE_NEEDS,
             onSelect: fromPalette,
           },
@@ -1229,17 +1244,22 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {chips.length === 0 ? (
               <>
                 <span className="grd-avail-sub" id="grd-starter-label">Starter colours</span>
-                <div className="grd-chips" role="group" aria-labelledby="grd-starter-label">
+                <div className="grd-chips grd-chips--starter" role="group" aria-labelledby="grd-starter-label">
                   {STARTER_COLOURS.map((c) => (
                     <ColourChip key={c.hex} hex={c.hex} label={c.name} on={selectedHex === c.hex} onPick={pickColour} />
                   ))}
                 </div>
               </>
             ) : (
-              <div className="grd-chips" role="group" aria-labelledby="grd-avail-label">
-                {chips.map((c) => (
+              <div className="grd-chips" role="group" aria-label="Palette colours">
+                {shownChips.map((c) => (
                   <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
                 ))}
+                {hiddenChips > 0 && (
+                  <Link to="/create/palette" className="grd-chips-more">
+                    +{hiddenChips} more<span className="sr-only">{hiddenChips === 1 ? ' colour' : ' colours'} in Palette Builder</span>
+                  </Link>
+                )}
               </div>
             )}
             {chips.length === 1 && (
@@ -1253,7 +1273,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
                 <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label">
                   {shades.items.map((c) => (
-                    <ColourChip key={c.shade} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
+                    <ColourChip key={c.hex} hex={c.hex} label={c.label} on={selectedHex === c.hex} onPick={pickColour} />
                   ))}
                 </div>
               </div>

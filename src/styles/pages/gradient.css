@@ -186,6 +186,7 @@
   grid-template-columns: 28px minmax(0, 1fr) 26px 26px;
   align-items: center;
   gap: 8px;
+  flex: 0 0 var(--grd-row);
   height: var(--grd-row);
   padding: 6px;
   border-radius: 12px;
@@ -209,10 +210,12 @@
 .grd .grd-stop-swatch[aria-disabled="true"] { opacity: 1; cursor: pointer; }
 .grd .grd-stop-chip { display: block; width: 100%; height: 100%; }
 /* Selecting the stop is one button: the role and shade ("Primary 500"), the
-   hex and the position. On touch the role stacks over the hex. */
+   hex and the position. The role column is capped (it holds "Secondary 500"), so
+   a wide row keeps the hex beside it and sends only the position to the edge.
+   On touch the role stacks over the hex. */
 .grd .grd-stop-select {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px 28px;
+  grid-template-columns: minmax(0, 96px) 52px minmax(28px, 1fr);
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -273,6 +276,11 @@
 .grd .grd-shades { display: grid; gap: 6px; }
 .grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .grd .grd-chips--shades { gap: 3px; }
+/* The starter colours are two even rows of five, so ten chips never wrap nine and one. */
+.grd .grd-chips--starter { display: grid; grid-template-columns: repeat(5, 28px); justify-content: space-between; gap: 8px; }
+/* "+3 more": a palette past thirteen colours, at chip height so the rows keep theirs. */
+.grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
+.grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .grd .grd-chip {
   display: grid;
   place-items: center;
@@ -284,8 +292,9 @@
   border-radius: 50%;
   color: oklch(0.98 0 0);
   cursor: pointer;
-  transition: border-color var(--dur-1) var(--ease-standard);
+  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
+.grd .grd-chip:active { transform: scale(0.97); }
 .grd .grd-chip.is-light { color: oklch(0.2 0 0); }
 .grd .grd-chips--shades .grd-chip { width: 24px; height: 24px; }
 .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
@@ -642,6 +651,8 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-chips--starter { grid-template-columns: repeat(5, 44px); }
+  .grd .grd-chips-more { height: 44px; }
   .grd .grd-chips--shades { gap: 4px; }
   .grd .grd-chips--shades .grd-chip { width: 36px; height: 36px; }
   .grd .grd-avail-link { min-height: 44px; }
@@ -679,9 +690,11 @@
 
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .grd .grd-chip:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
   :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-chip:active { transform: none; }
 }
 @media (forced-colors: active) {
   .grd .grd-chip { forced-color-adjust: none; border-color: CanvasText; }

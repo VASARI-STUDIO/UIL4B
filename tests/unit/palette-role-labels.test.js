@@ -195,3 +195,79 @@ test('activeShades: nothing for a stale ramp, a ramp with no record, or no ramp'
   assert.equal(activeShades(design({ tints: { scale: RAMP } })), null)
   assert.equal(activeShades({ palette: design().palette }), null)
 })
+
+// ── One hex, one name (the ramp is not the palette colour's twin) ──────────
+
+// A dark colour whose ramp repeats hexes (500 = 600, 700 = 800) and whose 500
+// is only near the colour, as the tint engine produces for #0B0C0E.
+const DARK = '#0B0C0E'
+const DARK_RAMP = [
+  '#F2F2F3', '#D6D7D9', '#9A9B9E', '#5C5D60', '#2A2A2D', '#0C0C0E',
+  '#0C0C0E', '#09090B', '#09090B', '#060607', '#030304',
+]
+const darkDesign = () => ({
+  palette: { base: DARK, activeIdx: 0, colors: [DARK, '#E894AC'] },
+  tints: { from: DARK, scale: DARK_RAMP },
+})
+
+test('the shades line\'s 500 is the palette colour itself, not the ramp\'s near-twin', () => {
+  const d = { palette: { activeIdx: 1, colors: ['#2F6BFF', '#E894AC'] }, tints: { from: '#E894AC', scale: [
+    '#FCEEF2', '#F8DDE5', '#F4CAD6', '#EFB6C8', '#EBA5BB', '#E798AE', '#C27F90', '#9C6573', '#764C57', '#50333A', '#2A1A1E',
+  ] } }
+  const s = activeShades(d)
+  assert.equal(s.role, 'Secondary')
+  const five = s.items.find((i) => i.shade === '500')
+  assert.equal(five.hex, '#E894AC')
+  assert.equal(labelFor('#E894AC', d).label, 'Secondary 500')
+  // The ramp's own near-miss is not the palette colour, so it is nobody's 500.
+  assert.equal(labelFor('#E798AE', d).label, 'Custom')
+})
+
+test('the shades line drops a hex it already offers, and each step still reads as its own name', () => {
+  const s = activeShades(darkDesign())
+  const hexes = s.items.map((i) => i.hex)
+  assert.equal(new Set(hexes).size, hexes.length, 'no hex appears twice in the shades row')
+  assert.deepEqual(s.items.map((i) => i.shade), ['50', '100', '200', '300', '400', '500', '600', '700', '900', '950'])
+  assert.equal(s.items.find((i) => i.shade === '500').hex, DARK)
+})
+
+test('for every chip the tool offers, labelFor gives the label that chip carries', () => {
+  for (const d of [darkDesign(), design()]) {
+    for (const c of paletteChips(d)) assert.equal(labelFor(c.hex, d).label, c.label, `chip ${c.hex}`)
+    for (const i of activeShades(d).items) assert.equal(labelFor(i.hex, d).label, i.label, `shade ${i.hex}`)
+  }
+})
+
+test('a ramp hex that repeats resolves to the lowest step, so "Primary 800" cannot be offered', () => {
+  const d = darkDesign()
+  // #09090B is step 700 and 800 in the ramp; only the lower step is offered, and it names it.
+  assert.equal(labelFor('#09090B', d).label, 'Primary 700')
+  assert.equal(activeShades(d).items.some((i) => i.label === 'Primary 800'), false)
+})
+
+test('a ramp step equal to another palette colour belongs to that colour, and is not offered as a shade', () => {
+  const d = design({ tints: { from: COLOURS[0], scale: [...RAMP.slice(0, 3), COLOURS[1], ...RAMP.slice(4)] } })
+  assert.equal(labelFor(COLOURS[1], d).label, 'Secondary 500')
+  assert.equal(activeShades(d).items.some((i) => i.hex === COLOURS[1]), false)
+})
+
+// ── Case ───────────────────────────────────────────────────────────────────
+
+test('a palette that repeats a colour in another case has one chip, and one name', () => {
+  const d = { palette: { activeIdx: 0, colors: ['#2f6bff', '#2F6BFF'] } }
+  const chips = paletteChips(d)
+  assert.equal(chips.length, 1)
+  assert.equal(chips[0].hex, '#2F6BFF')
+  assert.equal(labelFor('#2F6BFF', d).label, 'Primary 500')
+})
+
+// ── A project with a base colour and no palette colours ────────────────────
+
+test('only a base colour: no chips, no shades row, and a ramp hex is "Custom" rather than "Primary N"', () => {
+  const d = { palette: { base: COLOURS[0], activeIdx: 0, colors: [] }, tints: { from: COLOURS[0], scale: RAMP } }
+  assert.deepEqual(paletteChips(d), [])
+  assert.equal(tintsCurrent(d), true, 'the ramp is current, so only the empty palette can be what withholds the shades')
+  assert.equal(activeShades(d), null)
+  assert.equal(labelFor(RAMP[3], d).label, 'Custom')
+  assert.equal(labelFor(COLOURS[0], d).label, 'Custom')
+})

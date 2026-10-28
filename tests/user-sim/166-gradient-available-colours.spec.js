@@ -420,7 +420,6 @@ for (const [w, h] of [[768, 1024], [390, 844], [360, 780]]) {
 test.describe('touch at 360px, twelve stops', () => {
   test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
   test('every stop row stays 56px tall', async ({ page }) => {
-    test.fail(true, 'known defect: .grd-stop can shrink below --grd-row at 360px (see the note above)')
     watch(page, 'a designer with twelve stops on a small phone')
     await seed(page, { colors: THIRTEEN })
     await open(page)
