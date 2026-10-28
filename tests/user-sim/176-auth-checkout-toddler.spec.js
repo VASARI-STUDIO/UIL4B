@@ -40,6 +40,7 @@ const stubPrices = (page) => page.route('**/api/get-prices', (route) => route.fu
 const RAW_SERVER_TEXT = 'Stub raw failure: key_not_for_buyers'
 const GENERIC = 'Checkout couldn’t start. Try again in a moment.'
 const WEAK = 'Use at least 6 characters.'
+const WEAK_SPACES = 'Use at least 6 characters that aren\'t spaces.'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sign-up input
@@ -87,8 +88,9 @@ test.describe('the sign-up form checks what is typed before it asks for an accou
     for (const password of ['      ', '  ab c  ', '          ']) {
       await fillSignUp(page, password)
       await createButton(page).click()
-      const alert = page.getByRole('alert').filter({ hasText: WEAK })
-      await expect(alert, `"${password}" was not refused with the inline error`).toBeVisible()
+      const alert = page.getByRole('alert').filter({ hasText: WEAK_SPACES })
+      await expect(alert, `"${password}" was not refused with the spaces sentence`).toBeVisible()
+      await expect(alert, 'the plain "at least 6 characters" line was reused for spaces').not.toHaveText(new RegExp(`${WEAK}$`))
       await expect(field(page, 'Password')).toHaveAttribute('aria-invalid', 'true')
       // The button is back, so the form was not left waiting on a request.
       await expect(createButton(page)).toBeEnabled()
@@ -193,6 +195,37 @@ test.describe('a failed payment session is told in the page\'s own words', () =>
     await expect(form.getByRole('alert')).toContainText('Too many checkout attempts')
     await expect(form).not.toContainText(RAW_SERVER_TEXT)
     await expect(form.getByRole('alert')).not.toContainText(GENERIC)
+    // A wait is not a log-in: Try again stays, and the sentence says to wait.
+    await expect(form.getByRole('alert')).toContainText('wait a few minutes')
+    await expect(form.getByRole('button', { name: 'Try again' })).toBeVisible()
+  })
+
+  // MUTATION: in src/pages/Checkout.jsx render Try again for every error (drop
+  //   the `errorCode === 'log-in'` branch). The Log in button goes and Try again
+  //   comes back.
+  test('a 401 offers Log in and no Try again that would loop', async ({ page }) => {
+    watch(page, 'buyer whose sign-in expired at checkout')
+    const form = await openFailingCheckout(page, { status: 401, body: { error: 'Invalid auth token' } })
+    const alert = form.getByRole('alert')
+    await expect(alert).toContainText('Log in again to continue')
+    await expect(alert.getByRole('button', { name: 'Log in', exact: true })).toBeVisible()
+    await expect(alert.getByRole('button', { name: 'Try again' }), 'a retry with an expired sign-in only fails again').toHaveCount(0)
+    await expect(form).not.toContainText('Invalid auth token')
+  })
+
+  // MUTATION: in src/pages/Checkout.jsx delete the <ReportProblemLink /> in the
+  //   error panel, or in src/styles/global.css delete the `.report-problem`
+  //   display rule. The link is missing or never drawn.
+  test('on a small screen, where the bubble is hidden, the error panel carries Report a problem', async ({ page }) => {
+    watch(page, 'buyer on a short phone whose checkout fails')
+    await page.setViewportSize({ width: 390, height: 640 })
+    const form = await openFailingCheckout(page, { status: 500, body: { error: RAW_SERVER_TEXT } })
+    await expect(page.locator('.global-feedback-btn')).toBeHidden()
+    const report = form.getByRole('button', { name: 'Report a problem' })
+    await expect(report).toBeVisible()
+    await report.click()
+    // The same dialog the bubble opens.
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 })
 
@@ -265,6 +298,22 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
     await go(page, '/login?signup=1')
     await expect(createButton(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Share feedback' })).toBeVisible()
+    // And there the quiet link is not drawn, so the screen never carries both.
+    await expect(page.getByRole('button', { name: 'Report a problem' })).toBeHidden()
+  })
+
+  // MUTATION: in src/pages/LoginPage.jsx drop `showReport`. With the bubble
+  //   hidden, nothing on the page opens the feedback dialog.
+  test('at 390x640 the sign-in form carries Report a problem, and it opens the feedback dialog', async ({ page }) => {
+    watch(page, 'visitor on a short phone with a sign-in problem')
+    await page.setViewportSize({ width: 390, height: 640 })
+    await go(page, '/login?signup=1')
+    await expect(page.locator('.global-feedback-btn')).toBeHidden()
+    const report = page.getByRole('button', { name: 'Report a problem' })
+    await report.scrollIntoViewIfNeeded()
+    await expect(report).toBeVisible()
+    await report.click()
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 
   // MUTATION: as above. Signed in at 390x640 the bubble would sit over the
@@ -288,20 +337,29 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the Terms and Privacy links on /login are targets', () => {
-  // MUTATION: in src/styles/pages/auth.css delete `padding:6px 0` from
-  //   `.auth-legal a`. Each link is 15px tall.
-  for (const width of [390, 1440]) {
-    test(`at ${width} both links are at least 24px tall and the paragraph did not grow`, async ({ page }) => {
+  // MUTATION: in src/styles/pages/auth.css delete `padding:3px 0` from
+  //   `.auth-legal a`. Each link is 15px tall. Make the padding 10px and the
+  //   two boxes overlap at 320, and the overlap check goes red.
+  for (const width of [320, 390, 1440]) {
+    test(`at ${width} both links are at least 24px tall, clear of each other, and the paragraph did not grow`, async ({ page }, testInfo) => {
       watch(page, `visitor on a ${width}px screen reading the terms`)
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/login?signup=1')
       const legal = page.locator('.auth-legal')
       await expect(legal).toBeVisible()
+      await legal.scrollIntoViewIfNeeded()
+      await page.screenshot({ path: testInfo.outputPath(`legal-${width}.png`) })
+      const boxes = []
       for (const name of ['Terms', 'Privacy']) {
         const box = await legal.getByRole('link', { name: new RegExp(`^${name}`) }).boundingBox()
         expect(box, `${name} link is missing`).not.toBeNull()
         expect(box.height, `the ${name} link is ${box.height}px tall`).toBeGreaterThanOrEqual(24)
+        boxes.push(box)
       }
+      // Wrapped onto neighbouring lines, the padded boxes must not cover each other.
+      const [a, b] = boxes
+      const overlaps = a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+      expect(overlaps, 'the Terms and Privacy boxes overlap').toBe(false)
       // The padding must not move the text: the paragraph is whole 18px lines.
       const lines = (await legal.boundingBox()).height / 18
       expect(Math.abs(lines - Math.round(lines)), `the legal line is ${lines} lines tall`).toBeLessThan(0.05)
