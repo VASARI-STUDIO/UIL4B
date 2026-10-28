@@ -389,8 +389,8 @@ export function ToolButton({
 
 // ── ToolSelect ────────────────────────────────────────────────────────────
 // A labelled toolbar trigger backed by the shared listbox.
-export function ToolSelect({ label, value, options, onChange, ariaLabel, className, disabled }) {
-  return <MenuSelect toolbar label={label} value={value} options={options} onChange={onChange} ariaLabel={ariaLabel} className={className} disabled={disabled} />
+export function ToolSelect({ label, value, options, onChange, ariaLabel, className, disabled, footnote }) {
+  return <MenuSelect toolbar label={label} value={value} options={options} onChange={onChange} ariaLabel={ariaLabel} className={className} disabled={disabled} footnote={footnote} />
 }
 
 // The r14 tray the palette draws around undo/redo.

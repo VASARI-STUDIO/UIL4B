@@ -46,6 +46,50 @@
 }
 .plb .plb-collapsed strong { font-weight: 560; }
 
+/* The colour-vision strip: says a check is on and turns it off. One fixed
+   height whatever the mode, and a neutral card so the state is told in words. */
+.plb .plb-vision {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 10px var(--tl-pad) 0;
+  padding: 5px 6px 5px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  font-size: 13px;
+  color: var(--tl-ink);
+  animation: plb-vision-in var(--dur-1) var(--ease-entrance);
+}
+.plb .plb-collapsed + .plb-vision { margin-top: 8px; }
+@keyframes plb-vision-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .plb .plb-vision { animation: none; }
+}
+.plb .plb-vision-ico { flex: none; }
+.plb .plb-vision-ico--sm { display: none; }
+.plb .plb-vision-text { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; white-space: nowrap; color: var(--t1); }
+.plb .plb-vision-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 560; color: var(--tl-ink); }
+.plb .plb-vision-rest { flex: 0 0 auto; }
+.plb .plb-vision-short { display: none; }
+.plb .plb-vision .plb-vision-off { flex: none; height: 32px; min-height: 32px; }
+@media (max-width: 767px) {
+  .plb .plb-vision-ico--lg { display: none; }
+  .plb .plb-vision-ico--sm { display: block; }
+  .plb .plb-vision-long { display: none; }
+  .plb .plb-vision-short { display: inline; }
+}
+/* A finger gets 44px; the strip grows round it and stays one height for every mode. */
+@media (pointer: coarse) {
+  .plb .plb-vision { padding-block: 4px; }
+  .plb .plb-vision .plb-vision-off { min-width: 44px; height: 44px; min-height: 44px; }
+}
+
+/* The eye icon's dot is a content colour: it keeps its hue under forced colours
+   while the outline follows the system text colour. */
+.vis-dot { forced-color-adjust: none; }
+
 /* ── The seed chip (D:952-955) ──────────────────────────────────────────── */
 /* Also in the phone Tools sheet, which renders outside .plb. */
 :is(.plb, .tl-sheet-layer) .plb-seedpick { display: flex; }
