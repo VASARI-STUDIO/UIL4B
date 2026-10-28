@@ -538,7 +538,8 @@ test('[T11] community-submissions: the owner can only move an item to withdrawn,
   assert.equal((await readAsServer(QUEUE, 'p')).data().status, 'withdrawn')
 })
 
-test('[T11] community-submissions: OPEN DECISION, the rule lets an owner withdraw an item a reviewer already approved', async () => {
+// Decided 29 Oct (Dylan): an owner may take down their own work at any time, approved or not.
+test('[T11] community-submissions: an owner can withdraw an item a reviewer already approved', async () => {
   // Neither rule nor comment restricts the prior status, so this passes today.
   // The audit (T11) leaves it as a product decision; if approved items should
   // become final, this test is the one to flip.
