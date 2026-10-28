@@ -1267,6 +1267,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [say])
   const holdEnd = useCallback(() => clearTimeout(holdRef.current.timer), [])
   useEffect(() => holdEnd, [holdEnd])
+  // The Select button in the Stops head: the same mode a long press starts,
+  // for a finger that has not found the long press. The active stop is the first
+  // one in it.
+  const startSelecting = useCallback(() => {
+    setSelMode(true)
+    setPicked([])
+    anchorRef.current = activeStop
+    say('Selecting stops. Tap a stop to add or remove it.')
+  }, [activeStop, say])
   // The row's click: the end of a long press selects nothing more.
   const clickStop = useCallback((i, e) => {
     if (holdRef.current.fired) { holdRef.current.fired = false; return }
@@ -1635,9 +1644,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             label="Available colours"
             labelId="grd-avail-label"
             className="grd-avail"
-            aside={chipPicks.length > 0 ? <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button> : undefined}
+            aside={chipPicks.length > 0
+              ? <button type="button" className="grd-sel-clear" onClick={clearPicks}>Clear picks</button>
+              : <span className="grd-avail-tip" aria-hidden="true">{coarse ? 'Hold to pick for Shuffle' : 'Shift-click to pick for Shuffle'}</span>}
           >
-            <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. On a touch screen, press and hold.</span>
+            <span id="grd-picks-hint" className="sr-only">Shift-click colours to pick them for Shuffle from palette. From the keyboard, press Shift with Enter or Space on a colour. On a touch screen, press and hold.</span>
             <div className="sr-only" role="status">{pickNote}</div>
             {chips.length === 0 && (
               <div className="grd-avail-help">
@@ -1693,8 +1704,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     <span className="grd-sel-count">{targets.length} selected</span>
                     <button type="button" className="grd-sel-clear" onClick={() => clearSelection()}>{selMode ? 'Done' : 'Clear'}</button>
                   </>
-                ) : stops.length > 3 && (
-                  <span className="grd-stops-count">{`${stopScroll.first}–${Math.min(stops.length, stopScroll.first + 2)} of ${stops.length}`}</span>
+                ) : (
+                  <>
+                    {stops.length > 3 && (
+                      <span className="grd-stops-count">{`${stopScroll.first}–${Math.min(stops.length, stopScroll.first + 2)} of ${stops.length}`}</span>
+                    )}
+                    {/* A finger has no Shift or Ctrl and may not find the long
+                        press, so selecting stops gets a button of its own. */}
+                    {coarse && <button type="button" className="grd-sel-clear" onClick={startSelecting} aria-label="Select stops">Select</button>}
+                  </>
                 )}
                 <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
                   <ToolIcon name="arrows-left-right" size={13} />
@@ -1751,7 +1769,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   aria-pressed={inSel}
                   aria-label={`Select stop ${i + 1}, ${s.color.toUpperCase()}`}
                   aria-describedby={`grd-stop-role-${i}`}
-                  title={`${role.label}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%`}
+                  title={`${role.label}, ${s.color.toUpperCase()}, ${Math.round(s.position)}%${coarse ? '' : '. Shift-click to select more'}`}
                 >
                   {/* The role and shade ("Primary 500"), or "Custom" when the
                       colour is not one of the palette's. The accessible name
@@ -1786,7 +1804,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {/* The reason the × is inert at two stops. A press also says it in a
                 toast, which is how a finger or the keyboard sees it. */}
             {stops.length <= MIN_STOPS && <span id="grd-stop-min-hint" className="sr-only">A gradient needs at least two stops</span>}
-            <span id="grd-stops-hint" className="sr-only">Shift-click selects a run of stops. Ctrl-click adds or removes one. On a touch screen, press and hold. Shift with the up or down arrow extends the selection, Control A selects all, Escape clears it.</span>
+            <span id="grd-stops-hint" className="sr-only">Shift-click selects a run of stops. Ctrl-click adds or removes one. From the keyboard, Shift with Enter or Space does the same as Shift-click. On a touch screen, use the Select button or press and hold. Shift with the up or down arrow extends the selection, Control A selects all, Escape clears it.</span>
             <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop} aria-disabled={stops.length >= MAX_STOPS || undefined}>
               {stops.length >= MAX_STOPS ? `${MAX_STOPS} stops is the most` : 'Add a stop'}
             </ToolButton>

@@ -791,4 +791,8 @@
 /* The Available colours head row is the height of its tallest possible content
    (the "Clear picks" button), so picking colours never makes the panel taller. */
 .grd .grd-avail > .tl-sec-head { min-height: 26px; }
+/* The way in to picking, shown while nothing is picked. It takes the place of
+   the picks controls in the same row, so nothing moves. */
+.grd .grd-avail > .tl-sec-head .tl-sec-label { flex: 0 0 auto; white-space: nowrap; }
+.grd .grd-avail-tip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--tl-dim); }
 @media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
