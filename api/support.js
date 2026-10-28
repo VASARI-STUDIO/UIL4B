@@ -128,33 +128,6 @@ function isAlreadyExists(err) {
 // Bounds each outbound call so one slow service cannot hold the invocation open.
 const OUTBOUND_TIMEOUT_MS = 5000
 
-// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
-// wrote. Resolves to whether Resend took it; never rejects.
-async function sendCapNotice({ resendKey, notifyEmail }) {
-  try {
-    const sent = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
-      body: JSON.stringify({
-        from: mailFrom(),
-        reply_to: REPLY_TO,
-        to: [notifyEmail],
-        subject: '[UIL4B] Support email cap reached',
-        html: `
-          <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
-          </div>
-        `,
-      }),
-    })
-    return sent.ok
-  } catch (err) {
-    console.error('Cap notice email failed:', err.message)
-    return false
-  }
-}
-
 export default function handler(req, res) {
   return handleSupport(req, res)
 }
@@ -342,4 +315,31 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     return res.status(502).json({ error: 'We could not record that message. Please try again shortly.' })
   }
   return res.status(200).json({ ok: true })
+}
+
+// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
+// wrote. Resolves to whether Resend took it; never rejects.
+async function sendCapNotice({ resendKey, notifyEmail }) {
+  try {
+    const sent = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
+      body: JSON.stringify({
+        from: mailFrom(),
+        reply_to: REPLY_TO,
+        to: [notifyEmail],
+        subject: '[UIL4B] Support email cap reached',
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
+          </div>
+        `,
+      }),
+    })
+    return sent.ok
+  } catch (err) {
+    console.error('Cap notice email failed:', err.message)
+    return false
+  }
 }
