@@ -1,0 +1,45 @@
+diff --git a/api/verify-admin.js b/api/verify-admin.js
+--- a/api/verify-admin.js
++++ b/api/verify-admin.js
+@@ -13,6 +13,14 @@ import {
+ // Cross-user data for the admin Users tab. `users/{uid}` is owner-only in the
+ // Firestore rules, so it is read here with the Admin SDK and returned only to a
+ // caller that passed the verified-admin check.
++// Profile fields are written by the signed-in user, so a value here may be any
++// type. The Admin users table renders these as React children, and an object
++// or array in one makes the whole page throw. Anything that is not a string
++// becomes empty, and a string is cut to the cap the rules enforce.
++function profileText(value, max) {
++  return typeof value === 'string' ? value.slice(0, max) : ''
++}
++
+ async function listAllUsers() {
+   const authUsers = []
+   let pageToken
+@@ -34,7 +42,7 @@ async function listAllUsers() {
+     return {
+       uid: u.uid,
+       email: u.email || '',
+-      displayName: u.displayName || d.displayName || '',
++      displayName: u.displayName || profileText(d.displayName, 200),
+       provider: u.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email',
+       emailVerified: !!u.emailVerified,
+       createdAt: u.metadata?.creationTime || null,
+@@ -43,12 +51,12 @@ async function listAllUsers() {
+       // src/utils/billingCadence.js, which Admin labels the plan with.
+       subscription: { status: sub.status || null, interval: sub.interval || null, intervalCount: sub.intervalCount || null },
+       onboarding: {
+-        role: d.onboarding?.role || null,
+-        use: d.onboarding?.use || null,
+-        source: d.onboarding?.source || null,
++        role: profileText(d.onboarding?.role, 100) || null,
++        use: profileText(d.onboarding?.use, 100) || null,
++        source: profileText(d.onboarding?.source, 100) || null,
+       },
+-      location: d.location || '',
+-      company: d.company || '',
++      location: profileText(d.location, 200),
++      company: profileText(d.company, 200),
+     }
+   })
+ }

@@ -1,0 +1,42 @@
+diff --git a/firestore.rules b/firestore.rules
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -217,10 +217,34 @@ service cloud.firestore {
+ 
+       // The document id must be a date, the `day` field must match it, and a
+       // document holds at most 500 fields.
+-      allow create, update: if request.auth != null
+-        && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+-        && request.resource.data.day == day
+-        && request.resource.data.size() <= 500;
++      function dayDocOk() {
++        return request.auth != null
++          && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
++          && request.resource.data.day == day
++          && request.resource.data.size() <= 500;
++      }
++
++      // What a non-admin update may do to counters that already exist: keep
++      // every field, and not lower the two fixed totals. A rule cannot loop
++      // over field names, so the per-route, per-tool and per-icon counters
++      // (`view__*`, `tool__*`, `icon__*`) can still be overwritten with a
++      // smaller number; removal is the part that can be closed, and it is.
++      // `in resource.data` guards the first write of a total, when there is
++      // nothing to compare against yet.
++      function countersOnlyGrow() {
++        return request.resource.data.keys().toSet().hasAll(resource.data.keys().toSet())
++          && (!('views' in resource.data)
++              || request.resource.data.views >= resource.data.views)
++          && (!('icon-copies' in resource.data)
++              || request.resource.data['icon-copies'] >= resource.data['icon-copies']);
++      }
++
++      allow create: if dayDocOk();
++
++      // Removing or zeroing counters is the admin reset sweep
++      // (resetPageAnalytics), which runs under the `admin` claim.
++      allow update: if dayDocOk()
++        && (request.auth.token.admin == true || countersOnlyGrow());
+     }
+   }
+ }

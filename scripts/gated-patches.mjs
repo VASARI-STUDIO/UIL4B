@@ -126,6 +126,11 @@ const PER_PROJECT_PATCH = 'docs/design/per-project-sync-rules.patch'
 const MODERATOR_PATCH = 'docs/design/moderator-role-rules.patch'
 const MODERATOR_ROUTE_PATCH = 'docs/design/moderator-verify-admin.patch'
 const FIREBASE_PATCH = 'docs/design/firebase-deferral-gated.patch'
+const ICON_PATCH = 'docs/design/community-icon-rules.patch'
+const ANALYTICS_PATCH = 'docs/design/analytics-counters-rules.patch'
+const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
+const PROFILE_ROUTE_PATCH = 'docs/design/profile-text-verify-admin.patch'
+const PAYLOAD_PATCH = 'docs/design/submission-payload-rules.patch'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -281,6 +286,90 @@ export const GATED_PATCHES = [
         ),
         apply: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx) },
         check: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'community-icon',
+    title: 'Icon submissions accepted',
+    source: 'docs/design/community-icon-rules.patch',
+    grants:
+      'a signed-in member can submit an icon to the community review queue, which the '
+      + 'rules refuse today (every icon submit fails with a "could not reach the review '
+      + 'queue" message); the markup is capped at 8192 characters',
+    files: ['firestore.rules'],
+    parts: [
+      {
+        name: 'icon kind and svg payload key',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes("'palette', 'icon']"),
+        apply: async (ctx) => { await gitApplyInto(abs(ICON_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(ICON_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'analytics-counters',
+    title: 'Analytics counters cannot be erased',
+    source: 'docs/design/analytics-counters-rules.patch',
+    grants:
+      'a signed-in account can no longer delete or lower the usage counters on a day '
+      + 'document (only your admin sign-in can, which is what the reset button uses); '
+      + 'adding and increasing counters works as before',
+    files: ['firestore.rules'],
+    parts: [
+      {
+        name: 'counters only grow for non-admins',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function countersOnlyGrow()'),
+        apply: async (ctx) => { await gitApplyInto(abs(ANALYTICS_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(ANALYTICS_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'profile-types',
+    title: 'Profile fields type-checked',
+    source: 'docs/design/profile-types-rules.patch + docs/design/profile-text-verify-admin.patch',
+    grants:
+      'a profile can only hold text of a sane length in name, email, photo, location, '
+      + 'website, bio, company and flair (and numbers and short text in the onboarding '
+      + 'record), and the Admin users list turns those fields into capped text, so one '
+      + 'bad value can no longer crash your Admin page',
+    files: ['firestore.rules', 'api/verify-admin.js'],
+    parts: [
+      {
+        name: 'type and length checks on users/{uid}',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function profileTypesOk()'),
+        apply: async (ctx) => { await gitApplyInto(abs(PROFILE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PROFILE_PATCH), ctx, { check: true }) },
+      },
+      {
+        name: 'the users list coerces profile fields to capped text',
+        file: 'api/verify-admin.js',
+        detect: (text) => lf(text).includes('function profileText(value, max)'),
+        apply: async (ctx) => { await gitApplyInto(abs(PROFILE_ROUTE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PROFILE_ROUTE_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'submission-payload',
+    title: 'Submission payload bounded',
+    source: 'docs/design/submission-payload-rules.patch',
+    grants:
+      'a community submission has to carry a number for its angle, gradient stops that '
+      + 'are colour and position pairs, and short text for each palette colour, so one '
+      + 'submission can no longer be a megabyte inside the list-length limits',
+    files: ['firestore.rules'],
+    parts: [
+      {
+        name: 'angle type and list element caps',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function payloadElementsOk()'),
+        apply: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx, { check: true }) },
       },
     ],
   },
