@@ -1,0 +1,73 @@
+diff --git a/storage.rules b/storage.rules
+index 8c95cf9c..95be557d 100644
+--- a/storage.rules
++++ b/storage.rules
+@@ -2,7 +2,7 @@ rules_version = '2';
+ 
+ // Firebase Storage security rules for UIL4B.
+ //
+-// community-media/{uid}/**  — media attached to community-prompt submissions.
++// community-media/{uid}/{name}  — media attached to community-prompt submissions.
+ //   - Read and list: only the owner of the folder and reviewers. Storage rules
+ //     cannot tell whether the prompt a file belongs to has been approved (the
+ //     path carries no prompt id), so unreviewed media is closed to everyone
+@@ -12,9 +12,14 @@ rules_version = '2';
+ //     is what authorises the <img>/<video> request. That URL lives in the
+ //     prompt document, which firestore.rules only shows to other users once
+ //     the prompt is approved.
+-//   - Write: only the authenticated owner may write under their own uid folder,
+-//     each object is capped at 25MB, and it must declare an image or video
+-//     content type.
++//   - Write: only the verified owner of the uid folder. The object name is one
++//     of ten fixed slots (slot-0 to slot-9) with an extension that names one of
++//     six types, and the content type must be that type, so an account holds at
++//     most 60 objects. A slot is written once: an upload over an object that is
++//     already there is refused, so a file a prompt points at cannot be replaced,
++//     and the owner deletes an object to free its slot. Each object is capped
++//     at 10 MiB, the same as the upload forms.
++//   - Delete: the owner only. Reviewers can read but not remove.
+ //
+ // Everything else is denied by default.
+ service firebase.storage {
+@@ -26,15 +31,36 @@ service firebase.storage {
+             || request.auth.token.moderator == true);
+     }
+ 
++    // A slot name, and the one content type its extension stands for. An upload
++    // with no content type compares unequal to every type and is refused.
++    function slotAndType(name, mime) {
++      return (name.matches('slot-[0-9]\\.webp') && mime == 'image/webp')
++        || (name.matches('slot-[0-9]\\.png') && mime == 'image/png')
++        || (name.matches('slot-[0-9]\\.jpg') && mime == 'image/jpeg')
++        || (name.matches('slot-[0-9]\\.gif') && mime == 'image/gif')
++        || (name.matches('slot-[0-9]\\.mp4') && mime == 'video/mp4')
++        || (name.matches('slot-[0-9]\\.webm') && mime == 'video/webm');
++    }
++
++    // Reads and listings, at any depth below the owner's folder.
+     match /community-media/{uid}/{allPaths=**} {
+       allow read: if isReviewer()
+         || (request.auth != null && request.auth.uid == uid);
+-      allow write: if request.auth != null
++    }
++
++    // Writes, one level below the owner's folder only: a deeper path matches no
++    // write rule and is denied. Only create is allowed, and only where no object
++    // exists yet (`resource == null`), so an overwrite or a metadata change on a
++    // stored object is refused.
++    match /community-media/{uid}/{name} {
++      allow create: if request.auth != null
+         && request.auth.uid == uid
+-        && request.resource.size < 25 * 1024 * 1024
+-        // An upload with no content type is refused: matches() on null is an
+-        // error, and an error denies.
+-        && request.resource.contentType.matches('(image|video)/.*');
++        && resource == null
++        && request.auth.token.email_verified == true
++        && request.resource.size <= 10 * 1024 * 1024
++        && slotAndType(name, request.resource.contentType);
++      // No size or type to check on a delete, where request.resource is null.
++      allow delete: if request.auth != null && request.auth.uid == uid;
+     }
+   }
+ }

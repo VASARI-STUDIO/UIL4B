@@ -17,6 +17,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
+import { queueOrderField } from '../../src/utils/communityLimits.js'
 
 const ROOT = process.cwd()
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -37,6 +38,12 @@ function functionBody(src, name) {
   return src.slice(start, end + 2)
 }
 
+// A query sorts on a literal field or on queueOrderField(), which is createdAt
+// until the community limits ship and submittedAt after. The index file has to
+// serve both, so that call expands to both fields.
+const ORDER_BY = /orderBy\(\s*(?:'([^']+)'|(queueOrderField)\(\))\s*,\s*'(asc|desc)'/
+const orderFields = (m) => (m[1] ? [m[1]] : [queueOrderField(false), queueOrderField(true)])
+
 /**
  * Index field lists a function's query needs. A `where` guarded by an `if (...)`
  * on the same line is optional, so each combination of optional filters is a
@@ -52,12 +59,13 @@ function requiredShapes(body) {
     assert.equal(m[2], '==', `${m[1]}: only equality filters are modelled here`)
     ;(/\bif\s*\(/.test(line) ? optional : required).push(m[1])
   }
-  const sort = /orderBy\(\s*'([^']+)'\s*,\s*'(asc|desc)'/.exec(body)
+  const sort = ORDER_BY.exec(body)
   assert.ok(sort, 'query has no orderBy')
+  const dir = sort[3] === 'desc' ? 'DESCENDING' : 'ASCENDING'
   const shapes = []
   for (let mask = 0; mask < (1 << optional.length); mask++) {
     const eq = [...required, ...optional.filter((_, i) => mask & (1 << i))]
-    shapes.push({ eq, sortField: sort[1], dir: sort[2] === 'desc' ? 'DESCENDING' : 'ASCENDING' })
+    for (const sortField of orderFields(sort)) shapes.push({ eq, sortField, dir })
   }
   return shapes
 }
@@ -82,7 +90,10 @@ test('firebase.json points Firestore at firestore.indexes.json', () => {
 
 test('listQueue (admin community queue) has its composite index', () => {
   const shapes = requiredShapes(functionBody(queueApi, 'listQueue'))
-  assert.deepEqual(shapes, [{ eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' }])
+  assert.deepEqual(shapes, [
+    { eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' },
+    { eq: ['status'], sortField: 'submittedAt', dir: 'DESCENDING' },
+  ])
   for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
 })
 
@@ -91,9 +102,12 @@ test('the Admin Prompts tab query (community-prompts, one status, newest first) 
   assert.ok(/collection\(db,\s*'community-prompts'\)/.test(src), 'the Admin prompts query moved; update this case')
   const loader = src.slice(src.indexOf('const loadPrompts'), src.indexOf('const selectPromptFilter'))
   assert.ok(/where\(\s*'status'\s*,\s*'=='/.test(loader), 'the Admin prompts query lost its status filter')
-  assert.ok(/orderBy\(\s*'createdAt'\s*,\s*'desc'\s*\)/.test(loader), 'the Admin prompts query no longer sorts newest first')
-  assert.ok(hasIndex({ eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' }, 'community-prompts'),
-    'community-prompts needs a status ASC + createdAt DESC index in firestore.indexes.json')
+  const sort = ORDER_BY.exec(loader)
+  assert.ok(sort && sort[3] === 'desc', 'the Admin prompts query no longer sorts newest first')
+  for (const sortField of orderFields(sort)) {
+    assert.ok(hasIndex({ eq: ['status'], sortField, dir: 'DESCENDING' }, 'community-prompts'),
+      `community-prompts needs a status ASC + ${sortField} DESC index in firestore.indexes.json`)
+  }
 })
 
 test('listMySubmissions has an index with and without the kind filter', () => {

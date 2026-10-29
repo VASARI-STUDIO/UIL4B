@@ -65,6 +65,8 @@ const EXPECTED_IDS = [
   'analytics-counters',
   'profile-types',
   'submission-payload',
+  'upload-limits',
+  'queue-limits',
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -103,7 +105,9 @@ test('the applier reaches every file the four are meant to change', () => {
   assert.ok(TARGET_FILES.includes('src/contexts/AuthContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
-  assert.equal(TARGET_FILES.length, 5, 'the applier has grown a target nobody reviewed')
+  assert.ok(TARGET_FILES.includes('storage.rules'))
+  assert.ok(TARGET_FILES.includes('src/utils/communityLimits.js'))
+  assert.equal(TARGET_FILES.length, 7,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -246,6 +250,40 @@ test('the four rules-audit fixes (M1-M4) each land their rule, and the route hal
   assert.match(rules, /&& submissionPayloadOk\(\)\s*&& payloadElementsOk\(\)/)
 })
 
+test('the upload limits land in storage.rules, and reviewers keep read and gain nothing else', async () => {
+  // Written out against the planned text for the same reason as the M1-M4 test:
+  // a detector that had drifted to something trivially true would satisfy the
+  // planner. Each line is one the upload-limits patch adds or keeps.
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const storage = lf(plan.after.get('storage.rules'))
+
+  assert.match(storage, /match \/community-media\/\{uid\}\/\{name\} \{/, 'writes are no longer one level below the uid folder')
+  assert.doesNotMatch(storage, /allow (create|write|update)[^;]*allPaths/, 'the ** wildcard is back on a write rule')
+  assert.match(storage, /request\.auth\.token\.email_verified == true/)
+  assert.match(storage, /request\.resource\.size <= 10 \* 1024 \* 1024/)
+  assert.match(storage, /slotAndType\(name, request\.resource\.contentType\)/)
+  assert.match(storage, /allow delete: if request\.auth != null && request\.auth\.uid == uid;/)
+  // Reviewers still read every file, and still cannot write or delete.
+  assert.match(storage, /match \/community-media\/\{uid\}\/\{allPaths=\*\*\} \{\s*allow read: if isReviewer\(\)/)
+  assert.doesNotMatch(storage, /allow (write|create|update|delete)[^;]*isReviewer/, 'a reviewer can write or delete media')
+})
+
+test('the queue limits land in firestore.rules and flip the client flag with them', async () => {
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const rules = lf(plan.after.get('firestore.rules'))
+  const flat = rules.replace(/\s+/g, ' ')
+  assert.ok(flat.includes('function postLimitsOk(kind, id)'))
+  assert.ok(flat.includes('getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/limits/community)'))
+  assert.ok(flat.includes("request.resource.data.submittedAt == request.time && promptShapeOk() && postLimitsOk('prompt', promptId)"))
+  assert.ok(flat.includes("request.resource.data.submittedAt == request.time && submissionShapeOk() && postLimitsOk('submission', submissionId)"))
+  assert.equal(flat.split('request.auth.token.email_verified == true').length - 1, 2)
+  assert.ok(flat.includes("request.time > b.lastAt + duration.value(30, 's')"))
+  assert.ok(lf(plan.after.get('src/utils/communityLimits.js')).includes('export const COMMUNITY_LIMITS_ENABLED = true'),
+    'the rules land and the client stays switched off, which refuses every post')
+})
+
 test('nothing the four grant is taken away from the file they land in', async () => {
   // The blast radius, asserted rather than described. The rules patches may
   // replace lines — the moderator role rewrites three of them — so this checks
@@ -371,4 +409,13 @@ test('the plan is deterministic — two runs produce the same bytes', async () =
     assert.equal(lf(b.after.get(file)), lf(a.after.get(file)),
       `${file} is not byte-identical after a second run — the command is not idempotent`)
   }
+})
+
+test('queue-limits tells the founder to deploy the indexes and run the backfill before applying it', () => {
+  const patch = GATED_PATCHES.find((p) => p.id === 'queue-limits')
+  assert.match(patch.before, /firebase deploy --only firestore:indexes/)
+  assert.match(patch.before, /scripts\/backfill-submitted-at\.mjs/)
+  assert.ok(patch.before.indexOf('firestore:indexes') < patch.before.indexOf('backfill-submitted-at'), 'indexes first, then the backfill')
+  assert.ok(fs.existsSync(path.join(ROOT, 'scripts/backfill-submitted-at.mjs')), 'the script the note names exists')
+  assert.equal(read('scripts/apply-gated-patches.mjs').includes('patch.before'), true, 'the applier prints the note')
 })

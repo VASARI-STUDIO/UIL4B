@@ -25,6 +25,8 @@ import {
   canReview, canSeeReporterEmail, canAssignModerators,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
+import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
+import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail } from '../utils/constants'
 import { accountProviderIds } from '../utils/authSwitch'
@@ -1786,10 +1788,11 @@ export default function Admin({ toast }) {
       const promptSnap = await getDocs(query(
         collection(db, 'community-prompts'),
         ...constraints,
-        orderBy('createdAt', 'desc'),
+        orderBy(queueOrderField(), 'desc'),
         limit(spec.max),
       ))
-      return promptSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+      const list = promptSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+      return mergeUnstamped(list, await listUnstamped('community-prompts', spec.status), spec.max)
     },
     onStart: (spec, { clear }) => {
       setPromptsLoading(true)

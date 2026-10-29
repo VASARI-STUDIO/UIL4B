@@ -28,6 +28,7 @@
 import test, { after, before, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
   initializeTestEnvironment,
@@ -45,6 +46,13 @@ import {
 } from 'firebase/storage'
 
 const RULES_PATH = fileURLToPath(new URL('../../storage.rules', import.meta.url))
+
+// These cases describe storage.rules BEFORE docs/design/upload-limits-rules.patch
+// (free object names, 25 MiB, no verified-email check). Once `npm run apply:gated`
+// has put that patch in, they are skipped, and tests/rules/gated-upload-queue.test.js
+// holds the same refusals and the reviewer reads against the new rules.
+const UPLOAD_LIMITS_IN = /function slotAndType\(/.test(readFileSync(RULES_PATH, 'utf8'))
+const legacy = (name, fn) => test(name, { skip: UPLOAD_LIMITS_IN && 'storage.rules already carries the upload limits' }, fn)
 const ALICE = 'alice-uid'
 const BOB = 'bob-uid'
 
@@ -82,12 +90,12 @@ const mine = (name) => `community-media/${ALICE}/${name}`
 // meant to protect.
 
 for (const type of ['image/webp', 'image/png', 'image/jpeg', 'image/gif', 'video/mp4', 'video/quicktime']) {
-  test(`POSITIVE CONTROL: the owner can still upload ${type}`, async () => {
+  legacy(`POSITIVE CONTROL: the owner can still upload ${type}`, async () => {
     await assertSucceeds(put(aliceStore(), mine(`ok-${type.replace('/', '-')}`), type))
   })
 }
 
-test('POSITIVE CONTROL: an uploaded object is readable by its owner', async () => {
+legacy('POSITIVE CONTROL: an uploaded object is readable by its owner', async () => {
   // Proves an upload really landed rather than being silently dropped.
   await assertSucceeds(put(aliceStore(), mine('published.webp'), 'image/webp'))
   await assertSucceeds(getBytes(ref(aliceStore(), mine('published.webp'))))
@@ -97,7 +105,7 @@ test('POSITIVE CONTROL: an uploaded object is readable by its owner', async () =
 // THE ONE THAT MATTERS — the same bytes, refused by type
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('THE ONE THAT MATTERS: text/html is refused where the identical bytes as image/webp are accepted', async () => {
+legacy('THE ONE THAT MATTERS: text/html is refused where the identical bytes as image/webp are accepted', async () => {
   // Identical payload, identical path, identical owner, identical size. If the
   // first line fails and the second passes, the ONLY thing that can explain it
   // is the content type — which is the assertion this whole file exists to make.
@@ -114,18 +122,18 @@ for (const type of [
   'application/zip',
   'text/plain',
 ]) {
-  test(`a signed-in account can no longer host ${type} under the project's name`, async () => {
+  legacy(`a signed-in account can no longer host ${type} under the project's name`, async () => {
     await assertFails(put(aliceStore(), mine(`hosted-${type.replace(/[/+]/g, '-')}`), type))
   })
 }
 
-test('an upload declaring NO content type is refused, and the same one declaring an image is not', async () => {
+legacy('an upload declaring NO content type is refused, and the same one declaring an image is not', async () => {
   // Without this, "no type at all" would be the way around the check.
   await assertFails(put(aliceStore(), mine('untyped'), undefined))
   await assertSucceeds(put(aliceStore(), mine('untyped'), 'image/webp'))
 })
 
-test('a type merely CONTAINING "image/" is refused — the match must be anchored', async () => {
+legacy('a type merely CONTAINING "image/" is refused — the match must be anchored', async () => {
   // `matches()` in Storage rules is a full match, but that is a property worth
   // pinning: an unanchored check would accept 'text/html;x=image/png'.
   await assertFails(put(aliceStore(), mine('sneaky'), 'text/html+image/png'))
@@ -136,7 +144,7 @@ test('a type merely CONTAINING "image/" is refused — the match must be anchore
 // The gap this deliberately does NOT close, pinned so it cannot be forgotten
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('KNOWN GAP: image/svg+xml is still accepted, and this test is the record of that', async () => {
+legacy('KNOWN GAP: image/svg+xml is still accepted, and this test is the record of that', async () => {
   // An SVG can carry script that runs when the file is navigated to directly.
   // It is NOT excluded here because SVG is a supported upload —
   // imageProcessing.js passes it through unconverted rather than rasterising it
@@ -153,16 +161,16 @@ test('KNOWN GAP: image/svg+xml is still accepted, and this test is the record of
 // Everything the fix must NOT have widened
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('a signed-in user still cannot write into someone else\'s folder', async () => {
+legacy('a signed-in user still cannot write into someone else\'s folder', async () => {
   await assertFails(put(bobStore(), mine('intruder.webp'), 'image/webp'))
   await assertSucceeds(put(bobStore(), `community-media/${BOB}/own.webp`, 'image/webp'))
 })
 
-test('a signed-out client still cannot upload at all', async () => {
+legacy('a signed-out client still cannot upload at all', async () => {
   await assertFails(put(anonStore(), mine('anon.webp'), 'image/webp'))
 })
 
-test('paths outside community-media are still denied by default', async () => {
+legacy('paths outside community-media are still denied by default', async () => {
   await assertFails(put(aliceStore(), 'anything-else/x.webp', 'image/webp'))
   await assertFails(put(aliceStore(), `users/${ALICE}/x.webp`, 'image/webp'))
   await assertSucceeds(put(aliceStore(), mine('inside.webp'), 'image/webp'))
@@ -186,7 +194,7 @@ async function seedMedia(name) {
   })
 }
 
-test('an uploaded object is readable by its owner and by reviewers, and not by anyone else', async () => {
+legacy('an uploaded object is readable by its owner and by reviewers, and not by anyone else', async () => {
   await seedMedia('pending.webp')
   await assertSucceeds(getBytes(ref(aliceStore(), mine('pending.webp'))))
   await assertSucceeds(getBytes(ref(modStore(), mine('pending.webp'))))
@@ -196,7 +204,7 @@ test('an uploaded object is readable by its owner and by reviewers, and not by a
   await assertFails(getBytes(ref(anonStore(), mine('pending.webp'))))
 })
 
-test('a folder cannot be listed by the public, and can by its owner and reviewers', async () => {
+legacy('a folder cannot be listed by the public, and can by its owner and reviewers', async () => {
   // Its own subfolder, so files other tests leave in Alice's folder can't
   // change what this listing returns.
   await seedMedia('list-check/a.webp')
@@ -214,7 +222,7 @@ test('a folder cannot be listed by the public, and can by its owner and reviewer
   await assertFails(listAll(ref(bobStore(), 'community-media')))
 })
 
-test('being a reviewer opens reads only, not writes into someone else\'s folder', async () => {
+legacy('being a reviewer opens reads only, not writes into someone else\'s folder', async () => {
   await assertSucceeds(put(aliceStore(), mine('own.webp'), 'image/webp'))
   await assertFails(put(modStore(), mine('moderator-upload.webp'), 'image/webp'))
   await assertFails(put(adminStore(), mine('admin-upload.webp'), 'image/webp'))
@@ -235,7 +243,7 @@ async function refused(label, promise) {
   }
 }
 
-test('[T15] delete: another user, a reviewer and a signed-out client cannot delete an owner\'s object', async () => {
+legacy('[T15] delete: another user, a reviewer and a signed-out client cannot delete an owner\'s object', async () => {
   await seedMedia('keep.webp')
   const target = (store) => ref(store, mine('keep.webp'))
   // The object is there and its owner can read it.
@@ -254,7 +262,7 @@ test('[T15] delete: another user, a reviewer and a signed-out client cannot dele
 
 const MIB = 1024 * 1024
 
-test('[T16] size: 25 MiB minus one byte is accepted and 25 MiB is refused, as the same content type', async () => {
+legacy('[T16] size: 25 MiB minus one byte is accepted and 25 MiB is refused, as the same content type', async () => {
   // The rule is `request.resource.size < 25 * 1024 * 1024`.
   const upload = (bytes, name) =>
     uploadBytes(ref(aliceStore(), mine(name)), bytes, { contentType: 'image/webp' })
@@ -262,7 +270,7 @@ test('[T16] size: 25 MiB minus one byte is accepted and 25 MiB is refused, as th
   await refused('exactly 25 MiB', upload(new Uint8Array(25 * MIB), 'at-limit.webp'))
 })
 
-test('[T17] metadata: the owner can change a content type to another image, and not to text/html', async () => {
+legacy('[T17] metadata: the owner can change a content type to another image, and not to text/html', async () => {
   await seedMedia('meta.webp')
   const target = (store) => ref(store, mine('meta.webp'))
 
@@ -277,7 +285,7 @@ test('[T17] metadata: the owner can change a content type to another image, and 
   assert.equal(stored.contentType, 'image/png')
 })
 
-test('[T18] paths: the owner can write and list a nested folder; another user cannot, nor list the uid folder', async () => {
+legacy('[T18] paths: the owner can write and list a nested folder; another user cannot, nor list the uid folder', async () => {
   const nested = `community-media/${ALICE}/a/b/c`
   await assertSucceeds(uploadBytes(ref(aliceStore(), `${nested}/x.webp`), BYTES, { contentType: 'image/webp' }))
   await refused(

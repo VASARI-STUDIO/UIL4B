@@ -131,6 +131,11 @@ const ANALYTICS_PATCH = 'docs/design/analytics-counters-rules.patch'
 const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
 const PROFILE_ROUTE_PATCH = 'docs/design/profile-text-verify-admin.patch'
 const PAYLOAD_PATCH = 'docs/design/submission-payload-rules.patch'
+const UPLOAD_PATCH = 'docs/design/upload-limits-rules.patch'
+const QUEUE_PATCH = 'docs/design/queue-limits-rules.patch'
+const LIMITS_FILE = 'src/utils/communityLimits.js'
+const LIMITS_OFF = 'export const COMMUNITY_LIMITS_ENABLED = false'
+const LIMITS_ON = 'export const COMMUNITY_LIMITS_ENABLED = true'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -371,6 +376,66 @@ export const GATED_PATCHES = [
         detect: (text) => lf(text).includes('function payloadElementsOk()'),
         apply: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx) },
         check: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'upload-limits',
+    title: 'Media uploads limited',
+    source: 'docs/design/upload-limits-rules.patch',
+    grants:
+      'only a signed-in account with a verified email can upload community media, each file '
+      + 'up to 10 MiB, under ten fixed names per type (webp, png, jpg, gif, mp4, webm) so an '
+      + 'account holds at most 60 files, and an account can delete its own files but not '
+      + 'overwrite one. Reviewers can still read every file. SVG and QuickTime uploads are no '
+      + 'longer accepted',
+    files: ['storage.rules'],
+    parts: [
+      {
+        name: 'verified, 10 MiB, fixed slot names, owner delete',
+        file: 'storage.rules',
+        detect: (text) => lf(text).includes('function slotAndType(name, mime)'),
+        apply: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'queue-limits',
+    title: 'Community posts limited',
+    source: 'docs/design/queue-limits-rules.patch + src/utils/communityLimits.js',
+    grants:
+      'only an account with a verified email can send a prompt or a submission to the review '
+      + 'queue, at most one every 30 seconds and ten of each kind per 24 hours, and the queue '
+      + 'is ordered on the time the server received each one, which the sender cannot choose',
+    files: ['firestore.rules', 'src/utils/communityLimits.js'],
+    before:
+      '1) deploy the new indexes: firebase deploy --only firestore:indexes, and wait for them to '
+      + 'finish building. 2) run node --env-file=.env.local scripts/backfill-submitted-at.mjs, check '
+      + 'the list, then run it again with --write --all-statuses, so items already queued keep '
+      + 'their place once the queue is ordered on submittedAt. 3) then apply this, and deploy the '
+      + 'rules first and the site second. 4) after the patch is live, run node --env-file=.env.local '
+      + 'scripts/backfill-submitted-at.mjs --write --all-statuses again: anything posted between '
+      + 'step 2 and the deploy has no submittedAt, and the run is safe to repeat',
+    parts: [
+      {
+        name: 'verified, counted, server-stamped posts',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function postLimitsOk(kind, id)'),
+        apply: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The client writes a counter and a server stamp that the old rules
+        // refuse, so it stays off until the rules are in, as per-project sync does.
+        name: 'the client flag',
+        file: LIMITS_FILE,
+        detect: (text) => lf(text).includes(LIMITS_ON),
+        apply: async (ctx) => {
+          const text = await ctx.read(LIMITS_FILE)
+          if (!lf(text).includes(LIMITS_OFF)) throw new Error(`${LIMITS_OFF} is no longer in ${LIMITS_FILE}`)
+          await ctx.write(LIMITS_FILE, lf(text).replace(LIMITS_OFF, LIMITS_ON))
+        },
       },
     ],
   },

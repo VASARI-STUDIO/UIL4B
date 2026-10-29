@@ -156,3 +156,38 @@ test('a key the other tab removed outright during the listing publishes nothing 
   assert.equal(out.published, 0)
   assert.equal(out.failed, 0)
 })
+
+/* ── the post limits ─────────────────────────────────────────────────────── */
+
+const { PostLimitError, POST_LIMIT_RULE } = await import('../../src/utils/communityLimits.js')
+
+test('with the post limits on, Keep posts one gradient and stops without an error toast, then a later press carries on', async () => {
+  installBrowser([entry('a'), entry('b'), entry('c')])
+  const q = fakeQueue()
+  const real = globalThis.__QUEUE_API__.publishToQueueOnce
+  let gapOpen = false
+  let attempts = 0
+  globalThis.__QUEUE_API__.publishToQueueOnce = async (record, opts) => {
+    attempts += 1
+    if (!gapOpen && q.docs.size >= 1) throw new PostLimitError('cooldown', 30_000)
+    return real(record, opts)
+  }
+  const toasts = []
+  const settled = []
+  const hook = mountHook('u-limits', { toast: (m, kind) => toasts.push([m, kind]), onMigrated: (r) => settled.push(r) })
+
+  await hook.keep()
+  assert.equal(q.docs.size, 1, 'one gradient got through')
+  assert.equal(attempts, 2, 'the run stopped at the first refusal')
+  assert.equal(toasts.length, 1)
+  assert.equal(toasts[0][1], undefined, 'not an error toast')
+  assert.ok(toasts[0][0].includes(POST_LIMIT_RULE), toasts[0][0])
+  assert.ok(!/try again/i.test(toasts[0][0]), 'a limit is not offered as something to retry now')
+  assert.equal(settled[0].limited, true)
+  assert.equal(globalThis.localStorage.has(GRADIENT_SUBMISSIONS_KEY), true, 'the rest stay in this browser')
+
+  gapOpen = true
+  await hook.keep()
+  assert.equal(q.docs.size, 3, 'the later press posted the rest, once each')
+  assert.equal(globalThis.localStorage.has(GRADIENT_SUBMISSIONS_KEY), false)
+})
