@@ -965,7 +965,7 @@ for (const fail of [false, true]) {
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
-      // The waiting slot holds the stage's 48px box but paints no square of its own.
+      // The waiting slot holds the stage's 112px inspection box but paints no square of its own.
       const wait = stage.locator('.icust-stage-wait')
       await expect(wait).toHaveCount(1)
       const waitPaint = await wait.evaluate(e => {
@@ -974,8 +974,8 @@ for (const fail of [false, true]) {
         return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow, animation: s.animationName, width: r.width, height: r.height }
       })
       expect({ ...waitPaint, width: 0, height: 0 }).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none', animation: 'none', width: 0, height: 0 })
-      expect(waitPaint.width).toBeCloseTo(48, 1)
-      expect(waitPaint.height).toBeCloseTo(48, 1)
+      expect(waitPaint.width).toBeCloseTo(112, 1)
+      expect(waitPaint.height).toBeCloseTo(112, 1)
       await expect(stage.getByRole('status').locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
       const reserved = await stage.boundingBox()
       release()

@@ -250,11 +250,14 @@ test('the pixel range holds every value the migration can produce', () => {
 })
 
 test('the default is the weight the editor already rendered', () => {
-  // 2 units at size 48 painted 4px before this change, and painting 4px is what
-  // `default` now asks for — so the fix relabels, it does not restyle.
-  assert.equal(STROKE_PX.default, 4)
-  assert.equal(strokeAttrForPx({ px: STROKE_PX.default, size: 48, viewBox: 24 }), 2,
+  // The editor opens at 24 now (it was 48). 2px at 24 is 2 user units, the same
+  // proportions as 4px at 48, so a fresh icon looks as it always did. A 4px default
+  // at 24 would draw twice as heavy.
+  assert.equal(STROKE_PX.default, 2)
+  assert.equal(strokeAttrForPx({ px: STROKE_PX.default, size: 24, viewBox: 24 }), 2,
     'and the pre-paint CSS fallback --ig-stroke:2 still matches it')
+  assert.equal(strokeAttrForPx({ px: STROKE_PX.default * 2, size: 48, viewBox: 24 }), 2,
+    'the old default (4px at 48) is the same weight')
   // Every snap sits on the step grid, or the slider cannot reach it by keyboard.
   for (const s of STROKE_PX.snaps) {
     assert.ok(s >= STROKE_PX.min && s <= STROKE_PX.max, `snap ${s} is off the track`)
