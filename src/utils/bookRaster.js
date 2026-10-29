@@ -132,6 +132,22 @@ export function glyphDescent(measure, text, font) {
   return px * 0.03
 }
 
+/**
+ * A measurer that also counts a face's letter spacing (in em): every character
+ * adds `em` times the font size, which is what the canvas draws. It wraps the
+ * canvas measurer in the browser and the estimator in a test, and keeps the
+ * canvas measurer's `descent`.
+ */
+export function withTracking(measure, em) {
+  if (!em) return measure
+  const tracked = (str, font) => {
+    const px = Number(/(\d+(?:\.\d+)?)px/.exec(String(font))?.[1]) || 12
+    return measure(str, font) + [...String(str ?? '')].length * em * px
+  }
+  if (typeof measure.descent === 'function') tracked.descent = measure.descent
+  return tracked
+}
+
 function ellipsize(text, maxWidth, font, measure) {
   let t = String(text).replace(/…$/, '').trimEnd()
   while (t.length > 1 && measure(`${t}…`, font) > maxWidth) t = t.slice(0, -1).trimEnd()
@@ -293,6 +309,8 @@ function readContext(design, { projectName, watermark, measure, date, missingFon
   const iso = date.toISOString().slice(0, 10)
   return {
     d, name, watermark, measure, iso,
+    // Headings are drawn with the kit's tracking, so they are measured with it too.
+    headMeasure: withTracking(measure, d.headingSpacing),
     ladder: typeLadder(d),
     tokens: bookTokens(d),
     paper: roles.paper, ink: roles.ink, muted: roles.muted, rule: roles.rule,
@@ -431,7 +449,7 @@ function foot(c, page, fill, ruleColour, { rule = true } = {}) {
 function pageHead(c, title, lede, { first = true } = {}) {
   const ops = [text(title, MARGIN, TOP + 30, heading(c, 30), c.ink, headSpacing(c, 30))]
   if (!first) {
-    const w = c.measure(title, heading(c, 30))
+    const w = c.headMeasure(title, heading(c, 30))
     ops.push(caps('continued', MARGIN + w + 12, TOP + 30, c.muted, { px: 8, spacing: 1.4 }, c))
     return { ops, y: TOP + 56 }
   }
@@ -459,10 +477,10 @@ function coverOps(c) {
   let size = sizes[sizes.length - 1]
   let lines = null
   for (const s of sizes) {
-    const wrapped = wrapText(c.name, CONTENT_W, heading(c, s), c.measure)
+    const wrapped = wrapText(c.name, CONTENT_W, heading(c, s), c.headMeasure)
     if (wrapped.length <= 3) { size = s; lines = wrapped; break }
   }
-  if (!lines) lines = wrapText(c.name, CONTENT_W, heading(c, size), c.measure, { maxLines: 3 })
+  if (!lines) lines = wrapText(c.name, CONTENT_W, heading(c, size), c.headMeasure, { maxLines: 3 })
   const leading = Math.round(size * 1.04)
   const hasStrip = coverStrip(c).length > 0
   const stripTop = PAGE.height - 188
@@ -518,10 +536,10 @@ function contentsOps(c, page, entries) {
     }
     y += y === TOP + 120 ? 0 : 14
     const font = heading(c, 20)
-    const title = fitLine(e.title, listW - 120, font, c.measure)
+    const title = fitLine(e.title, listW - 120, font, c.headMeasure)
     if (e.num) ops.push(text(e.num, MARGIN, y, mono(500, 10), c.muted))
     ops.push(text(title, MARGIN + 44, y, font, c.ink, headSpacing(c, 20)))
-    const end = MARGIN + 44 + c.measure(title, font) + 10
+    const end = MARGIN + 44 + c.headMeasure(title, font) + 10
     const folioW = c.measure(pad2(e.folio), face(600, 12, d.body))
     if (end < MARGIN + listW - folioW - 10) ops.push(hair(end, y - 3, MARGIN + listW - folioW - 10, c.edge, [1, 3]))
     ops.push(text(pad2(e.folio), MARGIN + listW, y, face(600, 12, d.body), c.ink, { align: 'right' }))
@@ -569,7 +587,7 @@ function openingOps(c, page) {
   ops.push(text(page.num, RIGHT + 8, FOOT_Y - GHOST_GAP - glyphDescent(c.measure, page.num, ghostFont), ghostFont, ghost, { align: 'right' }))
 
   const size = 64
-  const titleLines = wrapText(page.title, 470, heading(c, size), c.measure, { maxLines: 2 })
+  const titleLines = wrapText(page.title, 470, heading(c, size), c.headMeasure, { maxLines: 2 })
   titleLines.forEach((line, i) => ops.push(text(line, MARGIN, 300 + i * 68, heading(c, size), page.ink, headSpacing(c, size))))
   const abstractTop = 300 + (titleLines.length - 1) * 68 + 44
   const lines = balanceLines(page.abstract, 360, bodyFont(c, 13, 400), c.measure, { maxLines: 6 })
@@ -596,7 +614,7 @@ function paletteOps(c, page) {
     const x2 = MARGIN + chipW + 24
     const w2 = 176
     ops.push(caps(roleLabel(d.harmony, index), x2, y + 16, c.muted, { px: 8 }, c))
-    const nameLines = wrapText(colorName(hex), w2, heading(c, 21), c.measure, { maxLines: 2 })
+    const nameLines = wrapText(colorName(hex), w2, heading(c, 21), c.headMeasure, { maxLines: 2 })
     nameLines.forEach((line, i) => ops.push(text(line, x2, y + 44 + i * 24, heading(c, 21), c.ink, headSpacing(c, 21))))
     const landsTop = y + 44 + (nameLines.length - 1) * 24 + 22
     const lands = wrapText(slotLandsBook(index), w2, bodyFont(c, 9.5, 400), c.measure, { maxLines: nameLines.length > 1 ? 2 : 3 })
@@ -786,7 +804,7 @@ export function scaleFactor(c, specW) {
   let k = Math.min(1, SCALE_MAX_PX / maxPx)
   for (const s of c.ladder) {
     const isHeading = s.exp >= 1
-    const w = c.measure(s.name, face(isHeading ? d.headingWeight : d.bodyWeight, s.px, isHeading ? d.heading : d.body))
+    const w = (isHeading ? c.headMeasure : c.measure)(s.name, face(isHeading ? d.headingWeight : d.bodyWeight, s.px, isHeading ? d.heading : d.body))
     if (w * k > specW) k = specW / w
   }
   return k
@@ -911,7 +929,7 @@ function colophonOps(c, page) {
   // The project name wraps to two lines at most and is never cut: if two lines
   // will not hold it at 15px the size steps down. Below the smallest size it takes
   // a third line (the rule moves up to make room) rather than losing words.
-  const { lines: nameLines, size: nameSize } = fitName(c.name, COLOPHON_NAME_W, c.measure, (px) => heading(c, px))
+  const { lines: nameLines, size: nameSize } = fitName(c.name, COLOPHON_NAME_W, c.headMeasure, (px) => heading(c, px))
   const nameLh = Math.round(nameSize * 1.25)
   const fy = BOTTOM - 60 - Math.max(0, nameLines.length - 2) * nameLh
   ops.push(hair(MARGIN, fy, RIGHT, c.ink))

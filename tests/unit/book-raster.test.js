@@ -129,6 +129,26 @@ test('a long project name wraps or is cut, and never overflows', () => {
   inside(build(DESIGN, { projectName: 'Supercalifragilisticexpialidocious'.repeat(4) }))
 })
 
+test('heading tracking is measured: a spaced long name stays inside the margins everywhere it is set', () => {
+  const name = 'Northern Coastal Cooperative Of Independent Cheesemakers And Allied Trades'
+  const spaced = { ...DESIGN, typeScale: { ...DESIGN.typeScale, headingSpacing: 0.1 } }
+  const book = build(spaced, { projectName: name })
+  let checked = 0
+  for (const page of book.pages) {
+    for (const o of page.ops.filter((x) => x.op === 'text' && x.letterSpacing && /"Outfit"/.test(x.font) && !x.align)) {
+      const width = estimateWidth(o.text, o.font) + [...o.text].length * o.letterSpacing
+      assert.ok(o.x + width <= 672 + 1, `${page.id}: "${o.text}" is ${Math.round(o.x + width)} wide against a 672 margin`)
+      checked += 1
+    }
+  }
+  assert.ok(checked > 10, 'no spaced heading was found to check')
+  const coverLines = book.pages[0].ops.filter((o) => o.op === 'text' && o.letterSpacing && o.y > 150 && o.y < 740)
+  assert.ok(coverLines.length >= 2, 'the long cover name should wrap')
+  // The same name with no tracking wraps no more than with it.
+  const plain = build(DESIGN, { projectName: name }).pages[0].ops.filter((o) => o.op === 'text' && /"Outfit"/.test(o.font) && o.y > 150 && o.y < 740)
+  assert.ok(coverLines.length >= plain.length, 'tracking made the cover title shorter')
+})
+
 test('many colours paginate: five a page at most, no stub, and the matrix stays capped', () => {
   for (const n of [1, 5, 6, 11, 13, 40]) {
     const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } }
