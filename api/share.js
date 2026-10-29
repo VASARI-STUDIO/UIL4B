@@ -79,11 +79,41 @@ export default function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const code = String(req.query?.c || '')
+  // A repeated `c` is a second spelling of one request, and a list would be
+  // joined into a valid-looking code by String(), so it is refused outright.
+  const rawCode = req.query?.c
+  const code = Array.isArray(rawCode) ? '' : String(rawCode || '')
   if (!CODE_RE.test(code)) {
     return res.status(400).json({ error: 'c must be 1-12 comma-separated 6-digit hex colours (no #)' })
   }
   const hexes = code.toUpperCase().split(',')
+
+  // The only keys this route reads are `c` (the /p/:code rewrite and the og:image
+  // URL below) and `img`, and `img` has exactly one value that is ever sent. Any
+  // other key or value (fbclid, utm_*, a cache-buster) is a second cache entry
+  // for the same palette, so it is sent on to the clean URL instead of served.
+  // A link shared on social media picks up tracking keys, and a refusal would
+  // break the link and its unfurl. The redirect builds no page and no PNG, and
+  // is itself cacheable. `Location` holds only the validated code, upper-cased
+  // so that case variants share one cache entry: nothing else from the request
+  // is copied into it.
+  //
+  // `code` is the path parameter of the /p/:code rewrite. If the platform adds
+  // it to the query, it is part of the rewrite and must not count as an extra
+  // key, or every share link would redirect to a URL that redirects again. It
+  // is only that when it repeats `c`; any other value is refused.
+  const query = req.query || {}
+  if (query.code !== undefined && query.code !== code) {
+    return res.status(400).json({ error: 'Unexpected query parameter' })
+  }
+  const imgValid = query.img === '1'
+  const extraKeys = Object.keys(query).some((key) => key !== 'c' && key !== 'img' && key !== 'code')
+  if (extraKeys || (query.img !== undefined && !imgValid)) {
+    const clean = hexes.join(',')
+    res.setHeader('Location', imgValid ? `/api/share?c=${clean}&img=1` : `/p/${clean}`)
+    res.setHeader('Cache-Control', 'public, s-maxage=86400')
+    return res.status(308).end()
+  }
 
   // Deterministic output per URL — let crawlers and the CDN cache it hard.
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=604800, immutable')

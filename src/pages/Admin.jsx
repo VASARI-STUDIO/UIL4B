@@ -14,8 +14,9 @@ import { Link } from 'react-router-dom'
 // server user list cannot be read, and it says on screen that that is what it
 // is showing. A labelled fallback is not a headline figure.
 import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getAggregateAnalytics, resetPageAnalytics, toolUsageRows } from '../utils/analytics'
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import { createPromptLoader, promptReadErrorText, ADMIN_PROMPT_DEFAULT_FILTER, ADMIN_PROMPT_FILTERS, ADMIN_PROMPT_LIMIT } from '../utils/adminPromptQuery'
 import CommunityQueue from '../components/admin/CommunityQueue'
 import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } from '../utils/feedbackQueueApi'
 import { useModerationRole } from '../hooks/useModerationRole'
@@ -1757,7 +1758,13 @@ export default function Admin({ toast }) {
   const [subSort, setSubSort] = useState('newest')
   const [expandedId, setExpandedId] = useState(null)
   const [pendingPrompts, setPendingPrompts] = useState([])
-  const [promptFilter, setPromptFilter] = useState('pending')
+  const [promptFilter, setPromptFilter] = useState(ADMIN_PROMPT_DEFAULT_FILTER)
+  // The refresh callback below has no dependencies, so it reads the filter here.
+  const promptFilterRef = useRef(ADMIN_PROMPT_DEFAULT_FILTER)
+  // '' = fine. Non-empty = the last prompts read FAILED, so an empty list is
+  // not "no prompts" (same rule as feedbackError above).
+  const [promptsError, setPromptsError] = useState('')
+  const [promptsLoading, setPromptsLoading] = useState(true)
   // Cross-user aggregate (server-read). null = loading, object = loaded.
   const [aggregate, setAggregate] = useState(null)
   const [aggregateLoaded, setAggregateLoaded] = useState(false)
@@ -1768,6 +1775,45 @@ export default function Admin({ toast }) {
   const [refreshedAt, setRefreshedAt] = useState(null)
   const [confirmPageReset, setConfirmPageReset] = useState(false)
   const [resettingPages, setResettingPages] = useState(false)
+
+  // One status at a time, newest first, capped (see utils/adminPromptQuery.js).
+  // Reading the whole collection pulled every spam prompt, with its inline
+  // media, into the moderator's browser.
+  // The newest read is the only one allowed to report (createPromptLoader).
+  const loadPrompts = useMemo(() => createPromptLoader({
+    read: async (spec) => {
+      const constraints = spec.status ? [where('status', '==', spec.status)] : []
+      const promptSnap = await getDocs(query(
+        collection(db, 'community-prompts'),
+        ...constraints,
+        orderBy('createdAt', 'desc'),
+        limit(spec.max),
+      ))
+      return promptSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+    },
+    onStart: (spec, { clear }) => {
+      setPromptsLoading(true)
+      setPromptsError('')
+      // A switch empties the list, so the previous filter's rows never sit
+      // under the new button while its read is in flight.
+      if (clear) setPendingPrompts([])
+    },
+    onList: (list) => { setPendingPrompts(list); setPromptsLoading(false) },
+    onError: (err) => {
+      // A query that needs a composite index that has not been deployed lands
+      // here, as does an offline admin: say so rather than show "no prompts".
+      console.error('admin: could not read community prompts', err?.code || err?.message)
+      setPendingPrompts([])
+      setPromptsLoading(false)
+      setPromptsError(promptReadErrorText(err))
+    },
+  }), [])
+
+  const selectPromptFilter = (next) => {
+    promptFilterRef.current = next
+    setPromptFilter(next)
+    loadPrompts(next, { clear: true })
+  }
 
   const refresh = useCallback(async () => {
     // The profile cache, and ONLY as the Users tab's labelled fallback for
@@ -1813,12 +1859,9 @@ export default function Admin({ toast }) {
       setFeedbackError(String(err?.message || err || 'Unknown error').slice(0, 200))
     }
     setFeedback(merged)
-    try {
-      const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
-      setPendingPrompts(promptSnap.docs.map(d => ({ ...d.data(), id: d.id })))
-    } catch { /* firestore unavailable */ }
+    await loadPrompts(promptFilterRef.current)
     setRefreshedAt(Date.now())
-  }, [])
+  }, [loadPrompts])
 
   const [serverVerified, setServerVerified] = useState(false)
   const [verifyError, setVerifyError] = useState('')
@@ -2604,22 +2647,37 @@ export default function Admin({ toast }) {
       {tab === 'prompts' && (
         <div className="adm-section">
           <div className="adm-section-h">
-            <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length})</div>
+            <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length}{pendingPrompts.length >= ADMIN_PROMPT_LIMIT ? '+' : ''})</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {['pending', 'approved', 'rejected', 'all'].map(f => (
-                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => setPromptFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {ADMIN_PROMPT_FILTERS.map(f => (
+                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => selectPromptFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
                   {f}
                 </button>
               ))}
             </div>
           </div>
+          {promptsError && (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }} role="alert">
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The prompts could not be read
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{promptsError}</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  The list below is empty because the read failed, not because there are no prompts.
+                </div>
+              </div>
+            </div>
+          )}
           {pendingPrompts
             .filter(p => promptFilter === 'all' || p.status === promptFilter)
             .map(prompt => (
               <PromptAdminCard key={prompt.id} prompt={prompt} setPendingPrompts={setPendingPrompts} toast={toast} />
             ))}
-          {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
-            <div className="adm-card"><div className="adm-empty">No {promptFilter === 'all' ? '' : promptFilter} prompts yet.</div></div>
+          {!promptsError && pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
+            <div className="adm-card"><div className="adm-empty">
+              {promptsLoading ? 'Loading prompts…' : `No ${promptFilter === 'all' ? '' : promptFilter} prompts yet.`}
+            </div></div>
           )}
         </div>
       )}

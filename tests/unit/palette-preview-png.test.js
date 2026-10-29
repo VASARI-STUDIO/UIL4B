@@ -243,12 +243,22 @@ test('a known id is answered with image/png, cached, and the same bytes previewP
   assert.ok(Buffer.isBuffer(res.ended) && res.ended.equals(png))
 })
 
-test('an unknown id, a missing id, a list and an over-long id are refused with no colour in the answer', () => {
-  for (const id of ['nope', undefined, ['teal-dusk'], 'x'.repeat(81)]) {
+test('an unknown id, a missing id and an over-long id are refused with no colour in the answer', () => {
+  for (const id of ['nope', undefined, 'x'.repeat(81)]) {
     const res = fakeRes()
     servePalettePreview({ query: { palettePreview: id } }, res, ROWS)
     assert.equal(res.statusCode, 404, `id ${JSON.stringify(id)}`)
     assert.equal(res.ended, null)
     assert.deepEqual(res.body, { error: 'No such palette' })
   }
+})
+
+test('a repeated palettePreview key (a list) is refused as a bad request, with no colour in the answer', () => {
+  // The query-key guard answers before the lookup: a repeated key is a second spelling of one request.
+  const res = fakeRes()
+  servePalettePreview({ query: { palettePreview: ['teal-dusk'] } }, res, ROWS)
+  assert.equal(res.statusCode, 400)
+  assert.equal(res.ended, null)
+  assert.deepEqual(res.body, { error: 'Unexpected query parameter' })
+  assert.ok(!/#?[0-9a-f]{6}/i.test(JSON.stringify(res.body)), 'a colour reached the refusal')
 })
