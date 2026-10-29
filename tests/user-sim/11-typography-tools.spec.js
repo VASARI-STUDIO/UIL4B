@@ -1295,8 +1295,10 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await expectTarget(sheet.getByRole('button', { name: 'All', exact: true }), 'Font Gallery filter')
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
-  await page.locator('.fg-card-compare').first().click()
-  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
+  // The phone tray stands on the tab bar once two fonts are picked.
+  await page.locator('.fg-card-compare').nth(0).click()
+  await page.locator('.fg-card-compare').nth(1).click()
+  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery compare')
 
   await go(page, '/create/font-pair')
   await expect(page.locator('.fpr-card').first()).toBeVisible()
