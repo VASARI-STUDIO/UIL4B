@@ -926,51 +926,64 @@ function AppHeader() {
 
       {sheet && (
         <div ref={sheetRef} className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
-          {visibleSections.map((section) => {
-            const expanded = sheetSection === section.id
-            const promo = menuPromo(section)
-            return (
-              <div className="pnav-acc" key={section.id}>
+          {/* Three segments, one open panel under them. The segments are the
+              same 44px buttons at the same top on every tab, so switching
+              never moves them; the open one does nothing when pressed. */}
+          <div className="pnav-acc-tabs">
+            {visibleSections.map((section) => {
+              const expanded = sheetSection === section.id
+              return (
                 <button
+                  key={section.id}
                   type="button"
                   className="pnav-acc-trigger"
                   aria-expanded={expanded}
-                  onClick={() => setSheetSection(expanded ? '' : section.id)}
+                  aria-controls={expanded ? 'pnav-acc-panel' : undefined}
+                  onClick={() => { if (!expanded) setSheetSection(section.id) }}
                 >
                   {section.label}
-                  <Chevron />
                 </button>
-                {expanded && (
-                  <div className="pnav-acc-panel">
-                    {section.id === 'create' && (
-                      <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
-                        {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
-                        <ArrowRight />
-                      </button>
-                    )}
-                    {/* Live rows only: a phone menu lists what
-                        opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
-                    {section.columns.flat().map((col) => {
-                      const live = col.tools.filter((t) => !t.soon)
-                      if (!live.length) return null
-                      return (
-                        <div className="pnav-acc-col" key={col.label}>
-                          <p className="pnav-acc-colhead">{col.label}</p>
-                          {live.map((t) => (
-                            <Link key={t.id} className="pnav-acc-link" to={t.route} onClick={closeAll}>
-                              <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                              <span className="pnav-acc-label">{t.label}</span>
-                              {t.beta && <span className="beta-badge">Beta</span>}
-                            </Link>
-                          ))}
-                        </div>
-                      )
-                    })}
-                    <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
-                      {menuViewAll(section)} <ArrowRight size={12} />
-                    </Link>
-                  </div>
+              )
+            })}
+          </div>
+          {visibleSections.filter((section) => sheetSection === section.id).map((section) => {
+            const promo = menuPromo(section)
+            return (
+              <div className="pnav-acc-panel" id="pnav-acc-panel" key={section.id}>
+                {/* Live rows only: a phone menu lists what
+                    opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
+                {section.columns.flat().map((col) => {
+                  const live = col.tools.filter((t) => !t.soon)
+                  if (!live.length) return null
+                  return (
+                    <div className="pnav-acc-col" key={col.label}>
+                      <p className="pnav-acc-colhead">{col.label}</p>
+                      <div className="pnav-acc-grid">
+                        {live.map((t) => (
+                          <Link key={t.id} className="pnav-acc-link" to={t.route} data-hue={t.hue} onClick={closeAll}>
+                            <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                            <span className="pnav-acc-label">{t.label}</span>
+                            {t.beta && <span className="beta-badge">Beta</span>}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {section.id === 'create' ? (
+                  <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
+                    {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
+                    <ArrowRight />
+                  </button>
+                ) : (
+                  <Link className="pnav-acc-cta" to={promo.href} onClick={closeAll}>
+                    {promo.cta}
+                    <ArrowRight />
+                  </Link>
                 )}
+                <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
+                  {menuViewAll(section)} <ArrowRight size={12} />
+                </Link>
               </div>
             )
           })}
