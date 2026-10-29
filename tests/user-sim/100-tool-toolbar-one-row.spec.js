@@ -63,7 +63,11 @@ const TOOLS = [
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
   {
     route: '/create/font-pair',
-    actions: [{ row: 'Shuffle', menu: 'Shuffle the heading' }, 'Build a scale from this pair', 'Copy font import'],
+    actions: [{ row: 'Shuffle', menu: 'Shuffle the heading' }, 'Build a type scale from this pair', 'Copy font import'],
+    // Below 1024 Shuffle is in the docked bar, and below 768 so is Copy CSS.
+    dockedBelow: 1024,
+    docked: ['Shuffle'],
+    primaryFrom: 768,
     links: ['Browse the Font Gallery'],
     primary: /^Copy CSS/,
     title: 'Font Pair',
@@ -130,7 +134,7 @@ for (const tool of TOOLS) {
         }
 
         // The primary, where the tool has one, is always on the row.
-        if (tool.primary) await expect(bar.getByRole('button', { name: tool.primary })).toBeVisible()
+        if (tool.primary && width >= (tool.primaryFrom || 0)) await expect(bar.getByRole('button', { name: tool.primary })).toBeVisible()
 
         // Every action: on the row, or in the overflow.
         await expect(bar, `${width}px: the toolbar is still measuring`).not.toHaveClass(/is-measuring/)
@@ -138,7 +142,7 @@ for (const tool of TOOLS) {
         const rowName = (a) => (typeof a === 'string' ? a : a.row)
         const menuName = (a) => (typeof a === 'string' ? a : a.menu)
         const missing = []
-        for (const action of tool.actions) {
+        for (const action of tool.actions.filter((a) => !(width < (tool.dockedBelow || 0) && (tool.docked || []).includes(typeof a === 'string' ? a : a.row)))) {
           // A row action that navigates is a link; its overflow row is a button.
           const named = { name: startsWith(rowName(action)) }
           const shown = await bar.getByRole('button', named).or(bar.getByRole('link', named)).first().isVisible().catch(() => false)

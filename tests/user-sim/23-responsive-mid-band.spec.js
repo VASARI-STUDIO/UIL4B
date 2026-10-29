@@ -148,10 +148,16 @@ test.describe('workbench two-column threshold', () => {
   const cases = [
     { route: '/color/tint', grid: '.tt .tl-grid', pane: '.tt .tl-main', persona: 'a designer building a tonal ramp' },
     { route: '/typescale', grid: '.tsc-grid', pane: '.tsc-output', persona: 'a designer reading a type scale back' },
-    { route: '/fontpairs', grid: '.fpr-grid', pane: '.fpr-output', persona: 'a designer testing a type pairing' },
+    // Pair A (fonts build spec, section 2) sets the panel beside the work from
+    // 1024 and stacks it above below that, so the column narrows ONCE, at 1024,
+    // by design: the 336px panel and its gap come out of it. `dockAt` allows
+    // exactly that step and no other; the column must still be a real working
+    // width (`dockedMin`) after it, which is what the 364px collapse this test
+    // was written for could not have met.
+    { route: '/fontpairs', grid: '.fpr-grid', pane: '.fpr-output', persona: 'a designer testing a type pairing', dockAt: 1024, dockedMin: 600 },
   ]
 
-  for (const { route, grid, pane, persona } of cases) {
+  for (const { route, grid, pane, persona, dockAt, dockedMin } of cases) {
     test(`${route} never narrows its working column as the window widens`, async ({ page }) => {
       watch(page, persona)
       await page.setViewportSize({ width: WORKBENCH_WIDTHS[0], height: 900 })
@@ -175,6 +181,7 @@ test.describe('workbench two-column threshold', () => {
         .slice(1)
         .map((row, i) => ({ from: seen[i], to: row }))
         .filter(({ from, to }) => to.column < from.column - 1)
+        .filter(({ from, to }) => !(dockAt && from.width < dockAt && to.width >= dockAt && to.column >= dockedMin))
         .map(({ from, to }) => `${from.width}px→${to.width}px: ${from.column}px→${to.column}px`)
 
       expect(shrinks, `widening the window narrowed the working column:\n  ${shrinks.join('\n  ')}`).toEqual([])

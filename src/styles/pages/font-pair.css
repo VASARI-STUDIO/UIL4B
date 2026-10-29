@@ -1,245 +1,66 @@
-/* font-pair.css — /create/font-pair (FontMatcher.jsx), on the shared tool
- * pattern.
+/* font-pair.css — /create/font-pair (FontMatcher.jsx), layout A "Specimen and
+ * panel", on the shared tool pattern.
  *
- * The toolbar, the 1fr/336 grid, the side panel, its sections, the pills and
- * the buttons come from pages/tool-layout.css. This sheet is the output
- * column — the specimen, the suggestion cards and the code — and the few
- * panel details the shared parts do not cover.
+ * The toolbar, the sticky bar, the buttons, pills and panel card come from
+ * pages/tool-layout.css. This sheet is the specimen, the suggestion list, the
+ * family cards, the docked bar and the few panel details the shared parts do
+ * not cover. Every selector is scoped under `.fpr-page`, the ToolLayout root.
  *
- * Every selector is scoped under `.fpr-page`, the ToolLayout root. One surface
- * per block: the specimen stage is one card with the specimen set straight on
- * it, the suggestion cards sit on the page, not inside another card. */
+ * Type rule: labels, captions and counts are Geist in sentence case. Mono is
+ * kept for the CSS code block only. */
 
+/* ── The grid ────────────────────────────────────────────────────────────────
+   The panel is first in the source, so below 1024 the families, then the
+   preview text, then the specimen read in that order. From 1024 the panel
+   takes the right-hand column and the work the left. */
+.fpr-page .fpr-grid { grid-template-columns: minmax(0, 1fr); }
 .fpr-page .fpr-output { gap: var(--tl-gap); }
+@media (min-width: 1024px) {
+  .fpr-page .fpr-grid { grid-template-columns: minmax(0, 1fr) 336px; }
+  .fpr-page .fpr-output { grid-column: 1; grid-row: 1; }
+  .fpr-page .fpr-config {
+    --fpr-sticky-top: calc(var(--chrome-h) + 76px);
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: var(--fpr-sticky-top);
+    max-height: calc(100vh - var(--fpr-sticky-top) - 16px);
+    max-height: calc(100dvh - var(--fpr-sticky-top) - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
 
-/* ── The specimen stage ─────────────────────────────────────────────────── */
-.fpr-page .fpr-stage {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  padding: 12px clamp(12px, 2vw, 16px) 0;
-  border-radius: 18px;
-  border: 1px solid var(--tl-line);
-  background: var(--tl-card);
-}
-.fpr-page .fpr-stage-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-/* The current pair, each name set in its own family. */
-.fpr-page .fpr-pair {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  font-size: 15px;
-  line-height: 1.3;
+/* ── The panel: family cards, then the preview text ─────────────────────── */
+.fpr-page .fpr-fams { display: grid; gap: 0; }
+.fpr-page .fpr-fam,
+.fpr-page .fpr-text { display: grid; gap: 8px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--tl-hair); }
+/* Side by side at 768 the taller card would otherwise hand its spare height to
+   the other card's rows, centring that card's name lower. */
+.fpr-page .fpr-fam { align-content: start; }
+.fpr-page .fpr-text { border-bottom: 0; }
+.fpr-page .fpr-label { font-family: var(--font); font-size: 12.5px; font-weight: 400; line-height: 1.3; color: var(--tl-dim); }
+.fpr-page .fpr-fam-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.fpr-page .fpr-fam-id { flex: 1 1 9rem; min-width: 0; display: grid; gap: 2px; }
+/* The name wraps rather than clipping, so no family is ever cut. */
+.fpr-page .fpr-fam-name {
+  font-family: var(--fpr-fam-ff, var(--font));
+  font-weight: var(--fpr-fam-fw, 400);
+  font-size: 22px;
+  line-height: 1.15;
   color: var(--tl-ink);
+  overflow-wrap: anywhere;
 }
-.fpr-page .fpr-pair span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fpr-page .fpr-pair span:first-child { font-family: var(--fpr-h-ff, var(--font)); font-weight: var(--fpr-h-fw, 600); }
-.fpr-page .fpr-pair span:last-child { font-family: var(--fpr-b-ff, var(--font)); font-weight: var(--fpr-b-fw, 400); }
-.fpr-page .fpr-pair i { font-style: normal; color: var(--tl-faint); }
-
-.fpr-page .fpr-specimen {
-  min-height: clamp(300px, 46vh, 460px);
-  padding: clamp(16px, 4vw, 56px) clamp(4px, 3vw, 44px) clamp(20px, 4vw, 56px);
+.fpr-page .fpr-fam-meta { font-size: 12.5px; line-height: 1.4; color: var(--tl-dim); overflow-wrap: anywhere; }
+.fpr-page .fpr-fam-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+/* On a phone both rows stack the same way: the name, then its buttons. */
+@media (max-width: 767px) {
+  .fpr-page .fpr-fam-row { flex-direction: column; align-items: stretch; }
+  .fpr-page .fpr-fam-id { flex: 0 0 auto; }
+  .fpr-page .fpr-fam-acts { flex-wrap: wrap; margin-left: 0; }
 }
-.fpr-page .fpr-h1 {
-  margin: 0 0 12px;
-  color: var(--tl-ink);
-  font-family: var(--fpr-h-ff);
-  font-weight: var(--fpr-h-fw);
-  /* "Typography" is 235px at 42px; the specimen measures ~250px at 320.
-     min(10vw, …) scales the floor with the phone and hands back to the
-     larger curve from 420px. */
-  font-size: clamp(30px, min(10vw, max(42px, 6vw)), 76px);
-  line-height: 1.01;
-  letter-spacing: -.03em;
-  overflow-wrap: break-word;
-}
-.fpr-page .fpr-h2 {
-  margin: 22px 0 10px;
-  color: var(--tl-ink);
-  font-family: var(--fpr-h-ff);
-  font-weight: var(--fpr-h-fw);
-  font-size: clamp(20px, 2.2vw, 27px);
-  line-height: 1.2;
-  letter-spacing: -.02em;
-}
-.fpr-page .fpr-lede {
-  max-width: 60ch;
-  margin: 0 0 12px;
-  color: var(--tl-soft);
-  font-family: var(--fpr-b-ff);
-  font-weight: var(--fpr-b-fw);
-  font-size: clamp(15px, 1.4vw, 19px);
-  line-height: 1.55;
-}
-.fpr-page .fpr-body {
-  max-width: 66ch;
-  margin: 0;
-  color: var(--tl-soft);
-  font-family: var(--fpr-b-ff);
-  font-weight: var(--fpr-b-fw);
-  font-size: 15px;
-  line-height: 1.72;
-}
-.fpr-page .fpr-product-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-/* Sample content inside the specimen: a product page's two buttons, drawn in
-   the body family. Not controls. */
-.fpr-page .fpr-product-actions span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 9px 18px;
-  border-radius: 999px;
-  font-family: var(--fpr-b-ff);
-  font-size: 14px;
-  font-weight: 600;
-}
-.fpr-page .fpr-product-primary { color: var(--accent-ink); background: var(--accent-fill); }
-.fpr-page .fpr-product-secondary { color: var(--tl-ink); border: 1px solid var(--tl-line-2); }
-.fpr-page .fpr-product-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 26px;
-  padding-top: 20px;
-  border-top: 1px solid var(--tl-hair);
-}
-.fpr-page .fpr-product-stats > div { display: flex; flex-direction: column; gap: 2px; }
-.fpr-page .fpr-product-stats .fpr-h2 { margin: 0; }
-.fpr-page .fpr-glyphs {
-  margin: 0 0 10px;
-  color: var(--tl-ink);
-  font-family: var(--fpr-h-ff);
-  font-weight: var(--fpr-b-fw);
-  font-size: clamp(16px, 2vw, 24px);
-  line-height: 1.5;
-  letter-spacing: .02em;
-  word-break: break-word;
-}
-.fpr-page .fpr-glyphs--heading { font-weight: var(--fpr-h-fw); }
-.fpr-page .fpr-specimen-raw .fpr-body { margin-top: 16px; }
-
-/* ── Section heads (suggestions, handoff) ───────────────────────────────── */
-.fpr-page .fpr-suggest,
-.fpr-page .fpr-delivery { display: grid; gap: 12px; min-width: 0; margin-top: 8px; }
-.fpr-page .fpr-section-head { display: grid; gap: 3px; }
-.fpr-page .fpr-section-head h2 { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
-.fpr-page .fpr-section-head p { margin: 0; max-width: 70ch; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
-
-/* ── Suggestions ────────────────────────────────────────────────────────── */
-.fpr-page .fpr-suggest-loading { display: flex; align-items: center; gap: 12px; min-height: 120px; font-size: 13px; color: var(--tl-dim); }
-.fpr-page .fpr-suggest-loading .fg-loader { margin: 0; }
-.fpr-page .fpr-suggest-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 18px;
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-}
-.fpr-page .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
-.fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
-
-.fpr-page .fpr-suggest-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.fpr-page .fpr-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-  background: var(--tl-card);
-}
-.fpr-page .fpr-card--on { border-color: var(--tl-line-on); box-shadow: inset 0 0 0 1px var(--tl-line-on); }
-.fpr-page .fpr-card-heading {
-  margin: 0 0 6px;
-  color: var(--tl-ink);
-  font-family: var(--fpr-h-ff);
-  font-weight: var(--fpr-h-fw);
-  font-size: 27px;
-  line-height: 1.12;
-  letter-spacing: -.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fpr-page .fpr-card-body {
-  margin: 0 0 10px;
-  color: var(--tl-soft);
-  font-family: var(--fpr-b-ff);
-  font-weight: var(--fpr-b-fw);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.fpr-page .fpr-card-why { margin: 0 0 12px; padding-top: 10px; border-top: 1px solid var(--tl-hair); }
-.fpr-page .fpr-card-why > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 24px;
-  border-radius: 2px;
-  font-size: 12px;
-  color: var(--tl-dim);
-  cursor: pointer;
-  list-style: none;
-}
-.fpr-page .fpr-card-why > summary::-webkit-details-marker { display: none; }
-/* A drawn caret so it can rotate; the UA marker is hidden above. */
-.fpr-page .fpr-card-why > summary::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-left: 4px solid currentColor;
-  border-top: 3.5px solid transparent;
-  border-bottom: 3.5px solid transparent;
-  transition: transform .16s var(--tl-ease);
-}
-.fpr-page .fpr-card-why[open] > summary::before { transform: rotate(90deg); }
-.fpr-page .fpr-card-reason { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
-.fpr-page .fpr-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
-.fpr-page .fpr-card-name {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 540;
-  color: var(--tl-ink);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fpr-page .fpr-card-name em { font-family: var(--mono); font-size: 10px; font-style: normal; color: var(--tl-dim); text-transform: capitalize; }
-.fpr-page .fpr-card--on .fpr-card-apply { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
-@media (hover: hover) and (pointer: fine) {
-  .fpr-page .fpr-card-why > summary:hover { color: var(--tl-ink); }
-}
-
-/* ── The handoff ────────────────────────────────────────────────────────── */
-.fpr-page .fpr-export { max-height: 340px; overflow: auto; font-size: 12px; }
-.fpr-page .fpr-keep { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
-.fpr-page .fpr-keep-note { flex: 1; min-width: 200px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
-
-/* ── The panel ──────────────────────────────────────────────────────────── */
 .fpr-page .fpr-weights { gap: 4px; }
-.fpr-page .fpr-bodyrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
-.fpr-page .fpr-bodyrow .typ-picker { margin-bottom: 0; }
+.fpr-page .fpr-wmenu { min-width: 0; }
 .fpr-page .fpr-input {
   width: 100%;
   min-width: 0;
@@ -254,39 +75,188 @@
 }
 .fpr-page .fpr-input:focus { border-color: var(--tl-line-on); }
 .fpr-page .fpr-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
-
-/* Two columns from 901px: the panel follows the page and is bounded by the
-   viewport — anything that does not fit scrolls inside it rather than
-   running off the bottom of the screen. Below that the columns stack and the
-   panel is plain page flow. */
-@media (min-width: 901px) {
-  .fpr-page .fpr-config {
-    --fpr-sticky-top: calc(var(--chrome-h) + 76px);
-    position: sticky;
-    top: var(--fpr-sticky-top);
-    max-height: calc(100vh - var(--fpr-sticky-top) - 16px);
-    max-height: calc(100dvh - var(--fpr-sticky-top) - 16px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
+/* A tablet sets the two family cards side by side. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .fpr-page .fpr-fams { grid-template-columns: 1fr 1fr; }
+  .fpr-page .fpr-fam { border-bottom: 1px solid var(--tl-hair); }
+  .fpr-page .fpr-fam + .fpr-fam { border-left: 1px solid var(--tl-hair); }
 }
+
+/* ── The specimen: flat on the page, no container ───────────────────────── */
+.fpr-page .fpr-stage { display: grid; gap: 8px; min-width: 0; }
+.fpr-page .fpr-stage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; min-width: 0; }
+/* The current pair, each name set in its own family. */
+.fpr-page .fpr-pair { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.3; color: var(--tl-ink); }
+.fpr-page .fpr-pair span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpr-page .fpr-pair span:first-child { font-family: var(--fpr-h-ff, var(--font)); font-weight: var(--fpr-h-fw, 600); }
+.fpr-page .fpr-pair span:last-child { font-family: var(--fpr-b-ff, var(--font)); font-weight: var(--fpr-b-fw, 400); }
+.fpr-page .fpr-pair i { font-style: normal; color: var(--tl-faint); }
+.fpr-page .fpr-specimen { min-height: clamp(220px, 34vh, 380px); padding: clamp(12px, 3vw, 32px) 0; }
+.fpr-page .fpr-h1 {
+  margin: 0 0 12px;
+  color: var(--tl-ink);
+  font-family: var(--fpr-h-ff);
+  font-weight: var(--fpr-h-fw);
+  /* 44px at 390, 64px at 768, 88px at 1440. The vw cap keeps "Typography"
+     whole on a 320 phone. */
+  font-size: clamp(30px, min(11.4vw, 44px), 44px);
+  line-height: 1.01;
+  letter-spacing: -.03em;
+  overflow-wrap: break-word;
+}
+@media (min-width: 768px) { .fpr-page .fpr-h1 { font-size: 64px; } }
+@media (min-width: 1024px) { .fpr-page .fpr-h1 { font-size: 88px; } }
+.fpr-page .fpr-h2 {
+  margin: 22px 0 10px;
+  color: var(--tl-ink);
+  font-family: var(--fpr-h-ff);
+  font-weight: var(--fpr-h-fw);
+  font-size: clamp(20px, 2.2vw, 27px);
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+.fpr-page .fpr-lede { max-width: 60ch; margin: 0 0 12px; color: var(--tl-soft); font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: clamp(15px, 1.4vw, 19px); line-height: 1.55; }
+.fpr-page .fpr-body { max-width: 66ch; margin: 0; color: var(--tl-soft); font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 15px; line-height: 1.72; }
+.fpr-page .fpr-product-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+/* Sample content inside the specimen: a product page's two buttons, drawn in
+   the body family. Not controls. */
+.fpr-page .fpr-product-actions span { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 18px; border-radius: 999px; font-family: var(--fpr-b-ff); font-size: 14px; font-weight: 600; }
+.fpr-page .fpr-product-primary { color: var(--accent-ink); background: var(--accent-fill); }
+.fpr-page .fpr-product-secondary { color: var(--tl-ink); border: 1px solid var(--tl-line-2); }
+.fpr-page .fpr-product-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--tl-hair); }
+.fpr-page .fpr-product-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.fpr-page .fpr-product-stats .fpr-h2 { margin: 0; }
+.fpr-page .fpr-glyphs { margin: 0 0 10px; color: var(--tl-ink); font-family: var(--fpr-h-ff); font-weight: var(--fpr-b-fw); font-size: clamp(16px, 2vw, 24px); line-height: 1.5; letter-spacing: .02em; word-break: break-word; }
+.fpr-page .fpr-glyphs--heading { font-weight: var(--fpr-h-fw); }
+.fpr-page .fpr-specimen-raw .fpr-body { margin-top: 16px; }
+
+/* ── Suggestions: a hairline list under the specimen ────────────────────── */
+.fpr-page .fpr-suggest { display: grid; gap: 4px; min-width: 0; margin-top: 8px; }
+.fpr-page .fpr-section-head h2 { margin: 0; font-size: 13px; font-weight: 400; line-height: 1.4; color: var(--tl-dim); }
+.fpr-page .fpr-suggest-loading { display: flex; align-items: center; gap: 12px; min-height: 120px; font-size: 13px; color: var(--tl-dim); }
+.fpr-page .fpr-suggest-loading .fg-loader { margin: 0; }
+.fpr-page .fpr-suggest-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 0; border-top: 1px solid var(--tl-hair); }
+.fpr-page .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
+.fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
+.fpr-page .fpr-suggest-grid { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--tl-hair); }
+.fpr-page .fpr-card { min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--tl-hair); }
+.fpr-page .fpr-card-line { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 52px; }
+.fpr-page .fpr-card-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--fpr-b-ff);
+  font-weight: var(--fpr-b-fw);
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--tl-ink);
+  overflow-wrap: anywhere;
+}
+/* The pair in use reads as plain text, not a button. */
+.fpr-page .fpr-card-apply[aria-pressed="true"] { border-color: transparent; background: transparent; padding-inline: 4px; cursor: default; }
+.fpr-page .fpr-card-why > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--tl-dim);
+  cursor: pointer;
+  list-style: none;
+}
+.fpr-page .fpr-card-why > summary::-webkit-details-marker { display: none; }
+/* A drawn caret so it can rotate; the UA marker is hidden above. */
+.fpr-page .fpr-card-why > summary::before,
+.fpr-page .fpr-delivery > summary::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  transition: transform .16s var(--tl-ease);
+}
+.fpr-page .fpr-card-why[open] > summary::before,
+.fpr-page .fpr-delivery[open] > summary::after { transform: rotate(90deg); }
+.fpr-page .fpr-card-reason { margin: 0 0 8px; max-width: 62ch; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .fpr-page .fpr-card-why > summary:hover,
+  .fpr-page .fpr-delivery > summary:hover { color: var(--tl-ink); }
+}
+
+/* ── The handoff: a disclosure row under the list ───────────────────────── */
+.fpr-page .fpr-delivery { min-width: 0; border-bottom: 1px solid var(--tl-hair); }
+.fpr-page .fpr-delivery > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--tl-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.fpr-page .fpr-delivery > summary::-webkit-details-marker { display: none; }
+.fpr-page .fpr-delivery > .fpr-hint { margin-bottom: 10px; }
+.fpr-page .fpr-export { max-height: 340px; overflow: auto; margin-bottom: 12px; font-size: 12px; }
+
+/* ── The docked bar ──────────────────────────────────────────────────────────
+   Sticky to the foot of the viewport, over the tab bar's height on a phone,
+   over the brand-kit bar while that is showing. 1440: the note and Save. 768:
+   Shuffle and Save. 390: Save, Shuffle, Copy CSS. */
+.fpr-page .fpr-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 16px calc(-1 * clamp(12px, 2vw, 20px)) calc(-1 * clamp(12px, 2vw, 20px));
+  padding: 10px max(clamp(12px, 2vw, 20px), env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(clamp(12px, 2vw, 20px), env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--tl-hair);
+  background: var(--bg-0);
+}
+.fpr-page .fpr-dock-note { flex: 1; margin: 0; font-size: 13px; color: var(--tl-dim); }
+.fpr-page .fpr-dock-save { display: flex; }
+/* Save carries the same 13px label as the tool buttons beside it. */
+.fpr-page .fpr-dock .svt-trigger { white-space: nowrap; font-size: 13px; }
+@media (min-width: 768px) { .fpr-page .fpr-dock-save { margin-left: auto; } }
+@media (max-width: 767px) {
+  html.has-tabbar .fpr-page .fpr-dock { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+  .fpr-page .fpr-dock .svt-wrap { width: auto; }
+  .fpr-page .fpr-dock-save { flex: 0 1 auto; }
+  .fpr-page .fpr-copy-primary { margin-left: auto; }
+}
+/* At 320 the three actions share 296px: drop the two decorative icons (Shuffle
+   is an icon alone from 767 down) and tighten the gaps so all three stay whole. */
+@media (max-width: 359px) {
+  .fpr-page .fpr-dock { gap: 6px; }
+  .fpr-page .fpr-dock .svt-trigger { padding-inline: 10px; }
+  .fpr-page .fpr-dock .svt-trigger svg,
+  .fpr-page .fpr-dock .fpr-copy-primary .tl-btn-ico { display: none; }
+  .fpr-page .fpr-dock .fpr-copy-primary { padding-inline: 12px; }
+}
+html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-h); }
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
   .fpr-page .fpr-product-stats { grid-template-columns: 1fr; gap: 12px; }
   .fpr-page .fpr-export { font-size: 11px; }
 }
-@media (max-width: 380px) {
-  .fpr-page .fpr-card-foot { align-items: stretch; flex-direction: column; gap: 8px; }
-}
 /* iOS zooms a focused field under 16px. */
-@media (max-width: 640px) {
-  .fpr-page .fpr-input { font-size: 16px; }
-}
+@media (max-width: 640px) { .fpr-page .fpr-input { font-size: 16px; } }
 @media (pointer: coarse) {
   /* 8px between neighbouring targets on a finger. */
   .fpr-page .tl-pills { gap: 8px; }
   .fpr-page .svt-trigger { min-height: 44px; }
   .fpr-page .fpr-input { height: 44px; font-size: 16px; }
   .fpr-page .fpr-card-why > summary { min-height: 44px; }
+}
+/* The disclosure caret turns with a transition; reduced motion drops it. */
+html[data-reduced-motion="true"] .fpr-page .fpr-card-why > summary::before,
+html[data-reduced-motion="true"] .fpr-page .fpr-delivery > summary::after { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-card-why > summary::before,
+  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-delivery > summary::after { transition: none; }
 }
