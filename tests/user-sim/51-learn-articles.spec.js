@@ -327,9 +327,10 @@ test.describe('Learn articles', () => {
     // THE ROW COUNT IS READ OFF THE PAGE'S OWN CSSOM, not typed.
     //
     // It was `toHaveCount(4)` and a change of faces made that wrong: the page
-    // now declares four families (Switzer, its local stand-in, Geist Mono,
-    // Caveat) over eight rules, two of the families split over two
-    // unicode-ranges and two shipped whole. The number was never this test's
+    // now declares six families (Switzer, its local stand-in, Geist Mono,
+    // Caveat, and the menu's Literata and Big Shoulders Display) over ten
+    // rules, two of the families split over two unicode-ranges and four
+    // shipped whole. The number was never this test's
     // subject; the subject is that FontFaceTable renders ONE ROW PER DECLARED
     // FACE and computes each one's range separately. Counting the
     // CSSFontFaceRules is counting the same thing

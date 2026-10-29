@@ -171,12 +171,14 @@ export default function FontLoading() {
         <FontFaceTable />
 
         <p>
-          Four families, eight rules, and only two of the families are subset.
+          Six families, ten rules, and only two of the families are subset.
           The interface face ships whole: one variable file for the upright and
           one for the italic, each declared with no range, so each reads as
           covering every code point and is fetched the first time text in that
           style is drawn. Its stand-in is a pair of local faces, which have no
-          file to fetch. The monospace face and the handwritten annotation face
+          file to fetch. Two display faces, a serif and a condensed sans, are
+          whole files too, but only the menu&rsquo;s hover effects use them, so
+          nothing asks for either until a menu opens. The monospace face and the handwritten annotation face
           are each split at U+0100, and the second file of each pair is only
           fetched when a character in its range is actually rendered. That is
           what the last column measures: it asks whether the file that would
