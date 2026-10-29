@@ -209,7 +209,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
       await last.scrollIntoViewIfNeeded()
       await expect(last).toBeInViewport()
       // The hand-off itself rides the sticky tool toolbar, so it is on screen.
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a scale from this pair' })).toBeInViewport()
+      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a type scale from this pair' })).toBeInViewport()
     })
   }
 

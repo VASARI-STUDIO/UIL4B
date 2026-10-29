@@ -2,91 +2,67 @@
  * pattern.
  *
  * The toolbar, the 1fr/336 grid, the side panel, its sections, the pills and
- * the buttons come from pages/tool-layout.css. This sheet is the output: the
- * ladder card (the base × ratio bar, the result and width switch, and the
- * rows), the design preview and the code; plus the panel's fine-tuning
- * groups.
+ * the buttons come from pages/tool-layout.css. This sheet is the ladder (one
+ * row per step: token, sample at its true size, px), the Page and Code views,
+ * and the panel: Base size with a real track, Ratio, the family rows, preview
+ * text and the fine-tuning groups.
  *
- * Every selector is scoped under `.tsc-page`, the ToolLayout root. One
- * surface per block: the ladder card holds the bar and the rows, separated by
- * hairlines rather than boxes. */
+ * Every selector is scoped under `.tsc-page`, the ToolLayout root.
+ *
+ * Layout: the work column (.tsc-output) is a size container, so a later
+ * ladder-beside-page split can key off the column's own width with the panel
+ * already counted. Until then every width shows the Scale / Page / Code switch.
+ * The panel is first in the source, so under 1024px it is a card above the
+ * work with no CSS reordering, and from 1024px the grid puts it beside the
+ * work. Phone: a Base and Ratio strip above the ladder, and a non-modal
+ * settings sheet capped at 55% of the viewport.
+ * Docked bar, every width: Save to a project (Save and Copy CSS on a phone). */
 
-.tsc-page .tsc-output { gap: var(--tl-gap); }
+.tsc-page { --tsc-top: calc(var(--chrome-h) + 56px); }
+/* The page scrolls the document, so the dock's height is declared on the root
+   too: a focused row or control scrolls clear of the docked bar, not under it. */
+html:has(.tsc-page),
+.tsc-page { --tsc-dock-h: 64px; }
+html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
+html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
+html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-h) + var(--bkit-toolbar-h, 0px) + 8px); }
+.tsc-page .tsc-output { gap: var(--tl-gap); container-type: inline-size; container-name: tsc-work; }
 
-/* ── The ladder card ────────────────────────────────────────────────────── */
-.tsc-page .tsc-card {
-  display: grid;
-  min-width: 0;
-  border-radius: 18px;
-  border: 1px solid var(--tl-line);
-  background: var(--tl-card);
-  overflow: hidden;
-}
-
-/* base × ratio: the two numbers that make the scale, above what they drive. */
-.tsc-page .tsc-scale-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(180px, .8fr);
-  gap: 10px 14px;
-  align-items: end;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--tl-hair);
-}
-.tsc-page .tsc-scale-term { display: grid; gap: 6px; min-width: 0; }
-.tsc-page .tsc-scale-custom { grid-column: 1 / -1; }
-.tsc-page .tsc-scale-bar .snapv-value { min-width: 58px; font-size: 15px; font-weight: 600; color: var(--tl-ink); }
-.tsc-page .tsc-scale-x { padding-bottom: 9px; font-family: var(--mono); font-size: 15px; color: var(--tl-faint); }
-
-.tsc-page .tsc-select {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--tl-line);
-  border-radius: 12px;
-  background-color: transparent;
-  color: var(--tl-ink);
+/* Labels are Geist, sentence case: the shared section label is uppercase mono. */
+.tsc-page .tl-sec-label,
+.tsc-page .typ-picker .seg-label,
+.tsc-page .tsc-k {
   font-family: var(--font);
-  font-size: 13px;
-  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tl-dim);
+  margin: 0;
 }
-.tsc-page .tsc-scale-select { font-weight: 540; }
-.tsc-page .tsc-select option { background: var(--card); color: var(--t0); }
+.tsc-page .typ-picker .seg-label { margin-bottom: 4px; }
 
-/* The result, and which end of the scale the ladder shows. */
-.tsc-page .tsc-ladder-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--tl-hair);
-}
-.tsc-page .tsc-scale-out { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; min-width: 0; margin: 0; font-size: 12px; color: var(--tl-dim); }
-.tsc-page .tsc-scale-out strong { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--tl-ink); }
-.tsc-page .tsc-scale-range { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
-.tsc-page .tsc-scale-hint { font-size: 12px; color: var(--tl-dim); }
-.tsc-page .tsc-width-switch { flex-wrap: nowrap; }
-.tsc-page .tsc-width-btn { white-space: nowrap; }
+/* ── Views switch ───────────────────────────────────────────────────────── */
+.tsc-page .tsc-view-switch { flex-wrap: nowrap; }
 
-/* The rows. */
-.tsc-page .tsc-ladder { display: flex; flex-direction: column; min-width: 0; width: 100%; }
-.tsc-page .tsc-ladder--clamped { max-width: var(--tsc-w); margin-inline: auto; border-inline: 1px dashed var(--tl-hair); }
+/* ── The ladder ─────────────────────────────────────────────────────────── */
+.tsc-page .tsc-ladder { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: calc(var(--tsc-top) + 4px); }
 .tsc-page .tsc-fit-note {
   margin: 0;
-  padding: 10px 16px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--tl-hair);
   font-size: 12px;
   line-height: 1.45;
   color: var(--tl-soft);
 }
 .tsc-page .tsc-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 16px;
   width: 100%;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 14px 0;
   border: 0;
   background: transparent;
   color: var(--tl-ink);
@@ -96,20 +72,24 @@
 }
 .tsc-page .tsc-row + .tsc-row { border-top: 1px solid var(--tl-hair); }
 .tsc-page .tsc-row:focus-visible { position: relative; z-index: 1; outline-offset: -2px; }
-.tsc-page .tsc-row-meta { display: flex; flex-direction: column; gap: 2px; flex: 0 0 120px; min-width: 0; }
-.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-overflow: ellipsis; }
-.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
-.tsc-page .tsc-row-sub { font-family: var(--mono); font-size: 10px; color: var(--tl-dim); }
+.tsc-page .tsc-row:active { background: var(--tl-wash-2); }
+/* The longest token, --text-base, is about 73px at 11px mono. */
+@media (min-width: 768px) {
+  .tsc-page .tsc-row { grid-template-columns: 84px minmax(0, 1fr) auto; }
+}
+/* Literal values only are mono: the token and the px. */
+.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 11px; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
+.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tsc-page .tsc-row-text {
-  flex: 1;
   min-width: 0;
-  max-width: 100%;
   overflow-wrap: break-word;
   color: var(--tl-ink);
   font-family: var(--tsc-body-ff);
   font-size: var(--tsc-fs);
   font-weight: var(--tsc-body-fw);
-  line-height: var(--tsc-lh);
+  /* A sample is judged by its size, so the ladder holds a tight leading; the
+     Line height control still sets the Page view and the export. */
+  line-height: min(1.2, var(--tsc-lh));
   letter-spacing: var(--tsc-body-ls);
 }
 .tsc-page .tsc-row-text--heading {
@@ -121,14 +101,19 @@
   .tsc-page .tsc-row:hover { background: var(--tl-wash); }
 }
 
-/* ── Design preview / developer handoff ─────────────────────────────────── */
-.tsc-page .tsc-delivery { display: grid; gap: 10px; min-width: 0; margin-top: 8px; }
-.tsc-page .tsc-delivery-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
-.tsc-page .tsc-delivery-head h2 { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
-.tsc-page .tsc-view-switch { flex-wrap: nowrap; }
-.tsc-page .tsc-delivery-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
-
+/* ── Page view ──────────────────────────────────────────────────────────── */
+.tsc-page .tsc-page-view { display: grid; gap: 10px; min-width: 0; }
+.tsc-page .tsc-page-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tsc-page .tsc-page-label { margin: 0; font-size: 12.5px; color: var(--tl-dim); }
+.tsc-page .tsc-width-select { width: auto; min-width: 176px; }
+.tsc-page .tsc-width-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
+/* The page is never scaled: the column is as wide as the chosen width, or the
+   space there is, and the type inside keeps its true px. */
+.tsc-page .tsc-page-col { min-width: 0; }
 .tsc-page .tsc-article {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--tsc-w, 100%);
   padding: clamp(16px, 3vw, 32px);
   border: 1px solid var(--tl-line);
   border-radius: 18px;
@@ -160,38 +145,133 @@
 }
 .tsc-page .tsc-article-small { margin-bottom: 0; color: var(--tl-dim); }
 
+/* ── Code view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
 .tsc-page .tsc-export { max-height: 420px; overflow: auto; font-size: 12px; }
 
-/* The save menu (SaveTypeSystemPanel). The trigger is a toolbar action, so the
-   menu hangs under the toolbar at the right: fixed, because the trigger may be
-   in the overflow and the toolbar is sticky. Below 561px the menu is already a
-   bottom sheet (global.css .svt-menu), so this wrapper adds no box of its own. */
+/* ── The docked bar ──────────────────────────────────────────────────────────
+   Sticky to the foot of the viewport from 768px (fixed on a phone, below),
+   over the brand-kit bar while that is showing. 768 and wider: Save to a
+   project. 390: Save and Copy CSS. */
+.tsc-page .tsc-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  margin: 16px calc(-1 * clamp(12px, 2vw, 20px)) calc(-1 * clamp(12px, 2vw, 20px));
+  padding: 10px max(clamp(12px, 2vw, 20px), env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(clamp(12px, 2vw, 20px), env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--tl-hair);
+  background: var(--bg-0);
+}
+.tsc-page .tsc-dock .tsc-save { white-space: nowrap; }
+
+/* The save menu (SaveTypeSystemPanel) opens upward from the docked bar, at the
+   right where Save is. Below 561px the menu is already a bottom sheet
+   (global.css .svt-menu). */
 .tsc-page .svt-pop { display: contents; }
 @media (min-width: 561px) {
   .tsc-page .svt-pop {
-    --tsc-bar-h: 55px;
     display: block;
-    position: fixed;
-    top: calc(var(--chrome-h) + var(--tsc-bar-h) + 6px);
-    right: var(--tl-pad);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: clamp(12px, 2vw, 20px);
     z-index: 60;
   }
   .tsc-page .svt-pop .svt-menu { position: static; }
 }
-@media (min-width: 561px) and (pointer: coarse) {
-  .tsc-page .svt-pop { --tsc-bar-h: 63px; }
-}
 
 /* ── The panel ──────────────────────────────────────────────────────────── */
+.tsc-page .tsc-scale-bar { display: grid; gap: 14px; }
+.tsc-page .tsc-scale-term { display: grid; gap: 6px; min-width: 0; }
+/* Base: the value field, then a real track (2px line, a fill, a 24px knob) over
+   the native range input. The value stays after the input in the source, so a
+   screen reader reads the slider first. */
+.tsc-page .tsc-range { display: flex; align-items: center; gap: 12px; }
+.tsc-page .tsc-range .snapv-value {
+  order: -1;
+  flex: 0 0 72px;
+  justify-content: flex-start;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-line-2);
+  border-radius: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--tl-ink);
+}
+/* The value field swaps to a number input while it is edited. It keeps the
+   button's slot, width and size, so the row does not shift. */
+.tsc-page .tsc-range .snapv-input {
+  order: -1;
+  flex: 0 0 72px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: left;
+}
+.tsc-page .tsc-range input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.tsc-page .tsc-range input[type="range"]::-webkit-slider-runnable-track { height: 2px; border-radius: 2px; background: var(--tl-line-on); }
+.tsc-page .tsc-range input[type="range"]::-moz-range-track { height: 2px; border-radius: 2px; background: var(--tl-line-on); }
+.tsc-page .tsc-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -11px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-0);
+  background: var(--tl-ink);
+}
+.tsc-page .tsc-range input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-0);
+  background: var(--tl-ink);
+}
+.tsc-page .tsc-range input[type="range"]:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 4px; }
+
+.tsc-page .tsc-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background-color: transparent;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tsc-page .tsc-select option { background: var(--card); color: var(--t0); }
+.tsc-page .tsc-scale-out { display: grid; gap: 2px; margin: 0; font-size: 12.5px; color: var(--tl-dim); }
+/* The summary is plain Geist: only the px values inside it are literal. */
+.tsc-page .tsc-scale-range { font-variant-numeric: tabular-nums; color: var(--tl-ink); }
+
 .tsc-page .tsc-sample-input {
   width: 100%;
   min-width: 0;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--tl-hair);
+  border: 1px solid var(--tl-line);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  background: transparent;
   color: var(--tl-ink);
   font-family: var(--font);
   font-size: 13px;
@@ -199,10 +279,17 @@
 .tsc-page .tsc-sample-input::placeholder { color: var(--tl-faint); }
 .tsc-page .tsc-sample-input:focus,
 .tsc-page .tsc-select:focus { border-color: var(--tl-line-on); }
-.tsc-page .tsc-weights { gap: 4px; margin-top: -2px; }
+.tsc-page .tsc-weights { gap: 4px; margin-top: -6px; margin-bottom: 10px; }
 
-/* Fine tuning: a text disclosure, then groups separated by hairlines — never
-   a box inside the panel. */
+/* The family rows: the name in its own face, with Browse; no box. */
+.tsc-page .typ-picker { margin-bottom: 8px; }
+.tsc-page .typ-picker .typ-picker-trigger { padding: 4px 0; border: 0; background: transparent; border-radius: 0; }
+.tsc-page .typ-picker .typ-picker-face { font-size: 22px; }
+.tsc-page .typ-picker .typ-picker-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.tsc-page .typ-picker .typ-picker-meta { font-family: var(--font); font-size: 12px; color: var(--tl-dim); text-transform: capitalize; }
+.tsc-page .typ-picker .typ-picker-cue { display: inline-flex; align-items: center; min-height: 36px; }
+
+/* Fine tuning: a text disclosure, then groups separated by hairlines. */
 .tsc-page .tsc-tuning-toggle {
   display: inline-flex;
   align-items: center;
@@ -222,40 +309,131 @@
 .tsc-page .tsc-tuning-caret { color: var(--tl-faint); transition: transform .16s var(--tl-ease); }
 .tsc-page .tsc-tuning-toggle[aria-expanded="true"] .tsc-tuning-caret { transform: rotate(90deg); }
 .tsc-page .tsc-tuning:not([hidden]) { display: grid; gap: 0; }
-.tsc-page .tsc-bp {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-  margin: 0;
-  padding: 14px 0;
-  border: 0;
-  border-top: 1px solid var(--tl-hair);
-}
+.tsc-page .tsc-bp { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 14px 0; border: 0; border-top: 1px solid var(--tl-hair); }
 .tsc-page .tsc-bp legend { float: left; width: 100%; margin: 0 0 2px; padding: 0; }
 .tsc-page .tsc-slider-row { display: grid; gap: 4px; min-width: 0; }
 .tsc-page .tsc-slider-k { font-size: 12.5px; color: var(--tl-dim); }
 .tsc-page .tsc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
+/* The sheet's row and head exist on a phone only. */
+.tsc-page .tsc-sheet-row,
+.tsc-page .tsc-sheet-head { display: none; }
+.tsc-page .tsc-sheet-body { display: contents; }
+
+/* ── The grid ────────────────────────────────────────────────────────────────
+   The panel is first in the source, so under 1024 it reads, tabs and shows
+   above the work with no `order`. From 1024 it takes the right-hand column
+   and the work the left. */
+.tsc-page .tl-grid.tsc-grid { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) {
+  .tsc-page .tl-grid.tsc-grid { grid-template-columns: minmax(0, 1fr) 336px; }
+  .tsc-page .tsc-output { grid-column: 1; grid-row: 1; }
+  .tsc-page .tsc-config { grid-column: 2; grid-row: 1; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tsc-page .tsc-scale-bar { grid-template-columns: 1fr 1fr; align-items: end; }
+}
+
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .tsc-page .tsc-scale-bar { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; }
-  .tsc-page .tsc-scale-x { display: none; }
-  .tsc-page .tsc-ladder-head { padding: 10px 12px; }
-  .tsc-page .tsc-width-switch { width: 100%; }
-  .tsc-page .tsc-width-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 6px; font-size: 11.5px; }
-  .tsc-page .tsc-row { align-items: flex-start; flex-direction: column; gap: 6px; padding: 12px; }
-  .tsc-page .tsc-row-meta { flex-direction: row; flex-basis: auto; flex-wrap: wrap; gap: 8px; }
+  .tsc-page .tl-body { padding-bottom: calc(var(--tsc-dock-h) + 12px); }
+  /* The panel dissolves: its first section is the Base and Ratio strip above
+     the ladder, its row opens the sheet, and the sheet floats. They come
+     before the ladder in the source, so nothing is reordered. */
+  .tsc-page .tsc-config { display: contents; }
+  .tsc-page .tsc-sec-scale { padding: 0; border: 0; }
+  .tsc-page .tsc-scale-bar { grid-template-columns: 128px minmax(0, 1fr); gap: 8px; align-items: end; }
+  .tsc-page .tsc-scale-term--base .tsc-range input[type="range"] { display: none; }
+  .tsc-page .tsc-scale-term--base .snapv-value,
+  .tsc-page .tsc-scale-term--base .snapv-input { order: 0; flex: 1; }
+  .tsc-page .tsc-scale-out { display: none; }
+  .tsc-page .tsc-sheet-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--tl-hair);
+    background: transparent;
+    color: var(--tl-ink);
+    font-family: var(--font);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tsc-page .tsc-row { grid-template-columns: 1fr auto; grid-template-areas: "name num" "text text"; gap: 4px 12px; padding: 12px 0; }
+  .tsc-page .tsc-row-name { grid-area: name; }
+  .tsc-page .tsc-row-num { grid-area: num; text-align: right; }
+  .tsc-page .tsc-row-text { grid-area: text; }
+  .tsc-page .tsc-row-prefix,
+  .tsc-page .tsc-row-rem { display: none; }
+
+  .tsc-page .tsc-sheet {
+    --tsc-sheet-bottom: calc(var(--tsc-dock-h) + env(safe-area-inset-bottom, 0px));
+    display: none;
+    position: fixed;
+    inset-inline: 0;
+    bottom: var(--tsc-sheet-bottom);
+    z-index: 40;
+    flex-direction: column;
+    /* At most 55% of the screen, and short enough that the top steps stay in
+       view above it. The contents scroll inside. */
+    max-height: min(55dvh, max(200px, calc(100dvh - var(--tsc-top) - var(--tsc-sheet-bottom) - 330px)));
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--tl-line-2);
+    border-bottom: 0;
+    background: var(--tl-card);
+    box-shadow: 0 -8px 40px rgb(0 0 0 / .22);
+  }
+  html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
+  .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
+  .tsc-page .tsc-sheet-title { font-size: 12.5px; color: var(--tl-dim); }
+  .tsc-page .tsc-sheet-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: max(0px, env(safe-area-inset-left, 0px)); }
+
+  .tsc-page .tsc-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 41;
+    justify-content: space-between;
+    margin: 0;
+    height: var(--tsc-dock-h);
+    box-sizing: border-box;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: var(--bg-0);
+    border-top: 1px solid var(--tl-hair);
+  }
+  html.has-tabbar .tsc-page .tsc-dock { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
+  html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  /* The walkthrough bar takes the foot of the screen and lifts the dock, so the sheet lifts with it. */
+  html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--bkit-h)); }
+  .tsc-page .tsc-page-bar { flex-wrap: wrap; }
 }
+html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-h); }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .tsc-page .tsc-sample-input,
-  .tsc-page .tsc-select { font-size: 16px; }
+  .tsc-page .tsc-select,
+  .tsc-page .tsc-range .snapv-input { font-size: 16px; }
 }
 @media (pointer: coarse) {
   /* 8px between neighbouring targets, and every control 44px on a finger. */
   .tsc-page .tl-pills { gap: 8px; }
   .tsc-page .snapv input[type="range"] { height: 44px; }
+  .tsc-page .tsc-range .snapv-value,
+  .tsc-page .tsc-range .snapv-input,
   .tsc-page .tsc-sample-input,
   .tsc-page .tsc-select,
-  .tsc-page .tsc-tuning-toggle { height: 44px; min-height: 44px; font-size: 16px; }
+  .tsc-page .tsc-tuning-toggle,
+  .tsc-page .typ-picker .typ-picker-cue { height: 44px; min-height: 44px; font-size: 16px; }
+  .tsc-page .tsc-row { min-height: 44px; }
+}
+html[data-reduced-motion="true"] .tsc-page .tsc-row,
+html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-row,
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-tuning-caret { transition: none; }
 }

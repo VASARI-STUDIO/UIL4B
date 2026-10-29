@@ -52,7 +52,7 @@ const HANDOFF = [
   // drawn screen has no cross-tool links, and its back button is the shared
   // toolbar's (see 100-tool-toolbar-one-row).
   ['/create/type-scale', '.tsc-handoff', 'Find a pairing'],
-  ['/create/font-pair', '.fpr-handoff', 'Build a scale'],
+  ['/create/font-pair', '.fpr-handoff', 'Build a type scale'],
   ['/create/font-gallery', '.fg-pair-link', 'Build a font pair'],
   // '/create/contrast' is not listed: its drawn screen has no
   // cross-tool links (the Create menu carries them), so the link is gone.

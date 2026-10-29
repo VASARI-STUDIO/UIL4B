@@ -33,6 +33,11 @@ for (const width of [390, 820]) {
       let seen = 0
       for (const [route, expected] of ROUTES) {
         await go(page, route)
+        // Type Scale's preview field lives in the settings sheet on a phone, which
+        // is closed on arrival, so open it before counting what a person can reach.
+        if (route === '/create/type-scale' && width < 768) {
+          await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
+        }
         await expect.poll(() => page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.getClientRects().length).length, TEXTLIKE), {
           message: `${route} never showed its ${expected} text field(s)`, timeout: 15000,
         }).toBeGreaterThanOrEqual(expected)
