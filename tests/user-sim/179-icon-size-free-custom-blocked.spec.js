@@ -49,7 +49,7 @@ const actions = (page) => ({
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
 })
 const reason = (page) => page.getByRole('status').filter({ hasText: 'Custom sizes are Pro' })
-const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom size/ })
+const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
 
 for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out viewer', null]]) {
@@ -73,7 +73,7 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       await sizeInput(page).fill('40')
       await sizeInput(page).press('Enter')
 
-      await expect(customRadio(page)).toHaveAccessibleName('Custom size, 40 pixels')
+      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
       for (const [label, button] of Object.entries(actions(page))) await expect(button, `${label} is on for a free custom size`).toBeDisabled()
       await expect(reason(page), 'the reason is a status line').toHaveText(REASON)
       await ctx.close()

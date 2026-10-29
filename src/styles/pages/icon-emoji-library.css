@@ -66,7 +66,6 @@
    same voice as the values beside them; the design sets labels in Geist and
    keeps mono for what a user copies. */
 .iel-page .icust-row>label,
-.iel-page .icust-pro-head,
 .iel-page .icust-code-label,
 .iel-page .icust-similar-label{
   font-family:var(--font);font-size:12.5px;font-weight:560;
@@ -99,8 +98,7 @@
 @media(max-width:560px){
   .iel-page .icust-stroke-note{padding-left:0;min-height:calc(2em * 1.4)}
 }
-.iel-page .icust-pro{border-radius:var(--radius);background:transparent}
-/* The Pro word on the line-style box. It rides the nav's `.pnav-pop-tag`
+/* The "Full" word on a project in the save picker. It rides the nav's `.pnav-pop-tag`
    class, which is a 999px accent pill painted in `--accent-strong`. Here it
    is a quiet 6px tag in the derived accent. */
 .iel-page .pnav-pop-tag{
@@ -324,10 +322,52 @@
   background:var(--card);
   box-shadow:0 -1px 0 var(--border);
 }
-/* The Pro line-style group was a bordered box inside the panel — a panel in
-   a panel, which the system does not allow. It is a section of the one surface now,
-   set apart by a hairline and space. */
-.iel-page .icust-pro{border:0;border-top:1px solid var(--border);border-radius:0;padding:14px 0 0;background:transparent}
+/* The line style: three tiles, each drawing the icon in its own style, and a disclosure
+   that sets the ends and corners apart. A section of the one surface, set apart by a
+   hairline and space (not a box in a box). Names, notes and the Pro word are in the UI
+   face; nothing here is a literal value, so nothing is mono. */
+.iel-page .icust-line{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--border)}
+.iel-page .icust-line-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.iel-page .icust-line-title{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
+.iel-page .icust-line-hint{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--accent-mid)}
+.iel-page .icust-line-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.iel-page .icust-line-tile{
+  box-sizing:border-box;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;
+  border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--t0);text-align:center;cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .icust-line-tile:hover{border-color:var(--bh)}}
+.iel-page .icust-line-tile[aria-checked="true"]{background:var(--accent-wash);border-color:var(--accent-border)}
+.iel-page .icust-line-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-line-art{display:grid;place-items:center;flex:none;width:56px;height:56px;line-height:0}
+.iel-page .icust-line-art svg{display:block;flex:none;max-width:none;width:56px;height:56px;color:var(--t0)}
+.iel-page .icust-line-name{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 6px;font-family:var(--font);font-size:13px;line-height:18px;font-weight:560;color:var(--t0)}
+.iel-page .icust-line-pro{font-family:var(--font);font-size:12px;font-weight:560;color:var(--accent-mid)}
+.iel-page .icust-line-note{font-family:var(--font);font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
+.iel-page .icust-line-block{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t1)}
+.iel-page .icust-line-toggle{
+  align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0;padding:0 4px 0 0;
+  border:0;border-radius:var(--radius-xs);background:none;font-family:var(--font);font-size:12.5px;font-weight:560;color:var(--t2);cursor:pointer;
+  transition:color 150ms var(--ease-out);
+}
+.iel-page .icust-line-toggle svg{flex:none;transition:transform 150ms var(--ease-out)}
+.iel-page .icust-line-toggle[aria-expanded="true"] svg{transform:rotate(90deg)}
+.iel-page .icust-line-toggle[aria-disabled="true"]{cursor:default}
+@media(hover:hover){.iel-page .icust-line-toggle:not([aria-disabled="true"]):hover{color:var(--t0)}}
+.iel-page .icust-line-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-line-split{display:flex;flex-direction:column;gap:8px}
+.iel-page .icust-line-split[hidden]{display:none}
+.iel-page .icust-line-split-note{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
+/* The sheet is tight: the tiles keep their names and drop the one-line notes. Touch targets
+   are 44px, with 8px between them. */
+@media(max-width:640px){.iel-page .icust-line-note{display:none}}
+@media(pointer:coarse){
+  .iel-page .icust-line-tiles{gap:8px}
+  .iel-page .icust-line-tile{min-height:44px}
+  .iel-page .icust-line-toggle{min-height:44px}
+  .iel-page .icust-line-split .icust-seg button{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){.iel-page .icust-line-toggle svg{transition:none}}
 
 
 /* ── The masthead tablist ─────────────────────────────────────────────────

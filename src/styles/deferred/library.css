@@ -323,10 +323,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    height and its "Colour" label, shows no control and cannot take focus, so no option
    flashes and then goes. */
 .icust-row--wait>:not(label){visibility:hidden}
-/* Pro-gated line-style controls: buttons preview their own cap/join effect */
-.icust-seg--icon button{padding:6px}
-.icust-pro{display:flex;flex-direction:column;gap:12px;margin-top:2px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
-.icust-pro-head{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 /* Signed-out upgrade gate — a small alert dialog floated over the customizer
    when a visitor taps a Pro-locked line-style control. (The overlay's
    backdrop-filter makes it the containing block for this fixed backdrop.) */

@@ -1,6 +1,8 @@
 // The customiser's export size: the five free presets, the custom range, and what
 // counts as a Pro setting. DOM-free so the rules are testable on their own.
 
+import { isProLineStyle } from './iconLineStyle.js'
+
 /** The sizes the rail draws, and the only ones a free viewer can export. */
 export const ICON_SIZE_PRESETS = Object.freeze([16, 20, 24, 32, 48])
 
@@ -41,13 +43,17 @@ export function parseCustomSize(raw) {
   return { value, clamped: value !== typed, typed }
 }
 
+/** Whether a committed size is one only Pro can export: anything but the five presets. */
+export const isProSize = (size) => !isPresetSize(size)
+
 /**
  * Whether the viewer's current settings include something only Pro can export.
- * A committed size that is not one of the five presets is a Pro setting for a
- * viewer who is not Pro; a preset never is, and Pro viewers have none. The line
- * style joins this check in the Pro preview slice.
+ * A committed size that is not one of the five presets, or a line style other than
+ * round ends with round corners, is a Pro setting for a viewer who is not Pro; Pro
+ * viewers have none. `cap` and `join` default to round, so a caller with no line
+ * style to report gets the size check alone.
  */
-export function isProSetting({ size, isPro }) {
+export function isProSetting({ size, isPro, cap, join }) {
   if (isPro) return false
-  return !isPresetSize(size)
+  return isProSize(size) || isProLineStyle(cap, join)
 }

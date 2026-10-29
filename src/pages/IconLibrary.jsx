@@ -37,8 +37,11 @@ import {
 } from '../utils/iconStroke'
 import {
   CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
-  NARROW_RAIL_BELOW, isPresetSize, isProSetting, parseCustomSize, railPresets,
+  NARROW_RAIL_BELOW, isPresetSize, isProSetting, isProSize, parseCustomSize, railPresets,
 } from '../utils/iconSize'
+import {
+  LINE_CORNERS, LINE_ENDS, LINE_STYLES, isProLineStyle, lineStyleOf,
+} from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
 import {
@@ -1193,19 +1196,10 @@ function recentPayload(icon) {
   return null
 }
 
-// Pro-gated line-style options. Each button previews its OWN effect: a thick
-// stub whose ends / corner render in the exact cap or join it sets, so the
-// choice is visual, not a word.
-const CAP_OPTS = [
-  { v: 'round', label: 'Round ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="round" /></svg> },
-  { v: 'butt', label: 'Flat ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="butt" /></svg> },
-  { v: 'square', label: 'Square ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="square" /></svg> },
-]
-const JOIN_OPTS = [
-  { v: 'round', label: 'Round corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="round" /></svg> },
-  { v: 'miter', label: 'Sharp corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="miter" /></svg> },
-  { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
-]
+// A line-style tile draws the icon at 56px with a stroke of 3 in the 24-unit grid, thick
+// enough that the ends and corners show. The stroke is in pixels, as the customiser's is.
+const LINE_TILE_PX = 56
+const LINE_TILE_STROKE_PX = 3 * LINE_TILE_PX / 24
 
 // One "Similar in this pack" tile. It stays invisible (but in layout, so the
 // 44px row never shifts) until its glyph has loaded, then fades in: an empty
@@ -1265,11 +1259,12 @@ function SimilarSection({ list, srcFor, onPick }) {
 
 // One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
 // pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
-function SizeArt({ markup }) {
+function SizeArt({ markup, className = 'icust-size-art' }) {
   const ref = useRef(null)
   useLayoutEffect(() => { if (ref.current) ref.current.innerHTML = markup || '' }, [markup])
-  return <span className="icust-size-art" ref={ref} aria-hidden="true" />
+  return <span className={className} ref={ref} aria-hidden="true" />
 }
+const LineArt = ({ markup }) => <SizeArt markup={markup} className="icust-line-art" />
 
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
@@ -1333,6 +1328,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
   const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || CUSTOMISER_DEFAULTS.cap)
   const [join, setJoin] = useState(() => (icon?.custom && icon.join) || CUSTOMISER_DEFAULTS.join)
+  // The "set ends and corners separately" rows. Open when someone opens them, and held open
+  // while the pair matches no tile (see `splitShown`).
+  const [splitOpen, setSplitOpen] = useState(() => !lineStyleOf(cap, join))
   const [rotate, setRotate] = useState(CUSTOMISER_DEFAULTS.rotate)
   const [flipH, setFlipH] = useState(CUSTOMISER_DEFAULTS.flipH)
   const [flipV, setFlipV] = useState(CUSTOMISER_DEFAULTS.flipV)
@@ -1364,7 +1362,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [newProjOpen, setNewProjOpen] = useState(false)
   const [newProjName, setNewProjName] = useState('')
 
-  // Pro asks (daily copy cap, project cap, line styles) all open the canonical
+  // Pro asks (daily copy cap, project cap) all open the canonical
   // Wave-1 Pro modal — one upgrade surface, no per-page variants. The edit in
   // progress here stays untouched behind the overlay, so nothing is lost.
   const showProGate = (kind) => {
@@ -1376,10 +1374,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       projects: {
         title: 'You’re at the free project limit',
         subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
-      },
-      line: {
-        title: 'Upgrade to Pro to use this feature',
-        subtitle: 'Line styles let you fine-tune stroke ends and corners — and Pro unlocks every other colour and icon tool too.',
       },
     }
     // `gate` is DERIVED from the kind rather than written into each preset, so
@@ -1565,10 +1559,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [onClose])
 
   const strokeCaption = strokeScaleCaption({ size, stroke, absolute: absStroke })
-  // Free viewers can preview a custom size but not take it away: Copy, Download and
-  // Save stay off until it is a preset again. The Pro preview slice replaces this
-  // with the Upgrade button.
-  const exportBlocked = isProSetting({ size, isPro })
+  // Free viewers can preview a custom size or a Pro line style but not take it away:
+  // Copy, Download and Save stay off until both are free again. The Pro preview slice
+  // replaces this with the Upgrade button.
+  const exportBlocked = isProSetting({ size, isPro, cap, join })
+  const sizeBlocked = !isPro && isProSize(size)
+  const lineBlocked = !isPro && isProLineStyle(cap, join)
+  const lineStyle = lineStyleOf(cap, join)
+  const splitShown = splitOpen || !lineStyle
+  const pickLineStyle = (s) => { setCap(s.cap); setJoin(s.join); markDirty() }
   // The rail's five drawings: the icon exported at each preset with the settings now on screen.
   const railArt = useMemo(() => {
     if (!baseSvgText) return {}
@@ -1580,6 +1579,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }
     return out
   }, [baseSvgText, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+  // The line-style tiles' three drawings: the same icon, each in one style.
+  const lineArt = useMemo(() => {
+    if (!baseSvgText || !isStroke) return {}
+    const out = {}
+    for (const s of LINE_STYLES) {
+      out[s.id] = serializeCustomizedSvg(baseSvgText, {
+        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke: LINE_TILE_STROKE_PX,
+        isStroke, absStroke: false, cap: s.cap, join: s.join, rotate, flipH, flipV,
+      })
+    }
+    return out
+  }, [baseSvgText, themeInk, isColoredPack, isStroke, rotate, flipH, flipV])
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1815,6 +1826,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setAbsStroke(d.absStroke)
     setCap(d.cap)
     setJoin(d.join)
+    setSplitOpen(false)
     setRotate(d.rotate)
     setFlipH(d.flipH)
     setFlipV(d.flipV)
@@ -2085,7 +2097,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     type="button"
                     role="radio"
                     aria-checked={customShown}
-                    aria-label={customShown && customValue != null ? `Custom size, ${customValue} pixels` : 'Custom size'}
+                    aria-label={customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}
                     tabIndex={customShown ? 0 : -1}
                     className="icust-size-cell icust-size-cell--custom"
                     onClick={pickCustom}
@@ -2125,7 +2137,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     )}
                   </div>
                 )}
-                {exportBlocked && (
+                {sizeBlocked && (
                   <p className="icust-size-block" role="status">
                     Custom sizes are Pro. Preview <span className="icust-mono">{size}px</span> here; copy, download and save need Pro.
                   </p>
@@ -2232,35 +2244,80 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
 
               {isStroke && (
-                <div
-                  className={`icust-pro${isPro ? '' : ' is-locked'}`}
-                  onClick={!isPro ? () => showProGate('line') : undefined}
-                >
-                  <div className="icust-pro-head">
-                    <span>Line style</span>
-                    {!isPro && <span className="pnav-pop-tag">Pro</span>}
+                <div className="icust-line">
+                  <div className="icust-line-head">
+                    <span className="icust-line-title" id="icust-line-label">Line style</span>
+                    {!isPro && <span className="icust-line-hint">Sharp and Crisp are Pro</span>}
                   </div>
-                  <div className="icust-row">
-                    <label>Ends</label>
-                    <div className="icust-seg icust-seg--icon">
-                      {CAP_OPTS.map(o => (
-                        <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) return; setCap(o.v); markDirty() }}>
-                          {o.icon}
+                  {/* Each tile draws the icon being edited in its own style. Pressing a Pro
+                      tile previews it for a free viewer; the export block below is what holds
+                      the file back. */}
+                  <div className="icust-line-tiles" role="radiogroup" aria-labelledby="icust-line-label" onKeyDown={steerRadios}>
+                    {LINE_STYLES.map((s, i) => {
+                      const on = lineStyle?.id === s.id
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          aria-label={s.pro && !isPro ? `${s.name}, Pro` : s.name}
+                          aria-describedby={`icust-line-note-${s.id}`}
+                          tabIndex={on || (!lineStyle && i === 0) ? 0 : -1}
+                          className="icust-line-tile"
+                          data-style={s.id}
+                          onClick={() => pickLineStyle(s)}
+                        >
+                          <LineArt markup={lineArt[s.id]} />
+                          <span className="icust-line-name">
+                            {s.name}
+                            {s.pro && !isPro && <span className="icust-line-pro">Pro</span>}
+                          </span>
+                          <span className="icust-line-note" id={`icust-line-note-${s.id}`}>{s.note}</span>
                         </button>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                  <div className="icust-row">
-                    <label>Corners</label>
-                    <div className="icust-seg icust-seg--icon">
-                      {JOIN_OPTS.map(o => (
-                        <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) return; setJoin(o.v); markDirty() }}>
-                          {o.icon}
-                        </button>
-                      ))}
+                  {lineBlocked && (
+                    <p className="icust-line-block" role="status">
+                      {lineStyle
+                        ? `${lineStyle.name} is a Pro line style. Preview it here; copy, download and save need Pro.`
+                        : 'That mix of ends and corners is Pro. Preview it here; copy, download and save need Pro.'}
+                    </p>
+                  )}
+                  {/* The tiles pair an end with a corner. This sets them apart; a pair no tile
+                      draws leaves every tile unselected, so the rows stay open to show it. */}
+                  <button
+                    type="button"
+                    className="icust-line-toggle"
+                    aria-expanded={splitShown}
+                    aria-controls="icust-line-split"
+                    aria-disabled={lineStyle ? undefined : true}
+                    onClick={() => { if (lineStyle) setSplitOpen(o => !o) }}
+                  >
+                    <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                    Set ends and corners separately
+                  </button>
+                  <div className="icust-line-split" id="icust-line-split" hidden={!splitShown}>
+                    <div className="icust-row">
+                      <label id="icust-ends-label">Ends</label>
+                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-ends-label" onKeyDown={steerRadios}>
+                        {LINE_ENDS.map(o => (
+                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1} className={cap === o.v ? 'active' : ''}
+                            onClick={() => { setSplitOpen(true); setCap(o.v); markDirty() }}>{o.name}</button>
+                        ))}
+                      </div>
                     </div>
+                    <div className="icust-row">
+                      <label id="icust-corners-label">Corners</label>
+                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-corners-label" onKeyDown={steerRadios}>
+                        {LINE_CORNERS.map(o => (
+                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1} className={join === o.v ? 'active' : ''}
+                            onClick={() => { setSplitOpen(true); setJoin(o.v); markDirty() }}>{o.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                    {!isPro && <p className="icust-line-split-note">Anything other than Round ends with Round corners is Pro.</p>}
                   </div>
                 </div>
               )}

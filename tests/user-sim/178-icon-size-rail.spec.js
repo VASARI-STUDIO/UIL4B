@@ -56,7 +56,7 @@ async function openCustomiser(browser, { width = 1440, height = 900, touch = fal
 }
 
 const radio = (page, name) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name })
-const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom size/ })
+const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
 const caption = (page) => page.locator('.icust-stage-cap')
 
@@ -113,7 +113,7 @@ test.describe('size rail (desktop)', () => {
     await sizeInput(page).fill('40')
     await sizeInput(page).press('Enter')
     await expect(customRadio(page)).toHaveAttribute('aria-checked', 'true')
-    await expect(customRadio(page)).toHaveAccessibleName('Custom size, 40 pixels')
+    await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
     await expect(customRadio(page).locator('.icust-size-num')).toHaveText('40')
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 40px.')
     for (const n of PRESETS) await expect(radio(page, `${n} pixels`)).toHaveAttribute('aria-checked', 'false')
@@ -294,7 +294,7 @@ test.describe('size rail (phone)', () => {
     await sizeInput(page).fill('20')
     await sizeInput(page).press('Enter')
     // 20 has no cell on this row, so it shows as the custom value and exports at 20.
-    await expect(customRadio(page)).toHaveAccessibleName('Custom size, 20 pixels')
+    await expect(customRadio(page)).toHaveAccessibleName('Custom, 20 pixels')
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 20px.')
     expect(await copiedSvg(page)).toMatch(/<svg[^>]* width="20" height="20"/)
     await ctx.close()

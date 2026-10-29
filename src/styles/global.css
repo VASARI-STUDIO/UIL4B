@@ -3282,15 +3282,6 @@ html.lenis{scroll-behavior:auto!important}
   .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
 }
 .icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
-.icust-seg--icon svg{display:block;width:22px;height:22px;margin:0 auto;color:var(--t2)}
-.icust-seg--icon button:hover svg{color:var(--t0)}
-.icust-seg--icon button.active svg{color:var(--t0)}
-.icust-pro.is-locked .icust-seg--icon button{cursor:pointer}
-.icust-pro.is-locked .icust-seg--icon svg{opacity:.55}
-.icust-pro.is-locked .icust-seg--icon button.active svg{opacity:1}
-/* Locked panel is fully clickable — any click opens the Pro upgrade modal
-   (no hover veil; less disruptive to the flow). */
-.icust-pro.is-locked{cursor:pointer}
 /* Footer + Pro save-lock — the actions share the row width evenly. On the icon
    page the footer holds one row at every width (see icon-emoji-library.css); the
    wrap here is the fallback for anywhere else it is used. */
