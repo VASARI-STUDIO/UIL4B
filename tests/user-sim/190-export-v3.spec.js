@@ -256,10 +256,6 @@ test.describe('the sizes the spec names', () => {
   test.describe('at 768', () => {
     test.use({ viewport: { width: 768, height: 1024 } })
     test('the rail is 208px and every target is at least 44px tall', async ({ page }) => {
-      // PRODUCT BUG (criterion 18): "Add logo" is 40px tall at 768
-      // (src/styles/deferred/overlay.css:52, `.exp-logo-acts .btn-s{min-height:40px}`).
-      // Remove this line when the button is 44px.
-      test.fail(true, 'Add logo is 40px tall at 768')
       watch(page, 'a designer exporting at 768px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
@@ -304,10 +300,6 @@ test.describe('the sizes the spec names', () => {
     })
 
     test('the title, the type control, the file pills and the dock text share one 16px left edge', async ({ page }) => {
-      // PRODUCT BUG (criterion 19, the old 16px phone gutter): the title starts at 24px because the
-      // phone head keeps the rail's left padding (src/styles/pages/export-dialog.css:24, not reset at :127).
-      // Remove this line when the head's left padding is 16px.
-      test.fail(true, 'the title starts at 24px, not 16px, at 390')
       watch(page, 'a designer exporting at 390px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)

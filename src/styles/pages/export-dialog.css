@@ -124,7 +124,7 @@
 .xd[data-layout="strip"] :is(.xd-dock-line,.xd-error){max-height:6.5em;overflow-y:auto}
 .xd[data-layout="strip"] .xd-dock-acts > .xd-act{flex:1 1 0;min-height:48px;min-width:0}
 .xd[data-layout="strip"] .xd-x{width:44px;height:44px}
-.xd[data-layout="strip"] .xd-head{padding-top:env(safe-area-inset-top);padding-right:var(--s-2);min-height:calc(var(--xd-head) + env(safe-area-inset-top))}
+.xd[data-layout="strip"] .xd-head{padding-top:env(safe-area-inset-top);padding-right:var(--s-2);padding-left:var(--s-4);min-height:calc(var(--xd-head) + env(safe-area-inset-top))}
 
 /* Strip: the type picker is a segmented control, the categories a row of chips. */
 .xd[data-layout="strip"] .xd-nav{gap:var(--s-2);padding:var(--s-3) var(--s-4);overflow:visible;border-right:0;border-bottom:1px solid var(--border)}
@@ -197,3 +197,5 @@ html[data-reduced-motion="true"] .xd{animation-duration:100ms}
 html[data-reduced-motion="true"] .xd-card{animation-name:xd-fade;animation-duration:100ms}
 html[data-reduced-motion="true"] .xd-swap{animation-duration:100ms}
 html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-preview-retry){transition:none}
+/* The logo buttons come from the shared identity fields at 40px; below 1024 every target here is 44px. */
+@media (max-width:1023.98px){.xd .exp-logo-acts .btn-s{min-height:44px}}
