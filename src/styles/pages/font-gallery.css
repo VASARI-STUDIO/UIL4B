@@ -37,28 +37,7 @@
 @media (pointer:coarse){
   :where(.fg-page) .fg-compare-chip{min-height:44px}
 }
-:where(.fg-page) .fg-card{gap:13px;padding:18px 0 16px;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-card:hover{background:var(--hvr)}
-:where(.fg-page) .fg-card:hover .lbry-card-shot{transform:none;box-shadow:none}
-:where(.fg-page) .fg-card-name{font-size:16px;line-height:1.3;letter-spacing:-.015em}
-:where(.fg-page) .fg-card-info{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:capitalize}
-:where(.fg-page) .fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
-@media (max-width:720px){
-  :where(.fg-page) .fg-card .lbry-card-foot{padding-left:34px}
-}
-:where(.fg-page) .fg-count{margin:0 0 14px;font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:.02em}
-:where(.fg-page) .fg-grid{margin:0 0 var(--s-5);padding:0;list-style:none}
-:where(.fg-page) .fg-card-preview{display:flex;flex-direction:column;gap:10px;overflow:hidden;font-family:var(--fg-ff)}
-:where(.fg-page) .fg-card-preview--pending{font-family:var(--font)}
 :where(.fg-page) .fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
-:where(.fg-page) .fg-card-skeleton--sample{width:76%;height:52px}
-:where(.fg-page) .fg-card-skeleton--body{width:92%;height:38px}
-:where(.fg-page) .fg-card-sample{display:block;flex:0 0 auto;height:52px;font-size:42px;line-height:52px;letter-spacing:-.02em;color:var(--t0);font-weight:var(--fg-fw-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-:where(.fg-page) .fg-card-pangram{display:-webkit-box;flex:0 0 auto;height:38px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:19px;font-weight:var(--fg-fw-b);color:var(--t1)}
-:where(.fg-page) .fg-card-compare{z-index:2;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-0);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-:where(.fg-page) .fg-card-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-:where(.fg-page) .fg-card-compare:hover{border-color:var(--bh);color:var(--t0)}
-:where(.fg-page) .fg-card-compare--on{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
 :where(.fg-page) .fg-sentinel{height:1px}
 :where(.fg-page) .fg-more{display:flex;justify-content:center;margin-bottom:var(--s-5)}
 :where(.fg-page) .fg-compare-tray{position:sticky;bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
@@ -141,59 +120,8 @@
 @media (max-width:767px){
   html.has-tabbar :where(.fg-page) .fg-compare-tray{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
 }
-@media (pointer:coarse){
-  :where(.fg-page) .fg-card-compare{width:44px;height:44px;opacity:1}
-}
 .fg-page{padding-bottom:72px}
 :where(.fg-page) .fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-:where(.fg-page) .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
-:where(.fg-page) .fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
-:where(.fg-page) .fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
-:where(.fg-page) .fg-card-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-:where(.fg-page) .fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
-:where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
-:where(.fg-page) .fg-card-skeleton--sample{height:var(--fg-line)}
-:where(.fg-page) .fg-card-skeleton--body{height:24px}
-:where(.fg-page) .fg-card-skeleton--ladder{width:44%;height:26px}
-:where(.fg-page) .fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
-:where(.fg-page) .fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
-:where(.fg-page) .fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
-:where(.fg-page) .fg-card-step{font-weight:var(--fg-fw)}
-:where(.fg-page) .fg-card-compare{position:static;opacity:1;transform:none}
-:where(.fg-page) .fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
-.fg-page .typ-loading{min-height:0;padding:var(--s-6) var(--s-5) var(--s-5)}
-:where(.fg-page) .fg-grid--skeleton{--lbry-col-min:100%}
-:where(.fg-page) .fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-skel-row:last-child{border-bottom-color:transparent}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
-@media (min-width:721px) and (max-width:959px){
-  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:48px}
-  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;line-clamp:2;white-space:normal}
-}
-@media (max-width:720px){
-  :where(.fg-page) .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  :where(.fg-page) .fg-card-index{padding-top:2px;font-size:10px}
-  :where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
-  :where(.fg-page) .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
-  :where(.fg-page) .fg-card-scripts{display:none}
-  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:40px}
-  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
-  :where(.fg-page) .fg-card-ladder,:where(.fg-page) .fg-card-skeleton--ladder{height:24px}
-  :where(.fg-page) .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}
-  :where(.fg-page) .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:72%}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:90%}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:56%}
-}
-:where(.fg-page) .fg-grid{
-  border:1px solid var(--border);
-  border-radius:var(--radius-l);
-  overflow:hidden;
-  background:var(--card);
-}
-:where(.fg-page) .fg-card:last-child{border-bottom-color:transparent}
 
 
 .fg-page {
@@ -201,74 +129,7 @@
   --fg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
 }
 
-.fg-page .fg-count { font-size: 10.5px; letter-spacing: .14em; color: var(--t2); }
 
-/* ── The specimen list: one ruled table ──────────────────────────────────── */
-
-.fg-page .fg-grid {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  background: var(--card);
-  box-shadow: var(--shadow-s);
-}
-
-/* library.css draws every .lbry-card as its own bordered, rounded card. A row
-   in this list is a band between two rules; the rules are the structure. */
-.fg-page .fg-grid .fg-card.lbry-card {
-  gap: 13px;
-  padding: 18px 0 16px;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  transition: background-color var(--dur-1) ease;
-}
-
-.fg-page .fg-grid .fg-card.lbry-card:last-child { border-bottom-color: transparent; }
-
-.fg-page .fg-grid .fg-card.lbry-card:hover { background: var(--fg-wash); border-color: var(--border); }
-
-.fg-page .fg-grid .fg-card.lbry-card:last-child:hover { border-bottom-color: transparent; }
-
-/* The foot clears the rank gutter again, so the name sits under the specimen
-   that names it (type.css's 56px, which library.css's 18px foot padding had
-   overridden). */
-.fg-page .fg-card.lbry-card .lbry-card-foot { align-items: baseline; padding: 0 22px 0 56px; }
-
-.fg-page .fg-card.lbry-card .lbry-card-name { font-size: 16px; font-weight: 560; }
-
-.fg-page .fg-card.lbry-card .lbry-card-meta,
-.fg-page .fg-card-info { color: var(--t2); }
-
-.fg-page .fg-card-index { color: var(--t2); font-weight: 500; }
-
-.fg-page .fg-card-scripts { color: var(--t2); }
-
-.fg-page .fg-grid .fg-card--comparing.lbry-card,
-.fg-page .fg-grid .fg-card--comparing.lbry-card:hover {
-  background: var(--fg-wash);
-  box-shadow: inset 3px 0 0 var(--t0);
-}
-
-.fg-page .fg-card-compare {
-  width: 32px;
-  height: 32px;
-  color: var(--t1);
-  background: var(--card);
-  border: 1px solid var(--bh);
-  border-radius: var(--btn-radius);
-}
-
-.fg-page .fg-card-compare:hover { color: var(--t0); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
-
-.fg-page .fg-card-compare--on,
-.fg-page .fg-card-compare--on:hover { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
-
-.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-@media (max-width: 720px) {
-  .fg-page .fg-card.lbry-card .lbry-card-foot { padding: 0 16px 0 34px; }
-}
 
 /* ── Buttons: show more, the tray, the onward links ──────────────────────── */
 
@@ -447,51 +308,41 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-compare:active { transform: none; }
 }
 
-/* ── The field strip: search and the preview words ──────────────────────── */
-.fg-page .fg-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin: 0 0 4px;
-}
-.fg-page .fg-controls .lbry-search { max-width: none; margin: 0; }
+/* ── Toolbar controls: category pills, search, preview text, size ─────────
+   The category pills stay on one line; every field is a fixed width so the
+   toolbar can measure it. */
+.fg-page .tl-toolbar .fg-cats { flex-wrap: nowrap; }
+.fg-page .tl-toolbar .fg-search { --search-h: 36px; flex: 0 0 auto; width: 220px; }
+.fg-page .fg-search input { font-size: 13px; }
 .fg-page .fg-preview-field {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 200px;
   min-width: 0;
-  min-height: 44px;
+  height: 36px;
   padding: 0 14px;
   border: 1px solid var(--tl-line);
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--t0) 3%, transparent);
+  transition: border-color var(--dur-1) var(--ease-standard);
 }
 .fg-page .fg-preview-field:focus-within { border-color: var(--tl-line-on); }
-.fg-page .fg-preview-k {
-  flex: 0 0 auto;
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--tl-faint);
-}
+.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .fg-page .fg-preview-field input {
   flex: 1;
   min-width: 0;
-  height: 42px;
+  height: 100%;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--tl-ink);
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 13px;
   box-shadow: none;
 }
 .fg-page .fg-preview-field input:focus { outline: none; }
-.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-
-/* ── Toolbar: the category pills stay on one line; the size control ───── */
-.fg-page .tl-toolbar .fg-cats { flex-wrap: nowrap; }
+.fg-page .fg-preview-k { flex: 0 0 auto; font-size: 12.5px; color: var(--tl-dim); }
 .fg-page .fg-size {
   display: inline-flex;
   align-items: center;
@@ -499,35 +350,291 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--tl-line);
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
 }
 .fg-page .fg-size-k { font-size: 12.5px; color: var(--tl-dim); }
 .fg-page .fg-size input[type="range"] { width: 96px; min-width: 0; margin: 0; accent-color: var(--t0); }
-.fg-page .fg-size-v { min-width: 36px; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-align: right; }
+.fg-page .fg-size-v { min-width: 44px; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-align: right; }
 .tl-sheet-layer .fg-size,
-.fg-page .tl-pop .fg-size { width: 100%; }
+.fg-page .tl-pop .fg-size,
+.tl-sheet-layer .fg-preview-field,
+.fg-page .tl-pop .fg-preview-field { width: 100%; }
 .tl-sheet-layer .fg-size input[type="range"],
 .fg-page .tl-pop .fg-size input[type="range"] { flex: 1; width: auto; }
 .tl-sheet-layer .fg-cats,
 .fg-page .tl-pop .fg-cats { flex-wrap: wrap; }
 
+/* The second toolbar row (tablet and phone): search, and on a tablet the pair
+   link. It never wraps. */
+.fg-page .fg-bar2 {
+  --search-h: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin: 0 0 4px;
+}
+.fg-page .fg-bar2 .fg-search { flex: 1 1 auto; min-width: 0; margin: 0; max-width: none; }
+.fg-page .fg-bar2 .fg-pair-link { flex: 0 0 auto; }
 @media (max-width: 767px) {
-  .fg-page .fg-controls { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .fg-page .fg-bar2 { --search-h: 44px; }
 }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .fg-page .fg-preview-field input,
-  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+  .tl-sheet-layer .fg-preview-field input,
+  .fg-page .fg-search input { font-size: 16px; }
 }
 @media (pointer: coarse) {
-  .fg-page .fg-preview-field input { height: 44px; font-size: 16px; }
-  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+  .fg-page .fg-preview-field input,
+  .tl-sheet-layer .fg-preview-field input,
+  .fg-page .fg-search input { font-size: 16px; }
+  .fg-page .fg-preview-field,
+  .tl-sheet-layer .fg-preview-field,
+  .fg-page .fg-size,
+  .tl-sheet-layer .fg-size { height: 44px; }
+  .fg-page .tl-toolbar .fg-search,
+  .fg-page .fg-bar2 { --search-h: 44px; }
   .fg-page .fg-cats,
   .tl-sheet-layer .fg-cats { gap: 8px; }
   .fg-page .fdx-tab { min-height: 44px; }
-  .fg-page .fg-size,
-  .tl-sheet-layer .fg-size { height: 44px; }
   /* A one-word category ("All") is narrower than a finger. */
   .fg-page .fg-cats .tl-pill,
   .tl-sheet-layer .fg-cats .tl-pill { min-width: 44px; justify-content: center; }
+}
+
+/* ── The count line ───────────────────────────────────────────────────────── */
+.fg-page {
+  /* The body's own padding, so the bands can run past it to the edges and
+     their contents can line up with the count and the toolbar again. */
+  --fg-pad: clamp(12px, 2vw, 20px);
+  --fg-padl: max(var(--fg-pad), env(safe-area-inset-left, 0px));
+  --fg-padr: max(var(--fg-pad), env(safe-area-inset-right, 0px));
+}
+.fg-page .fg-count {
+  margin: 12px 0;
+  padding-inline: var(--fg-padl) var(--fg-padr);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bands: a hairline between each, no container ─────────────────────────
+   Every band is the same fixed height (the size times a ratio, set on
+   `.fg-results`), and every part is placed inside it, so nothing changes size
+   when a face arrives, when a name is typed or when the wake shows. */
+.fg-page .fg-results { margin-inline: calc(-1 * var(--fg-pad)); }
+.fg-page .fg-grid { margin: 0 0 var(--s-5); padding: 0; border-top: 1px solid var(--border); }
+
+.fg-page :is(.fg-card, .fg-skel-row) {
+  /* Wide values; the tablet and phone ones follow. */
+  --fg-y-max: 20px;
+  --fg-pangram: 20px;
+  --fg-steps: 14px;
+  --fg-y: min(var(--fg-y-max), calc(var(--fg-name, 96px) * .25));
+  --fg-line: calc(var(--fg-name, 96px) * 1.1);
+  --fg-right: calc(var(--fg-padr) + 56px);
+  box-sizing: border-box;
+  height: var(--fg-band, 240px);
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 1023px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 16px; --fg-pangram: 18px; --fg-steps: 13px; }
+}
+@media (max-width: 767px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 12px; --fg-pangram: 13px; --fg-steps: 11px; }
+}
+@media (max-width: 359px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-pangram: 11px; }
+}
+
+.fg-page .fg-card {
+  /* The wake flips these four; everything inside reads them. */
+  --fg-ground: transparent;
+  --fg-ink: var(--t0);
+  --fg-ink-2: var(--t1);
+  --fg-back: var(--bg-0);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--fg-ground);
+  transition: background-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card--comparing { box-shadow: inset 3px 0 0 var(--t0); }
+
+.fg-page .fg-card-open {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+
+/* The name: top-left, in its own face, at band size. `--fg-fit` is the scale
+   FontGallery's useFitName sets for a long name; it never goes below the floor,
+   and what still does not fit is clipped, never ended with an ellipsis. */
+.fg-page .fg-card-preview {
+  position: absolute;
+  top: var(--fg-y);
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  height: var(--fg-line);
+  overflow-x: clip;
+  overflow-y: visible;
+  font-family: var(--fg-ff);
+}
+.fg-page .fg-card-preview--pending { display: flex; align-items: center; font-family: var(--font); }
+.fg-page .fg-card-name {
+  display: block;
+  font-size: calc(var(--fg-name, 96px) * var(--fg-fit, 1));
+  font-weight: var(--fg-fw-h);
+  line-height: var(--fg-line);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  color: var(--fg-ink);
+  transition: color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card-skeleton--sample { width: min(48%, 520px); height: calc(var(--fg-name, 96px) * .7); }
+
+.fg-page .fg-card-meta {
+  position: absolute;
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  bottom: var(--fg-y);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--fg-ink-2);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-1) var(--ease-standard);
+}
+@media (max-width: 767px) {
+  .fg-page .fg-card-meta { font-size: 12px; }
+}
+
+/* The wake's contents: always laid out, so only their opacity changes. */
+.fg-page .fg-card-reveal {
+  position: absolute;
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  top: calc(var(--fg-y) + var(--fg-line));
+  bottom: calc(var(--fg-y) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  font-family: var(--fg-ff);
+  color: var(--fg-ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease-standard);
+}
+@media (max-width: 767px) {
+  /* The pangram and the weights line together need 35px; 24px of clearance
+     below left only 31. */
+  .fg-page .fg-card-reveal { bottom: calc(var(--fg-y) + 18px); gap: 2px; }
+}
+.fg-page .fg-card-pangram {
+  flex: 0 0 auto;
+  font-size: var(--fg-pangram);
+  font-weight: var(--fg-fw-b);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.fg-page .fg-card-weights {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px 18px;
+  font-size: var(--fg-steps);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.fg-page .fg-card-step { font-weight: var(--fg-fw); }
+
+/* The wake: the ground flips to --t0 with --bg-0 ink. Hover waits 80ms, so a
+   pointer crossing the list does not strobe it; keyboard focus shows it at
+   once. Only colour and opacity change; no box moves. */
+.fg-page .fg-card:has(:focus-visible) {
+  --fg-ground: var(--t0);
+  --fg-ink: var(--bg-0);
+  --fg-ink-2: color-mix(in srgb, var(--bg-0) 78%, transparent);
+  --fg-back: var(--t0);
+}
+.fg-page .fg-card:has(:focus-visible) .fg-card-reveal { opacity: 1; }
+.fg-page .fg-card:has(.fg-card-open:focus-visible) .fg-card-open:focus-visible { outline-color: var(--bg-0); }
+@media (hover: hover) {
+  .fg-page .fg-card:hover {
+    --fg-ground: var(--t0);
+    --fg-ink: var(--bg-0);
+    --fg-ink-2: color-mix(in srgb, var(--bg-0) 78%, transparent);
+    --fg-back: var(--t0);
+  }
+  .fg-page .fg-card:hover .fg-card-reveal { opacity: 1; }
+  .fg-page .fg-card:hover,
+  .fg-page .fg-card:hover :is(.fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare) { transition-delay: 80ms; }
+}
+
+/* Compare: 44px, on the band's right edge, centred on the name. */
+.fg-page .fg-card-compare {
+  position: absolute;
+  z-index: 2;
+  right: var(--fg-padr);
+  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - 22px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--fg-ink-2);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--fg-ink) 34%, transparent);
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-card:has(:focus-visible) .fg-card-compare:focus-visible { outline-color: var(--bg-0); }
+@media (hover: hover) {
+  .fg-page .fg-card-compare:hover { color: var(--fg-ink); border-color: color-mix(in srgb, var(--fg-ink) 60%, transparent); }
+}
+.fg-page .fg-card-compare--on,
+.fg-page .fg-card-compare--on:hover { color: var(--fg-back); background: var(--fg-ink); border-color: var(--fg-ink); }
+
+/* Loading: the same bands, drawn empty. */
+.fg-page .fg-skel-row { padding: var(--fg-y) var(--fg-padr) 0 var(--fg-padl); }
+.fg-page .fg-skel-row .fg-card-skeleton--sample { margin-top: calc(var(--fg-name, 96px) * .2); }
+
+/* Empty: one plain band between two hairlines. */
+.fg-page .fg-empty {
+  margin: 0 0 var(--s-5);
+  padding: 40px var(--fg-padr) 40px var(--fg-padl);
+  background: transparent;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+}
+
+/* No transitions at all under reduced motion: the wake switches at once. */
+html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
 }

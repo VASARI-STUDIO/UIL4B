@@ -18,7 +18,7 @@ import { go, signIn } from './helpers.js'
 // a touch screen, so there is nothing to wait for. /create/gradient has two: the
 // selected stop's hex field and the angle wheel's number field.
 const ROUTES = [['/projects', 0], ['/create/palette', 0], ['/create/gradient', 2], ['/create/type-scale', 1],
-  ['/create/tint', 1], ['/create/icons', 1], ['/create/font-gallery', 2], ['/discover/palettes', 1],
+  ['/create/tint', 1], ['/create/icons', 1], ['/create/font-gallery', 1], ['/discover/palettes', 1],
   ['/discover/prompts', 1], ['/feedback', 2], ['/create/alt-text', 1], ['/settings', 0]]
 const TEXTLIKE = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])'
   + ':not([type=button]):not([type=submit]):not([type=reset]):not([type=image]):not([type=hidden]),select,textarea'
@@ -45,6 +45,24 @@ for (const width of [390, 820]) {
       // POSITIVE CONTROL: the walk really found fields, so an empty list means something.
       expect(seen, 'no text fields were found on any route — the walk is blind').toBeGreaterThan(10)
       expect(small, 'fields that make iOS zoom on focus').toEqual([])
+    })
+  })
+}
+
+// The Font Gallery keeps its Preview text field inside Filters below 1440, so the
+// walk above (which never opens a menu) cannot see it. Open Filters and read it.
+for (const width of [390, 820]) {
+  test.describe(`the Font Gallery's Filters field on a touch screen at ${width}`, () => {
+    test.use({ viewport: { width, height: 900 }, hasTouch: true, isMobile: true })
+
+    test('Preview text inside Filters is at least 16px', async ({ page }) => {
+      await go(page, '/create/font-gallery')
+      await expect(page.locator('.fg-card').first()).toBeVisible()
+      await page.getByRole('button', { name: 'Filters', exact: true }).click()
+      const field = page.getByRole('dialog', { name: 'Filters' }).getByRole('textbox')
+      await expect(field, 'Preview text is in the Filters panel').toBeVisible()
+      const px = await field.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+      expect(px, 'a field under 16px makes iOS zoom on focus').toBeGreaterThanOrEqual(16)
     })
   })
 }

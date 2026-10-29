@@ -239,7 +239,7 @@ test.describe('the Font Gallery search field', () => {
     await go(page, '/create/font-gallery')
     await expect(page.locator('[data-tool-toolbar]')).toBeVisible()
     const placeholder = await page.evaluate(() => {
-      const input = [...document.querySelectorAll('.fg-controls input')].filter((e) => e.offsetParent !== null)[0]
+      const input = [...document.querySelectorAll('input[aria-label="Search font families"]')].filter((e) => e.offsetParent !== null)[0]
       return input ? input.placeholder : null
     })
     expect(placeholder, 'the search field lost its placeholder').toBeTruthy()

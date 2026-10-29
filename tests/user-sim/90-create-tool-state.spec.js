@@ -420,20 +420,20 @@ test.describe('the catalogue tools name the thing they are for', () => {
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
-      'region("77 FAMILIES")',
+      'region("77 families, most popular first")',
     ])
 
     // AND IT SURVIVES THE EMPTY STATE. A section wrapped around only the
     // populated arm vanishes exactly when a reader most needs to find out why
     // there are no results — the fault fixed on /discover/palettes.
-    await page.locator('.fg-controls input').first().fill('zzzzqqq')
+    await page.getByLabel('Search font families').fill('zzzzqqq')
     await expect(page.locator('.fg-empty')).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(0)
 
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
-      'region("0 FAMILIES MATCHING “ZZZZQQQ”")',
+      'region("0 families match “zzzzqqq”, most popular first")',
     ])
   })
 

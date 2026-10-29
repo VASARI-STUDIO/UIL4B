@@ -53,6 +53,9 @@ const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.spm
 // the hero input and is left out on purpose.
 const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.spm-ic-search'])
 const SEARCH_H = 44
+// A search that sits ON a tool toolbar (the Font Gallery's, at 1440) is one of the
+// toolbar's controls, so it takes the toolbar control height, not the page search's.
+const TOOLBAR_SEARCH_H = 36
 const CIRCLE = 36
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
@@ -81,6 +84,7 @@ const measure = (els, selector) => els
       ),
       height: Math.round(r.height * 10) / 10,
       width: Math.round(r.width * 10) / 10,
+      inToolbar: !!el.closest('[data-tool-toolbar]'),
       border: cs.borderTopWidth + ' ' + cs.borderTopStyle,
       borderColor: cs.borderTopColor,
       fill: cs.backgroundColor,
@@ -96,6 +100,7 @@ for (const width of [1440, 390]) {
     const off = []
     const missing = []
     const searchHeights = new Map()
+    const toolbarSearchHeights = new Map()
     const circles = []
     const searchBorders = new Set()
     const familyColours = new Map()
@@ -120,6 +125,7 @@ for (const width of [1440, 390]) {
           if (FAMILY.has(selector)) {
             // A header search narrower than it is tall is the collapsed icon button.
             if (selector === '.pnav-search-field' && f.width <= f.height + 1) circles.push(`${route}: ${f.width}x${f.height}`)
+            else if (f.inToolbar) toolbarSearchHeights.set(`${route} ${selector}`, f.height)
             else searchHeights.set(`${route} ${selector}`, f.height)
             familyColours.set(`${route} ${selector}`, f.borderColor)
             familyFills.set(`${route} ${selector}`, f.fill)
@@ -131,6 +137,9 @@ for (const width of [1440, 390]) {
     expect(missing, 'selectors that no longer match anything, so nothing was measured').toEqual([])
     expect(off, 'not a full pill').toEqual([])
     expect([...new Set(searchHeights.values())], `search heights by route and selector: ${JSON.stringify([...searchHeights])}`).toEqual([SEARCH_H])
+    // POSITIVE CONTROL for the carve-out: only the gallery at 1440 may use it, and at 36px.
+    expect([...toolbarSearchHeights], 'searches that sit on a tool toolbar')
+      .toEqual(width === 1440 ? [['/create/font-gallery .lbry-search', TOOLBAR_SEARCH_H]] : [])
     expect(circles.filter((c) => c.split(': ')[1] !== `${CIRCLE}x${CIRCLE}`), 'the collapsed header search is a 36px circle').toEqual([])
     expect([...searchBorders], 'every bordered search carries the same hairline').toEqual(['1px solid'])
     expect([...new Set(familyColours.values())], `search border colours: ${JSON.stringify([...familyColours])}`).toHaveLength(1)
