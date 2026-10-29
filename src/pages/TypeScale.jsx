@@ -236,6 +236,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // The Code drawer belongs to the split; below it Code is the third view.
   const [codeOpen, setCodeOpen] = useState(false)
   const drawerOpen = split && codeOpen
+  // Leaving the split closes the drawer, so widening back doesn't reopen it.
+  if (!split && codeOpen) setCodeOpen(false)
   const codeBtnRef = useRef(null)
   const drawerRef = useRef(null)
   const [format, setFormat] = useState('css')
@@ -490,6 +492,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
   const currentExport = format === 'tailwind' ? tailwindExport : format === 'scss' ? scssExport : cssExport
+  // Both Copy buttons (the dock's and the Code drawer's) export through here.
+  const exportCode = () => onExport?.(currentExport)
 
   const openInFontPair = () => {
     const staged = setPairDraft({
@@ -657,7 +661,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     },
   ]
   const primary = (
-    <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={() => onExport?.(currentExport)}>
+    <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={exportCode}>
       {`Copy ${formatLabel}`}
     </ToolButton>
   )
@@ -1191,7 +1195,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         >
           <div className="tsc-drawer-head">
             {formatPills}
-            <ToolButton icon="copy" className="tsc-drawer-copy" onClick={() => onExport?.(currentExport)}>Copy</ToolButton>
+            <ToolButton icon="copy" className="tsc-drawer-copy" onClick={exportCode}>Copy</ToolButton>
             <ToolButton variant="quiet" icon="x" className="tl-btn--square tsc-drawer-close" aria-label="Close code" onClick={closeCode} />
           </div>
           {exportPre}
