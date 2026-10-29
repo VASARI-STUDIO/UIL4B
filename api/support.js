@@ -94,6 +94,16 @@ export function validateSupportBody(body, now = new Date()) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
+// A site-wide ceiling on notification emails to the founder, on top of the
+// per-address limits above: many addresses together can still send a flood, and
+// every email spends Resend quota and sending reputation. Over the ceiling the
+// message is still stored and the sender still sees success, but no email goes.
+export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
+
+// One "the cap was reached" email an hour, so a spent cap is visible to the
+// founder instead of silent. Counted separately and never against MAIL_CAP.
+export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -224,7 +234,31 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   const resendKey = process.env.RESEND_API_KEY
   const notifyEmail = process.env.SUPPORT_NOTIFY_EMAIL
 
-  const mailed = resendKey && notifyEmail ? (async () => {
+  // The cap applies only to a stored message. An unstored one has the email as
+  // its only copy (see below), so that email is never held back.
+  let mailAllowed = Boolean(resendKey && notifyEmail)
+  let capNotice = null
+  if (mailAllowed && stored) {
+    const verdict = await consume(db, MAIL_CAP)
+    if (!verdict.allowed) {
+      mailAllowed = false
+      if (verdict.contended) {
+        // The counter could not be read or updated (an outage, contention, or a
+        // missing salt in production): the allowance is not known to be spent,
+        // so this is neither logged as the cap nor announced to the founder.
+        console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
+      } else {
+        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+        // The cap itself must not hide that messages are arriving unseen, so the
+        // founder gets one notice an hour. It is exempt from MAIL_CAP and holds
+        // no user content.
+        const notice = await consume(db, MAIL_CAP_NOTICE)
+        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail })
+      }
+    }
+  }
+
+  const mailed = mailAllowed ? (async () => {
     try {
       const sent = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -263,7 +297,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     }
   })() : null
 
-  const notifications = Promise.all([mirrored, mailed])
+  const notifications = Promise.all([mirrored, mailed, capNotice])
 
   // A stored message is already safe, and the notifications are best-effort
   // extras, so the reply does not wait for them: they finish after the response
@@ -281,4 +315,31 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     return res.status(502).json({ error: 'We could not record that message. Please try again shortly.' })
   }
   return res.status(200).json({ ok: true })
+}
+
+// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
+// wrote. Resolves to whether Resend took it; never rejects.
+async function sendCapNotice({ resendKey, notifyEmail }) {
+  try {
+    const sent = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
+      body: JSON.stringify({
+        from: mailFrom(),
+        reply_to: REPLY_TO,
+        to: [notifyEmail],
+        subject: '[UIL4B] Support email cap reached',
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
+          </div>
+        `,
+      }),
+    })
+    return sent.ok
+  } catch (err) {
+    console.error('Cap notice email failed:', err.message)
+    return false
+  }
 }

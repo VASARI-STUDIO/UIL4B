@@ -37,12 +37,15 @@ export const CHECKOUT_LIMITS = Object.freeze({
  * one through would exempt the request from the per-address limit. Vercel
  * always supplies an address, so a blank one is not a real buyer's request.
  * Nothing is counted for it.
+ *
+ * Both limits fail CLOSED on a database outage (`failOpen: false`): a refused
+ * call costs the buyer a retry, while an uncounted one creates Stripe objects.
  */
 export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
   if (!ip) return { noAddress: true, retryAfter: 0 }
-  const uidVerdict = await consume(db, { bucket: 'checkout-uid', key: uid, ...CHECKOUT_LIMITS.perUid, now })
+  const uidVerdict = await consume(db, { bucket: 'checkout-uid', key: uid, ...CHECKOUT_LIMITS.perUid, now, failOpen: false })
   if (!uidVerdict.allowed) return { retryAfter: uidVerdict.retryAfter }
-  const ipVerdict = await consume(db, { bucket: 'checkout-ip', key: ip, ...CHECKOUT_LIMITS.perIp, now })
+  const ipVerdict = await consume(db, { bucket: 'checkout-ip', key: ip, ...CHECKOUT_LIMITS.perIp, now, failOpen: false })
   if (!ipVerdict.allowed) return { retryAfter: ipVerdict.retryAfter }
   return null
 }
