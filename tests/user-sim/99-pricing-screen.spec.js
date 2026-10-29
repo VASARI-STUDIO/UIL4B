@@ -6,7 +6,8 @@
 //      is computed here from the stubbed /api/get-prices answer, never typed, so a
 //      page that starts typing a price goes red.
 //   2. THE PRO CTA FLOW. Signed in, straight to /checkout for the chosen cadence;
-//      signed out, the same link: /checkout is public and asks for the sign-in itself.
+//      signed out, the login popup opens over /plans and then goes on to that
+//      checkout. /checkout opened directly still asks for the sign-in itself.
 //   3. NOTHING MOVES. Switching cadence must not shift the Pro button, at a phone
 //      and a desktop width.
 //   4. THE DOCKED PLAN BAR below 1360px, and the offer-first layout below 1024px:
@@ -559,6 +560,21 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await choose(page, 'Monthly')
     await expect(page.locator('.pr-close .pr-cta--pro')).toHaveAttribute('href', '/checkout?plan=monthly')
     await expect(page.locator('.pr-bar-btn')).toHaveAttribute('href', '/checkout?plan=monthly')
+
+    // Each of them starts the login flow on this page too. Closing the popup
+    // leaves the visitor on /plans with nothing started.
+    const popup = page.locator('#ui-login-title')
+    await page.evaluate(() => window.scrollTo(0, 900))
+    await expect(page.locator('.pr-bar')).toHaveClass(/is-on/)
+    await page.locator('.pr-bar-btn').click()
+    await expect(popup, 'the docked bar button did not open the login popup').toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(popup).toHaveCount(0)
+    await expect(page).toHaveURL(/\/plans$/)
+
+    await page.locator('.pr-close .pr-cta--pro').click()
+    await expect(popup, 'the closing Choose Pro did not open the login popup').toBeVisible()
+    await expect(page).toHaveURL(/\/plans$/)
   })
 
   // The continuation of the test above: the visitor clicks the prompt, logs in
