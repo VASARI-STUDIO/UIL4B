@@ -218,11 +218,45 @@
 .iel-page .lbry-toolbar-quick>.ig-weight .ig-weight-btn,
 .iel-page .lbry-panel-groups>.ig-weight .ig-weight-btn{flex:1 1 0;min-width:max-content}
 
-/* The customizer's stage, while the icon is in the theme's default ink: the
-   page's own ground (flat, over a hairline), so the preview reads as the page
-   will. A picked colour keeps the light or dark contrast ground. */
-.iel-page .icust-stage--theme{background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border)}
-.iel-page .icust-stage--theme .icust-stage-msg{color:var(--t2)}
+/* The stage's ground switch: four flat swatches in a small pill at the stage's
+   bottom right. Page is the theme's own ground; Light, Dark and Transparent are
+   fixed. It is the only thing that changes the ground, and the ground swaps
+   in the same frame (no transition). The selected swatch wears a ring; focus
+   is the accent outline. */
+.iel-page .icust-ground{
+  position:absolute;right:12px;bottom:12px;z-index:1;
+  display:flex;gap:4px;padding:4px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);
+}
+.iel-page .icust-ground-sw{
+  position:relative;width:20px;height:20px;padding:0;
+  border:1px solid var(--bh);border-radius:50%;cursor:pointer;
+}
+.iel-page .icust-ground-sw--page{background:var(--bg-0)}
+.iel-page .icust-ground-sw--light{background:#EDEDF0}
+.iel-page .icust-ground-sw--dark{background:#0E0E11}
+.iel-page .icust-ground-sw--checker{background-color:#EDEDF0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E");background-size:12px 12px}
+.iel-page .icust-ground-sw[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg-1),0 0 0 3.5px var(--t0)}
+.iel-page .icust-ground-sw:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+@media(pointer:coarse){
+  .iel-page .icust-ground-sw{width:28px;height:28px}
+  /* 44px tall; the 4px gaps leave 32px of width each, so the pitch is the width. */
+  .iel-page .icust-ground-sw::after{content:"";position:absolute;inset:-8px -2px}
+}
+@media(max-width:560px){.iel-page .icust-ground{right:8px;bottom:8px}}
+
+/* Low contrast between the icon and the ground: one line under the stage and a
+   text button. Never an automatic switch. */
+.iel-page .icust-ground-note{margin:0 24px}
+.iel-page .icust-ground-note p{margin:8px 0 0;font-family:var(--font);font-size:12.5px;line-height:1.4;color:var(--t1)}
+.iel-page .icust-ground-fix{
+  position:relative;margin-left:8px;padding:0;border:0;background:none;
+  font:inherit;font-weight:560;color:var(--t0);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+}
+.iel-page .icust-ground-fix:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.iel-page .icust-ground-fix::after{content:"";position:absolute;inset:-14px -8px}}
+@media(max-width:560px){.iel-page .icust-ground-note{margin:0 16px}}
 
 /* On a phone "Add icon" keeps its glyph and gives its word's width to the
    search field, which is what the row is for (the design's mock gives the search the

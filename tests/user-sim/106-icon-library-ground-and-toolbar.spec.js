@@ -1,8 +1,8 @@
 // ICON LIBRARY: THE PREVIEW GROUND AND THE ONE-ROW TOOLBAR.
 //
-// 1. With the default icon colour the customizer's preview sits on the page's
-//    own background in both themes, not on a fixed dark or white gradient. A
-//    chosen colour keeps a contrast ground.
+// 1. The customizer's preview sits on the page's own background in both themes by
+//    default, never on a gradient. The ground is its own control (the Background
+//    switch): choosing a colour never changes it, and the choice is remembered.
 //    Coloured icons (flags, brand and colour packs) always sit on that same page
 //    ground, and the grid draws them with no white box behind: the chip around
 //    a coloured glyph is a transparent slot in both themes. Ink that matches the
@@ -49,17 +49,27 @@ test.describe('the customizer preview ground', () => {
     })
   }
 
-  test('a chosen colour keeps a contrast ground, and Reset brings the page ground back', async ({ browser }) => {
+  test('a chosen colour never changes the ground; only the Background switch does, and it is remembered', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
     watch(page, 'someone picking white for an icon')
     await openCustomizer(page)
+    const stage = page.locator('.icust-stage')
+    await expect(stage).toHaveClass(/icust-stage--page/)
+    const before = await stageAndPage(page)
     await page.getByRole('button', { name: 'White', exact: true }).click()
-    const picked = await stageAndPage(page)
-    expect(picked.image, 'white on the page ground would be invisible').not.toBe('none')
+    await page.getByRole('button', { name: 'Black', exact: true }).click()
     await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
-    const back = await stageAndPage(page)
-    expect(back.bg).toBe(back.page)
+    await expect(stage).toHaveClass(/icust-stage--page/)
+    expect((await stageAndPage(page)).bg, 'a colour press moved the ground').toBe(before.bg)
+    const grounds = page.getByRole('radiogroup', { name: 'Background' })
+    await grounds.getByRole('radio', { name: 'Dark', exact: true }).click()
+    await expect(stage).toHaveClass(/icust-stage--dark/)
+    expect((await stageAndPage(page)).image).toBe('none')
+    // Closed and reopened: the ground survives.
+    await page.keyboard.press('Escape')
+    await page.locator('.ig .ic').first().click()
+    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--dark/)
     await ctx.close()
   })
 })
@@ -260,7 +270,7 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
 
       await page.locator('.ig .ic').first().click()
       await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
-      await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+      await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--page/)
       const { bg, image, page: pageBg } = await stageAndPage(page)
       expect(image, 'the flag stage is painting a gradient').toBe('none')
       expect(bg, 'the flag stage is not the page background').toBe(pageBg)
@@ -827,7 +837,7 @@ for (const scheme of ['dark', 'light']) {
         const stage = await stageAndPage(page)
         expect(stage.bg).toBe(stage.page)
         expect(stage.image).toBe('none')
-        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--page/)
         await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--light/)
         const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
         await expect(colourRow.getByRole('button')).toHaveCount(0)

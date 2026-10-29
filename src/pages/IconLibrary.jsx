@@ -26,7 +26,7 @@ import { collectionToNames, createCollectionLoader, createLimiter } from '../uti
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
 import { isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
-import { colourRowState } from '../utils/iconColourRow'
+import { colourRowState, colourChoice, normaliseGround, groundContrastNote } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
@@ -224,6 +224,37 @@ function readStickyStroke() {
 }
 function writeStickyStroke(v) {
   try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
+}
+
+// The preview ground is a viewing choice, not part of the icon: it is remembered
+// per browser like the stroke, never exported and never saved with a custom.
+const GROUND_KEY = 'vs-icon-ground'
+function readGround() {
+  try { return normaliseGround(localStorage.getItem(GROUND_KEY)) } catch { return normaliseGround() }
+}
+function writeGround(v) {
+  try { localStorage.setItem(GROUND_KEY, v) } catch { /* private mode / quota: non-fatal */ }
+}
+const GROUND_OPTS = [
+  { id: 'page', label: 'Page' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'checker', label: 'Transparent' },
+]
+
+// Arrow keys inside a radiogroup: focus moves to the neighbour (wrapping) and, unless
+// it only opens a popup, selects it. Keys from anything inside a radio's popup
+// (a colour pad, a hex field) are left alone: only a focused radio steers.
+function steerRadios(e) {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+  if (!step || e.target.getAttribute('role') !== 'radio') return
+  const radios = Array.from(e.currentTarget.querySelectorAll('[role="radio"]'))
+  const at = radios.indexOf(e.target)
+  if (at < 0) return
+  e.preventDefault()
+  const next = radios[(at + step + radios.length) % radios.length]
+  next.focus()
+  if (!next.hasAttribute('aria-haspopup')) next.click()
 }
 
 // The customiser's opening values. One table feeds the first-open seeds, what
@@ -1278,6 +1309,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [rotate, setRotate] = useState(CUSTOMISER_DEFAULTS.rotate)
   const [flipH, setFlipH] = useState(CUSTOMISER_DEFAULTS.flipH)
   const [flipV, setFlipV] = useState(CUSTOMISER_DEFAULTS.flipV)
+  // What the stage is drawn on. Only the ground switch changes it: not the colour,
+  // not the pack, not the theme (the Page ground follows the theme by itself).
+  const [ground, setGround] = useState(readGround)
+  const chooseGround = (g) => { setGround(g); writeGround(g) }
   const [copied, setCopied] = useState('')
   // The file format the Download button hands over; it follows the account.
   const [dlFormat, setDlFormat] = useState(() => readDownloadFormat())
@@ -1567,18 +1602,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!glyphCache.has(brandKey)) glyphCache.set(brandKey, sampleGlyph(e.currentTarget))
     setBrandInk(glyphCache.get(brandKey).ink)
   }
-  const stageHalo = isColoredPack ? haloFor(brandInk, theme, activeIcon?.pack) : ''
-  const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
-  const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
-  // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
-  // own page ground. A coloured pack always uses it; a chosen mono colour keeps
-  // the contrast ground.
-  const onThemeGround = isColoredPack || !color
+  // The halo keeps art that matches its ground readable, so it follows the ground
+  // the stage is on (Page is the theme's own), not the theme alone.
+  const stageHalo = isColoredPack ? haloFor(brandInk, ground === 'page' ? theme : ground === 'dark' ? 'dark' : 'light', activeIcon?.pack) : ''
+  // Low contrast is a note, never a switch: the person decides. Coloured art keeps
+  // its own colours, so there is nothing to measure.
+  const contrastNote = isColoredPack ? null : groundContrastNote({ ink: color || themeInk, ground, theme })
+  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: 'This colour' }[colourChoice(color)]
   // Until the stage has its own art, show the glyph the grid drew for this icon
-  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
-  // used on the theme ground, where the grid's tint matches. With no grid glyph
-  // (or a chosen colour) the slot stays the same size and paints nothing.
-  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  // (same data: URI, so nothing new is fetched) in the stage's box. The grid's tint
+  // is the theme ink, so it only matches while the icon is drawn in that ink (no
+  // colour chosen). With no grid glyph (or a chosen colour) the slot stays the same
+  // size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && (isColoredPack || !color) ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
   const stageWait = waitSrc
     ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
     : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
@@ -1816,7 +1852,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+            <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
@@ -1840,6 +1876,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
+              )}
+              <div className="icust-ground" role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+                {GROUND_OPTS.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={ground === g.id}
+                    aria-label={g.label}
+                    title={g.label}
+                    tabIndex={ground === g.id ? 0 : -1}
+                    className={`icust-ground-sw icust-ground-sw--${g.id}`}
+                    onClick={() => chooseGround(g.id)}
+                  />
+                ))}
+              </div>
+            </div>
+            {/* Always in the DOM so a note that arrives is announced. */}
+            <div className="icust-ground-note" aria-live="polite">
+              {contrastNote && (
+                <p>
+                  {choiceName} is hard to see on this background.
+                  {contrastNote.suggest && (
+                    <button type="button" className="icust-ground-fix" onClick={() => chooseGround(contrastNote.suggest)}>
+                      Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                    </button>
+                  )}
+                </p>
               )}
             </div>
 
