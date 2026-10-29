@@ -18,7 +18,14 @@
  * settings sheet capped at 55% of the viewport.
  * Docked bar, every width: Save to a project (Save and Copy CSS on a phone). */
 
-.tsc-page { --tsc-dock-h: 64px; --tsc-top: calc(var(--chrome-h) + 56px); }
+.tsc-page { --tsc-top: calc(var(--chrome-h) + 56px); }
+/* The page scrolls the document, so the dock's height is declared on the root
+   too: a focused row or control scrolls clear of the docked bar, not under it. */
+html:has(.tsc-page),
+.tsc-page { --tsc-dock-h: 64px; }
+html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
+html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
+html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-h) + var(--bkit-toolbar-h, 0px) + 8px); }
 .tsc-page .tsc-output { gap: var(--tl-gap); container-type: inline-size; container-name: tsc-work; }
 
 /* Labels are Geist, sentence case: the shared section label is uppercase mono. */
@@ -198,6 +205,18 @@
   text-align: left;
   color: var(--tl-ink);
 }
+/* The value field swaps to a number input while it is edited. It keeps the
+   button's slot, width and size, so the row does not shift. */
+.tsc-page .tsc-range .snapv-input {
+  order: -1;
+  flex: 0 0 72px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: left;
+}
 .tsc-page .tsc-range input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -325,7 +344,8 @@
   .tsc-page .tsc-sec-scale { padding: 0; border: 0; }
   .tsc-page .tsc-scale-bar { grid-template-columns: 128px minmax(0, 1fr); gap: 8px; align-items: end; }
   .tsc-page .tsc-scale-term--base .tsc-range input[type="range"] { display: none; }
-  .tsc-page .tsc-scale-term--base .snapv-value { order: 0; flex: 1; }
+  .tsc-page .tsc-scale-term--base .snapv-value,
+  .tsc-page .tsc-scale-term--base .snapv-input { order: 0; flex: 1; }
   .tsc-page .tsc-scale-out { display: none; }
   .tsc-page .tsc-sheet-row {
     display: flex;
@@ -343,8 +363,7 @@
     text-align: left;
     cursor: pointer;
   }
-  .tsc-page .tsc-row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name num" "text text"; gap: 4px 12px; padding: 12px 0; }
-  .tsc-page .tsc-row { grid-template-columns: 1fr auto; }
+  .tsc-page .tsc-row { grid-template-columns: 1fr auto; grid-template-areas: "name num" "text text"; gap: 4px 12px; padding: 12px 0; }
   .tsc-page .tsc-row-name { grid-area: name; }
   .tsc-page .tsc-row-num { grid-area: num; text-align: right; }
   .tsc-page .tsc-row-text { grid-area: text; }
@@ -397,13 +416,15 @@ html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-h); }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .tsc-page .tsc-sample-input,
-  .tsc-page .tsc-select { font-size: 16px; }
+  .tsc-page .tsc-select,
+  .tsc-page .tsc-range .snapv-input { font-size: 16px; }
 }
 @media (pointer: coarse) {
   /* 8px between neighbouring targets, and every control 44px on a finger. */
   .tsc-page .tl-pills { gap: 8px; }
-  .tsc-page .tsc-range input[type="range"] { height: 44px; }
+  .tsc-page .snapv input[type="range"] { height: 44px; }
   .tsc-page .tsc-range .snapv-value,
+  .tsc-page .tsc-range .snapv-input,
   .tsc-page .tsc-sample-input,
   .tsc-page .tsc-select,
   .tsc-page .tsc-tuning-toggle,

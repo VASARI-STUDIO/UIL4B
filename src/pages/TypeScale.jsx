@@ -218,6 +218,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const phone = useMedia('(max-width: 767px)')
   const ladderRef = useRef(null)
   const pageColRef = useRef(null)
+  const sheetRowRef = useRef(null)
   const [colW, setColW] = useState(0)
   const [format, setFormat] = useState('css')
   // THE WORDS IN THE PREVIEW. Empty means the pangram below.
@@ -514,6 +515,25 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     setSheetOpen(true)
     requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
   }
+  // Closing hides the sheet, so focus goes back to the row that opened it
+  // rather than falling to <body>.
+  const closeSheet = () => {
+    setSheetOpen(false)
+    sheetRowRef.current?.focus({ preventScroll: true })
+  }
+  // Escape closes the open sheet. Escape that belongs to a popup inside it (a
+  // list, the font dialog, the Base value field) is left to that popup.
+  useEffect(() => {
+    if (!sheetOpen) return undefined
+    const onKey = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
+      setSheetOpen(false)
+      sheetRowRef.current?.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [sheetOpen])
 
   const formatLabel = format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'
 
@@ -688,10 +708,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
           <button
             type="button"
+            ref={sheetRowRef}
             className="tsc-sheet-row"
             aria-expanded={sheetOpen}
             aria-controls="tsc-sheet"
-            onClick={() => (sheetOpen ? setSheetOpen(false) : openSheet())}
+            onClick={() => (sheetOpen ? closeSheet() : openSheet())}
           >
             Families, preview text and fine tuning
             <ToolIcon name="caret-right" size={13} />
@@ -700,7 +721,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'}>
             <div className="tsc-sheet-head">
               <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
-              <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={() => setSheetOpen(false)}>Done</button>
+              <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
             <div className="tsc-sheet-body">
               <ToolSection>
