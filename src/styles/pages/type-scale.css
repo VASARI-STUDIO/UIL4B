@@ -128,12 +128,20 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
   align-items: start;
 }
 .tsc-page .tsc-view[data-view="split"] .tsc-row { grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto); gap: 12px; }
+.tsc-page .tsc-view[data-view="split"] .tsc-row-num { text-align: right; }
 .tsc-page .tsc-view[data-view="split"] .tsc-row-prefix,
 .tsc-page .tsc-view[data-view="split"] .tsc-row-rem { display: none; }
 /* A tall ladder keeps the page beside it: the page half stays under the toolbar
-   while the steps scroll, when the screen is tall enough to hold it. */
+   while the steps scroll, when the screen is tall enough to hold it. A page
+   taller than the room between the toolbar and the dock scrolls within itself. */
 @media (min-height: 800px) {
-  .tsc-page .tsc-view[data-view="split"] .tsc-page-view { position: sticky; top: calc(var(--tsc-top) + 8px); }
+  .tsc-page .tsc-view[data-view="split"] .tsc-page-view {
+    position: sticky;
+    top: calc(var(--tsc-top) + 8px);
+    max-height: calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - 16px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
 }
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
@@ -198,6 +206,8 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 .tsc-page .tsc-dock .tsc-save { white-space: nowrap; }
 /* The split puts Code at the foot of the work column, under the drawer it opens. */
 .tsc-page .tsc-dock:has(.tsc-code-btn) { justify-content: space-between; }
+/* While the drawer is open the Code pill reads as on. */
+.tsc-page .tsc-code-btn[aria-expanded="true"] { background: var(--tl-wash-2); color: var(--tl-ink); }
 
 /* ── The Code drawer ─────────────────────────────────────────────────────────
    Up to 60% of the viewport, over the work column and above the docked bar.

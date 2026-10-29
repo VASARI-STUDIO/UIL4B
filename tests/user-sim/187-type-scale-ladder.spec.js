@@ -401,7 +401,7 @@ test.describe('Type Scale · the split and the Code drawer', () => {
     expect(names).toEqual(['Code', 'Save to a project'])
   })
 
-  test('the Code drawer opens with focus inside, holds Tab, and Escape closes it and returns focus', async ({ page }) => {
+  test('the Code drawer opens with focus inside, does not trap Tab, and Escape closes it and returns focus', async ({ page }) => {
     watch(page, 'keyboard designer reading the export')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/type-scale')
@@ -425,24 +425,20 @@ test.describe('Type Scale · the split and the Code drawer', () => {
     await expect(drawer.locator('.tsc-drawer-copy')).toBeVisible()
     await expect(drawer.locator('.tsc-drawer-close')).toBeVisible()
 
-    // Focus moved into it, and Tab and Shift+Tab cannot leave it.
+    // Focus moved into it. It is non-modal: no trap, so Tab walks on out of it.
     await expect.poll(inDrawer, { message: 'focus is inside the drawer once it opens' }).toBe(true)
-    for (let i = 0; i < 12; i += 1) {
-      await page.keyboard.press('Tab')
-      expect(await inDrawer(), `Tab ${i + 1} stays in the drawer`).toBe(true)
-    }
-    for (let i = 0; i < 12; i += 1) {
-      await page.keyboard.press('Shift+Tab')
-      expect(await inDrawer(), `Shift+Tab ${i + 1} stays in the drawer`).toBe(true)
-    }
+    await expect(drawer).toHaveAttribute('aria-modal', 'false')
+    for (let i = 0; i < 12 && await inDrawer(); i += 1) await page.keyboard.press('Tab')
+    expect(await inDrawer(), 'Tab is not trapped in the drawer').toBe(false)
 
+    await drawer.locator('.tsc-drawer-copy').focus()
     await page.keyboard.press('Escape')
     await expect(drawer).toBeHidden()
     await expect(button).toHaveAttribute('aria-expanded', 'false')
     await expect(button, 'focus goes back to the button that opened the drawer').toBeFocused()
   })
 
-  test('the Close button and a press outside also close the drawer', async ({ page }) => {
+  test('the Close button and a press outside also close the drawer, but a press in the panel does not', async ({ page }) => {
     watch(page, 'designer dismissing the export')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/type-scale')
@@ -459,7 +455,17 @@ test.describe('Type Scale · the split and the Code drawer', () => {
 
     await button.click()
     await expect(drawer).toBeVisible()
-    await page.locator('.tsc-config').click({ position: { x: 8, y: 8 } })
+    // A press in the settings panel beside it leaves it open, and the code follows the control.
+    const exportText = () => drawer.locator('#tsc-export').innerText()
+    const before = await exportText()
+    await page.locator('#tsc-ratio').click()
+    await page.getByRole('listbox').getByRole('option', { name: /^Perfect fifth/ }).click()
+    await expect(drawer, 'a press in the panel keeps the drawer open').toBeVisible()
+    await expect.poll(exportText, { message: 'the code updates as the ratio changes' }).not.toBe(before)
+    await expect(button).toHaveAttribute('aria-expanded', 'true')
+
+    // A press outside both closes it.
+    await page.locator('.tsc-dock').click({ position: { x: 400, y: 4 } })
     await expect(drawer).toBeHidden()
     await expect(button).toHaveAttribute('aria-expanded', 'false')
 

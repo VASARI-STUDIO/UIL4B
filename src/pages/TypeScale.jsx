@@ -105,6 +105,8 @@ function deviceWidth() {
 // and keeps two halves of about 500px: a 40px token, a 48px value and a sample of
 // about 390px between them. Samples wrap at their true size and are never cut.
 const SPLIT_MIN = 1024
+// Below this the split is left: 16px of slack, wider than a scrollbar.
+const SPLIT_LEAVE = 1008
 
 function useMedia(query) {
   const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
@@ -232,7 +234,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // the Scale / Page / Code switch.
   const [workEl, setWorkEl] = useState(null)
   const [work, setWork] = useState({ left: 0, width: 0 })
-  const split = work.width >= SPLIT_MIN
+  // The split is entered at SPLIT_MIN and left only below SPLIT_LEAVE, held in a
+  // ref, so a scrollbar appearing or going away cannot flip the layout back and forth.
+  const splitRef = useRef(false)
+  if (work.width >= SPLIT_MIN) splitRef.current = true
+  else if (work.width < SPLIT_LEAVE) splitRef.current = false
+  const split = splitRef.current
   // The Code drawer belongs to the split; below it Code is the third view.
   const [codeOpen, setCodeOpen] = useState(false)
   const drawerOpen = split && codeOpen
@@ -552,34 +559,26 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     setCodeOpen(false)
     codeBtnRef.current?.focus({ preventScroll: true })
   }
-  // The drawer takes focus when it opens, keeps Tab inside it, and closes on
-  // Escape or a press outside it. The page behind is not scroll-locked: the
-  // drawer covers only the work column, and locking would drop the scrollbar
-  // and shift the ladder under it.
+  // The drawer takes focus when it opens and closes on Escape or a press outside
+  // it. It is non-modal: Tab leaves it, and a press in the settings panel beside
+  // it is left alone so the code can be watched as the controls change. The page
+  // behind is not scroll-locked: the drawer covers only the work column, and
+  // locking would drop the scrollbar and shift the ladder under it.
   useEffect(() => {
     if (!drawerOpen) return undefined
     const drawer = drawerRef.current
     drawer?.focus({ preventScroll: true })
+    // The panel, and the popups its controls open (a list, a typed value), count as inside.
+    const beside = '.tsc-config, [role="listbox"], .snapv-input'
     const onKey = event => {
-      if (event.key === 'Escape') {
-        if (event.defaultPrevented) return
-        setCodeOpen(false)
-        codeBtnRef.current?.focus({ preventScroll: true })
-        return
-      }
-      if (event.key !== 'Tab' || !drawer) return
-      const list = Array.from(drawer.querySelectorAll('button:not([disabled]),[tabindex]:not([tabindex="-1"])'))
-      if (!list.length) { event.preventDefault(); drawer.focus(); return }
-      const first = list[0]
-      const last = list[list.length - 1]
-      const active = document.activeElement
-      const outside = !drawer.contains(active)
-      if (event.shiftKey && (active === first || active === drawer || outside)) { event.preventDefault(); last.focus() }
-      else if (!event.shiftKey && (active === last || outside)) { event.preventDefault(); first.focus() }
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (event.target instanceof Element && event.target.closest('[role="listbox"], .snapv-input')) return
+      setCodeOpen(false)
+      codeBtnRef.current?.focus({ preventScroll: true })
     }
     const onPress = event => {
       const t = event.target
-      if (!(t instanceof Node) || drawer?.contains(t) || codeBtnRef.current?.contains(t)) return
+      if (!(t instanceof Element) || drawer?.contains(t) || codeBtnRef.current?.contains(t) || t.closest(beside)) return
       setCodeOpen(false)
     }
     document.addEventListener('keydown', onKey)
@@ -1187,7 +1186,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           ref={el => { drawerRef.current = el; varsRef({ '--tsc-work-left': `${work.left}px`, '--tsc-work-w': `${work.width}px` })(el) }}
           className="tsc-drawer"
           role="dialog"
-          aria-modal="true"
+          aria-modal="false"
           aria-label="Code"
           tabIndex={-1}
           hidden={!drawerOpen}
