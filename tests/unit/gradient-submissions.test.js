@@ -7,6 +7,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as mod from '../../src/utils/gradientSubmissions.js'
+import { PostLimitError } from '../../src/utils/communityLimits.js'
 
 const {
   GRADIENT_SUBMISSIONS_KEY,
@@ -400,4 +401,48 @@ test('the hook asks first: it counts and waits, and moves nothing on its own', a
   const effect = src.slice(src.indexOf('useEffect('), src.indexOf('const keep'))
   assert.ok(!effect.includes('migrateGradientSubmissions'), 'the mount effect never runs the migration')
   assert.match(src, /publish: publishToQueueOnce/)
+})
+
+/* ── the post limits ─────────────────────────────────────────────────────── */
+
+test('a refusal by the post limits stops the run quietly: nothing failed, the key stays, and the next run carries on', async () => {
+  const s = memoryStorage([draft({ id: 'a', name: 'One' }), draft({ id: 'b', name: 'Two' }), draft({ id: 'c', name: 'Three' })])
+  const q = fakeQueue()
+  let attempts = 0
+  const limited = async (record, opts) => {
+    attempts += 1
+    if (attempts > 1) throw new PostLimitError('cooldown', 30_000)
+    await q.publish(record)
+    return { id: opts.id, created: true }
+  }
+  const out = await migrateGradientSubmissions({ user: USER, storage: s, list: q.list, publish: limited })
+  assert.equal(out.published, 1, 'the first one got through')
+  assert.equal(out.failed, 0, 'a limit is not a failure')
+  assert.equal(out.limited, true)
+  assert.equal(attempts, 2, 'it stops at the first refusal rather than asking for each of the rest')
+  assert.equal(s.has(), true, 'the key stays for the next visit')
+  assert.equal(s.calls.remove, 0)
+
+  // The next visit, once the gap is over: the one that went through is not posted again.
+  const next = fakeQueue({ existing: q.published.map((r, i) => ({ id: `doc${i}`, ...r })) })
+  const again = await migrateGradientSubmissions({ user: USER, storage: s, list: next.list, publish: next.publish })
+  assert.equal(again.limited, false)
+  assert.equal(again.published, 2)
+  assert.equal(again.skipped, 1)
+  assert.equal(s.has(), false)
+})
+
+test('a refusal by the limits and a real failure in one run still reports the failure', async () => {
+  const s = memoryStorage([draft({ id: 'a', name: 'One' }), draft({ id: 'b', name: 'Two' })])
+  const q = fakeQueue()
+  let attempts = 0
+  const publish = async () => {
+    attempts += 1
+    if (attempts === 1) throw new Error('offline')
+    throw new PostLimitError('daily', 3_600_000)
+  }
+  const out = await migrateGradientSubmissions({ user: USER, storage: s, list: q.list, publish })
+  assert.equal(out.failed, 1)
+  assert.equal(out.limited, true)
+  assert.equal(s.has(), true)
 })

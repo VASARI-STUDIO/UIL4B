@@ -188,15 +188,17 @@ export function writeMigrationDismissed(uid, storage) {
  *  - Entries that do not sanitise to a real gradient, ones the person had
  *    withdrawn, and repeats within the key are skipped too.
  *  - The key is removed only when every publish succeeded. One failure keeps
- *    it, and the next run skips what did get through (by localId).
+ *    it, and so does a refusal by the post limits; the next run skips what did
+ *    get through (by localId).
  *
  * Only the gradient itself (type, angle, stops) and its name go to the queue,
  * plus the display name buildQueueRecord adds. The email never does.
  *
- * Returns { published, skipped, failed, cleared, listFailed }.
+ * Returns { published, skipped, failed, cleared, listFailed, limited }. `limited`
+ * means the post limits stopped the run early; those entries are not failures.
  */
 export async function migrateGradientSubmissions({ user, storage, list, publish } = {}) {
-  const result = { published: 0, skipped: 0, failed: 0, cleared: false, listFailed: false }
+  const result = { published: 0, skipped: 0, failed: 0, cleared: false, listFailed: false, limited: false }
   if (!user?.uid || typeof list !== 'function' || typeof publish !== 'function') return result
   const target = resolveStorage(storage)
   const raw = readRawLegacy(target)
@@ -252,12 +254,21 @@ export async function migrateGradientSubmissions({ user, storage, list, publish 
       const out = await publish({ ...record, localId: entry.id }, { id: docId })
       if (out && out.created === false) result.skipped += 1
       else result.published += 1
-    } catch {
+    } catch (err) {
+      // The post limits (utils/communityLimits.js) allow one item every 30
+      // seconds, so after the first only a refusal can follow. That is not a
+      // failure: stop here, keep the key, and the next run carries on from the
+      // entries that did not get through. Matched by name because this module
+      // is loaded without the Firebase-facing code.
+      if (err?.name === 'PostLimitError') {
+        result.limited = true
+        break
+      }
       result.failed += 1
     }
   }
 
-  if (result.failed === 0) {
+  if (result.failed === 0 && !result.limited) {
     clearGradientSubmissions(target)
     result.cleared = true
   }

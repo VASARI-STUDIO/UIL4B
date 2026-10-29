@@ -23,18 +23,24 @@ export const POST_DAILY_CAP = 10
 /** The field the reviewers' queue is ordered on: the server's stamp once the rules require it. */
 export const queueOrderField = (enabled = COMMUNITY_LIMITS_ENABLED) => (enabled ? 'submittedAt' : 'createdAt')
 
+/** The limits in plain words, the start of every refusal message. */
+export const POST_LIMIT_RULE = 'You can share one item every 30 seconds and 10 a day.'
+
 /** A thrown refusal the screen can show as it is. */
 export class PostLimitError extends Error {
   constructor(reason, retryInMs) {
     const secs = Math.max(1, Math.ceil((retryInMs || 0) / 1000))
     super(reason === 'cooldown'
-      ? `You can post once every 30 seconds. Try again in ${secs} seconds.`
-      : 'You have reached today\'s limit of 10. Try again tomorrow.')
+      ? `${POST_LIMIT_RULE} Try again in ${secs} ${secs === 1 ? 'second' : 'seconds'}.`
+      : `${POST_LIMIT_RULE} You have reached today's limit, so try again tomorrow.`)
     this.name = 'PostLimitError'
     this.reason = reason
     this.retryInMs = retryInMs || 0
   }
 }
+
+/** True when a failed post was refused by the limits, as opposed to failing for any other reason. */
+export const isPostLimit = (err) => err?.name === 'PostLimitError'
 
 const millis = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : Number(t) || 0)
 
