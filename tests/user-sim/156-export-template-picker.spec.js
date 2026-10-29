@@ -86,7 +86,8 @@ test('Free sees the book tiles clear and the preview locked, and the button stil
   await openProject(page, 'free')
   await chooseFormat(page, 'book')
   await expect(group(page).getByRole('radio')).toHaveCount(3)
-  await expect(exportPanel(page).locator('.xd-lock'), 'the page strip is locked for Free, and says which document').toHaveText(/Book is a Pro export/)
+  await expect(exportPanel(page).locator('.xd-lock'), 'the page strip is locked for Free').toHaveText(/Pro export/)
+  await expect(categoryRadio(page, 'Book'), 'and the rail names the document it locks').toHaveAccessibleName('Book, A4 pages, Pro')
   await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i })).toBeVisible()
   // The tiles carry no per-tile lock: all three are Pro, so the row's own mark says it once.
   await expect(group(page).locator('.exp-tpl-tile .exp-preview-tag, .exp-tpl-tile [class*="pro-tag"]')).toHaveCount(0)
@@ -399,7 +400,7 @@ test('Free sees the guidelines tiles clear, and the strip and button stay locked
     await expect(exportPanel(page).locator('.exp-preview-caption'), `the strip follows the template: ${name}`).toHaveText(`Your guidelines in ${name}, slides 1 to 3`)
     await expect(strip(page)).toHaveAttribute('data-state', 'ready')
     await expect(exportPanel(page).locator('.exp-preview-strip img[data-blurred="true"]'), 'still blurred for Free').toHaveCount(3)
-    await expect(exportPanel(page).locator('.xd-lock'), 'and still locked').toHaveText(/Slides is a Pro export/)
+    await expect(exportPanel(page).locator('.xd-lock'), 'and still locked').toHaveText(/Pro export/)
     await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i }), 'the button is still locked').toBeVisible()
   }
   await tile(page, 'Presentation').click()

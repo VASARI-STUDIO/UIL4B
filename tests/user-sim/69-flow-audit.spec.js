@@ -51,7 +51,7 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
-import { chooseFormat, exportPanel, primaryButton, actionLabel } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton, actionLabel, categoryRadio } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -538,7 +538,8 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
-    await expect(page.locator('.xd-lock'), 'the preview names the document it locks').toHaveText(/Slides is a Pro export/)
+    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
     await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.

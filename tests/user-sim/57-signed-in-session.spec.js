@@ -192,7 +192,7 @@ test.describe('the export gate, driven', () => {
       'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
     await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
-    await expect(page.locator('.xd-lock'), 'the preview is locked and names the document').toHaveText(/Book is a Pro export/)
+    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
 
     const action = page.getByRole('button', { name: /Unlock with Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()

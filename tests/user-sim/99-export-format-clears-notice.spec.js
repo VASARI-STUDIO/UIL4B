@@ -1,8 +1,8 @@
-// The Export panel keeps what a finished export said in the footer, right above
-// the buttons. That line belongs to the format that produced it: once someone
-// picks another format, "Your UI kit downloaded." must not sit beside an
-// "Export CSS tokens" button that has not been pressed.
-import { chooseFormat } from './export-rows.js'
+// The Export popup keeps what a finished export said in its dock, right beside
+// the button. That line belongs to the file that produced it: once someone
+// picks another file, "Your UI kit downloaded." must not sit beside an
+// "Export CSS" button that has not been pressed.
+import { chooseFormat, exportPanel, primaryButton, dockStatus, fileGroup, typeRadio } from './export-rows.js'
 import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -30,29 +30,27 @@ test('choosing another format clears the finished-export notice', async ({ page 
   await go(page, BOARD)
 
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-  const panel = page.getByRole('dialog', { name: /Export your design system/i })
+  const panel = exportPanel(page)
   await expect(panel).toBeVisible()
-  await expect(panel.getByRole('radio', { name: /^UI kit/ })).toHaveAttribute('aria-checked', 'true')
+  // The header Export opens on the Brand book, so the kit is a pick like any other.
+  await chooseFormat(panel, 'kit')
+  await expect(typeRadio(panel, 'UI kit')).toHaveAttribute('aria-checked', 'true')
 
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 30000 }),
-    panel.getByRole('button', { name: 'Export UI kit', exact: true }).click(),
+    primaryButton(panel).click(),
   ])
   expect(download.suggestedFilename()).toBe('uil4b-ui-kit.html')
-  await expect(panel.getByRole('status')).toContainText('Your UI kit downloaded.')
-  await expect(panel.locator('.exp-notice-lead')).toHaveText('Your UI kit downloaded.')
-  // With the message on screen the left button closes the panel.
-  await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
+  await expect(dockStatus(panel)).toContainText('Your UI kit downloaded.')
+  await expect(dockStatus(panel).locator('strong')).toHaveText('Your UI kit downloaded.')
+  // With the message on screen the button offers another go.
+  await expect(primaryButton(panel)).toHaveText('Export again')
 
   await chooseFormat(panel, 'css')
 
-  await expect(panel.getByRole('radio', { name: 'CSS', exact: true })).toHaveAttribute('aria-checked', 'true')
-  await expect(panel.getByRole('button', { name: 'Export CSS tokens', exact: true })).toBeEnabled()
-  // The status region is always mounted (a screen reader needs it present before
-  // the text arrives), so the check is on the words, not on the region.
-  await expect(panel.locator('.exp-notice'), 'the kit confirmation is gone once another format is chosen').toHaveCount(0)
-  await expect(panel.getByRole('status')).not.toContainText('Your UI kit downloaded.')
-  // With nothing finished on screen there is something to cancel again.
-  await expect(panel.getByRole('button', { name: 'Cancel', exact: true }), 'the left button goes back to Cancel after a format change').toBeVisible()
-  await expect(panel.getByRole('button', { name: 'Close', exact: true })).toHaveCount(0)
+  await expect(fileGroup(panel, 'Code').getByRole('radio', { name: 'CSS stylesheet', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(primaryButton(panel), 'the button is back to naming the new file').toHaveText('Export CSS')
+  await expect(primaryButton(panel)).toBeEnabled()
+  await expect(dockStatus(panel), 'the kit confirmation is gone once another file is chosen').not.toContainText('Your UI kit downloaded.')
+  await expect(dockStatus(panel).locator('strong'), 'and the dock now speaks for the CSS pick').toHaveText('Free.')
 })
