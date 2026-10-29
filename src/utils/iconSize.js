@@ -11,8 +11,12 @@ export const DEFAULT_EXPORT_SIZE = 24
 export const CUSTOM_SIZE_MIN = 8
 export const CUSTOM_SIZE_MAX = 1024
 
-/** Below this viewport width the rail drops the 20 cell (it stays reachable as a custom size). */
-export const NARROW_RAIL_BELOW = 360
+/**
+ * Below this viewport width the rail drops the 20 cell (it stays reachable as a custom size).
+ * Six touch cells need 308px of rail, and the rail is the viewport less 66px, so 374 is the
+ * narrowest viewport that holds them (measured at 360: 14px too wide).
+ */
+export const NARROW_RAIL_BELOW = 375
 
 /** The size the stage draws the icon at, whatever the export size. */
 export const INSPECT_PX = 112

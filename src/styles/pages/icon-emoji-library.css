@@ -390,6 +390,8 @@
   .iel-page .icust-size-cell[data-s="48"]{--cmin:48px}
   .iel-page .icust-size-cell--custom{--cw:64px}
 }
+/* At 320 the five touch cells need 256px with 8px gaps and the rail has 254px: 6px gaps fit (248px). */
+@media(pointer:coarse) and (max-width:374px){.iel-page .icust-size-rail{gap:6px}}
 /* The custom row is the rail's last child, so it reads as part of the control. */
 .iel-page .icust-size-custom{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;scroll-margin-bottom:112px}
 .iel-page .icust-size-custom>label{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
