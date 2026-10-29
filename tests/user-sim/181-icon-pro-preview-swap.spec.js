@@ -127,7 +127,7 @@ for (const [who, plan] of VIEWERS) {
         foot: (await page.locator('.icust-foot').boundingBox()).width,
         x: (await primary(page).boundingBox()).x,
       }
-      expect(Math.abs(after.button - before.button), 'the button changed width with its label (measured: 1.7px from the faces sizing, see the report)').toBeLessThan(3)
+      expect(Math.abs(after.button - before.button), 'the button changed width with its label (a sizer face that drops its space measured 1.7 to 3px)').toBeLessThan(1)
       expect(after.foot, 'the foot changed width').toBeCloseTo(before.foot, 0)
       expect(after.x, 'the button moved sideways').toBeCloseTo(before.x, 0)
       await ctx.close()

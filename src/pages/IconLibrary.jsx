@@ -2526,13 +2526,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   aria-busy={!baseSvgText && !loadErr}
                   aria-label={previewing ? 'Upgrade to Pro' : copied === 'svg' ? undefined : 'Copy SVG'}
                 >
+                  {/* Each face wraps its words in one span: as separate flex items, " SVG" and " to Pro" would lose their leading space. */}
                   <span className="icust-primary-faces">
                     <span className="icust-face">
                       {previewing ? <span>Upgrade<span className="icust-tier-w"> to Pro</span></span>
                         : copied === 'svg' ? 'Copied!' : <span>Copy<span className="icust-tier-w"> SVG</span></span>}
                     </span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true">Copy<span className="icust-tier-w"> SVG</span></span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true">Upgrade<span className="icust-tier-w"> to Pro</span></span>
+                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Copy<span className="icust-tier-w"> SVG</span></span></span>
+                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Upgrade<span className="icust-tier-w"> to Pro</span></span></span>
                   </span>
                 </button>
 
