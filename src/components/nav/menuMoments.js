@@ -15,7 +15,7 @@ export const HOVER_FINE = '(hover: hover) and (pointer: fine)'
 // and starts at once.
 export const INTENT_MS = 80
 
-// Row id -> moment id (the value of data-moment). Part A: the first nine tools.
+// Row id -> moment id (the value of data-moment). All 18 tools of Create and Discover.
 // A row not listed here has no moment and renders as it always has.
 export const MOMENT_OF = {
   palette: 'palette',
@@ -28,6 +28,15 @@ export const MOMENT_OF = {
   'type-scale': 'type-scale',
   icons: 'icons',
   'icon-library': 'icons',
+  emoji: 'emoji',
+  'file-converter': 'file-converter',
+  ratio: 'ratio',
+  '3d-converter': 'model-3d',
+  'alt-text': 'alt-text',
+  'palette-library': 'palette-library',
+  'gradient-gallery': 'gradient-library',
+  inspiration: 'inspiration',
+  'community-prompts': 'prompt-library',
 }
 
 export function finePointer() {

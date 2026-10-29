@@ -341,6 +341,85 @@ const MOMENT_ICONS = {
       <path className="i3" d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
     </>
   ),
+  // The face tilts and its right eye winks once.
+  emoji: (
+    <g className="face">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9 10.5h.01" />
+      <path className="er" d="M15 10.5h.01" />
+      <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
+    </g>
+  ),
+  // Two arrows that run through once, like a file passing.
+  'file-converter': (
+    <>
+      <g className="a1">
+        <path d="M4 8.5h15" />
+        <path d="m15.5 5 3.5 3.5-3.5 3.5" />
+      </g>
+      <g className="a2">
+        <path d="M20 15.5H5" />
+        <path d="M8.5 12 5 15.5 8.5 19" />
+      </g>
+    </>
+  ),
+  // The inner frame turns from landscape to portrait.
+  ratio: (
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <rect className="in" x="7" y="9.5" width="7" height="5" rx="1" />
+    </>
+  ),
+  // Three faces of the cube take light, drawn first so the outline stays above.
+  'model-3d': (
+    <>
+      <path className="f f1" d="M12 3.5 19.5 7.8 12 12 4.5 7.8z" />
+      <path className="f f2" d="M4.5 7.8 12 12v8.5L4.5 16.2z" />
+      <path className="f f3" d="M19.5 7.8 12 12v8.5l7.5-4.3z" />
+      <path d="M12 3.5 19.5 7.8v8.4L12 20.5 4.5 16.2V7.8z" />
+      <path d="M4.5 7.8 12 12l7.5-4.2M12 12v8.5" />
+    </>
+  ),
+  // The picture steps back and the T comes forward.
+  'alt-text': (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <g className="pic">
+        <circle cx="8" cy="9.5" r="1.4" />
+        <path d="M4 16l4-3.5 3 2.5" />
+      </g>
+      <path className="tx" d="M13.5 9.5h5M16 9.5v6" />
+    </>
+  ),
+  // Terracotta Dusk (paletteGallery.js), filled under the outlines.
+  'palette-library': (
+    <>
+      <rect className="c c1" x="4" y="4" width="7" height="7" rx="1.5" fill="#264653" />
+      <rect className="c c2" x="13" y="4" width="7" height="7" rx="1.5" fill="#2A9D8F" />
+      <rect className="c c3" x="4" y="13" width="7" height="7" rx="1.5" fill="#E9C46A" />
+      <rect className="c c4" x="13" y="13" width="7" height="7" rx="1.5" fill="#E76F51" />
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  inspiration: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path className="needle" d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z" />
+    </>
+  ),
+  // The line becomes three dots that hop once, like a reply on its way.
+  'prompt-library': (
+    <>
+      <path d="M4 5.5h16v9H9l-4 3.5v-3.5H4z" />
+      <path className="ln" d="M8.5 10h7" />
+      <circle className="d d1" cx="9" cy="10" r="1.1" />
+      <circle className="d d2" cx="12" cy="10" r="1.1" />
+      <circle className="d d3" cx="15" cy="10" r="1.1" />
+    </>
+  ),
 }
 
 export default function NavIcon({ id, className, moment }) {
