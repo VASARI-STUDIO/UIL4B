@@ -278,10 +278,10 @@ test('the inventory the guide describes is the inventory global.css declares', (
   // The count is asserted rather than derived on purpose: a family appearing or
   // disappearing is a first-paint decision, and this is where the guide's
   // sentence and the stylesheet are held to the same number.
-  assert.equal(faces.length, 8, `global.css now declares ${faces.length} @font-face rules`)
+  assert.equal(faces.length, 10, `global.css now declares ${faces.length} @font-face rules`)
   const families = [...new Set(faces.map((f) => f.family))]
-  assert.equal(families.length, 4, `global.css now declares ${families.length} families`)
-  assert.match(loadingProse, /Four families, eight rules/)
+  assert.equal(families.length, 6, `global.css now declares ${families.length} families`)
+  assert.match(loadingProse, /Six families, ten rules/)
 
   // Which families are subset, and which ship whole, is the claim the section
   // turns on. The UI face is the one that must carry no range at all; the

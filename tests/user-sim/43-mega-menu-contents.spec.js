@@ -110,6 +110,46 @@ async function settle(page) {
   ))
 }
 
+/** The computed font-family of the site's two faces, read off probes that use the tokens. */
+function fontFaces(page) {
+  return page.evaluate(() => {
+    const read = (token) => {
+      const el = document.createElement('span')
+      el.style.fontFamily = `var(${token})`
+      document.body.appendChild(el)
+      const family = getComputedStyle(el).fontFamily
+      el.remove()
+      return family
+    }
+    return { sans: read('--font'), mono: read('--mono') }
+  })
+}
+
+/**
+ * Every text node under `rootSelector` whose parent computes to the mono face,
+ * as "tag.class: text". The export preview (.pnav-prev) is a picture of a
+ * printed page and is left out.
+ */
+async function monoText(page, rootSelector) {
+  const { mono } = await fontFaces(page)
+  return page.evaluate(({ rootSelector: sel, mono: monoFamily }) => {
+    const out = []
+    for (const root of document.querySelectorAll(sel)) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const text = (n.textContent || '').trim()
+        const el = n.parentElement
+        if (!text || !el || el.closest('.pnav-prev')) continue
+        const family = getComputedStyle(el).fontFamily
+        if (family === monoFamily || /mono|monospace|consolas|menlo/i.test(family)) {
+          out.push(`${el.tagName.toLowerCase()}.${el.className}: ${text.slice(0, 40)}`)
+        }
+      }
+    }
+    return out
+  }, { rootSelector, mono })
+}
+
 async function openWithPointer(page, name) {
   await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByRole('region', { name: `${name} menu` })).toBeVisible()
@@ -240,24 +280,56 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 
 
-  // The App file's group labels (line 135) are one quiet mono caption in the
-  // faint ink, sentence case, with no rule — and its rows carry no category
-  // colour. There are no hue rules.
-  test('group labels are the file\'s quiet mono captions: one colour, no rule, sentence case', async ({ page }) => {
+  // Group labels are the site's Label role (mono retired from the menu):
+  // 13px, weight 500, in the body face, sentence case, untracked, one faint ink,
+  // with no rule. Rows carry no category colour in the label. There are no hue rules.
+  test('group labels are 13px/500 quiet captions in the body face: one colour, no rule, sentence case', async ({ page }) => {
     watch(page, 'a scanner trying to tell six columns apart')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
+    const faces = await fontFaces(page)
     const labels = await page.locator('#pnav-mega .pnav-col-label').evaluateAll((els) => els.map((el) => {
       const cs = getComputedStyle(el)
-      return { color: cs.color, size: cs.fontSize, transform: cs.textTransform, rule: getComputedStyle(el, '::before').content }
+      return {
+        text: el.textContent, color: cs.color, size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily,
+        transform: cs.textTransform, spacing: cs.letterSpacing, rule: getComputedStyle(el, '::before').content,
+      }
     }))
     // Signed out, so a group made only of soon tools is not drawn.
     expect(labels.length).toBeGreaterThanOrEqual(5)
     expect(new Set(labels.map((l) => l.color)).size).toBe(1)
     for (const l of labels) {
-      expect(l.size).toBe('9.5px')
+      expect(l.size, `${l.text} is not 13px`).toBe('13px')
+      expect(l.weight, `${l.text} is not weight 500`).toBe('500')
+      expect(l.family, `${l.text} is not in the body face`).toBe(faces.sans)
+      expect(l.family, `${l.text} is in the mono face`).not.toBe(faces.mono)
       expect(l.transform).toBe('none')
+      expect(['normal', '0px'], `${l.text} is tracked`).toContain(l.spacing)
+      // "AI" is an acronym; anything longer typed in capitals is not sentence case.
+      expect(l.text === l.text.toUpperCase() && l.text.length > 3, `${l.text} is typed in capitals`).toBe(false)
       expect(['none', 'normal']).toContain(l.rule)
+    }
+  })
+
+  // Mono stays only for a code value, and the menus show none. The export
+  // preview in the Create pane is a picture of a printed page (aria-hidden, its
+  // own hex chips), so it is the one place left out.
+  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 11px', async ({ page }) => {
+    watch(page, 'a visitor reading all three menus')
+    await go(page, MENU_ROUTE)
+    for (const name of TRIGGERS) {
+      await page.keyboard.press('Escape')
+      await openWithPointer(page, name)
+      expect(await monoText(page, '.pnav-menu'), `mono text in the ${name} menu`).toEqual([])
+      const badges = await page.locator('.pnav-menu .soon-badge, .pnav-menu .beta-badge').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      for (const b of badges) {
+        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.transform).toBe('none')
+        expect(['normal', '0px']).toContain(b.spacing)
+      }
     }
   })
 
@@ -592,9 +664,234 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await openWithPointer(page, 'Create')
     const heights = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pnav-mega .pnav-tool')]
       .map((r) => Math.round(r.getBoundingClientRect().height)))])
-    expect(heights).toEqual([42])
+    expect(heights).toEqual([48])
     const wrapped = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool-label')]
       .filter((l) => l.getClientRects().length > 1).map((l) => l.textContent))
     expect(wrapped).toEqual([])
+  })
+})
+
+// ── Layout: the readout, the count line, the glyphs, the phone sheet ─────
+//
+// Each check below was written to be able to go red: the readout test fails if
+// the foot never changes (or never comes back), the segment test fails if a tab
+// moves the row or shrinks it under 44px, and the glyph test fails the moment two
+// rows in one menu share an SVG.
+test.describe('layout: the foot answers the row, and every row has its own glyph', () => {
+  const footText = (page) => page.locator('#pnav-mega .pnav-menu-readout').innerText()
+
+  test('hovering a row says what it is for, and leaving puts the foot note back', async ({ page }) => {
+    watch(page, 'a visitor pointing at one tool')
+    await go(page, MENU_ROUTE)
+    await openWithPointer(page, 'Create')
+    const rest = await footText(page)
+    expect(rest, 'the resting foot is the count line').toMatch(/live tools/)
+    const row = page.locator('#pnav-mega .pnav-tool').nth(1)
+    const label = (await row.locator('.pnav-tool-label').innerText()).trim()
+    await row.hover()
+    await expect.poll(() => footText(page), 'the foot did not answer the pointer').not.toBe(rest)
+    expect(await footText(page)).toContain(label)
+    // Leave the grid, but stay inside the menu so it does not close.
+    await page.locator('#pnav-mega .pnav-menu-foot-note').hover()
+    await expect.poll(() => footText(page), 'the foot kept the row after the pointer left').toBe(rest)
+  })
+
+  test('keyboard focus on a row says the same, and blur puts the foot note back', async ({ page }) => {
+    watch(page, 'a keyboard user moving through the tools')
+    await go(page, MENU_ROUTE)
+    await openWithPointer(page, 'Create')
+    const rest = await footText(page)
+    const row = page.locator('#pnav-mega .pnav-tool').nth(2)
+    const label = (await row.locator('.pnav-tool-label').innerText()).trim()
+    await row.focus()
+    await expect.poll(() => footText(page), 'focus did not reach the foot').not.toBe(rest)
+    expect(await footText(page)).toContain(label)
+    await row.evaluate((el) => el.blur())
+    await expect.poll(() => footText(page), 'the foot kept the row after focus left').toBe(rest)
+  })
+
+  test('Create\'s foot counts its live tools and its beta tools', async ({ page }) => {
+    watch(page, 'a visitor sizing up the Create menu')
+    await go(page, MENU_ROUTE)
+    await openWithPointer(page, 'Create')
+    // The numbers are words and come from the tool tree; match the shape, not 13 and 1.
+    expect(await footText(page)).toMatch(/^[A-Z][a-z]+ live tools and [a-z]+ in beta, across /)
+  })
+
+  test('no two rows in one menu share a glyph', async ({ page }) => {
+    watch(page, 'a scanner telling the rows apart by icon')
+    await go(page, MENU_ROUTE)
+    for (const name of TRIGGERS) {
+      await openWithPointer(page, name)
+      const glyphs = await page.locator('#pnav-mega .pnav-tool-ico svg').evaluateAll((els) => els.map((el) => el.innerHTML))
+      if (name === 'Create') expect(glyphs.length, 'Create drew no glyphs').toBeGreaterThan(8)
+      const seen = new Set()
+      const dupes = glyphs.filter((g) => (seen.has(g) ? true : (seen.add(g), false)))
+      expect(dupes.length, `${name} has rows that share a glyph`).toBe(0)
+      await page.keyboard.press('Escape')
+    }
+  })
+
+  test('Create\'s view-all goes to /tools', async ({ page }) => {
+    watch(page, 'a visitor wanting the whole tool list')
+    await go(page, MENU_ROUTE)
+    await openWithPointer(page, 'Create')
+    const link = page.locator('#pnav-mega .pnav-menu-foot-link')
+    await expect(link).toHaveAttribute('href', '/tools')
+    await link.click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/tools')
+  })
+
+  test('at 768 the brand-kit sentence wraps in full: no clamp, no ellipsis, nothing cut', async ({ page }) => {
+    watch(page, 'a tablet visitor reading the Create card')
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await go(page, MENU_ROUTE)
+    await openWithPointer(page, 'Create')
+    const blurb = page.locator('#pnav-mega .pnav-editorial-blurb')
+    await expect(blurb).toBeVisible()
+    const m = await blurb.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      const text = range.getBoundingClientRect()
+      const box = el.getBoundingClientRect()
+      return {
+        clamp: cs.webkitLineClamp, overflow: cs.overflow, ellipsis: cs.textOverflow,
+        cut: el.scrollHeight > el.clientHeight + 1, textBelowBox: text.bottom > box.bottom + 1,
+        lines: Math.round(box.height / parseFloat(cs.lineHeight)),
+      }
+    })
+    expect(m.clamp).toBe('none')
+    expect(m.ellipsis).not.toBe('ellipsis')
+    expect(m.overflow).not.toBe('hidden')
+    expect(m.cut).toBe(false)
+    expect(m.textBelowBox).toBe(false)
+    expect(m.lines, 'the sentence is meant to wrap onto more than one line here').toBeGreaterThan(1)
+  })
+})
+
+test.describe('layout: the phone sheet is three segments over a 2-column grid', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  async function openSheet(page) {
+    await go(page, '/create/palette')
+    await page.getByRole('button', { name: 'Open menu', exact: true }).click()
+    await expect(page.locator('.pnav-sheet .pnav-acc-trigger')).toHaveCount(3)
+  }
+  const segs = (page) => page.locator('.pnav-sheet .pnav-acc-trigger')
+  const tops = (page) => segs(page).evaluateAll((els) => els.map((el) => {
+    const r = el.getBoundingClientRect()
+    return { top: Math.round(r.top * 10) / 10, height: Math.round(r.height * 10) / 10 }
+  }))
+
+  test('the segments are 44px or taller and share one top, on every tab', async ({ page }) => {
+    watch(page, 'a phone visitor switching between tabs')
+    await openSheet(page)
+    const first = await tops(page)
+    for (const s of first) expect(s.height, 'a segment is under the 44px target').toBeGreaterThanOrEqual(44)
+    expect(new Set(first.map((s) => s.top)).size, 'the segments do not share one top').toBe(1)
+    for (const name of ['Discover', 'Learn', 'Create']) {
+      await segs(page).filter({ hasText: name }).click()
+      await expect(segs(page).filter({ hasText: name })).toHaveAttribute('aria-expanded', 'true')
+      expect(await tops(page), `the segments moved when ${name} opened`).toEqual(first)
+    }
+  })
+
+  test('the open segment does nothing when pressed, and the others are buttons in tab order', async ({ page }) => {
+    watch(page, 'a keyboard user on the phone sheet')
+    await openSheet(page)
+    const create = segs(page).filter({ hasText: 'Create' })
+    await expect(create).toHaveAttribute('aria-expanded', 'true')
+    await create.click()
+    await expect(create, 'pressing the open segment closed it').toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('.pnav-sheet .pnav-acc-panel')).toHaveCount(1)
+    for (let i = 0; i < 3; i += 1) expect(await segs(page).nth(i).evaluate((el) => el.tagName + el.tabIndex)).toBe('BUTTON0')
+    await segs(page).filter({ hasText: 'Discover' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(segs(page).filter({ hasText: 'Discover' })).toHaveAttribute('aria-expanded', 'true')
+    await expect(create).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('each group is a 2-column grid of 56px rows, and an odd last tool spans both columns', async ({ page }) => {
+    watch(page, 'a phone visitor scanning the Create tools')
+    await openSheet(page)
+    const grids = await page.locator('.pnav-sheet .pnav-acc-grid').evaluateAll((els) => els.map((g) => {
+      const gr = g.getBoundingClientRect()
+      const links = [...g.querySelectorAll('.pnav-acc-link')].map((l) => {
+        const r = l.getBoundingClientRect()
+        return { h: Math.round(r.height), w: Math.round(r.width) }
+      })
+      return { n: links.length, width: Math.round(gr.width), links, cols: getComputedStyle(g).gridTemplateColumns.split(' ').length }
+    }))
+    expect(grids.length).toBeGreaterThan(3)
+    for (const g of grids) {
+      expect(g.cols).toBe(2)
+      for (const l of g.links) expect(l.h).toBeGreaterThanOrEqual(56)
+      if (g.n % 2 === 1) expect(g.links[g.n - 1].w, 'the odd last tool should span the grid').toBeGreaterThanOrEqual(g.width - 1)
+      else expect(g.links[g.n - 1].w).toBeLessThan(g.width - 1)
+    }
+    expect(grids.some((g) => g.n % 2 === 1), 'no odd group, so the span rule was not exercised').toBe(true)
+  })
+
+  test('Discover and Learn each carry a 44px pill, and view-all is a 44px target', async ({ page }) => {
+    watch(page, 'a phone visitor wanting the next step on each tab')
+    await openSheet(page)
+    const cases = [
+      ['Create', /Build a brand kit/, null],
+      ['Discover', /Open Discover/, '/discover'],
+      ['Learn', /Read the guides/, '/learn'],
+    ]
+    for (const [tab, label, href] of cases) {
+      await segs(page).filter({ hasText: tab }).click()
+      const pill = page.locator('.pnav-sheet .pnav-acc-cta')
+      await expect(pill).toHaveText(label)
+      expect((await pill.boundingBox()).height).toBeGreaterThanOrEqual(44)
+      if (href) await expect(pill).toHaveAttribute('href', href)
+      const all = page.locator('.pnav-sheet .pnav-acc-all')
+      await expect(all).toHaveText(/View all .* tools/)
+      expect((await all.boundingBox()).height).toBeGreaterThanOrEqual(44)
+    }
+  })
+
+  test('no text in the sheet is set in the mono face, and its group labels and badges follow the roles', async ({ page }) => {
+    watch(page, 'a phone visitor reading every tab')
+    await openSheet(page)
+    const faces = await fontFaces(page)
+    for (const name of ['Create', 'Discover', 'Learn']) {
+      await segs(page).filter({ hasText: name }).click()
+      await expect(segs(page).filter({ hasText: name })).toHaveAttribute('aria-expanded', 'true')
+      expect(await monoText(page, '.pnav-sheet'), `mono text in the ${name} tab`).toEqual([])
+      const heads = await page.locator('.pnav-sheet .pnav-acc-colhead').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      expect(heads.length).toBeGreaterThan(0)
+      for (const h of heads) {
+        expect(h.size, `${h.text} is not 13px`).toBe('13px')
+        expect(h.weight, `${h.text} is not weight 500`).toBe('500')
+        expect(h.family).toBe(faces.sans)
+        expect(h.transform).toBe('none')
+        expect(['normal', '0px']).toContain(h.spacing)
+      }
+      const badges = await page.locator('.pnav-sheet .beta-badge, .pnav-sheet .soon-badge').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      for (const b of badges) {
+        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.transform).toBe('none')
+        expect(['normal', '0px']).toContain(b.spacing)
+      }
+    }
+    // The Appearance label sits under the tabs, in every tab.
+    const appearance = await page.locator('.pnav-sheet .pnav-sheet-theme .pnav-pop-head').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily, transform: cs.textTransform, spacing: cs.letterSpacing }
+    })
+    expect(appearance.size).toBe('13px')
+    expect(appearance.weight).toBe('500')
+    expect(appearance.family).toBe(faces.sans)
+    expect(appearance.transform).toBe('none')
+    expect(['normal', '0px']).toContain(appearance.spacing)
   })
 })

@@ -95,6 +95,12 @@
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+/* Literata and Big Shoulders Display: the mega menu's Font Gallery and Font Pair moments, and the
+   homepage font specimens. Declaring costs nothing; the files (86KB and 35KB) are fetched once by
+   document.fonts.load in PillNav's menu, the first time the Create or Discover menu opens on a
+   hover-capable device, or by the homepage when it draws text in them. Same declarations as spectrum.css. */
+@font-face{font-family:'Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/big-shoulders-display-latin.woff2') format('woff2')}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 /* Form controls do not inherit the page's font by
@@ -2876,7 +2882,7 @@ html.lenis{scroll-behavior:auto!important}
 
 /* ── The account popover: kept, on the file's materials ─────────────────── */
 .pnav .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:272px;max-width:calc(100vw - 24px);padding:7px;background:var(--card);border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-2xl);box-shadow:0 30px 70px -30px rgba(var(--shade-rgb),var(--shade-a))}
-.pnav-pop-head{margin:0;padding:8px 10px 4px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:rgba(var(--ink-rgb),var(--ink-faint))}
+.pnav-pop-head{margin:0;padding:8px 10px 4px;font:500 13px/1.3 var(--font);letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-faint))}
 .pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 6px 10px}
 .pnav-pop-row-label{font-size:13px;font-weight:560;color:rgb(var(--ink-rgb))}
 .pnav-pop-sep{height:1px;margin:4px 6px;background:rgba(var(--ink-rgb),.08)}
@@ -2887,13 +2893,13 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item--danger{color:var(--err-strong,var(--err))}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong,var(--err))}
 .pnav-pop-id{display:flex;align-items:center;gap:12px;padding:10px}
-.pnav-pop-avatar{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--mono);font-size:13px;font-weight:600}
+.pnav-pop-avatar{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--font);font-size:13px;font-weight:600}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:560;color:rgb(var(--ink-rgb));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-pop-tag{padding:3px 6px;border-radius:var(--radius-xs);background:var(--accent-bg);color:var(--accent-mid);font-family:var(--mono);font-size:8.5px;font-style:normal;letter-spacing:.1em;text-transform:uppercase}
+.pnav-pop-tag{padding:2px 8px;border-radius:var(--radius-xs);background:var(--accent-bg);color:var(--accent-mid);font:500 11px/1 var(--font);font-style:normal;letter-spacing:0;text-transform:none}
 .pnav-pop-id-email{font-size:12.5px;color:rgba(var(--ink-rgb),var(--ink-dim));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
-.pnav-pop-acct-avatar{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--mono);font-size:10px;font-weight:600}
+.pnav-pop-acct-avatar{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--font);font-size:10px;font-weight:600}
 .pnav-pop-acct-text{display:flex;flex-direction:column;gap:1px;min-width:0}
 .pnav-pop-acct-name{font-size:13.5px;color:rgba(var(--ink-rgb),.86);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct-email{font-size:12px;color:rgba(var(--ink-rgb),var(--ink-dim));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2935,31 +2941,200 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-colstack:last-child{border-right:0}
 .pnav-col{margin-bottom:13px}
 .pnav-col:last-child{margin-bottom:0}
-/* Group labels (App line 135): 9.5px Geist Mono, .16em, sentence case, faint. */
-.pnav-col-label{display:block;margin:0;padding:0 6px 8px;font-family:var(--mono);font-size:9.5px;font-weight:400;letter-spacing:.16em;color:rgba(var(--ink-rgb),var(--ink-faint))}
-.pnav-toollist{list-style:none;display:grid;gap:1px;margin:0;padding:0}
+/* Group labels: the Label role. 13px Geist, 500, sentence case, untracked, faint. */
+.pnav-col-label{display:block;margin:0;padding:0 6px 8px;font:500 13px/1.3 var(--font);letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-faint))}
+.pnav-toollist{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:1px;margin:0;padding:0}
 /* A row (App lines 138-142): ONE line. A 26px neutral tile, a 13.5px label,
    a badge on the right. No description and no category colour. Hover and
    focus: an ink .07 row, and the tile turns accent. */
-.pnav-tool{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--radius);color:rgba(var(--ink-rgb),.86);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius);background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim));transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pnav-tool-ico svg{width:14px;height:14px}
-.pnav-tool-label{flex:1 1 auto;min-width:0;font-size:13.5px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-tool{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 10px;border-radius:12px;color:rgba(var(--ink-rgb),.86);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim));transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-tool-ico svg{width:18px;height:18px}
+.pnav-tool-label{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-tool:hover .pnav-tool-ico,.pnav-tool:focus-visible .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
+.pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
 .pnav-tool:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 .pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb))}
-.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat] .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
+.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]:not([data-hue]) .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
+/* HUE TILES (mega menu). A row wears its category as a 32px tile: the
+   category's FILL mixed into the page ground at 18-26%, the glyph in its STRONG
+   colour. Menu-scoped on purpose: the global --hue-* set has almost no margin
+   (see the note above it) and is not edited for this. Light is the base here, as
+   it is for --page-rgb; dark overrides under [data-theme="dark"].
+   Glyph on tile, measured in oklab against #F5F5F2 / #060607: light 4.90 (icons)
+   to 5.71 (colour); dark 6.42 (component) to 9.82 (colour). All above 3:1.
+   Colour and Media swap their mix per theme (26 / 18 dark, 18 / 26 light) so the
+   two lightest fills do not sit at the same lightness. */
+.pnav-menu,.pnav-sheet{--mm-colour-h:#EAB308;--mm-colour-s:#854D0E;--mm-colour-mix:18%;--mm-type-h:#0E7490;--mm-type-s:#155E75;--mm-imagery-h:#EA580C;--mm-imagery-s:#9A3412;--mm-imagery-mix:26%;--mm-ai-h:#BE185D;--mm-ai-s:#A31450;--mm-icons-h:#15803D;--mm-icons-s:#166534;--mm-component-h:#A855F7;--mm-component-s:#7E22CE;--mm-neutral-h:#6C6C66;--mm-neutral-s:#50504A}
+[data-theme="dark"] .pnav-menu,[data-theme="dark"] .pnav-sheet{--mm-colour-h:#FACC15;--mm-colour-s:#FDE047;--mm-colour-mix:26%;--mm-type-h:#06B6D4;--mm-type-s:#22D3EE;--mm-imagery-h:#DF670B;--mm-imagery-s:#F68A37;--mm-imagery-mix:18%;--mm-ai-h:#E95391;--mm-ai-s:#EF85B1;--mm-icons-h:#22C55E;--mm-icons-s:#4ADE80;--mm-component-h:#A855F7;--mm-component-s:#C084FC;--mm-neutral-h:#8A8A94;--mm-neutral-s:#B9B9C1}
+.pnav-tool[data-hue="colour"]{--mm-h:var(--mm-colour-h);--mm-s:var(--mm-colour-s);--mm-mix:var(--mm-colour-mix)}
+.pnav-tool[data-hue="type"]{--mm-h:var(--mm-type-h);--mm-s:var(--mm-type-s)}
+.pnav-tool[data-hue="imagery"]{--mm-h:var(--mm-imagery-h);--mm-s:var(--mm-imagery-s);--mm-mix:var(--mm-imagery-mix)}
+.pnav-tool[data-hue="ai"]{--mm-h:var(--mm-ai-h);--mm-s:var(--mm-ai-s)}
+.pnav-tool[data-hue="icons"]{--mm-h:var(--mm-icons-h);--mm-s:var(--mm-icons-s)}
+.pnav-tool[data-hue="component"]{--mm-h:var(--mm-component-h);--mm-s:var(--mm-component-s)}
+.pnav-tool[data-hue="neutral"]{--mm-h:var(--mm-neutral-h);--mm-s:var(--mm-neutral-s)}
+.pnav-tool[data-hue] .pnav-tool-ico{background:color-mix(in oklab,var(--mm-h) var(--mm-mix,22%),rgb(var(--page-rgb)));color:var(--mm-s)}
+/* Hover and keyboard focus (and the lit first row at rest) deepen the tile by 8
+   points instead of turning it accent: the row keeps its category colour and the
+   tile still answers the pointer. Worst glyph contrast at the deeper mix is
+   still above 4:1 in both themes. */
+.pnav-tool[data-hue]:hover .pnav-tool-ico,.pnav-tool[data-hue]:focus-visible .pnav-tool-ico,.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat][data-hue] .pnav-tool-ico{background:color-mix(in oklab,var(--mm-h) calc(var(--mm-mix,22%) + 8%),rgb(var(--page-rgb)))}
 /* Soon: the label drops to ink-faint (App line 2039), still AA: #121418 at
    .72 on #F5F5F2 is 7.05:1, #EFEEEA at .55 on #060607 is 5.55:1. */
 .pnav-tool[data-soon] .pnav-tool-label{color:rgba(var(--ink-rgb),var(--ink-faint))}
-/* Badges (App line 141): 8.5px mono at .1em, 3px 6px, 8px radius, no border.
+/* Badges: the Badge role. 11px Geist, 500, sentence case, 2px 8px, 8px radius, no border.
    Soon is neutral; Beta is the tertiary #E8C547 wash, its label in the file's
    tertiaryText (the tertiary walked 58% toward #0B0C0E in light). */
-.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .soon-badge,.pnav-acc-link .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
-.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .beta-badge{flex:0 0 auto;margin:0;border:0;font-family:var(--mono);font-size:8.5px;font-weight:400;letter-spacing:.1em;line-height:1.2;text-transform:uppercase}
+.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .soon-badge,.pnav-acc-link .beta-badge{padding:2px 8px;border-radius:var(--radius-xs)}
+.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .beta-badge{flex:0 0 auto;margin:0;border:0;font-family:var(--font);font-size:11px;font-weight:500;letter-spacing:0;line-height:1;text-transform:none}
 .pnav-tool .soon-badge{background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-tool .beta-badge,.pnav-acc-link .beta-badge{background:color-mix(in srgb,var(--tertiary) 16%,transparent);color:var(--tertiary-text)}
+
+/* HOVER MOMENTS (mega menu). A tool row plays one short moment that previews the
+   tool: the name (Palette, Font Gallery, Font Pair) or the glyph. PillNav sets
+   [data-live] on the active row: 80ms after a fine pointer arrives, at once on
+   keyboard focus, removed at once on leave, blur or a move onto anything that is
+   not a row. Each moment plays once in 200 to 600ms and holds; the exit is 150ms
+   ease-in on the base rule. Only transform, opacity, fill-opacity, stroke-width,
+   clip-path, background-position and font family change, so the 48px row and the
+   name's start never move. Touch and coarse pointers get nothing (the media query
+   below); reduced motion gets the end state at once, because the global
+   reduced-motion rule cuts every duration to 0. These moments deliberately use
+   gradients, gradient text and motion on a row hover, which the rest of the site
+   avoids. */
+.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450;--mm-bloom:linear-gradient(135deg in oklab,#EAB308,#F9A8D4,#C4B5FD);--mm-ok:var(--ok);--mm-warn:var(--warn);--mm-err:var(--err)}
+[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6;--mm-bloom:linear-gradient(135deg in oklab,#A16207,#BE185D,#6D28D9);--mm-ok:var(--ok-strong);--mm-warn:var(--warn-strong);--mm-err:var(--err-strong)}
+/* The Gradient bloom sits under the glyph's own strokes, and the glyph's diagonal runs along the
+   gradient's 50% band, so the middle stop is what the diagonal is drawn on. Every stop is chosen to
+   keep the glyph's strong colour (#854D0E light, #FDE047 dark) above 3:1: light 3.6 to 3.8, dark 3.7 to 5.4. */
+/* Gradient Library's two samples: Sun Flare and Aurora Sweep, copied from src/data/gradientGallery.js. */
+.pnav-menu{--mm-sun:radial-gradient(circle,#FDE68A 0%,#F97316 62%,#7C2D12 100%);--mm-aurora:conic-gradient(from 90deg,#22D3EE 0%,#818CF8 30%,#F472B6 62%,#22D3EE 100%)}
+/* The name: its own box with a fixed 20px line, so a face swap cannot grow the line
+   box (a taller face made it 21px) and nudge the name. top-aligned so the font's
+   baseline cannot move it either. */
+.pnav-tool-nm{display:inline-block;vertical-align:top;max-width:100%;height:20px;line-height:20px;overflow:hidden;text-overflow:ellipsis}
+.pnav-tool-nm[data-face]{font-size-adjust:.5}
+/* The ink the rainbow settles on is the row's own text colour (.86 at rest, full on hover). */
+.pnav-tool[data-moment]{--mm-nm-ink:rgba(var(--ink-rgb),.86)}
+.pnav-tool[data-moment]:is(:hover,:focus-visible),.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat][data-moment]{--mm-nm-ink:rgb(var(--ink-rgb))}
+/* Rest states of the moving parts: the glyph looks as it always did. */
+.pnav-tool-ico{position:relative}
+.pnav-tool-ico svg{position:relative}
+.pnav-fx{position:absolute;pointer-events:none}
+.pnav-fx-g{left:10.5px;top:10.5px;width:11px;height:11px;border-radius:1.6px;background:var(--mm-bloom);clip-path:circle(0% at 0 100%)}
+/* Gradient Library: the glyph's front square (3.5 to 16 by 8 to 20.5 in the 24 grid, drawn at 18px
+   in the 32px tile), inset past the 1.2px stroke. Two library gradients stack in it, the glyph's
+   outline drawn above both. Sun Flare and Aurora Sweep are src/data/gradientGallery.js's own stops. */
+.pnav-fx-a,.pnav-fx-b{left:10.2px;top:13.6px;width:8.2px;height:8.2px;border-radius:1.3px;opacity:0}
+.pnav-fx-a{background:var(--mm-sun)}
+.pnav-fx-b{background:var(--mm-aurora)}
+.mm-gl .half{transform-origin:12px 12px}
+.mm-gl .rise{transform:translateY(15.5px)}
+.mm-gl .sb{transform-box:fill-box;transform-origin:0 50%;transform:scaleX(0);fill-opacity:.85}
+.mm-gl .s1{fill:var(--mm-ok)}
+.mm-gl .s2{fill:var(--mm-warn)}
+.mm-gl .s3{fill:var(--mm-err)}
+.mm-gl .t1,.mm-gl .t2,.mm-gl .t3{transform-box:fill-box;transform-origin:50% 100%}
+/* Scaled strokes keep their width: 1.6 units at the 18px glyph is 1.2px. */
+.mm-gl .ts path{vector-effect:non-scaling-stroke;stroke-width:1.2px}
+.mm-gl .i2,.mm-gl .i3{opacity:0}
+.mm-gl .face{transform-origin:12px 12px}
+/* The right eye winks: the dot gives way to a short closed lid, so the wink reads as an eye closing. */
+.mm-gl .ew{opacity:0;fill:none}
+/* The inner frame scales about its own centre; its stroke stays 1.2px (1.6 units at 18px). */
+.mm-gl .in{transform-box:fill-box;transform-origin:50% 50%;vector-effect:non-scaling-stroke;stroke-width:1.2px}
+.mm-gl .f{fill:currentColor;fill-opacity:0;stroke:none}
+.mm-gl .c{opacity:0;stroke:none}
+.mm-gl .needle{transform-origin:12px 12px}
+.mm-gl .d{opacity:0;fill:currentColor;stroke:none}
+@media (hover:hover) and (pointer:fine){
+  /* Exit: every moving part goes back in 150ms ease-in. */
+  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),fill-opacity var(--mm-out),stroke-width var(--mm-out)}
+  .pnav-fx-g{transition:clip-path var(--mm-out)}
+  .pnav-fx-a,.pnav-fx-b{transition:opacity var(--mm-out)}
+  /* 1 Palette: the name takes a rainbow, swept in from the left. Every stop clears 4.5:1
+     on the hover ground in both themes (5.6 to 6.5 light, 6.0 to 10.9 dark). The sweep is a
+     window sliding over one fixed gradient in oklab, so no frame holds a colour
+     outside it. Guarded: without `in oklab` the transparent text would have nothing to paint. */
+  @supports (background-image:linear-gradient(90deg in oklab,red,blue)){
+    .pnav-tool[data-moment="palette"] .pnav-tool-nm{background-image:linear-gradient(90deg in oklab,var(--mm-rainbow) 33.3%,var(--mm-nm-ink) 40%,var(--mm-nm-ink));background-size:300% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;transition:background-position var(--mm-out)}
+    .pnav-tool[data-moment="palette"][data-live] .pnav-tool-nm{background-position:0 0;transition:background-position 480ms var(--mm-ease)}
+  }
+  /* 2 Gradient: a mini gradient blooms from the glyph's lower-left corner. */
+  .pnav-tool[data-moment="gradient"][data-live] .pnav-fx-g{clip-path:circle(150% at 0 100%);transition:clip-path 420ms var(--mm-ease)}
+  /* 3 Contrast Checker: the dark half of the disc turns 180deg. */
+  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 360ms var(--mm-ease)}
+  /* 4 Tint: the ramp rises inside the drop. */
+  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 380ms var(--mm-ease)}
+  /* 5 Semantic Colour: the bars fill with success, warning and error in turn. */
+  .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease)}
+  .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms}
+  .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms}
+  /* 6 Font Gallery: PillNav swaps the name through ready faces (style + data-face). */
+  /* 7 Font Pair: "Font" in Literata 600, then "Pair" in Geist Mono 500, 90ms later.
+     A face is used only once it is ready (data-faces on the menu root); until then
+     "Font" takes Switzer 700 and "Pair" stays as it is. */
+  .pnav-tool[data-moment="font-pair"][data-live] .w1{font-weight:700}
+  .pnav-menu[data-faces~="literata"] .pnav-tool[data-moment="font-pair"][data-live] .w1{font-family:Literata,serif;font-weight:600;font-size-adjust:.5}
+  .pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2{animation:mm-mono 1ms 90ms forwards}
+  /* 8 Type Scale: the T's grow toward one another, the smallest first and by the most. */
+  .pnav-tool[data-moment="type-scale"][data-live] .t1{transform:scaleY(2.4);transition:transform 340ms var(--mm-ease)}
+  .pnav-tool[data-moment="type-scale"][data-live] .t2{transform:scaleY(1.45);transition:transform 340ms var(--mm-ease) 60ms}
+  .pnav-tool[data-moment="type-scale"][data-live] .t3{transform:scaleY(1.12);transition:transform 340ms var(--mm-ease) 120ms}
+  /* 9 Icon Library: star to heart to bolt, holding on the bolt. */
+  .pnav-tool[data-moment="icons"][data-live] .i1{animation:mm-i1 460ms var(--mm-ease) forwards}
+  .pnav-tool[data-moment="icons"][data-live] .i2{animation:mm-i2 460ms var(--mm-ease) forwards}
+  .pnav-tool[data-moment="icons"][data-live] .i3{animation:mm-i3 460ms var(--mm-ease) forwards}
+  /* 10 Emoji Library: the face tilts 20deg and the right eye closes once (dot out, lid in). */
+  .pnav-tool[data-moment="emoji"][data-live] .face{transform:rotate(-20deg);transition:transform 300ms var(--mm-ease)}
+  .pnav-tool[data-moment="emoji"][data-live] .er{animation:mm-wink 380ms ease-in-out 140ms}
+  .pnav-tool[data-moment="emoji"][data-live] .ew{animation:mm-wink-lid 380ms ease-in-out 140ms}
+  /* 11 File Converter: the arrows nudge past each other and back as one motion, the return one 60ms
+     later; it eases down to 40% and rests there. Neither arrow ever leaves, and the final keyframe
+     matches the resting opacity, so nothing steps when the animation ends. */
+  .pnav-tool[data-moment="file-converter"][data-live] .a1{animation:mm-run 480ms cubic-bezier(.4,0,.2,1)}
+  .pnav-tool[data-moment="file-converter"][data-live] .a2{opacity:.4;animation:mm-run-back 480ms cubic-bezier(.4,0,.2,1) 60ms backwards}
+  /* 12 Aspect: the inner frame turns from landscape (7 by 5 units) to portrait (5 by 8). */
+  .pnav-tool[data-moment="ratio"][data-live] .in{transform:scale(.714,1.6);transition:transform 340ms var(--mm-ease)}
+  /* 13 3D Model Converter: the cube takes light, its three faces at 55 / 28 / 12%. */
+  .pnav-tool[data-moment="model-3d"][data-live] .f{transition:fill-opacity 280ms var(--mm-ease)}
+  .pnav-tool[data-moment="model-3d"][data-live] .f1{fill-opacity:.55}
+  .pnav-tool[data-moment="model-3d"][data-live] .f2{fill-opacity:.28}
+  .pnav-tool[data-moment="model-3d"][data-live] .f3{fill-opacity:.12}
+  /* 14 Alt Text: the picture steps back to 30% and the T thickens (1.6 to 2.4). */
+  .pnav-tool[data-moment="alt-text"][data-live] .pic{opacity:.3;transition:opacity 260ms var(--mm-ease)}
+  .pnav-tool[data-moment="alt-text"][data-live] .tx{stroke-width:2.4;transition:stroke-width 260ms var(--mm-ease)}
+  /* 15 Palette Library: the four swatches fill with Terracotta Dusk, in reading order. */
+  .pnav-tool[data-moment="palette-library"][data-live] .c{opacity:1;transition:opacity 180ms var(--mm-ease)}
+  .pnav-tool[data-moment="palette-library"][data-live] .c2{transition-delay:60ms}
+  .pnav-tool[data-moment="palette-library"][data-live] .c3{transition-delay:120ms}
+  .pnav-tool[data-moment="palette-library"][data-live] .c4{transition-delay:180ms}
+  /* 16 Gradient Library: Sun Flare, then Aurora Sweep fades in over it and holds. */
+  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-a{opacity:1;transition:opacity 160ms var(--mm-ease)}
+  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-b{opacity:1;transition:opacity 200ms var(--mm-ease) 220ms}
+  /* 17 Inspiration: the compass needle swings a quarter turn to a new heading. */
+  .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 420ms var(--mm-ease)}
+  /* 18 Prompt Library: the line becomes three dots that each hop once, 2.4 units (about 1.8px) high. */
+  .pnav-tool[data-moment="prompt-library"][data-live] .ln{opacity:0;transition:opacity 120ms ease-out}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d{opacity:1;transition:opacity 120ms ease-out 60ms;animation:mm-hop 300ms var(--mm-ease) 120ms}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d2{animation-delay:190ms}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d3{animation-delay:260ms}
+}
+@keyframes mm-mono{from,to{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5}}
+@keyframes mm-i1{0%{opacity:1}30%,100%{opacity:0}}
+@keyframes mm-i2{0%{opacity:0}30%,60%{opacity:1}85%,100%{opacity:0}}
+@keyframes mm-i3{0%,60%{opacity:0}85%,100%{opacity:1}}
+@keyframes mm-wink{0%,100%{opacity:1}18%,82%{opacity:0}}
+@keyframes mm-wink-lid{0%,100%{opacity:0}18%,82%{opacity:1}}
+@keyframes mm-run{0%,100%{transform:none}45%{transform:translateX(4px)}}
+@keyframes mm-run-back{0%{transform:none;opacity:1}45%{transform:translateX(-4px);opacity:.7}100%{transform:none;opacity:.4}}
+@keyframes mm-hop{0%,100%{transform:none}50%{transform:translateY(-2.4px)}}
+/* Forced colours: the rainbow clip off, the overlay hidden. */
+@media (forced-colors:active){
+  .pnav-tool[data-moment="palette"] .pnav-tool-nm{background:none;color:CanvasText}
+  .pnav-fx{display:none}
+}
 
 /* The promo content (App lines 151-206): the file's pane, minus its box. It is
    separated from the columns by one hairline and sits on the tray itself. */
@@ -2988,20 +3163,41 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-dcount{display:grid;align-content:start;gap:7px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-dcount-strip{display:flex;height:22px;border-radius:var(--radius-xs);overflow:hidden}
 .pnav-dcount-strip > span{flex:1}
-.pnav-dcount-n{font-family:var(--mono);font-size:15px;color:rgb(var(--ink-rgb))}
+.pnav-dcount-n{font-family:var(--font);font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0;color:rgb(var(--ink-rgb))}
 .pnav-dcount-l{font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
 /* Learn: every published guide with its mono reading time (App lines 192-200). */
 .pnav-guides{list-style:none;display:grid;gap:2px;margin:0;padding:0}
 .pnav-guide{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid rgba(var(--ink-rgb),.06)}
 .pnav-guide-label{flex:1 1 auto;min-width:0;font-size:12.5px;color:rgba(var(--ink-rgb),.86);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-guide-mins{font-family:var(--mono);font-size:9.5px;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
+.pnav-guide-mins{font:400 11px/1.45 var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
 /* The foot (App lines 209-214): the section's own line and its view-all in
    the accent's text member (the file's accentMid). */
 .pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 15px;border-top:1px solid rgba(var(--ink-rgb),.06)}
 .pnav-menu-foot-note{font-size:12.5px;color:rgba(var(--ink-rgb),var(--ink-faint))}
+/* The readout (the foot's line, which names the row under the pointer or focus).
+   Its height is reserved per menu so a hover never moves the panel: one line on
+   Create (its longest description, Aspect & Resolution, is one line at 1440),
+   two on Discover and Learn (the longest guide line is about 150 characters).
+   At 1240 and under the link beside it squeezes the line, so Create reserves two.
+   No aria-live: the active row points at this paragraph with aria-describedby
+   and nothing is announced unasked. */
+.pnav-menu-readout{flex:1 1 0;min-width:0;max-width:110ch;margin:0;line-height:18px;min-height:18px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden}
+.pnav-menu-readout b{margin-right:4px;font-weight:500;color:rgb(var(--ink-rgb))}
+.pnav-menu[data-menu="discover"] .pnav-menu-readout,.pnav-menu[data-menu="learn"] .pnav-menu-readout{min-height:36px;-webkit-line-clamp:2;line-clamp:2}
+@media(max-width:1240px){.pnav-menu[data-menu="create"] .pnav-menu-readout{min-height:36px;-webkit-line-clamp:2;line-clamp:2}}
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;border-radius:6px;color:var(--accent-mid);font-size:12.5px;text-decoration:none}
 .pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 .pnav-menu-foot-link:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+/* 768 to 900: Create's three columns are about 245px each, and the 3D Model Converter row
+   (tile, name, Beta pill) needs more than the column holds at 768. The list track is
+   minmax(0,1fr) above, so a row can never run past its column; this band also trims the side
+   padding, the tile-to-name gaps and the badge so the full name and pill fit. Rows stay 48px. */
+@media(max-width:900px){
+  .pnav-menu{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
+  .pnav-menu[data-menu="create"] .pnav-colstack{padding-inline:6px}
+  .pnav-menu[data-menu="create"] .pnav-tool{gap:10px;padding-inline:8px}
+  .pnav-menu[data-menu="create"] .pnav-tool .soon-badge,.pnav-menu[data-menu="create"] .pnav-tool .beta-badge{padding-inline:6px}
+}
 /* 768-1240: the promo content stays (the brief), and moves under the columns
    as one full-width band — text and button on the left, its picture on the
    right — rather than squeezing the tool columns until labels truncate. */
@@ -3049,21 +3245,38 @@ html.lenis{scroll-behavior:auto!important}
    nothing scrolls under the translucent header (audit A9). Live rows only,
    one line each, at a 48px touch height. */
 .pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
-@keyframes pnav-sheet-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Opacity only: a rise would put the segments 8px low while the sheet opens, so they would not sit at one top on every tab. */
+@keyframes pnav-sheet-in{from{opacity:0}to{opacity:1}}
 @media(min-width:768px){.pnav-sheet{bottom:0}}
-.pnav-acc{border-bottom:1px solid rgba(var(--ink-rgb),.08)}
-.pnav-acc-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 4px;border:0;background:none;color:rgb(var(--ink-rgb));font-family:var(--font);font-size:17px;font-weight:560;letter-spacing:-.01em;cursor:pointer}
-.pnav-acc-trigger .pnav-chev{width:14px;height:14px;color:rgba(var(--ink-rgb),var(--ink-faint))}
-.pnav-acc-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
+/* The three section segments: a 48px track holding 44px buttons (2 + 44 + 2),
+   the same size and top on every tab. The open one is lit and does nothing when
+   pressed; the panel under them is the only thing that changes. */
+.pnav-acc-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:48px;margin:8px 0 0;padding:2px;border-radius:var(--radius-pill);background:rgba(var(--ink-rgb),.06)}
+.pnav-acc-trigger{display:grid;place-items:center;min-width:0;height:44px;padding:0 8px;border:0;border-radius:var(--radius-pill);background:none;color:rgba(var(--ink-rgb),.72);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-acc-trigger[aria-expanded="true"]{background:rgba(var(--ink-rgb),.14);color:rgb(var(--ink-rgb));cursor:default}
+.pnav-acc-trigger:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 .pnav-acc-panel{padding:0 0 14px}
-.pnav-acc-cta{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin:2px 0 6px;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;cursor:pointer}
-.pnav-acc-colhead{margin:14px 8px 4px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:rgba(var(--ink-rgb),var(--ink-faint))}
-.pnav-acc-link{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 8px;border-radius:var(--radius);color:rgba(var(--ink-rgb),.86);font-size:15px;text-decoration:none}
+.pnav-acc-cta{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:18px 4px 0;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;text-decoration:none;cursor:pointer}
+.pnav-acc-cta:hover{color:var(--accent-ink);text-decoration:none}
+.pnav-acc-colhead{margin:0;padding:14px 4px 4px;font-family:var(--font);font-size:13px;font-weight:500;line-height:1.3;letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-acc-col:first-child .pnav-acc-colhead{padding-top:10px}
+.pnav-acc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px}
+.pnav-acc-grid .pnav-acc-link:last-child:nth-child(odd){grid-column:1/-1}
+.pnav-acc-link{display:flex;align-items:center;gap:10px;min-width:0;min-height:56px;padding:8px 4px;border-radius:var(--radius);color:rgba(var(--ink-rgb),.86);font-size:14.5px;line-height:19px;text-decoration:none}
 .pnav-acc-link:active,.pnav-acc-link:hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-acc-ico{display:grid;place-items:center;flex:0 0 auto;width:30px;height:30px;border-radius:var(--radius);background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim))}
-.pnav-acc-ico svg{width:15px;height:15px}
+.pnav-acc-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-acc-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-acc-ico svg{width:18px;height:18px}
+.pnav-acc-link[data-hue] .pnav-acc-ico{background:color-mix(in oklab,var(--mm-h) var(--mm-mix,22%),rgb(var(--page-rgb)));color:var(--mm-s)}
+.pnav-acc-link[data-hue="colour"]{--mm-h:var(--mm-colour-h);--mm-s:var(--mm-colour-s);--mm-mix:var(--mm-colour-mix)}
+.pnav-acc-link[data-hue="type"]{--mm-h:var(--mm-type-h);--mm-s:var(--mm-type-s)}
+.pnav-acc-link[data-hue="imagery"]{--mm-h:var(--mm-imagery-h);--mm-s:var(--mm-imagery-s);--mm-mix:var(--mm-imagery-mix)}
+.pnav-acc-link[data-hue="ai"]{--mm-h:var(--mm-ai-h);--mm-s:var(--mm-ai-s)}
+.pnav-acc-link[data-hue="icons"]{--mm-h:var(--mm-icons-h);--mm-s:var(--mm-icons-s)}
+.pnav-acc-link[data-hue="component"]{--mm-h:var(--mm-component-h);--mm-s:var(--mm-component-s)}
+.pnav-acc-link[data-hue="neutral"]{--mm-h:var(--mm-neutral-h);--mm-s:var(--mm-neutral-s)}
 .pnav-acc-label{flex:1 1 auto;min-width:0}
-.pnav-acc-all{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:4px;padding:0 8px;color:var(--accent-mid);font-size:14px;text-decoration:none}
+.pnav-acc-all{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:6px 0 0;padding:0 4px;color:var(--accent-mid);font-size:14px;text-decoration:none}
 .pnav-sheet-group{display:grid;gap:2px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-sheet-row{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 8px;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),.86);font-family:var(--font);font-size:15px;font-weight:400;text-align:left;text-decoration:none;cursor:pointer}
 .pnav-sheet-row svg{flex:0 0 auto;color:rgba(var(--ink-rgb),var(--ink-dim))}
@@ -4553,15 +4766,14 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
              that you can cancel before then.
    Deliberately NOT taken: any "most popular" ribbon that isn't backed by real
    data, and every save badge that only appears once you hover the cheaper tab. */
-/* Mono eyebrow - V2's tool texture. --accent-strong because it is 11px. */
-/* Accent text and glyphs in the Pro dialog read the derived family, never the
-   --accent-strong literal. Measured light / dark: the eyebrow's --accent-mid on
-   the card is 5.55 / 8.15; the chosen plan's name sits on the 8% accent wash and
-   steps to --accent-text, 5.52 / 7.90; the trial tag and tick carry
-   --accent-ink on --accent-mid, 5.18 / 9.17. */
-.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
-.ui-pro-title{margin:8px 0 0;font-size:var(--fs-h3);font-weight:700;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
+/* Accent text in the Pro dialog reads the derived family, never the
+   --accent-strong literal. Measured light / dark: the "Save N%" text's
+   --accent-mid on the card is 5.55 / 8.15; the chosen plan's name sits on the
+   8% accent wash and steps to --accent-text, 5.52 / 7.90. */
+.ui-pro-title{margin:0;font-size:var(--fs-h3);font-weight:700;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
 .ui-pro-sub{margin:8px 0 0;max-width:46ch;font-size:14px;line-height:1.55;color:var(--t2);text-wrap:pretty}
+/* A literal value in the subtitle (a size) is the one mono run in the head. */
+.ui-pro-sub code{font-family:var(--mono);font-size:.93em;color:var(--t1)}
 
 /* The headline rate. */
 /* .ui-pro-from* removed 2026-09-15 with the element. It was a 40px repeat of
@@ -4569,9 +4781,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    that state every rate — and it was the reason a stale fallback price could
    paint on top of "we couldn't load current prices". */
 
-.ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
-.ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
-.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-fill);color:var(--accent-ink)}
+.ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ui-pro-li{font-size:14px;line-height:1.45;color:var(--t1)}
 
 /* Monthly and Yearly are stacked plan rows, with space for trial details. */
 .ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
@@ -4585,16 +4796,16 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan:has(.ui-pro-plan-input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 /* Identity left, money right, on one baseline-aligned line. */
 .ui-pro-plan-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
-.ui-pro-plan-id{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
-.ui-pro-plan-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+.ui-pro-plan-id{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.ui-pro-plan-name{font-size:15px;font-weight:560;line-height:1.3;color:var(--t1)}
 .ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-text)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
-.ui-pro-plan-save{font-size:13px;font-weight:500;color:var(--accent-mid);white-space:pre}
+.ui-pro-plan-save{font-size:13px;font-weight:500;color:var(--accent-mid);white-space:nowrap}
 .ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-left:auto;flex:none}
-.ui-pro-plan-amount{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.035em;color:var(--t0)}
+.ui-pro-plan-amount{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.035em;color:var(--t0);font-variant-numeric:tabular-nums}
 .ui-pro-plan-per{font-size:13px;font-weight:600;color:var(--t2)}
-.ui-pro-plan-total{font-size:12px;line-height:1.4;color:var(--t2)}
+.ui-pro-plan-total{font-size:12px;line-height:1.4;color:var(--t2);font-variant-numeric:tabular-nums}
 /* THE TRIAL, as a filled chip rather than a line of small print.
    It was 11.5px of accent text below the total — the least prominent element
    in the tile, for the strongest thing in the offer. Filled, because the
@@ -4671,21 +4882,34 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    beside the offer. A 900px dialog with one empty half would be worse than a
    narrow one — the modal becomes a single focused column instead. */
 .ui-pro--norail{max-width:540px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "body"}
+.ui-pro--norail .ui-pro-title{padding-right:36px}
 .ui-pro-x{position:absolute;top:14px;right:14px;z-index:2}
 .ui-pro-head{grid-area:head;padding:26px 28px 0}
 .ui-pro-body{grid-area:body;padding:16px 28px 26px}
 .ui-pro-rail{grid-area:rail;align-self:stretch;display:flex;flex-direction:column;padding:26px 26px 26px 24px;border-left:1px solid var(--border);background:var(--cbg)}
 
+/* The caller's proof sits in the rail's slot: a single picture and its caption,
+   centred on the same ground the rail uses. The dialog is narrower than the
+   rail's 900px, because one picture does not fill a rail. */
+.ui-pro--proof{max-width:760px;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);grid-template-areas:"head proof" "body proof"}
+.ui-pro-proof{grid-area:proof;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;padding:26px 24px;border-left:1px solid var(--border);background:var(--cbg);text-align:center;color:var(--t0)}
+/* The frame a caller puts its picture in, so one icon holds the column. */
+.ui-pro-proof-art{display:grid;place-items:center;width:144px;height:144px;border-radius:16px;border:1px solid var(--border);background:var(--bg-0)}
+.ui-pro-proof-art>svg,.ui-pro-proof-art>img{width:96px;height:96px}
+/* The caption a caller may put under its picture. */
+.ui-pro-proof-cap{margin:0;font-size:13px;line-height:1.4;color:var(--t2)}
+.ui-pro-proof-cap code{font-family:var(--mono);font-size:.93em;color:var(--t1)}
+
 /* Right padding keeps the heading clear of the close button, which is
    absolutely positioned over this column at wide widths. */
-.ui-pro-rail-h{margin:0;padding-right:34px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.ui-pro-rail-h{margin:0;padding-right:34px;font-size:13px;font-weight:600;line-height:1.4;color:var(--t1)}
 .ui-pro-rail-seed{display:flex;align-items:center;gap:7px;margin:8px 0 0;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1)}
 .ui-pro-rail-chip{width:14px;height:14px;flex:none;border-radius:var(--radius-xs);border:1px solid color-mix(in srgb,var(--t0) 14%,transparent)}
 .ui-pro-rail-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:11px}
 .ui-pro-rail-row{display:flex;flex-direction:column;gap:5px;min-width:0}
 .ui-pro-rail-name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--t1)}
 .ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-mid)}
-.ui-pro-rail-free{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-1)}
+.ui-pro-rail-free{font-size:11px;font-weight:600;line-height:1.3;padding:1px 7px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-1)}
 /* The strip is the product. Five swatches because that is what the palette
    tools build - a four-swatch preview would be showing a system that does not
    exist. Rendered in full colour on the locked rows too: the honest version of
@@ -4718,6 +4942,15 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
      body, the rail holds no focusable control, so Tab order and a screen
      reader's reading order are unchanged. */
   .ui-pro{max-width:460px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "body" "rail"}
+  /* The proof is short, so it stays between the head and the price. */
+  .ui-pro--proof{grid-template-areas:"head" "proof" "body"}
+  /* The head has no bottom padding of its own, so it needs room above the band. */
+  .ui-pro--proof .ui-pro-head{padding-bottom:16px}
+  .ui-pro-proof-art{width:96px;height:96px;border-radius:12px}
+  .ui-pro-proof-art>svg,.ui-pro-proof-art>img{width:64px;height:64px}
+  .ui-pro-proof{border-left:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 22px}
+  /* One column: the corner close button now sits over the title's line. */
+  .ui-pro-title{padding-right:36px}
   .ui-pro-rail{border-left:none;border-top:1px solid var(--border);padding:18px 22px}
   .ui-pro-rail-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
   .ui-pro-head{padding:22px 22px 0}
@@ -4727,13 +4960,14 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .ui-pro-head{padding:18px 16px 0}
   .ui-pro-body{padding:12px 16px 20px}
   .ui-pro-rail{padding:16px}
+  .ui-pro-proof{padding:18px 16px}
   .ui-pro-rail-list{grid-template-columns:minmax(0,1fr)}
   /* 24px of slack for a 320×568 screen: with the rail painted last (above)
      the price-service error and its two buttons ended 5px past the sheet's
      scroll box on the smallest phone. The list tightens, the error block
      loses its outer margin; nothing is hidden and nothing is smaller than
      the tap floor. */
-  .ui-pro-list{margin-top:12px;gap:7px}
+  .ui-pro-list{margin-top:12px}
   .ui-pro-plans-err{margin-top:12px;padding:12px}
 }
 

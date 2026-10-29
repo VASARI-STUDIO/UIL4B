@@ -21,6 +21,9 @@ const FIRST_RUN_DESTINATION = '/projects'
 const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 
+// /checkout itself, with or without a plan, but not /checkout/return.
+const isCheckoutTarget = (target) => target === '/checkout' || (typeof target === 'string' && target.startsWith('/checkout?'))
+
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT HAPPENED TO THE SURVEY
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,16 +171,16 @@ export default function Onboarding() {
   // the artefact the sign-up dialog promised them ("your palettes, type scales
   // and gradients, kept").
   //
-  // The stashed resume target is DROPPED, exactly as the old pricing step's
-  // Free button dropped a stashed checkout intent: choosing a start here is a
-  // newer and more specific statement of intent than whatever they clicked
-  // before the account existed.
+  // A stashed checkout wins over the pick: someone who signed up by clicking a
+  // Pro button came to pay, so they go on to that checkout and the pick is still
+  // recorded. Any other stashed target is dropped, because choosing a start here
+  // is a newer and more specific statement of intent than the page they were on.
   const chooseFirstWin = (win) => {
     setLeaving(true)
     persist({ firstWin: win.id })
     recordFirstWin(win.id)
-    takeResumeTarget()
-    navigate(win.route)
+    const resume = takeResumeTarget()
+    navigate(isCheckoutTarget(resume) ? resume : win.route)
   }
 
   // Declined all three. Onboarding is still COMPLETE — the screen was answered

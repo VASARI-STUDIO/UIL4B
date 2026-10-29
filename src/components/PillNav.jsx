@@ -3,7 +3,7 @@ import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
 import { localiseTools } from '../data/tools'
-import { searchHints } from '../data/toolIndex'
+import { CREATE_TOOL_SEARCH, searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the
 // same gallery palette and the same inkFor/grade the exporter uses.
 import { LIBRARY_LEAD } from '../data/libraryTotals'
@@ -22,6 +22,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
+import { INTENT_MS, MOMENT_OF, GALLERY_STEP_MS, faceByKey, facesAttr, finePointer, galleryRun, warmFaces } from './nav/menuMoments'
 import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
@@ -926,51 +927,64 @@ function AppHeader() {
 
       {sheet && (
         <div ref={sheetRef} className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
-          {visibleSections.map((section) => {
-            const expanded = sheetSection === section.id
-            const promo = menuPromo(section)
-            return (
-              <div className="pnav-acc" key={section.id}>
+          {/* Three segments, one open panel under them. The segments are the
+              same 44px buttons at the same top on every tab, so switching
+              never moves them; the open one does nothing when pressed. */}
+          <div className="pnav-acc-tabs">
+            {visibleSections.map((section) => {
+              const expanded = sheetSection === section.id
+              return (
                 <button
+                  key={section.id}
                   type="button"
                   className="pnav-acc-trigger"
                   aria-expanded={expanded}
-                  onClick={() => setSheetSection(expanded ? '' : section.id)}
+                  aria-controls={expanded ? 'pnav-acc-panel' : undefined}
+                  onClick={() => { if (!expanded) setSheetSection(section.id) }}
                 >
                   {section.label}
-                  <Chevron />
                 </button>
-                {expanded && (
-                  <div className="pnav-acc-panel">
-                    {section.id === 'create' && (
-                      <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
-                        {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
-                        <ArrowRight />
-                      </button>
-                    )}
-                    {/* Live rows only: a phone menu lists what
-                        opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
-                    {section.columns.flat().map((col) => {
-                      const live = col.tools.filter((t) => !t.soon)
-                      if (!live.length) return null
-                      return (
-                        <div className="pnav-acc-col" key={col.label}>
-                          <p className="pnav-acc-colhead">{col.label}</p>
-                          {live.map((t) => (
-                            <Link key={t.id} className="pnav-acc-link" to={t.route} onClick={closeAll}>
-                              <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                              <span className="pnav-acc-label">{t.label}</span>
-                              {t.beta && <span className="beta-badge">Beta</span>}
-                            </Link>
-                          ))}
-                        </div>
-                      )
-                    })}
-                    <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
-                      {menuViewAll(section)} <ArrowRight size={12} />
-                    </Link>
-                  </div>
+              )
+            })}
+          </div>
+          {visibleSections.filter((section) => sheetSection === section.id).map((section) => {
+            const promo = menuPromo(section)
+            return (
+              <div className="pnav-acc-panel" id="pnav-acc-panel" key={section.id}>
+                {/* Live rows only: a phone menu lists what
+                    opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
+                {section.columns.flat().map((col) => {
+                  const live = col.tools.filter((t) => !t.soon)
+                  if (!live.length) return null
+                  return (
+                    <div className="pnav-acc-col" key={col.label}>
+                      <p className="pnav-acc-colhead">{col.label}</p>
+                      <div className="pnav-acc-grid">
+                        {live.map((t) => (
+                          <Link key={t.id} className="pnav-acc-link" to={t.route} data-hue={t.hue} onClick={closeAll}>
+                            <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                            <span className="pnav-acc-label">{t.label}</span>
+                            {t.beta && <span className="beta-badge">Beta</span>}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {section.id === 'create' ? (
+                  <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
+                    {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
+                    <ArrowRight />
+                  </button>
+                ) : (
+                  <Link className="pnav-acc-cta" to={promo.href} onClick={closeAll}>
+                    {promo.cta}
+                    <ArrowRight />
+                  </Link>
                 )}
+                <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
+                  {menuViewAll(section)} <ArrowRight size={12} />
+                </Link>
               </div>
             )
           })}
@@ -1072,12 +1086,82 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
   // nothing is hovered, App line 1414); CSS lights it only while no other row
   // is hovered or focused.
   const featId = stacks[0]?.[0]?.tools?.[0]?.id
+
+  // THE READOUT. One row is "active" while the pointer is on it or keyboard focus
+  // is in it; the foot's line then says what that row is for, and goes back to
+  // the section's own line when nothing is. Tracked by delegation on the grid
+  // (pointerover and focus bubble), not a handler per row. The section id rides
+  // along so a row id both menus share (Font Gallery) cannot carry over.
+  // `mode` rides along for the hover moments (nav/menuMoments.js): 'pointer' for a
+  // fine pointer, 'key' for keyboard focus, null for anything that gets no moment.
+  // The same handlers set it, so there is no second tracker.
+  const [active, setActive] = useState({ section: section.id, id: null, mode: null })
+  const activeId = active.section === section.id ? active.id : null
+  const activeMode = active.section === section.id ? active.mode : null
+  const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
+  const setRow = (id, mode = null) => setActive((prev) => (
+    prev.section === section.id && prev.id === id && prev.mode === (id ? mode : null)
+      ? prev
+      : { section: section.id, id, mode: id ? mode : null }
+  ))
+  // Nothing under the pointer: fall back to the row keyboard focus is in, or to none.
+  const settleRow = (grid) => {
+    const f = grid.contains(document.activeElement) ? document.activeElement : null
+    setRow(rowOf(f), keyboardRow(f))
+  }
+  const keyboardRow = (el) => (el?.matches?.(':focus-visible') ? 'key' : null)
+  const pointerMode = (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return null
+    if (!finePointer()) return null
+    // A pointer arriving on the row keyboard focus is already on keeps that moment.
+    const row = e.target.closest?.('[data-row-id]')
+    return row && row === document.activeElement ? keyboardRow(row) || 'pointer' : 'pointer'
+  }
+  const activeRow = activeId
+    ? stacks.flat().flatMap((col) => col.tools).find((t) => t.id === activeId)
+    : null
+  const activeDesc = activeRow
+    ? (section.id === 'create' ? CREATE_TOOL_SEARCH[activeRow.id]?.description : null) || activeRow.desc
+    : null
+  const readoutText = activeRow && activeDesc ? activeDesc : null
+
+  // THE HOVER MOMENT. data-live goes on the active row: at once for keyboard focus,
+  // INTENT_MS after a fine pointer arrives. Leaving or blurring clears it at once
+  // (activeId changes), and the timer's cleanup drops a pending start.
+  const [intentId, setIntentId] = useState(null)
+  useEffect(() => {
+    if (activeMode !== 'pointer' || !activeId) return undefined
+    const t = setTimeout(() => setIntentId(activeId), INTENT_MS)
+    return () => { clearTimeout(t); setIntentId(null) }
+  }, [activeId, activeMode])
+  const liveId = activeMode === 'key' ? activeId : activeMode === 'pointer' && intentId === activeId ? activeId : null
+
+  // Faces for the name moments: warmed once, on the first menu open, and used only
+  // once ready. data-faces on the root tells the CSS which are.
+  const [faces, setFaces] = useState(facesAttr)
+  const warms = section.id === 'create' || section.id === 'discover'
+  useEffect(() => {
+    if (!warms) return undefined
+    let alive = true
+    warmFaces().then(() => { if (alive) setFaces(facesAttr()) })
+    return () => { alive = false }
+  }, [warms])
+
+  // Font Gallery: the name swaps through ready faces and lands on a random one.
+  const [galleryFace, setGalleryFace] = useState(null)
+  const galleryLive = liveId === 'font-gallery' && finePointer()
+  useEffect(() => {
+    if (!galleryLive) return undefined
+    const timers = galleryRun().map((f, i) => setTimeout(() => setGalleryFace(f.key), i * GALLERY_STEP_MS))
+    return () => { timers.forEach(clearTimeout); setGalleryFace(null) }
+  }, [galleryLive])
   return (
     <div
       ref={ref}
       id="pnav-mega"
       className="pnav-menu"
       data-menu={section.id}
+      data-faces={faces || undefined}
       role="region"
       aria-label={`${section.label} menu`}
       onMouseEnter={onMouseEnter}
@@ -1086,31 +1170,67 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
     >
       <div className="pnav-menu-body">
         <div className="pnav-menu-cols">
-          <div className="pnav-grid" data-cols={stacks.length}>
+          <div
+            className="pnav-grid"
+            data-cols={stacks.length}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)); else settleRow(e.currentTarget) }}
+            onPointerLeave={(e) => settleRow(e.currentTarget)}
+            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id, keyboardRow(e.target)) }}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
+          >
             {stacks.map((stack) => (
               <div className="pnav-colstack" key={stack[0].label}>
                 {stack.map((col) => (
                   <div className="pnav-col" key={col.label}>
                     <p className="pnav-col-label">{col.label}</p>
                     <ul className="pnav-toollist">
-                      {col.tools.map((t) => (
+                      {col.tools.map((t) => {
+                        const moment = MOMENT_OF[t.id]
+                        const face = moment === 'font-gallery' && t.id === liveId ? faceByKey(galleryFace) : null
+                        return (
                         <li key={t.id}>
                           <Link
                             className="pnav-tool"
                             to={t.route}
                             data-soon={t.soon ? 'true' : undefined}
+                            data-hue={t.hue}
+                            data-row-id={t.id}
+                            data-moment={moment}
+                            data-live={moment && t.id === liveId ? '' : undefined}
+                            aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
                             data-feat={t.id === featId ? 'true' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}
                             data-pnav-menuitem
                           >
-                            <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                            <span className="pnav-tool-label">{t.label}</span>
+                            <span className="pnav-tool-ico" aria-hidden="true">
+                              {moment === 'gradient' && <span className="pnav-fx pnav-fx-g" />}
+                              {moment === 'gradient-library' && (
+                                <>
+                                  <span className="pnav-fx pnav-fx-a" />
+                                  <span className="pnav-fx pnav-fx-b" />
+                                </>
+                              )}
+                              <NavIcon id={t.icon} moment={moment} />
+                            </span>
+                            <span className="pnav-tool-label">
+                              {moment === 'font-pair'
+                                // A real space between the words, so textContent stays "Font Pair".
+                                ? <span className="pnav-tool-nm"><span className="w1">Font</span> <span className="w2">Pair</span></span>
+                                : (
+                                  <span
+                                    className="pnav-tool-nm"
+                                    data-face={face ? face.key : undefined}
+                                    style={face ? { fontFamily: face.family, fontWeight: face.weight } : undefined}
+                                  >{t.label}</span>
+                                )}
+                            </span>
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
                           </Link>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   </div>
                 ))}
@@ -1154,7 +1274,9 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
         </div>
       </div>
       <div className="pnav-menu-foot">
-        <span className="pnav-menu-foot-note">{menuFootNote(section)}</span>
+        <p className="pnav-menu-foot-note pnav-menu-readout" id="pnav-readout">
+          {readoutText ? <><b>{activeRow.label}</b>{' '}{readoutText}</> : menuFootNote(section)}
+        </p>
         <Link className="pnav-menu-foot-link" to={section.viewAllHref} onClick={onPick} data-pnav-menuitem>
           <span>{menuViewAll(section)}</span>
           <ArrowRight size={12} />

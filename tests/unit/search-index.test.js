@@ -479,7 +479,7 @@ test('PillNav no longer keeps its own hint list', () => {
   assert.ok(src.includes('SearchPlaceholder'), 'stripping ate PillNav own code')
   assert.ok(!src.includes('SEARCH_HINTS'),
     'PillNav has a hand-kept SEARCH_HINTS array again — it must read searchHints()')
-  assert.match(src, /import \{ searchHints \} from '\.\.\/data\/toolIndex'/,
+  assert.match(src, /import \{[^}]*\bsearchHints\b[^}]*\} from '\.\.\/data\/toolIndex'/,
     'PillNav no longer reads the registry-derived hints')
   // The one thing that legitimately differs between the two surfaces.
   assert.match(src, /pnav-search-ph/, 'PillNav renders its hint into a span, not a placeholder')
