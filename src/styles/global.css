@@ -4688,6 +4688,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    rail's 900px, because one picture does not fill a rail. */
 .ui-pro--proof{max-width:760px;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);grid-template-areas:"head proof" "body proof"}
 .ui-pro-proof{grid-area:proof;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;padding:26px 24px;border-left:1px solid var(--border);background:var(--cbg);text-align:center;color:var(--t0)}
+/* The frame a caller puts its picture in, so one icon holds the column. */
+.ui-pro-proof-art{display:grid;place-items:center;width:144px;height:144px;border-radius:16px;border:1px solid var(--border);background:var(--bg-0)}
+.ui-pro-proof-art>svg,.ui-pro-proof-art>img{width:96px;height:96px}
 /* The caption a caller may put under its picture. */
 .ui-pro-proof-cap{margin:0;font-size:13px;line-height:1.4;color:var(--t2)}
 .ui-pro-proof-cap code{font-family:var(--mono);font-size:.93em;color:var(--t1)}
@@ -4736,6 +4739,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .ui-pro{max-width:460px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "body" "rail"}
   /* The proof is short, so it stays between the head and the price. */
   .ui-pro--proof{grid-template-areas:"head" "proof" "body"}
+  /* The head has no bottom padding of its own, so it needs room above the band. */
+  .ui-pro--proof .ui-pro-head{padding-bottom:16px}
+  .ui-pro-proof-art{width:96px;height:96px;border-radius:12px}
+  .ui-pro-proof-art>svg,.ui-pro-proof-art>img{width:64px;height:64px}
   .ui-pro-proof{border-left:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 22px}
   /* One column: the corner close button now sits over the title's line. */
   .ui-pro-title{padding-right:36px}
