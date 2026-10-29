@@ -534,11 +534,14 @@ test.describe('the preview strip', () => {
     await expect(strip).toHaveCount(1)
     await expect(strip).toHaveAttribute('data-state', 'ready')
 
-    // The book row now has a template picker between it and the pictures: one Tab stop,
-    // on the chosen tile (spec 156 pins that), so the strip is the second stop.
+    // Between the book row and its pictures sit the file-type switch (PDF or PNG) and the
+    // template picker, one Tab stop each on the checked option (spec 156 pins the picker),
+    // so the strip is the third stop.
     await rowFor(panel, 'Design system book').focus()
     await page.keyboard.press('Tab')
-    await expect(panel.getByRole('radiogroup', { name: 'Template' }).getByRole('radio', { checked: true }), 'the first stop after the row is the chosen template').toBeFocused()
+    await expect(panel.getByRole('radiogroup', { name: 'Design system book file type' }).getByRole('radio', { checked: true }), 'the first stop after the row is the chosen file type').toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(panel.getByRole('radiogroup', { name: 'Template' }).getByRole('radio', { checked: true }), 'the next stop is the chosen template').toBeFocused()
     await page.keyboard.press('Tab')
     await expect(strip, 'the next Tab stop after the template is the strip').toBeFocused()
     const ring = await strip.evaluate((el) => {
