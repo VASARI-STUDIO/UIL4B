@@ -279,7 +279,8 @@
    at desktop as well as on a phone, and the rows below must not move when the choice
    changes. */
 .iel-page .icust-colour-help{flex:1 0 100%;margin:0;min-height:calc(2em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
-.iel-page .icust-colour-help code{font-family:var(--mono);font-size:.95em;color:var(--t1)}
+/* The mono face's taller metrics would add a pixel to its line, so the code adds no height. */
+.iel-page .icust-colour-help code{font-family:var(--mono);font-size:.95em;line-height:0;color:var(--t1)}
 
 /* Low contrast between the icon and the ground: one line under the stage and a
    text button. Never an automatic switch. The wrapper holds the note's space (8px
