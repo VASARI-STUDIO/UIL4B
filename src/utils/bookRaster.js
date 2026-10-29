@@ -68,9 +68,11 @@ const GHOST_GAP = 40
 const BANDS_PER_PAGE = 5
 const BAND_H = 144
 const BAND_GAP = 6
-// The matrix is square, so it grows quadratically; past eight colours the cells
-// stop being legible, and the page says so rather than shrinking them.
-export const MATRIX_MAX = 8
+// The matrix is as wide as the palette plus white and black. A cell is 35 units
+// wide at 13 colours (15 columns), the narrowest a ratio still reads in; past that
+// the page says so rather than shrinking the cells. Rows split over pages.
+export const MATRIX_MAX = 13
+export const MATRIX_ROWS_PER_PAGE = 7
 const TOKENS_ROW_PAD = 10
 const TOKENS_LINE = 14
 // The token table: where it starts under the introduction on the first page and
@@ -357,8 +359,13 @@ export function planBookPages(design, {
     balancedChunk(indexed, BANDS_PER_PAGE).forEach((items, gi) => {
       add('palette', 'Colour', { items, first: gi === 0, leaf: gi === 0 ? 'The palette' : null })
     })
-    add('matrix', 'Colour', {
-      colours: d.palette.slice(0, MATRIX_MAX), capped: d.palette.length > MATRIX_MAX, leaf: 'Contrast matrix',
+    const colours = d.palette.slice(0, MATRIX_MAX)
+    const groups = balancedChunk(colours, MATRIX_ROWS_PER_PAGE)
+    groups.forEach((rows, gi) => {
+      add('matrix', 'Colour', {
+        colours, rows, first: gi === 0, capped: d.palette.length > MATRIX_MAX, left: d.palette.length - colours.length,
+        leaf: groups.length > 1 ? `Contrast matrix (${gi + 1} of ${groups.length})` : 'Contrast matrix',
+      })
     })
   }
   if (d.gradient) add('gradient', 'Colour', { leaf: 'The gradient' })
@@ -659,11 +666,13 @@ export function matrixClass(ratio) {
 function matrixOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
-  const head = pageHead(c, 'Contrast matrix', 'Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.')
+  const head = pageHead(c, 'Contrast matrix', 'Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.', { first: page.first })
   ops.push(...head.ops)
   const axes = [...page.colours, '#FFFFFF', '#000000']
-  const rowHeadW = 104
+  const rowHeadW = 95
   const cw = Math.min(64, (CONTENT_W - rowHeadW) / axes.length)
+  // The ratio is set at the largest size that fits its cell (35 units wide at 13 colours).
+  const figPx = [11.5, 10.5, 9.5, 8.5, 8, 7.5].find((px) => c.measure('21.00:1', face(700, px, d.body)) <= cw - 4) || 7.5
   const headH = 58
   const rowH = 48
   let y = head.y + 8
@@ -678,7 +687,7 @@ function matrixOps(c, page) {
   y += headH
   ops.push(hair(MARGIN, y, RIGHT, c.ink))
 
-  page.colours.forEach((row) => {
+  page.rows.forEach((row) => {
     ops.push(rect(MARGIN, y + rowH / 2 - 7, 14, 14, row, 7))
     if (contrast(row, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, y + rowH / 2 - 7, 14, 14, c.edge, 7))
     ops.push(text(row, MARGIN + 24, y + rowH / 2 + 3.5, mono(500, 10), c.ink))
@@ -692,7 +701,7 @@ function matrixOps(c, page) {
       const { word, weight } = matrixClass(ratio)
       if (word === 'Fail') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.06)))
       else if (word === 'Large') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.025)))
-      ops.push(text(formatRatio(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, 11.5, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
+      ops.push(text(formatRatio(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, figPx, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
       ops.push(caps(word, x + cw / 2, y + rowH / 2 + 14, c.muted, { px: 6.5, spacing: 1, align: 'center' }, c))
     })
     y += rowH
@@ -712,7 +721,7 @@ function matrixOps(c, page) {
   })
   y += key.length * 18 + 14
   if (page.capped) {
-    const note = `The matrix shows the first ${MATRIX_MAX} colours. Past eight the cells stop being legible at this size, so the remaining colours are specified on the palette pages and measured against paper and ink there.`
+    const note = `The matrix is limited to the first ${MATRIX_MAX} colours: with white and black that is ${MATRIX_MAX + 2} columns, the most a page can set at a size a ratio still reads in. The other ${page.left} ${page.left === 1 ? 'colour is' : 'colours are'} not shown in it.`
     const lines = wrapText(note, 470, face(400, 10, d.body), c.measure, { maxLines: 4 })
     lines.forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
   }

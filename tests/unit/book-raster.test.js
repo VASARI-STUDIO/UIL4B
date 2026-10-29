@@ -149,8 +149,9 @@ test('heading tracking is measured: a spaced long name stays inside the margins 
   assert.ok(coverLines.length >= plain.length, 'tracking made the cover title shorter')
 })
 
-test('many colours paginate: five a page at most, no stub, and the matrix stays capped', () => {
-  for (const n of [1, 5, 6, 11, 13, 40]) {
+test('many colours paginate: five a page at most, no stub; the matrix takes up to 13 colours, 7 rows a page', () => {
+  assert.equal(MATRIX_MAX, 13)
+  for (const n of [2, 5, 6, 8, 11, 13, 14, 40]) {
     const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } }
     const book = build(design)
     inside(book)
@@ -161,9 +162,41 @@ test('many colours paginate: five a page at most, no stub, and the matrix stays 
       const sizes = palettePages.map((p) => p.items.length)
       assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1, `${n} colours: uneven pages ${sizes}`)
     }
-    const matrix = book.pages.find((p) => p.kind === 'matrix')
-    assert.equal(matrix.colours.length, Math.min(n, MATRIX_MAX))
-    assert.equal(matrix.capped, n > MATRIX_MAX)
+    const matrices = book.pages.filter((p) => p.kind === 'matrix')
+    const shown = Math.min(n, MATRIX_MAX)
+    assert.equal(matrices[0].colours.length, shown)
+    assert.equal(matrices[0].capped, n > MATRIX_MAX)
+    assert.equal(matrices.length, Math.ceil(shown / 7), `${n} colours: ${matrices.length} matrix pages`)
+    assert.deepEqual(matrices.flatMap((p) => p.rows), matrices[0].colours, `${n} colours: a row is missing or repeated`)
+    for (const p of matrices) assert.ok(p.rows.length <= 7, `${n} colours: ${p.rows.length} rows on a matrix page`)
+    const rowCounts = matrices.map((p) => p.rows.length)
+    assert.ok(Math.max(...rowCounts) - Math.min(...rowCounts) <= 1, `${n} colours: uneven matrix pages ${rowCounts}`)
+    // Every extra matrix page is its own contents entry.
+    assert.equal(book.contents.filter((e) => /^Contrast matrix/.test(e.title)).length, matrices.length)
+    for (const p of matrices) assert.ok(book.contents.some((e) => e.folio === p.folio), `${n} colours: matrix page ${p.folio} is not in the contents`)
+    // The cap is explained on the page, and no longer says the rest are measured elsewhere.
+    const said = texts(matrices[0]).join(' ')
+    if (n > MATRIX_MAX) {
+      assert.match(said, new RegExp(`first ${MATRIX_MAX} colours`))
+      assert.ok(!/palette pages/.test(said), 'the matrix still claims the rest are measured on the palette pages')
+    } else assert.ok(!/limited to the first/.test(said))
+  }
+})
+
+test('with 13 colours the matrix is 15 columns of 35 units, and every figure fits its cell', () => {
+  const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(13) } }
+  const matrix = build(design).pages.filter((p) => p.kind === 'matrix')
+  assert.equal(matrix.length, 2)
+  for (const page of matrix) {
+    const centres = page.ops.filter((o) => o.op === 'text' && /^[0-9A-F]{6}$/.test(o.text) && o.align === 'center').map((o) => o.x)
+    assert.equal(centres.length, 15)
+    centres.slice(1).forEach((x, i) => assert.equal(Math.round((x - centres[i]) * 100) / 100, 35))
+    const figures = page.ops.filter((o) => o.op === 'text' && /^\d+\.\d\d:1$/.test(o.text))
+    assert.ok(figures.length >= 6 * 14, `${figures.length} figures`)
+    for (const o of figures) assert.ok(estimateWidth(o.text, o.font) <= 35, `"${o.text}" is ${Math.round(estimateWidth(o.text, o.font))} wide in a 35 cell`)
+    const rowLabel = page.ops.find((o) => o.op === 'text' && /^#[0-9A-F]{6}$/.test(o.text))
+    assert.ok(rowLabel.x + estimateWidth(rowLabel.text, rowLabel.font) <= 52 + 95, 'a row label runs into the first column')
+    assert.ok(Math.abs(centres[0] - (52 + 95 + 17.5)) < 0.01, 'the first column does not start after the 95 unit row head')
   }
 })
 
