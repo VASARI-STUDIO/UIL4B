@@ -2944,27 +2944,26 @@ html.lenis{scroll-behavior:auto!important}
 /* Group labels: the Label role. 13px Geist, 500, sentence case, untracked, faint. */
 .pnav-col-label{display:block;margin:0;padding:0 6px 8px;font:500 13px/1.3 var(--font);letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-faint))}
 .pnav-toollist{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:1px;margin:0;padding:0}
-/* A row (App lines 138-142): ONE line. A 26px neutral tile, a 13.5px label,
-   a badge on the right. No description and no category colour. Hover and
-   focus: an ink .07 row, and the tile turns accent. */
+/* A row: ONE line. A bare glyph in a 32px slot (no tile behind it), the label,
+   a badge on the right. No description. Hover and focus: an ink .07 row, and a
+   glyph without a category turns accent. */
 .pnav-tool{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 10px;border-radius:12px;color:rgba(var(--ink-rgb),.86);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim));transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;color:rgba(var(--ink-rgb),var(--ink-dim));transition:color var(--dur-1) var(--ease-standard)}
 .pnav-tool-ico svg{width:18px;height:18px}
 .pnav-tool-label{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
+.pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{color:var(--accent-soft)}
 .pnav-tool:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 .pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb))}
-.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]:not([data-hue]) .pnav-tool-ico{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent-soft)}
-/* HUE TILES (mega menu). A row wears its category as a 32px tile: the
-   category's FILL mixed into the page ground at 18-26%, the glyph in its STRONG
-   colour. Menu-scoped on purpose: the global --hue-* set has almost no margin
-   (see the note above it) and is not edited for this. Light is the base here, as
-   it is for --page-rgb; dark overrides under [data-theme="dark"].
-   Glyph on tile, measured in oklab against #F5F5F2 / #060607: light 4.90 (icons)
-   to 5.71 (colour); dark 6.42 (component) to 9.82 (colour). All above 3:1.
-   Colour and Media swap their mix per theme (26 / 18 dark, 18 / 26 light) so the
-   two lightest fills do not sit at the same lightness. */
+.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]:not([data-hue]) .pnav-tool-ico{color:var(--accent-soft)}
+/* HUE GLYPHS (mega menu). A row wears its category as the glyph's colour: the
+   category's STRONG colour, drawn straight on the menu with no tile behind it.
+   Menu-scoped on purpose: the global --hue-* set has almost no margin (see the
+   note above it) and is not edited for this. Light is the base here, as it is
+   for --page-rgb; dark overrides under [data-theme="dark"]. The FILL (--mm-*-h)
+   and its mix are kept for the moments that paint with the category colour.
+   Every strong colour is above 4.5:1 on the menu and on the hover wash in both
+   themes. */
 .pnav-menu,.pnav-sheet{--mm-colour-h:#EAB308;--mm-colour-s:#854D0E;--mm-colour-mix:18%;--mm-type-h:#0E7490;--mm-type-s:#155E75;--mm-imagery-h:#EA580C;--mm-imagery-s:#9A3412;--mm-imagery-mix:26%;--mm-ai-h:#BE185D;--mm-ai-s:#A31450;--mm-icons-h:#15803D;--mm-icons-s:#166534;--mm-component-h:#A855F7;--mm-component-s:#7E22CE;--mm-neutral-h:#6C6C66;--mm-neutral-s:#50504A}
 [data-theme="dark"] .pnav-menu,[data-theme="dark"] .pnav-sheet{--mm-colour-h:#FACC15;--mm-colour-s:#FDE047;--mm-colour-mix:26%;--mm-type-h:#06B6D4;--mm-type-s:#22D3EE;--mm-imagery-h:#DF670B;--mm-imagery-s:#F68A37;--mm-imagery-mix:18%;--mm-ai-h:#E95391;--mm-ai-s:#EF85B1;--mm-icons-h:#22C55E;--mm-icons-s:#4ADE80;--mm-component-h:#A855F7;--mm-component-s:#C084FC;--mm-neutral-h:#8A8A94;--mm-neutral-s:#B9B9C1}
 .pnav-tool[data-hue="colour"]{--mm-h:var(--mm-colour-h);--mm-s:var(--mm-colour-s);--mm-mix:var(--mm-colour-mix)}
@@ -2974,12 +2973,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool[data-hue="icons"]{--mm-h:var(--mm-icons-h);--mm-s:var(--mm-icons-s)}
 .pnav-tool[data-hue="component"]{--mm-h:var(--mm-component-h);--mm-s:var(--mm-component-s)}
 .pnav-tool[data-hue="neutral"]{--mm-h:var(--mm-neutral-h);--mm-s:var(--mm-neutral-s)}
-.pnav-tool[data-hue] .pnav-tool-ico{background:color-mix(in oklab,var(--mm-h) var(--mm-mix,22%),rgb(var(--page-rgb)));color:var(--mm-s)}
-/* Hover and keyboard focus (and the lit first row at rest) deepen the tile by 8
-   points instead of turning it accent: the row keeps its category colour and the
-   tile still answers the pointer. Worst glyph contrast at the deeper mix is
-   still above 4:1 in both themes. */
-.pnav-tool[data-hue]:hover .pnav-tool-ico,.pnav-tool[data-hue]:focus-visible .pnav-tool-ico,.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat][data-hue] .pnav-tool-ico{background:color-mix(in oklab,var(--mm-h) calc(var(--mm-mix,22%) + 8%),rgb(var(--page-rgb)))}
+.pnav-tool[data-hue] .pnav-tool-ico{color:var(--mm-s)}
 /* Soon: the label drops to ink-faint (App line 2039), still AA: #121418 at
    .72 on #F5F5F2 is 7.05:1, #EFEEEA at .55 on #060607 is 5.55:1. */
 .pnav-tool[data-soon] .pnav-tool-label{color:rgba(var(--ink-rgb),var(--ink-faint))}
@@ -2997,8 +2991,9 @@ html.lenis{scroll-behavior:auto!important}
    keyboard focus, removed at once on leave, blur or a move onto anything that is
    not a row. Each moment plays once in 200 to 600ms and holds; the exit is 150ms
    ease-in on the base rule. Only transform, opacity, fill-opacity, stroke-width,
-   clip-path, background-position and font family change, so the 48px row and the
-   name's start never move. Touch and coarse pointers get nothing (the media query
+   clip-path, background-position, colour and font family change, so the 48px row
+   never moves. The name moves with the glyph on every row: it slides 3px along and
+   takes the category colour; a row without a moment lifts its glyph instead. Touch and coarse pointers get nothing (the media query
    below); reduced motion gets the end state at once, because the global
    reduced-motion rule cuts every duration to 0. These moments deliberately use
    gradients, gradient text and motion on a row hover, which the rest of the site
@@ -3050,6 +3045,13 @@ html.lenis{scroll-behavior:auto!important}
 .mm-gl .d{opacity:0;fill:currentColor;stroke:none}
 @media (hover:hover) and (pointer:fine){
   /* Exit: every moving part goes back in 150ms ease-in. */
+  .pnav-tool-label,.pnav-tool-ico svg{transition:transform var(--mm-out),color var(--mm-out)}
+  /* The name answers with the glyph: 3px along, in the row's category colour (a Soon
+     row keeps its faint ink). Palette's name paints its own rainbow over this. */
+  .pnav-tool:is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{transform:translateX(3px);transition:transform 280ms var(--mm-ease),color 200ms var(--mm-ease)}
+  .pnav-tool[data-hue]:not([data-soon]):is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{color:var(--mm-s)}
+  /* A row with no moment of its own: the glyph lifts 2px. */
+  .pnav-tool:not([data-moment]):is(:hover,:focus-visible) .pnav-tool-ico svg{transform:translateY(-2px);transition:transform 280ms var(--mm-ease)}
   .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),fill-opacity var(--mm-out),stroke-width var(--mm-out)}
   .pnav-fx-g{transition:clip-path var(--mm-out)}
   .pnav-fx-a,.pnav-fx-b{transition:opacity var(--mm-out)}
@@ -3265,9 +3267,9 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-link{display:flex;align-items:center;gap:10px;min-width:0;min-height:56px;padding:8px 4px;border-radius:var(--radius);color:rgba(var(--ink-rgb),.86);font-size:14.5px;line-height:19px;text-decoration:none}
 .pnav-acc-link:active,.pnav-acc-link:hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-acc-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-.pnav-acc-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-acc-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-acc-ico svg{width:18px;height:18px}
-.pnav-acc-link[data-hue] .pnav-acc-ico{background:color-mix(in oklab,var(--mm-h) var(--mm-mix,22%),rgb(var(--page-rgb)));color:var(--mm-s)}
+.pnav-acc-link[data-hue] .pnav-acc-ico{color:var(--mm-s)}
 .pnav-acc-link[data-hue="colour"]{--mm-h:var(--mm-colour-h);--mm-s:var(--mm-colour-s);--mm-mix:var(--mm-colour-mix)}
 .pnav-acc-link[data-hue="type"]{--mm-h:var(--mm-type-h);--mm-s:var(--mm-type-s)}
 .pnav-acc-link[data-hue="imagery"]{--mm-h:var(--mm-imagery-h);--mm-s:var(--mm-imagery-s);--mm-mix:var(--mm-imagery-mix)}
