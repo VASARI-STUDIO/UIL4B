@@ -95,6 +95,11 @@
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+/* Literata and Big Shoulders Display: the mega menu's hover moments only (Font Gallery, Font Pair).
+   Declaring costs nothing; the files (86KB and 35KB) are fetched once, by document.fonts.load in
+   PillNav's menu, the first time a menu opens on a hover-capable device. Same declarations as spectrum.css. */
+@font-face{font-family:'Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/big-shoulders-display-latin.woff2') format('woff2')}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 /* Form controls do not inherit the page's font by
@@ -2984,6 +2989,89 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .beta-badge{flex:0 0 auto;margin:0;border:0;font-family:var(--font);font-size:11px;font-weight:500;letter-spacing:0;line-height:1;text-transform:none}
 .pnav-tool .soon-badge{background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-tool .beta-badge,.pnav-acc-link .beta-badge{background:color-mix(in srgb,var(--tertiary) 16%,transparent);color:var(--tertiary-text)}
+
+/* HOVER MOMENTS (mega menu, card 7789f1fd77). A tool row plays one short moment
+   that previews the tool: the name (Palette, Font Gallery, Font Pair) or the glyph.
+   PillNav sets [data-live] on the active row: 80ms after a fine pointer arrives, at
+   once on keyboard focus, removed at once on leave or blur. Each moment plays once
+   in 200 to 600ms and holds; the exit is 150ms ease-in on the base rule. Only
+   transform, opacity, fill-opacity, stroke-width, clip-path, background-position and
+   font family change, so the 48px row and the name's start never move. Touch and
+   coarse pointers get nothing (the media query below); reduced motion gets the end
+   state at once, because the global rule (lines 315-316) cuts every duration to 0.
+   This is an override of three standing rules, for these moments only, on Dylan's
+   word: no gradients (craft R1), no gradient text, no motion on row hovers. */
+.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450;--mm-bloom:linear-gradient(135deg in oklab,#EAB308,#BE185D,#7E22CE);--mm-ok:var(--ok);--mm-warn:var(--warn);--mm-err:var(--err)}
+[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6;--mm-bloom:linear-gradient(135deg in oklab,#FDE047,#EF85B1,#C084FC);--mm-ok:var(--ok-strong);--mm-warn:var(--warn-strong);--mm-err:var(--err-strong)}
+/* The name: its own box with a fixed 20px line, so a face swap cannot grow the line
+   box (a taller face made it 21px) and nudge the name. top-aligned so the font's
+   baseline cannot move it either. */
+.pnav-tool-nm{display:inline-block;vertical-align:top;max-width:100%;height:20px;line-height:20px;overflow:hidden;text-overflow:ellipsis}
+.pnav-tool-nm[data-face]{font-size-adjust:.5}
+/* The ink the rainbow settles on is the row's own text colour (.86 at rest, full on hover). */
+.pnav-tool[data-moment]{--mm-nm-ink:rgba(var(--ink-rgb),.86)}
+.pnav-tool[data-moment]:is(:hover,:focus-visible),.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat][data-moment]{--mm-nm-ink:rgb(var(--ink-rgb))}
+/* Rest states of the moving parts: the glyph looks as it always did. */
+.pnav-tool-ico{position:relative}
+.pnav-tool-ico svg{position:relative}
+.pnav-fx{position:absolute;left:10.5px;top:10.5px;width:11px;height:11px;border-radius:1.6px;pointer-events:none;background:var(--mm-bloom);clip-path:circle(0% at 0 100%)}
+.mm-gl .half{transform-origin:12px 12px}
+.mm-gl .rise{transform:translateY(15.5px)}
+.mm-gl .sb{transform-box:fill-box;transform-origin:0 50%;transform:scaleX(0);fill-opacity:.85}
+.mm-gl .s1{fill:var(--mm-ok)}
+.mm-gl .s2{fill:var(--mm-warn)}
+.mm-gl .s3{fill:var(--mm-err)}
+.mm-gl .t1,.mm-gl .t2{transform-box:fill-box;transform-origin:50% 100%}
+/* Scaled strokes keep their width: 1.6 units at the 18px glyph is 1.2px. */
+.mm-gl .ts path{vector-effect:non-scaling-stroke;stroke-width:1.2px}
+.mm-gl .i2,.mm-gl .i3{opacity:0}
+@media (hover:hover) and (pointer:fine){
+  /* Exit: every moving part goes back in 150ms ease-in. */
+  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),fill-opacity var(--mm-out),stroke-width var(--mm-out)}
+  .pnav-fx{transition:clip-path var(--mm-out)}
+  /* 1 Palette: the name takes a rainbow, swept in from the left. Every stop clears 4.5:1
+     on the hover ground in both themes (5.6 to 6.5 light, 6.0 to 10.9 dark, by hand;
+     qa to confirm on the render). The sweep is a window sliding over one fixed gradient
+     in oklab, so no frame holds a colour outside it. Guarded: without `in oklab` the
+     transparent text would have nothing to paint. */
+  @supports (background-image:linear-gradient(90deg in oklab,red,blue)){
+    .pnav-tool[data-moment="palette"] .pnav-tool-nm{background-image:linear-gradient(90deg in oklab,var(--mm-rainbow) 33.3%,var(--mm-nm-ink) 40%,var(--mm-nm-ink));background-size:300% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;transition:background-position var(--mm-out)}
+    .pnav-tool[data-moment="palette"][data-live] .pnav-tool-nm{background-position:0 0;transition:background-position 480ms var(--mm-ease)}
+  }
+  /* 2 Gradient: a mini gradient blooms from the glyph's lower-left corner. */
+  .pnav-tool[data-moment="gradient"][data-live] .pnav-fx-g{clip-path:circle(150% at 0 100%);transition:clip-path 420ms var(--mm-ease)}
+  /* 3 Contrast Checker: the dark half of the disc turns 180deg. */
+  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 360ms var(--mm-ease)}
+  /* 4 Tint: the ramp rises inside the drop. */
+  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 380ms var(--mm-ease)}
+  /* 5 Semantic Colour: the bars fill with success, warning and error in turn. */
+  .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease)}
+  .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms}
+  .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms}
+  /* 6 Font Gallery: PillNav swaps the name through ready faces (style + data-face). */
+  /* 7 Font Pair: "Font" in Literata 600, then "Pair" in Geist Mono 500, 90ms later.
+     A face is used only once it is ready (data-faces on the menu root); until then
+     "Font" takes Switzer 700 and "Pair" stays as it is. */
+  .pnav-tool[data-moment="font-pair"][data-live] .w1{font-weight:700}
+  .pnav-menu[data-faces~="literata"] .pnav-tool[data-moment="font-pair"][data-live] .w1{font-family:Literata,serif;font-weight:600;font-size-adjust:.5}
+  .pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2{animation:mm-mono 1ms 90ms forwards}
+  /* 8 Type Scale: the two smaller T's grow to a flatter ratio, the small one first. */
+  .pnav-tool[data-moment="type-scale"][data-live] .t1{transform:scaleY(1.78);transition:transform 320ms var(--mm-ease)}
+  .pnav-tool[data-moment="type-scale"][data-live] .t2{transform:scaleY(1.28);transition:transform 320ms var(--mm-ease) 60ms}
+  /* 9 Icon Library: star to heart to bolt, holding on the bolt. */
+  .pnav-tool[data-moment="icons"][data-live] .i1{animation:mm-i1 460ms var(--mm-ease) forwards}
+  .pnav-tool[data-moment="icons"][data-live] .i2{animation:mm-i2 460ms var(--mm-ease) forwards}
+  .pnav-tool[data-moment="icons"][data-live] .i3{animation:mm-i3 460ms var(--mm-ease) forwards}
+}
+@keyframes mm-mono{from,to{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5}}
+@keyframes mm-i1{0%{opacity:1}30%,100%{opacity:0}}
+@keyframes mm-i2{0%{opacity:0}30%,60%{opacity:1}85%,100%{opacity:0}}
+@keyframes mm-i3{0%,60%{opacity:0}85%,100%{opacity:1}}
+/* Forced colours: the rainbow clip off, the overlay hidden. */
+@media (forced-colors:active){
+  .pnav-tool[data-moment="palette"] .pnav-tool-nm{background:none;color:CanvasText}
+  .pnav-fx{display:none}
+}
 
 /* The promo content (App lines 151-206): the file's pane, minus its box. It is
    separated from the columns by one hairline and sits on the tray itself. */

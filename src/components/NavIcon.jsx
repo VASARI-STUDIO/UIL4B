@@ -4,6 +4,8 @@
 // category hue from the parent `.pnav-ico` tile — zero asset dependencies, and
 // the menu can never drift from the tree.
 
+import { useId } from 'react'
+
 const ICONS = {
   // ── Create ──
   colour: (
@@ -287,10 +289,67 @@ const ICONS = {
 
 const FALLBACK = <circle cx="12" cy="12" r="7" />
 
-export default function NavIcon({ id, className }) {
+// Hover-moment variants (mega menu, card 7789f1fd77). The same glyph at rest, with
+// its moving parts classed so global.css ("HOVER MOMENTS") can animate them. Only
+// the menu rows ask for these (`moment`), so every other use of an icon is untouched.
+// Rest geometry is identical to ICONS; the extra parts are hidden at rest by CSS.
+// A value that is a function gets a unique id, for a clipPath.
+const MOMENT_ICONS = {
+  contrast: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path className="half" d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // The ramp (tint at the top, shade at the bottom) rises inside the drop, which
+  // is the clip; the outline is drawn last so the stroke stays above the fill.
+  tint: (uid) => (
+    <>
+      <clipPath id={uid}><path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" /></clipPath>
+      <g clipPath={`url(#${uid})`}>
+        <g className="rise" stroke="none" fill="currentColor">
+          <rect x="5" y="3" width="14" height="6" fillOpacity=".18" />
+          <rect x="5" y="9" width="14" height="4.6" fillOpacity=".42" />
+          <rect x="5" y="13.6" width="14" height="6" fillOpacity=".75" />
+        </g>
+      </g>
+      <path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" />
+    </>
+  ),
+  semantic: (
+    <>
+      <rect className="sb s1" x="4" y="5" width="16" height="4.2" rx="2.1" stroke="none" />
+      <rect className="sb s2" x="4" y="10.4" width="16" height="4.2" rx="2.1" stroke="none" />
+      <rect className="sb s3" x="4" y="15.8" width="10" height="4.2" rx="2.1" stroke="none" />
+      <rect x="4" y="5" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="10.4" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="15.8" width="10" height="4.2" rx="2.1" />
+    </>
+  ),
+  'type-scale': (
+    <g className="ts">
+      <path d="M3.5 20h17" />
+      <g className="t1"><path d="M6 20v-4.5M4.5 15.5h3" /></g>
+      <g className="t2"><path d="M11.5 20v-9M9.6 11h3.8" /></g>
+      <g><path d="M17.5 20V5.5M15.2 5.5h4.6" /></g>
+    </g>
+  ),
+  icons: (
+    <>
+      <path className="i1" d="m12 4 2.4 5 5.4.7-4 3.7 1.1 5.4L12 16.1l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" />
+      <path className="i2" d="M12 19s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 7.6a3.8 3.8 0 0 1 7 2.2C19 14.6 12 19 12 19z" />
+      <path className="i3" d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
+    </>
+  ),
+}
+
+export default function NavIcon({ id, className, moment }) {
+  const uid = `nvi${useId().replace(/:/g, '')}`
+  const variant = moment ? MOMENT_ICONS[moment] : null
+  const glyph = variant ? (typeof variant === 'function' ? variant(uid) : variant) : ICONS[id] || FALLBACK
   return (
     <svg
-      className={className}
+      className={variant ? ['mm-gl', className].filter(Boolean).join(' ') : className}
       viewBox="0 0 24 24"
       width="20"
       height="20"
@@ -301,7 +360,7 @@ export default function NavIcon({ id, className }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {ICONS[id] || FALLBACK}
+      {glyph}
     </svg>
   )
 }
