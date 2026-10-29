@@ -9,20 +9,28 @@
  *
  * Every selector is scoped under `.tsc-page`, the ToolLayout root.
  *
- * Layout: the work column (.tsc-output) is a size container, so a later
- * ladder-beside-page split can key off the column's own width with the panel
- * already counted. Until then every width shows the Scale / Page / Code switch.
+ * Layout: the work column (.tsc-output) is a size container, and the page
+ * measures that column (SPLIT_MIN in TypeScale.jsx), so the panel beside it is
+ * already counted. Wide enough, the column is the split (Scale B): the ladder
+ * and the page side by side, Code a drawer from the docked bar. Narrower, it
+ * shows the Scale / Page / Code switch, one view at a time.
  * The panel is first in the source, so under 1024px it is a card above the
  * work with no CSS reordering, and from 1024px the grid puts it beside the
  * work. Phone: a Base and Ratio strip above the ladder, and a non-modal
  * settings sheet capped at 55% of the viewport.
- * Docked bar, every width: Save to a project (Save and Copy CSS on a phone). */
+ * Docked bar: Save to a project (Code and Save in the split; Save and Copy CSS
+ * on a phone). */
 
 .tsc-page { --tsc-top: calc(var(--chrome-h) + 56px); }
 /* The page scrolls the document, so the dock's height is declared on the root
    too: a focused row or control scrolls clear of the docked bar, not under it. */
 html:has(.tsc-page),
 .tsc-page { --tsc-dock-h: 64px; }
+/* With a mouse the bar is one 36px row between two 10px pads and a hairline. */
+@media (min-width: 768px) and (pointer: fine) {
+  html:has(.tsc-page),
+  .tsc-page { --tsc-dock-h: 57px; }
+}
 html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
 html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
 html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-h) + var(--bkit-toolbar-h, 0px) + 8px); }
@@ -104,9 +112,29 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 /* ── Page view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-page-view { display: grid; gap: 10px; min-width: 0; }
 .tsc-page .tsc-page-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tsc-page .tsc-page-label { margin: 0; font-size: 12.5px; color: var(--tl-dim); }
-.tsc-page .tsc-width-select { width: auto; min-width: 176px; }
+.tsc-page .tsc-page-label { flex: 0 0 auto; margin: 0; font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+.tsc-page .tsc-width-select { flex: 0 1 220px; width: auto; min-width: 176px; }
 .tsc-page .tsc-width-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
+
+/* ── The split (Scale B) ─────────────────────────────────────────────────────
+   The ladder and the page side by side. The page keeps its true sizes in a
+   column that is the chosen width or the half it has, whichever is smaller, and
+   the width note says when lines wrap sooner. The ladder half drops the token
+   prefix and the rem value, which the A layouts keep. */
+.tsc-page .tsc-view[data-view="split"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--tl-gap) 24px;
+  align-items: start;
+}
+.tsc-page .tsc-view[data-view="split"] .tsc-row { grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto); gap: 12px; }
+.tsc-page .tsc-view[data-view="split"] .tsc-row-prefix,
+.tsc-page .tsc-view[data-view="split"] .tsc-row-rem { display: none; }
+/* A tall ladder keeps the page beside it: the page half stays under the toolbar
+   while the steps scroll, when the screen is tall enough to hold it. */
+@media (min-height: 800px) {
+  .tsc-page .tsc-view[data-view="split"] .tsc-page-view { position: sticky; top: calc(var(--tsc-top) + 8px); }
+}
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
 .tsc-page .tsc-page-col { min-width: 0; }
@@ -168,6 +196,55 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
   background: var(--bg-0);
 }
 .tsc-page .tsc-dock .tsc-save { white-space: nowrap; }
+/* The split puts Code at the foot of the work column, under the drawer it opens. */
+.tsc-page .tsc-dock:has(.tsc-code-btn) { justify-content: space-between; }
+
+/* ── The Code drawer ─────────────────────────────────────────────────────────
+   Up to 60% of the viewport, over the work column and above the docked bar.
+   Its left edge and width are the column's measured box (--tsc-work-left,
+   --tsc-work-w), because a fixed box can't be placed by the size container. */
+.tsc-page .tsc-drawer {
+  position: fixed;
+  left: var(--tsc-work-left, 20px);
+  bottom: var(--tsc-dock-h);
+  z-index: 30;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: var(--tsc-work-w, 60vw);
+  max-height: min(60dvh, calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - 16px));
+  border: 1px solid var(--tl-line-2);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--tl-card);
+  box-shadow: 0 -8px 32px rgb(0 0 0 / .18);
+  overscroll-behavior: contain;
+  animation: tsc-drawer-in var(--dur-2, 200ms) var(--ease-entrance, ease-out) both;
+}
+.tsc-page .tsc-drawer[hidden] { display: none; }
+html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit-h)); }
+.tsc-page .tsc-drawer:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+.tsc-page .tsc-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--tl-hair);
+}
+.tsc-page .tsc-drawer-head .tsc-fmt { margin-right: auto; }
+.tsc-page .tsc-drawer .tsc-export {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.tsc-page .tsc-drawer .tsc-export:focus-visible { outline-offset: -2px; }
+@keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
 /* The save menu (SaveTypeSystemPanel) opens upward from the docked bar, at the
    right where Save is. Below 561px the menu is already a bottom sheet
@@ -433,7 +510,11 @@ html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-h); }
 }
 html[data-reduced-motion="true"] .tsc-page .tsc-row,
 html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none; }
+/* The drawer keeps its opacity fade and drops the rise. */
+html[data-reduced-motion="true"] .tsc-page .tsc-drawer { animation-name: tsc-drawer-fade; }
+@keyframes tsc-drawer-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .tsc-page .tsc-row,
   html:not([data-reduced-motion="false"]) .tsc-page .tsc-tuning-caret { transition: none; }
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-drawer { animation-name: tsc-drawer-fade; }
 }
