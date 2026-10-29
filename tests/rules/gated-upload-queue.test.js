@@ -99,7 +99,8 @@ test('H1: reviewers and the owner can read an object, and another account cannot
 })
 
 // ── H2 · firestore.rules, community queue ───────────────────────────────────
-import { doc, writeBatch, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore'
+import { doc, writeBatch, serverTimestamp, setDoc, getDoc, Timestamp } from 'firebase/firestore'
+import { planCounter } from '../../src/utils/communityLimits.js'
 
 let fsEnv
 before(async () => {
@@ -114,11 +115,17 @@ const submission = (extra = {}) => ({
   kind: 'palette', name: 'Harbour', authorUid: ALICE, authorName: 'Alice', status: 'pending',
   payload: { colors: ['#0F172A'], category: 'Branding' }, createdAt: '2026-10-29T00:00:00.000Z', ...extra,
 })
+// The shape buildCommunityPromptRecord writes.
+const prompt = (extra = {}) => ({
+  title: 'Harbour at dusk', text: 'A quiet harbour at dusk, soft light.', tags: 'harbour, dusk',
+  authorName: 'Alice', authorUid: ALICE, profileLink: null, status: 'pending',
+  createdAt: '2026-10-29T00:00:00.000Z', ...extra,
+})
 // The batch the client sends: the post and its counter, both stamped by the server.
 async function post(db, id, { counter = {}, record = {}, kind = 'submission' } = {}) {
   const batch = writeBatch(db)
   batch.set(doc(db, kind === 'prompt' ? 'community-prompts' : 'community-submissions', id), {
-    ...submission(), submittedAt: serverTimestamp(), ...record,
+    ...(kind === 'prompt' ? prompt() : submission()), submittedAt: serverTimestamp(), ...record,
   })
   batch.set(doc(db, 'users', ALICE, 'limits', 'community'), {
     windowStart: serverTimestamp(), lastAt: serverTimestamp(), lastKind: kind, lastId: id,
@@ -153,4 +160,89 @@ test('H2: the 11th submission in a window is refused', async () => {
   const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
   await seedCounter({ windowStart: at(3_600_000), lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
   await assertFails(post(dbFor(), 's6', { counter: { windowStart: at(3_600_000), submissions: 11 } }))
+})
+
+test('H2: a prompt is held to the same rules as a submission', async () => {
+  await assertFails(post(dbFor({ email_verified: false }), 'p0', { kind: 'prompt' }))
+  await assertFails(post(dbFor(), 'p1', { kind: 'prompt', record: { submittedAt: Timestamp.fromDate(new Date('2999-12-31')) } }))
+  // A prompt written with a counter that names a submission is not counted as a prompt.
+  await assertFails(post(dbFor(), 'p2', { kind: 'prompt', counter: { lastKind: 'submission', prompts: 0, submissions: 1 } }))
+  await assertSucceeds(post(dbFor(), 'p3', { kind: 'prompt' }))
+})
+
+test('H2: the 11th prompt in a window is refused, and the 10th is accepted', async () => {
+  const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+  const window = at(3_600_000)
+  await seedCounter({ windowStart: window, lastAt: at(60_000), lastKind: 'prompt', lastId: 'x', prompts: 9, submissions: 0 })
+  await assertSucceeds(post(dbFor(), 'p4', { kind: 'prompt', counter: { windowStart: window, prompts: 10 } }))
+  await seedCounter({ windowStart: window, lastAt: at(60_000), lastKind: 'prompt', lastId: 'x', prompts: 10, submissions: 0 })
+  await assertFails(post(dbFor(), 'p5', { kind: 'prompt', counter: { windowStart: window, prompts: 11 } }))
+})
+
+test('H2: the counter restarts after 24 hours, and not before', async () => {
+  const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+  const HOUR = 3_600_000
+  // Past the window: a full counter can start again at one, but cannot carry on counting.
+  const old = at(25 * HOUR)
+  await seedCounter({ windowStart: old, lastAt: old, lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
+  await assertFails(post(dbFor(), 'r0', { counter: { windowStart: old, submissions: 11 } }))
+  await assertFails(post(dbFor(), 'r1', { counter: { windowStart: old, submissions: 10 } }))
+  await assertSucceeds(post(dbFor(), 'r2'))
+  // Inside the window: the same restart is refused, so the cap cannot be reset early.
+  const recent = at(23 * HOUR)
+  await seedCounter({ windowStart: recent, lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
+  await assertFails(post(dbFor(), 'r3'))
+})
+
+test('H2: two posts in one batch with one counter write is refused', async () => {
+  const db = dbFor()
+  const batch = writeBatch(db)
+  batch.set(doc(db, 'community-submissions', 'b0'), { ...submission(), submittedAt: serverTimestamp() })
+  batch.set(doc(db, 'community-submissions', 'b1'), { ...submission(), submittedAt: serverTimestamp() })
+  batch.set(doc(db, 'users', ALICE, 'limits', 'community'), {
+    windowStart: serverTimestamp(), lastAt: serverTimestamp(), lastKind: 'submission', lastId: 'b0',
+    prompts: 0, submissions: 2,
+  })
+  await assertFails(batch.commit())
+  // The counter names one post, so the same batch with only that post is accepted.
+  await assertSucceeds(post(db, 'b2'))
+})
+
+test('H2: a post with no counter write is refused', async () => {
+  const db = dbFor()
+  await assertFails(setDoc(doc(db, 'community-submissions', 'n0'), { ...submission(), submittedAt: serverTimestamp() }))
+  await assertFails(setDoc(doc(db, 'community-prompts', 'n1'), { ...prompt(), submittedAt: serverTimestamp() }))
+  await assertSucceeds(post(db, 'n2'))
+})
+
+test('H2: the batch postWithLimits builds is accepted, for a first post, a later one and a restart', async () => {
+  // The counter comes from planCounter, as communityQueueApi.postWithLimits builds it.
+  const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+  const HOUR = 3_600_000
+  let n = 0
+  const send = async (kind, prev) => {
+    const id = `real${++n}`
+    const db = dbFor()
+    const { data } = planCounter(prev, { kind, id, nowMs: Date.now(), stamp: serverTimestamp() })
+    const batch = writeBatch(db)
+    batch.set(doc(db, kind === 'prompt' ? 'community-prompts' : 'community-submissions', id), {
+      ...(kind === 'prompt' ? prompt() : submission()), submittedAt: serverTimestamp(),
+    })
+    batch.set(doc(db, 'users', ALICE, 'limits', 'community'), data)
+    return batch.commit()
+  }
+  await assertSucceeds(send('submission', null))
+  const first = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+  assert.equal(first.submissions, 1)
+
+  const later = { windowStart: at(HOUR), lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 2, submissions: 3 }
+  await seedCounter(later)
+  await assertSucceeds(send('prompt', later))
+  const kept = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+  assert.equal(kept.prompts, 3)
+  assert.equal(kept.submissions, 3)
+
+  const expired = { windowStart: at(25 * HOUR), lastAt: at(25 * HOUR), lastKind: 'prompt', lastId: 'x', prompts: 10, submissions: 4 }
+  await seedCounter(expired)
+  await assertSucceeds(send('submission', expired))
 })
