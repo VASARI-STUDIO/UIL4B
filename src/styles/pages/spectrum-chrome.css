@@ -90,7 +90,6 @@ html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opac
 /* The wrapper keeps its line box (the pill is 55px tall because of it); the
    lockup sits on the baseline inside it, 0.85em tall. */
 .spnav-word .brand-logo{height:.85em}
-.spnav-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--t2);white-space:nowrap}
 .spnav-rule{flex:0 0 auto;width:1px;height:20px;background:color-mix(in srgb,var(--t0) 11%,transparent)}
 .spnav-quiet{display:flex;align-items:center;gap:1px}
 /* No transition: the design writes `transition:none` inline on these three
@@ -233,7 +232,6 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
   .spnav-quiet,.spnav-rule{display:none}
 }
 @media(max-width:479px){
-  .spnav-eyebrow{display:none}
   .spnav-mark{padding:8px 10px}
 }
 @media(max-width:389px){

@@ -302,13 +302,12 @@ export default function SpectrumNav() {
       >
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>
-            {/* One accessible name for the pair, so a screen reader meets
-                "UI L4B home" and not "UI L 4 B" then "TOOLKIT". */}
+            {/* One accessible name for the logo, so a screen reader meets
+                "UI L4B home" and not "UI L 4 B". */}
             <span className="spnav-word" aria-hidden="true">
               <BrandLockup className="brand-logo-wide" />
               <BrandSymbol className="brand-logo-narrow" />
             </span>
-            <span className="spnav-eyebrow" aria-hidden="true">TOOLKIT</span>
             <span className="sr-only">UI L4B home</span>
           </Link>
 
