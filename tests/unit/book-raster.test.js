@@ -204,6 +204,34 @@ test('a one-colour kit has no matrix page: its palette page has a full-width swa
   assert.ok(build({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB', '#0F172A'] } }).pages.some((p) => p.kind === 'matrix'))
 })
 
+test('palette pages of three rows or fewer have 200 high swatches 210 apart; fuller pages keep 144 and 150', () => {
+  const chipsOf = (n) => {
+    const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } }
+    return build(design).pages.filter((p) => p.kind === 'palette').map((page) => {
+      inside({ pages: [page] })
+      return page.ops.filter((o) => o.op === 'rect' && o.w === 170 && o.radius === 3).map((o) => ({ y: o.y, h: o.h }))
+    })
+  }
+  for (const n of [2, 3, 6]) {
+    for (const chips of chipsOf(n)) {
+      assert.ok(chips.length >= 1 && chips.length <= 3)
+      for (const chip of chips) assert.equal(chip.h, 200, `${n} colours: a swatch is ${chip.h} high`)
+      chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 210, `${n} colours: rows ${chip.y - chips[i].y} apart`))
+    }
+  }
+  for (const n of [4, 5]) {
+    const [chips] = chipsOf(n)
+    for (const chip of chips) assert.equal(chip.h, 144, `${n} colours: a swatch is ${chip.h} high`)
+    chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 150))
+  }
+  // The taller band keeps its tints inside it.
+  const [three] = chipsOf(3)
+  const page = build({ ...DESIGN, palette: { base: '#2563EB', colors: manyColours(3) } }).pages.find((p) => p.kind === 'palette')
+  const tints = page.ops.filter((o) => o.op === 'rect' && o.h === 18)
+  assert.equal(tints.length, 12)
+  for (const t of tints) assert.ok(t.y + t.h <= three[Math.floor(tints.indexOf(t) / 4)].y + 200, 'a tint leaves its band')
+})
+
 test('matrix shading tints the passing cells and leaves the failing ones bare and light', () => {
   const page = build().pages.find((p) => p.kind === 'matrix')
   const cells = page.ops.filter((o) => o.op === 'rect' && o.h === 46)

@@ -68,6 +68,10 @@ const GHOST_GAP = 40
 const BANDS_PER_PAGE = 5
 const BAND_H = 144
 const BAND_GAP = 6
+// A palette page with this many rows or fewer draws them taller and further apart.
+export const ROOMY_MAX_ROWS = 3
+export const ROOMY_BAND_H = 200
+export const ROOMY_BAND_STEP = 210
 // The matrix is as wide as the palette plus white and black. A cell is 35 units
 // wide at 13 colours (15 columns), the narrowest a ratio still reads in; past that
 // the page says so rather than shrinking the cells. Rows split over pages.
@@ -613,13 +617,18 @@ function paletteOps(c, page) {
   ops.push(...head.ops)
   if (d.palette.length === 1) return soloPaletteOps(c, page.items[0], ops, head.y)
   let y = head.y
+  // A page of three rows or fewer has the room to breathe: taller swatches, further apart.
+  const roomy = page.items.length <= ROOMY_MAX_ROWS
+  const bandH = roomy ? ROOMY_BAND_H : BAND_H
+  const step = roomy ? ROOMY_BAND_STEP : BAND_H + BAND_GAP
+  const lineH = roomy ? 20 : 15
   page.items.forEach(({ index, hex }, n) => {
     const { ink, ratio, label } = inkFor(hex)
     const chipW = 170
-    ops.push(rect(MARGIN, y, chipW, BAND_H, hex, 3))
-    if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, y, chipW, BAND_H, c.edge, 3))
+    ops.push(rect(MARGIN, y, chipW, bandH, hex, 3))
+    if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, y, chipW, bandH, c.edge, 3))
     ops.push(text(pad2(index + 1), MARGIN + 14, y + 26, mono(600, 11), ink))
-    ops.push(text(hex, MARGIN + 14, y + BAND_H - 16, face(700, 16, d.body), ink))
+    ops.push(text(hex, MARGIN + 14, y + bandH - 16, face(700, 16, d.body), ink))
 
     const x2 = MARGIN + chipW + 24
     const w2 = 176
@@ -633,27 +642,30 @@ function paletteOps(c, page) {
     const x3 = x2 + w2 + 24
     const w3 = RIGHT - x3
     notationRows(hex).forEach(([k, v], i) => {
-      ops.push(caps(k, x3, y + 16 + i * 15, c.muted, { px: 7.5 }, c))
-      ops.push(text(v, x3 + 42, y + 16 + i * 15, mono(500, 9.5), c.ink))
+      ops.push(caps(k, x3, y + 16 + i * lineH, c.muted, { px: 7.5 }, c))
+      ops.push(text(v, x3 + 42, y + 16 + i * lineH, mono(500, 9.5), c.ink))
     })
-    ops.push(hair(x3, y + 74, RIGHT, c.rule))
+    const ruleAt = roomy ? 100 : 74
+    ops.push(hair(x3, y + ruleAt, RIGHT, c.rule))
     const cells = [['Ink', label], ['Ratio', formatRatio(ratio)], ['Grade', grade(ratio)]]
     cells.forEach(([k, v], i) => {
       const cx = x3 + (w3 / 3) * i
-      ops.push(caps(k, cx, y + 92, c.muted, { px: 7.5 }, c))
-      ops.push(text(v, cx, y + 108, face(600, 11, d.body), c.ink))
+      ops.push(caps(k, cx, y + ruleAt + 18, c.muted, { px: 7.5 }, c))
+      ops.push(text(v, cx, y + ruleAt + 34, face(600, 11, d.body), c.ink))
     })
-    ops.push(caps('Tints 80 · 60 · 40 · 20', x3, y + 126, c.muted, { px: 7, spacing: 1.2 }, c))
+    const chipH = roomy ? 18 : 12
+    const chipY = y + bandH - 1 - chipH
+    ops.push(caps('Tints 80 · 60 · 40 · 20', x3, chipY - 5, c.muted, { px: 7, spacing: 1.2 }, c))
     ;[80, 60, 40, 20].forEach((pct, i) => {
       const tint = mixHex(hex, c.paper, pct / 100)
       const tw = (w3 - 12) / 4
       const tx = x3 + i * (tw + 4)
-      ops.push(rect(tx, y + 131, tw, 12, tint))
-      if (contrast(tint, c.paper) < NEAR_PAPER) ops.push(outline(tx, y + 131, tw, 12, c.edge))
+      ops.push(rect(tx, chipY, tw, chipH, tint))
+      if (contrast(tint, c.paper) < NEAR_PAPER) ops.push(outline(tx, chipY, tw, chipH, c.edge))
     })
 
-    if (n < page.items.length - 1) ops.push(hair(MARGIN, y + BAND_H + BAND_GAP / 2, RIGHT, c.rule))
-    y += BAND_H + BAND_GAP
+    if (n < page.items.length - 1) ops.push(hair(MARGIN, y + bandH + (step - bandH) / 2, RIGHT, c.rule))
+    y += step
   })
   return ops
 }
