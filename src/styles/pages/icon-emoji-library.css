@@ -71,12 +71,6 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
    (--t3 clears 3:1 on the card in both themes). */
 .iel-page .icust-foot .lib-btn.icust-save[aria-disabled="true"]{color:var(--t3);border-color:var(--border);cursor:default}
 .iel-page .icust-foot .lib-btn.icust-save[aria-disabled="true"]:hover{background:transparent;border-color:var(--border)}
-.iel-page .icust-code-box[aria-disabled="true"]{cursor:default}
-.iel-page .icust-code-box[aria-disabled="true"] code,
-.iel-page .icust-code-box[aria-disabled="true"] .icust-code-hint{color:var(--t3)}
-/* "Preview only" is a sentence in the UI face, not a tracked mono tag. */
-.iel-page .icust-code-box[aria-disabled="true"] .icust-code-hint{font-family:var(--font);letter-spacing:0;text-transform:none}
-.iel-page .icust-code-box[aria-disabled="true"]:hover{border-color:var(--border)}
 .iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
 /* Try again sits on the notice's warn-tinted band, so it carries a card
    ground of its own — a transparent button there would read as part of the
@@ -95,30 +89,20 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-overlay{-webkit-backdrop-filter:none;backdrop-filter:none}
 .iel-page .icust-panel{background:var(--card);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l)}
 .iel-page .icust-head{padding:22px 24px 12px}
-/* The eyebrow was accent-coloured mono caps. It is a kind label, not the next
-   action, so it goes quiet; the title carries the hierarchy. */
-.iel-page .icust-eyebrow{
-  font-family:var(--font);font-size:12.5px;font-weight:560;
-  letter-spacing:0;text-transform:none;color:var(--t2);
-}
-.iel-page .icust-title{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.iel-page .icust-title{font-size:var(--fs-h4);font-weight:600;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
 .iel-page .icust-close{
   width:40px;height:40px;border-radius:var(--btn-radius);
   border-color:var(--border);background:transparent;
 }
 @media(pointer:coarse){.iel-page .icust-close{width:44px;height:44px}}
 .iel-page .icust-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-/* Metadata tags are values (pack, name, source), so they stay mono — but as
-   6px rectangles, not pills: nothing here toggles. */
-.iel-page .icust-tag{border-radius:var(--radius-xs)}
 /* Control labels: sentence case in the UI face. Mono caps at 10px was the
    same voice as the values beside them; the design sets labels in Geist and
    keeps mono for what a user copies. */
 .iel-page .icust-row>label,
-.iel-page .icust-code-label,
 .iel-page .icust-similar-label{
-  font-family:var(--font);font-size:12.5px;font-weight:560;
-  letter-spacing:0;text-transform:none;color:var(--t2);
+  font-family:var(--font);font-size:13px;font-weight:560;
+  letter-spacing:0;text-transform:none;color:var(--t1);
 }
 /* The segmented controls: the design's selected segment is a 9% ink wash, not
    a lifted white chip — which in dark was `--bg-0` on `--bg-2`, the page
@@ -143,6 +127,7 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 /* Align with the slider: 56px label + 12px row gap. Reserve one caption line,
    two on phones where the off caption wraps. */
 .iel-page .icust-stroke-note{margin:0;padding-left:68px;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+.iel-page .icust-stroke-note{text-wrap:pretty}
 .iel-page .icust-stroke-note b{font-weight:560;color:var(--t0);font-variant-numeric:tabular-nums}
 @media(max-width:560px){
   .iel-page .icust-stroke-note{padding-left:0;min-height:calc(2em * 1.4)}
@@ -153,7 +138,6 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .pnav-pop-tag{
   color:var(--accent-mid);border-color:var(--accent-border);border-radius:var(--radius-xs);
 }
-.iel-page .icust-code-box:hover .icust-code-hint{color:var(--t0)}
 .iel-page .icust-upgrade{color:var(--accent-mid)}
 /* The similar-icon tiles lift on hover. Decorative motion on a row of
    targets; the border and ground already say "this one". */
@@ -321,12 +305,14 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-chip-sw--text{background:var(--t0);position:relative;overflow:hidden}
 .iel-page .icust-chip-sw--text::after{content:"";position:absolute;inset:0 0 0 50%;background:var(--bg-0)}
 .iel-page .icust-chip-sw--empty{background:transparent;border-style:dashed}
-/* Two lines are held at every width: the longer sentence wraps in the 412px column
-   at desktop as well as on a phone, and the rows below must not move when the choice
-   changes. */
+/* The longer sentence still wraps on a phone, so two lines are held there; from 561px up both
+   sentences fit one line in the desktop column too, so only that one line is held. Either way
+   the rows below must not move when the choice changes. */
 .iel-page .icust-colour-help{flex:1 0 100%;margin:0;min-height:calc(2em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
 /* The mono face's taller metrics would add a pixel to its line, so the code adds no height. */
 .iel-page .icust-colour-help code{font-family:var(--mono);font-size:.95em;line-height:0;color:var(--t1)}
+.iel-page .icust-colour-help{text-wrap:pretty}
+@media(min-width:561px){.iel-page .icust-right .icust-colour-help{min-height:calc(1em * 1.4)}}
 
 /* Low contrast between the icon and the ground: one line under the stage and a
    text button. Never an automatic switch. The wrapper holds the note's space (8px
@@ -391,7 +377,7 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-line-art svg{display:block;flex:none;max-width:none;width:56px;height:56px;color:var(--t0)}
 .iel-page .icust-line-name{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 6px;font-family:var(--font);font-size:13px;line-height:18px;font-weight:560;color:var(--t0)}
 .iel-page .icust-line-pro{font-family:var(--font);font-size:12px;font-weight:560;color:var(--accent-mid)}
-.iel-page .icust-line-note{font-family:var(--font);font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
+.iel-page .icust-line-note{font-family:var(--font);font-size:var(--fs-caption);line-height:1.35;color:var(--t2);text-wrap:balance}
 .iel-page .icust-line-toggle{
   align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0;padding:0 4px 0 0;
   border:0;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:12.5px;font-weight:560;color:var(--t2);cursor:pointer;
@@ -513,4 +499,164 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 @media(max-width:560px){
   .iel-page .icust-stage-foot{left:8px;right:8px;bottom:8px}
   .iel-page .icust-stage{padding-bottom:96px}
+}
+
+
+/* ── The customiser's head, two columns and phone sheet ────────────────────
+   Head: the icon's name, then "{Pack}, {weight}" in the UI face (the pack lives here
+   on a touch screen, where the grid shows it on hover only). Reset sits before Close
+   and shows only once something differs. Body: a left column (stage, size rail) and a
+   right column (the controls); the preview line and the foot span both. Above 800px
+   the dialog is 760px wide and the columns scroll on their own; to 800px it is one
+   560px column; to 640px it is a bottom sheet. Mono is only for literal values. */
+.iel-page .icust-head{align-items:center;gap:8px;padding:18px 24px 8px}
+.iel-page .icust-head-text{flex:1 1 auto;gap:2px}
+.iel-page .icust-sub{margin:0;font-family:var(--font);font-size:13px;line-height:1.4;color:var(--t2)}
+.iel-page .icust-head .icust-reset{flex:none;min-height:36px;padding:0 12px;border-color:transparent;color:var(--t1)}
+@media(hover:hover){.iel-page .icust-head .icust-reset:hover{color:var(--t0)}}
+@media(pointer:coarse){.iel-page .icust-head .icust-reset{min-height:44px}}
+.iel-page .icust-stage-msg{font-family:var(--font)}
+
+.iel-page .icust-left{display:flex;flex-direction:column;gap:12px;min-width:0;padding:4px 24px 0}
+.iel-page .icust-right{min-width:0;padding:16px 24px 8px}
+.iel-page .icust-left .icust-stage{margin:0;flex:1 1 auto;min-height:216px}
+/* The size rail under the note never moves when a note arrives. Where the room for a note comes
+   from depends on the width. Above 800px the stage is the flexible part of a column of fixed
+   height, so an empty note takes no room and the stage gives up what a note needs. From 641 to
+   800px the column is as tall as its content, so the held lines move into the stage instead: with
+   no note the stage is that much taller, and when one arrives the stage gives the room back. On a
+   phone sheet (640px and below) the stage stays at its 168px and the note's lines are held in the
+   note's own box under it, so nothing below the stage moves and the stage never grows to fill them. */
+.iel-page .icust-left .icust-ground-note{margin:0;padding-top:0;min-height:0}
+.iel-page .icust-left .icust-ground-note:empty{margin-top:-12px}
+@media(min-width:641px) and (max-width:800px){
+  .iel-page .icust-left{--stage-rest:216px;--note-lines:1}
+  .iel-page .icust-left .icust-ground-note:has(p){min-height:calc(var(--note-lines) * 1.4em)}
+  .iel-page .icust-left:not(:has(.icust-ground-note p)) .icust-stage{min-height:calc(var(--stage-rest) + 12px + var(--note-lines) * 1.4 * var(--fs-caption))}
+}
+@media(max-width:640px){
+  .iel-page .icust-left{--note-lines:1}
+  .iel-page .icust-left .icust-ground-note,
+  .iel-page .icust-left .icust-ground-note:empty{min-height:calc(var(--note-lines) * 1.4em);margin-top:0}
+}
+@media(max-width:560px){.iel-page .icust-left{--note-lines:2}}
+.iel-page .icust-controls{gap:10px;padding:0}
+.iel-page .icust-line-tile{padding-block:8px}
+.iel-page .icust-line{gap:6px}
+.iel-page .icust-body>.icust-foot.icust-foot--tool{margin-top:0}
+.iel-page .icust-foot-row{padding:10px 24px 14px}
+.iel-page .icust-savedin{padding:10px 0 0}
+.iel-page .icust-right .icust-similar{padding:16px 0 8px}
+@media(max-width:560px){
+  .iel-page .icust-left{padding-inline:16px}
+  .iel-page .icust-right{padding-inline:16px}
+}
+@media(min-width:641px){
+  .iel-page .icust-foot-row>.lib-btn,.iel-page .icust-foot-row>.dl-split{flex:0 0 auto}
+  .iel-page .icust-foot-row>.icust-save{margin-left:auto}
+}
+
+@media(min-width:801px){
+  .iel-page .icust-panel{width:min(760px,calc(100vw - 32px));max-height:min(760px,calc(100dvh - 64px - env(safe-area-inset-top,0px)))}
+  .iel-page .icust-body{display:grid;grid-template-columns:320px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto auto;overflow:hidden}
+  .iel-page .icust-left{grid-area:1/1;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 16px 24px}
+  .iel-page .icust-right{grid-area:1/2;overflow-y:auto;overscroll-behavior:contain;padding:12px 24px 8px 16px;border-left:1px solid var(--border)}
+  .iel-page .icust-body>.icust-paste{grid-area:1/1/4/3;overflow-y:auto}
+  .iel-page .icust-preview.is-on{grid-area:2/1/3/3;border-top:1px solid var(--border)}
+  .iel-page .icust-body>.icust-foot{grid-area:3/1/4/3;position:static}
+}
+@media(max-width:800px){
+  .iel-page .icust-panel{width:min(560px,calc(100vw - 32px))}
+}
+
+/* The phone sheet: the dialog rises from the bottom edge and the foot stays pinned. */
+@media(max-width:640px){
+  .iel-page .icust-overlay{align-items:flex-end;padding:max(24px,env(safe-area-inset-top,0px)) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+  .iel-page .icust-panel{width:100%;max-height:calc(100dvh - max(24px,env(safe-area-inset-top,0px)));border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-width:1px 0 0}
+  .iel-page .icust-head{padding:16px 16px 8px}
+  /* 168px in all: 8px, the 88px drawing, and 72px under it for the caption and the ground switch,
+     which when they stack (390 and 320) take about 71px: an 8px edge, the 38px switch pill, 8px, a caption line. */
+  .iel-page .icust-left .icust-stage{min-height:168px;padding:8px 12px 72px}
+  .iel-page .icust-body>.icust-foot .icust-foot-row{padding:12px 16px max(16px,env(safe-area-inset-bottom,0px))}
+  .iel-page .icust-foot-row>.icust-copy{flex:1 1 auto}
+}
+
+/* Rotate and flip: one group, the angle at the right of its header (beside the buttons, or above them
+   once the group wraps), four 40px icon buttons. */
+.iel-page .icust-rot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.iel-page .icust-rot-head{display:flex;flex:1 1 auto;align-items:baseline;justify-content:space-between;gap:8px}
+.iel-page .icust-rot-title{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
+.iel-page .icust-rot-val{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums;text-align:right}
+.iel-page .icust-rot-btns{display:flex;align-items:center;gap:4px}
+.iel-page .icust-rot-sep{width:1px;height:20px;margin:0 6px;background:var(--border)}
+.iel-page .icust-rot-btn{
+  display:grid;place-items:center;width:40px;height:40px;padding:0;
+  border:1px solid var(--border);border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out),color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .icust-rot-btn:hover{border-color:var(--bh);color:var(--t0)}}
+.iel-page .icust-rot-btn[aria-pressed="true"]{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
+.iel-page .icust-rot-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){
+  .iel-page .icust-rot-btns{gap:8px}
+  .iel-page .icust-rot-btn{width:44px;height:44px}
+  .iel-page .icust-rot-sep{margin:0}
+}
+
+/* The SVG code: a closed disclosure whose summary holds the live size. Open, the code can be
+   selected, with a Copy text button in its corner. While a Pro setting is only previewed the
+   code still shows but cannot be selected and Copy is dimmed (aria-disabled, still in the tab order). */
+.iel-page .icust-code{margin:0;border-top:1px solid var(--border)}
+.iel-page .icust-code-sum{display:flex;align-items:center;gap:8px;min-height:40px;list-style:none;cursor:pointer;border-radius:var(--radius-xs)}
+.iel-page .icust-code-sum::-webkit-details-marker{display:none}
+.iel-page .icust-code-sum:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-code-caret{flex:none;color:var(--t2);transition:transform 150ms var(--ease-out)}
+.iel-page .icust-code[open] .icust-code-caret{transform:rotate(90deg)}
+.iel-page .icust-code-name{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
+.iel-page .icust-code-val{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
+.iel-page .icust-code-box{position:relative;margin:0 0 8px;padding:40px 12px 12px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s)}
+.iel-page .icust-code-box code{-webkit-user-select:text;user-select:text;cursor:text;border-radius:var(--radius-xs)}
+/* The code scrolls at 120px, so it takes a Tab stop (tabindex="0") and shows where it is. */
+.iel-page .icust-code-box code:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-code-box.is-locked code{-webkit-user-select:none;user-select:none;cursor:default;color:var(--t3)}
+.iel-page .icust-code-copy{
+  position:absolute;top:6px;right:6px;min-height:32px;padding:0 12px;
+  border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--card);
+  font-family:var(--font);font-size:12px;font-weight:560;color:var(--t1);cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .icust-code-copy:hover:not(:disabled):not([aria-disabled="true"]){background:var(--hvr);border-color:var(--bh);color:var(--t0)}}
+.iel-page .icust-code-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-code-copy[aria-disabled="true"]{color:var(--t3);cursor:default}
+@media(pointer:coarse){
+  .iel-page .icust-code-sum{min-height:44px}
+  .iel-page .icust-code-box{padding-top:56px}
+  .iel-page .icust-code-copy{min-height:44px}
+}
+
+/* Reduced motion: nothing in the popup transitions or animates a transform. */
+html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-line-toggle svg,.iel-page .icust-code-caret){animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.iel-page .icust-panel,.iel-page .icust-line-toggle svg,.iel-page .icust-code-caret){animation:none;transition:none}
+}
+
+/* ── Desktop fit: the right column holds a stroke icon without scrolling at 1440 by 900 ───────────
+   The column is 397px wide. The Colour chips tighten so all four sit on one row (370px of chips and
+   18px of gaps), and the Stroke note takes the full width instead of the slider's indent, so it
+   stays on one line. */
+@media(min-width:801px){
+  .iel-page .icust-chip,.iel-page .icust-chip.cpk-trigger{gap:6px;padding:0 12px 0 8px}
+  .iel-page .icust-right .icust-stroke-note{padding-left:0}
+}
+@media(min-width:801px) and (pointer:fine){
+  .iel-page .icust-chips{gap:6px}
+}
+
+/* The foot's top hairline shows only while a column has more under it. Above 800px the two columns
+   scroll on their own, and the line is the cue that a cut-off row carries on; with everything in
+   view there is nothing to say, so the line is transparent (the border stays, so the foot never
+   changes height). IconLibrary.jsx sets data-scrolls on .icust-body while either column overflows. */
+@media(min-width:801px){
+  .iel-page .icust-body>.icust-foot{box-shadow:none;border-top:1px solid transparent}
+  .iel-page .icust-body[data-scrolls]>.icust-foot{border-top-color:var(--border)}
 }

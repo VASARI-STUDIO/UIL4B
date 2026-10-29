@@ -595,13 +595,13 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
       expect(rowBox, 'the row stays one 44px line while every tile waits').toBe(44)
 
-      // Tab from the control before the row must not land on a waiting tile. Save is the last
-      // control ahead of the row (Reset is hidden, and so cannot take focus, until something is
-      // edited), and the guard proves the focus really started there.
-      const save = page.locator('.icust-save')
-      await expect(save).toBeEnabled()
-      await save.focus()
-      await expect(save, 'the Tab walk starts on the control just before the row').toBeFocused()
+      // Tab from the control before the row must not land on a waiting tile. The SVG code summary is
+      // the last control ahead of the row (Reset is hidden, and so cannot take focus, until something
+      // is edited), and the guard proves the focus really started there.
+      const codeSum = page.locator('.icust-code-sum')
+      await expect(page.locator('.icust-save')).toBeEnabled()
+      await codeSum.focus()
+      await expect(codeSum, 'the Tab walk starts on the control just before the row').toBeFocused()
       for (let i = 0; i < 4; i += 1) {
         await page.keyboard.press('Tab')
         const onTile = await page.evaluate(() => document.activeElement?.classList.contains('icust-similar-btn'))
@@ -630,8 +630,8 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       expect((await tileState(failed)).height).toBe(44)
 
       // Positive control for the Tab check: a shown tile IS reachable from the same spot.
-      await save.focus()
-      await expect(save).toBeFocused()
+      await codeSum.focus()
+      await expect(codeSum).toBeFocused()
       await page.keyboard.press('Tab')
       await expect(page.getByRole('button', { name: `Open ${names[0]}`, exact: true })).toBeFocused()
     } finally { release() }

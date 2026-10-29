@@ -56,6 +56,8 @@ async function openAs(browser, plan, viewport = { width: 1440, height: 900 }) {
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
   await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  // The code sits in a closed disclosure; open it so its Copy can be reached.
+  await page.locator('.icust-code-sum').click()
   await expect(page.locator('.icust-line-tile svg').first()).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   await expect(primary(page)).toBeEnabled({ timeout: 20_000 })
@@ -71,7 +73,7 @@ const sizeGroup = (page) => page.getByRole('radiogroup', { name: 'Export size' }
 const customRadio = (page) => sizeGroup(page).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
 const dimmed = (page) => ({
-  'the code Copy': page.locator('.icust-code-box'),
+  'the code Copy': page.locator('.icust-code-copy'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
   'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
@@ -125,7 +127,7 @@ for (const [who, plan] of VIEWERS) {
         foot: (await page.locator('.icust-foot').boundingBox()).width,
         x: (await primary(page).boundingBox()).x,
       }
-      expect(Math.abs(after.button - before.button), 'the button changed width with its label (measured: 1.7px from the faces sizing, see the report)').toBeLessThan(3)
+      expect(Math.abs(after.button - before.button), 'the button changed width with its label (a sizer face that drops its space measured 1.7 to 3px)').toBeLessThan(1)
       expect(after.foot, 'the foot changed width').toBeCloseTo(before.foot, 0)
       expect(after.x, 'the button moved sideways').toBeCloseTo(before.x, 0)
       await ctx.close()
@@ -153,11 +155,18 @@ for (const [who, plan] of VIEWERS) {
       await expect(line(page)).toHaveText(SHARP)
 
       // Tab order through the code and the foot: code Copy, Back, Upgrade, Download SVG, Download formats, Save.
+      // The scrolling code and any Similar tiles sit between the code Copy and Back; they are stepped over.
       const d = dimmed(page)
       await d['the code Copy'].focus()
       await expect(d['the code Copy']).toBeFocused()
+      await page.keyboard.press('Tab')
+      for (let i = 0; i < 14 && !(await back(page).evaluate((el) => el === document.activeElement)); i += 1) {
+        const between = await page.evaluate(() => document.activeElement?.tagName === 'CODE' || document.activeElement?.classList.contains('icust-similar-btn'))
+        expect(between, 'Tab left the code Copy for something other than the code, a Similar tile or Back').toBe(true)
+        await page.keyboard.press('Tab')
+      }
+      await expect(back(page), 'Tab did not reach Back to free settings').toBeFocused()
       for (const [label, next] of [
-        ['Back to free settings', back(page)],
         ['Upgrade to Pro', primary(page)],
         ['Download SVG', d['Download SVG']],
         ['Download formats', d['Download formats']],
@@ -244,7 +253,7 @@ for (const [who, plan] of VIEWERS) {
     test('Back to free settings restores Round and the preset, keeps the rest, focuses Copy SVG, and Copy works again', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
       await sizeGroup(page).getByRole('radio', { name: '32 pixels' }).click()
-      await page.locator('.icust-seg button', { hasText: 'Horizontal' }).click()
+      await page.getByRole('button', { name: 'Flip horizontally', exact: true }).click()
       await tile(page, 'Sharp').click()
       await commitSize(page, 40)
       await expect(line(page)).toHaveText(BOTH)
@@ -253,7 +262,7 @@ for (const [who, plan] of VIEWERS) {
       await expect(tile(page, 'Round'), 'line style is not Round').toHaveAttribute('aria-checked', 'true')
       await expect(sizeGroup(page).getByRole('radio', { name: '32 pixels' }), 'size is not the last preset').toHaveAttribute('aria-checked', 'true')
       await expect(page.locator('.icust-size-custom'), 'the custom row stayed open').toHaveCount(0)
-      await expect(page.locator('.icust-seg button', { hasText: 'Horizontal' }), 'another setting was reset').toHaveAttribute('aria-pressed', 'true')
+      await expect(page.getByRole('button', { name: 'Flip horizontally', exact: true }), 'another setting was reset').toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Copy SVG')
       await expect(primary(page), 'focus did not land on Copy SVG').toBeFocused()
       await expect(back(page)).toHaveCount(0)
@@ -288,7 +297,7 @@ for (const [who, plan] of VIEWERS) {
       await sizeGroup(page).getByRole('radio', { name: '32 pixels' }).click()
       await tile(page, 'Sharp').click()
       await commitSize(page, 40)
-      await page.locator('.icust-seg button', { hasText: 'Vertical' }).click()
+      await page.getByRole('button', { name: 'Flip vertically', exact: true }).click()
       await expect(line(page)).toHaveText(BOTH)
       const name = await customiser(page).getAttribute('aria-labelledby').then((id) => page.locator(`#${id}`).innerText())
 
@@ -301,7 +310,7 @@ for (const [who, plan] of VIEWERS) {
       await expect(page.locator('#icust-title')).toHaveText(name)
       await expect(tile(page, 'Sharp')).toHaveAttribute('aria-checked', 'true')
       await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
-      await expect(page.locator('.icust-seg button', { hasText: 'Vertical' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.getByRole('button', { name: 'Flip vertically', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await expect(line(page)).toHaveText(BOTH)
 

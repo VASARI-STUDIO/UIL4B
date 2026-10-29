@@ -101,8 +101,9 @@ test('the note and the help line hold their lines, so a choice never moves the c
   const css = flatCss(ICON_CSS)
   assert.match(css.match(/\.iel-page \.icust-ground-note ?\{[^}]*\}/)[0], /min-height: ?calc\(8px \+ 1em \* 1\.4\)/)
   assert.match(css, /@media ?\(max-width: ?560px\) ?\{ ?\.iel-page \.icust-ground-note ?\{[^}]*min-height: ?calc\(8px \+ 2em \* 1\.4\)/)
-  // two lines at every width: no narrower override for the help line
+  // two lines held by default (a phone), one from 561px up where both sentences fit one line
   assert.match(css.match(/\.iel-page \.icust-colour-help ?\{[^}]*\}/)[0], /min-height: ?calc\(2em \* 1\.4\)/)
+  assert.match(css, /@media ?\(min-width: ?561px\) ?\{ ?\.iel-page \.icust-right \.icust-colour-help ?\{[^}]*min-height: ?calc\(1em \* 1\.4\)/)
   assert.doesNotMatch(css, /@media[^{]*\{ ?\.iel-page \.icust-colour-help ?\{/)
 })
 
