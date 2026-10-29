@@ -222,7 +222,7 @@ test.describe('Font Pair', () => {
     // A plain substring check rather than a RegExp: a family name can carry a
     // regex metacharacter, and escaping one to assert on it adds a way for the
     // test to be wrong that the assertion itself does not need.
-    const offered = await wand.getAttribute('aria-label')
+    const offered = await wand.getAttribute('title')
     expect(offered).toContain(top)
 
     // POSITIVE CONTROL: the body face must not already BE the suggestion, or
@@ -301,6 +301,7 @@ test.describe('Font Pair', () => {
     watch(page, 'front-end developer wiring up two families')
     await go(page, '/create/font-pair')
 
+    await page.locator('.fpr-delivery > summary').click()
     const code = page.locator('#fpr-export')
     await expect(code).toContainText('@import url(')
     await expect(code).toContainText('--font-heading:')
@@ -982,7 +983,7 @@ test.describe('typography hand-offs', () => {
     await expect(page.locator('.fpr-pair span').nth(0)).toHaveText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
-    await page.getByRole('button', { name: /Build a scale from this pair/ }).click()
+    await page.getByRole('button', { name: /Build a type scale from this pair/ }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/type-scale')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
     const family = await page.locator('.tsc-row-text--heading').first().evaluate(
@@ -1071,7 +1072,7 @@ test.describe('the font picker is browsable', () => {
     watch(page, 'designer choosing a heading face')
     await go(page, '/fontpairs')
 
-    const trigger = page.locator('.typ-picker-trigger').first()
+    const trigger = page.getByRole('button', { name: 'Browse heading family' })
     await expect(trigger).toBeVisible()
     await trigger.click()
 
@@ -1095,7 +1096,7 @@ test.describe('the font picker is browsable', () => {
     await tile.locator('.fbd-tile').click()
 
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(trigger.locator('.typ-picker-name')).toHaveText('Lora')
+    await expect(page.locator('.fpr-fam').first().locator('.fpr-fam-name')).toHaveText('Lora')
   })
 
   test('no specimen is trimmed to fit, at either end of the column range', async ({ page }) => {
@@ -1163,7 +1164,7 @@ test.describe('the font picker is browsable', () => {
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/fontpairs')
-      const trigger = page.locator('.typ-picker-trigger').first()
+      const trigger = page.getByRole('button', { name: 'Browse heading family' })
       await expect(trigger).toBeVisible()
       await trigger.click()
       const dialog = page.getByRole('dialog')
@@ -1249,7 +1250,7 @@ test.describe('the font picker is browsable', () => {
     // is not a component that is mounted.
     watch(page, 'designer inspecting a face from inside the picker')
     await go(page, '/fontpairs')
-    await page.locator('.typ-picker-trigger').first().click()
+    await page.getByRole('button', { name: 'Browse heading family' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await dialog.getByLabel('Search font families').fill('Lora')
@@ -1284,9 +1285,23 @@ test.describe('the font picker is browsable', () => {
     await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow + document.body.style.overflow)).toBe('')
   })
 
-  test('the trigger shows the current family in that family', async ({ page }) => {
+  test('the family card shows the current family in that family', async ({ page }) => {
     watch(page, 'designer glancing at the current selection')
     await go(page, '/fontpairs')
+
+    // Font Pair's family card is a preview, not a label: the name is set in the
+    // family it names, for both the heading and the body card.
+    for (const card of await page.locator('.fpr-fam').all()) {
+      const name = card.locator('.fpr-fam-name')
+      const shown = await name.innerText()
+      const stack = await name.evaluate((n) => getComputedStyle(n).fontFamily)
+      expect(stack.toLowerCase(), `${shown} is not set in itself`).toContain(shown.toLowerCase())
+    }
+  })
+
+  test('the Type Scale trigger shows the current family in that family', async ({ page }) => {
+    watch(page, 'designer glancing at the current selection')
+    await go(page, '/typescale')
 
     // The trigger is a preview, not a label: its specimen must resolve to the
     // selected family and not to the UI font.

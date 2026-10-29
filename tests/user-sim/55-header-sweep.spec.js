@@ -190,9 +190,9 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   // PRESENT: the output's sections are named in words. The controls are the
   // side panel, an <aside> named by its label rather than a visible head.
   const headings = page.locator('.fpr-section-head h2')
-  await expect(headings).toHaveCount(2)
-  await expect(headings.nth(0)).toContainText('Body faces that work under')
-  await expect(headings.nth(1)).toHaveText('Prepare the handoff')
+  await expect(headings).toHaveCount(1)
+  await expect(headings.nth(0)).toContainText('Bodies that suit')
+  await expect(page.locator('.fpr-delivery > summary')).toHaveText('Prepare the handoff')
   await expect(page.getByRole('complementary', { name: 'Font Pair controls' })).toBeVisible()
 
   // The specimen's sr-only h2 still names its region.
