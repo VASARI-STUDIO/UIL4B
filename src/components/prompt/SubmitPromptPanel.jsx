@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { publishPrompt } from '../../utils/communityQueueApi'
+import { isPostLimit } from '../../utils/communityLimits'
 import { processImageForUpload } from '../../utils/imageProcessing'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../../utils/mediaUpload'
 import { buildCommunityPromptRecord } from '../../utils/promptSubmission'
@@ -97,7 +98,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
       onClose()
     } catch (err) {
       // The 30-second gap and the daily cap have wording of their own.
-      toast(err?.name === 'PostLimitError' ? err.message : 'Failed to submit — try again')
+      toast(isPostLimit(err) ? err.message : 'Failed to submit — try again')
     } finally {
       setSubmitting(false)
     }

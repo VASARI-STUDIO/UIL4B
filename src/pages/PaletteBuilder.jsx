@@ -53,6 +53,7 @@ import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pe
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
+import { isPostLimit } from '../utils/communityLimits'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
@@ -2573,10 +2574,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     try {
       await publishToQueue({ ...queued, localId })
       toast?.('Submitted to the community — thanks!')
-    } catch {
+    } catch (err) {
       // Never claim it reached the queue when it did not. The local copy is
-      // kept, so nothing the user made is lost.
-      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+      // kept, so nothing the user made is lost. A refusal by the post limits
+      // gets its own words, because trying again at once cannot work.
+      toast?.(isPostLimit(err)
+        ? `${err.message} Your palette is saved in this browser.`
+        : 'Saved locally — we could not reach the review queue. Try again later.')
     }
   }
 
