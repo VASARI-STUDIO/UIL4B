@@ -47,3 +47,20 @@ test('no stage ground paints a gradient', () => {
     }
   }
 })
+
+test('the colour row is one radiogroup of four chips, with no pill track and no Default button', () => {
+  const jsx = stripJs(read('src/pages/IconLibrary.jsx'))
+  assert.match(jsx, /role="radiogroup" aria-labelledby="icust-colour-label"/)
+  // Text colour, Black and White are written out; Custom is the colour picker's trigger as a radio.
+  assert.match(jsx, /isDuotone \? 'Original' : 'Text colour'/)
+  assert.match(jsx, /\['black', 'Black', '#000000'\], \['white', 'White', '#ffffff'\]/)
+  assert.match(jsx, /triggerProps=\{\{ role: 'radio', 'aria-checked': choice === 'custom'/)
+  assert.doesNotMatch(jsx, />Default<\/button>/)
+})
+
+test('choosing Text colour clears the colour, so the serializer writes none', () => {
+  const jsx = stripJs(read('src/pages/IconLibrary.jsx'))
+  assert.match(jsx, /onClick=\{\(\) => \{ setColor\(''\); markDirty\(\) \}\}/)
+  // the serializer only touches colour when one is given
+  assert.match(jsx, /if \(color\) \{\s*svg\.setAttribute\('color', color\)/)
+})

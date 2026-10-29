@@ -164,6 +164,10 @@ export default function ColorPickerPop({
   onDisabledClick,
   triggerClassName = '',
   triggerChildren,
+  // Extra attributes for the trigger button, spread last. The icon customiser uses
+  // it to make the trigger one radio of its colour group (role, aria-checked,
+  // tabIndex, data attributes), so a caller can fit the picker into a larger control.
+  triggerProps,
   // For a tool that restyles its own picker's panel; a portalled panel sits
   // outside the tool's wrapper, so a descendant selector cannot reach it.
   popClassName = '',
@@ -386,6 +390,7 @@ export default function ColorPickerPop({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-disabled={disabled}
+        {...triggerProps}
         onClick={() => {
           // Stay a real (not natively disabled) button when locked so a click
           // still reaches onDisabledClick — the Pro gate wants to raise its modal.

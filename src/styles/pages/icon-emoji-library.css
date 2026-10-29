@@ -245,6 +245,36 @@
 }
 @media(max-width:560px){.iel-page .icust-ground{right:8px;bottom:8px}}
 
+/* Icon colour: four chips in one radiogroup, exactly one selected. The header
+   carries the label and, on the right, the value the file will hold (currentColor,
+   or a hex): the only mono here, because it is a literal. The chip selected is a
+   9% ink wash with an ink hairline, the same recipe as the other toggles. */
+.iel-page .icust-row--colour{flex-wrap:wrap;row-gap:8px}
+.iel-page .icust-row--colour>label{flex:1 1 auto}
+.iel-page .icust-colour-value{flex:0 0 auto;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t2)}
+.iel-page .icust-chips{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:8px}
+.iel-page .icust-chip{
+  display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 10px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;
+  font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;color:var(--t1);cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out),color 150ms var(--ease-out);
+}
+.iel-page .icust-chips .cpk-wrap{flex:0 0 auto}
+.iel-page .icust-chip.cpk-trigger{width:auto;height:auto;min-height:40px;padding:0 14px 0 10px;border-radius:var(--radius-pill);background:transparent}
+@media(hover:hover){.iel-page .icust-chip:hover{color:var(--t0);border-color:var(--bh)}}
+.iel-page .icust-chip[aria-checked="true"]{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
+.iel-page .icust-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.iel-page .icust-chip,.iel-page .icust-chip.cpk-trigger{min-height:44px}.iel-page .icust-chips{gap:8px}}
+.iel-page .icust-chip-sw{flex:0 0 auto;width:18px;height:18px;border:1px solid var(--bh);border-radius:50%;box-sizing:border-box}
+/* Text colour: half the page ink, half the page ground, so it reads as "whatever
+   the text is". Two flat halves, no gradient. */
+.iel-page .icust-chip-sw--text{background:var(--t0);position:relative;overflow:hidden}
+.iel-page .icust-chip-sw--text::after{content:"";position:absolute;inset:0 0 0 50%;background:var(--bg-0)}
+.iel-page .icust-chip-sw--empty{background:transparent;border-style:dashed}
+.iel-page .icust-colour-help{flex:1 0 100%;margin:0;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+.iel-page .icust-colour-help code{font-family:var(--mono);font-size:.95em;color:var(--t1)}
+@media(max-width:560px){.iel-page .icust-colour-help{min-height:calc(2em * 1.4)}}
+
 /* Low contrast between the icon and the ground: one line under the stage and a
    text button. Never an automatic switch. */
 .iel-page .icust-ground-note{margin:0 24px}

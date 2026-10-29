@@ -1608,7 +1608,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Low contrast is a note, never a switch: the person decides. Coloured art keeps
   // its own colours, so there is nothing to measure.
   const contrastNote = isColoredPack ? null : groundContrastNote({ ink: color || themeInk, ground, theme })
-  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: 'This colour' }[colourChoice(color)]
+  const choice = colourChoice(color)
+  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: 'This colour' }[choice]
   // Until the stage has its own art, show the glyph the grid drew for this icon
   // (same data: URI, so nothing new is fetched) in the stage's box. The grid's tint
   // is the theme ink, so it only matches while the icon is drawn in that ink (no
@@ -1940,20 +1941,61 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 />
               </div>
 
-              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}`}>
-                <label>Colour</label>
+              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
+                <label id="icust-colour-label">Colour</label>
                 {colourRow === 'original' ? (
                   <span className="icust-value">Original colours</span>
                 ) : colourRow === 'wait' ? (
                   <span className="icust-value">&nbsp;</span>
                 ) : (
                   <>
-                    <div className="icust-seg">
-                      {isDuotone && <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>}
-                      <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
-                      <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
+                    <span className="icust-colour-value">{choice === 'text' ? 'currentColor' : color.toUpperCase()}</span>
+                    {/* Four choices, exactly one selected. Text colour is the file's
+                        currentColor (no colour written); the rest write a hex. */}
+                    <div className="icust-chips" role="radiogroup" aria-labelledby="icust-colour-label" onKeyDown={steerRadios}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={choice === 'text'}
+                        tabIndex={choice === 'text' ? 0 : -1}
+                        className="icust-chip"
+                        onClick={() => { setColor(''); markDirty() }}
+                      >
+                        <span className="icust-chip-sw icust-chip-sw--text" aria-hidden="true" />
+                        {isDuotone ? 'Original' : 'Text colour'}
+                      </button>
+                      {[['black', 'Black', '#000000'], ['white', 'White', '#ffffff']].map(([id, label, hex]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={choice === id}
+                          tabIndex={choice === id ? 0 : -1}
+                          className="icust-chip"
+                          onClick={() => { setColor(hex); markDirty() }}
+                        >
+                          <span className="icust-chip-sw" style={{ background: hex }} aria-hidden="true" />
+                          {label}
+                        </button>
+                      ))}
+                      <ColorPickerPop
+                        value={color || themeInk}
+                        onChange={(v) => { setColor(v); markDirty() }}
+                        triggerClassName="icust-chip"
+                        triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, tabIndex: choice === 'custom' ? 0 : -1 }}
+                        triggerChildren={(
+                          <>
+                            <span className={`icust-chip-sw${choice === 'custom' ? '' : ' icust-chip-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
+                            Custom
+                          </>
+                        )}
+                      />
                     </div>
-                    <ColorPickerPop value={color || themeInk} onChange={(v) => { setColor(v); markDirty() }} />
+                    <p className="icust-colour-help">
+                      {choice === 'text'
+                        ? <>The file uses <code>currentColor</code>, so it takes the colour of the text around it.</>
+                        : 'The file sets this colour itself.'}
+                    </p>
                   </>
                 )}
               </div>

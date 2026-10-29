@@ -41,7 +41,10 @@ test.describe('the customizer preview ground', () => {
       watch(page, `someone opening an icon in ${scheme} mode`)
       await openCustomizer(page)
       await expect(page.locator('.icust-panel').getByRole('button', { name: 'Default', exact: true })).toHaveCount(0)
-      await expect(page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg button.active')).toHaveCount(0)
+      // Exactly one colour chip is selected, and with nothing picked it is Text colour.
+      const chips = page.getByRole('radiogroup', { name: 'Icon colour' })
+      await expect(chips.getByRole('radio', { checked: true })).toHaveCount(1)
+      await expect(chips.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
       const { bg, image, page: pageBg } = await stageAndPage(page)
       expect(image, 'the stage is painting a gradient').toBe('none')
       expect(bg, 'the stage is not the page background').toBe(pageBg)
@@ -57,8 +60,12 @@ test.describe('the customizer preview ground', () => {
     const stage = page.locator('.icust-stage')
     await expect(stage).toHaveClass(/icust-stage--page/)
     const before = await stageAndPage(page)
-    await page.getByRole('button', { name: 'White', exact: true }).click()
-    await page.getByRole('button', { name: 'Black', exact: true }).click()
+    for (const chip of ['White', 'Black', 'Text colour']) {
+      await page.getByRole('radio', { name: chip, exact: true }).click()
+      await expect(page.getByRole('radio', { name: chip, exact: true })).toBeChecked()
+      await expect(stage, `pressing ${chip} changed the ground`).toHaveClass(/icust-stage--page/)
+      expect((await stageAndPage(page)).bg, `pressing ${chip} repainted the ground`).toBe(before.bg)
+    }
     await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
     await expect(stage).toHaveClass(/icust-stage--page/)
     expect((await stageAndPage(page)).bg, 'a colour press moved the ground').toBe(before.bg)
@@ -482,7 +489,7 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     expect(m.bg, 'the mark got a box').toBe('none')
     // A one-colour mark uses the theme ink once opened in the customizer.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
-    await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible()
     await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo-light/)
     await ctx.close()
   })
@@ -538,7 +545,7 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       await expect(colourRow.locator('.icust-value')).toBeHidden()
       await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       release()
-      await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible()
+      await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible()
       await expect(stage).not.toHaveClass(/icust-stage--halo-light/)
     } finally { release(); await ctx.close() }
   })
@@ -646,7 +653,7 @@ test.describe('saved icons', () => {
       // controls, no "Original colours" default, and no halo on the stage.
       const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
       await page.locator('.ig .ic', { hasText: pick }).click()
-      await expect(page.getByRole('button', { name: 'Black', exact: true })).toBeVisible({ timeout: 20000 })
+      await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible({ timeout: 20000 })
       await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo/)
       await page.keyboard.press('Escape')
@@ -795,11 +802,11 @@ for (const [name, body, multicolour] of [
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
     await expect(colour.getByText('Default', { exact: true })).toHaveCount(0)
     await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
-    await expect(colour.getByRole('button', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
-    await expect(colour.getByRole('button', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.getByRole('radio', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.getByRole('radio', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
     await expect(colour.locator('.cpk-trigger')).toHaveCount(multicolour ? 0 : 1)
     if (multicolour) return
-    await colour.getByRole('button', { name: 'Black', exact: true }).click()
+    await colour.getByRole('radio', { name: 'Black', exact: true }).click()
     await expect(page.locator('.icust-code-box')).toContainText('color="#000000"')
     await expect.poll(async () => decodeURIComponent(await page.locator('.icust-stage-img').getAttribute('src'))).toContain('color="#000000"')
     await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
@@ -850,7 +857,7 @@ for (const scheme of ['dark', 'light']) {
 }
 
 for (const weight of ['Regular', 'Bold', 'Fill', 'Duo']) {
-  test(`Default colour is offered only for Duo, when browsing ${weight}`, async ({ page }) => {
+  test(`Original colour is offered only for Duo, when browsing ${weight}`, async ({ page }) => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     const seg = page.getByRole('group', { name: 'Icon weight' })
@@ -861,8 +868,10 @@ for (const weight of ['Regular', 'Bold', 'Fill', 'Duo']) {
     }
     await page.locator('.ig .ic').first().click()
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-    await expect(colour.getByRole('button', { name: 'Default', exact: true })).toHaveCount(weight === 'Duo' ? 1 : 0)
-    if (weight !== 'Duo') await expect(colour.locator('.icust-seg button.active')).toHaveCount(0)
+    await expect(colour.getByRole('radio', { name: 'Original', exact: true })).toHaveCount(weight === 'Duo' ? 1 : 0)
+    // Text colour is the default; on a duotone icon it is called Original.
+    await expect(colour.getByRole('radio', { checked: true })).toHaveCount(1)
+    await expect(colour.getByRole('radio', { name: weight === 'Duo' ? 'Original' : 'Text colour', exact: true })).toBeChecked()
   })
 }
 
@@ -907,7 +916,7 @@ for (const fail of [false, true]) {
   })
 }
 
-test('a saved duotone icon reopens with the Default colour button', async ({ page }) => {
+test('a saved duotone icon reopens with the Original colour chip', async ({ page }) => {
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Duo/ }).click()
@@ -930,7 +939,7 @@ test('a saved duotone icon reopens with the Default colour button', async ({ pag
   await expect(saved).toContainText(/Custom \(.*-duotone 1\)/)
   await saved.click()
   const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-  await expect(colour.getByRole('button', { name: 'Default', exact: true })).toBeVisible()
+  await expect(colour.getByRole('radio', { name: 'Original', exact: true })).toBeChecked()
 })
 
 test('the pack menu has one Interface group and borrows no style word from the Weight and Coloured chips', async ({ page }) => {
@@ -1029,3 +1038,27 @@ for (const width of [1440, 390]) {
     }
   })
 }
+
+// TEXT COLOUR IS CURRENTCOLOR. With the default chip selected the copied file holds
+// currentColor and writes no colour of its own; picking Black writes it.
+test('Text colour copies currentColor with no colour on the root; Black writes one', async ({ browser }) => {
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+  const page = await ctx.newPage()
+  watch(page, 'someone copying an icon in the default colour')
+  await openCustomizer(page)
+  await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
+  const copy = async () => {
+    await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+    await expect(page.getByRole('button', { name: /Copied!/ })).toBeVisible()
+    return page.evaluate(() => navigator.clipboard.readText())
+  }
+  const plain = await copy()
+  expect(plain.match(/<svg[^>]*>/)?.[0] || '', 'a colour was written onto the root').not.toMatch(/\s(color|fill|stroke)="#/)
+  expect(plain, 'currentColor is gone from the file').toContain('currentColor')
+  await page.getByRole('radio', { name: 'Black', exact: true }).click()
+  await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeVisible({ timeout: 5000 })
+  await expect.poll(copy, { timeout: 10000 }).toContain('color="#000000"')
+  await ctx.close()
+})
