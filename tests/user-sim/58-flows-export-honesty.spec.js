@@ -39,7 +39,7 @@
 //
 // Two call sites, broken one at a time:
 //
-//   src/config/exportV3.js: a category listing an unbuilt format's id (or a rail row
+//   src/config/dialogExport.js: a category listing an unbuilt format's id (or a rail row
 //        rendered for it)  →  fails "every unbuilt format … has no row and no button";
 //        the control passes.
 //   src/hooks/useExportRunner.js: `watermark: !proNow` on the style guide → `watermark: false`

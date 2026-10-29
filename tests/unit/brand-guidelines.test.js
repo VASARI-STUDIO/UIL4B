@@ -26,7 +26,7 @@ import { buildBrandGuidelines, guidelineSections, readGuidelines } from '../../s
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS, proOnlyFormats } from '../../src/config/exportFormats.js'
-import { EXPORT_TYPES } from '../../src/config/exportV3.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src

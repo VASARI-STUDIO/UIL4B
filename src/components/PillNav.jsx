@@ -2,7 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
-import { readLastPick, resolvePreset } from '../config/exportV3'
+import { readLastPick, resolvePreset } from '../config/dialogExport'
 import { localiseTools } from '../data/tools'
 import { CREATE_TOOL_SEARCH, searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the

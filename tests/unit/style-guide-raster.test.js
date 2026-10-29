@@ -11,7 +11,7 @@ import path from 'node:path'
 import { buildStyleGuideLayout, A4, MARGIN } from '../../src/utils/styleGuideRaster.js'
 import { contrast, typeLadder, readDesign } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
-import { EXPORT_TYPES } from '../../src/config/exportV3.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -194,7 +194,7 @@ test('the export panel offers the raster formats and loads them on demand', () =
   assert.ok(!png.pro && !jpeg.pro, 'the raster style guides are free-tier formats')
 
   // The engine that builds the file loads the raster path on demand; the dialog
-  // reaches the formats through src/config/exportV3.js, which must list both.
+  // reaches the formats through src/config/dialogExport.js, which must list both.
   const runner = read('src/hooks/useExportRunner.js')
   assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(runner),
     'the raster path must be code-split so an HTML export does not pay for it')

@@ -11,7 +11,7 @@ import { readIdentity, IDENTITY_NAME_MAX, IDENTITY_DESCRIPTION_MAX } from '../..
 import { parseGoogleFontCss, loadKitFonts, licenseUrls, googleCssUrl, LICENSE_SOURCE_COMMIT } from '../../src/utils/kitFonts.js'
 import { EXPORT_FORMATS, freeFormats, styleGuideFormats } from '../../src/config/exportFormats.js'
 import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
-import { EXPORT_TYPES } from '../../src/config/exportV3.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const TEMPLATE = read('src/templates/kit/studio.html')

@@ -37,8 +37,8 @@
 
 /* Reduced motion keeps the fade and caps it at 100ms; nothing moves. */
 @media (prefers-reduced-motion:reduce){
-  .xfp-in{animation-duration:100ms}
-  .xfp-retry{transition-duration:100ms}
+  html:not([data-reduced-motion="false"]) .xfp-in{animation-duration:100ms}
+  html:not([data-reduced-motion="false"]) .xfp-retry{transition-duration:100ms}
 }
 html[data-reduced-motion="true"] .xfp-in{animation-duration:100ms}
 html[data-reduced-motion="true"] .xfp-retry{transition-duration:100ms}

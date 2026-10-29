@@ -15,7 +15,7 @@ import { bestPole, contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tint
 import { getLenis } from '../hooks/useSmoothScroll'
 import { refreshScrollLimit } from '../utils/hashLanding'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
-import { resolvePreset } from '../config/exportV3'
+import { resolvePreset } from '../config/dialogExport'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'

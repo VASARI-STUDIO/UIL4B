@@ -10,7 +10,7 @@ import { EXPORT_TEMPLATES, assertTemplatesCoherent } from '../../src/config/expo
 import {
   DEFAULT_PRESET, EXPORT_TYPES, LAST_PICK_KEY, exportLocation, galleryPick, needsNetwork,
   presetFromGalleryPick, readLastPick, resolvePreset, resolveUpgradeTarget, storeLastPick,
-} from '../../src/config/exportV3.js'
+} from '../../src/config/dialogExport.js'
 import { GALLERY_CHECKOUT, GALLERY_DESIGNS, GALLERY_FORMATS, normalisePick } from '../../src/utils/kitGalleryPick.js'
 
 const memory = () => {

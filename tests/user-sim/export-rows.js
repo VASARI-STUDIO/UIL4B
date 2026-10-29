@@ -1,11 +1,11 @@
 // How a spec reaches one export file in the Export popup (src/components/export/):
 // pick the type in the rail, then the category under Brand book, then the file in
 // that category's "{Category} file type" switch. Where a format lives is read from
-// src/config/exportV3.js, so a file moved to another category is followed here.
+// src/config/dialogExport.js, so a file moved to another category is followed here.
 // What the popup SAYS (file labels, button words) is written out below, not read
 // from the source, so a reworded button fails the spec instead of agreeing with it.
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
-import { exportLocation } from '../../src/config/exportV3.js'
+import { exportLocation } from '../../src/config/dialogExport.js'
 
 /** The popup (the dialog inside the .xd overlay). */
 export const exportPanel = (page) => page.locator('.xd').getByRole('dialog')

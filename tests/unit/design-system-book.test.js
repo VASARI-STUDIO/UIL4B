@@ -22,7 +22,7 @@ import {
 } from '../../src/utils/designSystemBook.js'
 import { contrast, grade } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
-import { EXPORT_TYPES, resolveUpgradeTarget } from '../../src/config/exportV3.js'
+import { EXPORT_TYPES, resolveUpgradeTarget } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 // Block comments AND line comments go before any assertion runs. A source

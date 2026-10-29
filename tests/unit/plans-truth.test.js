@@ -39,7 +39,7 @@ import {
   proOnlyFormats,
   unbuiltFormats,
 } from '../../src/config/exportFormats.js'
-import { EXPORT_TYPES } from '../../src/config/exportV3.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 import * as PLAN_CONFIG from '../../src/config/plans.js'
 const { FREE_SAVE_LIMITS } = PLAN_CONFIG
 
@@ -237,7 +237,7 @@ test('the export dialog and the pricing page read ONE table', () => {
     'the export entitlement gate no longer reads the shared table')
   assert.match(code, /fmt\.pro && !isPro/, 'the export entitlement gate no longer reads the shared table')
 
-  // The dialog's rows (src/config/exportV3.js) only group ids; every one must be a
+  // The dialog's rows (src/config/dialogExport.js) only group ids; every one must be a
   // format of the shared table, or the dialog offers a file the table has never heard of.
   const known = new Set(EXPORT_FORMATS.map(f => f.id))
   for (const t of EXPORT_TYPES) for (const c of t.categories) for (const id of c.files) {

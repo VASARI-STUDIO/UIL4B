@@ -16,7 +16,7 @@ import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 import '../styles/pages/project.css'
-import { readLastPick, resolvePreset } from '../config/exportV3'
+import { readLastPick, resolvePreset } from '../config/dialogExport'
 // `lazy` in this file is lazyRoute, not React's: if the file for the export dialog
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'

@@ -16,7 +16,7 @@ import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuid
 import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
-import { needsNetwork, resolveUpgradeTarget } from '../config/exportV3'
+import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
