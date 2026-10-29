@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS } from './communityQueue'
-import { COMMUNITY_LIMITS_ENABLED, planCounter, queueOrderField } from './communityLimits'
+import { COMMUNITY_LIMITS_ENABLED, UNSTAMPED_SCAN, mergeUnstamped, planCounter, queueOrderField } from './communityLimits'
 
 /**
  * Create one prompt or submission. Before the limits rules are in, that is a
@@ -110,7 +110,30 @@ export async function listQueue(status = 'pending') {
     orderBy(queueOrderField(), 'desc'),
     limit(200),
   ))
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  return mergeUnstamped(list, await listUnstamped(QUEUE_COLLECTION, status), 200)
+}
+
+/**
+ * The newest items of a collection by createdAt, for the reviewers' queues while
+ * the limits are on; mergeUnstamped keeps those with no submittedAt. Firestore
+ * cannot ask for a missing field, so this reads the newest few and filters. A
+ * failed read returns nothing, so the queue itself still loads. status null
+ * means every status.
+ */
+export async function listUnstamped(collectionName, status) {
+  if (!COMMUNITY_LIMITS_ENABLED) return []
+  try {
+    const snap = await getDocs(query(
+      collection(db, collectionName),
+      ...(status ? [where('status', '==', status)] : []),
+      orderBy('createdAt', 'desc'),
+      limit(UNSTAMPED_SCAN),
+    ))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch {
+    return []
+  }
 }
 
 /**

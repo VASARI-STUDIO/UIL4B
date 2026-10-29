@@ -24,7 +24,7 @@ export const POST_DAILY_CAP = 10
 export const queueOrderField = (enabled = COMMUNITY_LIMITS_ENABLED) => (enabled ? 'submittedAt' : 'createdAt')
 
 /** The limits in plain words, the start of every refusal message. */
-export const POST_LIMIT_RULE = 'You can share one item every 30 seconds and 10 a day.'
+export const POST_LIMIT_RULE = 'You can share one item every 30 seconds, and 10 prompts and 10 other items a day.'
 
 /** A thrown refusal the screen can show as it is. */
 export class PostLimitError extends Error {
@@ -43,6 +43,30 @@ export class PostLimitError extends Error {
 export const isPostLimit = (err) => err?.name === 'PostLimitError'
 
 const millis = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : Number(t) || 0)
+
+/** How many of the newest items by createdAt are read to find items posted before the stamp existed. */
+export const UNSTAMPED_SCAN = 50
+
+const hasStamp = (item) => item.submittedAt !== undefined && item.submittedAt !== null
+const sortMs = (item) => (hasStamp(item) ? millis(item.submittedAt) : Date.parse(item.createdAt) || 0)
+
+/**
+ * The review queue, ordered on submittedAt, leaves out an item that has none:
+ * one posted before the rules were applied and not yet backfilled. `byCreated`
+ * is a read of the newest items on createdAt; those without a stamp that the
+ * main read did not return are merged in at the place their createdAt gives
+ * them, and the list stays capped at `max`.
+ *
+ * @param {object[]} stamped    the queue as read on submittedAt, newest first
+ * @param {object[]} byCreated  the same collection read on createdAt
+ * @param {number} max
+ */
+export function mergeUnstamped(stamped, byCreated, max) {
+  const seen = new Set(stamped.map((item) => item.id))
+  const extra = byCreated.filter((item) => !hasStamp(item) && !seen.has(item.id))
+  if (extra.length === 0) return stamped
+  return [...stamped, ...extra].sort((a, b) => sortMs(b) - sortMs(a)).slice(0, max)
+}
 
 /**
  * The counter document to write alongside a post.
