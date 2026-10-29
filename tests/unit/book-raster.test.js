@@ -394,3 +394,22 @@ test('the typography opener is the kit\'s darkest colour by luminance, with the 
   const light = plan(kit(['#F8FAFC', '#E2E8F0', '#CBD5E1'])).find((p) => p.title === 'Typography')
   assert.equal(light.ink, '#000000')
 })
+
+// ── The cover without a colour strip ────────────────────────────────────────
+
+test('a one-colour cover has no strip and its title block sits 144 lower than with one', () => {
+  const kit = (colors) => ({ ...DESIGN, palette: { base: colors[0], harmony: 'analogous', colors } })
+  const metaY = (design) => {
+    const cover = build(design).pages[0]
+    return {
+      y: cover.ops.find((o) => o.op === 'text' && o.text === 'Outfit and Inter').y,
+      bars: cover.ops.filter((o) => o.op === 'rect' && o.w < PAGE.width && o.h > 0 && o.y > 800 && o.x >= 0 && o.w > 0).length,
+    }
+  }
+  const many = metaY(kit(['#2563EB', '#1E40AF', '#93C5FD']))
+  const one = metaY(kit(['#2563EB']))
+  assert.ok(many.bars >= 2, 'the multi-colour cover lost its strip')
+  assert.equal(one.bars, 0, 'the one-colour cover still draws a strip')
+  assert.equal(one.y - many.y, 144)
+  inside(build(kit(['#2563EB'])))
+})

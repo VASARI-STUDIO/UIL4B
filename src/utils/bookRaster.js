@@ -420,6 +420,9 @@ function pageHead(c, title, lede, { first = true } = {}) {
 
 // ── Pages ───────────────────────────────────────────────────────────────────
 
+/** How far the cover's title block moves down when there is no colour strip. */
+export const COVER_NO_STRIP_DROP = 144
+
 function coverOps(c) {
   const { d } = c
   const ops = [rect(0, 0, PAGE.width, PAGE.height, c.field)]
@@ -439,9 +442,12 @@ function coverOps(c) {
   }
   if (!lines) lines = wrapText(c.name, CONTENT_W, heading(c, size), c.measure, { maxLines: 3 })
   const leading = Math.round(size * 1.04)
-  const stripTop = coverStrip(c).length ? PAGE.height - 188 : PAGE.height - 96
+  const hasStrip = coverStrip(c).length > 0
+  const stripTop = PAGE.height - 188
   const metaH = 70
-  const titleBottom = stripTop - metaH - 36
+  // With no colour strip the title block drops by the strip's room, so the page
+  // does not end in an empty band under it.
+  const titleBottom = stripTop - metaH - 36 + (hasStrip ? 0 : COVER_NO_STRIP_DROP)
   const firstBaseline = titleBottom - (lines.length - 1) * leading
   lines.forEach((line, i) => ops.push(text(line, MARGIN, firstBaseline + i * leading, heading(c, size), c.fieldInk, headSpacing(c, size))))
 
