@@ -651,7 +651,7 @@ function discoverPromoBlurb() {
 
 export const NAV_SECTIONS = [
   {
-    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/sitemap', width: 960,
+    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/tools', width: 960,
     promo: {
       eyebrow: 'Brand kit',
       title: 'Build your brand kit, step by step',
