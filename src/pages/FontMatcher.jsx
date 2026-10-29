@@ -629,7 +629,7 @@ export default function FontMatcher({ onCopy, toast }) {
       </ToolGrid>
 
       {/* The docked bar: one stack above the tab bar on a phone. */}
-      <div className="fpr-dock" role="group" aria-label="Save and shuffle">
+      <div className="fpr-dock" role="group" aria-label="Pair actions">
         {desktop && <p className="fpr-dock-note">Keeps both families with your project</p>}
         {!desktop && !phone && shuffleButton}
         {saveButton}
