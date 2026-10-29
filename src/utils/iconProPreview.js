@@ -22,6 +22,10 @@ const TAIL = 'saving and export need Pro.'
  *   size     the Pro export size in pixels (null if none)
  *   parts    the preview line: strings, and { code } for a literal value (set in mono)
  *   text     the same line as plain text, for the live region and aria-describedby
+ *
+ * The line never names the size: it is read out by a live region, and a size that changed on every
+ * arrow key would have it read the whole note again each time. The size is on the rail and the
+ * slider, and in `caption`.
  *   caption  the proof caption under the picture in the upgrade popup, same shape as `parts`
  */
 export function proPreview({ isPro, size, cap, join }) {
@@ -36,10 +40,10 @@ export function proPreview({ isPro, size, cap, join }) {
   let parts
   let caption
   if (linePro && sizePro) {
-    parts = [`${style} and custom sizes are Pro. Preview them here; ${TAIL}`]
+    parts = [`Custom ends, corners and sizes are Pro. Preview them here; ${TAIL}`]
     caption = [`${style}, `, { code: `${size}px` }]
   } else if (sizePro) {
-    parts = ['Custom sizes are Pro. Preview ', { code: `${size}px` }, ` here; ${TAIL}`]
+    parts = [`Custom sizes are Pro. Preview them here; ${TAIL}`]
     caption = ['Exports at ', { code: `${size}px` }]
   } else if (tile) {
     parts = [`${style} is a Pro line style. Preview it here; ${TAIL}`]

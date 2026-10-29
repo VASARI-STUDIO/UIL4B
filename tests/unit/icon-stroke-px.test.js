@@ -21,7 +21,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   DEFAULT_VIEWBOX, STROKE_PX, clampStrokePx, customIconStrokePx, draftStrokePx,
-  parseViewBox, renderScale, stickyStrokePx, strokeAttrForPx, viewBoxOf,
+  parseViewBox, renderScale, stickyStrokePx, stickyStrokeToken, strokeAttrForPx, viewBoxOf,
 } from '../../src/utils/iconStroke.js'
 
 // What a browser does with `<svg width=size height=size viewBox="0 0 w h">`:
@@ -206,20 +206,55 @@ test('a record with no usable stroke seeds nothing rather than a wrong number', 
 })
 
 test('the sticky preference keeps its WEIGHT across the unit change', () => {
-  // The old key held a bare user-unit number with no size beside it, but the
-  // editor has always opened at 48 on a 24 grid — the state that value was set
-  // and last seen in. Its stated purpose is "the next icon starts at the same
-  // weight", so the weight is what survives, not the digit.
-  assert.equal(stickyStrokePx(null, '2'), 4, 'the old default painted 4px and still does')
-  assert.equal(stickyStrokePx(null, '1'), 2)
-  assert.equal(stickyStrokePx(null, '3'), 6)
-  // The new key wins outright once it exists.
-  assert.equal(stickyStrokePx('2', '3'), 2)
-  assert.equal(stickyStrokePx('1.5', null), 1.5)
+  // The editor opens at 24 now (it was 48). The weight a visitor chose is what survives, not the digit.
+  // A legacy user-unit number (1 to 3) is already a weight on the 24 grid: 2 units is 2px at 24.
+  assert.equal(stickyStrokePx(null, '2'), 2, 'the old default is still the pack weight, 2px at 24')
+  assert.equal(stickyStrokePx(null, '1'), 1)
+  assert.equal(stickyStrokePx(null, '3'), 3)
+  // A units token wins over the legacy key, and means the same number at the opening size.
+  assert.equal(stickyStrokePx('2u', '3'), 2)
+  assert.equal(stickyStrokePx('1.5u', null), 1.5)
+  assert.equal(stickyStrokePx(' 2u ', null), 2, 'stray spaces do not lose the weight')
   // Junk in either slot falls to the default, never to NaN.
-  for (const [a, b] of [[null, null], ['', ''], ['x', 'y'], [null, '9'], [null, '0'], ['0', null]]) {
+  for (const [a, b] of [[null, null], ['', ''], ['x', 'y'], [null, '9'], [null, '0'], ['0', null], ['0u', null], ['-2u', null], ['u', null], ['2uu', null]]) {
     assert.equal(stickyStrokePx(a, b), STROKE_PX.default, `${a} / ${b}`)
   }
+})
+
+test('a bare pixel number saved while the editor opened at 48 keeps its weight at 24', () => {
+  // Before the editor opened at 24, "4" meant 4px at 48: 2 viewBox units. Read as pixels at 24 it
+  // would draw twice as heavy, so the saved weight is halved. Hand-checked: px * 24 / 48.
+  assert.equal(stickyStrokePx('4', null), 2, 'the old default 4px at 48 is 2px at 24')
+  assert.equal(stickyStrokePx('2', '3'), 1, 'the bare pixel key still wins over the legacy key')
+  assert.equal(stickyStrokePx('6', null), 3)
+  assert.equal(stickyStrokePx('1.5', null), 0.75)
+  assert.equal(stickyStrokePx('0.5', null), 0.25, 'half of 0.5 is the floor of the control')
+  assert.equal(stickyStrokePx('0.25', null), 0.25, 'half of 0.25 is below the floor, so it is held there')
+  assert.equal(stickyStrokePx('200', null), 64, 'a huge number stays on the control')
+})
+
+test('the sticky token writes viewBox units, so the weight does not depend on the opening size', () => {
+  // px / (size / 24) is the viewBox-unit weight; the token is that number and a "u".
+  assert.equal(stickyStrokeToken(2, 24), '2u')
+  assert.equal(stickyStrokeToken(4, 48), '2u', '4px at 48 is the same weight as 2px at 24')
+  assert.equal(stickyStrokeToken(3, 48), '1.5u')
+  assert.equal(stickyStrokeToken(2, 12), '4u', '2px at 12 is drawn at half scale, so 4 viewBox units')
+  assert.equal(stickyStrokeToken(1, 96), '0.25u')
+  assert.equal(stickyStrokeToken(5, 24, 48), '10u', 'a 48-unit viewBox at 24 draws at half scale')
+  // Written at one size and read back at the opening size, the number is the unit weight.
+  assert.equal(stickyStrokePx(stickyStrokeToken(4, 48), null), 2)
+  assert.equal(stickyStrokePx(stickyStrokeToken(2, 24), null), 2)
+  assert.equal(stickyStrokePx(stickyStrokeToken(1.5, 24), null), 1.5)
+  assert.equal(stickyStrokePx(stickyStrokeToken(6, 96), null), 1.5)
+})
+
+test('the library writes the sticky stroke through the token, at the size in the editor', () => {
+  // The page is not importable without a browser, so this reads its source: it can see the wiring
+  // (that no bare number is written back) but not the click path, which spec 178 and 181 drive.
+  const page = src('../../src/pages/IconLibrary.jsx')
+  assert.match(page, /localStorage\.setItem\(STROKE_KEY, stickyStrokeToken\(v, size\)\)/)
+  assert.match(page, /writeStickyStroke\(v, size\); markDirty\(\)/, 'the slider writes at the current size')
+  assert.match(page, /writeStickyStroke\(d\.stroke, d\.size\)/, 'applying a draft writes at the draft size')
 })
 
 test('the homepage hand-off keeps the weight the visitor saw', () => {

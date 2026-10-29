@@ -31,11 +31,11 @@ import { isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
-import { clearPreviewDraft, readPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
+import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
 import { BACK_TO_FREE_NOTE, proPreview } from '../utils/iconProPreview'
 import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
-  stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
+  stickyStrokePx, stickyStrokeToken, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
 import {
   CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
@@ -225,7 +225,8 @@ function bumpCopyCount() {
 // what every returning user's stored digit meant. The old key is read exactly
 // once, converted at the size the editor has always opened at (see
 // `stickyStrokePx`), and then left alone — the first slider move writes the
-// pixel key, which wins from then on.
+// pixel key, which wins from then on. It is written in viewBox units ("2u") because
+// a bare pixel number from before the editor opened at 24 means half that weight here.
 const STROKE_KEY = 'vs-icon-stroke-px'
 const LEGACY_STROKE_KEY = 'vs-icon-stroke'
 function readStickyStroke() {
@@ -233,8 +234,8 @@ function readStickyStroke() {
     return stickyStrokePx(localStorage.getItem(STROKE_KEY), localStorage.getItem(LEGACY_STROKE_KEY))
   } catch { return STROKE_PX.default }
 }
-function writeStickyStroke(v) {
-  try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
+function writeStickyStroke(v, size) {
+  try { localStorage.setItem(STROKE_KEY, stickyStrokeToken(v, size)) } catch { /* private mode / quota — non-fatal */ }
 }
 
 // The preview ground is a viewing choice, not part of the icon: it is remembered
@@ -1320,6 +1321,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const id = icon && !icon.custom ? (icon.id || `${icon.pack}:${icon.name}`) : null
     return d && id && d.icon.id === id ? d.settings : null
   })
+  // Restored once. A reload after the return trip finds the slot empty, not the preview again.
+  useEffect(() => { if (kept) clearPreviewDraft() }, [kept])
   const [size, setSize] = useState(() => (icon?.custom && icon.size) || kept?.size || icon?.draftSize || CUSTOMISER_DEFAULTS.size)
   // The size rail. `size` is the committed export size; the rest is the Custom radio
   // and its field. Custom is "open" when it is chosen (or when the size is one the
@@ -1861,7 +1864,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setClampedTo(null)
     setColor(d.color)
     setStroke(d.stroke)
-    writeStickyStroke(d.stroke)
+    writeStickyStroke(d.stroke, d.size)
     setAbsStroke(d.absStroke)
     setCap(d.cap)
     setJoin(d.join)
@@ -1899,7 +1902,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         </p>
       </>
     ) : undefined
-    openProModal({ gate: preview.gate, proof })
+    // Leaving for /plans stamps the kept preview, which is what lets Back bring it back.
+    openProModal({ gate: preview.gate, proof, onLeave: () => stampPreviewDraft() })
   }
 
   // Put back every Pro setting: Round ends and corners, and the last preset size. Everything else stays.
@@ -2095,21 +2099,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
-              <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
-              <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
-                {GROUND_OPTS.map(g => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={ground === g.id}
-                    aria-label={g.label}
-                    title={g.label}
-                    tabIndex={ground === g.id ? 0 : -1}
-                    className={`icust-ground-sw icust-ground-sw--${g.id}`}
-                    onClick={() => chooseGround(g.id)}
-                  />
-                ))}
+              <div className="icust-stage-foot">
+                <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
+                <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+                  {GROUND_OPTS.map(g => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={ground === g.id}
+                      aria-label={g.label}
+                      title={g.label}
+                      tabIndex={ground === g.id ? 0 : -1}
+                      className={`icust-ground-sw icust-ground-sw--${g.id}`}
+                      onClick={() => chooseGround(g.id)}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
             {/* Always in the DOM so a note that arrives is announced. */}
@@ -2207,7 +2213,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     </span>
                     <span className="icust-size-range" id="icust-size-range">From <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span></span>
                     {clampedTo && (
-                      <p className="icust-size-note" id="icust-size-note">
+                      <p className="icust-size-note" id="icust-size-note" role="status">
                         Sizes go from <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="icust-mono">{clampedTo}px</span>.
                       </p>
                     )}
@@ -2293,7 +2299,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       inputMax={STROKE_PX.inputMax}
                       decimals={2}
                       ariaLabel="Stroke width in pixels"
-                      onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
+                      onChange={(v) => { setStroke(v); writeStickyStroke(v, size); markDirty() }}
                     />
                     {/* Both modes now measure the same pixels AT THIS SIZE; they
                         differ only once someone rescales the exported file. Off:
@@ -2420,17 +2426,20 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </button>
             </div>
 
+            {/* The one preview line. Always mounted, so its first message is announced. With no
+                preview it is out of sight and holds only the note that the settings are free again.
+                It sits in the scrolling body, just above the pinned foot, so it can wrap to as many
+                lines as it needs without making the foot (and the scroll area) taller. */}
+            <div className={`icust-preview${previewing ? ' is-on' : ''}`}>
+              <p className="icust-preview-text" id="icust-preview-line" role="status" aria-live="polite">
+                {preview
+                  ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="icust-mono">{p.code}</span>))
+                  : leftPreview ? BACK_TO_FREE_NOTE : ''}
+              </p>
+              {previewing && <button type="button" className="icust-preview-back" onClick={backToFree}>Back to free settings</button>}
+            </div>
+
             <div className="icust-foot icust-foot--tool">
-              {/* The one preview line. Always mounted, so its first message is announced. With no
-                  preview it is out of sight and holds only the note that the settings are free again. */}
-              <div className={`icust-preview${previewing ? ' is-on' : ''}`}>
-                <p className="icust-preview-text" id="icust-preview-line" role="status" aria-live="polite">
-                  {preview
-                    ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="icust-mono">{p.code}</span>))
-                    : leftPreview ? BACK_TO_FREE_NOTE : ''}
-                </p>
-                {previewing && <button type="button" className="icust-preview-back" onClick={backToFree}>Back to free settings</button>}
-              </div>
               <div className="icust-foot-row">
                 {/* One button, two jobs: Copy SVG, or Upgrade to Pro while a Pro setting is previewed.
                     The same node either way, so focus and tab order never move. The hidden faces hold

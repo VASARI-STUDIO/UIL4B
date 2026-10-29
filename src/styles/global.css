@@ -4970,6 +4970,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .ui-pro-list{margin-top:12px}
   .ui-pro-plans-err{margin-top:12px;padding:12px}
 }
+/* A phone that is short as well as narrow (390 by 780): the single column puts the proof band
+   (picture and caption, about 160px) above the price, which pushed "Start your 7-day free trial"
+   and "Maybe later" below the fold. The band goes; the title and subtitle still name the setting. */
+@media(max-width:780px) and (max-height:800px){
+  .ui-pro--proof .ui-pro-proof{display:none}
+}
 
 /* -- Accent-text rule enforcement on the auth + popup surfaces --------------
    --accent (#0F6FFF) measures 4.43:1 on white and 3.82:1 on the page ground:

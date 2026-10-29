@@ -28,15 +28,16 @@
 /* One row at every width: the footer is a size container, so its labels choose
    a tier from its own width (see the split Download block in deferred/library.css). */
 .iel-page .icust-foot{container-type:inline-size;flex-wrap:nowrap}
-/* The customiser's foot has two rows: the preview line (only while a Pro setting is previewed)
-   above the buttons. The buttons' row is the size container, so the label tiers below still pick
-   their width from the same content box they always did. */
+/* The customiser's foot is the buttons' row alone, which is the size container, so the label tiers
+   below pick their width from the same content box they always did. The preview line is not in
+   it: it scrolls with the body above, so the pinned foot keeps one height. */
 .iel-page .icust-foot.icust-foot--tool{display:block;padding:0;container-type:normal}
 .iel-page .icust-foot-row{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:18px 24px 24px;container-type:inline-size}
 @media(max-width:560px){.iel-page .icust-foot-row{padding:16px 16px 20px}}
 
 /* The preview line: no fill, no accent. The Upgrade button is the only accent in the foot.
-   Always mounted (it is a live region); out of sight when nothing is previewed. */
+   Always mounted (it is a live region); out of sight when nothing is previewed. It is the last
+   thing in the scrolling body, just above the foot. */
 .iel-page .icust-preview{
   display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;min-height:40px;padding:6px 24px;
   font-family:var(--font);font-size:13px;line-height:1.4;color:var(--t1);
@@ -73,6 +74,8 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-code-box[aria-disabled="true"]{cursor:default}
 .iel-page .icust-code-box[aria-disabled="true"] code,
 .iel-page .icust-code-box[aria-disabled="true"] .icust-code-hint{color:var(--t3)}
+/* "Preview only" is a sentence in the UI face, not a tracked mono tag. */
+.iel-page .icust-code-box[aria-disabled="true"] .icust-code-hint{font-family:var(--font);letter-spacing:0;text-transform:none}
 .iel-page .icust-code-box[aria-disabled="true"]:hover{border-color:var(--border)}
 .iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
 /* Try again sits on the notice's warn-tinted band, so it carries a card
@@ -269,7 +272,7 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
    is the accent outline. Page is drawn half ink, half the page ground, so it
    reads as "whatever the page is" and never as a fourth fixed colour. */
 .iel-page .icust-ground{
-  position:absolute;right:12px;bottom:12px;z-index:1;
+  flex:0 0 auto;margin-left:auto;
   display:flex;gap:4px;padding:4px;
   border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);
 }
@@ -291,7 +294,6 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
      so the hit areas meet without overlapping. */
   .iel-page .icust-ground-sw::after{content:"";position:absolute;inset:-8px}
 }
-@media(max-width:560px){.iel-page .icust-ground{right:8px;bottom:8px}}
 
 /* Icon colour: four chips in one radiogroup, exactly one selected. The header
    carries the label and, on the right, the value the file will hold (currentColor,
@@ -495,8 +497,20 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
   .iel-page .icust-size-field{width:96px}
   .iel-page .icust-size-input{height:44px;font-size:16px}
 }
-/* The caption sits bottom left of the stage, clear of the ground switch on the right. */
-.iel-page .icust-stage-cap{position:absolute;left:12px;bottom:12px;max-width:50%;margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
+/* The caption and the ground switch share the stage's bottom strip: the caption on the left, the
+   switch on the right. When the strip is too narrow for both, the caption wraps onto a row of its
+   own above the switch, so they never overlap. */
+.iel-page .icust-stage-foot{
+  position:absolute;left:12px;right:12px;bottom:12px;z-index:1;
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;pointer-events:none;
+}
+.iel-page .icust-stage-foot>*{pointer-events:auto}
+.iel-page .icust-stage-cap{flex:1 1 150px;min-width:0;margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
 .icust-stage--light .icust-stage-cap,.icust-stage--checker .icust-stage-cap{color:rgba(10,10,11,.6)}
 .icust-stage--dark .icust-stage-cap{color:rgba(244,244,245,.65)}
-@media(max-width:560px){.iel-page .icust-stage-cap{left:8px;bottom:8px}}
+/* On a phone the strip can stack to three rows' height (two caption lines over a switch), so the
+   stage keeps that room clear of the icon. */
+@media(max-width:560px){
+  .iel-page .icust-stage-foot{left:8px;right:8px;bottom:8px}
+  .iel-page .icust-stage{padding-bottom:96px}
+}

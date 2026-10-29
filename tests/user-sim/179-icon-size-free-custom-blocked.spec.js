@@ -18,7 +18,7 @@ import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
 const PERSONA = 'someone without Pro trying a custom icon size'
-const REASON = 'Custom sizes are Pro. Preview 40px here; saving and export need Pro.'
+const REASON = 'Custom sizes are Pro. Preview them here; saving and export need Pro.'
 const FREE_AGAIN = 'Back to free settings. Copy, download and save are on.'
 
 /** Open the customiser as a signed-in free viewer or a signed-out one. */
@@ -88,7 +88,9 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       }
       await expect(reason(page), 'the reason is the preview line').toHaveText(REASON)
       await expect(reason(page)).toHaveAttribute('role', 'status')
-      await expect(reason(page).locator('.icust-mono'), 'only the value is mono').toHaveText('40px')
+      // The live region never names the size (an arrow key would have it read again); the stage does.
+      await expect(reason(page).locator('.icust-mono'), 'the live region names a value').toHaveCount(0)
+      await expect(page.locator('.icust-stage-cap .icust-mono'), 'the stage names the size').toHaveText('40px')
       await ctx.close()
     })
 

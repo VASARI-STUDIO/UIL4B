@@ -23,6 +23,8 @@
 //   drop the Escape branch in onSizeKey                   -> "Escape reverts an uncommitted edit ..."
 //   .icust-size-input font-size 14px / height 36px (css)  -> "on a phone the field is 16px text ..."
 //   NARROW_RAIL_BELOW = 0 (utils/iconSize.js)             -> "at 320 the rail drops the 20 cell ..."
+//   .icust-stage-foot { display:contents } with .icust-ground and .icust-stage-cap absolute again
+//     (src/styles/pages/icon-emoji-library.css)           -> "at 320 the stage caption and the ground switch do not overlap ..."
 //   src restored byte for byte                            -> all of them pass again.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -272,6 +274,23 @@ test.describe('size rail (phone)', () => {
     expect(m.oneRow, 'the cells wrapped').toBe(true)
     expect(m.bodyFits, 'the popup scrolls sideways').toBe(true)
     expect(m.pageFits, 'the page scrolls sideways').toBe(true)
+    await ctx.close()
+  })
+
+  test('at 320 the stage caption and the ground switch do not overlap, and both sit inside the stage', async ({ browser }) => {
+    const { ctx, page } = await openCustomiser(browser, { width: 320, height: 640, touch: true })
+    const cap = page.locator('.icust-stage-cap')
+    const ground = page.locator('.icust-ground')
+    await expect(cap).toBeVisible()
+    await expect(ground).toBeVisible()
+    const [c, g, s] = await Promise.all([cap.boundingBox(), ground.boundingBox(), page.locator('.icust-stage').boundingBox()])
+    const apart = c.x + c.width <= g.x + 0.5 || g.x + g.width <= c.x + 0.5 || c.y + c.height <= g.y + 0.5 || g.y + g.height <= c.y + 0.5
+    expect(apart, `caption ${JSON.stringify(c)} overlaps the ground switch ${JSON.stringify(g)}`).toBe(true)
+    for (const [name, b] of [['caption', c], ['ground switch', g]]) {
+      expect(b.x, `${name} sticks out of the stage on the left`).toBeGreaterThanOrEqual(s.x - 0.5)
+      expect(b.x + b.width, `${name} sticks out of the stage on the right`).toBeLessThanOrEqual(s.x + s.width + 0.5)
+      expect(b.y + b.height, `${name} sticks out of the stage at the bottom`).toBeLessThanOrEqual(s.y + s.height + 0.5)
+    }
     await ctx.close()
   })
 

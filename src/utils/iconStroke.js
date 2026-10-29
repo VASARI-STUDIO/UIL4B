@@ -23,6 +23,8 @@
 // DOM-free on purpose — it is pure arithmetic plus one regex, so the contract
 // is testable without a browser.
 
+import { DEFAULT_EXPORT_SIZE } from './iconSize.js'
+
 /** Every pack we ship draws on a 24-unit grid; the fallback when none is given. */
 export const DEFAULT_VIEWBOX = 24
 
@@ -54,10 +56,9 @@ export const STROKE_PX = Object.freeze({
 export const STROKE_UNIT_PX = 'px'
 
 /**
- * The size the editor used to open at, kept for recovering the pixel weight behind
- * a legacy sticky preference (a bare user-unit number with no size beside it) and
- * for saved records that carry no size. The editor itself now opens at 24; see
- * iconSize.js.
+ * The size the editor used to open at, kept for saved records and homepage drafts that
+ * carry no size, and for the pixel weight behind a sticky preference written while the
+ * editor opened here. The editor itself now opens at 24; see iconSize.js.
  */
 export const DEFAULT_ICON_SIZE = 48
 
@@ -180,25 +181,35 @@ export function customIconStrokePx(record) {
   return clampStrokePx(stored * renderScale(record.size || DEFAULT_ICON_SIZE, viewBoxOf(record.svg)))
 }
 
+// A sticky stroke written now is "<viewBox units>u". Units do not depend on the export
+// size, so the weight survives the editor's opening size changing (it was 48, it is 24).
+const STICKY_UNITS = /^(\d*\.?\d+)u$/
+
+/** The text the sticky key stores for a stroke of `px` drawn at `size`: its weight in viewBox units. */
+export function stickyStrokeToken(px, size, viewBox = DEFAULT_VIEWBOX) {
+  return `${roundAttr(Number(px) / renderScale(size, viewBox))}u`
+}
+
 /**
- * The pixel stroke the sticky preference should seed.
+ * The pixel stroke the sticky preference should seed, at the size the editor opens at.
  *
- * `raw` is the new pixel key, `legacyRaw` the old user-unit one. The legacy key
- * was written with no size beside it, but the editor has always OPENED at
- * size 48 on a 24-unit grid, which is the state that value was set and last
- * seen in — so converting at that scale reproduces the weight the user chose.
- * Its whole stated purpose is "the next icon starts at the same weight", and
- * preserving the weight serves that better than preserving the digit.
+ * `raw` is the pixel key and `legacyRaw` the older user-unit one. Three shapes:
+ *   "2u"      units, written now: the same number at the 24 grid's opening size
+ *   "4"       a bare pixel number, written while the editor opened at size 48 with the
+ *             stroke measured at that size, so it carries half the weight at 24
+ *   legacy    a bare user-unit number (1 to 3), already a weight on the 24 grid
+ * The aim is "the next icon starts at the same weight", so the weight survives, not the digit.
  */
 export function stickyStrokePx(raw, legacyRaw) {
+  const open = renderScale(DEFAULT_EXPORT_SIZE, DEFAULT_VIEWBOX)
+  const units = STICKY_UNITS.exec(String(raw ?? '').trim())
+  if (units && Number(units[1]) > 0) return clampStrokePx(Number(units[1]) * open)
   const px = Number(raw)
-  if (Number.isFinite(px) && px > 0) return clampStrokePx(px)
+  if (Number.isFinite(px) && px > 0) return clampStrokePx(px * open / renderScale(DEFAULT_ICON_SIZE, DEFAULT_VIEWBOX))
   const legacy = Number(legacyRaw)
   // The old key's own validity window; anything outside it was never written
   // by us and is not worth reinterpreting.
-  if (Number.isFinite(legacy) && legacy >= 1 && legacy <= 3) {
-    return clampStrokePx(legacy * renderScale(DEFAULT_ICON_SIZE, DEFAULT_VIEWBOX))
-  }
+  if (Number.isFinite(legacy) && legacy >= 1 && legacy <= 3) return clampStrokePx(legacy * open)
   return STROKE_PX.default
 }
 

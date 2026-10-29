@@ -23,19 +23,23 @@
 //   the proof prop is not passed to openProModal               -> the same test: no icon in the popup
 //   the popup's Escape no longer stops propagation             -> "Escape closes only the upgrade popup ..."
 //   writePreviewDraft is not called                            -> "going to /plans and back ..."
+//   the @media(max-width:780px) and (max-height:800px) rule that hides .ui-pro--proof .ui-pro-proof
+//     is removed (src/styles/global.css)                       -> "on a 390 by 780 phone the upgrade popup shows its trial button ..."
+//   readPreviewDraft stops requiring the stamp (iconPreviewDraft.js) -> "a reload, or the address typed again, opens no preview ..."
 //   src restored byte for byte                                 -> all of them pass again.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 const PERSONA = 'someone previewing a Pro icon setting'
 const SHARP = 'Sharp is a Pro line style. Preview it here; saving and export need Pro.'
-const SIZE = 'Custom sizes are Pro. Preview 40px here; saving and export need Pro.'
-const BOTH = 'Sharp and custom sizes are Pro. Preview them here; saving and export need Pro.'
+const SIZE = 'Custom sizes are Pro. Preview them here; saving and export need Pro.'
+const BOTH = 'Custom ends, corners and sizes are Pro. Preview them here; saving and export need Pro.'
 const FREE_AGAIN = 'Back to free settings. Copy, download and save are on.'
 
 /** Open the customiser on the first icon as a free viewer, a signed-out one (plan null), or Pro. */
-async function openAs(browser, plan) {
-  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+async function openAs(browser, plan, viewport = { width: 1440, height: 900 }) {
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   const page = await ctx.newPage()
   watch(page, PERSONA)
@@ -312,12 +316,50 @@ for (const [who, plan] of VIEWERS) {
       await ctx.close()
     })
 
+    test('a reload, or the address typed again, opens no preview: only the way back from /plans does', async ({ browser }) => {
+      const { ctx, page } = await openAs(browser, plan)
+      await commitSize(page, 40)
+      await primary(page).click()
+      // The popup is open but nobody has left yet: the draft exists and is not stamped.
+      await expect(upgradeDialog(page, 'Export icons at any size')).toBeVisible()
+      expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('vs-icon-draft')).leftAt), 'stamped before leaving').toBeUndefined()
+      await page.reload()
+      await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+      await expect(customiser(page), 'a reload reopened the preview').toHaveCount(0)
+      expect(await page.evaluate(() => sessionStorage.getItem('vs-icon-draft')), 'the stale draft was kept').toBeNull()
+      await ctx.close()
+    })
+
+    test('on a 390 by 780 phone the upgrade popup shows its trial button and Maybe later without scrolling', async ({ browser }) => {
+      const { ctx, page } = await openAs(browser, plan, { width: 390, height: 780 })
+      // The suite's preview has no serverless functions; without prices the popup shows an outage
+      // note and no buttons. Production's own answer shape, monthly and yearly (yearly carries the trial).
+      await page.route('**/api/get-prices', (route) => route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify(withAvailability({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } })),
+      }))
+      await tile(page, 'Sharp').click()
+      await commitSize(page, 40)
+      await primary(page).click()
+      const dialog = upgradeDialog(page, 'Export your Pro settings')
+      await expect(dialog).toBeVisible()
+      const trial = dialog.getByRole('button', { name: 'Start your 7-day free trial', exact: true })
+      const later = dialog.getByRole('button', { name: 'Maybe later', exact: true })
+      await expect(trial).toBeVisible()
+      // Whole buttons, inside the window as it stands: no scroll of the popup or the page has happened.
+      await expect(trial, 'the trial button is below the fold').toBeInViewport({ ratio: 1 })
+      await expect(later, 'Maybe later is below the fold').toBeInViewport({ ratio: 1 })
+      const box = await later.boundingBox()
+      expect(box.y + box.height, 'Maybe later ends past the bottom of the window').toBeLessThanOrEqual(780)
+      await ctx.close()
+    })
+
     test('a size outside a preset alone says so, and Crisp or a mixed pair name themselves', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
       await commitSize(page, 40)
       await expect(line(page)).toHaveText(SIZE)
       await tile(page, 'Crisp').click()
-      await expect(line(page)).toHaveText('Crisp and custom sizes are Pro. Preview them here; saving and export need Pro.')
+      await expect(line(page)).toHaveText(BOTH)
       await back(page).click()
       await page.getByRole('button', { name: 'Set ends and corners separately' }).click()
       await page.getByRole('radiogroup', { name: 'Ends' }).getByRole('radio', { name: 'Square' }).click()
