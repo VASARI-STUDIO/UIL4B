@@ -79,11 +79,11 @@ test.describe('Type Scale · the overhaul', () => {
     // 20 x 1.5^6 = 227.81 -> 228.
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(range).toHaveText('10px – 61px')
+    await expect(range).toHaveText('9 steps, 10px to 61px')
     await expect(largest).toContainText('61px')
 
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(range).toHaveText('7px – 182.5px')
+    await expect(range).toHaveText('9 steps, 7px to 182.5px')
     await expect(largest).toContainText('182.5px')
 
     // And the base, from its own control in the same bar.
@@ -94,12 +94,12 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(largest).toContainText('228px')
   })
 
-  test('the ladder comes before the rail, at every width', async ({ page }) => {
+  test('the panel is a card above the ladder when stacked, and the ladder is the left column beside it', async ({ page }) => {
     watch(page, 'designer on a laptop and on a phone')
 
-    // The rail used to lead in the DOM. Below 1344px this page is a single
-    // column, so that put ~330px of families and a closed disclosure between
-    // the scale bar and the thing it describes on most screens.
+    // Below 1024 the panel (Base, Ratio, families) leads, in the source as well
+    // as on screen: 187-type-scale-ladder checks the source order. From 1024 the
+    // ladder takes the wide left column and the panel the right.
     for (const [w, h] of [[1440, 900], [1200, 900], [768, 1024], [390, 844]]) {
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
@@ -112,7 +112,7 @@ test.describe('Type Scale · the overhaul', () => {
         // Two columns: the ladder takes the wide left column.
         expect(order.outLeft, `${w}px: the ladder is the left column`).toBeLessThan(order.cfgLeft)
       } else {
-        expect(order.outTop, `${w}px: the ladder is above the rail`).toBeLessThan(order.cfgTop)
+        expect(order.cfgTop, `${w}px: the panel (Base, Ratio, families) is a card above the ladder when stacked`).toBeLessThan(order.outTop)
       }
     }
   })
@@ -125,9 +125,14 @@ test.describe('Type Scale · the overhaul', () => {
     // all along. The tool whose only job is judging sizes did not.
     const rows = page.locator('.tsc-row-text')
     await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
+    // The page preview is its own view of the Scale / Page / Code switch, and
+    // only one view is in the DOM at a time.
+    await page.getByRole('tab', { name: 'Page' }).click()
     await expect(page.locator('.tsc-article-h1')).toHaveText('A page set on this scale')
+    await page.getByRole('tab', { name: 'Scale' }).click()
 
-    await page.getByLabel('Preview text').fill('Checkout · 3 items')
+    // Exact: the 390 settings sheet's name also contains "preview text".
+    await page.getByLabel('Preview text', { exact: true }).fill('Checkout · 3 items')
 
     // WIRING, and the point of the control: EVERY step takes the words, so the
     // question "is this size usable for this string" can be asked at all nine.
@@ -136,10 +141,12 @@ test.describe('Type Scale · the overhaul', () => {
       await expect(rows.nth(i)).toHaveText('Checkout · 3 items')
     }
     // One string, both previews.
+    await page.getByRole('tab', { name: 'Page' }).click()
     await expect(page.locator('.tsc-article-h1')).toHaveText('Checkout · 3 items')
+    await page.getByRole('tab', { name: 'Scale' }).click()
 
     // Emptying it falls back to the pangram rather than to nothing.
-    await page.getByLabel('Preview text').fill('')
+    await page.getByLabel('Preview text', { exact: true }).fill('')
     await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
   })
 
@@ -153,7 +160,7 @@ test.describe('Type Scale · the overhaul', () => {
     // Closed means closed: nothing inside is reachable, and in particular the
     // fluid/fixed pair must not answer to the preview width switch's class.
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(0)
-    await expect(visible(page, '.tsc-width-btn')).toHaveCount(3)
+    await expect(page.getByRole('tab')).toHaveCount(3)
     await expect(page.locator('#tsc-round')).toBeHidden()
 
     await toggle.click()

@@ -67,7 +67,7 @@ test.describe('Type Scale Generator', () => {
     // replaces and it is why it is not replaced in kind.
     await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
     await expect(page.getByLabel('Scale ratio')).toHaveAttribute('value', '1.25')
-    await expect(page.locator('.tsc-scale-range')).toHaveText('10px – 61px')
+    await expect(page.locator('.tsc-scale-range')).toHaveText('9 steps, 10px to 61px')
 
     // The ratio genuinely drives the maths: a bigger ratio must move the top step.
     // 16 × 1.25^6 = 61.04 and 16 × 1.5^6 = 182.25, both snapped to the default
@@ -93,7 +93,8 @@ test.describe('Type Scale Generator', () => {
     // from it. (Tint Scale carried the identical pair and lost it in the same
     // way in #surface-headers-read-as-ai — see 05-tint-scale-workflows.spec.js
     // and 55-header-sweep.spec.js. Neither page has hero cards now.)
-    await expect(page.getByRole('tab', { name: /Design preview/i })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tab', { name: /Scale/i })).toHaveAttribute('aria-selected', 'true')
+    await page.getByRole('tab', { name: 'Page' }).click()
     await expect(page.locator('.tsc-article')).toBeVisible()
   })
 
@@ -101,8 +102,8 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    await page.getByRole('tab', { name: 'Developer handoff' }).click()
-    await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
+    await page.getByRole('tab', { name: 'Code' }).click()
+    await expect(page.locator('#tsc-export')).toBeVisible()
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
     // joined by clamp(), so a step exports as an interpolation rather than a
@@ -147,11 +148,15 @@ test.describe('Type Scale Generator', () => {
     // within sight of what they change.
     await expect(page.getByRole('tablist')).toHaveCount(1)
 
-    const designer = page.getByRole('tab', { name: /Design preview/i })
+    const designer = page.getByRole('tab', { name: /Scale/i })
     await designer.focus()
+    // Three tabs now: Scale, Page, Code. One step right is Page; two is Code.
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: /Developer handoff/i })).toBeFocused()
+    await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByRole('tab', { name: /Code/i })).toBeFocused()
     await expect(page.locator('#tsc-export')).toBeVisible()
+    await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await expect(designer).toBeFocused()
   })
@@ -194,7 +199,7 @@ test.describe('Type Scale Generator', () => {
     // clamp rather than a lone rem — the extreme value is still carried
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
-    await page.getByRole('tab', { name: 'Developer handoff' }).click()
+    await page.getByRole('tab', { name: 'Code' }).click()
     await expect(page.locator('#tsc-export')).toContainText('787320px')
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
@@ -1339,7 +1344,8 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await expectTarget(page.locator('.fpr-card-apply').first(), 'Font Pair apply')
 
   await go(page, '/create/type-scale')
-  await expect(page.locator('.tsc-width-btn').first()).toBeVisible()
-  await expectTarget(page.locator('.tsc-width-btn').first(), 'Type Scale width')
+  await page.getByRole('tab', { name: 'Page' }).click()
+  await expect(page.locator('#tsc-width')).toBeVisible()
+  await expectTarget(page.locator('#tsc-width'), 'Type Scale width')
   await context.close()
 })

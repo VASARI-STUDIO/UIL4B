@@ -142,10 +142,11 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
 
-    // The export lives in the developer view; the designer view is what mounts
-    // first. Only one of the two is ever in the DOM (they are a ternary, not a
-    // hidden sibling), so this is a real navigation, not a reveal.
-    await page.locator('#tsc-tab-developer').click()
+    // Copy CSS sits in the toolbar in every view; the Code view is where the
+    // text being copied can be read. Only one of the three views is ever in the
+    // DOM (they are conditional renders, not hidden siblings), so this is a real
+    // navigation, not a reveal.
+    await page.locator('#tsc-tab-code').click()
     const copy = page.locator('.tsc-copy-primary')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
