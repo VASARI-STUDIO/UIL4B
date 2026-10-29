@@ -330,7 +330,7 @@ function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewTe
         className="fg-card-open"
         ref={ref}
         onClick={() => onOpen(font)}
-        aria-label={`Open the ${font.family} specimen — ${font.category}, ${weightLabel}`}
+        aria-label={`Open the ${font.family} specimen — ${sentence(catWord(font.category))}, ${weightLabel}`}
       >
         {/* The band is decorative to assistive tech: the button's own label
             already names the family, its category and its weight count, so the

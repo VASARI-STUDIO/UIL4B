@@ -11,6 +11,9 @@
 //   criterion 3  `.fg-card-reveal { display: none }` with `display: flex` on `.fg-card:hover`
 //                and `:has(:focus-visible)`, so the reveal enters the layout on a wake.
 //                `position: static` alone stays green: the box is the same either way.
+//   criterion 4  delete the two `@container fg-reveal` rules for the 1024px+ layout (the
+//                48 and 72 sizes then cut the pangram or weights mid-glyph), or drop the
+//                `* .14` descender room from `.fg-card-reveal`'s `top`
 //   criterion 5  make the count or the placeholder ignore the category
 //
 // Criterion 2 is asserted on the base list state only. The compare tray, the
@@ -129,6 +132,47 @@ test.describe('Font Gallery bands', () => {
     expect(info.size, 'the name never goes below the 72px floor').toBeGreaterThanOrEqual(71.5)
     expect(info.ellipsis).toBe(false)
   })
+
+  // The band follows the Size choice but the reveal's type does not, so at a
+  // small size the reveal must drop what does not fit instead of cutting it.
+  for (const size of [72, 48]) {
+    test(`criterion 4: at Size ${size} the reveal is hidden or its content fits, and it clears the name`, async ({ page }) => {
+      watch(page, 'someone hovering a small-size band')
+      await open(page, 1440)
+      await page.getByRole('button', { name: /^Specimen size/ }).click()
+      await page.getByRole('option', { name: String(size), exact: true }).click()
+      const card = page.locator('.fg-card').first()
+      await expect(card.locator('.fg-card-name')).toHaveText('Lora')
+      await card.hover()
+      await page.waitForTimeout(400)
+      const m = await card.evaluate((el) => {
+        const reveal = el.querySelector('.fg-card-reveal')
+        const r = reveal.getBoundingClientRect()
+        const preview = el.querySelector('.fg-card-preview').getBoundingClientRect()
+        const lines = ['.fg-card-pangram', '.fg-card-weights'].map((sel) => {
+          const line = reveal.querySelector(sel)
+          const shown = getComputedStyle(line).display !== 'none'
+          const b = line.getBoundingClientRect()
+          return { sel, shown, overflow: shown ? b.bottom - r.bottom : 0 }
+        })
+        return {
+          name: parseFloat(getComputedStyle(el.querySelector('.fg-card-name')).fontSize),
+          opacity: getComputedStyle(reveal).opacity,
+          gap: r.top - preview.bottom,
+          clipped: reveal.scrollHeight - reveal.clientHeight,
+          lines,
+        }
+      })
+      expect(m.opacity, 'the wake shows the reveal').toBe('1')
+      expect(m.name, 'the Size choice took').toBe(size)
+      expect(m.gap, 'the reveal starts below the descender room under the name').toBeGreaterThanOrEqual(size * 0.14 - 0.5)
+      for (const line of m.lines) expect(line.overflow, `${line.sel} runs past the reveal`).toBeLessThanOrEqual(0.5)
+      expect(m.clipped, 'something in the reveal is cut off').toBeLessThanOrEqual(0)
+      // 72 has room for the pangram; the check above proves nothing if the
+      // reveal is hidden everywhere.
+      if (size === 72) expect(m.lines[0].shown, 'the pangram fits at Size 72 and should show').toBe(true)
+    })
+  }
 
   test('criterion 5: the count and the search placeholder follow the category', async ({ page }) => {
     watch(page, 'someone narrowing to serifs')
