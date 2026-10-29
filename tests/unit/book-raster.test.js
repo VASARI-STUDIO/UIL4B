@@ -333,3 +333,22 @@ test('scale rows share one factor: no 44px cap, the largest sits at 76, the note
   for (const r of gentle.rows) assert.equal(r.drawn, r.step.px, `${r.step.name} was reduced without need`)
   assert.ok(!/shown reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
 })
+
+// ── The colophon names the project in full ──────────────────────────────────
+
+test('the colophon wraps the project name to two lines at most, and never cuts it', () => {
+  const nameOps = (name) => {
+    const page = build(DESIGN, { projectName: name }).pages.find((p) => p.kind === 'colophon')
+    return page.ops.filter((o) => o.op === 'text' && o.x === 52 && o.y > 880 && o.y < 944 && o.text !== 'Issued')
+  }
+  const medium = 'Northern Cooperative Of Independent Cheesemakers And Allied Trades'
+  const lines = nameOps(medium)
+  assert.ok(lines.length >= 2 && lines.length <= 2, `${lines.length} lines`)
+  assert.equal(lines.map((o) => o.text).join(' '), medium, 'the name was cut')
+  // Too long for two lines at 15px: the size steps down, the words stay.
+  const long = 'The Extraordinarily Long-Winded Name Of A Brand Identity Programme For A Regional Cooperative Of Independent Cheesemakers'
+  const small = nameOps(long)
+  assert.equal(small.map((o) => o.text).join(' '), long, 'a long name was cut')
+  assert.ok(small.every((o) => !o.text.includes('…')), 'an ellipsis was drawn')
+  assert.ok(sizeOf(small[0].font) < 15, 'the size did not step down')
+})

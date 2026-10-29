@@ -799,6 +799,22 @@ function tokensOps(c, page) {
   return ops
 }
 
+export const COLOPHON_NAME_W = 300
+const COLOPHON_NAME_SIZES = [15, 14, 13, 12, 11, 10]
+
+/**
+ * A name set in at most two lines of `width`, stepping the size down until it
+ * fits. Never ellipsised: at the smallest size every line is kept.
+ */
+export function fitName(name, width, measure, fontFor) {
+  let out
+  for (const size of COLOPHON_NAME_SIZES) {
+    out = { size, lines: wrapText(name, width, fontFor(size), measure) }
+    if (out.lines.length <= 2) break
+  }
+  return out
+}
+
 function colophonOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
@@ -829,9 +845,14 @@ function colophonOps(c, page) {
   column(left, MARGIN)
   column(right, MARGIN + colW + 40)
 
-  const fy = BOTTOM - 60
+  // The project name wraps to two lines at most and is never cut: if two lines
+  // will not hold it at 15px the size steps down. Below the smallest size it takes
+  // a third line (the rule moves up to make room) rather than losing words.
+  const { lines: nameLines, size: nameSize } = fitName(c.name, COLOPHON_NAME_W, c.measure, (px) => heading(c, px))
+  const nameLh = Math.round(nameSize * 1.25)
+  const fy = BOTTOM - 60 - Math.max(0, nameLines.length - 2) * nameLh
   ops.push(hair(MARGIN, fy, RIGHT, c.ink))
-  ops.push(text(fitLine(c.name, 250, heading(c, 15), c.measure), MARGIN, fy + 28, heading(c, 15), c.ink, headSpacing(c, 15)))
+  nameLines.forEach((line, i) => ops.push(text(line, MARGIN, fy + 28 + i * nameLh, heading(c, nameSize), c.ink, headSpacing(c, nameSize))))
   ops.push(text(`Issued ${c.iso}`, MARGIN + 330, fy + 28, face(400, 10, d.body), c.muted))
   ops.push(text('Set from the system it describes', RIGHT, fy + 28, face(400, 10, d.body), c.muted, { align: 'right' }))
   return ops
