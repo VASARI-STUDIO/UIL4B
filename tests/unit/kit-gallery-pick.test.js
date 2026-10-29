@@ -84,8 +84,9 @@ test('only the gallery page sends anyone to the gallery checkout address', () =>
     .map((p) => path.basename(p))
     .sort()
   // The page, the helper that defines the address, the panel comment naming the
-  // exception, and the return page's retry link, which keeps a gallery buyer's origin.
-  assert.deepEqual(users, ['CheckoutReturn.jsx', 'ExportPanel.jsx', 'ProjectExport.jsx', 'kitGalleryPick.js'])
+  // exception, the return page's retry link, which keeps a gallery buyer's origin, and the
+  // export config's upgrade rule (a Pro pick from a saved project; the runner only calls it).
+  assert.deepEqual(users, ['CheckoutReturn.jsx', 'ExportPanel.jsx', 'ProjectExport.jsx', 'exportV3.js', 'kitGalleryPick.js'])
   const panel = fs.readFileSync(path.join(process.cwd(), 'src/components/ExportPanel.jsx'), 'utf8')
   assert.match(panel, /navigate\('\/plans'\)/, 'the export panel gate still goes to /plans')
 })
