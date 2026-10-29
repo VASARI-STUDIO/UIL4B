@@ -99,7 +99,7 @@ test('each write only goes through if the document is unchanged since it was rea
   assert.deepEqual(db.updates[0].precondition, { lastUpdateTime: 't:community-submissions/a' })
 })
 
-test('a createdAt that does not parse is skipped and reported, and the run carries on', async () => {
+test('a createdAt that does not parse takes the run time and is reported, and the run carries on', async () => {
   const db = fakeDb({
     'community-submissions': {
       bad: { status: 'pending', createdAt: 'yesterday-ish' },
@@ -110,10 +110,13 @@ test('a createdAt that does not parse is skipped and reported, and the run carri
     'community-prompts': {},
   })
   const out = await run(db, { write: true })
-  assert.deepEqual(out.skipped.map((s) => s.id).sort(), ['bad', 'empty', 'none'])
-  assert.equal(out.skipped.find((s) => s.id === 'none').reason, 'no createdAt')
-  assert.equal(out.skipped.find((s) => s.id === 'bad').reason, 'createdAt does not parse')
-  assert.deepEqual(db.updates.map((u) => u.id), ['good'])
+  assert.deepEqual(out.defaulted.map((s) => s.id).sort(), ['bad', 'empty', 'none'])
+  assert.equal(out.defaulted.find((s) => s.id === 'none').reason, 'no createdAt')
+  assert.equal(out.defaulted.find((s) => s.id === 'bad').reason, 'createdAt does not parse')
+  assert.deepEqual(db.updates.map((u) => u.id).sort(), ['bad', 'empty', 'good', 'none'])
+  const stamped = (id) => db.updates.find((u) => u.id === id).patch.submittedAt.stamp
+  assert.equal(stamped('bad'), '2026-10-29T00:00:00.000Z')
+  assert.equal(stamped('good'), '2026-10-01T10:00:00.000Z')
   assert.deepEqual(out.failed, [])
 })
 
@@ -168,4 +171,14 @@ test('the script writes nothing without --write, prints the project id before it
   assert.ok(projectAt > 0, 'the project id must be printed')
   assert.ok(projectAt < src.indexOf('await backfillSubmittedAt(adminDb()'), 'before the backfill starts')
   assert.match(src, /process\.exitCode = 1/)
+})
+
+test('a createdAt before 2000 is raised to 2000-01-01 so the stamp can always be stored', async () => {
+  const db = fakeDb({
+    'community-submissions': { old: { status: 'pending', createdAt: '0001-01-01T00:00:00.000Z' } },
+    'community-prompts': {},
+  })
+  const out = await run(db, { write: true })
+  assert.equal(out.clamped, 1)
+  assert.deepEqual(db.updates[0].patch, { submittedAt: { stamp: '2000-01-01T00:00:00.000Z' } })
 })

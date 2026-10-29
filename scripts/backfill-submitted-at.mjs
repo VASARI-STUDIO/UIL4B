@@ -6,7 +6,10 @@
 // queues are ordered on `submittedAt` (src/utils/communityLimits.js,
 // queueOrderField). Firestore leaves a document out of an orderBy on a field it
 // does not have, so every item already waiting would vanish from the queue.
-// Run this after the indexes are deployed and before the patch is applied.
+// Run this after the indexes are deployed and before the patch is applied, and
+// run it once more with --write --all-statuses after the patch is live: anything
+// posted between the first run and the deploy has no submittedAt. The run is
+// idempotent, since a document that already has the field is left alone.
 //
 // DRY RUN BY DEFAULT. It lists what it would set and writes nothing. Pass
 // `--write` to make the changes.
@@ -24,9 +27,10 @@
 // read. This script reads it and never prints it.
 //
 // `createdAt` is a string the sender chose, so it is not trusted past this
-// point: one that does not parse is skipped and reported, and one dated in the
-// future is capped at the time of the run, so a spammer's 9999-12-31 does not
-// sit at the top of the queue for good. Each write only goes through if the
+// point: one that does not parse gets the time of the run and is logged, one
+// dated in the future is capped at the time of the run, so a spammer's
+// 9999-12-31 does not sit at the top of the queue for good, and one dated before
+// 2000 is raised to 2000-01-01, which Timestamp.fromDate can always store. Each write only goes through if the
 // document is unchanged since it was read, so a reviewer's decision made during
 // the run is never overwritten. Run it again to pick up anything that failed.
 
@@ -34,6 +38,7 @@ import { pathToFileURL } from 'node:url'
 
 export const COLLECTIONS = ['community-submissions', 'community-prompts']
 const PAGE = 300
+const EARLIEST_MS = Date.UTC(2000, 0, 1)
 
 /**
  * The time a `createdAt` value stands for, or null when it is not one. Strings
@@ -72,11 +77,11 @@ async function* pages(collection, statuses) {
 
 /**
  * Walk the community collections and set `submittedAt` on each document that
- * lacks it. Returns `{ scanned, missing, updated, clamped, skipped, failed }`:
+ * lacks it. Returns `{ scanned, missing, updated, clamped, defaulted, failed }`:
  * `missing` counts documents without the field, `updated` those actually written
- * (always 0 unless `write`), `clamped` those whose createdAt was in the future,
- * `skipped` the `{ collection, id, reason }` of each one with no usable
- * createdAt, and `failed` the `{ collection, id, error }` of each write that threw.
+ * (always 0 unless `write`), `clamped` those whose createdAt was in the future
+ * or before 2000, `defaulted` the `{ collection, id, reason }` of each one
+ * with no usable createdAt, which took the time of the run, and `failed` the `{ collection, id, error }` of each write that threw.
  *
  * Each document is its own try/catch, so one failure does not abort the run.
  *
@@ -90,7 +95,7 @@ export async function backfillSubmittedAt(db, {
   now = () => Date.now(),
   log = () => {},
 } = {}) {
-  const out = { scanned: 0, missing: 0, updated: 0, clamped: 0, skipped: [], failed: [] }
+  const out = { scanned: 0, missing: 0, updated: 0, clamped: 0, defaulted: [], failed: [] }
   const statuses = allStatuses ? [null] : ['pending']
   const runAt = now()
   for (const name of COLLECTIONS) {
@@ -102,12 +107,15 @@ export async function backfillSubmittedAt(db, {
         out.missing += 1
         let when = parseCreatedAt(data.createdAt)
         if (!when) {
-          out.skipped.push({ collection: name, id: snap.id, reason: data.createdAt === undefined ? 'no createdAt' : 'createdAt does not parse' })
-          log(`skipped: ${name}/${snap.id} (${out.skipped[out.skipped.length - 1].reason})`)
-          continue
-        }
-        if (when.getTime() > runAt) {
+          const reason = data.createdAt === undefined ? 'no createdAt' : 'createdAt does not parse'
+          out.defaulted.push({ collection: name, id: snap.id, reason })
+          log(`defaulted to the run time: ${name}/${snap.id} (${reason})`)
           when = new Date(runAt)
+        } else if (when.getTime() > runAt) {
+          when = new Date(runAt)
+          out.clamped += 1
+        } else if (when.getTime() < EARLIEST_MS) {
+          when = new Date(EARLIEST_MS)
           out.clamped += 1
         }
         log(`${write ? 'setting' : 'would set'}: ${name}/${snap.id} submittedAt ${when.toISOString()}`)
@@ -149,9 +157,9 @@ async function main() {
     toStamp: (date) => Timestamp.fromDate(date),
     log: (line) => console.log(line),
   })
-  console.log(`${out.scanned} scanned, ${out.missing} without submittedAt, ${out.updated} set, ${out.clamped} future-dated and capped, ${out.skipped.length} skipped, ${out.failed.length} failed.`)
-  if (out.skipped.length > 0) {
-    console.error('The skipped items (listed above) stay out of the queue until their createdAt is fixed by hand.')
+  console.log(`${out.scanned} scanned, ${out.missing} without submittedAt, ${out.updated} set, ${out.clamped} future- or far-past-dated and capped, ${out.defaulted.length} defaulted to the run time, ${out.failed.length} failed.`)
+  if (out.defaulted.length > 0) {
+    console.error('The defaulted items (listed above) have no usable createdAt and sit in the queue at the time of this run.')
   }
   if (out.failed.length > 0) {
     for (const f of out.failed) console.error(`failed: ${f.collection}/${f.id} ${f.error}`)
