@@ -6,6 +6,7 @@ import {
   fontsInUseSearchUrl, ladderFor, sceneWeights, scenesFor,
 } from '../utils/fontScenes'
 import { usesFor } from '../data/fontRealWorldUses'
+import { useFontLicences } from '../hooks/useFontLicences'
 import { weightName } from '../utils/fontGallery'
 import { fontStack, loadFont } from '../utils/googleFonts'
 
@@ -162,7 +163,8 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
 }
 
 export function FontAboutPanel({ font, id, labelledBy }) {
-  const rows = useMemo(() => fontFacts(font), [font])
+  const licences = useFontLicences()
+  const rows = useMemo(() => fontFacts(font, licences), [font, licences])
   if (!font) return null
 
   const note = CATEGORY_NOTE[font.category]

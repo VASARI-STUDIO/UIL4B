@@ -104,8 +104,12 @@ export function yearOf(iso) {
   return match ? match[1] : ''
 }
 
-/** The facts the loaded catalogue actually holds for a family, in reading order. */
-export function fontFacts(font) {
+/**
+ * The facts the loaded catalogue actually holds for a family, in reading order.
+ * `licences` is the family-to-SPDX table from src/data/fontLicences.json; it is
+ * passed in because that file loads on demand.
+ */
+export function fontFacts(font, licences) {
   if (!font) return []
   const rows = []
 
@@ -151,13 +155,82 @@ export function fontFacts(font) {
   const scripts = formatSubsets(font.subsets)
   if (scripts.length) rows.push({ k: 'Scripts', v: scripts.join(', ') })
 
-  if (font.openSource === true) rows.push({ k: 'Licence', v: 'Open source' })
+  // Named from the licence table, never from the catalogue's open-source flag:
+  // that flag says nothing about which licence applies. Until the table has
+  // loaded there is nothing to name, so the row is left out.
+  const licence = fontLicence(font, licences)
+  if (licence) rows.push({ k: 'Licence', v: licence.heading })
 
   if (Number.isFinite(font.popularity)) {
     rows.push({ k: 'Popularity', v: `#${(font.popularity + 1).toLocaleString()} by use on Google Fonts` })
   }
 
   return rows
+}
+
+// The licences a family can be published under, keyed by SPDX id. `summary` is
+// one plain sentence on what the licence allows, shown under the heading.
+export const LICENCES = {
+  'OFL-1.1': {
+    heading: 'SIL Open Font License 1.1',
+    summary: 'Free to use in personal and commercial work, including apps and logos. You can\u2019t sell the font files on their own.',
+    href: 'https://openfontlicense.org',
+  },
+  'Apache-2.0': {
+    heading: 'Apache License 2.0',
+    summary: 'Free to use in personal and commercial work. Keep the licence notice if you share the font files.',
+    href: 'https://www.apache.org/licenses/LICENSE-2.0',
+  },
+  'UFL-1.0': {
+    heading: 'Ubuntu Font Licence 1.0',
+    summary: 'Free to use in personal and commercial work. A changed version can\u2019t use the Ubuntu name.',
+    href: 'https://ubuntu.com/legal/font-licence',
+  },
+}
+
+export const LICENCE_LINK_LABEL = 'Read the licence \u2197'
+
+// Shown when a family is not in the table: it points at the one place that does
+// know, and never asserts a licence.
+const LICENCE_UNKNOWN = {
+  heading: 'Licence on Google Fonts',
+  summary: 'Check the licence on Google Fonts before you ship.',
+}
+
+/**
+ * The table key for a family name: lowercase letters and digits only, which is
+ * how the google/fonts repository names a family's folder ("Open Sans" is
+ * "opensans"). scripts/build-font-licences.mjs writes the table under these.
+ */
+export function licenceKey(family) {
+  return String(family || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function googleFontsPage(family) {
+  return `https://fonts.google.com/specimen/${encodeURIComponent(family).replace(/%20/g, '+')}`
+}
+
+/**
+ * What the pop-up shows for a family's licence:
+ * { id, heading, summary, href, linkLabel }, where `id` is the SPDX id or null.
+ * Returns null when there is no family or the table has not loaded, so a slow
+ * table reads as silence and not as "unknown". A family missing from a loaded
+ * table, or mapped to an id this module has no text for, gets the Google Fonts
+ * fallback.
+ */
+export function fontLicence(font, table) {
+  if (!font?.family || !table || typeof table !== 'object') return null
+  const key = licenceKey(font.family)
+  const id = Object.hasOwn(table, key) ? table[key] : null
+  if (typeof id === 'string' && Object.hasOwn(LICENCES, id)) {
+    return { id, ...LICENCES[id], linkLabel: LICENCE_LINK_LABEL }
+  }
+  return {
+    id: null,
+    ...LICENCE_UNKNOWN,
+    href: googleFontsPage(font.family),
+    linkLabel: LICENCE_LINK_LABEL,
+  }
 }
 
 /** True when the loaded catalogue carries none of the enriched About fields. */
