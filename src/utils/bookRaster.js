@@ -447,8 +447,13 @@ const rect = (x, y, w, h, fill, radius = 0) => ({ op: 'rect', x, y, w, h, fill, 
 const outline = (x, y, w, h, stroke, radius = 0) => ({ op: 'strokeRect', x, y, w, h, stroke, ...(radius ? { radius } : {}) })
 const hair = (x1, y, x2, stroke, dash) => ({ op: 'line', x1, y1: y, x2, y2: y, stroke, ...(dash ? { dash } : {}) })
 
-const caps = (t, x, y, fill, { px = 8, weight = 600, spacing = 1.4, align, family } = {}, c) =>
-  text(String(t).toUpperCase(), x, y, face(weight, px, family || c.d.body), fill, { letterSpacing: spacing, ...(align ? { align } : {}) })
+// A label is sentence case in the body face at weight 500, a point above the size
+// it was drawn at as a tracked cap, with no letter spacing (Dylan's type rule).
+const labelText = (t, x, y, fill, { px = 8, weight = 500, align, family } = {}, c) =>
+  text(String(t), x, y, face(weight, px + 1, family || c.d.body), fill, align ? { align } : {})
+
+/** "ANALOGOUS −30°" to "Analogous −30°": the role names are stored in capitals. */
+const sentence = (t) => { const s = String(t).toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1) }
 
 const heading = (c, px) => face(c.d.headingWeight, px, c.d.heading)
 const bodyFont = (c, px, weight = c.d.bodyWeight) => face(weight, px, c.d.body)
@@ -458,10 +463,10 @@ const headSpacing = (c, px) => (c.d.headingSpacing ? { letterSpacing: round(c.d.
 function frame(c, page) {
   const ops = [rect(0, 0, PAGE.width, PAGE.height, c.paper)]
   const label = page.section || ''
-  const nameFont = face(600, 8.5, c.d.body)
+  const nameFont = face(500, 9.5, c.d.body)
   ops.push(
-    caps(fitLine(c.name.toUpperCase(), 330, nameFont, c.measure), MARGIN, 40, c.muted, { px: 8.5 }, c),
-    caps(label, RIGHT, 40, c.muted, { px: 8.5, align: 'right' }, c),
+    labelText(fitLine(c.name, 330, nameFont, c.measure), MARGIN, 40, c.muted, { px: 8.5 }, c),
+    labelText(label, RIGHT, 40, c.muted, { px: 8.5, align: 'right' }, c),
     hair(MARGIN, 54, RIGHT, c.rule),
   )
   ops.push(...foot(c, page, c.muted, c.rule))
@@ -483,7 +488,7 @@ function pageHead(c, title, lede, { first = true } = {}) {
   const ops = [text(title, MARGIN, TOP + 30, heading(c, 30), c.ink, headSpacing(c, 30))]
   if (!first) {
     const w = c.headMeasure(title, heading(c, 30))
-    ops.push(caps('continued', MARGIN + w + 12, TOP + 30, c.muted, { px: 8, spacing: 1.4 }, c))
+    ops.push(labelText('continued', MARGIN + w + 12, TOP + 30, c.muted, { px: 8 }, c))
     return { ops, y: TOP + 56 }
   }
   const lines = balanceLines(lede, 470, bodyFont(c, 11.5, 400), c.measure, { maxLines: 2 })
@@ -500,8 +505,8 @@ function coverOps(c) {
   const { d } = c
   const ops = [rect(0, 0, PAGE.width, PAGE.height, c.field)]
   ops.push(
-    caps('Design system book', MARGIN, 64, c.fieldSoft, { px: 9.5, spacing: 2.4 }, c),
-    caps(`Issued ${c.iso}`, RIGHT, 64, c.fieldSoft, { px: 9.5, spacing: 1.6, align: 'right' }, c),
+    labelText('Design system book', MARGIN, 64, c.fieldSoft, { px: 9.5 }, c),
+    labelText(`Issued ${c.iso}`, RIGHT, 64, c.fieldSoft, { px: 9.5, align: 'right' }, c),
   )
 
   // The name at the largest size that sets in three lines or fewer; if even the
@@ -562,7 +567,7 @@ function contentsOps(c, page, entries) {
     if (e.sub) {
       const font = bodyFont(c, 11, 400)
       const title = fitLine(e.title, listW - 120, font, c.measure)
-      ops.push(text(title, MARGIN + 44, y, font, c.muted))
+      ops.push(text(title, MARGIN + 20, y, font, c.muted))
       ops.push(text(pad2(e.folio), MARGIN + listW, y, face(400, 10, d.body), c.muted, { align: 'right' }))
       y += 22
       continue
@@ -570,9 +575,8 @@ function contentsOps(c, page, entries) {
     y += y === TOP + 120 ? 0 : 14
     const font = heading(c, 20)
     const title = fitLine(e.title, listW - 120, font, c.headMeasure)
-    if (e.num) ops.push(text(e.num, MARGIN, y, mono(500, 10), c.muted))
-    ops.push(text(title, MARGIN + 44, y, font, c.ink, headSpacing(c, 20)))
-    const end = MARGIN + 44 + c.headMeasure(title, font) + 10
+    ops.push(text(title, MARGIN, y, font, c.ink, headSpacing(c, 20)))
+    const end = MARGIN + c.headMeasure(title, font) + 10
     const folioW = c.measure(pad2(e.folio), face(600, 12, d.body))
     if (end < MARGIN + listW - folioW - 10) ops.push(hair(end, y - 3, MARGIN + listW - folioW - 10, c.edge, [1, 3]))
     ops.push(text(pad2(e.folio), MARGIN + listW, y, face(600, 12, d.body), c.ink, { align: 'right' }))
@@ -583,7 +587,7 @@ function contentsOps(c, page, entries) {
   const ax = MARGIN + listW + 44
   const aw = RIGHT - ax
   ops.push({ op: 'line', x1: ax - 22, y1: TOP + 100, x2: ax - 22, y2: TOP + 560, stroke: c.rule })
-  ops.push(caps('About this book', ax, TOP + 120, c.muted, { px: 8 }, c))
+  ops.push(labelText('About this book', ax, TOP + 120, c.muted, { px: 8 }, c))
   const prose = [
     `This is the specification for ${c.name}: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.`,
     'Every contrast figure in it was measured, not estimated. Nothing here is illustrative: each value is the value the system actually holds.',
@@ -598,7 +602,7 @@ function contentsOps(c, page, entries) {
   const facts = [['Colours', d.palette.length], ['Type steps', c.ladder.length], ['Tokens', c.tokens.length], ['Issued', c.iso]]
   for (const [label, value] of facts) {
     ops.push(hair(ax, ay - 14, RIGHT, c.rule))
-    ops.push(caps(label, ax, ay + 2, c.muted, { px: 7.5 }, c))
+    ops.push(labelText(label, ax, ay + 2, c.muted, { px: 7.5 }, c))
     ops.push(text(String(value), RIGHT, ay + 2, face(600, 11, d.body), c.ink, { align: 'right' }))
     ay += 30
   }
@@ -610,7 +614,7 @@ function openingOps(c, page) {
   const { d } = c
   const soft = softInk(page.ink, page.field, contrast, { amount: 0.82 })
   const ops = [rect(0, 0, PAGE.width, PAGE.height, page.field)]
-  ops.push(caps(`Section ${page.num}`, MARGIN, 64, soft, { px: 9.5, spacing: 2.4 }, c))
+  ops.push(labelText(`Section ${Number(page.num)}`, MARGIN, 64, soft, { px: 9.5 }, c))
   // The numeral is a ghost: large enough to read as a shape, close enough to the
   // field that it never competes with the title.
   const ghost = mixHex(page.ink, page.field, 0.16)
@@ -647,12 +651,12 @@ function paletteOps(c, page) {
     const chipW = 170
     ops.push(rect(MARGIN, y, chipW, bandH, hex, 3))
     if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, y, chipW, bandH, c.edge, 3))
-    ops.push(text(pad2(index + 1), MARGIN + 14, y + 26, mono(600, 11), ink))
+    ops.push(text(pad2(index + 1), MARGIN + 14, y + 26, face(600, 11, d.body), ink, { tabular: true }))
     ops.push(text(hex, MARGIN + 14, y + bandH - 16, face(700, 16, d.body), ink))
 
     const x2 = MARGIN + chipW + 24
     const w2 = 176
-    ops.push(caps(roleLabel(d.harmony, index), x2, y + 16, c.muted, { px: 8 }, c))
+    ops.push(labelText(sentence(roleLabel(d.harmony, index)), x2, y + 16, c.muted, { px: 8 }, c))
     const nameLines = wrapText(c.names[index], w2, heading(c, 21), c.headMeasure, { maxLines: 2 })
     nameLines.forEach((line, i) => ops.push(text(line, x2, y + 44 + i * 24, heading(c, 21), c.ink, headSpacing(c, 21))))
     const landsTop = y + 44 + (nameLines.length - 1) * 24 + 22
@@ -662,7 +666,7 @@ function paletteOps(c, page) {
     const x3 = x2 + w2 + 24
     const w3 = RIGHT - x3
     notationRows(hex).forEach(([k, v], i) => {
-      ops.push(caps(k, x3, y + 16 + i * lineH, c.muted, { px: 7.5 }, c))
+      ops.push(labelText(k, x3, y + 16 + i * lineH, c.muted, { px: 7.5 }, c))
       ops.push(text(v, x3 + 42, y + 16 + i * lineH, mono(500, 9.5), c.ink))
     })
     const ruleAt = roomy ? 100 : 74
@@ -670,12 +674,12 @@ function paletteOps(c, page) {
     const cells = [['Ink', label], ['Ratio', formatRatio(ratio)], ['Grade', grade(ratio)]]
     cells.forEach(([k, v], i) => {
       const cx = x3 + (w3 / 3) * i
-      ops.push(caps(k, cx, y + ruleAt + 18, c.muted, { px: 7.5 }, c))
+      ops.push(labelText(k, cx, y + ruleAt + 18, c.muted, { px: 7.5 }, c))
       ops.push(text(v, cx, y + ruleAt + 34, face(600, 11, d.body), c.ink))
     })
     const chipH = roomy ? 18 : 12
     const chipY = y + bandH - 1 - chipH
-    ops.push(caps('Tints 80 · 60 · 40 · 20', x3, chipY - 5, c.muted, { px: 7, spacing: 1.2 }, c))
+    ops.push(labelText('Tints 80, 60, 40, 20%', x3, chipY - 5, c.muted, { px: 7 }, c))
     ;[80, 60, 40, 20].forEach((pct, i) => {
       const tint = mixHex(hex, c.paper, pct / 100)
       const tw = (w3 - 12) / 4
@@ -704,12 +708,12 @@ function soloPaletteOps(c, { index, hex }, ops, top) {
   const { w, h } = SOLO_SWATCH
   ops.push(rect(MARGIN, top, w, h, hex, 3))
   if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, top, w, h, c.edge, 3))
-  ops.push(text(pad2(index + 1), MARGIN + 22, top + 38, mono(600, 13), ink))
+  ops.push(text(pad2(index + 1), MARGIN + 22, top + 38, face(600, 13, d.body), ink, { tabular: true }))
   ops.push(text(hex, MARGIN + 22, top + h - 26, face(700, 34, d.body), ink))
 
   let y = top + h + 34
   const left = 270
-  ops.push(caps(roleLabel(d.harmony, index), MARGIN, y, c.muted, { px: 8 }, c))
+  ops.push(labelText(sentence(roleLabel(d.harmony, index)), MARGIN, y, c.muted, { px: 8 }, c))
   const nameLines = wrapText(c.names[index], left, heading(c, 28), c.headMeasure, { maxLines: 2 })
   nameLines.forEach((line, i) => ops.push(text(line, MARGIN, y + 34 + i * 32, heading(c, 28), c.ink, headSpacing(c, 28))))
   const landsTop = y + 34 + (nameLines.length - 1) * 32 + 24
@@ -718,7 +722,7 @@ function soloPaletteOps(c, { index, hex }, ops, top) {
 
   const x3 = MARGIN + left + 50
   notationRows(hex).forEach(([k, v], i) => {
-    ops.push(caps(k, x3, y + i * 22, c.muted, { px: 7.5 }, c))
+    ops.push(labelText(k, x3, y + i * 22, c.muted, { px: 7.5 }, c))
     ops.push(text(v, x3 + 48, y + i * 22, mono(500, 10), c.ink))
   })
   y = Math.max(y + 3 * 22, landsTop + (lands.length - 1) * 14) + 28
@@ -730,16 +734,16 @@ function soloPaletteOps(c, { index, hex }, ops, top) {
   const colW = CONTENT_W / 3
   cells.forEach(([k, ratio], i) => {
     const cx = MARGIN + colW * i
-    ops.push(caps(k, cx, y + 24, c.muted, { px: 7.5 }, c))
+    ops.push(labelText(k, cx, y + 24, c.muted, { px: 7.5 }, c))
     ops.push(text(formatRatio(ratio), cx, y + 50, face(600, 18, d.body), c.ink))
     ops.push(text(grade(ratio), cx, y + 68, face(500, 10.5, d.body), c.muted))
   })
-  ops.push(caps('Best ink', MARGIN + colW * 2, y + 24, c.muted, { px: 7.5 }, c))
+  ops.push(labelText('Best ink', MARGIN + colW * 2, y + 24, c.muted, { px: 7.5 }, c))
   ops.push(text(best, MARGIN + colW * 2, y + 50, face(600, 18, d.body), c.ink))
   ops.push(hair(MARGIN, y + 86, RIGHT, c.rule))
   y += 86 + 34
 
-  ops.push(caps('Tints 80 · 60 · 40 · 20', MARGIN, y, c.muted, { px: 7.5, spacing: 1.2 }, c))
+  ops.push(labelText('Tints 80, 60, 40, 20%', MARGIN, y, c.muted, { px: 7.5 }, c))
   const gap = 8
   const tw = (CONTENT_W - gap * 3) / 4
   ;[80, 60, 40, 20].forEach((pct, i) => {
@@ -780,7 +784,7 @@ function matrixOps(c, page) {
   const rowH = 48
   let y = head.y + 8
 
-  ops.push(caps('bg / fg', MARGIN, y + headH - 12, c.muted, { px: 7.5 }, c))
+  ops.push(labelText('Background / text', MARGIN, y + headH - 12, c.muted, { px: 7.5 }, c))
   axes.forEach((hex, i) => {
     const cx = MARGIN + rowHeadW + i * cw + cw / 2
     ops.push(rect(cx - 7, y + 8, 14, 14, hex, 7))
@@ -807,7 +811,7 @@ function matrixOps(c, page) {
       if (word === 'Pass') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, MATRIX_TINT.pass)))
       else if (word === 'Large') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, MATRIX_TINT.large)))
       ops.push(text(formatRatio(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, figPx, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
-      ops.push(caps(word, x + cw / 2, y + rowH / 2 + 14, c.muted, { px: 6.5, spacing: 1, align: 'center' }, c))
+      ops.push(labelText(word, x + cw / 2, y + rowH / 2 + 14, c.muted, { px: 6.5, align: 'center' }, c))
     })
     y += rowH
     ops.push(hair(MARGIN, y, RIGHT, c.rule))
@@ -848,7 +852,7 @@ function gradientOps(c, page) {
   y += 220 + 36
 
   const colX = [MARGIN, MARGIN + 150, MARGIN + 330]
-  ;['Stop', 'Colour', 'Position'].forEach((h, i) => ops.push(caps(h, colX[i], y, c.muted, { px: 8 }, c)))
+  ;['Stop', 'Colour', 'Position'].forEach((h, i) => ops.push(labelText(h, colX[i], y, c.muted, { px: 8 }, c)))
   y += 10
   ops.push(hair(MARGIN, y, RIGHT, c.ink))
   // The code box is reserved first, then as many stop rows as the rest of the page
@@ -898,7 +902,7 @@ function familiesOps(c, page) {
   ]
   for (const [role, family, weight, spacing] of specimens) {
     ops.push(hair(MARGIN, y, RIGHT, c.ink))
-    ops.push(caps(role, MARGIN, y + 20, c.muted, { px: 8.5 }, c))
+    ops.push(labelText(role, MARGIN, y + 20, c.muted, { px: 8.5 }, c))
     ops.push(text(
       `Weight ${weight}  ·  Tracking ${spacing ? `${spacing}em` : 'normal'}`,
       RIGHT, y + 20, face(400, 9.5, d.body), c.muted, { align: 'right' },
@@ -946,8 +950,8 @@ function scaleOps(c, page) {
   let y = head.y + 4
   const cols = { step: MARGIN, size: MARGIN + 92, rem: MARGIN + 148, lead: MARGIN + 208, specimen: MARGIN + 270 }
   const specW = RIGHT - cols.specimen
-  ;[['Step', cols.step], ['Size', cols.size], ['rem', cols.rem], ['Leading', cols.lead], ['Specimen', cols.specimen]]
-    .forEach(([h, x]) => ops.push(caps(h, x, y, c.muted, { px: 7.5 }, c)))
+  ;[['Step', cols.step], ['Size', cols.size], ['Rem', cols.rem], ['Leading', cols.lead], ['Specimen', cols.specimen]]
+    .forEach(([h, x]) => ops.push(labelText(h, x, y, c.muted, { px: 7.5 }, c)))
   y += 10
   ops.push(hair(MARGIN, y, RIGHT, c.ink))
   // One shared factor shrinks every row, so the steps keep their true proportions.
@@ -981,7 +985,7 @@ function scaleOps(c, page) {
   const lh = round(d.baseSize * d.lineHeight)
   const maxLines = Math.max(0, Math.floor(room / lh))
   if (maxLines >= 3) {
-    ops.push(caps(`Body at ${d.baseSize}px, ${d.lineHeight} leading`, MARGIN, y + 6, c.muted, { px: 7.5 }, c))
+    ops.push(labelText(`Body at ${d.baseSize}px, ${d.lineHeight} leading`, MARGIN, y + 6, c.muted, { px: 7.5 }, c))
     wrapText(sample, 440, face(d.bodyWeight, d.baseSize, d.body), c.measure, { maxLines: Math.min(maxLines, 7) })
       .forEach((line, i) => ops.push(text(line, MARGIN, y + 30 + i * lh, face(d.bodyWeight, d.baseSize, d.body), c.ink)))
   }
@@ -1045,7 +1049,7 @@ function colophonOps(c, page) {
   const column = (blocks, x) => {
     let y = TOP + 90
     for (const [label, body] of blocks) {
-      ops.push(caps(label, x, y, c.muted, { px: 8 }, c))
+      ops.push(labelText(label, x, y, c.ink, { px: 8, weight: 600 }, c))
       const lines = wrapText(body, colW, face(400, 10.5, d.body), c.measure)
       lines.forEach((line, i) => ops.push(text(line, x, y + 22 + i * 16, face(400, 10.5, d.body), c.ink)))
       y += 22 + lines.length * 16 + 28
@@ -1143,7 +1147,13 @@ export function drawBookOps(ctx, ops) {
       ctx.textBaseline = 'alphabetic'
       const spaced = o.letterSpacing && 'letterSpacing' in ctx
       if (spaced) ctx.letterSpacing = `${o.letterSpacing}px`
-      ctx.fillText(o.text, o.x, o.y)
+      if (o.tabular) {
+        // Canvas has no font-variant-numeric, so figures that must line up (a swatch's
+        // index) are set one to a cell, each as wide as the face's zero.
+        const pitch = ctx.measureText('0').width
+        ctx.textAlign = 'center'
+        ;[...o.text].forEach((ch, i) => ctx.fillText(ch, o.x + pitch * (i + 0.5), o.y))
+      } else ctx.fillText(o.text, o.x, o.y)
       if (spaced) ctx.letterSpacing = '0px'
     }
   }

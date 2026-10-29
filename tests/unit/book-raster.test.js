@@ -393,7 +393,7 @@ test('body pages carry a running head and a folio; the cover carries neither', (
   const cover = texts(book.pages[0])
   assert.ok(!cover.includes('01'))
   const palette = book.pages.find((p) => p.kind === 'palette')
-  assert.ok(texts(palette).includes('ACME'), 'the running head does not name the project')
+  assert.ok(texts(palette).includes('Acme'), 'the running head does not name the project')
   assert.ok(texts(palette).includes(String(palette.folio).padStart(2, '0')), 'the folio is missing')
   assert.ok(texts(book.pages[1]).includes('02'), 'the contents page is not folio 02')
 })
@@ -668,4 +668,34 @@ test('formatRatio always gives two decimals and ":1", and the band and matrix bo
   for (const band of book.pages.filter((p) => p.kind === 'palette')) {
     for (const t of texts(band).filter((x) => /:1$/.test(x))) assert.match(t, /^\d+\.\d\d:1$/)
   }
+})
+
+// ── Labels: sentence case, no tracking ──────────────────────────────────────
+
+test('labels are sentence case and untracked: no small text has letter spacing or is set in capitals', () => {
+  const sizeOf = (font) => Number(/(\d+(?:\.\d+)?)px/.exec(font)[1])
+  const spaced = { ...DESIGN, typeScale: { ...DESIGN.typeScale, headingSpacing: 0.1 } }
+  const designs = [DESIGN, spaced, { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(13) } }]
+  // The four notation acronyms, the WCAG grades a figure carries, and hex values are not labels.
+  const allowed = new Set(['HEX', 'RGB', 'HSL', 'OKLCH', 'AA', 'AAA'])
+  for (const design of designs) {
+    for (const page of build(design).pages) {
+      for (const o of page.ops.filter((x) => x.op === 'text' && sizeOf(x.font) <= 12)) {
+        assert.ok(!(o.letterSpacing > 0), `${page.id}: "${o.text}" is tracked by ${o.letterSpacing}`)
+        // Labels are the body face at weight 500 or 600; prose is 400 and values are monospace.
+        if (/monospace/.test(o.font) || !/^(500|600) /.test(o.font)) continue
+        const words = o.text.replace(/#?\b[0-9A-F]{6}\b/g, '').split(/[^A-Za-z]+/).filter((w) => w.length > 1)
+        for (const w of words) {
+          assert.ok(w !== w.toUpperCase() || allowed.has(w), `${page.id}: "${o.text}" has the capitals word ${w}`)
+        }
+      }
+    }
+  }
+  // The labels the design names, in the case it names them.
+  const book = build()
+  const all = (kind) => book.pages.filter((p) => p.kind === kind).flatMap(texts)
+  assert.ok(all('palette').includes('Primary') && all('palette').includes('Tints 80, 60, 40, 20%'))
+  assert.ok(all('matrix').includes('Background / text'))
+  assert.ok(texts(book.pages[0]).includes('Design system book') && texts(book.pages[0]).includes('Issued 2026-10-29'))
+  assert.ok(book.pages.filter((p) => p.kind === 'opening').every((p) => texts(p).includes(`Section ${Number(p.num)}`)))
 })
