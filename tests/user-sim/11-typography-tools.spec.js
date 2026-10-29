@@ -353,7 +353,7 @@ test.describe('Font Gallery', () => {
     expect(Math.abs(second.x - first.x), 'every row starts at the same left edge').toBeLessThan(2)
 
     await page.getByRole('button', { name: 'Serif', exact: true }).click()
-    await expect(page.locator('.fg-count')).toContainText('in Serif')
+    await expect(page.locator('.fg-count')).toContainText('serif families')
     const serifCount = await page.locator('.fg-card').count()
     expect(serifCount).toBeGreaterThan(0)
     expect(serifCount).toBeLessThan(48)
@@ -750,61 +750,27 @@ test.describe('Font Gallery', () => {
     const row = page.locator('.fg-card').first()
     await expect(row).toBeVisible()
 
+    // The band spans the list edge to edge, and the click target fills the band.
     const rowBox = await row.boundingBox()
     const shot = await page.locator('.fg-card-open').first().boundingBox()
-    // THE TOLERANCE IS THE CARD'S OWN BORDER, read rather than assumed.
-    //
-    // This was `toBeGreaterThan(rowBox.width - 2)`, and the 2 was a hand-picked
-    // slack that the library restyle turned into an exact boundary: the card is
-    // `box-sizing: border-box` with a 1px border, so its CONTENT box is exactly
-    // 2px narrower than its border box and the specimen — which fills that
-    // content box perfectly — lands on `rowBox.width - 2` rather than above it.
-    // Measured: card 1345.84, specimen 1343.84, a strict `>` short by nothing
-    // at all. The guarantee is "the specimen spends the whole row", and a
-    // specimen that is exactly the row minus its border is the best case of it,
-    // not a failure of it.
-    const inset = await row.evaluate((el) => {
-      const cs = getComputedStyle(el)
-      return parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth)
-        + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
-    })
-    expect(shot.width, `the specimen block fills the row it is given (row ${rowBox.width}, inset ${inset})`)
-      .toBeGreaterThanOrEqual(rowBox.width - inset)
+    expect(shot.width, 'the band button fills the band').toBeGreaterThanOrEqual(rowBox.width - 2)
+    expect(shot.height, 'the band button fills the band height').toBeGreaterThanOrEqual(rowBox.height - 2)
 
-    // THE WEIGHT LADDER. The gallery's whole answer to "what weights has this
-    // family got" used to be the string "6w" in the card foot. It now draws
-    // them, and each numeral is set in the cut it names.
-    const ladder = page.locator('.fg-card-ladder').first()
-    await expect(ladder).toBeVisible()
-    const steps = ladder.locator('.fg-card-step')
+    // THE WEIGHTS wait in the wake: one name per cut, each set in the cut it names.
+    const steps = page.locator('.fg-card-weights').first().locator('.fg-card-step')
     await expect(steps).toHaveCount(5)
-    await expect(steps.first()).toHaveText('100')
-    await expect(steps.last()).toHaveText('900')
-
+    await expect(steps.first()).toHaveText('Thin')
+    await expect(steps.last()).toHaveText('Black')
     const stepWeights = await steps.evaluateAll(
       (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
     )
-    expect(stepWeights, 'each numeral is rendered at the weight it names')
-      .toEqual(['100:100', '300:300', '500:500', '700:700', '900:900'])
+    expect(stepWeights, 'each weight name is rendered at the weight it names')
+      .toEqual(['Thin:100', 'Light:300', 'Medium:500', 'Bold:700', 'Black:900'])
+    await expect(page.locator('.fg-card-weights').nth(1).locator('.fg-card-step')).toHaveCount(2)
 
-    // A two-weight family draws two numerals, and its ladder still occupies the
-    // SAME reserved box — the row must not shrink or grow with the weight count,
-    // or a list of mixed families would step up and down as faces arrive.
-    const shortLadder = page.locator('.fg-card-ladder').nth(1)
-    await expect(shortLadder.locator('.fg-card-step')).toHaveCount(2)
-    const ladderBoxes = await page.locator('.fg-card-ladder').evaluateAll(
-      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
-    )
-    expect(ladderBoxes.length).toBe(2)
-    expect(new Set(ladderBoxes).size, 'nine cuts and two cuts reserve the same ladder box').toBe(1)
-
-    // The body line is running text at body weight, not a 43-character squeeze.
-    const bodyLine = await page.locator('.fg-card-pangram').first().textContent()
-    expect(bodyLine.length, 'the body sample uses the width it now has').toBeGreaterThan(90)
-
-    // Script coverage at the row's far edge — the fact the grid never showed.
-    await expect(page.locator('.fg-card-scripts').first())
-      .toHaveText('Latin, Latin Extended, Cyrillic +1')
+    // The pangram is the full running-text sample, and the meta line names the family's facts.
+    await expect(page.locator('.fg-card-pangram').first()).toHaveText('The quick brown fox jumps over the lazy dog')
+    await expect(page.locator('.fg-card-meta').first()).toHaveText('01 · Serif · 6 weights')
   })
 
   test('a held stylesheet keeps skeletons visible until the face registers, then reveals without FOUT', async ({ page }) => {
@@ -954,13 +920,8 @@ test.describe('Font Gallery', () => {
     })
 
     expect(report.count, 'the gallery should have specimens to measure').toBeGreaterThan(0)
-    expect(report.sample.length, 'the pangram should be the long running-text sample').toBeGreaterThan(90)
-    expect(report.nowrap, 'the specimen line must not be held on one line at 834px').toBe(false)
+    expect(report.sample, 'the wake holds the whole pangram').toBe('The quick brown fox jumps over the lazy dog')
     expect(report.heights, 'every row must reserve the same specimen box').toHaveLength(1)
-    expect(
-      report.heights[0],
-      `the specimen box should reserve two lines of ${report.lineHeight}px, not one`,
-    ).toBeGreaterThanOrEqual(report.lineHeight * 2)
     expect(report.clipped, 'specimen lines sliced at the box edge').toEqual([])
   })
 })

@@ -86,7 +86,11 @@ const TOOLS = [
     actions: ['All', 'Serif', 'Display'],
     selects: ['Sort families'],
     sliders: ['Specimen size'],
+    // Preview text is a field on the row from 1440 and moves into Filters below.
+    fields: ['Preview text'],
     links: ['Build a font pair'],
+    // From 768 to 1023 search and "Build a font pair" sit on the page's own second row.
+    secondRow: '.fg-bar2',
     overflow: 'Filters',
     title: 'Font Gallery',
   },
@@ -122,6 +126,9 @@ for (const tool of TOOLS) {
         await expect(page.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
         const bar = page.locator('[data-tool-toolbar]')
         await expect(bar).toBeVisible()
+        // Where an action can sit while it is still "on the row": the toolbar, or
+        // the tool's own second row when it names one.
+        const scope = tool.secondRow ? page.locator(`[data-tool-toolbar], ${tool.secondRow}`) : bar
 
         const row = await readRow(page)
         // POSITIVE CONTROL: the row really has its parts on it.
@@ -156,32 +163,37 @@ for (const tool of TOOLS) {
         for (const action of tool.actions.filter((a) => !(width < (tool.dockedBelow || 0) && (tool.docked || []).includes(typeof a === 'string' ? a : a.row)))) {
           // A row action that navigates is a link; its overflow row is a button.
           const named = { name: startsWith(rowName(action)) }
-          const shown = await bar.getByRole('button', named).or(bar.getByRole('link', named)).first().isVisible().catch(() => false)
+          const shown = await scope.getByRole('button', named).or(scope.getByRole('link', named)).first().isVisible().catch(() => false)
           if (!shown) missing.push(menuName(action))
         }
         for (const name of tool.links || []) {
-          const shown = await bar.getByRole('link', { name: startsWith(name) }).first().isVisible().catch(() => false)
+          const shown = await scope.getByRole('link', { name: startsWith(name) }).first().isVisible().catch(() => false)
           if (!shown) missing.push(name)
         }
         const missingSelects = []
         for (const name of tool.selects || []) {
-          const shown = await bar.getByRole('button', { name }).first().isVisible().catch(() => false)
+          const shown = await scope.getByRole('button', { name }).first().isVisible().catch(() => false)
           if (!shown) missingSelects.push(name)
+        }
+        const missingFields = []
+        for (const name of tool.fields || []) {
+          const shown = await scope.getByRole('textbox', { name }).first().isVisible().catch(() => false)
+          if (!shown) missingFields.push(name)
         }
         const missingSliders = []
         for (const name of tool.sliders || []) {
-          const shown = await bar.getByRole('slider', { name }).first().isVisible().catch(() => false)
+          const shown = await scope.getByRole('slider', { name }).or(scope.getByRole('button', { name })).first().isVisible().catch(() => false)
           if (!shown) missingSliders.push(name)
         }
         const inOverflow = [...missing, ...(tool.menuOnly || [])]
         // An overflow with nothing in it is a defect too: it means the row is
         // stuck in its measuring pass (seen once on /create/tint).
-        if (!inOverflow.length && !missingSelects.length && !missingSliders.length) {
+        if (!inOverflow.length && !missingSelects.length && !missingSliders.length && !missingFields.length) {
           await expect(bar.getByRole('button', { name: overflowName, exact: true }), `${width}px: a ${overflowName} button with nothing in it`).toHaveCount(0)
         }
-        if (inOverflow.length || missingSelects.length || missingSliders.length) {
+        if (inOverflow.length || missingSelects.length || missingSliders.length || missingFields.length) {
           const more = bar.getByRole('button', { name: overflowName, exact: true })
-          await expect(more, `${width}px: ${[...inOverflow, ...missingSelects, ...missingSliders].join(', ')} are off the row and there is no ${overflowName}`).toBeVisible()
+          await expect(more, `${width}px: ${[...inOverflow, ...missingSelects, ...missingSliders, ...missingFields].join(', ')} are off the row and there is no ${overflowName}`).toBeVisible()
           await more.click()
           const panel = page.getByRole('dialog', { name: overflowName })
           await expect(panel).toBeVisible()
@@ -191,8 +203,11 @@ for (const tool of TOOLS) {
           for (const name of missingSelects) {
             await expect(panel.getByRole('button', { name }), `${width}px: the "${name}" select is not in the overflow`).toBeVisible()
           }
+          for (const name of missingFields) {
+            await expect(panel.getByRole('textbox', { name }).first(), `${width}px: the "${name}" field is not in the overflow`).toBeVisible()
+          }
           for (const name of missingSliders) {
-            await expect(panel.getByRole('slider', { name }), `${width}px: the "${name}" slider is not in the overflow`).toBeVisible()
+            await expect(panel.getByRole('slider', { name }).or(panel.getByRole('button', { name })).first(), `${width}px: the "${name}" control is not in the overflow`).toBeVisible()
           }
           // The overflow is dismissable, and gives focus back.
           await page.keyboard.press('Escape')

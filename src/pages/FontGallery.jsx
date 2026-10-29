@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import LibrarySearch from '../components/library/LibrarySearch'
-import LibraryGrid from '../components/library/LibraryGrid'
-import LibraryCard from '../components/library/LibraryCard'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import {
@@ -70,13 +68,6 @@ const SORTS = [
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-// The row's body line. A 434px card could hold one pangram at 12px and that was
-// the whole running-text sample the gallery offered. A full-width row holds
-// about 110 characters at 15px, so the line is written to spend them: two
-// pangrams cover the alphabet twice in different letter pairs, and the tail
-// carries the figures, currency and punctuation you cannot judge from letters —
-// the parts of a face that most often turn out to be the disappointing ones.
-const SPECIMEN_LINE = 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. 0123456789 £$€ &@?!'
 // 24, not 48. A page of results is a scroll distance, not a card count: one
 // specimen per row makes each result about twice as tall, so keeping 48 would
 // have doubled the run to the "Show more" control and to the tools below it.
@@ -85,6 +76,144 @@ const SPECIMEN_LINE = 'The quick brown fox jumps over the lazy dog. Pack my box 
 // this changes how much arrives at once, not how much is reachable.
 const PAGE_SIZE = 24
 const MAX_COMPARE = 3
+
+// The three layouts. `name` is the band's name size and the size the list
+// opens at; `floor` is how far a long name may shrink before it is clipped;
+// `ratio` turns the size into the band's height, so changing the size moves the
+// whole list once and never one band on its own.
+const LAYOUTS = {
+  wide: { name: 96, floor: 72, ratio: 2.5 },
+  tablet: { name: 64, floor: 48, ratio: 3.125 },
+  phone: { name: 40, floor: 32, ratio: 3 },
+}
+const SIZE_MIN = 24
+const SIZE_MAX = 120
+const SIZE_CHOICES = [24, 32, 40, 48, 64, 72, 96, 120]
+const MIN_BAND = 72
+
+// Category names as they read in running text (the pills keep Google's casing).
+const CAT_WORDS = { 'sans-serif': 'sans serif', serif: 'serif', display: 'display', handwriting: 'script' }
+const catWord = (category) => CAT_WORDS[category] || String(category || '').toLowerCase()
+const sentence = (word) => word.charAt(0).toUpperCase() + word.slice(1)
+
+function layoutFor() {
+  if (typeof window === 'undefined' || !window.matchMedia) return 'wide'
+  if (window.matchMedia('(min-width: 1024px)').matches) return 'wide'
+  return window.matchMedia('(min-width: 768px)').matches ? 'tablet' : 'phone'
+}
+
+// Which of the three layouts the viewport is in. The toolbar carries a
+// different set of controls in each, so the page needs to know.
+function useLayoutName() {
+  const [name, setName] = useState(layoutFor)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const queries = [window.matchMedia('(min-width: 1024px)'), window.matchMedia('(min-width: 768px)')]
+    const update = () => setName(layoutFor())
+    queries.forEach(mq => mq.addEventListener?.('change', update))
+    update()
+    return () => queries.forEach(mq => mq.removeEventListener?.('change', update))
+  }, [])
+  return name
+}
+
+// Fits are batched: every name queued in a frame is reset, then measured, then
+// written, so a page of bands costs one layout rather than one per band. A font
+// loading or a resize can queue every band at once; they all settle in one frame.
+const pendingFits = new Set()
+let fitFrame = 0
+function runFits() {
+  fitFrame = 0
+  const jobs = Array.from(pendingFits).filter(job => !job.dead)
+  pendingFits.clear()
+  jobs.forEach(job => job.el.style.setProperty('--fg-fit', '1'))
+  jobs.forEach(job => {
+    job.room = job.box.clientWidth
+    job.natural = job.el.scrollWidth
+  })
+  jobs.forEach(job => {
+    job.scale = job.room > 0 && job.natural > job.room ? Math.max(job.room / job.natural, job.floor) : 1
+    job.el.style.setProperty('--fg-fit', String(job.scale))
+  })
+  // Width is not exactly linear in font size: hinting and rounding can leave a
+  // scaled name a few pixels over. Measure again and shrink by what is left,
+  // still never below the floor.
+  for (let pass = 0; pass < 2; pass++) {
+    const over = jobs.filter(job => job.scale < 1 && job.scale > job.floor)
+      .map(job => ({ job, width: job.el.scrollWidth }))
+      .filter(({ job, width }) => width > job.room)
+    if (!over.length) break
+    over.forEach(({ job, width }) => {
+      job.scale = Math.max(job.scale * (job.room / width), job.floor)
+      job.el.style.setProperty('--fg-fit', String(job.scale))
+    })
+  }
+}
+// `now` fits synchronously, for the first measure after a name mounts, so it
+// never paints at the wrong size.
+function queueFit(job, now) {
+  if (now) {
+    pendingFits.add(job)
+    runFits()
+    return
+  }
+  pendingFits.add(job)
+  if (!fitFrame) fitFrame = requestAnimationFrame(runFits)
+}
+
+// Shrinks a long name to fit its band, down to `floor`, and no further. Past the
+// floor the name is clipped by its box, never ended with an ellipsis. The scale
+// is written as `--fg-fit`, which the name's font-size multiplies, so the
+// natural width is measured at fit 1 each time. The name is only in the DOM
+// once its face is confirmed, so it is measured in the right face.
+function useFitName(active, label, size, floor) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = el && el.parentElement
+    if (!el || !box) return undefined
+    const job = {
+      el,
+      box,
+      floor: Math.min(floor, size) / size,
+      natural: 0,
+      room: 0,
+    }
+    const fit = () => queueFit(job)
+    queueFit(job, true)
+    // A face can still land after this, such as a subset for typed preview
+    // text. Ask for this name's own face and fit again when it is in.
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
+      const cs = getComputedStyle(el)
+      document.fonts.load(`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`, el.textContent)
+        .then(() => { if (!job.dead) queueFit(job, true) }, () => {})
+    }
+    const fonts = typeof document !== 'undefined' ? document.fonts : null
+    // A face that arrives after the first measure changes the name's width, so
+    // the fit runs again for it. Only a face this name is set in counts.
+    const onLoaded = (event) => {
+      const faces = event && event.fontfaces
+      if (faces && faces.length) {
+        const stack = getComputedStyle(el).fontFamily
+        if (!faces.some(face => stack.includes(face.family.replace(/^["']|["']$/g, '')))) return
+      }
+      fit()
+    }
+    if (fonts) {
+      fonts.addEventListener?.('loadingdone', onLoaded)
+      if (fonts.ready) fonts.ready.then(fit, () => {})
+    }
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit)
+    if (ro) ro.observe(box)
+    return () => {
+      job.dead = true
+      pendingFits.delete(job)
+      if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
+      if (ro) ro.disconnect()
+    }
+  }, [active, label, size, floor])
+  return ref
+}
 
 // Set CSS custom properties on a node — the no-inline-styles route for values
 // that are genuinely per-item (a family, a weight, a size).
@@ -135,9 +264,18 @@ function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
     const start = () => {
       const extra = extraKey ? extraKey.split(',').map(Number) : []
       loadFont(font.family, [weight, bodyWeight(font), ...extra])
-      verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-        if (!cancelled && status === 'ok') setReadyKey(key)
-      })
+      verifyFontLoaded(font.family, bodyWeight(font))
+        .then(async status => {
+          // The name paints in `weight`, a separate file that only starts
+          // downloading once text is drawn in it. Wait for that cut too, so the
+          // first fit is measured in the real face. Its result is ignored: a
+          // heading cut that fails must not hold the band at a skeleton.
+          if (status === 'ok' && weight !== bodyWeight(font)) await verifyFontLoaded(font.family, weight)
+          return status
+        })
+        .then(status => {
+          if (!cancelled && status === 'ok') setReadyKey(key)
+        })
     }
 
     if (!defer) { start(); return () => { cancelled = true } }
@@ -171,133 +309,91 @@ function CloseIcon() {
   )
 }
 
-/* ── Catalogue row ────────────────────────────────────────────────────────── */
+/* ── Catalogue band ───────────────────────────────────────────────────────── */
 
-function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
+// One band per family: the name at band size in its own face, a meta line
+// along the bottom, and a compare button on the right. The pangram and the run
+// of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
+// faded in (hover or keyboard focus), so showing it never moves a box.
+function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, floor }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
-  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
   const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
   const weights = font.variants.length
+  const typed = previewText.trim()
+  const nameRef = useFitName(ready, `${typed}|${font.family}`, nameSize, floor)
+  const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
+  // With the reader's own words in the name, the family name moves to the meta
+  // line so it is still on the band.
+  const meta = [
+    rank != null ? String(rank).padStart(2, '0') : null,
+    typed ? font.family : null,
+    sentence(catWord(font.category)),
+    weightLabel,
+  ].filter(Boolean).join(' · ')
 
   return (
-    <LibraryCard
+    <article
       className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'}
-      nameClassName="fg-card-name"
-      metaClassName="fg-card-info"
-      media={(
-        <button
-          type="button"
-          className="fg-card-open"
-          ref={ref}
-          onClick={() => onOpen(font)}
-          aria-label={`Open the ${font.family} specimen — ${font.category}, ${weights} weight${weights === 1 ? '' : 's'}`}
-        >
-          {/* The catalogue position, which the "Popular" sort makes a real fact
-              and every other ordering makes a place in the list you are reading.
-              It is also the row's left edge: a full-width row with nothing at its
-              start has no line for the eye to come back to down 24 of them. */}
-          <span className="fg-card-index" aria-hidden="true">{String(rank).padStart(2, '0')}</span>
-          {/* The specimen is decorative to assistive tech: the button's own label
-              already names the family, its category and its weight count, so
-              exposing the sample, the pangram and the ladder as well would repeat
-              the same family name three times and read a pangram out per row. */}
-          <span
-            className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
-            ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
-            aria-hidden="true"
-          >
-            {ready ? (
-              <>
-                {/* Three lines, three questions, and the row is full width because
-                    all three want the width:
-
-                      the display line  what do the letterforms look like at size,
-                                        in the reader's OWN words when they type
-                                        some — a 434px column showed about fifteen
-                                        characters of a 40px face and truncated the
-                                        rest, which is why the size slider had to
-                                        stop at 48px;
-                      the pangram       the same family as running text at body
-                                        weight, whole rather than ellipsised;
-                      the ladder        how much RANGE the family has, drawn
-                                        instead of counted. This is the one that
-                                        could not exist in the grid: nine weights
-                                        laid across a row need a row's width, and
-                                        "9w" in the card foot was the entire answer
-                                        the gallery gave to the question a designer
-                                        most often has to check. */}
-                <span className="fg-card-sample">{previewText.trim() || font.family}</span>
-                <span className="fg-card-pangram">{SPECIMEN_LINE}</span>
-                <span className="fg-card-ladder">
-                  {ladder.map(w => (
-                    <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{w}</span>
-                  ))}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="fg-card-skeleton fg-card-skeleton--sample" />
-                <span className="fg-card-skeleton fg-card-skeleton--body" />
-                <span className="fg-card-skeleton fg-card-skeleton--ladder" />
-              </>
-            )}
-          </span>
-        </button>
-      )}
-      float={(
-        <button
-          type="button"
-          className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
-          onClick={() => onToggleCompare(font)}
-          aria-pressed={inCompare}
-          aria-label={inCompare ? `Remove ${font.family} from the comparison` : `Add ${font.family} to the comparison`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            {inCompare
-              ? <polyline points="20 6 9 17 4 12" />
-              : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
-          </svg>
-        </button>
-      )}
-      name={font.family}
-      meta={`${font.category} · ${weights} weight${weights === 1 ? '' : 's'}`}
-      /* The far edge of a full-width row is the one place a fact can sit without
-         competing with the specimen, so it carries the one the gallery never
-         showed at all: which scripts the family actually covers. Three names and
-         a remainder, because the answer to "can I set my copy in this" is
-         usually settled by the first script in the list and never needs seven.
-         On the bundled fallback catalogue every entry is latin-only, so this
-         reads "Latin" down the whole page there. That is the fallback list being
-         thin, not the row being repetitive, and the banner above already says
-         which catalogue is on screen — reporting it honestly beats hiding a
-         field because the degraded data makes it dull. */
-      tail={scripts.length > 0 ? (
-        <span className="fg-card-scripts">
-          {scripts.slice(0, 3).join(', ')}
-          {scripts.length > 3 ? ` +${scripts.length - 3}` : ''}
+      ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+    >
+      <button
+        type="button"
+        className="fg-card-open"
+        ref={ref}
+        onClick={() => onOpen(font)}
+        aria-label={`Open the ${font.family} specimen — ${sentence(catWord(font.category))}, ${weightLabel}`}
+      >
+        {/* The band is decorative to assistive tech: the button's own label
+            already names the family, its category and its weight count, so the
+            name, pangram and weights would only say them again. */}
+        <span className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'} aria-hidden="true">
+          {ready
+            ? <span className="fg-card-name fg-card-sample" ref={nameRef}>{typed || font.family}</span>
+            : <span className="fg-card-skeleton fg-card-skeleton--sample" />}
         </span>
-      ) : null}
-    />
+        {ready && (
+          <span className="fg-card-reveal" aria-hidden="true">
+            <span className="fg-card-pangram">{PANGRAM}</span>
+            <span className="fg-card-weights">
+              {ladder.map(w => (
+                <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{weightName(w) || w}</span>
+              ))}
+            </span>
+          </span>
+        )}
+        <span className="fg-card-meta" aria-hidden="true">{meta}</span>
+      </button>
+      <button
+        type="button"
+        className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
+        onClick={() => onToggleCompare(font)}
+        aria-pressed={inCompare}
+        aria-label={inCompare ? `Remove ${font.family} from comparison` : `Add ${font.family} to comparison`}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {inCompare
+            ? <polyline points="20 6 9 17 4 12" />
+            : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+        </svg>
+      </button>
+    </article>
   )
 }
 
-// The reserved row geometry, drawn empty. Shown while the catalogue is still
+// The reserved band geometry, drawn empty. Shown while the catalogue is still
 // in flight so the list arrives into a shape the reader has already seen,
 // instead of a centred spinner collapsing into a full page.
 //
-// Four, not the grid's nine: one column means a skeleton row is a full-width
-// band, and nine of those is a screen and a half of shimmer promising more than
-// the first paint can deliver.
-function SkeletonRows({ count = 4 }) {
+// Four, not a screenful: each is a full band, and a screen of shimmer promises
+// more than the first paint can deliver.
+function SkeletonRows({ count = 4, vars }) {
   return (
-    <div className="lbry-grid fg-grid fg-grid--skeleton" aria-hidden="true">
+    <div className="fg-grid fg-grid--skeleton" aria-hidden="true" ref={vars}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="fg-skel-row">
           <span className="fg-card-skeleton fg-card-skeleton--sample" />
-          <span className="fg-card-skeleton fg-card-skeleton--body" />
-          <span className="fg-card-skeleton fg-card-skeleton--ladder" />
         </div>
       ))}
     </div>
@@ -716,6 +812,7 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
 
 export default function FontGallery({ onCopy, toast }) {
   const navigate = useNavigate()
+  const mode = useLayoutName()
   const { setFonts } = useProject()
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
@@ -727,13 +824,9 @@ export default function FontGallery({ onCopy, toast }) {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
-  // 52, back up from the grid's 40. That 40 was chosen because three columns
-  // gave each specimen ~400px and 52px ellipsised the longer family names — the
-  // one thing a font gallery must never do to a name. A full-width row is not
-  // under that constraint: "Playfair Display" at 52px wants ~430px and has
-  // ~1,180px at 1440, so the reason for the smaller default has gone with the
-  // columns that caused it.
-  const [previewSize, setPreviewSize] = useState(52)
+  // The specimen size is the reader's choice once they make one; until then
+  // each layout opens at its own band size.
+  const [sizeOverride, setSizeOverride] = useState(null)
   const [page, setPage] = useState(1)
   // THE PAGE RESET, ADJUSTED DURING RENDER RATHER THAN IN AN EFFECT.
   // `useEffect(() => { setPage(1) }, [query, category, sort])` was the third
@@ -758,13 +851,19 @@ export default function FontGallery({ onCopy, toast }) {
 
   const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
 
-  // The one catalogue figure that survived the hero (#surface-headers-read-as-ai).
-  // It is derived from the catalogue actually on screen, so a degraded fallback
-  // list scopes the search honestly rather than quoting the full catalogue's
-  // number. Rendered into the search placeholder, never as a standalone stat.
-  const searchPlaceholder = galleryCatalog.length
-    ? `Search ${galleryCatalog.length.toLocaleString()} families…`
-    : 'Search families…'
+  // The filtered figures are derived from the catalogue actually on screen, so
+  // a degraded fallback list scopes the search honestly rather than quoting the
+  // full catalogue's number. Both the count line and the search placeholder
+  // follow the category.
+  const inCategory = useMemo(
+    () => (category === 'all' ? galleryCatalog : galleryCatalog.filter(f => f.category === category)),
+    [galleryCatalog, category],
+  )
+  const rankOf = useMemo(() => new Map(galleryCatalog.map((f, i) => [f.family, i + 1])), [galleryCatalog])
+  const catPhrase = category === 'all' ? '' : `${catWord(category)} `
+  const searchPlaceholder = inCategory.length
+    ? `Search ${inCategory.length.toLocaleString()} ${catPhrase}${inCategory.length === 1 ? 'family' : 'families'}`
+    : 'Search families'
 
   const filtered = useMemo(() => {
     let out = galleryCatalog
@@ -836,22 +935,38 @@ export default function FontGallery({ onCopy, toast }) {
   }, [navigate, setFonts, toast])
 
   const ready = status !== 'loading'
-  const sizeControl = (
+
+  const layout = LAYOUTS[mode]
+  const nameSize = sizeOverride ?? layout.name
+  const floor = Math.min(layout.floor, nameSize)
+  const band = Math.max(MIN_BAND, Math.round(nameSize * layout.ratio))
+  const bandVars = varsRef({ '--fg-name': `${nameSize}px`, '--fg-band': `${band}px` })
+
+  // The slider is the control on a tablet and a phone (inside Filters); the
+  // wide toolbar has room for a menu that reads "Size 96".
+  const sizeSlider = (
     <label className="fg-size">
       <span className="fg-size-k">Size</span>
-      {/* The ceiling is the reserved sample box, not a round number: a 72px
-          face needs ~84px of ascent plus descent inside its 92px line. */}
       <input
         type="range"
-        min="22"
-        max="72"
-        value={previewSize}
-        onChange={e => setPreviewSize(+e.target.value)}
+        min={SIZE_MIN}
+        max={SIZE_MAX}
+        value={nameSize}
+        onChange={e => setSizeOverride(+e.target.value)}
         aria-label="Specimen size"
-        aria-valuetext={`${previewSize} pixels`}
+        aria-valuetext={`${nameSize} pixels`}
       />
-      <span className="fg-size-v" aria-hidden="true">{previewSize}px</span>
+      <span className="fg-size-v" aria-hidden="true">{nameSize}px</span>
     </label>
+  )
+  const sizeSelect = (
+    <ToolSelect
+      label="Size"
+      ariaLabel="Specimen size"
+      value={nameSize}
+      options={SIZE_CHOICES.map(n => ({ value: n, label: String(n) }))}
+      onChange={v => setSizeOverride(Number(v))}
+    />
   )
   const categoryPills = (
     <ToolPills
@@ -872,62 +987,99 @@ export default function FontGallery({ onCopy, toast }) {
       disabled={!ready}
     />
   )
-
-  // Category, sort and size change what is shown and how; they sit on the row
-  // while it has room and move into the overflow (a sheet on a phone) when it
-  // does not. The row never wraps.
-  const items = [
-    { id: 'category', priority: 2, render: () => categoryPills, menu: () => categoryPills },
-    { id: 'sort', priority: 1, render: () => sortSelect, menu: () => sortSelect },
-    { id: 'size', priority: 0, render: () => sizeControl, menu: () => sizeControl },
-    { id: 'div', divider: true, align: 'end' },
-    {
-      id: 'pair',
-      priority: 3,
-      render: () => (
-        <ToolButton as={NavLink} to="/create/font-pair" icon="caret-right" className="fg-pair-link">
-          Build a font pair
-        </ToolButton>
-      ),
-      menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
-    },
-  ]
-
-  // Search and the preview words: the two fields a visitor types into, at the
-  // head of the results.
-  const fields = (
-    <div className="fg-controls">
-      <LibrarySearch
-        value={query}
-        onChange={setQuery}
-        placeholder={searchPlaceholder}
-        label="Search font families"
+  const searchField = (
+    <LibrarySearch
+      className="fg-search"
+      value={query}
+      onChange={setQuery}
+      placeholder={searchPlaceholder}
+      label="Search font families"
+    />
+  )
+  // On the toolbar the field has no room for a visible label; inside Filters it does.
+  const previewField = (labelled) => (
+    <label className={labelled ? 'fg-preview-field fg-preview-field--labelled' : 'fg-preview-field'}>
+      {labelled && <span className="fg-preview-k">Preview text</span>}
+      <input
+        type="text"
+        value={previewText}
+        maxLength={72}
+        spellCheck="false"
+        placeholder="Type your own words"
+        aria-label={labelled ? undefined : 'Preview text'}
+        onChange={e => setPreviewText(e.target.value)}
       />
-      <label className="fg-preview-field">
-        <span className="fg-preview-k">Preview text</span>
-        <input
-          type="text"
-          value={previewText}
-          maxLength={72}
-          spellCheck="false"
-          placeholder="Type something beautiful…"
-          onChange={e => setPreviewText(e.target.value)}
-        />
-      </label>
+    </label>
+  )
+  const pairLink = (
+    <ToolButton as={NavLink} to="/create/font-pair" icon="caret-right" className="fg-pair-link">
+      Build a font pair
+    </ToolButton>
+  )
+  const pairItem = {
+    id: 'pair',
+    priority: 9,
+    render: () => pairLink,
+    menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
+  }
+  const categoryItem = { id: 'category', priority: 5, render: () => categoryPills, menu: () => categoryPills }
+
+  // One item set per layout. The row never wraps: whatever does not fit goes
+  // into the Filters overflow, lowest priority first.
+  //   wide    every control on the row
+  //   tablet  category pills on the row; search and the pair link sit on a
+  //           second row; the rest is in Filters
+  //   phone   the pair link on the row; search on a second row; the rest is
+  //           in Filters
+  let items
+  if (mode === 'wide') {
+    items = [
+      categoryItem,
+      { id: 'search', priority: 4, render: () => searchField, menu: () => searchField },
+      { id: 'preview', priority: 1, render: () => previewField(false), menu: () => previewField(true) },
+      { id: 'div', divider: true, align: 'end' },
+      { id: 'sort', priority: 3, render: () => sortSelect, menu: () => sortSelect },
+      { id: 'size', priority: 2, render: () => sizeSelect, menu: () => sizeSelect },
+      pairItem,
+    ]
+  } else {
+    const filters = [
+      { id: 'sort', inline: false, menu: () => sortSelect },
+      { id: 'size', inline: false, menu: () => sizeSlider },
+      { id: 'preview', inline: false, menu: () => previewField(true) },
+    ]
+    items = mode === 'tablet'
+      ? [categoryItem, ...filters]
+      : [pairItem, { id: 'category', inline: false, menu: () => categoryPills }, ...filters]
+  }
+
+  // The second toolbar row, below the sticky bar, for the layouts that cannot
+  // fit search on the first. It never wraps either.
+  const bar2 = mode === 'wide' ? null : (
+    <div className="fg-bar2">
+      {searchField}
+      {mode === 'tablet' && pairLink}
     </div>
   )
 
-  // The layout, the fields and the row geometry are withheld from nothing
+  // The layout, the fields and the band geometry are withheld from nothing
   // while the catalogue resolves; only the filters wait, so half-working
   // filters never run over an empty list.
   if (!ready) {
     return (
       <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
+        {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
-        <SkeletonRows />
+        <SkeletonRows vars={bandVars} />
       </ToolLayout>
     )
   }
+
+  const noun = filtered.length === 1 ? 'family' : 'families'
+  const query1 = query.trim()
+  const countText = `${filtered.length.toLocaleString()} ${catPhrase}${noun}`
+    + `${query1 ? ` ${filtered.length === 1 ? 'matches' : 'match'} “${query1}”` : ''}`
+    + `${sort === 'popularity' ? ', most popular first' : ''}`
 
   return (
     <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
@@ -939,42 +1091,36 @@ export default function FontGallery({ onCopy, toast }) {
         count={galleryCatalog.length}
       />
 
-      {fields}
+      {bar2}
 
       {/* The results are a region named by the live count line, so it stays
           in the landmark list in the empty state too. */}
-      <section className="fg-results" aria-labelledby="fg-count">
-        <p className="fg-count" id="fg-count" aria-live="polite">
-          {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
-          {category !== 'all' ? ` in ${CATS.find(c => c.id === category)?.label}` : ''}
-          {query.trim() ? ` matching “${query.trim()}”` : ''}
-        </p>
+      <section className="fg-results" aria-labelledby="fg-count" ref={bandVars}>
+        <p className="fg-count" id="fg-count" aria-live="polite">{countText}</p>
 
         {filtered.length === 0 ? (
           <LibraryEmpty
             className="fg-empty"
             title="Nothing matches that yet."
-            detail={`${query.trim()
-              ? `No family in the loaded catalogue contains “${query.trim()}”.`
-              : 'No family in the loaded catalogue is in this category.'} Clear the filters to see everything again.`}
             onClear={() => { setQuery(''); setCategory('all') }}
           />
         ) : (
           <>
-            <LibraryGrid className="fg-grid">
-              {paged.map((font, i) => (
+            <div className="fg-grid">
+              {paged.map(font => (
                 <GalleryCard
                   key={font.family}
                   font={font}
-                  rank={i + 1}
+                  rank={sort === 'popularity' ? rankOf.get(font.family) : null}
                   onOpen={setSelected}
                   inCompare={compareIds.has(font.family)}
                   onToggleCompare={toggleCompare}
                   previewText={previewText}
-                  previewSize={previewSize}
+                  nameSize={nameSize}
+                  floor={floor}
                 />
               ))}
-            </LibraryGrid>
+            </div>
 
             {hasMore && (
               <>

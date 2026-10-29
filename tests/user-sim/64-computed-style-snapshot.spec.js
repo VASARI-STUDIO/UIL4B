@@ -106,6 +106,17 @@ import { withAvailability } from './price-payload.js'
 
 const BASELINE_FILE = path.join(process.cwd(), 'tests', 'user-sim', 'fixtures', 'computed-style-baseline.json')
 const UPDATING = process.env.UPDATE_STYLE_BASELINE === '1'
+// UPDATE_STYLE_ROUTES=/create/font-gallery re-measures only the named routes and
+// leaves every other route in the fixture byte for byte as it was. It exists for
+// a slice that repaints one page on purpose: regenerating all 24 on one machine
+// would also rewrite the other 23 with that machine's platform values.
+const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) => r.trim()).filter(Boolean)
+// Elements a redesigned route gained. They join the measure only while
+// regenerating; once they are in the fixture they are compared like any other.
+const ADDED_SELECTORS = {
+  '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
+    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
+}
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))
 const { props: PROPS, widths: WIDTHS, routes: ROUTES } = baseline
@@ -335,13 +346,14 @@ const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools
 const updated = {}
 
 for (const route of routeNames) {
+  if (UPDATING && ONLY_ROUTES.length && !ONLY_ROUTES.includes(route)) continue
   test(`computed styles are unchanged on ${route}`, async ({ browser }) => {
     test.setTimeout(120_000)
     const perWidth = {}
     for (const width of WIDTHS) {
       const stored = ROUTES[route][String(width)]
       const expected = Object.fromEntries(Object.entries(stored).map(([s, v]) => [s, asObject(v)]))
-      const selectors = Object.keys(expected)
+      const selectors = [...new Set([...Object.keys(expected), ...(UPDATING ? ADDED_SELECTORS[route] || [] : [])])]
       expect(selectors.length, `${route} @${width} has no elements to measure`).toBeGreaterThan(0)
 
       const actual = await openSettled(browser, route, width, selectors)
@@ -371,11 +383,12 @@ for (const route of routeNames) {
 
 test.afterAll(async () => {
   if (!UPDATING) return
-  if (Object.keys(updated).length !== routeNames.length) {
+  const wanted = ONLY_ROUTES.length ? ONLY_ROUTES.length : routeNames.length
+  if (Object.keys(updated).length !== wanted) {
     // A partial rewrite would silently shrink the fixture, which is the failure
     // mode this file's own positive control exists to catch.
     console.log(
-      `baseline NOT written: this worker measured ${Object.keys(updated).length}/${routeNames.length} routes. `
+      `baseline NOT written: this worker measured ${Object.keys(updated).length}/${wanted} routes. `
       + 'Re-run the regeneration with --workers=1.',
     )
     return
@@ -389,7 +402,8 @@ test.afterAll(async () => {
     lines.push(`  ${JSON.stringify(route)}: {`)
     WIDTHS.forEach((w, wi) => {
       lines.push(`   "${w}": {`)
-      const rows = Object.entries(updated[route][w])
+      // A route that was not re-measured keeps the fixture's own rows.
+      const rows = Object.entries((updated[route] || ROUTES[route])[w])
       rows.forEach(([sel, vals], i) => {
         lines.push(`    ${JSON.stringify(sel)}: ${JSON.stringify(vals)}${i === rows.length - 1 ? '' : ','}`)
       })
@@ -399,5 +413,5 @@ test.afterAll(async () => {
   })
   lines.push(' }', '}', '')
   fs.writeFileSync(BASELINE_FILE, lines.join('\n'))
-  console.log(`baseline rewritten: ${routeNames.length} routes`)
+  console.log(`baseline rewritten: ${wanted} of ${routeNames.length} routes measured`)
 })
