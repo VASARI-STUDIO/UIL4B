@@ -74,7 +74,10 @@ async function main() {
     // for deletion) and could never match a catalogue name anyway.
     const families = (await getTree(entry.sha)).filter(e => e.type === 'tree' && /^[a-z0-9]+$/.test(e.path))
     counts[spdx] = families.length
-    for (const f of families) licences[f.path] = spdx
+    for (const f of families) {
+      if (licences[f.path]) throw new Error(`"${f.path}" is listed under both ${licences[f.path]} and ${spdx}; nothing written`)
+      licences[f.path] = spdx
+    }
   }
 
   const total = Object.keys(licences).length
@@ -85,7 +88,11 @@ async function main() {
   // Sorted so a rerun diffs as only the families that changed.
   const sorted = Object.fromEntries(Object.entries(licences).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
   fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true })
-  fs.writeFileSync(OUT_FILE, JSON.stringify(sorted) + '\n')
+  // Written beside the target and renamed, so a failed write never leaves a
+  // truncated table behind.
+  const tmp = `${OUT_FILE}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(sorted) + '\n')
+  fs.renameSync(tmp, OUT_FILE)
 
   const bytes = fs.statSync(OUT_FILE).size
   console.log(`Wrote ${path.relative(ROOT, OUT_FILE)}: ${total} families, ${bytes} bytes`)

@@ -22,7 +22,8 @@ function loadFontLicences() {
   return pending
 }
 
-/** The licence table, or null until it has loaded (or if it could not). */
+/** The licence table, or null until it has loaded. If it cannot load, an empty
+ * table, so every family gets the Google Fonts fallback rather than no licence. */
 export function useFontLicences() {
   const [table, setTable] = useState(loaded)
 
@@ -31,7 +32,10 @@ export function useFontLicences() {
     let live = true
     loadFontLicences().then(
       next => { if (live) setTable(next) },
-      () => {},
+      err => {
+        console.error('[fonts] licence table failed to load', err)
+        if (live) setTable({})
+      },
     )
     return () => { live = false }
   }, [table])
