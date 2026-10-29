@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import useExportDesign from '../../hooks/useExportDesign'
 import { readExportTemplates, EXPORT_TEMPLATES } from '../../config/exportTemplates'
 import { templateThumb } from '../../utils/exportTemplateThumb'
@@ -26,6 +26,7 @@ const CODE_LABEL = { css: 'First lines of your stylesheet', json: 'First lines o
 const FAILED_LINE = 'The preview didn’t draw. Your file isn’t affected.'
 
 export default function ExportFreePreview({ kind, file = 'css', watermark = true }) {
+  const labelId = useId()
   const design = useExportDesign()
   const projectName = design?.name || 'Design System'
   const template = readExportTemplates(design).kit
@@ -131,7 +132,7 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
     )
   } else if (shown?.lines) {
     body = (
-      <pre className="xfp-code xfp-in" key={shown.id}>
+      <pre className="xfp-code xfp-in" key={shown.id} role="group" aria-labelledby={labelId}>
         <code>{shown.lines.join('\n')}</code>
       </pre>
     )
@@ -140,7 +141,7 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
   // The label is always present for code, so it never shifts the box.
   return (
     <div className="xfp" data-kind={kind}>
-      {kind === 'code' && <p className="xfp-label">{CODE_LABEL[file === 'json' ? 'json' : 'css']}</p>}
+      {kind === 'code' && <p className="xfp-label" id={labelId}>{CODE_LABEL[file === 'json' ? 'json' : 'css']}</p>}
       <div className="xfp-box" data-state={failed ? 'failed' : body ? 'ready' : 'loading'} aria-busy={!failed && !body}>
         {body}
       </div>

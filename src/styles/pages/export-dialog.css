@@ -7,10 +7,12 @@
 
 .xd{position:fixed;inset:0;z-index:9997;display:flex;align-items:center;justify-content:center;padding:var(--s-6);background:var(--scrim);animation:xd-fade var(--dur-1) var(--ease-entrance)}
 .xd[data-layout="menu"]{padding:var(--s-5)}
-.xd[data-layout="strip"]{padding:0}
+.xd[data-layout="strip"]{padding:0;align-items:flex-start}
 .xd-card{position:relative;isolation:isolate;display:flex;flex-direction:column;width:min(1120px,100%);height:min(820px,calc(100dvh - 2 * var(--s-6)));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);animation:xd-rise var(--dur-3) var(--ease-entrance)}
 .xd[data-layout="menu"] .xd-card{height:calc(100dvh - 2 * var(--s-5))}
-.xd[data-layout="strip"] .xd-card{width:100%;height:100dvh;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);animation-name:xd-sheet}
+/* The sheet's top and bottom insets are padded inside the head and the dock (their own colours reach the screen edge); only the sides are padded here. While the keyboard is up, --xd-vh and --xd-top (set by the component) fit the sheet to the visual viewport. */
+.xd[data-layout="strip"] .xd-card{width:100%;height:var(--xd-vh,100dvh);margin-top:var(--xd-top,0);border:0;border-radius:0;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left);animation-name:xd-sheet}
+.xd-card[data-kbd] .xd-dock{display:none}
 .xd-card:focus,.xd-title:focus{outline:none}
 @keyframes xd-fade{from{opacity:0}}
 @keyframes xd-rise{from{opacity:0;transform:translateY(12px)}}
@@ -18,7 +20,8 @@
 @keyframes xd-swap{from{opacity:0}}
 
 /* Head: one row, never wraps. */
-.xd-head{flex:none;display:flex;align-items:center;gap:var(--s-3);min-height:56px;padding:0 var(--s-4) 0 var(--s-5);border-bottom:1px solid var(--border)}
+.xd{--xd-head:56px}
+.xd-head{flex:none;display:flex;align-items:center;gap:var(--s-3);min-height:var(--xd-head);padding:0 var(--s-4) 0 var(--s-5);border-bottom:1px solid var(--border)}
 .xd-title{flex:1;min-width:0;margin:0;font-size:15px;font-weight:600;line-height:1.3;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xd-x{flex:none;display:grid;place-items:center;width:36px;height:36px;padding:0;color:var(--t1);background:none;border:0;border-radius:50%;cursor:pointer;transition:background-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .xd-x[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
@@ -30,14 +33,20 @@
 
 /* The rail. */
 .xd-nav{display:flex;flex-direction:column;gap:var(--s-4);min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4);border-right:1px solid var(--border)}
+/* The type group and the category group are siblings. In the rail the type group has no box, so its rows join the list and --xd-o puts the categories under their type. Rail rows change at once, with no fade. */
+.xd-list{display:flex;flex-direction:column;gap:var(--s-1)}
 .xd-types{display:flex;flex-direction:column;gap:var(--s-1)}
+.xd:not([data-layout="strip"]) .xd-types{display:contents}
+.xd:not([data-layout="strip"]) .xd-type,.xd:not([data-layout="strip"]) .xd-cats{order:var(--xd-o)}
 .xd-cats{display:flex;flex-direction:column;gap:var(--s-1);padding-bottom:var(--s-2)}
-.xd-type,.xd-cat{position:relative;display:flex;align-items:center;gap:var(--s-2);width:100%;padding:0 var(--s-3);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.xd-type,.xd-cat{position:relative;display:flex;align-items:center;gap:var(--s-2);width:100%;padding:0 var(--s-3);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer}
 .xd-type{flex-wrap:wrap;align-content:center;min-height:40px;font-size:14px;font-weight:600;color:var(--t0)}
 .xd-type-l{flex-basis:100%;font-size:12px;font-weight:400;line-height:1.4;color:var(--t2)}
 .xd-type:has(.xd-type-l){padding-block:var(--s-2)}
 .xd-cat{justify-content:space-between;min-height:36px;margin-left:var(--s-4);width:calc(100% - var(--s-4));font-size:14px;font-weight:400}
 .xd-type.is-on,.xd-cat.is-on{background:var(--bg-2);color:var(--t0)}
+.xd-type.is-on.has-cats{background:none;font-weight:700}
+.xd-type.is-on.has-cats::before{content:none}
 .xd-type.is-on::before,.xd-cat.is-on::before{content:"";position:absolute;left:0;top:var(--s-2);bottom:var(--s-2);width:2px;border-radius:1px;background:var(--accent-text)}
 .xd-type[aria-disabled="true"],.xd-cat[aria-disabled="true"]{cursor:not-allowed;opacity:.6}
 .xd-pro,.xd-free{display:inline-flex;align-items:center;gap:var(--s-1);flex:none;font-size:12px;font-weight:600;line-height:1;color:var(--t1)}
@@ -59,6 +68,10 @@
 .xd-rename{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2)}
 .xd-rename input{flex:1 1 200px;min-width:0;min-height:40px;font-size:var(--fs-body-s)}
 .xd-rename-b{min-height:40px}
+/* Touch-sized targets below the rail's width. */
+.xd:not([data-layout="rail"]) :is(.xd-link,.xd-rename-b,.xd-rename input){min-height:44px}
+/* 16px keeps iOS from zooming the page when the field takes focus. */
+.xd[data-layout="strip"] .xd-rename input{font-size:16px}
 
 /* Reused pieces, fitted to the column. Their own captions are replaced by the step labels. */
 .xd .exp-switch-label,.xd .exp-tpl-label{display:none}
@@ -72,7 +85,7 @@
 .xd{--xd-preview:300px}
 .xd[data-layout="menu"]{--xd-preview:240px}
 .xd[data-layout="strip"]{--xd-preview:220px}
-@media (max-height:499.98px){.xd{--xd-preview:160px}}
+@media (max-height:499.98px){.xd,.xd[data-layout]{--xd-preview:160px;--xd-head:44px}}
 .xd-frame{position:relative;isolation:isolate;container-type:size;height:var(--xd-preview);overflow:hidden;background:var(--bg-2);border-radius:var(--radius-xs)}
 .xd-frame::after{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--border);pointer-events:none}
 .xd-frame .exp-preview{margin:0;width:100%;height:100%}
@@ -94,7 +107,7 @@
 
 /* The dock. */
 .xd-dock{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);min-height:72px;padding:var(--s-3) var(--s-6);background:var(--card);border-top:1px solid var(--border)}
-.xd[data-layout="menu"] .xd-dock{padding-inline:var(--s-5)}
+.xd[data-layout="menu"] .xd-dock{padding-inline:var(--s-5);min-height:84px}
 .xd-dock-line{flex:1;min-width:0}
 .xd-status,.xd-error{margin:0;font-size:13px;line-height:1.5;color:var(--t1);overflow-wrap:anywhere}
 .xd-status strong{font-weight:600;color:var(--t0)}
@@ -106,12 +119,12 @@
 .xd-act:disabled{cursor:not-allowed}
 
 /* The phone sheet: the price line sits above full-width buttons. */
-.xd[data-layout="strip"] .xd-dock{flex-direction:column;align-items:stretch;gap:var(--s-2);padding:var(--s-3) var(--s-4)}
+.xd[data-layout="strip"] .xd-dock{flex-direction:column;align-items:stretch;gap:var(--s-2);padding:var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom))}
 .xd[data-layout="strip"] .xd-dock-line{flex:none}
-.xd[data-layout="strip"] .xd-status{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.xd[data-layout="strip"] :is(.xd-dock-line,.xd-error){max-height:6.5em;overflow-y:auto}
 .xd[data-layout="strip"] .xd-dock-acts > .xd-act{flex:1 1 0;min-height:48px;min-width:0}
 .xd[data-layout="strip"] .xd-x{width:44px;height:44px}
-.xd[data-layout="strip"] .xd-head{padding-right:var(--s-2)}
+.xd[data-layout="strip"] .xd-head{padding-top:env(safe-area-inset-top);padding-right:var(--s-2);min-height:calc(var(--xd-head) + env(safe-area-inset-top))}
 
 /* Strip: the type picker is a segmented control, the categories a row of chips. */
 .xd[data-layout="strip"] .xd-nav{gap:var(--s-2);padding:var(--s-3) var(--s-4);overflow:visible;border-right:0;border-bottom:1px solid var(--border)}
@@ -121,11 +134,17 @@
 .xd[data-layout="strip"] .xd-type-l,.xd[data-layout="menu"] .xd-type-l{display:none}
 .xd[data-layout="strip"] .xd-type.is-on{background:var(--card);box-shadow:inset 0 0 0 1px var(--border)}
 .xd[data-layout="strip"] .xd-type.is-on::before,.xd[data-layout="strip"] .xd-cat.is-on::before{content:none}
-.xd[data-layout="strip"] .xd-chips{display:flex;gap:var(--s-2);padding:2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+.xd[data-layout="strip"] .xd-list{gap:var(--s-2);width:100%;max-width:560px;margin-inline:auto}
+/* The padding gives the chips' focus rings room inside the scroll box; the negative margin takes it back. */
+.xd[data-layout="strip"] .xd-chips{display:flex;gap:var(--s-2);padding:4px;margin:-2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
 .xd[data-layout="strip"] .xd-chips::-webkit-scrollbar{display:none}
 .xd[data-layout="strip"] .xd-cat{flex:none;width:auto;margin:0;min-height:44px;padding:0 var(--s-4);white-space:nowrap;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .xd[data-layout="strip"] .xd-cat.is-on{background:var(--bg-2);border-color:var(--t2)}
 .xd[data-layout="strip"] .xd-free{display:none}
+@media (max-width:359px){
+  .xd[data-layout="strip"] .xd-cat{padding:0 var(--s-3)}
+  .xd[data-layout="strip"] .xd-cat .exp-pro-lock{display:none}
+}
 .xd[data-layout="strip"] .xd-coming{margin:var(--s-6) 0 0}
 
 /* Tablets are coarse: every target is 44px. */
@@ -135,6 +154,7 @@
 @media (pointer:coarse){
   .xd-type{min-height:44px}
   .xd-cat,.xd-link,.xd-rename input,.xd-rename-b{min-height:44px}
+  .xd-rename input{font-size:16px}
   .xd-x{width:44px;height:44px}
   .xd-frame .exp-preview-retry{min-height:44px}
 }
@@ -147,6 +167,24 @@
 }
 .xd-x:focus-visible,.xd-type:focus-visible,.xd-cat:focus-visible,.xd-link:focus-visible,.xd-frame .exp-preview-retry:focus-visible,.xd-act:focus-visible,.xd-rename input:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 .xd-type:active:not([aria-disabled="true"]),.xd-cat:active:not([aria-disabled="true"]),.xd-x:active:not([aria-disabled="true"]){background:var(--bg-2)}
+
+/* A window under 500px tall (a landscape phone). The tablet layout goes full-bleed,
+ * the head and dock thin out, and in the phone sheet the rail scrolls with the
+ * content instead of staying pinned and eating the height. These sit last so they
+ * win over the per-layout rules above. */
+@media (max-height:499.98px){
+  .xd[data-layout="menu"]{padding:0}
+  .xd[data-layout="menu"] .xd-card{height:100dvh;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .xd[data-layout] .xd-dock{flex-direction:row;align-items:center;min-height:56px;padding-block:var(--s-2)}
+  .xd[data-layout] .xd-dock-line{flex:1}
+  .xd[data-layout] .xd-dock-acts > .xd-act{flex:none;min-height:44px}
+  .xd[data-layout="strip"] .xd-dock{padding-bottom:calc(var(--s-2) + env(safe-area-inset-bottom))}
+  .xd[data-layout="strip"] .xd-body{display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
+  .xd[data-layout="strip"] .xd-nav{flex:none}
+  .xd[data-layout="strip"] .xd-col{display:contents}
+  .xd[data-layout="strip"] .xd-scroll{flex:1 0 auto;overflow:visible}
+  .xd[data-layout="strip"] .xd-dock{position:sticky;bottom:0;z-index:1;margin-top:auto}
+}
 
 /* Reduced motion: no transform anywhere, fades capped at 100ms. */
 @media (prefers-reduced-motion:reduce){

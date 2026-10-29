@@ -111,7 +111,7 @@ function Preview({ cat, file, name, isPro, checking, design, chosen }) {
         {!isPro && !checking && (
           <div className="xd-lock">
             <ExportProTag className="xd-pro" />
-            <span>{cat.name} is a Pro export</span>
+            <span>Pro export</span>
           </div>
         )}
       </div>
@@ -124,7 +124,7 @@ function Preview({ cat, file, name, isPro, checking, design, chosen }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, name, project, strip, coming, onRenameState }) {
+export default function ExportSteps({ cat, file, onFile, onLayout, name, project, strip, coming, onRenameState }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
   const { design: working, updateDesign } = useProject()
@@ -187,7 +187,7 @@ export default function ExportSteps({ cat, file, onFile, name, project, strip, c
               <ExportTemplatePicker
                 format={cat.layouts}
                 value={chosen[cat.layouts]}
-                onChange={(id) => updateDesign({ exportTemplates: { [cat.layouts]: id } })}
+                onChange={(id) => { updateDesign({ exportTemplates: { [cat.layouts]: id } }); onLayout?.() }}
                 thumbs={templateThumb}
               />
             )}

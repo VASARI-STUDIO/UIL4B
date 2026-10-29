@@ -33,7 +33,7 @@
 /* The reserved height follows the dialog's sizes. */
 @media (max-width:1023px){.xfp{--xfp-h:240px}}
 @media (max-width:767px){.xfp{--xfp-h:220px}}
-@media (max-height:499px){.xfp{--xfp-h:160px}}
+@media (max-height:499.98px){.xfp{--xfp-h:160px}}
 
 /* Reduced motion keeps the fade and caps it at 100ms; nothing moves. */
 @media (prefers-reduced-motion:reduce){

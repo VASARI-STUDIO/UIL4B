@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { useEffect } from 'react'
 import useRovingRadio from '../../hooks/useRovingRadio'
 import ExportProTag from '../ExportProTag'
 
@@ -6,10 +6,11 @@ import ExportProTag from '../ExportProTag'
 // Code) and, under a type that makes more than one kind of document, its
 // categories. A type with one category shows no sub-rows.
 //
-// Two radiogroups, each with one Tab stop (the chosen row); arrows move and
-// choose, Home and End jump, the ends wrap (useRovingRadio). In the rail the
-// category group sits under its type; in the phone layout (`strip`) the same two
-// groups lay out as a segmented control and a row of chips.
+// Two sibling radiogroups, each with one Tab stop (the chosen row); arrows move
+// and choose, Home and End jump, the ends wrap (useRovingRadio). In the rail the
+// category group is drawn under its type (CSS `order`; the type group has no box
+// of its own there); in the phone layout (`strip`) the same two groups lay out as
+// a segmented control and a row of chips.
 //
 // `showTags` is true for a free account whose plan has loaded: Pro rows carry the
 // lock and "Pro", the free one says "Free". A Pro account sees neither, and
@@ -23,8 +24,16 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
   // A building export belongs to the shown pick, so the rows hold still.
   const keyed = (roving) => (e, i) => { if (!disabled) roving.onKeyDown(e, i) }
 
-  const catGroup = (className) => (
-    <div className={className} role="radiogroup" aria-label={`${type.name} categories`}>
+  // The chosen chip stays in view when the row scrolls sideways.
+  const chosenAt = cats.findIndex((c) => c.id === categoryId)
+  const chipRefs = catRoving.refs
+  useEffect(() => {
+    if (strip) chipRefs.current[chosenAt]?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+  }, [strip, chosenAt, chipRefs])
+
+  const typeAt = types.indexOf(type)
+  const catGroup = (className, style) => (
+    <div className={className} style={style} role="radiogroup" aria-label={`${type.name} categories`}>
       {cats.map((c, i) => {
         const on = c.id === categoryId
         return (
@@ -51,18 +60,22 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
 
   return (
     <nav className="xd-nav" aria-label="What to export">
-      <div className="xd-types" role="radiogroup" aria-label="Export type">
-        {types.map((t, i) => {
-          const on = t.id === type.id
-          return (
-            <Fragment key={t.id}>
+      <div className="xd-list">
+        <div className="xd-types" role="radiogroup" aria-label="Export type">
+          {types.map((t, i) => {
+            const on = t.id === type.id
+            // The chosen type with categories under it leaves the fill and the bar to the category row.
+            const nested = !strip && on && cats.length > 1
+            return (
               <button
+                key={t.id}
                 type="button"
                 role="radio"
                 aria-checked={on}
                 aria-disabled={disabled || undefined}
                 tabIndex={on ? 0 : -1}
-                className={`xd-type${on ? ' is-on' : ''}`}
+                className={`xd-type${on ? ' is-on' : ''}${nested ? ' has-cats' : ''}`}
+                style={{ '--xd-o': i * 2 }}
                 ref={(el) => { typeRoving.refs.current[i] = el }}
                 onClick={() => { if (!disabled) onType(t.id) }}
                 onKeyDown={(e) => keyed(typeRoving)(e, i)}
@@ -70,12 +83,11 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
                 <span className="xd-type-n">{t.name}</span>
                 {t.line && <span className="xd-type-l">{t.line}</span>}
               </button>
-              {!strip && on && cats.length > 1 && catGroup('xd-cats')}
-            </Fragment>
-          )
-        })}
+            )
+          })}
+        </div>
+        {cats.length > 1 && catGroup(strip ? 'xd-chips' : 'xd-cats', strip ? undefined : { '--xd-o': typeAt * 2 + 1 })}
       </div>
-      {strip && cats.length > 1 && catGroup('xd-chips')}
       {!strip && coming && <p className="xd-coming">{coming}</p>}
     </nav>
   )

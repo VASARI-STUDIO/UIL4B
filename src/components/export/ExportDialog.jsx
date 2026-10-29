@@ -21,14 +21,24 @@ import '../../styles/pages/export-dialog.css'
 // `projectId` is the saved project, if one is open (it enables Rename and the
 // trial path). Files are built by useExportRunner; nothing here makes one.
 //
-// The layout is chosen once by width and height, as PalettePreviewDialog does:
-// rail from 1024px, a narrower rail from 768px, and the phone sheet below that
-// or in a window under 500px tall.
+// The layout is chosen by width and height, as PalettePreviewDialog does: rail
+// from 1024px (and 500px tall), a narrower rail from 768px, the phone sheet below
+// that. A window under 500px tall keeps the narrower rail from 560px wide, as a
+// full-bleed sheet, so a landscape phone isn't squeezed into a strip. While a
+// field has focus the layout holds still: the on-screen keyboard shrinks the
+// window, and a layout switch would unmount the field being typed in.
+const FIELD = 'input:not([type=checkbox],[type=radio],[type=button],[type=submit],[type=file],[type=color]),textarea,select,[contenteditable="true"]'
+const isField = (el) => Boolean(el && el.matches && el.matches(FIELD))
+const calmMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.reducedMotion === 'true'
+
 export default function ExportDialog({ onClose, preset, projectId }) {
   const wide = useMediaQuery('(min-width: 1024px)')
   const mid = useMediaQuery('(min-width: 768px)')
+  const roomy = useMediaQuery('(min-width: 560px)')
   const tall = useMediaQuery('(min-height: 500px)')
-  const layout = !tall ? 'strip' : wide ? 'rail' : mid ? 'menu' : 'strip'
+  const [held, setHeld] = useState(null)
+  const fitted = wide && tall ? 'rail' : (mid || (!tall && roomy)) ? 'menu' : 'strip'
+  const layout = held || fitted
   const strip = layout === 'strip'
 
   const runner = useExportRunner()
@@ -69,12 +79,20 @@ export default function ExportDialog({ onClose, preset, projectId }) {
 
   const apply = (next) => {
     if (next.type === pick.type && next.category === pick.category && next.file === pick.file) return
+    const moved = next.type !== pick.type || next.category !== pick.category
     setPick(next)
     storeLastPick(next)
     runner.reset()
     setLocalError('')
-    if (mainRef.current) mainRef.current.scrollTop = 0
+    // A new document starts at the top; a new file type in the same one keeps its place.
+    // In a short window the whole body scrolls, so it is reset with the column.
+    if (moved && mainRef.current) {
+      mainRef.current.scrollTop = 0
+      const body = mainRef.current.closest('.xd-body')
+      if (body) body.scrollTop = 0
+    }
   }
+  const onLayout = () => { runner.reset(); setLocalError('') }
   const pickCategory = (typeId, catId) => {
     const c = EXPORT_TYPES.find((t) => t.id === typeId).categories.find((x) => x.id === catId)
     apply({ type: typeId, category: catId, file: lastFile.current[catId] || c.files[0] })
@@ -119,11 +137,85 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     }
   }, [busy, dialogRef])
 
+  // The phone sheet follows the visual viewport, so the on-screen keyboard shrinks
+  // the sheet and the dock steps aside instead of the page scrolling behind it.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const card = dialogRef.current
+    if (!strip || !vv || !card) return undefined
+    const sync = () => {
+      const kbd = window.innerHeight - vv.height > 120
+      if (kbd) {
+        card.style.setProperty('--xd-vh', `${Math.round(vv.height)}px`)
+        card.style.setProperty('--xd-top', `${Math.round(vv.offsetTop)}px`)
+        card.setAttribute('data-kbd', '')
+        const at = document.activeElement
+        if (isField(at) && at.closest('.xd-scroll')) at.scrollIntoView({ block: 'center', behavior: 'auto' })
+      } else {
+        card.style.removeProperty('--xd-vh')
+        card.style.removeProperty('--xd-top')
+        card.removeAttribute('data-kbd')
+      }
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      card.style.removeProperty('--xd-vh')
+      card.style.removeProperty('--xd-top')
+      card.removeAttribute('data-kbd')
+    }
+  }, [strip, dialogRef])
+
+  // Toasts sit above the dock while the dialog is open, not behind or over its buttons.
+  useEffect(() => {
+    const root = document.documentElement
+    const card = dialogRef.current
+    const dock = card?.querySelector('.xd-dock')
+    if (!dock) return undefined
+    const sync = () => {
+      const box = dock.getBoundingClientRect()
+      if (box.height) root.style.setProperty('--toast-lift', `${Math.round(window.innerHeight - box.top)}px`)
+      else root.style.removeProperty('--toast-lift')
+    }
+    sync()
+    const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(sync) : null
+    watch?.observe(dock)
+    window.addEventListener('resize', sync)
+    // The card rises into place on open; measure again once it has settled.
+    card.addEventListener('animationend', sync)
+    return () => {
+      watch?.disconnect()
+      window.removeEventListener('resize', sync)
+      card.removeEventListener('animationend', sync)
+      root.style.removeProperty('--toast-lift')
+    }
+  }, [dialogRef, layout])
+
+  // A field being typed in holds the layout; focusing anything else lets it follow the window again.
+  const onFocus = (e) => setHeld(isField(e.target) ? (h) => h || fitted : null)
+  const onBlur = (e) => { if (!isField(e.relatedTarget)) setHeld(null) }
+  const onScrollFocus = (e) => {
+    if (strip && isField(e.target)) e.target.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' })
+  }
+  // The veil closes on click, and only when the press began on it too, so a text
+  // selection dragged out of the card doesn't close the dialog.
+  const veilDown = useRef(false)
+
   const titleId = useId()
   const title = name ? `Export ${name}` : 'Export your design system'
 
   return (
-    <div className="xd" data-layout={layout} onPointerDown={(e) => { if (e.target === e.currentTarget) requestClose() }}>
+    <div
+      className="xd"
+      data-layout={layout}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      onPointerDown={(e) => { veilDown.current = e.target === e.currentTarget }}
+      onClick={(e) => { if (veilDown.current && e.target === e.currentTarget) requestClose(); veilDown.current = false }}
+    >
       <div className="xd-card" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={dialogRef}>
         <header className="xd-head">
           <h2 className="xd-title" id={titleId} tabIndex={-1}>{title}</h2>
@@ -146,13 +238,14 @@ export default function ExportDialog({ onClose, preset, projectId }) {
             coming={comingLine()}
           />
           <div className="xd-col">
-            <div className="xd-scroll" ref={mainRef}>
+            <div className="xd-scroll" ref={mainRef} onFocus={onScrollFocus}>
               {/* Keyed by category: a swap replays the 150ms fade. Fields stop while a file builds. */}
               <fieldset className="xd-swap" key={`${type.id}/${cat.id}`} disabled={busy}>
                 <ExportSteps
                   cat={cat}
                   file={pick.file}
                   onFile={onFile}
+                  onLayout={onLayout}
                   name={name || 'Design System'}
                   project={project}
                   strip={strip}
