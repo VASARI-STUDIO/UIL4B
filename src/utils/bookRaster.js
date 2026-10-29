@@ -152,9 +152,15 @@ export function wrapText(text, maxWidth, font, measure = estimateWidth, { maxLin
 export function balancedChunk(list, max) {
   if (list.length <= max) return [list]
   const pages = Math.ceil(list.length / max)
-  const size = Math.ceil(list.length / pages)
+  const small = Math.floor(list.length / pages)
+  const big = list.length % pages
   const out = []
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  let at = 0
+  for (let g = 0; g < pages; g += 1) {
+    const size = small + (g < big ? 1 : 0)
+    out.push(list.slice(at, at + size))
+    at += size
+  }
   return out
 }
 

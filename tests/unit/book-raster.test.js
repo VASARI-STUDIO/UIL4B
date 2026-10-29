@@ -49,7 +49,8 @@ test('every section of the book has a page, in the same order as the PDF book', 
   const kinds = plan().map((p) => p.kind)
   assert.deepEqual(kinds, [
     'cover', 'contents',
-    'opening', 'palette', 'matrix', 'gradient',
+    // Six colours at five a page: two pages of three.
+    'opening', 'palette', 'palette', 'matrix', 'gradient',
     'opening', 'families', 'scale',
     'opening', 'tokens', 'colophon',
   ])
@@ -175,7 +176,7 @@ test('the same design always plans the same pages', () => {
   const a = plan().map((p) => p.id)
   const b = plan().map((p) => p.id)
   assert.deepEqual(a, b)
-  assert.equal(a.length, 12)
+  assert.equal(a.length, 13)
   assert.deepEqual(a.map((_, i) => i + 1), plan().map((p) => p.folio))
   // The date, the watermark and a wider measurer change words and positions, not the structure of a short book.
   assert.equal(plan(DESIGN, { date: new Date(Date.UTC(2030, 0, 1)) }).length, a.length)
