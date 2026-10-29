@@ -359,8 +359,10 @@ export function planBookPages(design, {
     balancedChunk(indexed, BANDS_PER_PAGE).forEach((items, gi) => {
       add('palette', 'Colour', { items, first: gi === 0, leaf: gi === 0 ? 'The palette' : null })
     })
-    const colours = d.palette.slice(0, MATRIX_MAX)
-    const groups = balancedChunk(colours, MATRIX_ROWS_PER_PAGE)
+    // One colour has nothing to be measured against but white and black, which the
+    // palette page already shows as its ink ratios: no matrix page.
+    const colours = d.palette.length > 1 ? d.palette.slice(0, MATRIX_MAX) : []
+    const groups = colours.length ? balancedChunk(colours, MATRIX_ROWS_PER_PAGE) : []
     groups.forEach((rows, gi) => {
       add('matrix', 'Colour', {
         colours, rows, first: gi === 0, capped: d.palette.length > MATRIX_MAX, left: d.palette.length - colours.length,
@@ -609,6 +611,7 @@ function paletteOps(c, page) {
   const ops = frame(c, page)
   const head = pageHead(c, 'The palette', `Each colour with its role in the ${systemName(d.harmony)} system, its values in three notations, and the ink that reads on it.`, { first: page.first })
   ops.push(...head.ops)
+  if (d.palette.length === 1) return soloPaletteOps(c, page.items[0], ops, head.y)
   let y = head.y
   page.items.forEach(({ index, hex }, n) => {
     const { ink, ratio, label } = inkFor(hex)
@@ -629,7 +632,7 @@ function paletteOps(c, page) {
 
     const x3 = x2 + w2 + 24
     const w3 = RIGHT - x3
-    ;[['HEX', hex], ['RGB', rgbOf(hex)], ['HSL', hslOf(hex)], ['OKLCH', oklchOf(hex)]].forEach(([k, v], i) => {
+    notationRows(hex).forEach(([k, v], i) => {
       ops.push(caps(k, x3, y + 16 + i * 15, c.muted, { px: 7.5 }, c))
       ops.push(text(v, x3 + 42, y + 16 + i * 15, mono(500, 9.5), c.ink))
     })
@@ -654,6 +657,71 @@ function paletteOps(c, page) {
   })
   return ops
 }
+
+/** The swatch of a one-colour kit, the full width of the page. */
+export const SOLO_SWATCH = Object.freeze({ w: CONTENT_W, h: 260 })
+
+/**
+ * A one-colour kit's palette page. The one swatch is the page's subject, so it is
+ * drawn the full width with the tints large under it, and the ratios it would have
+ * had a matrix page for (against white and against black) sit in the same row.
+ */
+function soloPaletteOps(c, { index, hex }, ops, top) {
+  const { d } = c
+  const { ink } = inkFor(hex)
+  const { w, h } = SOLO_SWATCH
+  ops.push(rect(MARGIN, top, w, h, hex, 3))
+  if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, top, w, h, c.edge, 3))
+  ops.push(text(pad2(index + 1), MARGIN + 22, top + 38, mono(600, 13), ink))
+  ops.push(text(hex, MARGIN + 22, top + h - 26, face(700, 34, d.body), ink))
+
+  let y = top + h + 34
+  const left = 270
+  ops.push(caps(roleLabel(d.harmony, index), MARGIN, y, c.muted, { px: 8 }, c))
+  const nameLines = wrapText(colorName(hex), left, heading(c, 28), c.headMeasure, { maxLines: 2 })
+  nameLines.forEach((line, i) => ops.push(text(line, MARGIN, y + 34 + i * 32, heading(c, 28), c.ink, headSpacing(c, 28))))
+  const landsTop = y + 34 + (nameLines.length - 1) * 32 + 24
+  const lands = wrapText(slotLandsBook(index), left, bodyFont(c, 10, 400), c.measure, { maxLines: 3 })
+  lands.forEach((line, i) => ops.push(text(line, MARGIN, landsTop + i * 14, bodyFont(c, 10, 400), c.muted)))
+
+  const x3 = MARGIN + left + 50
+  notationRows(hex).forEach(([k, v], i) => {
+    ops.push(caps(k, x3, y + i * 22, c.muted, { px: 7.5 }, c))
+    ops.push(text(v, x3 + 48, y + i * 22, mono(500, 10), c.ink))
+  })
+  y = Math.max(y + 3 * 22, landsTop + (lands.length - 1) * 14) + 28
+
+  // The ink ratios: the colour as a background, under white text and under black.
+  ops.push(hair(MARGIN, y, RIGHT, c.rule))
+  const best = inkFor(hex).label
+  const cells = [['On white', contrast(hex, '#FFFFFF')], ['On black', contrast(hex, '#000000')]]
+  const colW = CONTENT_W / 3
+  cells.forEach(([k, ratio], i) => {
+    const cx = MARGIN + colW * i
+    ops.push(caps(k, cx, y + 24, c.muted, { px: 7.5 }, c))
+    ops.push(text(formatRatio(ratio), cx, y + 50, face(600, 18, d.body), c.ink))
+    ops.push(text(grade(ratio), cx, y + 68, face(500, 10.5, d.body), c.muted))
+  })
+  ops.push(caps('Best ink', MARGIN + colW * 2, y + 24, c.muted, { px: 7.5 }, c))
+  ops.push(text(best, MARGIN + colW * 2, y + 50, face(600, 18, d.body), c.ink))
+  ops.push(hair(MARGIN, y + 86, RIGHT, c.rule))
+  y += 86 + 34
+
+  ops.push(caps('Tints 80 · 60 · 40 · 20', MARGIN, y, c.muted, { px: 7.5, spacing: 1.2 }, c))
+  const gap = 8
+  const tw = (CONTENT_W - gap * 3) / 4
+  ;[80, 60, 40, 20].forEach((pct, i) => {
+    const tint = mixHex(hex, c.paper, pct / 100)
+    const tx = MARGIN + i * (tw + gap)
+    ops.push(rect(tx, y + 12, tw, SOLO_TINT_H, tint, 2))
+    if (contrast(tint, c.paper) < NEAR_PAPER) ops.push(outline(tx, y + 12, tw, SOLO_TINT_H, c.edge, 2))
+    ops.push(text(`${pct}%`, tx, y + 12 + SOLO_TINT_H + 18, mono(500, 9.5), c.muted))
+  })
+  return ops
+}
+const SOLO_TINT_H = 72
+
+const notationRows = (hex) => [['HEX', hex], ['RGB', rgbOf(hex)], ['HSL', hslOf(hex)], ['OKLCH', oklchOf(hex)]]
 
 /** A contrast ratio as drawn: always two decimals, so 7 reads "7.00:1" and the column aligns. */
 export const formatRatio = (r) => `${Number(r).toFixed(2)}:1`

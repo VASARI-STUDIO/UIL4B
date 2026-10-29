@@ -183,6 +183,27 @@ test('many colours paginate: five a page at most, no stub; the matrix takes up t
   }
 })
 
+test('a one-colour kit has no matrix page: its palette page has a full-width swatch, big tints and the ink ratios', () => {
+  const one = { ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB'] } }
+  const book = build(one)
+  inside(book)
+  assert.ok(!book.pages.some((p) => p.kind === 'matrix'), 'a one-colour kit still has a matrix page')
+  assert.ok(!book.contents.some((e) => /matrix/i.test(e.title)), 'the contents still list a matrix')
+  const hex = readBook(one).palette[0]
+  const page = book.pages.find((p) => p.kind === 'palette')
+  const swatch = page.ops.find((o) => o.op === 'rect' && o.fill === hex && o.h === 260)
+  assert.ok(swatch, 'no 260 high swatch')
+  assert.equal(swatch.x, 52)
+  assert.equal(swatch.w, 620)
+  const said = texts(page)
+  assert.ok(said.includes(formatRatio(contrast(hex, '#FFFFFF'))), 'no ratio on white')
+  assert.ok(said.includes(formatRatio(contrast(hex, '#000000'))), 'no ratio on black')
+  const tints = page.ops.filter((o) => o.op === 'rect' && o.w > 140 && o.h >= 60 && o.fill !== hex && o.w < 724)
+  assert.equal(tints.length, 4, 'four large tints')
+  // Two colours do get their matrix.
+  assert.ok(build({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB', '#0F172A'] } }).pages.some((p) => p.kind === 'matrix'))
+})
+
 test('matrix shading tints the passing cells and leaves the failing ones bare and light', () => {
   const page = build().pages.find((p) => p.kind === 'matrix')
   const cells = page.ops.filter((o) => o.op === 'rect' && o.h === 46)
