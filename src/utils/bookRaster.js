@@ -400,7 +400,7 @@ function foot(c, page, fill, ruleColour, { rule = true } = {}) {
   if (rule) ops.push(hair(MARGIN, FOOT_RULE, RIGHT, ruleColour))
   const left = c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book'
   ops.push(text(left, MARGIN, FOOT_Y, face(400, 9, c.d.body), fill))
-  const folio = page.kind === 'contents' ? ['i', 'ii', 'iii', 'iv', 'v', 'vi'][page.folio - 1] || String(page.folio) : pad2(page.folio)
+  const folio = pad2(page.folio)
   ops.push(text(folio, RIGHT, FOOT_Y, face(600, 10, c.d.body), fill, { align: 'right' }))
   return ops
 }
@@ -490,7 +490,7 @@ function contentsOps(c, page, entries) {
       const font = bodyFont(c, 11, 400)
       const title = fitLine(e.title, listW - 120, font, c.measure)
       ops.push(text(title, MARGIN + 44, y, font, c.muted))
-      ops.push(text(String(e.folio), MARGIN + listW, y, face(400, 10, d.body), c.muted, { align: 'right' }))
+      ops.push(text(pad2(e.folio), MARGIN + listW, y, face(400, 10, d.body), c.muted, { align: 'right' }))
       y += 22
       continue
     }
@@ -500,9 +500,9 @@ function contentsOps(c, page, entries) {
     if (e.num) ops.push(text(e.num, MARGIN, y, mono(500, 10), c.muted))
     ops.push(text(title, MARGIN + 44, y, font, c.ink, headSpacing(c, 20)))
     const end = MARGIN + 44 + c.measure(title, font) + 10
-    const folioW = c.measure(String(e.folio), face(600, 12, d.body))
+    const folioW = c.measure(pad2(e.folio), face(600, 12, d.body))
     if (end < MARGIN + listW - folioW - 10) ops.push(hair(end, y - 3, MARGIN + listW - folioW - 10, c.edge, [1, 3]))
-    ops.push(text(String(e.folio), MARGIN + listW, y, face(600, 12, d.body), c.ink, { align: 'right' }))
+    ops.push(text(pad2(e.folio), MARGIN + listW, y, face(600, 12, d.body), c.ink, { align: 'right' }))
     y += 26
   }
 

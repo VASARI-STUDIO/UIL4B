@@ -235,7 +235,25 @@ test('body pages carry a running head and a folio; the cover carries neither', (
   const palette = book.pages.find((p) => p.kind === 'palette')
   assert.ok(texts(palette).includes('ACME'), 'the running head does not name the project')
   assert.ok(texts(palette).includes(String(palette.folio).padStart(2, '0')), 'the folio is missing')
-  assert.ok(texts(book.pages[1]).includes('ii'), 'the contents page is not numbered in roman')
+  assert.ok(texts(book.pages[1]).includes('02'), 'the contents page is not folio 02')
+})
+
+test('every folio is two-digit arabic, with no roman numeral anywhere, contents list included', () => {
+  const book = build()
+  const roman = /^(i|ii|iii|iv|v|vi|vii|viii|ix|x)$/i
+  for (const page of book.pages) {
+    assert.ok(!texts(page).some((t) => roman.test(t)), `${page.id} draws a roman numeral`)
+    const folios = page.ops.filter((o) => o.op === 'text' && o.align === 'right' && o.y === FOOT_Y)
+    if (page.kind !== 'cover') assert.deepEqual(folios.map((o) => o.text).filter((t) => /^\d+$/.test(t)), [String(page.folio).padStart(2, '0')])
+  }
+  const listed = book.pages.find((p) => p.kind === 'contents').ops
+    .filter((o) => o.op === 'text' && o.align === 'right' && /^\d+$/.test(o.text) && o.y < 700).map((o) => o.text)
+  assert.ok(listed.length >= book.contents.length)
+  assert.ok(listed.every((t) => /^\d\d$/.test(t)), `a contents folio is not two digits: ${listed}`)
+  // Ten or more pages: still two digits, never three.
+  const long = build({ ...DESIGN, palette: { ...DESIGN.palette, colors: manyColours(16) } })
+  assert.ok(long.pages.some((p) => p.folio >= 10))
+  for (const p of long.pages.filter((q) => q.kind !== 'cover')) assert.ok(texts(p).includes(String(p.folio).padStart(2, '0')))
 })
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
