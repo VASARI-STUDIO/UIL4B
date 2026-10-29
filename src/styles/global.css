@@ -3084,7 +3084,8 @@ html.lenis{scroll-behavior:auto!important}
    nothing scrolls under the translucent header (audit A9). Live rows only,
    one line each, at a 48px touch height. */
 .pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
-@keyframes pnav-sheet-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Opacity only: a rise would put the segments 8px low while the sheet opens, so they would not sit at one top on every tab. */
+@keyframes pnav-sheet-in{from{opacity:0}to{opacity:1}}
 @media(min-width:768px){.pnav-sheet{bottom:0}}
 /* The three section segments: a 48px track holding 44px buttons (2 + 44 + 2),
    the same size and top on every tab. The open one is lit and does nothing when
