@@ -36,7 +36,7 @@
 //   src restored byte for byte            -> all of them pass again.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, headPackNames, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer scrolling the icon library and copying an icon out of it'
 const LIVE = 'the live API decides which icons exist; this spec controls the answers'
@@ -414,6 +414,12 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
   test('an answer that leaves the listing the same length mid-reveal does not strand the page', async ({ page }) => {
     watch(page, PERSONA)
     await holdRevealFrames(page)
+    // A short window, set before the page opens. The grid reveals a page by itself while the
+    // sentinel is within 600px of the window, so on the suite's 900px-tall one the second page
+    // starts the moment the first lands (the sentinel sits ~1390px down) and is done in three
+    // frames, before this test can hold anything back. At 500px the second page waits for the
+    // scroll below, which is the moment the test means to hold.
+    await page.setViewportSize({ width: 1440, height: 500 })
     // "All packs" is built from one answer per pack, and the listing is replaced each time one
     // lands. One pack answers late and with nothing to add: the listing is a new array of the
     // same length, which cancels the page being revealed.
@@ -424,16 +430,31 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
       await route.fulfill({ status: 200, contentType: 'text/javascript', body: 'export default { title: "Phosphor", names: [] }' })
         .catch(() => { /* page closed while held */ })
     })
+    // Every other pack's answer has landed before the reveal starts. One landing during it would
+    // replace the listing too, and each replacement restarts the reveal a chunk further on.
+    const landed = new Set()
+    page.on('requestfinished', (req) => { const p = headPackOfUrl(req.url()); if (p) landed.add(p) })
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     const cells = () => page.locator('.ig .ic').count()
     await expect(page.locator('.ig .ic svg.ig-sym').first()).toBeVisible({ timeout: 20_000 })
+    const others = headPackNames().filter((p) => p !== 'ph')
+    await expect.poll(() => others.filter((p) => !landed.has(p)), { timeout: 20_000, message: 'packs whose answer never landed' }).toEqual([])
+    await expect(page.locator('.ig-sentinel')).toBeAttached()
+
+    // The first page is whatever the grid shows before anyone scrolls; its size is the page size.
+    let settled = -1
+    await expect.poll(async () => { const was = settled; settled = await cells(); return was === settled }, { intervals: [300], timeout: 20_000 }).toBe(true)
+    const pageSize = settled
+    expect(pageSize, 'the first page drew no cells').toBeGreaterThan(0)
+    const beyondMargin = await page.evaluate(() => document.querySelector('.ig-sentinel').getBoundingClientRect().top - window.innerHeight)
+    expect(beyondMargin, 'the sentinel is inside the 600px margin, so the second page starts without a scroll and cannot be held').toBeGreaterThan(600)
 
     // Start the second page at the foot of the grid; part-way through it, its first cells are in and the rest are held back.
     await page.evaluate(() => { window.__rafDelay = 2500; window.scrollTo(0, document.documentElement.scrollHeight) })
-    await expect.poll(cells, { timeout: 15_000 }).toBeGreaterThan(120)
+    await expect.poll(cells, { timeout: 15_000 }).toBeGreaterThan(pageSize)
     const mid = await cells()
-    expect(mid, 'positive control: the second page is part-way, not done').toBeLessThan(240)
+    expect(mid, 'positive control: the second page is part-way, not done').toBeLessThan(2 * pageSize)
 
     await page.evaluate(() => { window.__rafDelay = 0 })
     answerLate()
@@ -441,7 +462,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     await expect.poll(cells, {
       timeout: 15_000,
       message: `the page stopped at ${mid} cells after the listing was replaced (the observer did not restart)`,
-    }).toBeGreaterThanOrEqual(240)
+    }).toBeGreaterThanOrEqual(2 * pageSize)
   })
 
   for (const scheme of ['dark', 'light']) {
