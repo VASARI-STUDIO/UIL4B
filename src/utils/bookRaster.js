@@ -1003,32 +1003,49 @@ export function drawBookOps(ctx, ops) {
   }
 }
 
-// How long a render waits for the kit's faces before it draws in the fallback.
+// How long a render waits for one family's stylesheet before it draws in the fallback.
 const FONT_WAIT_MS = 6000
+// The one deadline over the whole font step. A .woff2 that never arrives (so
+// document.fonts.load never settles) must not hold the export, and the panel
+// with it, for ever.
+export const BOOK_FONT_DEADLINE_MS = 8000
 
 /**
- * Load the kit's faces and wait for them. Resolves the families that did NOT
- * arrive (empty when all did), so the colophon can say so instead of claiming a
- * face the pages are not set in. Never rejects: a font that cannot load is a
- * fallback, not a failed export.
+ * Load the kit's faces and wait for them, for at most `deadlineMs` in all.
+ * Resolves the families that did NOT arrive (empty when all did), so the
+ * colophon can say so instead of claiming a face the pages are not set in. A
+ * family still loading at the deadline counts as missing. Never rejects: a font
+ * that cannot load is a fallback, not a failed export. `fontApi`
+ * ({ loadFont, verifyFontLoaded }) can be injected; it defaults to the Google
+ * Fonts helpers.
  */
-export async function ensureBookFonts(d) {
+export async function ensureBookFonts(d, { deadlineMs = BOOK_FONT_DEADLINE_MS, fontApi } = {}) {
   if (typeof document === 'undefined' || !document.fonts?.load) return []
   const families = [...new Set([d.heading, d.body])]
   const weights = [...new Set([400, 500, 600, 700, d.headingWeight, d.bodyWeight])]
-  const missing = []
-  try {
-    const { loadFont, verifyFontLoaded } = await import('./googleFonts')
-    await Promise.all(families.map(async (family) => {
-      await Promise.race([loadFont(family, weights).catch(() => null), new Promise((r) => setTimeout(r, FONT_WAIT_MS))])
-      await Promise.all(weights.map((w) => Promise.resolve(document.fonts.load(face(w, 24, family))).catch(() => null)))
-      const check = family === d.heading ? d.headingWeight : d.bodyWeight
-      if ((await verifyFontLoaded(family, check, { timeout: 1500 })) === 'failed') missing.push(family)
-    }))
-  } catch {
-    return []
-  }
-  return missing
+  const finished = new Set()
+  const failed = new Set()
+  const timers = []
+  const after = (ms) => new Promise((resolve) => { timers.push(setTimeout(resolve, ms)) })
+
+  const work = (async () => {
+    try {
+      const { loadFont, verifyFontLoaded } = fontApi || await import('./googleFonts')
+      await Promise.all(families.map(async (family) => {
+        try {
+          await Promise.race([Promise.resolve(loadFont(family, weights)).catch(() => null), after(FONT_WAIT_MS)])
+          await Promise.all(weights.map((w) => Promise.resolve().then(() => document.fonts.load(face(w, 24, family))).catch(() => null)))
+          const check = family === d.heading ? d.headingWeight : d.bodyWeight
+          if ((await verifyFontLoaded(family, check, { timeout: 1500 })) === 'failed') failed.add(family)
+        } catch { /* a family that errors is a fallback, not a failed export */ }
+        finished.add(family)
+      }))
+    } catch { families.forEach((family) => finished.add(family)) /* the helper module would not load: draw in the fallback */ }
+  })()
+
+  await Promise.race([work, after(Math.max(0, deadlineMs))])
+  timers.forEach(clearTimeout)
+  return families.filter((family) => failed.has(family) || !finished.has(family))
 }
 
 const canvasMeasurer = (ctx) => {

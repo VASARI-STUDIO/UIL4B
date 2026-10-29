@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, ensureBookFonts,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
@@ -216,6 +216,27 @@ test('the colophon names a face that could not load instead of claiming it', () 
   assert.ok(!/could not be loaded/.test(ok))
   const missing = texts(build(DESIGN, { missingFonts: ['Outfit'] }).pages.at(-1)).join(' ')
   assert.match(missing, /Outfit could not be loaded/)
+})
+
+test('ensureBookFonts resolves at its deadline when a face never settles, naming it as missing', async () => {
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  globalThis.document = { fonts: { load: () => new Promise(() => {}) } }
+  try {
+    const fontApi = { loadFont: () => Promise.resolve('loaded'), verifyFontLoaded: async () => 'ok' }
+    const started = Date.now()
+    const missing = await ensureBookFonts({ heading: 'Outfit', body: 'Inter', headingWeight: 700, bodyWeight: 400 }, { deadlineMs: 40, fontApi })
+    assert.ok(Date.now() - started < 2000, 'the font step waited far past its deadline')
+    assert.deepEqual(missing.sort(), ['Inter', 'Outfit'])
+    // A stylesheet that never loads is caught by the same deadline.
+    const stuck = { loadFont: () => new Promise(() => {}), verifyFontLoaded: async () => 'ok' }
+    assert.deepEqual(await ensureBookFonts({ heading: 'Outfit', body: 'Outfit', headingWeight: 700, bodyWeight: 400 }, { deadlineMs: 40, fontApi: stuck }), ['Outfit'])
+    // When everything loads, nothing is missing.
+    globalThis.document = { fonts: { load: async () => [] } }
+    assert.deepEqual(await ensureBookFonts({ heading: 'Outfit', body: 'Inter', headingWeight: 700, bodyWeight: 400 }, { deadlineMs: 500, fontApi }), [])
+  } finally {
+    if (had) Object.defineProperty(globalThis, 'document', had)
+    else delete globalThis.document
+  }
 })
 
 // ── The watermark ───────────────────────────────────────────────────────────
