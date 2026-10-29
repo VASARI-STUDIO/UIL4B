@@ -1,5 +1,6 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -15,6 +16,7 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import SnapSlider from '../components/SnapSlider'
+import useMediaQuery from '../hooks/useMediaQuery'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
 import {
@@ -30,9 +32,13 @@ import { colourRowState, colourChoice, normaliseGround, groundContrastNote } fro
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import {
-  DEFAULT_ICON_SIZE, STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
+  STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
   stickyStrokePx, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
 } from '../utils/iconStroke'
+import {
+  CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
+  NARROW_RAIL_BELOW, isPresetSize, isProSetting, parseCustomSize, railPresets,
+} from '../utils/iconSize'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
 import {
@@ -261,7 +267,7 @@ function steerRadios(e) {
 // Reset restores, and the test for "does anything differ" (which shows Reset),
 // so they can never disagree. The stroke is in pixels (see iconStroke.js).
 const CUSTOMISER_DEFAULTS = Object.freeze({
-  size: DEFAULT_ICON_SIZE,
+  size: DEFAULT_EXPORT_SIZE,
   color: '',
   stroke: STROKE_PX.default,
   absStroke: false,
@@ -1257,6 +1263,14 @@ function SimilarSection({ list, srcFor, onPick }) {
   )
 }
 
+// One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
+// pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
+function SizeArt({ markup }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => { if (ref.current) ref.current.innerHTML = markup || '' }, [markup])
+  return <span className="icust-size-art" ref={ref} aria-hidden="true" />
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
@@ -1292,6 +1306,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // homepage draft (`draftSize` / `draftStroke` — bounded values, nothing else),
   // then from the defaults.
   const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || CUSTOMISER_DEFAULTS.size)
+  // The size rail. `size` is the committed export size; the rest is the Custom radio
+  // and its field. Custom is "open" when it is chosen (or when the size is one the
+  // rail has no cell for), and `lastCustom` keeps the last custom value for this open.
+  const narrowRail = useMediaQuery(`(max-width: ${NARROW_RAIL_BELOW - 1}px)`)
+  const onSheet = useMediaQuery('(max-width: 640px)')
+  const inspectPx = onSheet ? INSPECT_PX_SHEET : INSPECT_PX
+  const [customOpen, setCustomOpen] = useState(() => !isPresetSize(size))
+  const [lastCustom, setLastCustom] = useState(() => (isPresetSize(size) ? null : size))
+  const [sizeText, setSizeText] = useState(() => String(size))
+  const [clampedTo, setClampedTo] = useState(null)
+  const railRef = useRef(null)
+  const sizeInputRef = useRef(null)
+  const sizeRowRef = useRef(null)
   const [color, setColor] = useState(() => (icon?.custom && icon.color) || CUSTOMISER_DEFAULTS.color)
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
   // Both arrive in whatever unit their era used, so both go through the pixel
@@ -1489,10 +1516,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
+    // The stage always draws at the inspection size, so the stroke is scaled to it:
+    // the drawing keeps the proportions of the file exported at `size`.
     const strokeAttr = strokeAttrForPx({
-      px: stroke, size, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
+      px: stroke * inspectPx / size, size: inspectPx, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
     })
-    stage.style.setProperty('--ig-size', `${size}px`)
+    stage.style.setProperty('--ig-size', `${inspectPx}px`)
     stage.style.setProperty('--ig-stroke', String(strokeAttr ?? STROKE_PX.default))
     stage.style.setProperty('--ig-color', color || themeInk)
     stage.style.setProperty('--ig-cap', cap)
@@ -1502,7 +1531,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
+  }, [size, inspectPx, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
 
   // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
@@ -1536,6 +1565,21 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [onClose])
 
   const strokeCaption = strokeScaleCaption({ size, stroke, absolute: absStroke })
+  // Free viewers can preview a custom size but not take it away: Copy, Download and
+  // Save stay off until it is a preset again. The Pro preview slice replaces this
+  // with the Upgrade button.
+  const exportBlocked = isProSetting({ size, isPro })
+  // The rail's five drawings: the icon exported at each preset with the settings now on screen.
+  const railArt = useMemo(() => {
+    if (!baseSvgText) return {}
+    const out = {}
+    for (const n of ICON_SIZE_PRESETS) {
+      out[n] = serializeCustomizedSvg(baseSvgText, {
+        size: n, color: isColoredPack ? undefined : (color || themeInk), stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+      })
+    }
+    return out
+  }, [baseSvgText, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1543,20 +1587,20 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   const stageImgUrl = useMemo(() => {
     if (!activeIcon?.cdn) return ''
-    const p = { size }
+    const p = { size: inspectPx }
     const imgColor = isColoredPack ? '' : (color || themeInk)
     if (imgColor) p.color = imgColor
     if (rotate) p.rotate = rotate
     if (flipH) p.flipH = true
     if (flipV) p.flipV = true
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
-  }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
+  }, [activeIcon, inspectPx, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
   // Reuse the grid's cached markup, resolving currentColor for standalone images.
   const previewSvg = useMemo(() => serializeCustomizedSvg(baseSvgText, {
-    size, color: isColoredPack ? undefined : (color || themeInk),
-    stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
-  }), [baseSvgText, size, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+    size: inspectPx, color: isColoredPack ? undefined : (color || themeInk),
+    stroke: stroke * inspectPx / size, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+  }), [baseSvgText, size, inspectPx, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
   const previewSrc = useMemo(() => (previewSvg ? svgToDataUri(previewSvg) : stageImgUrl), [previewSvg, stageImgUrl])
   // The frame on screen is the last one that decoded for THIS icon. A new size,
   // rotation or colour decodes off-screen and swaps in, so the picture never
@@ -1624,8 +1668,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // size and paints nothing.
   const waitSrc = activeIcon?.cdn && !activeIcon.custom && (isColoredPack || !color) ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
   const stageWait = waitSrc
-    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
-    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
+    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
+    : <span className="icust-stage-img icust-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1642,7 +1686,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // an <img> that paints before that markup arrives, so these wait for it (their
   // buttons are disabled meanwhile) rather than send an empty string.
   const handleCopySvg = async () => {
-    if (!baseSvgText) return
+    if (!baseSvgText || exportBlocked) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1655,7 +1699,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   const handleCopyCode = async () => {
-    if (!baseSvgText) return
+    if (!baseSvgText || exportBlocked) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1670,7 +1714,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Every format goes through the same gate. `format` is a described format from
   // utils/iconDownload.js; the result tells the button what to show.
   const handleDownload = async (format) => {
-    if (!serializedOutput) return { status: 'none' }
+    if (!serializedOutput || exportBlocked) return { status: 'none' }
     if (!(await requireExportAccount('download this icon'))) return { status: 'cancelled' }
     const file = downloadFileName(activeIcon?.name, format)
     try {
@@ -1697,7 +1741,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // gated to login first — projects are account-scoped, so the per-project save
   // cap can't be enforced without one.
   const handleSave = () => {
-    if (!activeIcon || !baseSvgText) return
+    if (!activeIcon || !baseSvgText || exportBlocked) return
     if (!user) { promptSaveLogin(); return }
     setSavePickerOpen(true)
   }
@@ -1706,7 +1750,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // over-cap non-Pro save routes to checkout with no record built and the
   // Custom store never written.
   const handleSaveToProject = (projectId) => {
-    if (!activeIcon || !baseSvgText) return
+    if (!activeIcon || !baseSvgText || exportBlocked) return
     const existing = readCustomIcons()
     const used = existing.filter(r => r.projectId === projectId).length
     if (!isPro && used >= saveLimit) { setSavePickerOpen(false); openInNewTab('/plans'); return }
@@ -1761,6 +1805,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const handleReset = () => {
     const d = CUSTOMISER_DEFAULTS
     setSize(d.size)
+    setCustomOpen(false)
+    setLastCustom(null)
+    setSizeText(String(d.size))
+    setClampedTo(null)
     setColor(d.color)
     setStroke(d.stroke)
     writeStickyStroke(d.stroke)
@@ -1772,8 +1820,82 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setFlipV(d.flipV)
     markDirty()
     // The button hides once nothing differs, so focus goes to the first control.
-    document.getElementById('icust-size')?.focus()
+    requestAnimationFrame(() => railRef.current?.querySelector('[role="radio"][aria-checked="true"]')?.focus())
   }
+  const checkedSizeRadio = () => railRef.current?.querySelector('[role="radio"][aria-checked="true"]')
+
+  // ── The size rail ──
+  const railSizes = railPresets(narrowRail)
+  // Custom is chosen, or the size is one the rail has no cell for (20 on a narrow row).
+  const customShown = customOpen || !railSizes.includes(size)
+  const customValue = !railSizes.includes(size) ? size : lastCustom
+  const pickPreset = (n) => {
+    setSize(n); setCustomOpen(false); setSizeText(String(n)); setClampedTo(null); markDirty()
+  }
+  // A pointer press on Custom goes straight into the field (flushSync, so the field
+  // exists while the press is still the user gesture and a phone raises its keyboard).
+  // A keyboard press or an arrow key leaves focus on the radio; Tab goes in.
+  const pickCustom = (e) => {
+    const pointer = e.detail > 0
+    if (!customShown) {
+      const next = lastCustom ?? size
+      const open = () => { setCustomOpen(true); setSize(next); setSizeText(String(next)); setClampedTo(null); markDirty() }
+      if (pointer) flushSync(open); else open()
+    }
+    if (pointer) { sizeInputRef.current?.focus(); sizeInputRef.current?.select() }
+  }
+  const commitSize = (text, fromEnter) => {
+    const parsed = parseCustomSize(text)
+    if (!parsed) { setSizeText(String(size)); setClampedTo(null); return }
+    const { value, clamped } = parsed
+    setClampedTo(clamped ? value : null)
+    setSizeText(String(value))
+    setSize(value)
+    markDirty()
+    if (railSizes.includes(value)) {
+      setCustomOpen(false)
+      // The field is going away; Enter keeps the keyboard where the person is.
+      if (fromEnter) requestAnimationFrame(() => checkedSizeRadio()?.focus())
+    } else {
+      setCustomOpen(true)
+      setLastCustom(value)
+    }
+  }
+  const stepSize = (dir, big) => {
+    const base = parseCustomSize(sizeText)?.typed ?? size
+    const next = Math.min(CUSTOM_SIZE_MAX, Math.max(CUSTOM_SIZE_MIN, base + dir * (big ? 10 : 1)))
+    setSize(next); setSizeText(String(next)); setClampedTo(null); markDirty()
+    if (!isPresetSize(next)) setLastCustom(next)
+  }
+  const onSizeKey = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitSize(sizeText, true) }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepSize(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey) }
+    else if (e.key === 'Escape' && sizeText !== String(size)) {
+      // An uncommitted edit goes back; the popup stays open. With nothing to revert,
+      // Escape is left alone and closes the popup as everywhere else.
+      e.preventDefault(); e.stopPropagation()
+      setSizeText(String(size)); setClampedTo(null)
+    }
+  }
+  // Keep the field clear of the pinned foot, and of the keyboard where the visual
+  // viewport reports it.
+  const revealSizeField = useCallback(() => {
+    const row = sizeRowRef.current
+    const body = panelRef.current?.querySelector('.icust-body')
+    if (!row || !body) return
+    const foot = body.querySelector(':scope > .icust-foot')
+    const vv = window.visualViewport
+    const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
+    const over = row.getBoundingClientRect().bottom - floor
+    if (over > 0) body.scrollTop += over
+  }, [])
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv || !customShown) return undefined
+    const onResize = () => { if (document.activeElement === sizeInputRef.current) revealSizeField() }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [customShown, revealSizeField])
   // True while any control differs from what handleReset sets.
   const edited = size !== CUSTOMISER_DEFAULTS.size || color !== CUSTOMISER_DEFAULTS.color
     || stroke !== CUSTOMISER_DEFAULTS.stroke || absStroke !== CUSTOMISER_DEFAULTS.absStroke
@@ -1873,18 +1995,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <img
                       className="icust-stage-img"
                       src={shownSrc}
-                      width={size}
-                      height={size}
+                      width={inspectPx}
+                      height={inspectPx}
                       alt={activeIcon.name}
                       onLoad={brandKey ? onStageImgLoad : undefined}
                       style={imageError ? { visibility: 'hidden' } : undefined}
                     />
                   ) : imageError ? (
-                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
+                    <span className="icust-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
                   ) : stageWait}
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
+              <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
               <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
                 {GROUND_OPTS.map(g => (
                   <button
@@ -1932,20 +2055,81 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
 
             <div className="icust-controls">
-              <div className="icust-row">
-                <label htmlFor="icust-size">Size</label>
-                <SnapSlider
-                  id="icust-size"
-                  min={12}
-                  max={128}
-                  value={size}
-                  defaultValue={CUSTOMISER_DEFAULTS.size}
-                  snaps={[12, 16, 24, 32, 48, 64, 96, 128]}
-                  unit="px"
-                  inputMax={1024}
-                  ariaLabel="Icon size"
-                  onChange={(v) => { setSize(v); markDirty() }}
-                />
+              <div className="icust-size" ref={railRef}>
+                <div className="icust-size-head">
+                  <span className="icust-size-title" id="icust-size-label">Export size</span>
+                  <span className="icust-size-sub">shown at real pixels</span>
+                  {!isPro && <span className="icust-size-hint">Custom size is Pro</span>}
+                </div>
+                <div className="icust-size-rail" role="radiogroup" aria-labelledby="icust-size-label" onKeyDown={steerRadios}>
+                  {railSizes.map(n => {
+                    const on = !customShown && size === n
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={`${n} pixels`}
+                        tabIndex={on ? 0 : -1}
+                        className="icust-size-cell"
+                        data-s={n}
+                        onClick={() => pickPreset(n)}
+                      >
+                        <SizeArt markup={railArt[n]} />
+                        <span className="icust-size-num">{n}</span>
+                      </button>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={customShown}
+                    aria-label={customShown && customValue != null ? `Custom size, ${customValue} pixels` : 'Custom size'}
+                    tabIndex={customShown ? 0 : -1}
+                    className="icust-size-cell icust-size-cell--custom"
+                    onClick={pickCustom}
+                  >
+                    <span className="icust-size-word">Custom</span>
+                    {customShown && customValue != null && <span className="icust-size-num">{customValue}</span>}
+                  </button>
+                </div>
+                {customShown && (
+                  <div className="icust-size-custom" ref={sizeRowRef}>
+                    <label htmlFor="icust-size-input">Custom size</label>
+                    <span className="icust-size-field">
+                      <input
+                        id="icust-size-input"
+                        ref={sizeInputRef}
+                        className="icust-size-input"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        enterKeyHint="done"
+                        autoComplete="off"
+                        spellCheck={false}
+                        value={sizeText}
+                        aria-describedby={clampedTo ? 'icust-size-range icust-size-note' : 'icust-size-range'}
+                        onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
+                        onKeyDown={onSizeKey}
+                        onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
+                        onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
+                      />
+                      <span className="icust-size-px" aria-hidden="true">px</span>
+                    </span>
+                    <span className="icust-size-range" id="icust-size-range">From <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span></span>
+                    {clampedTo && (
+                      <p className="icust-size-note" id="icust-size-note">
+                        Sizes go from <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="icust-mono">{clampedTo}px</span>.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {exportBlocked && (
+                  <p className="icust-size-block" role="status">
+                    Custom sizes are Pro. Preview <span className="icust-mono">{size}px</span> here; copy, download and save need Pro.
+                  </p>
+                )}
               </div>
 
               <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
@@ -2101,7 +2285,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
             <div className="icust-code">
               <div className="icust-code-label">SVG</div>
-              <button type="button" className="icust-code-box" onClick={handleCopyCode} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
+              <button type="button" className="icust-code-box" onClick={handleCopyCode} disabled={!baseSvgText || exportBlocked} aria-busy={!baseSvgText && !loadErr}>
                 <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
                 <code>{serializedOutput}</code>
               </button>
@@ -2112,7 +2296,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 type="button"
                 className="lib-btn lib-btn--primary icust-copy"
                 onClick={handleCopySvg}
-                disabled={!baseSvgText}
+                disabled={!baseSvgText || exportBlocked}
                 aria-busy={!baseSvgText && !loadErr}
                 aria-label={copied === 'svg' ? undefined : 'Copy SVG'}
               >
@@ -2122,7 +2306,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <SplitDownload
                 format={dlFormat}
                 size={size}
-                disabled={!baseSvgText}
+                disabled={!baseSvgText || exportBlocked}
                 loading={!baseSvgText && !loadErr}
                 onPick={pickDownloadFormat}
                 onDownload={handleDownload}
@@ -2132,7 +2316,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 type="button"
                 className="lib-btn icust-save"
                 onClick={handleSave}
-                disabled={!baseSvgText}
+                disabled={!baseSvgText || exportBlocked}
                 aria-busy={!baseSvgText && !loadErr}
                 aria-label={saveLabel.full}
                 title={saveLabel.full}

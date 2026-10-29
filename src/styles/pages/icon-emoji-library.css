@@ -346,3 +346,72 @@
 
 /* The same face as the control labels beside it. */
 .iel-page .icust-value{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
+
+/* The size rail: the icon drawn at the five preset sizes, in real pixels. The drawings
+   are the control (a radiogroup), and each cell is as wide as the drawing it holds
+   (art + 12), so unequal things get unequal cells. Cells grow evenly into a wider
+   row. The 48 and Custom cells are the two that give way when the row is tight,
+   and never below their own minimum. Labels and captions are in the UI face; mono
+   is only for the literal sizes. */
+.iel-page .icust-size{display:flex;flex-direction:column;gap:8px}
+.iel-page .icust-size-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.iel-page .icust-size-title{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
+.iel-page .icust-size-sub{font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
+.iel-page .icust-size-hint{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--accent-mid)}
+.iel-page .icust-mono{font-family:var(--mono)}
+.iel-page .icust-size-rail{display:flex;gap:4px;min-width:0}
+.iel-page .icust-size-cell{
+  --art:16px;--cw:calc(var(--art) + 12px);--cmin:var(--cw);
+  flex:1 1 var(--cw);min-width:var(--cmin);height:80px;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:4px 0;
+  border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--t0);cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+.iel-page .icust-size-cell[data-s="16"]{--art:16px}
+.iel-page .icust-size-cell[data-s="20"]{--art:20px}
+.iel-page .icust-size-cell[data-s="24"]{--art:24px}
+.iel-page .icust-size-cell[data-s="32"]{--art:32px}
+.iel-page .icust-size-cell[data-s="48"]{--art:48px;--cmin:48px}
+.iel-page .icust-size-cell--custom{--cw:64px;--cmin:44px}
+.iel-page .icust-size-art{display:grid;place-items:center;flex:none;width:var(--art);height:48px;line-height:0}
+.iel-page .icust-size-cell--custom .icust-size-art{display:none}
+.iel-page .icust-size-art svg{display:block;flex:none;max-width:none;width:var(--art);height:var(--art);color:var(--t0)}
+.iel-page .icust-size-num{font-family:var(--mono);font-size:12px;line-height:16px;color:var(--t2);font-variant-numeric:tabular-nums}
+.iel-page .icust-size-word{font-family:var(--font);font-size:12px;line-height:16px;font-weight:560;color:var(--t1)}
+@media(hover:hover){.iel-page .icust-size-cell:hover{border-color:var(--bh)}}
+.iel-page .icust-size-cell[aria-checked="true"]{background:var(--accent-wash);border-color:var(--accent-border)}
+.iel-page .icust-size-cell[aria-checked="true"] .icust-size-num,
+.iel-page .icust-size-cell[aria-checked="true"] .icust-size-word{color:var(--t0)}
+.iel-page .icust-size-cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Touch: every cell is at least 44px wide, and 8px apart. */
+@media(pointer:coarse){
+  .iel-page .icust-size-rail{gap:8px}
+  .iel-page .icust-size-cell{--cw:max(44px,calc(var(--art) + 12px));--cmin:44px}
+  .iel-page .icust-size-cell[data-s="48"]{--cmin:48px}
+  .iel-page .icust-size-cell--custom{--cw:64px}
+}
+/* The custom row is the rail's last child, so it reads as part of the control. */
+.iel-page .icust-size-custom{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;scroll-margin-bottom:112px}
+.iel-page .icust-size-custom>label{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
+.iel-page .icust-size-field{position:relative;flex:0 0 auto;width:88px}
+.iel-page .icust-size-input{
+  display:block;width:100%;height:36px;box-sizing:border-box;margin:0;padding:0 28px 0 8px;
+  text-align:right;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;color:var(--t0);
+  background:var(--inp);border:1px solid var(--bh);border-radius:var(--radius);
+  transition:border-color 150ms var(--ease-out);
+}
+.iel-page .icust-size-input:focus,.iel-page .icust-size-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.iel-page .icust-size-px{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:12px;color:var(--t2);pointer-events:none}
+.iel-page .icust-size-range,.iel-page .icust-size-note{font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
+.iel-page .icust-size-note{flex:1 0 100%;margin:0}
+.iel-page .icust-size-block{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t1)}
+/* Touch and tablet: 44px tall, and 16px text so iOS does not zoom the page on focus. */
+@media(pointer:coarse),(max-width:768px){
+  .iel-page .icust-size-field{width:96px}
+  .iel-page .icust-size-input{height:44px;font-size:16px}
+}
+/* The caption sits bottom left of the stage, clear of the ground switch on the right. */
+.iel-page .icust-stage-cap{position:absolute;left:12px;bottom:12px;max-width:50%;margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
+.icust-stage--light .icust-stage-cap,.icust-stage--checker .icust-stage-cap{color:rgba(10,10,11,.6)}
+.icust-stage--dark .icust-stage-cap{color:rgba(244,244,245,.65)}
+@media(max-width:560px){.iel-page .icust-stage-cap{left:8px;bottom:8px}}

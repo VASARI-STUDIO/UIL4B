@@ -36,16 +36,16 @@ export const DEFAULT_VIEWBOX = 24
  * 0.5–8px covers hairline through heavy for the sizes the editor offers, and
  * `inputMax` lets a 128px icon be typed up to a genuinely heavy stroke.
  *
- * `default: 4` is deliberate. 4px is exactly what the old default (2 units at
- * size 48) already rendered, so this fix changes no icon's appearance — it only
- * makes the label true. A user who wants 2px now types 2 and gets 2px.
+ * `default: 2` is deliberate. The editor opens at size 24 (DEFAULT_EXPORT_SIZE), where
+ * 2px is 2 user units: the pack's own weight, and the same proportions the old
+ * default (2 units at size 48, 4px) drew. At 24 a 4px default would be twice as heavy.
  */
 export const STROKE_PX = Object.freeze({
   min: 0.5,
   max: 8,
   step: 0.25,
   snaps: Object.freeze([1, 2, 3, 4, 6]),
-  default: 4,
+  default: 2,
   inputMin: 0.25,
   inputMax: 64,
 })
@@ -54,9 +54,10 @@ export const STROKE_PX = Object.freeze({
 export const STROKE_UNIT_PX = 'px'
 
 /**
- * The size the editor opens at when nothing else seeds it. Used to recover the
- * pixel weight behind a legacy sticky preference, which was stored as a bare
- * user-unit number with no size beside it.
+ * The size the editor used to open at, kept for recovering the pixel weight behind
+ * a legacy sticky preference (a bare user-unit number with no size beside it) and
+ * for saved records that carry no size. The editor itself now opens at 24; see
+ * iconSize.js.
  */
 export const DEFAULT_ICON_SIZE = 48
 

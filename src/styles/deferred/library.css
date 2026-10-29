@@ -286,7 +286,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    attribute in the exported file. The Customizer's control is in pixels and JS
    converts it once (src/utils/iconStroke.js, strokeAttrForPx) for both the Stage
    and the export, so the preview cannot disagree with the download. The literal
-   2 below is the pre-paint fallback and equals the 4px default at size 48. ══ */
+   2 below is the pre-paint fallback and equals the 2px default at size 24. ══ */
 /* Rises without scaling, so the Stage measures the same size all the way through the entrance. */
 @keyframes icust-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
