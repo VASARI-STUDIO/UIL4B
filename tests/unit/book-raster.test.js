@@ -467,10 +467,10 @@ test('the gradient runs corner to corner at 135 degrees and up at 0', () => {
 
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
-test('the book row offers PDF or PNG (2K), and both are Pro', () => {
+test('the book row offers PDF, PNG (2K) or HTML, and all are Pro', () => {
   const formats = groupFormats('book')
-  assert.deepEqual(formats.map((f) => f.id), ['book', 'book-png'])
-  assert.deepEqual(formats.map((f) => f.option), ['PDF', 'PNG (2K)'])
+  assert.deepEqual(formats.map((f) => f.id), ['book', 'book-png', 'book-html'])
+  assert.deepEqual(formats.map((f) => f.option), ['PDF', 'PNG (2K)', 'HTML'])
   assert.ok(formats.every((f) => f.pro && f.live))
   assert.equal(isGroupPro('book'), true)
   assert.equal(assertFormatsCoherent(EXPORT_FORMATS), true)
