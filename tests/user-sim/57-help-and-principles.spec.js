@@ -16,7 +16,7 @@
 import { test, expect } from './base.js'
 import { expectRendered, go, signIn, watch } from './helpers.js'
 import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
-import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { EXPORT_FORMATS, documentFormats } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
 import { stepPx } from '../../src/utils/fluidType.js'
@@ -32,7 +32,8 @@ const SOON = CREATE_GROUPS.flatMap((g) => (
 )).length
 
 const FREE_FORMATS = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
-const PRO_FORMATS = EXPORT_FORMATS.filter((f) => f.live && f.pro)
+// Documents, not files: the book as PNG is another file of the book and has no name of its own on these pages.
+const PRO_FORMATS = documentFormats().filter((f) => f.live && f.pro)
 const UNBUILT_FORMATS = EXPORT_FORMATS.filter((f) => !f.live)
 
 /** `#rrggbb` → the `rgb(r, g, b)` string getComputedStyle hands back. */

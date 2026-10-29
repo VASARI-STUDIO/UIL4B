@@ -52,7 +52,10 @@ export const EXPORT_FORMATS = Object.freeze([
   // landscape PRESENTATION a brand is argued from. See the long note at the top
   // of utils/brandGuidelines.js for why the founder's reference material
   // (UI Examples/Brand kit examples) could not be served by extending the book.
-  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'An A4 book of your system: cover, contents, colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', action: 'Export book' }),
+  Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'An A4 book of your system: cover, contents, colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', option: 'PDF', action: 'Export book (PDF)' }),
+  // The same book as page images. Not a third Pro document: `variantOf` marks it as another file of the book,
+  // so the plan lines count and name the book once. Drawn in the browser (utils/bookRaster.js), one layout.
+  Object.freeze({ id: 'book-png', name: 'Design system book (PNG, 2K)', desc: 'The same book as 2K page images, 1448 x 2048 px each, in one zip: cover, contents, colour specimens, the contrast matrix, type specimens and every token. For screens, decks and review.', live: true, pro: true, variantOf: 'book', group: 'book', option: 'PNG (2K)', action: 'Export book (PNG)' }),
   Object.freeze({ id: 'guidelines', name: 'Brand guidelines (presentation)', desc: 'A 16:9 landscape deck — cover, numbered sections, named swatches, alphabet grids, and your own logo on every brand ground with its clear-space rule. Opens ready to save as PDF.', live: true, pro: true, logo: true, group: 'guidelines', action: 'Export guidelines' }),
   Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true, group: 'guide', option: 'HTML', action: 'Export style guide (HTML)' }),
   Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true, group: 'guide', option: 'Markdown', action: 'Export style guide (Markdown)' }),
@@ -77,7 +80,7 @@ export const EXPORT_GROUPS = Object.freeze([
   Object.freeze({ id: 'kit', name: 'UI kit', desc: 'One HTML file with your palette, type and components. Opens offline.' }),
   Object.freeze({ id: 'guide', name: 'Style guide', desc: 'A printable A4 guide to your palette and type.' }),
   Object.freeze({ id: 'tokens', name: 'Design tokens', desc: 'Your palette, tints and type as code.' }),
-  Object.freeze({ id: 'book', name: 'Design system book', desc: 'An A4 book of your system, ready to save as PDF.', preview: 'book' }),
+  Object.freeze({ id: 'book', name: 'Design system book', desc: 'An A4 book of your system, as a PDF or as 2K page images.', preview: 'book' }),
   Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'Your logo, colour and type as 16:9 slides.', preview: 'guidelines' }),
 ])
 
@@ -109,10 +112,16 @@ export const styleGuideFormats = () => freeFormats().filter((f) => !f.kit)
 // Built, and gated. Everything a Pro subscription actually adds to the export
 // offer — if this is ever empty, Pro sells nothing on export and the pricing
 // page must stop saying it does.
-export const proOnlyFormats = () => EXPORT_FORMATS.filter((f) => f.live && f.pro)
+export const proOnlyFormats = () => documentFormats().filter((f) => f.live && f.pro)
+
+// A format that is another file of a document already in the list (the book as PNG
+// beside the book as PDF) carries `variantOf`. The plan lines and the pricing page
+// count and name documents, so the Pro and live lists below leave variants out;
+// the panel reads EXPORT_FORMATS directly and offers every file.
+export const documentFormats = () => EXPORT_FORMATS.filter((f) => !f.variantOf)
 
 // Built, on either plan.
-export const liveFormats = () => EXPORT_FORMATS.filter((f) => f.live)
+export const liveFormats = () => documentFormats().filter((f) => f.live)
 
 // NOT built, for anybody. These are the ones a pricing page is tempted to sell
 // and must not.
@@ -129,6 +138,8 @@ export function assertFormatsCoherent(formats = EXPORT_FORMATS) {
   }
   const ids = formats.map((f) => f.id)
   if (new Set(ids).size !== ids.length) throw new Error('duplicate export format id')
+  const stray = formats.filter((f) => f.variantOf && !formats.some((x) => x.id === f.variantOf && x.live && x.group === f.group))
+  if (stray.length) throw new Error(`export formats ${stray.map((f) => f.id).join(', ')} name a variantOf that is not a live format in their row`)
   return true
 }
 

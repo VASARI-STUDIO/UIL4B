@@ -113,13 +113,37 @@ test.describe('the five-row export panel', () => {
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     const panel = await open(page)
-    for (const f of liveFormats()) {
+    // Every built file, the book's PNG variant included: liveFormats() names documents only.
+    const files = EXPORT_FORMATS.filter((f) => f.live)
+    for (const f of files) {
       await chooseFormat(panel, f.id)
       const primary = panel.locator('.exp-foot .btn-accent')
       await expect(primary).toHaveText(f.pro ? 'Unlock with Pro' : actionLabel(f.id))
       await expect(primary).toBeEnabled()
     }
-    expect(EXPORT_FORMATS.filter((f) => f.live).length).toBe(liveFormats().length)
+    // Documents plus variants (another file of a document) are every file walked.
+    expect(files.length).toBe(liveFormats().length + EXPORT_FORMATS.filter((f) => f.live && f.variantOf).length)
+  })
+
+  test('Free: the PNG (2K) pill on the book row is selected and the button stays the Pro gate', async ({ page }) => {
+    watch(page, 'a free account choosing the book as PNG')
+    await signIn(page, { plan: 'free' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await chooseFormat(panel, 'book-png')
+    await expect(panel.getByRole('radiogroup', { name: 'Design system book file type' }).getByRole('radio', { name: 'PNG (2K)', exact: true })).toBeChecked()
+    await expect(panel.locator('.exp-foot .btn-accent')).toHaveText('Unlock with Pro')
+  })
+
+  test('Pro: the PNG (2K) pill changes the button to the PNG label, and PDF changes it back (nothing is exported)', async ({ page }) => {
+    watch(page, 'a Pro account choosing the book as PNG')
+    await signIn(page, { plan: 'pro' })
+    await go(page, WORKED_BOARD)
+    const panel = await open(page)
+    await chooseFormat(panel, 'book-png')
+    await expect(panel.locator('.exp-foot .btn-accent')).toHaveText(actionLabel('book-png'))
+    await chooseFormat(panel, 'book')
+    await expect(panel.locator('.exp-foot .btn-accent')).toHaveText(actionLabel('book'))
   })
 
   test('Free: the book shows a lock, Pro and three blurred thumbnails, and unlocks to /plans', async ({ page }) => {
@@ -208,7 +232,7 @@ test.describe('the five-row export panel', () => {
     await expect(panel.locator('.exp-fmt-pro, .exp-pro-lock')).toHaveCount(0)
     await rowFor(panel, 'Design system book').click()
     await expect(panel.locator('.exp-thumb[data-blurred="false"]')).toHaveCount(3)
-    await expect(panel.locator('.exp-foot .btn-accent')).toHaveText('Export book')
+    await expect(panel.locator('.exp-foot .btn-accent')).toHaveText(actionLabel('book'))
   })
 
   test('no eyebrow and no em dash anywhere in the panel', async ({ page }) => {
@@ -510,11 +534,14 @@ test.describe('the preview strip', () => {
     await expect(strip).toHaveCount(1)
     await expect(strip).toHaveAttribute('data-state', 'ready')
 
-    // The book row now has a template picker between it and the pictures: one Tab stop,
-    // on the chosen tile (spec 156 pins that), so the strip is the second stop.
+    // Between the book row and its pictures sit the file-type switch (PDF or PNG) and the
+    // template picker, one Tab stop each on the checked option (spec 156 pins the picker),
+    // so the strip is the third stop.
     await rowFor(panel, 'Design system book').focus()
     await page.keyboard.press('Tab')
-    await expect(panel.getByRole('radiogroup', { name: 'Template' }).getByRole('radio', { checked: true }), 'the first stop after the row is the chosen template').toBeFocused()
+    await expect(panel.getByRole('radiogroup', { name: 'Design system book file type' }).getByRole('radio', { checked: true }), 'the first stop after the row is the chosen file type').toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(panel.getByRole('radiogroup', { name: 'Template' }).getByRole('radio', { checked: true }), 'the next stop is the chosen template').toBeFocused()
     await page.keyboard.press('Tab')
     await expect(strip, 'the next Tab stop after the template is the strip').toBeFocused()
     const ring = await strip.evaluate((el) => {

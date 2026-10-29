@@ -9,7 +9,7 @@
   "installCommand": "npm ci",
   "functions": {
     "api/ai.js": {
-      "includeFiles": "{src/{config/export*,data/{designDefaults,learnIndex,routeMetaMap,toolTree},utils/{book*,brand{G,L}*,colors,designS*,exportTemplates/{*,*/*},meshF*,palette[ANR]*,projectT*,routeMeta,styleGuideE*,tintL*}}.js,public/fonts/{b,h,i,l,mar,s}*-latin.woff2}"
+      "includeFiles": "{src/{config/export*,data/{designDefaults,learnIndex,routeMetaMap,toolTree},utils/{book{M,T}*,brand{G,L}*,colors,designS*,exportTemplates/{*,*/*},meshF*,palette[ANR]*,projectT*,routeMeta,styleGuideE*,tintL*}}.js,public/fonts/{b,h,i,l,mar,s}*-latin.woff2}"
     }
   },
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src api public index.html vite.config.js vercel.json package.json package-lock.json scripts",
