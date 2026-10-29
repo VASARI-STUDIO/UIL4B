@@ -129,7 +129,8 @@ test.describe('the icon weight segment', () => {
     await expect(bold).toHaveAccessibleName(/drawn by Phosphor only/)
     // Until Lucide's own listing lands the grid still shows the "All packs" cells, so a read
     // taken now is the old view and differs from the Lucide list that replaces it.
-    await expect(page.locator('.ig-status').filter({ hasText: /· Lucide · [\d,]+ icons$/ })).toBeVisible({ timeout: 15000 })
+    // Signed out the count is not drawn; the single-pack view is the one with no pack name on its cells.
+    await expect(page.locator('.ig .ic .ic-pack')).toHaveCount(0, { timeout: 15000 })
     const before = await cellNames(page)
     await bold.click({ force: true })
     await expect(seg.getByRole('button', { name: 'Regular', exact: true })).toHaveAttribute('aria-pressed', 'true')

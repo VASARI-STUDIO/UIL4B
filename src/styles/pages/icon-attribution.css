@@ -17,7 +17,7 @@
  * ── Design ──────────────────────────────────────────────────────────────────
  *
  * A caption, not a banner. It sits under the grid in the same caption ink as
- * `.ig-status`, reads as one wrapped sentence of names, and never draws a box:
+ * the page's other captions, reads as one wrapped sentence of names, and never draws a box:
  * an attribution that announces itself is an attribution people learn to skip,
  * and the founder's anti-slop pass deleted the last element on this surface
  * that shouted at its own content.
@@ -33,16 +33,24 @@
  */
 
 .ig-credit {
-  padding: 4px 0 24px;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 24px;
+  margin-top: 56px;
+  padding: 16px 0 40px;
+  border-top: 1px solid var(--border);
   font-size: var(--fs-caption);
   line-height: 2;
-  color: var(--t3);
+  color: var(--t2);
 }
 
+.ig-credit p { margin: 0; }
+.ig-credit-label { flex: 0 0 auto; font-weight: 560; color: var(--t1); }
+
 .ig-credit-packs {
-  margin: 0 auto;
-  max-width: 96ch;
+  flex: 1 1 320px;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -60,26 +68,27 @@
   min-height: 24px;
   color: var(--t1);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
   border-radius: var(--radius-xs);
 }
-.ig-credit a:hover { color: var(--t0); border-bottom-color: var(--bh); }
+.ig-credit a:hover { color: var(--t0); text-decoration: underline; text-underline-offset: 2px; }
 .ig-credit a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* The licence sits in the dimmest ink on the line: it qualifies the name, and
    a licence id set at the same weight as the set's name reads as a second
    product. */
-.ig-credit-lic { font-family: var(--mono); font-size: .92em; color: var(--t3); }
+.ig-credit-lic { color: var(--t2); }
 
-.ig-credit-more { margin: 0; }
+.ig-credit-more { flex: 0 0 auto; }
 /* `--accent-mid`, not `--accent-strong` (a per-theme literal a premium theme's
    accent would strand): 4.79:1 on the light page, 8.9:1 on the dark one.
    The link is alone in its paragraph, so on a coarse pointer it takes the
    44px touch floor the rest of the library holds — measured 27px before. */
 .ig-credit-more a { color: var(--accent-mid); font-weight: 600; }
-.ig-credit-more a:hover { color: var(--accent-mid); border-bottom-color: currentColor; }
+.ig-credit-more a:hover { color: var(--accent-mid); }
 @media (pointer: coarse) { .ig-credit-more a { min-height: 44px; } }
 
-@media (max-width: 600px) {
-  .ig-credit { text-align: left; padding-bottom: 20px; }
+@media (max-width: 767px) {
+  .ig-credit { flex-direction: column; gap: 4px; }
+  /* In a column the 320px basis would become a height. */
+  .ig-credit-packs { flex: 0 1 auto; }
 }

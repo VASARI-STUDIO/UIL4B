@@ -83,7 +83,7 @@ export function pickTeaseIcons({ icons, shownNames = [], count, canSee } = {}) {
   return out
 }
 
-export const TEASE_ROWS = 2
+export const TEASE_ROWS = 1
 
 /** How many cells to draw for `cols` live grid columns. */
 export function teaseCellCount(cols) {

@@ -145,12 +145,13 @@ test.describe('/create/icons · the masthead pill says what the grid is showing'
     const sets = setsFor('anon')
     expect(sets, 'a signed-out visitor is entitled to no packs at all, so this would measure nothing').toBeGreaterThan(0)
     await expect(
-      page.locator('.ig-status'),
-      'the masthead never went back to stating the catalogue it is browsing',
-    ).toContainText(`${sets} sets`, { timeout: 20000 })
+      page.locator('.ig-end[data-gate="anon"] .ig-end-p'),
+      'the gate never went back to naming the sets this visitor is browsing',
+    ).toContainText(`from ${sets} outline sets`, { timeout: 20000 })
     // …and it is stating a POPULATED grid, not an empty one: the count is what
     // says the browse actually re-ran rather than the line merely re-rendering.
-    await expect(page.locator('.ig-status')).toContainText(/Showing [\d,]+ of [\d,]+/)
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    await expect(page.locator('.ig-status')).toHaveCount(0)
     await expect(page.locator('.lib-net')).toHaveText('Live library connected')
     await expect(page.locator('.lib-net')).toHaveClass(/is-online/)
     await ctx.close()

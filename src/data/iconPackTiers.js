@@ -258,27 +258,18 @@ export function visiblePacks(packs, tier) {
   return packs.filter((p) => canSeePack(p, tier))
 }
 
-/* ── COPY ───────────────────────────────────────────────────────────────────
- *
- * FOUNDER: THESE SIX SENTENCES ARE PLACEHOLDERS AND THEY ARE YOURS TO REWRITE.
- * They live here, beside the table, so changing what a wall says is the same
- * kind of one-file edit as changing who sees a pack — no component code.
- *
- * They were written to state a FACT rather than make a pitch: what the rule is,
- * and what is on the other side of it. Nothing claims a benefit, nothing
- * invents urgency, and no count is hard-coded — every number is passed in from
- * the live table. The two action labels are the app's existing words ("Log in"
- * is the nav trigger's own label; "See what Pro includes" is what the palette
- * and prompt libraries already say). */
+/* ── COPY ─────────────────────────────────────────────────────────────────
+ * What each gate says, beside the table so a wording change is a one-file edit.
+ * Every number is passed in from the live table, never typed. */
 export const ICON_GATE_COPY = {
   // The band at the end of the grid (IconEndBand). `anon` sits under the capped
   // signed-out grid; `free` sits at the end of a signed-in free viewer's
   // results. Counts are passed in, never typed.
   end: {
     anon: {
-      heading: 'Log in to keep browsing.',
-      // `cap` is ANON_ICON_CAP; `n` is how many packs an account adds.
-      body: (cap, n) => `Signed out, you see the first ${cap} icons. A free account lifts that cap and adds ${n.toLocaleString()} more ${n === 1 ? 'pack' : 'packs'}.`,
+      heading: 'Log in to browse the full sets.',
+      // `shown` is the icons on screen, `sets` the outline sets they come from, `n` the sets an account adds.
+      body: (shown, sets, n) => `Signed out, you see ${shown.toLocaleString()} icons from ${sets} outline sets. A free account opens every icon in them and adds ${n.toLocaleString()} more ${n === 1 ? 'set' : 'sets'}. Copying needs no account.`,
       action: 'Log in',
       secondary: 'See the plans',
       // The hover chip on a blurred icon.
