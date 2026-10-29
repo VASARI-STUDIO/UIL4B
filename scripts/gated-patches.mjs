@@ -131,6 +131,7 @@ const ANALYTICS_PATCH = 'docs/design/analytics-counters-rules.patch'
 const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
 const PROFILE_ROUTE_PATCH = 'docs/design/profile-text-verify-admin.patch'
 const PAYLOAD_PATCH = 'docs/design/submission-payload-rules.patch'
+const UPLOAD_PATCH = 'docs/design/upload-limits-rules.patch'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -371,6 +372,26 @@ export const GATED_PATCHES = [
         detect: (text) => lf(text).includes('function payloadElementsOk()'),
         apply: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx) },
         check: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'upload-limits',
+    title: 'Media uploads limited',
+    source: 'docs/design/upload-limits-rules.patch',
+    grants:
+      'only a signed-in account with a verified email can upload community media, each file '
+      + 'up to 10 MiB, under ten fixed names per type (webp, png, jpg, gif, mp4, webm) so an '
+      + 'account holds at most 60 files, and an account can delete its own files. Reviewers can '
+      + 'still read every file. SVG and QuickTime uploads are no longer accepted',
+    files: ['storage.rules'],
+    parts: [
+      {
+        name: 'verified, 10 MiB, fixed slot names, owner delete',
+        file: 'storage.rules',
+        detect: (text) => lf(text).includes('function slotAndType(name, mime)'),
+        apply: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx, { check: true }) },
       },
     ],
   },

@@ -65,6 +65,7 @@ const EXPECTED_IDS = [
   'analytics-counters',
   'profile-types',
   'submission-payload',
+  'upload-limits',
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -103,7 +104,8 @@ test('the applier reaches every file the four are meant to change', () => {
   assert.ok(TARGET_FILES.includes('src/contexts/AuthContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
-  assert.equal(TARGET_FILES.length, 5, 'the applier has grown a target nobody reviewed')
+  assert.ok(TARGET_FILES.includes('storage.rules'))
+  assert.equal(TARGET_FILES.length, 6,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -244,6 +246,25 @@ test('the four rules-audit fixes (M1-M4) each land their rule, and the route hal
   assert.doesNotMatch(rules, /s\[12\]/)
   assert.match(rules, /p\.colors\.join\(''\)\.size\(\) <= 1024/)
   assert.match(rules, /&& submissionPayloadOk\(\)\s*&& payloadElementsOk\(\)/)
+})
+
+test('the upload limits land in storage.rules, and reviewers keep read and gain nothing else', async () => {
+  // Written out against the planned text for the same reason as the M1-M4 test:
+  // a detector that had drifted to something trivially true would satisfy the
+  // planner. Each line is one the upload-limits patch adds or keeps.
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const storage = lf(plan.after.get('storage.rules'))
+
+  assert.match(storage, /match \/community-media\/\{uid\}\/\{name\} \{/, 'writes are no longer one level below the uid folder')
+  assert.doesNotMatch(storage, /allow (create|write|update)[^;]*allPaths/, 'the ** wildcard is back on a write rule')
+  assert.match(storage, /request\.auth\.token\.email_verified == true/)
+  assert.match(storage, /request\.resource\.size <= 10 \* 1024 \* 1024/)
+  assert.match(storage, /slotAndType\(name, request\.resource\.contentType\)/)
+  assert.match(storage, /allow delete: if request\.auth != null && request\.auth\.uid == uid;/)
+  // Reviewers still read every file, and still cannot write or delete.
+  assert.match(storage, /match \/community-media\/\{uid\}\/\{allPaths=\*\*\} \{\s*allow read: if isReviewer\(\)/)
+  assert.doesNotMatch(storage, /allow (write|create|update|delete)[^;]*isReviewer/, 'a reviewer can write or delete media')
 })
 
 test('nothing the four grant is taken away from the file they land in', async () => {
