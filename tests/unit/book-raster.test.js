@@ -315,6 +315,29 @@ test('wrapText breaks on words, splits a word wider than a line, and cuts with a
   assert.deepEqual(wrapText('', 100, font), [])
 })
 
+test('a gradient with 30 stops lists what fits, says how many more, and keeps the code box on the page', () => {
+  const stopsOf = (n) => manyColours(n).map((color, i) => ({ color, position: Math.round((i * 100) / Math.max(1, n - 1)) }))
+  const gradientPage = (n) => build({ ...DESIGN, gradient: { angle: 135, type: 'Linear', stops: stopsOf(n) } }).pages.find((p) => p.kind === 'gradient')
+  const listedOn = (page) => texts(page).filter((t) => /^Stop \d+$/.test(t)).length
+
+  const small = gradientPage(5)
+  assert.equal(listedOn(small), 5)
+  assert.ok(!texts(small).some((t) => /more stop/.test(t)), 'a short list should not say there are more')
+
+  const long = gradientPage(30)
+  inside({ pages: [long] })
+  const listed = listedOn(long)
+  assert.ok(listed >= 6 && listed < 30, `${listed} stops listed`)
+  assert.ok(texts(long).includes(`+${30 - listed} more stops`), 'the page does not say how many stops are left out')
+  const box = long.ops.filter((o) => o.op === 'rect' && o.w === 620 && o.radius === 3).at(-1)
+  assert.ok(box.y + box.h <= 944, `the code box ends at ${box.y + box.h}`)
+  const lastRow = Math.max(...long.ops.filter((o) => o.op === 'text' && /^Stop \d+$/.test(o.text)).map((o) => o.y))
+  assert.ok(lastRow < box.y, 'the stop list runs into the code box')
+  // Every stop is still in the code.
+  const code = long.ops.filter((o) => o.op === 'text' && o.y > box.y).map((o) => o.text).join(' ')
+  assert.equal((code.match(/#[0-9A-F]{6} \d+%/g) || []).length, 30)
+})
+
 test('the gradient runs corner to corner at 135 degrees and up at 0', () => {
   const diag = gradientLine({ x: 0, y: 0, w: 100, h: 100, angle: 135 })
   assert.ok(diag.x0 < diag.x1 && diag.y0 < diag.y1, 'a 135deg gradient should run down and right')

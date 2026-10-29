@@ -719,6 +719,9 @@ function matrixOps(c, page) {
   return ops
 }
 
+const GRADIENT_ROW_H = 30
+const GRADIENT_CODE_GAP = 28
+
 function gradientOps(c, page) {
   const { d } = c
   const g = d.gradient
@@ -734,19 +737,30 @@ function gradientOps(c, page) {
   ;['Stop', 'Colour', 'Position'].forEach((h, i) => ops.push(caps(h, colX[i], y, c.muted, { px: 8 }, c)))
   y += 10
   ops.push(hair(MARGIN, y, RIGHT, c.ink))
-  g.stops.forEach((s, i) => {
+  // The code box is reserved first, then as many stop rows as the rest of the page
+  // holds. Past that the list ends in "+N more stops"; the CSS below still carries
+  // every one of them, so nothing is lost, only not listed.
+  const code = wrapText(`background: ${css};`, CONTENT_W - 32, mono(400, 10), c.measure, { maxLines: 12 })
+  const boxH = code.length * 15 + 28
+  const fits = Math.max(0, Math.floor((BOTTOM - y - GRADIENT_CODE_GAP - boxH) / GRADIENT_ROW_H))
+  const listed = g.stops.length <= fits ? g.stops.length : Math.max(0, fits - 1)
+  g.stops.slice(0, listed).forEach((s, i) => {
     const mid = y + 17
     ops.push(rect(colX[0], mid - 9, 12, 12, s.color, 6))
     if (contrast(s.color, c.paper) < NEAR_PAPER) ops.push(outline(colX[0], mid - 9, 12, 12, c.edge, 6))
     ops.push(text(`Stop ${i + 1}`, colX[0] + 22, mid, face(600, 11, d.body), c.ink))
     ops.push(text(s.color, colX[1], mid, mono(500, 10.5), c.ink))
     ops.push(text(`${s.position}%`, colX[2], mid, mono(500, 10.5), c.ink))
-    y += 30
+    y += GRADIENT_ROW_H
     ops.push(hair(MARGIN, y, RIGHT, c.rule))
   })
-  y += 28
-  const code = wrapText(`background: ${css};`, CONTENT_W - 32, mono(400, 10), c.measure)
-  const boxH = code.length * 15 + 28
+  if (listed < g.stops.length) {
+    const more = g.stops.length - listed
+    ops.push(text(`+${more} more ${more === 1 ? 'stop' : 'stops'}`, MARGIN, y + 19, face(500, 10.5, d.body), c.muted))
+    y += GRADIENT_ROW_H
+    ops.push(hair(MARGIN, y, RIGHT, c.rule))
+  }
+  y += GRADIENT_CODE_GAP
   ops.push(rect(MARGIN, y, CONTENT_W, boxH, mixHex(c.ink, c.paper, 0.05), 3))
   code.forEach((line, i) => ops.push(text(line, MARGIN + 16, y + 24 + i * 15, mono(400, 10), c.ink)))
   return ops
