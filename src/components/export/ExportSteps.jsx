@@ -119,7 +119,6 @@ function Preview({ cat, file, name, isPro, checking, design, chosen }) {
   }
   return (
     <div className="xd-prev">
-      {kind === 'code' && <p className="xd-preview-l">{file === 'json' ? 'First lines of your token file' : 'First lines of your stylesheet'}</p>}
       <ExportFreePreview kind={kind} file={file} watermark={!isPro} />
     </div>
   )

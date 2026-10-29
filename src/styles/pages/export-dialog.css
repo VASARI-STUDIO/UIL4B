@@ -91,7 +91,6 @@
 .xd-lock > span:last-child{padding:var(--s-1) var(--s-3);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .xd-lock .xd-pro{color:var(--t0)}
 .xd-prev{display:flex;flex-direction:column;gap:var(--s-2)}
-.xd-preview-l{margin:0;font-size:13px;font-weight:600;color:var(--t1)}
 
 /* The dock. */
 .xd-dock{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);min-height:72px;padding:var(--s-3) var(--s-6);background:var(--card);border-top:1px solid var(--border)}
