@@ -11,6 +11,7 @@ import { readIdentity, IDENTITY_NAME_MAX, IDENTITY_DESCRIPTION_MAX } from '../..
 import { parseGoogleFontCss, loadKitFonts, licenseUrls, googleCssUrl, LICENSE_SOURCE_COMMIT } from '../../src/utils/kitFonts.js'
 import { EXPORT_FORMATS, freeFormats, styleGuideFormats } from '../../src/config/exportFormats.js'
 import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
+import { EXPORT_TYPES } from '../../src/config/exportV3.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const TEMPLATE = read('src/templates/kit/studio.html')
@@ -220,19 +221,21 @@ test('user-supplied text renders inert', () => {
 test('the export panel offers the kit as a free format, and the plan lines say so', () => {
   const kit = EXPORT_FORMATS.find((f) => f.id === 'kit')
   assert.ok(kit && kit.live && !kit.pro, 'the UI kit must be built and free')
-  assert.equal(EXPORT_FORMATS[0].id, 'kit', 'the kit is the first format the panel offers')
+  assert.equal(EXPORT_FORMATS[0].id, 'kit', 'the kit is the first format in the shared table')
   assert.ok(freeFormats().includes(kit))
   assert.ok(!styleGuideFormats().includes(kit))
   assert.ok(FREE_POINTS.some((l) => l.startsWith('The UI kit')))
   assert.ok(PRO_POINTS.some((l) => /UI kit with no “Made with UIL4B” line/.test(l)))
-  const panel = read('src/components/ExportPanel.jsx')
-  assert.match(panel, /useState\('kit'\)/, 'the kit is the panel\'s default format')
+  // The dialog gives the kit its own rail row, a free one with one file.
+  const row = EXPORT_TYPES.find((t) => t.id === 'kit')
+  assert.deepEqual(row?.categories.map((c) => [c.id, c.pro, c.files]), [['kit', false, ['kit']]], 'the kit is not a free row of its own')
+  const panel = read('src/hooks/useExportRunner.js')
   assert.match(panel, /let proNow = isPro\b/, 'the export starts from the live entitlement')
   assert.match(panel, /proNow = live\.current\.isPro/, 'an account that signed in at the gate is re-read before building')
   assert.match(panel, /tier: proNow \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
   // The kit's identity comes from the working design inside the renderer. The
   // design has no `name`, so passing one from here personalised nothing.
-  const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('download(blob, filename)'))
+  const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('savedFile = download(blob, filename)'))
   assert.ok(call.length > 0, 'the kit call is no longer found — this assertion has gone blind')
   assert.doesNotMatch(call, /design\?\.name|projectName/, 'the kit is handed a name the working design does not hold')
 })

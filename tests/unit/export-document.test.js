@@ -434,7 +434,8 @@ function reachableFrom(entry) {
 test('neither Pro generator is reachable from the app entry, so neither ships to the browser', () => {
   const reach = reachableFrom('src/main.jsx')
   assert.ok(reach.size > 200, `the import walk found only ${reach.size} files, so it has gone blind`)
-  assert.ok(reach.has(path.resolve('src/components/ExportPanel.jsx')), 'the walk no longer reaches the export panel')
+  assert.ok(reach.has(path.resolve('src/components/export/ExportDialog.jsx')), 'the walk no longer reaches the export dialog')
+  assert.ok(reach.has(path.resolve('src/hooks/useExportRunner.js')), 'the walk no longer reaches the export engine')
   for (const g of GENERATORS) {
     assert.ok(fs.existsSync(g), `${g} moved; update this test`)
     assert.ok(!reach.has(g), `${path.basename(g)} is in the client bundle again: anyone can call it and skip the Pro check`)

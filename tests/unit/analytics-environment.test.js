@@ -121,16 +121,20 @@ test('activation fires only on real, completed work', () => {
   // completed piece of work either.
   const project = read('src/contexts/ProjectContext.jsx')
   assert.match(project, /if \(!opts\.blank\) \{/, 'a blank shell must not count as activation')
-  const exportPanel = read('src/components/ExportPanel.jsx')
-  const run = /const runExport = async[\s\S]*?\n {2}\}/.exec(exportPanel)?.[0] || ''
-  assert.ok(run.indexOf('trackActivation') < run.indexOf('} catch'),
-    'activation must fire on the success path, never in the catch')
+  // The export engine (useExportRunner) builds the file; the success path is the
+  // text before the `catch (err)` that reports a failure.
+  const runner = read('src/hooks/useExportRunner.js')
+  const run = /const runExport = async[\s\S]*?\n {2}\}/.exec(runner)?.[0] || ''
+  const [success, failure] = run.split('} catch (err)')
+  assert.ok(failure !== undefined, 'runExport must still catch a failed export')
+  assert.ok(success.includes('trackActivation('), 'activation must fire on the success path')
+  assert.ok(!failure.includes('trackActivation'), 'activation must never fire in the catch')
 })
 
 test('analytics can never break the thing it is measuring', () => {
   for (const [file, fn] of [
     ['src/contexts/ProjectContext.jsx', 'trackActivation'],
-    ['src/components/ExportPanel.jsx', 'trackActivation'],
+    ['src/hooks/useExportRunner.js', 'trackActivation'],
     ['src/contexts/ProModalContext.jsx', 'trackUpgradeGate'],
   ]) {
     const src = read(file)

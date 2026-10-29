@@ -263,12 +263,12 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
 /* ── the export gate: sign-in is no longer "only" for saving ───────────────── */
 
 test('/info stops calling sign-in optional while taking a file away needs an account', () => {
-  const panel = stripComments(read('src/components/ExportPanel.jsx'))
-  // Condition and positive control in one: the gate exists and the panel
-  // uses it (e2309608). Remove the gate and the old wording is true again,
+  const runner = stripComments(read('src/hooks/useExportRunner.js'))
+  // Condition and positive control in one: the gate exists and the export
+  // engine uses it (e2309608). Remove the gate and the old wording is true again,
   // and this check should go with it.
-  assert.ok(panel.includes('useExportGate'),
-    'ExportPanel.jsx no longer uses useExportGate — file exports are ungated again, so retire this test')
+  assert.ok(runner.includes('useExportGate') && /await requireExportAccount\(/.test(runner),
+    'useExportRunner.js no longer uses useExportGate — file exports are ungated again, so retire this test')
   for (const phrase of ['only if you want saved projects', 'is optional']) {
     assert.ok(!INFO.includes(phrase),
       `/info says sign-in "${phrase}" again, and taking a file away — the export panel, the icon `
