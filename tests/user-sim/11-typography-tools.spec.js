@@ -1253,12 +1253,10 @@ test.describe('the font picker is browsable', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await dialog.getByLabel('Search font families').fill('Lora')
-    // The info button lives in LibraryCard's actions slot, which is real DOM at
-    // all times but revealed on hover and focus-within — so the card is hovered
-    // first, exactly as a pointer user reaches it.
+    // The info button is always painted in the card's foot (188 pins that), so
+    // it is reached without hovering the card first.
     const card = dialog.locator('.fbd-card', { hasText: 'Lora' }).first()
     await expect(card).toBeVisible()
-    await card.hover()
     await dialog.getByRole('button', { name: /^About Lora/ }).first().click()
 
     const tabs = await dialog.locator('[role="tab"]').allTextContents()

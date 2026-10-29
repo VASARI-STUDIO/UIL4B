@@ -7,7 +7,7 @@ import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from './FontDossier'
-import { filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
+import { FONT_CATEGORIES, filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 
 // Browse the catalogue and pick a family by LOOKING at it.
@@ -31,18 +31,16 @@ import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleF
 // screen-reader names and touch targets all hold.
 
 // Every category the pickable corpus actually contains, so the tray can reach
-// all of it. Mono was missing, and it was not a cosmetic gap: this picker keeps
-// monospace families on purpose (see `filterPickableTypefaces` — a mono body
-// face is a legitimate choice for a technical product), so the catalogue served
-// 51 mono families that no chip could reach and that EVERY non-"All" chip hid.
+// all of it. The first five are the Font Gallery's own set (FONT_CATEGORIES),
+// so the two browsers name a category the same way. Mono is added on top, and
+// it is not a cosmetic extra: this picker keeps monospace families on purpose
+// (see `filterPickableTypefaces` — a mono body face is a legitimate choice for
+// a technical product), so the catalogue served 51 mono families that no chip
+// could reach and that EVERY non-"All" chip hid.
 // The only route to one was knowing its name and typing it — which is the exact
 // remember-and-type failure this dialog was built to end.
 const CATS = [
-  { id: 'all', label: 'All' },
-  { id: 'sans-serif', label: 'Sans' },
-  { id: 'serif', label: 'Serif' },
-  { id: 'display', label: 'Display' },
-  { id: 'handwriting', label: 'Script' },
+  ...FONT_CATEGORIES,
   { id: 'monospace', label: 'Mono' },
 ]
 
@@ -152,13 +150,14 @@ function FontTile({ font, selected, onPick, onInspect }) {
       // before committing to it, so "what is this face, actually?" could only
       // be answered by choosing it and then undoing that.
       //
-      // It lives in LibraryCard's `actions` slot, which is a SIBLING of the
-      // tile button rather than a child of it — a button inside a button is
-      // invalid and would not be reachable by keyboard anyway. The slot is real
-      // DOM at all times and revealed on hover AND focus-within, so tabbing
-      // reaches exactly what a pointer reveals.
-      actionsLabel={`About ${font.family}`}
-      actions={(
+      // It sits in LibraryCard's `tail` slot, beside the name, and not in the
+      // `actions` slot. `actions` is a hover reveal on a fine pointer, so the
+      // About button was invisible until a tile was hovered (K3), and on touch
+      // it became a second row under every tile. The foot is always painted,
+      // so the button is there on every tile at every width and pointer, and it
+      // stays a SIBLING of the tile button (a button inside a button is invalid
+      // and would not be reachable by keyboard anyway).
+      tail={(
         <button
           type="button"
           className="fbd-info"

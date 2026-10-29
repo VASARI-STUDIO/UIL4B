@@ -1,6 +1,17 @@
 const NON_TEXT_FAMILY_PATTERN = /(?:^|\s)(?:barcode|code|coding|console|emoji|icon|icons|math|mono|monospace|music|signwriting|symbol|symbols|terminal)(?:\s|$)/i
 const NON_TEXT_SUBSETS = new Set(['math', 'music', 'signwriting', 'symbols'])
 
+// The category set both font browsers offer. The Font Gallery uses it as is;
+// the picker dialog adds Mono on top (see FontBrowseDialog), because a picker
+// keeps monospace families and the gallery does not.
+export const FONT_CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'sans-serif', label: 'Sans Serif' },
+  { id: 'serif', label: 'Serif' },
+  { id: 'display', label: 'Display' },
+  { id: 'handwriting', label: 'Script' },
+]
+
 // Keep the gallery focused on typefaces intended for reading and display.
 // Google categorises programming families as monospace, while emoji, icon and
 // symbol families are identified by their family names and specialist subsets.

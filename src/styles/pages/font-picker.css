@@ -143,13 +143,15 @@
   font-weight: 560;
 }
 
-.fbd-overlay .fbd-close:hover,
-.fbd-overlay .fbd-back:hover,
-.fbd-overlay .fbd-info:hover,
-.fbd-overlay .fg-more-btn:hover:not(:disabled) {
-  color: var(--t0);
-  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
-  background: var(--hvr);
+@media (hover: hover) {
+  .fbd-overlay .fbd-close:hover,
+  .fbd-overlay .fbd-back:hover,
+  .fbd-overlay .fbd-info:hover,
+  .fbd-overlay .fg-more-btn:hover:not(:disabled) {
+    color: var(--t0);
+    border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+    background: var(--hvr);
+  }
 }
 
 .fbd-overlay .fbd-close:focus-visible,
@@ -195,6 +197,7 @@
   gap: 6px;
   padding: 0;
   background: none;
+  border: 0;
   border-radius: 0;
 }
 
@@ -213,10 +216,12 @@
     border-color var(--dur-1) var(--ease-standard);
 }
 
-.fbd-overlay .lbry-filters .lbry-filter:hover {
-  color: var(--t0);
-  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
-  background: var(--hvr);
+@media (hover: hover) {
+  .fbd-overlay .lbry-filters .lbry-filter:hover {
+    color: var(--t0);
+    border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+    background: var(--hvr);
+  }
 }
 
 /* The pressed chip paints its own fill as well as being covered by the sliding
@@ -245,7 +250,9 @@
   font-weight: 560;
 }
 
-.fbd-overlay .lbry-filtertrig:hover { color: var(--t0); background: var(--hvr); }
+@media (hover: hover) {
+  .fbd-overlay .lbry-filtertrig:hover { color: var(--t0); background: var(--hvr); }
+}
 
 .fbd-overlay .lbry-filtertrig[aria-expanded="true"],
 .fbd-overlay .lbry-filtertrig[data-active="true"] {
@@ -275,6 +282,37 @@
 
 .fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* ── K8: the phone's category row is ONE scrolling line ──────────────────────
+   LibraryToolbar keeps the first filter group on a phone as `.lbry-toolbar-quick`
+   and expects it to scroll sideways. library.css styles that row, but only under
+   `.lib-surface`, which this portalled dialog is not, so the chips wrapped to
+   two lines and ran past the toolbar's edge. The row below is that block
+   restated under this root. The 4px of block padding (netted off by the negative
+   margin, so the layout does not move) keeps the 2px focus ring clear of the
+   clip; the 6px of inline padding is the same trick sideways, so the first chip
+   sits on the search field's edge at rest and the last one can scroll fully in. */
+.fbd-overlay .lbry-toolbar-quick {
+  margin: -4px -6px;
+  padding: 4px 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 6px;
+  scrollbar-width: none;
+}
+.fbd-overlay .lbry-toolbar-quick::-webkit-scrollbar { display: none; }
+.fbd-overlay .lbry-toolbar-quick > .lbry-filters {
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: none;
+}
+
+/* A mouse cannot swipe the row, and a vertical wheel does not scroll it, so a
+   fine pointer gets the thin bar back. */
+@media (pointer: fine) {
+  .fbd-overlay .lbry-toolbar-quick { scrollbar-width: thin; }
+}
+
 /* ── Tiles ─────────────────────────────────────────────────────────────────── */
 
 .fbd-overlay .fbd-tile {
@@ -283,7 +321,9 @@
   transition: border-color var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
-.fbd-overlay .fbd-tile:hover { border-color: var(--bh); }
+@media (hover: hover) {
+  .fbd-overlay .fbd-tile:hover { border-color: var(--bh); }
+}
 
 .fbd-overlay .fbd-card.is-selected .fbd-tile {
   border-color: var(--t0);
@@ -293,11 +333,29 @@
 
 .fbd-overlay .fbd-card .lbry-card-name { font-weight: 560; }
 
+/* Plain sentence case in the UI font: the base rule set this line in mono
+   capitals, and mono is for tokens and code. */
 .fbd-overlay .fbd-count {
-  font-size: 10px;
-  letter-spacing: .14em;
+  font-family: var(--font);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--t2);
 }
+
+/* The weight label under each cut ("400 Regular"), likewise. */
+.fbd-overlay .fbd-cut-label {
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* About (i): painted in the card foot beside the name, so it is on every tile
+   at every width and pointer (K3). It was in the hover-revealed actions layer. */
+.fbd-overlay .fbd-card .lbry-card-foot { align-items: center; }
+.fbd-overlay .fbd-card .lbry-card-tail { flex-shrink: 0; }
 
 /* ── Detail view ──────────────────────────────────────────────────────────── */
 
@@ -317,19 +375,26 @@
   .fbd-overlay .fbd-back,
   .fbd-overlay .fg-more-btn { min-height: 44px; }
   .fbd-overlay .fbd-info { width: 44px; height: 44px; }
+  /* At least 8px between targets: the chips in a row, and the rows of the
+     Category menu a tablet gets. */
+  .fbd-overlay .lbry-filters { gap: 8px; }
+  .fbd-overlay .lbry-filtermenu { gap: 8px; }
 }
 
 /* ── Press feedback, with the house reduced-motion pair ──────────────────── */
 
 .fbd-overlay .lbry-filters .lbry-filter:active,
-.fbd-overlay .lbry-filtertrig:active { transform: scale(.97); }
+.fbd-overlay .lbry-filtertrig:active,
+.fbd-overlay .fbd-info:active { transform: scale(.97); }
 
 html[data-reduced-motion="true"] .fbd-overlay .lbry-filters .lbry-filter:active,
-html[data-reduced-motion="true"] .fbd-overlay .lbry-filtertrig:active { transform: none; }
+html[data-reduced-motion="true"] .fbd-overlay .lbry-filtertrig:active,
+html[data-reduced-motion="true"] .fbd-overlay .fbd-info:active { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filters .lbry-filter:active,
-  html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filtertrig:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filtertrig:active,
+  html:not([data-reduced-motion="false"]) .fbd-overlay .fbd-info:active { transform: none; }
 }
 
 /* The dossier tabs reach the 44px touch floor on a finger. */
