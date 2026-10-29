@@ -271,11 +271,12 @@ test.describe('the nav does not animate layout', () => {
     ).toBe(0)
   })
 
-  // The App file's hover (lines 138-139, 2036-2042): the row takes an ink .07
-  // wash and its tile deepens (a hue tile turns a few points stronger, in the
-  // row's own category colour). There is no category rail. The FIRST row is lit at rest, as the file
-  // opens every menu, so the second row is the one pointed at.
-  test('a row hover moves nothing — it changes its wash and its tile', async ({ page }) => {
+  // The hover: the row takes an ink .07 wash, and the name moves with the glyph
+  // (3px along, in the row's category colour). The glyph sits bare in its
+  // category colour, with no tile behind it at rest or on hover. The row itself
+  // never moves. The FIRST row is lit at rest, as every menu opens, so the second
+  // row is the one pointed at.
+  test('a row hover moves the name with the glyph, never the row, and draws no tile', async ({ page }) => {
     watch(page, 'a visitor pointing at one tool')
     await go(page, ROUTE)
     await openMenu(page)
@@ -286,16 +287,24 @@ test.describe('the nav does not animate layout', () => {
       rowX: Math.round(el.getBoundingClientRect().x),
       background: getComputedStyle(el).backgroundColor,
       tile: getComputedStyle(el.querySelector('.pnav-tool-ico')).backgroundColor,
+      glyph: getComputedStyle(el.querySelector('.pnav-tool-ico')).color,
+      ink: getComputedStyle(el).color,
+      name: getComputedStyle(el.querySelector('.pnav-tool-label')).transform,
+      nameColour: getComputedStyle(el.querySelector('.pnav-tool-label')).color,
     }))
 
     const rest = await read()
     await row.hover()
     await expect.poll(async () => (await read()).background).not.toBe(rest.background)
-    const hot = await read()
 
-    expect(hot.icon, 'the tool icon lifts on hover again').toBe(rest.icon)
+    expect(rest.tile, 'a tile is drawn behind the glyph at rest').toBe('rgba(0, 0, 0, 0)')
+    expect(rest.glyph, 'the glyph is not in its category colour').not.toBe(rest.ink)
+    await expect.poll(async () => (await read()).name, { message: 'the name does not move with the glyph' }).toBe('matrix(1, 0, 0, 1, 3, 0)')
+    const hot = await read()
+    expect(hot.tile, 'a tile appears behind the glyph on hover').toBe('rgba(0, 0, 0, 0)')
+    expect(hot.icon, 'the glyph slot itself moves on hover').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    expect(hot.tile, 'the tile does not answer the pointer').not.toBe(rest.tile)
+    await expect.poll(async () => (await read()).nameColour, { message: 'the name does not take the category colour' }).toBe(hot.glyph)
   })
 })
 

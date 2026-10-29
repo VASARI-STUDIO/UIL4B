@@ -1,8 +1,8 @@
 // Per-group line icons for the nav mega-menus (and reusable later in the in-tool
 // rail and surface landings). One inline SVG set, keyed by the group `id` from
 // src/data/toolTree.js. Every glyph is stroke="currentColor" so it inherits its
-// category hue from the parent `.pnav-ico` tile — zero asset dependencies, and
-// the menu can never drift from the tree.
+// category colour from the row's `.pnav-tool-ico` slot — zero asset dependencies,
+// and the menu can never drift from the tree.
 
 import { useId } from 'react'
 
