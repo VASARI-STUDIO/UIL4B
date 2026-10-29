@@ -50,9 +50,7 @@ test('H1: a verified account can upload to each of the six slot types', async ()
 
 test('H1: an unverified account is refused, and the same upload from a verified one is accepted', async () => {
   await assertFails(put(unverified(), mine('slot-0.webp'), 'image/webp'))
-  // The accepted upload goes to another slot of the same type. After a refused upload the
-  // storage emulator refuses the next create on that path, even once storage is cleared.
-  await assertSucceeds(put(verified(), mine('slot-1.webp'), 'image/webp'))
+  await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
 })
 
 test('H1: 10 MiB is accepted and 10 MiB plus one byte is refused, as the same slot and type', async () => {
@@ -71,8 +69,7 @@ test('H1: an unknown slot name, a deep path or a wrong type is refused', async (
   // The extension and the type must agree.
   await assertFails(put(verified(), mine('slot-0.png'), 'image/webp'))
   await assertFails(put(verified(), mine('slot-0.webp'), undefined))
-  // Another slot, for the same emulator reason as above.
-  await assertSucceeds(put(verified(), mine('slot-1.webp'), 'image/webp'))
+  await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
 })
 
 test('H1: an account cannot write into another account\'s folder', async () => {
