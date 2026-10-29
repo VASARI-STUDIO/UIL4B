@@ -84,6 +84,20 @@ const FALLBACK_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica
 const MONO_STACK = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace'
 const DARK_FIELD = '#111114'
 
+/**
+ * The kit's darkest colour by relative luminance: the lowest luminance is the
+ * smallest contrast ratio against black. DARK_FIELD only stands in for an empty palette.
+ */
+export function darkestColour(palette) {
+  let best = null
+  let bestRatio = Infinity
+  for (const hex of palette || []) {
+    const ratio = contrast(hex, '#000000')
+    if (ratio < bestRatio) { best = hex; bestRatio = ratio }
+  }
+  return best || DARK_FIELD
+}
+
 const round = (n) => Math.round(n * 100) / 100
 const pad2 = (n) => String(n).padStart(2, '0')
 
@@ -253,7 +267,8 @@ function readContext(design, { projectName, watermark, measure, date, missingFon
   const name = String(projectName ?? '').trim() || 'Design System'
   const base = d.base
   const roles = deriveRoles(d.palette, { contrast, primary: base || d.palette[0] })
-  const field = base || DARK_FIELD
+  const dark = darkestColour(d.palette)
+  const field = base || dark
   const fieldInk = inkFor(field).ink
   const iso = date.toISOString().slice(0, 10)
   return {
@@ -261,7 +276,7 @@ function readContext(design, { projectName, watermark, measure, date, missingFon
     ladder: typeLadder(d),
     tokens: bookTokens(d),
     paper: roles.paper, ink: roles.ink, muted: roles.muted, rule: roles.rule,
-    field, fieldInk,
+    field, fieldInk, dark,
     // The same ink the cover is set in, toned down to a solid secondary colour that
     // still passes on the field (an opacity would let the ratio fall unchecked).
     fieldSoft: softInk(fieldInk, field, contrast, { amount: 0.82 }),
@@ -309,7 +324,7 @@ export function planBookPages(design, {
   if (d.gradient) add('gradient', 'Colour', { leaf: 'The gradient' })
 
   add('opening', 'Typography', {
-    num: '02', title: 'Typography', field: DARK_FIELD, ink: '#FFFFFF',
+    num: '02', title: 'Typography', field: c.dark, ink: inkFor(c.dark).ink,
     abstract: `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
   })
   add('families', 'Typography', { leaf: 'The families' })

@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
@@ -376,4 +376,21 @@ test('an opening\'s section number ends above the folio, by its measured descent
   // Content pages foot on the same line.
   const body = build().pages.find((p) => p.kind === 'palette')
   assert.ok(body.ops.some((o) => o.op === 'text' && o.y === FOOT_Y && o.align === 'right'))
+})
+
+// ── The typography opener ───────────────────────────────────────────────────
+
+test('the typography opener is the kit\'s darkest colour by luminance, with the fixed dark only for an empty palette', () => {
+  const kit = (colors) => ({ ...DESIGN, palette: { base: colors[0], harmony: 'analogous', colors } })
+  const field = (design) => plan(design).find((p) => p.kind === 'opening' && p.title === 'Typography').field
+  assert.equal(field(DESIGN), '#0F172A')
+  // The darkest is not first, last, or the base.
+  assert.equal(field(kit(['#2563EB', '#FFFFFF', '#1B4D3E', '#93C5FD', '#7C3AED'])), '#1B4D3E')
+  // A kit of light colours still gets its own darkest, not the fixed #111114.
+  assert.equal(field(kit(['#F8FAFC', '#E2E8F0', '#CBD5E1'])), '#CBD5E1')
+  assert.equal(darkestColour(['#336699', '#223344', '#ffeedd']), '#223344')
+  assert.equal(field({ ...DESIGN, palette: { colors: [] }, gradient: null }), '#111114')
+  // The ink is chosen for it: white on a dark field, black on a light one.
+  const light = plan(kit(['#F8FAFC', '#E2E8F0', '#CBD5E1'])).find((p) => p.title === 'Typography')
+  assert.equal(light.ink, '#000000')
 })
