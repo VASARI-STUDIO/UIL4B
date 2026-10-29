@@ -228,7 +228,7 @@ test.describe('the export gate, driven', () => {
 
     const [book] = await Promise.all([
       context.waitForEvent('page'),
-      page.getByRole('button', { name: /^Export book$/i }).click(),
+      page.getByRole('button', { name: /^Export book \(PDF\)$/i }).click(),
     ])
     await book.waitForLoadState('domcontentloaded')
     // The window is reserved inside the click and is blank (then labelled "Preparing
