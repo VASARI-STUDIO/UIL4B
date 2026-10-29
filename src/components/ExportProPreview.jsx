@@ -28,9 +28,14 @@ const CACHE_LIMIT = 8
 // read, so a Pro document is never shown sharp on a guess. `showLock` is only the
 // chip over the strip, which the panel holds back until it knows the account is
 // not Pro.
-export default function ExportProPreview({ kind, template, design, projectName, blurred, showLock = blurred }) {
+//
+// `fit` is for a host that gives the pictures a box of its own (the export gallery's
+// card frame): the pages share that box instead of scrolling past it, so the strip
+// is not a Tab stop, and a failed draw offers "Try again" in place of the panel's note.
+export default function ExportProPreview({ kind, template, design, projectName, blurred, showLock = blurred, fit = false }) {
   const key = previewKey({ kind, template, blurred, design, projectName })
   const [result, setResult] = useState({ key: '', pages: [], failed: false })
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let live = true
@@ -67,9 +72,9 @@ export default function ExportProPreview({ kind, template, design, projectName, 
       live = false
       urls.forEach((u) => URL.revokeObjectURL(u))
     }
-    // `key` already folds in every input the previews are drawn from.
+    // `key` already folds in every input the previews are drawn from; `attempt` is "Try again".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
+  }, [key, attempt])
 
   // Anything drawn for a different input than the current one is stale.
   const ready = result.key === key ? result : { pages: [], failed: false }
@@ -77,13 +82,30 @@ export default function ExportProPreview({ kind, template, design, projectName, 
   const templateName = previewTemplateName(kind, template)
 
   return (
-    <div className={`exp-preview is-${kind}`}>
+    <div className={`exp-preview is-${kind}${fit ? ' is-fit' : ''}`}>
       {/* The strip's heading, above it, so the pictures read as the result of the choice
           above and not as a second row of tiles. The strip carries the same words as its
           accessible name, so a screen reader hears them once. */}
-      {ready.failed
-        ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
-        : <p className="exp-preview-caption" aria-hidden="true">{previewCaption(kind, template)}</p>}
+      {ready.failed && fit
+        ? (
+          <div className="exp-preview-failed" role="status">
+            <p>Preview didn’t load.</p>
+            <button
+              type="button"
+              className="exp-preview-retry"
+              onClick={(e) => {
+                // The card is a label around a radio: the button asks for a redraw and nothing else.
+                e.preventDefault()
+                e.stopPropagation()
+                setResult({ key: '', pages: [], failed: false })
+                setAttempt((n) => n + 1)
+              }}
+            >Try again</button>
+          </div>
+        )
+        : ready.failed
+          ? <p className="exp-preview-note">The preview could not be drawn. The document is unaffected.</p>
+          : <p className="exp-preview-caption" aria-hidden="true">{previewCaption(kind, template)}</p>}
       {/* The stage is as wide as the pictures (up to the box), so the Pro chip
           centres over them and not over the empty room beside them. */}
       <div className="exp-preview-stage">
@@ -92,7 +114,7 @@ export default function ExportProPreview({ kind, template, design, projectName, 
         <div
           className="exp-preview-strip"
           data-state={ready.failed ? 'failed' : ready.pages.length ? 'ready' : 'loading'}
-          tabIndex={0}
+          tabIndex={fit ? undefined : 0}
           role="group"
           aria-label={`Pages of your ${name} in ${templateName}`}
         >

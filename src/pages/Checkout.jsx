@@ -208,6 +208,8 @@ export default function Checkout() {
   // breakpoint is the sheet's one-column break.
   const wide = useMediaQuery('not all and (max-width: 760px)')
 
+  // Which surface sent the buyer here (the export gallery sends `kit-gallery`).
+  const from = params.get('from')
   const requestedPlan = params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
   const plan = PLANS[planKey]
@@ -336,12 +338,12 @@ export default function Checkout() {
     // a new session, not a new checkout, so it is sent once per visit.
     if (!startedSent.current) {
       startedSent.current = true
-      sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval })
+      sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval, from })
     }
     return createCheckoutSession(sessionInterval, (session) => {
       setSessionCurrencies((prev) => ({ ...prev, [sessionInterval]: session?.currency || null }))
     })
-  }, [createCheckoutSession, sessionInterval])
+  }, [createCheckoutSession, sessionInterval, from])
 
   // The payment panel is waiting on the auth answer, so ask for it now rather
   // than when the browser is idle. A no-op in a build that loads auth eagerly.
