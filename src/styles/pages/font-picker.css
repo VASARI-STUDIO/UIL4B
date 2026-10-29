@@ -130,8 +130,8 @@
 .fbd-overlay .fbd-back { min-height: 36px; padding: 6px 13px 6px 9px; font-size: 12.5px; font-weight: 560; }
 
 .fbd-overlay .fbd-info {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--btn-radius);
   background: var(--card);
 }
@@ -194,7 +194,7 @@
 .fbd-overlay .lbry-toolbar-filters { gap: 10px; }
 
 .fbd-overlay .lbry-filters {
-  gap: 6px;
+  gap: 8px;
   padding: 0;
   background: none;
   border: 0;
@@ -265,8 +265,13 @@
   border-color: transparent;
   border-radius: var(--radius-s);
   min-height: 38px;
+  font-size: 12.5px;
+  font-weight: 560;
   background: transparent;
 }
+
+/* The trigger's label reads in sentence case, like the chips it stands in for. */
+.fbd-overlay .lbry-filtertrig-k { font-size: 12px; letter-spacing: 0; text-transform: none; }
 
 .fbd-overlay .lbry-filtermenu .lbry-filter[data-active="true"] {
   color: var(--t0);
