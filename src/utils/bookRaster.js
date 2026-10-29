@@ -303,6 +303,25 @@ function oklchOf(hex) {
   return `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`
 }
 
+/**
+ * A name for each palette entry. Two colours that land on the same name (two
+ * near blues are both "Cobalt") would read as one colour listed twice, so the
+ * later ones are numbered: Cobalt, Cobalt 2, Cobalt 3.
+ */
+export function uniqueColourNames(palette) {
+  const used = new Set()
+  const seen = new Map()
+  return (palette || []).map((hex) => {
+    const base = colorName(hex)
+    let n = (seen.get(base) || 0) + 1
+    let name = n === 1 ? base : `${base} ${n}`
+    while (used.has(name)) { n += 1; name = `${base} ${n}` }
+    seen.set(base, n)
+    used.add(name)
+    return name
+  })
+}
+
 /** Everything the plan and the layout read, worked out once. */
 function readContext(design, { projectName, watermark, measure, date, missingFonts }) {
   const d = readBook(design)
@@ -317,6 +336,7 @@ function readContext(design, { projectName, watermark, measure, date, missingFon
     d, name, watermark, measure, iso,
     // Headings are drawn with the kit's tracking, so they are measured with it too.
     headMeasure: withTracking(measure, d.headingSpacing),
+    names: uniqueColourNames(d.palette),
     ladder: typeLadder(d),
     tokens: bookTokens(d),
     paper: roles.paper, ink: roles.ink, muted: roles.muted, rule: roles.rule,
@@ -633,7 +653,7 @@ function paletteOps(c, page) {
     const x2 = MARGIN + chipW + 24
     const w2 = 176
     ops.push(caps(roleLabel(d.harmony, index), x2, y + 16, c.muted, { px: 8 }, c))
-    const nameLines = wrapText(colorName(hex), w2, heading(c, 21), c.headMeasure, { maxLines: 2 })
+    const nameLines = wrapText(c.names[index], w2, heading(c, 21), c.headMeasure, { maxLines: 2 })
     nameLines.forEach((line, i) => ops.push(text(line, x2, y + 44 + i * 24, heading(c, 21), c.ink, headSpacing(c, 21))))
     const landsTop = y + 44 + (nameLines.length - 1) * 24 + 22
     const lands = wrapText(slotLandsBook(index), w2, bodyFont(c, 9.5, 400), c.measure, { maxLines: nameLines.length > 1 ? 2 : 3 })
@@ -690,7 +710,7 @@ function soloPaletteOps(c, { index, hex }, ops, top) {
   let y = top + h + 34
   const left = 270
   ops.push(caps(roleLabel(d.harmony, index), MARGIN, y, c.muted, { px: 8 }, c))
-  const nameLines = wrapText(colorName(hex), left, heading(c, 28), c.headMeasure, { maxLines: 2 })
+  const nameLines = wrapText(c.names[index], left, heading(c, 28), c.headMeasure, { maxLines: 2 })
   nameLines.forEach((line, i) => ops.push(text(line, MARGIN, y + 34 + i * 32, heading(c, 28), c.ink, headSpacing(c, 28))))
   const landsTop = y + 34 + (nameLines.length - 1) * 32 + 24
   const lands = wrapText(slotLandsBook(index), left, bodyFont(c, 10, 400), c.measure, { maxLines: 3 })

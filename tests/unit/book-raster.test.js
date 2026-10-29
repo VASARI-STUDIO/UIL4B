@@ -11,10 +11,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, ensureBookFonts,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, ensureBookFonts, uniqueColourNames,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
+import { colorName } from '../../src/utils/paletteNames.js'
 import { readBook } from '../../src/utils/bookModel.js'
 import { EXPORT_FORMATS, assertFormatsCoherent, groupFormats, isGroupPro, proOnlyFormats } from '../../src/config/exportFormats.js'
 
@@ -230,6 +231,23 @@ test('palette pages of three rows or fewer have 200 high swatches 210 apart; ful
   const tints = page.ops.filter((o) => o.op === 'rect' && o.h === 18)
   assert.equal(tints.length, 12)
   for (const t of tints) assert.ok(t.y + t.h <= three[Math.floor(tints.indexOf(t) / 4)].y + 200, 'a tint leaves its band')
+})
+
+test('two palette entries with one colour name are numbered: the later ones get 2, 3', () => {
+  // Three colours that really do share a name ("Wild Fern"), and one that does not.
+  const near = ['#256403', '#25670D', '#256803', '#0F172A']
+  const name = colorName(near[0])
+  assert.equal(colorName(near[1]), name, 'the fixture colours no longer share a name; pick others')
+  assert.equal(colorName(near[2]), name)
+  assert.deepEqual(uniqueColourNames(near).slice(0, 3), [name, `${name} 2`, `${name} 3`])
+  assert.equal(uniqueColourNames(near)[3], colorName(near[3]), 'a name that is already unique is left alone')
+  const drawnNames = (colors) => build({ ...DESIGN, palette: { base: colors[0], colors } }).pages
+    .filter((p) => p.kind === 'palette')
+    .flatMap((p) => p.ops.filter((o) => o.op === 'text' && /^700 21px/.test(o.font)).map((o) => o.text))
+  assert.deepEqual(drawnNames(near).slice(0, 3), [name, `${name} 2`, `${name} 3`])
+  // The count runs over the whole palette, not per page: six of one name over two pages.
+  const six = ['#256403', '#25670D', '#256803', '#256A00', '#257044', '#25712C']
+  assert.deepEqual(drawnNames(six), six.map((_, i) => (i ? `${name} ${i + 1}` : name)))
 })
 
 test('matrix shading tints the passing cells and leaves the failing ones bare and light', () => {
