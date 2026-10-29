@@ -51,7 +51,7 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
-import { chooseFormat } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton, actionLabel } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -509,22 +509,22 @@ test.describe('flow 4 — each live free format downloads under its own name', (
 
     for (const fmt of FREE_LIVE) {
       await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-      const panel = page.getByRole('dialog', { name: /Export your design system/i })
+      const panel = exportPanel(page)
       await expect(panel).toBeVisible()
       await chooseFormat(page, fmt.id)
-      const cta = panel.locator('.exp-foot button').last()
+      const cta = primaryButton(page)
       // The label says what will happen, not what it costs.
-      await expect(cta).toContainText(/^Export /)
+      await expect(cta).toHaveText(actionLabel(fmt.id))
       await expect(cta).not.toContainText(/Pro|Soon/)
       const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
-      // The kit stays open only to report a font it could not embed (the font
-      // hosts are live network here); that notice follows a finished export.
-      if (fmt.id === 'kit' && await panel.getByRole('status').count()) {
-        await panel.getByRole('button', { name: 'Close', exact: true }).click()
-      }
-      // The panel closes after a successful export; the page is still the tool.
+      // The popup stays open after a finished export and says so in its status line
+      // (the kit's line can instead carry a font it could not embed: the font hosts
+      // are live network here), so a second file is one more click.
+      await expect(cta, `${fmt.name}: the button offers another go`).toHaveText('Export again')
+      await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
+      await page.keyboard.press('Escape')
       await expect(panel).toHaveCount(0)
     }
     await context.close()
@@ -536,8 +536,10 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-    await page.getByRole('radio', { name: /Brand guidelines/i }).click()
-    await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')
+    await expect(exportPanel(page)).toBeVisible()
+    await chooseFormat(page, 'guidelines')
+    await expect(page.locator('.xd-lock'), 'the preview names the document it locks').toHaveText(/Slides is a Pro export/)
+    await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.
     await page.getByRole('button', { name: /Unlock with Pro/i }).click()

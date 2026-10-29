@@ -43,6 +43,7 @@ import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
+import { chooseFormat, exportPanel, categoryRadio, primaryButton } from './export-rows.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -173,8 +174,8 @@ test.describe('the export gate, driven', () => {
   // dialog can never hold a worker.
   async function openExportPanel(page) {
     await page.getByRole('button', { name: 'Export', exact: true }).click()
-    await expect(page.getByRole('dialog', { name: /Export your design system/i })).toBeVisible()
-    await page.getByRole('radio', { name: /Design system book/i }).click()
+    await expect(exportPanel(page)).toBeVisible()
+    await chooseFormat(page, 'book')
   }
 
   test('a free account is walled, by the wall that names this document', async ({ browser }) => {
@@ -187,9 +188,11 @@ test.describe('the export gate, driven', () => {
     await openExportPanel(page)
 
     await expect(
-      page.locator('.exp-fmt-pro').first(),
-      'the book row must carry its Pro badge for a free account',
+      categoryRadio(page, 'Book').locator('.xd-pro'),
+      'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
+    await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
+    await expect(page.locator('.xd-lock'), 'the preview is locked and names the document').toHaveText(/Book is a Pro export/)
 
     const action = page.getByRole('button', { name: /Unlock with Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()
@@ -214,7 +217,9 @@ test.describe('the export gate, driven', () => {
     await go(page, WORKED_BOARD)
     await openExportPanel(page)
 
-    await expect(page.locator('.exp-fmt-pro'), 'Pro sees no Pro badges').toHaveCount(0)
+    await expect(primaryButton(page), 'the plan has loaded and the button names the export').toHaveText('Export PDF')
+    await expect(page.locator('.xd-pro'), 'Pro sees no Pro badges').toHaveCount(0)
+    await expect(page.locator('.xd-lock'), 'and no lock over the preview').toHaveCount(0)
 
     // The book is built by the server (POST /api/ai?export=document); the preview
     // server has no /api, so the answer is stubbed with the real generator's
@@ -228,7 +233,7 @@ test.describe('the export gate, driven', () => {
 
     const [book] = await Promise.all([
       context.waitForEvent('page'),
-      page.getByRole('button', { name: /^Export book \(PDF\)$/i }).click(),
+      primaryButton(page).click(),
     ])
     await book.waitForLoadState('domcontentloaded')
     // The window is reserved inside the click and is blank (then labelled "Preparing
