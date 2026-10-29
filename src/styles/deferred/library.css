@@ -1258,6 +1258,10 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .lib-btn--primary{background:var(--t0);border-color:var(--t0);color:var(--bg-1)}
 .lib-surface .lib-btn--primary:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1));border-color:transparent}
 .lib-surface .lib-btn--primary:disabled:hover{background:var(--t0);border-color:var(--t0)}
+/* The Upgrade to Pro face of the customiser's primary button: the accent fill, the same shape. */
+.lib-surface .lib-btn--upgrade{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink)}
+.lib-surface .lib-btn--upgrade:hover{background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}
+.lib-surface .lib-btn--upgrade:disabled:hover{background:var(--accent-fill);border-color:var(--accent-fill)}
 .lib-surface .lib-btn svg{flex-shrink:0}
 @media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
 
@@ -1304,6 +1308,14 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .icust-foot .dl-more[aria-expanded="true"]{background:var(--hvr)}
 .icust-foot .dl-main:disabled,.icust-foot .dl-more:disabled{opacity:.5;cursor:not-allowed}
 .icust-foot .dl-main[aria-disabled="true"]{cursor:progress}
+/* Split Download while a Pro setting is previewed: both parts dimmed, still focusable, nothing on hover. */
+.icust-foot .dl-split[data-blocked="true"]::after,
+.icust-foot .dl-split[data-blocked="true"]:hover::after{box-shadow:inset 0 0 0 1px var(--border)}
+.icust-foot .dl-split[data-blocked="true"] .dl-main,
+.icust-foot .dl-split[data-blocked="true"] .dl-more{color:var(--t3);cursor:default}
+.icust-foot .dl-split[data-blocked="true"] .dl-more{border-left-color:var(--border)}
+.icust-foot .dl-split[data-blocked="true"] .dl-main:hover,
+.icust-foot .dl-split[data-blocked="true"] .dl-more:hover{background:transparent}
 .dl-caret{flex:none;transition:transform var(--dur-1) var(--ease-standard)}
 .dl-more[aria-expanded="true"] .dl-caret{transform:rotate(180deg)}
 

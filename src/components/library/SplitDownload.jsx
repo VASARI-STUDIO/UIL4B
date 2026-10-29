@@ -13,6 +13,8 @@ import FooterGlyph from './FooterGlyph'
 //   format        the remembered format id (utils/iconDownload.js)
 //   size          the customiser's Size, in px: PNG rows are scales of it
 //   disabled      the icon's markup is not there yet (or failed to load)
+//   blocked       a Pro preview is on screen: both parts are dimmed with aria-disabled (still
+//                 reachable by Tab) and do nothing. `describedBy` is the id of the line saying why.
 //   loading       as above, but still arriving: only changes aria-busy
 //   onPick(id)    the person chose a format in the menu: remember it
 //   onDownload(f) build and hand over the file for the described format `f`;
@@ -28,7 +30,7 @@ import FooterGlyph from './FooterGlyph'
 const SIZER_WIDE = ['SVG', 'PNG 2048px', 'Retry']
 const SIZER_PHONE = ['SVG', 'PNG', 'Retry']
 
-export default function SplitDownload({ format, size, disabled = false, loading = false, onPick, onDownload }) {
+export default function SplitDownload({ format, size, disabled = false, blocked = false, describedBy, loading = false, onPick, onDownload }) {
   const uid = useId()
   const menuId = `dl-menu-${uid}`
   const moreId = `dl-more-${uid}`
@@ -171,6 +173,7 @@ export default function SplitDownload({ format, size, disabled = false, loading 
       className="dl-split"
       role="group"
       aria-label="Download"
+      data-blocked={blocked ? 'true' : undefined}
       data-phase={phase}
       data-spin={spin ? 'true' : undefined}
     >
@@ -179,11 +182,12 @@ export default function SplitDownload({ format, size, disabled = false, loading 
         type="button"
         className="dl-main"
         disabled={disabled}
-        aria-disabled={building || undefined}
+        aria-disabled={building || blocked || undefined}
+        aria-describedby={blocked ? describedBy : undefined}
         aria-busy={loading || building || undefined}
         aria-label={mainName}
         title={mainName}
-        onClick={() => { if (!building) run(current) }}
+        onClick={() => { if (!building && !blocked) run(current) }}
       >
         {/* The face is the visible icon and label. The hidden sizers hold every
             face of each width tier (formats and Retry), all in grid cell 1/1, so the button
@@ -211,11 +215,14 @@ export default function SplitDownload({ format, size, disabled = false, loading 
         disabled={disabled || building}
         aria-label="Download formats"
         title="Other formats"
+        aria-disabled={blocked || undefined}
+        aria-describedby={blocked ? describedBy : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        onClick={() => (open ? closeToTrigger() : openMenu('checked'))}
+        onClick={() => { if (blocked) return; if (open) closeToTrigger(); else openMenu('checked') }}
         onKeyDown={(e) => {
+          if (blocked) return
           if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) openMenu('first') }
           else if (e.key === 'ArrowUp') { e.preventDefault(); if (!open) openMenu('last') }
         }}

@@ -28,6 +28,52 @@
 /* One row at every width: the footer is a size container, so its labels choose
    a tier from its own width (see the split Download block in deferred/library.css). */
 .iel-page .icust-foot{container-type:inline-size;flex-wrap:nowrap}
+/* The customiser's foot has two rows: the preview line (only while a Pro setting is previewed)
+   above the buttons. The buttons' row is the size container, so the label tiers below still pick
+   their width from the same content box they always did. */
+.iel-page .icust-foot.icust-foot--tool{display:block;padding:0;container-type:normal}
+.iel-page .icust-foot-row{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:18px 24px 24px;container-type:inline-size}
+@media(max-width:560px){.iel-page .icust-foot-row{padding:16px 16px 20px}}
+
+/* The preview line: no fill, no accent. The Upgrade button is the only accent in the foot.
+   Always mounted (it is a live region); out of sight when nothing is previewed. */
+.iel-page .icust-preview{
+  display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;min-height:40px;padding:6px 24px;
+  font-family:var(--font);font-size:13px;line-height:1.4;color:var(--t1);
+}
+.iel-page .icust-preview:not(.is-on){
+  position:absolute;width:1px;height:1px;min-height:0;margin:-1px;padding:0;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;
+}
+.iel-page .icust-preview.is-on{animation:icust-preview-in 150ms var(--ease-out)}
+@keyframes icust-preview-in{from{opacity:0}}
+html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
+@media(prefers-reduced-motion:reduce){.iel-page .icust-preview.is-on{animation:none}}
+.iel-page .icust-preview-text{margin:0;min-width:0}
+.iel-page .icust-preview-back{
+  position:relative;flex:none;padding:0;border:0;background:none;
+  font:inherit;font-weight:560;color:var(--t0);cursor:pointer;text-underline-offset:2px;
+}
+@media(hover:hover){.iel-page .icust-preview-back:hover{text-decoration:underline}}
+.iel-page .icust-preview-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.iel-page .icust-preview-back::after{content:"";position:absolute;inset:-14px -8px}}
+@media(max-width:560px){.iel-page .icust-preview{min-height:48px;padding:8px 16px}}
+
+/* One button, two faces. The widest label is held by hidden sizers, so the words swapping
+   never changes the button's width. */
+.iel-page .icust-primary-faces{display:inline-grid}
+.iel-page .icust-primary-faces>.icust-face{grid-area:1/1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.iel-page .icust-primary-faces>.icust-face--sizer{visibility:hidden;height:0;overflow:hidden;pointer-events:none}
+
+/* Dimmed while a Pro setting is previewed: aria-disabled, not disabled, so they stay in the tab
+   order. Quieter text and a hairline, no hover change, no pointer. The words stay readable
+   (--t3 clears 3:1 on the card in both themes). */
+.iel-page .icust-foot .lib-btn.icust-save[aria-disabled="true"]{color:var(--t3);border-color:var(--border);cursor:default}
+.iel-page .icust-foot .lib-btn.icust-save[aria-disabled="true"]:hover{background:transparent;border-color:var(--border)}
+.iel-page .icust-code-box[aria-disabled="true"]{cursor:default}
+.iel-page .icust-code-box[aria-disabled="true"] code,
+.iel-page .icust-code-box[aria-disabled="true"] .icust-code-hint{color:var(--t3)}
+.iel-page .icust-code-box[aria-disabled="true"]:hover{border-color:var(--border)}
 .iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
 /* Try again sits on the notice's warn-tinted band, so it carries a card
    ground of its own — a transparent button there would read as part of the
@@ -344,7 +390,6 @@
 .iel-page .icust-line-name{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 6px;font-family:var(--font);font-size:13px;line-height:18px;font-weight:560;color:var(--t0)}
 .iel-page .icust-line-pro{font-family:var(--font);font-size:12px;font-weight:560;color:var(--accent-mid)}
 .iel-page .icust-line-note{font-family:var(--font);font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
-.iel-page .icust-line-block{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t1)}
 .iel-page .icust-line-toggle{
   align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0;padding:0 4px 0 0;
   border:0;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:12.5px;font-weight:560;color:var(--t2);cursor:pointer;
@@ -445,7 +490,6 @@
 .iel-page .icust-size-px{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:12px;color:var(--t2);pointer-events:none}
 .iel-page .icust-size-range,.iel-page .icust-size-note{font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
 .iel-page .icust-size-note{flex:1 0 100%;margin:0}
-.iel-page .icust-size-block{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t1)}
 /* Touch and tablet: 44px tall, and 16px text so iOS does not zoom the page on focus. */
 @media(pointer:coarse),(max-width:768px){
   .iel-page .icust-size-field{width:96px}
