@@ -1,5 +1,5 @@
 diff --git a/firestore.rules b/firestore.rules
-index 8ccb1b72..ea61fbc9 100644
+index 8ccb1b72..7c0fdb53 100644
 --- a/firestore.rules
 +++ b/firestore.rules
 @@ -31,6 +31,17 @@ service cloud.firestore {
@@ -20,7 +20,7 @@ index 8ccb1b72..ea61fbc9 100644
      // User profiles — only the owner can read/write, and never the billing fields
      match /users/{userId} {
        function isOwner() {
-@@ -113,6 +124,55 @@ service cloud.firestore {
+@@ -113,6 +124,57 @@ service cloud.firestore {
        match /projects/{projectId} {
          allow read, write: if isOwner();
        }
@@ -31,6 +31,8 @@ index 8ccb1b72..ea61fbc9 100644
 +      // window. The window starts at the first post and restarts, on a server
 +      // time, only once 24 hours have passed. No delete.
 +      match /limits/{docId} {
++        // No lower bound is checked: counterStartOk and counterStepOk keep both
++        // counts at 0, 1 or the stored count plus 0 or 1, so neither goes below zero.
 +        function counterShapeOk() {
 +          let a = request.resource.data;
 +          return docId == 'community'
@@ -38,8 +40,8 @@ index 8ccb1b72..ea61fbc9 100644
 +            && a.lastAt == request.time
 +            && a.lastKind in ['prompt', 'submission']
 +            && a.lastId is string && a.lastId.size() <= 200
-+            && a.prompts is int && a.prompts >= 0 && a.prompts <= 10
-+            && a.submissions is int && a.submissions >= 0 && a.submissions <= 10;
++            && a.prompts is int && a.prompts <= 10
++            && a.submissions is int && a.submissions <= 10;
 +        }
 +
 +        // The first post: a new window, and this post is the only one in it.
@@ -76,7 +78,7 @@ index 8ccb1b72..ea61fbc9 100644
      }
  
      // Feedback — reviewers can read, update and delete; clients cannot create.
-@@ -132,10 +192,11 @@ service cloud.firestore {
+@@ -132,10 +194,11 @@ service cloud.firestore {
        function promptShapeOk() {
          return request.resource.data.keys().hasOnly([
                   'title', 'text', 'tags', 'authorName', 'authorUid', 'ownerId',
@@ -90,7 +92,7 @@ index 8ccb1b72..ea61fbc9 100644
            // Length caps on each string field.
            && request.resource.data.title is string
            && request.resource.data.title.size() <= 300
-@@ -166,10 +227,15 @@ service cloud.firestore {
+@@ -166,10 +229,15 @@ service cloud.firestore {
                    && request.resource.data.mediaUrl.size() < 900000));
        }
  
@@ -107,7 +109,7 @@ index 8ccb1b72..ea61fbc9 100644
        // Rules are not filters: a list query must itself be constrained to
        // status == 'approved' or authorUid == the caller, or it is refused.
        allow read: if isReviewer()
-@@ -289,7 +355,7 @@ service cloud.firestore {
+@@ -289,7 +357,7 @@ service cloud.firestore {
        function submissionShapeOk() {
          return request.resource.data.keys().hasOnly([
                   'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
@@ -116,7 +118,7 @@ index 8ccb1b72..ea61fbc9 100644
            // `localId` is the one optional key. Every submit path sends it
            // (Community, GradientGenerator, PaletteBuilder) and the "my
            // submissions" list pairs the server copy with the browser's own
-@@ -300,7 +366,7 @@ service cloud.firestore {
+@@ -300,7 +368,7 @@ service cloud.firestore {
                    && request.resource.data.localId.size() <= 64))
            && request.resource.data.keys().hasAll([
                   'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
@@ -125,7 +127,7 @@ index 8ccb1b72..ea61fbc9 100644
            && request.resource.data.kind in ['gradient', 'design', 'palette', 'icon']
            && request.resource.data.name is string
            && request.resource.data.name.size() <= 80
-@@ -313,10 +379,15 @@ service cloud.firestore {
+@@ -313,10 +381,15 @@ service cloud.firestore {
        }
  
        // A client may only create its own submission, with status 'pending'.

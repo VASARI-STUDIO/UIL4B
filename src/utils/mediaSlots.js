@@ -3,9 +3,11 @@
 //
 // storage.rules accepts an object under community-media/{uid}/ only when its
 // name is slot-0 to slot-9 plus one of six extensions and its content type is
-// the type that extension stands for. An account therefore holds at most 60
-// objects, and a repeat upload replaces one instead of adding another. These
-// tables are the client's copy of that rule: change one, change the other.
+// the type that extension stands for, and only where no object exists yet. An
+// account therefore holds at most 60 objects, a slot is never overwritten, and
+// a full set of ten for a type means the next upload of that type has to take
+// the caller's inline fallback. These tables are the client's copy of that
+// rule: change one, change the other.
 
 export const MEDIA_SLOTS = 10
 export const MAX_MEDIA_BYTES = 10 * 1024 * 1024
@@ -50,19 +52,58 @@ export function resolveMediaKind(type, ext) {
   return TYPE_FOR_EXT[normal] ? { ext: normal, contentType: TYPE_FOR_EXT[normal] } : null
 }
 
+/** Thrown when all ten slots of a type are taken; callers fall back to inline base64. */
+export class MediaSlotsFullError extends Error {
+  constructor(ext) {
+    super(`All ${MEDIA_SLOTS} ${ext} slots are in use`)
+    this.name = 'MediaSlotsFullError'
+    this.ext = ext
+  }
+}
+
 /**
- * Which slot name to upload under. The first slot of this type that is not in
- * the folder yet; when all ten are taken, a random one, which replaces that
- * object (the folder holds no record of which prompt uses which).
+ * Which slot name to upload under: the first slot of this type that is not in
+ * the folder yet. The rule refuses an upload over an existing object, so when
+ * all ten are taken this throws rather than name one of them.
  *
  * @param {Iterable<string>} taken object names already in the owner's folder
  * @param {string} ext             one of the six extensions
- * @param {() => number} [random]  [0, 1), injectable for tests
+ * @throws {MediaSlotsFullError} when every slot of this type is taken
  */
-export function pickMediaSlot(taken, ext, random = Math.random) {
+export function pickMediaSlot(taken, ext) {
   const used = new Set(taken)
   for (let n = 0; n < MEDIA_SLOTS; n += 1) {
     if (!used.has(`slot-${n}.${ext}`)) return `slot-${n}.${ext}`
   }
-  return `slot-${Math.floor(random() * MEDIA_SLOTS)}.${ext}`
+  throw new MediaSlotsFullError(ext)
+}
+
+/** storage.rules answers an upload over an existing object with this code. */
+const isRefused = (err) => err?.code === 'storage/unauthorized'
+
+/**
+ * Upload into a free slot. Two uploads can pick the same free slot from the
+ * same listing; the rule lets the first create it and refuses the second, so a
+ * refusal is retried once with a fresh listing, the slot just tried counted as
+ * taken. A second refusal, or a full set, throws for the caller's fallback.
+ *
+ * @param {object} args
+ * @param {() => Promise<string[]>} args.listTaken object names in the owner's folder
+ * @param {(name: string) => Promise<unknown>} args.put uploads under that name
+ * @param {string} args.ext one of the six extensions
+ * @returns {Promise<string>} the slot name that took the upload
+ * @throws {MediaSlotsFullError} when every slot of this type is taken
+ */
+export async function putInFreeSlot({ listTaken, put, ext }) {
+  const tried = []
+  for (let attempt = 0; ; attempt += 1) {
+    const name = pickMediaSlot([...(await listTaken()), ...tried], ext)
+    try {
+      await put(name)
+      return name
+    } catch (err) {
+      if (attempt > 0 || !isRefused(err)) throw err
+      tried.push(name)
+    }
+  }
 }

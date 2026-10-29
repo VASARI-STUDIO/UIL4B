@@ -15,7 +15,7 @@
 import test, { after, before, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
-import { ref, uploadBytes, getBytes, deleteObject } from 'firebase/storage'
+import { ref, uploadBytes, getBytes, deleteObject, updateMetadata } from 'firebase/storage'
 import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
 const MIB = 1024 * 1024
@@ -87,6 +87,31 @@ test('H1: the owner can delete their own object, and nobody else can', async () 
   await assertSucceeds(deleteObject(ref(verified(), mine('slot-0.webp'))))
 })
 
+test('H1: a slot that already holds an object cannot be overwritten, by its owner or anyone else', async () => {
+  // The first write creates the slot; the same bytes over it are an update.
+  await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
+  await assertFails(put(verified(), mine('slot-0.webp'), 'image/webp'))
+  await assertFails(put(verified(), mine('slot-0.webp'), 'image/webp', new Uint8Array([1, 2, 3])))
+  await assertFails(put(verified(BOB), mine('slot-0.webp'), 'image/webp'))
+  // The next slot of the same type is still free.
+  await assertSucceeds(put(verified(), mine('slot-1.webp'), 'image/webp'))
+})
+
+test('H1: the metadata of a stored object cannot be changed either', async () => {
+  await storageEnv.withSecurityRulesDisabled(async (ctx) => {
+    await put(ctx.storage(), mine('slot-0.webp'), 'image/webp')
+  })
+  await assertFails(updateMetadata(ref(verified(), mine('slot-0.webp')), { contentType: 'image/webp', cacheControl: 'no-store' }))
+  await assertSucceeds(getBytes(ref(verified(), mine('slot-0.webp'))))
+})
+
+test('H1: after the owner deletes an object, the same slot can be created again', async () => {
+  await assertSucceeds(put(verified(), mine('slot-3.mp4'), 'video/mp4'))
+  await assertFails(put(verified(), mine('slot-3.mp4'), 'video/mp4'))
+  await assertSucceeds(deleteObject(ref(verified(), mine('slot-3.mp4'))))
+  await assertSucceeds(put(verified(), mine('slot-3.mp4'), 'video/mp4'))
+})
+
 test('H1: reviewers and the owner can read an object, and another account cannot', async () => {
   await storageEnv.withSecurityRulesDisabled(async (ctx) => {
     await put(ctx.storage(), mine('slot-0.webp'), 'image/webp')
@@ -149,17 +174,23 @@ test('H2: a client-set submittedAt is refused', async () => {
 
 test('H2: a second post within 30 seconds is refused, and one after 30 seconds is accepted', async () => {
   const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
-  await seedCounter({ windowStart: at(60_000), lastAt: at(5_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
-  const keep = { windowStart: at(60_000), submissions: 2 }
+  // One window timestamp, shared by the stored counter and the update: a different
+  // value would be read as a new window and refused for that reason instead.
+  const window = at(60_000)
+  await seedCounter({ windowStart: window, lastAt: at(5_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
+  const keep = { windowStart: window, submissions: 2 }
   await assertFails(post(dbFor(), 's4', { counter: keep }))
-  await seedCounter({ windowStart: at(60_000), lastAt: at(31_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
+  await seedCounter({ windowStart: window, lastAt: at(31_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
   await assertSucceeds(post(dbFor(), 's5', { counter: keep }))
 })
 
-test('H2: the 11th submission in a window is refused', async () => {
+test('H2: the 11th submission in a window is refused, and the 10th is accepted', async () => {
   const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
-  await seedCounter({ windowStart: at(3_600_000), lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
-  await assertFails(post(dbFor(), 's6', { counter: { windowStart: at(3_600_000), submissions: 11 } }))
+  const window = at(3_600_000)
+  await seedCounter({ windowStart: window, lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 9 })
+  await assertSucceeds(post(dbFor(), 's6', { counter: { windowStart: window, submissions: 10 } }))
+  await seedCounter({ windowStart: window, lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
+  await assertFails(post(dbFor(), 's7', { counter: { windowStart: window, submissions: 11 } }))
 })
 
 test('H2: a prompt is held to the same rules as a submission', async () => {
@@ -245,4 +276,81 @@ test('H2: the batch postWithLimits builds is accepted, for a first post, a later
   const expired = { windowStart: at(25 * HOUR), lastAt: at(25 * HOUR), lastKind: 'prompt', lastId: 'x', prompts: 10, submissions: 4 }
   await seedCounter(expired)
   await assertSucceeds(send('submission', expired))
+})
+
+// ── H2 · the rules' expression budget ───────────────────────────────────────
+// Firestore stops evaluating a request that uses too many expressions and
+// refuses it. The post's shape checks run once per list element, and the counter
+// checks run on the counter write in the same batch, so the largest payloads the
+// client can send are sent here through the batch postWithLimits builds
+// (planCounter for the counter), once as a first post, where the counter is
+// created, and once as a later post, where it is updated.
+let budgetN = 0
+async function sendCounted(kind, record, prev) {
+  const id = `budget${++budgetN}`
+  const db = dbFor()
+  const { data } = planCounter(prev, { kind, id, nowMs: Date.now(), stamp: serverTimestamp() })
+  const batch = writeBatch(db)
+  batch.set(doc(db, kind === 'prompt' ? 'community-prompts' : 'community-submissions', id), {
+    ...(kind === 'prompt' ? prompt() : submission()), ...record, submittedAt: serverTimestamp(),
+  })
+  batch.set(doc(db, 'users', ALICE, 'limits', 'community'), data)
+  return batch.commit()
+}
+
+function budgetCase(label, kind, record) {
+  test(`H2 budget: ${label}, as a first post (the counter is created)`, async () => {
+    await assertSucceeds(sendCounted(kind, record, null))
+    const counter = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+    assert.equal(counter[kind === 'prompt' ? 'prompts' : 'submissions'], 1, 'the counter was not written with the post')
+  })
+
+  test(`H2 budget: ${label}, as a later post (the counter is updated)`, async () => {
+    const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+    const prev = { windowStart: at(3_600_000), lastAt: at(60_000), lastKind: 'prompt', lastId: 'x', prompts: 2, submissions: 3 }
+    await seedCounter(prev)
+    await assertSucceeds(sendCounted(kind, record, prev))
+    const counter = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+    assert.equal(counter[kind === 'prompt' ? 'prompts' : 'submissions'], kind === 'prompt' ? 3 : 4, 'the counter was not stepped with the post')
+  })
+}
+
+const MAX_STOPS = 12
+budgetCase('a 12-stop gradient', 'submission', {
+  kind: 'gradient',
+  payload: {
+    type: 'linear',
+    angle: 135,
+    stops: Array.from({ length: MAX_STOPS }, (_, i) => ({ color: `#${(16 + i * 12).toString(16)}80c0`, position: i / (MAX_STOPS - 1) })),
+  },
+})
+
+budgetCase('a 32-colour palette', 'submission', {
+  kind: 'palette',
+  payload: {
+    colors: Array.from({ length: 32 }, (_, i) => `#${(16 + i * 7).toString(16)}c0a0`),
+    category: 'Branding',
+    author: 'Alice',
+  },
+})
+
+const SVG_HEAD = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="'
+const SVG_TAIL = '"/></svg>'
+budgetCase('an icon of 8192 characters', 'submission', {
+  kind: 'icon',
+  payload: {
+    svg: SVG_HEAD + 'M1 1'.padEnd(8192 - SVG_HEAD.length - SVG_TAIL.length, ' ') + SVG_TAIL,
+    author: 'Alice',
+  },
+})
+
+budgetCase('a prompt with every optional key', 'prompt', {
+  title: 'T'.repeat(300),
+  text: 'A quiet harbour at dusk. '.repeat(800).slice(0, 20000),
+  tags: 'h'.repeat(300),
+  authorName: 'A'.repeat(120),
+  profileLink: `https://example.com/${'p'.repeat(2000)}`,
+  ownerId: 'o'.repeat(64),
+  mediaType: 'image',
+  mediaUrl: `https://firebasestorage.googleapis.com/v0/b/demo/o/community-media%2F${ALICE}%2Fslot-0.webp?alt=media&token=${'t'.repeat(36)}`,
 })

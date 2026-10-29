@@ -12,20 +12,22 @@
 
 import { ref, uploadBytes, getDownloadURL, listAll } from 'firebase/storage'
 import { storage, auth } from './firebase'
-import { MAX_MEDIA_BYTES, resolveMediaKind, pickMediaSlot } from './mediaSlots'
+import { MAX_MEDIA_BYTES, resolveMediaKind, putInFreeSlot } from './mediaSlots'
 
 /**
  * Upload a Blob/File to community-media/{uid}/slot-{n}.{ext} and return its
  * public download URL. storage.rules only accepts those names (ten slots per
  * type) and a content type that matches the extension, so both are set here
- * from the blob's own type.
+ * from the blob's own type. A slot is written once and never overwritten, so a
+ * file an approved prompt points at stays as it was.
  *
  * @param {Blob|File} blobOrFile - the media to upload (raw File or processed Blob)
  * @param {string} [uid] - owner uid; defaults to the signed-in user's uid
  * @param {string} [ext] - extension hint, used only when the blob has no type
  * @returns {Promise<string>} download URL
  * @throws if the type is not one of the six storage accepts, the file is over
- *   10 MiB, Storage is unavailable/disabled, the user isn't authed, or upload fails
+ *   10 MiB, all ten slots of the type are taken, Storage is unavailable/disabled,
+ *   the user isn't authed, or upload fails
  */
 export async function uploadCommunityMedia(blobOrFile, uid, ext) {
   const ownerUid = uid || auth.currentUser?.uid
@@ -37,14 +39,17 @@ export async function uploadCommunityMedia(blobOrFile, uid, ext) {
   if (blobOrFile.size > MAX_MEDIA_BYTES) throw new Error('Media is over 10 MiB')
 
   const folder = `community-media/${ownerUid}`
-  // An unreadable folder only costs the free-slot lookup: the upload itself
-  // does not depend on it.
-  const taken = await listAll(ref(storage, folder))
+  // An unreadable folder only costs the free-slot lookup: a slot that is taken
+  // is refused by the rule and the upload tries the next one.
+  const listTaken = () => listAll(ref(storage, folder))
     .then((res) => res.items.map((item) => item.name))
     .catch(() => [])
-  const storageRef = ref(storage, `${folder}/${pickMediaSlot(taken, kind.ext)}`)
-  await uploadBytes(storageRef, blobOrFile, { contentType: kind.contentType })
-  return await getDownloadURL(storageRef)
+  const slot = await putInFreeSlot({
+    ext: kind.ext,
+    listTaken,
+    put: (name) => uploadBytes(ref(storage, `${folder}/${name}`), blobOrFile, { contentType: kind.contentType }),
+  })
+  return await getDownloadURL(ref(storage, `${folder}/${slot}`))
 }
 
 // Best-effort extension from a File's name or MIME type. Used only when the

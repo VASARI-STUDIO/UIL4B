@@ -386,8 +386,9 @@ export const GATED_PATCHES = [
     grants:
       'only a signed-in account with a verified email can upload community media, each file '
       + 'up to 10 MiB, under ten fixed names per type (webp, png, jpg, gif, mp4, webm) so an '
-      + 'account holds at most 60 files, and an account can delete its own files. Reviewers can '
-      + 'still read every file. SVG and QuickTime uploads are no longer accepted',
+      + 'account holds at most 60 files, and an account can delete its own files but not '
+      + 'overwrite one. Reviewers can still read every file. SVG and QuickTime uploads are no '
+      + 'longer accepted',
     files: ['storage.rules'],
     parts: [
       {
@@ -412,7 +413,10 @@ export const GATED_PATCHES = [
       '1) deploy the new indexes: firebase deploy --only firestore:indexes, and wait for them to '
       + 'finish building. 2) run node --env-file=.env.local scripts/backfill-submitted-at.mjs, check '
       + 'the list, then run it again with --write --all-statuses, so items already queued keep '
-      + 'their place once the queue is ordered on submittedAt. 3) then apply this',
+      + 'their place once the queue is ordered on submittedAt. 3) then apply this, and deploy the '
+      + 'rules first and the site second. 4) after the patch is live, run node --env-file=.env.local '
+      + 'scripts/backfill-submitted-at.mjs --write --all-statuses again: anything posted between '
+      + 'step 2 and the deploy has no submittedAt, and the run is safe to repeat',
     parts: [
       {
         name: 'verified, counted, server-stamped posts',
