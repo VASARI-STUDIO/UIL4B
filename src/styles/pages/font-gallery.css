@@ -501,7 +501,10 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   overflow-y: visible;
   font-family: var(--fg-ff);
 }
-.fg-page .fg-card-preview--pending { display: flex; align-items: center; font-family: var(--font); }
+.fg-page .fg-card-preview--pending { font-family: var(--font); }
+/* The placeholder sits centred in the name's line box (.7 of a 1.1 line) without
+   changing the box's display, so a card reads the same before and after its face. */
+.fg-page .fg-card-preview--pending .fg-card-skeleton--sample { margin-top: calc(var(--fg-name, 96px) * .2); }
 .fg-page .fg-card-name {
   display: block;
   font-size: calc(var(--fg-name, 96px) * var(--fg-fit, 1));

@@ -132,9 +132,22 @@ function runFits() {
     job.natural = job.el.scrollWidth
   })
   jobs.forEach(job => {
-    const scale = job.room > 0 && job.natural > job.room ? job.room / job.natural : 1
-    job.el.style.setProperty('--fg-fit', String(Math.max(scale, job.floor)))
+    job.scale = job.room > 0 && job.natural > job.room ? Math.max(job.room / job.natural, job.floor) : 1
+    job.el.style.setProperty('--fg-fit', String(job.scale))
   })
+  // Width is not exactly linear in font size: hinting and rounding can leave a
+  // scaled name a few pixels over. Measure again and shrink by what is left,
+  // still never below the floor.
+  for (let pass = 0; pass < 2; pass++) {
+    const over = jobs.filter(job => job.scale < 1 && job.scale > job.floor)
+      .map(job => ({ job, width: job.el.scrollWidth }))
+      .filter(({ job, width }) => width > job.room)
+    if (!over.length) break
+    over.forEach(({ job, width }) => {
+      job.scale = Math.max(job.scale * (job.room / width), job.floor)
+      job.el.style.setProperty('--fg-fit', String(job.scale))
+    })
+  }
 }
 // `now` fits synchronously, for the first measure after a name mounts, so it
 // never paints at the wrong size.
