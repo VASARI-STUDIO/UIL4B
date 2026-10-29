@@ -83,10 +83,9 @@ async function stubStripe(page) {
   })
 }
 
-// Logs in through the popup the checkout's prompt opens. `lateSignIn` starts
-// the page signed out and lets this form complete the sign-in in place.
-async function logInThroughPrompt(page) {
-  await page.locator('.checkout-form').getByRole('button', { name: 'Log in to continue' }).click()
+// Logs in through the login popup already open over the page. `lateSignIn`
+// starts the page signed out and lets this form complete the sign-in in place.
+async function logInThroughPopup(page) {
   await expect(page.locator('#ui-login-title')).toBeVisible()
   await page.locator('#ui-login-email').fill('someone@uil4b.test')
   await page.locator('#ui-login-password').fill('a-long-password')
@@ -514,7 +513,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expect(page.locator('.checkout-plan-cadence'), 'a quarterly plan summary rendered').toHaveCount(0)
   })
 
-  test('signed out, every paid button goes to checkout for the chosen cadence, which names the plan and asks for an account', async ({ page }) => {
+  test('signed out, the Pro button opens the login popup over the plans page and keeps the chosen cadence in its link', async ({ page }) => {
     watch(page, 'a visitor upgrading before they have an account')
     await stubPrices(page)
     await go(page, '/plans')
@@ -524,10 +523,21 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await choose(page, 'Monthly')
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=monthly')
 
-    // Not the bare sign-in box: the visitor lands on the plan, its price and its trial.
-    await choose(page, 'Yearly')
+    // The login flow starts at once, on this page: no second click at checkout.
     await proCta(page).click()
-    await expect(page).toHaveURL(/\/checkout\?plan=yearly$/)
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await expect(page).toHaveURL(/\/plans$/)
+    expect(
+      await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
+      'a new account would not come back to the checkout it chose',
+    ).toBe('/checkout?plan=monthly')
+  })
+
+  test('signed out, opening /checkout directly names the plan and asks for an account', async ({ page }) => {
+    watch(page, 'a visitor who opened a checkout link before they have an account')
+    await stubPrices(page)
+    await go(page, '/checkout?plan=yearly')
+    // Not the bare sign-in box: the visitor lands on the plan, its price and its trial.
     await expect(page.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
     await expect(page.locator('.checkout-plan-amount')).not.toHaveText('—')
     await expect(page.locator('.checkout-trial')).toContainText('7-day free trial')
@@ -556,7 +566,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
   // they chose, now with the payment form mounting for it.
   for (const cadence of ['yearly', 'monthly']) {
     const word = cadence === 'yearly' ? 'Yearly' : 'Monthly'
-    test(`signed out, logging in at checkout keeps the ${cadence} plan and mounts the ${cadence} payment form`, async ({ page }) => {
+    test(`signed out, logging in from the plans page keeps the ${cadence} plan and mounts the ${cadence} payment form`, async ({ page }) => {
       watch(page, 'a visitor who chose a cadence, then logged in to pay')
       const sessions = await answerSessions(page)
       await stubStripe(page)
@@ -566,11 +576,10 @@ test.describe('the Pro CTA starts the real upgrade', () => {
       await expectRendered(page)
       await choose(page, word)
       await proCta(page).click()
-      await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
-      await expect(page.locator('.checkout-form').getByText('Log in or create an account to pay')).toBeVisible()
       expect(sessions, 'a payment session was asked for before anyone had logged in').toEqual([])
 
-      await logInThroughPrompt(page)
+      await logInThroughPopup(page)
+      await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
       // The hand-off a brand-new account depends on: sign-up routes through
       // onboarding, which returns to whatever this holds (69-flow-audit covers
       // the return itself). The fixture cannot mint a new account, so the
@@ -580,8 +589,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
         'the checkout with its cadence was not remembered for a new sign-up',
       ).toBe(`/checkout?plan=${cadence}`)
 
-      // Still this checkout, for this cadence: the popup closed over the page and
-      // did not send the visitor anywhere.
+      // The checkout for this cadence, with the popup gone.
       await expect(page.locator('#ui-login-title')).toHaveCount(0)
       await expect(page.getByText('Log in or create an account to pay')).toHaveCount(0)
       await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
