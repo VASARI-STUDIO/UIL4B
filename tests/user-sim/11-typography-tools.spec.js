@@ -132,10 +132,10 @@ test.describe('Type Scale Generator', () => {
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
-    // Pressing outside the drawer closes it, so the panel's controls are used
-    // with the drawer shut and the code is opened again to read the result.
+    // The drawer is not modal: the panel beside it stays usable with the code
+    // open, so a change there is read straight from the drawer.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    await expect(page.locator('#tsc-code-drawer')).toBeHidden()
+    await expect(page.locator('#tsc-code-drawer')).toBeVisible()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
     await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')
