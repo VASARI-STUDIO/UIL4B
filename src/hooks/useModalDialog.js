@@ -104,7 +104,15 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     const onKey = (e) => {
       // stopPropagation so a dialog opened from inside another surface closes
       // only itself rather than collapsing the whole stack.
-      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+      if (e.key === 'Escape') {
+        // A menu open inside the dialog takes this Escape: its own listener runs
+        // after this one and closes just the menu, so the dialog stays.
+        // Only a trigger on screen counts, so a stale attribute on a hidden one
+        // can never leave the dialog without Escape.
+        const menuOpen = Array.from(node?.querySelectorAll('[aria-haspopup][aria-expanded="true"]') || []).some(el => el.offsetParent !== null)
+        if (menuOpen) return
+        e.stopPropagation(); onClose(); return
+      }
       if (e.key !== 'Tab') return
       const list = focusables()
       if (!list.length) { e.preventDefault(); node?.focus(); return }

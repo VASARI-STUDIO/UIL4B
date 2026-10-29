@@ -1,8 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import {
-  DOSSIER_TABS, facesThinCatalogue, fontFacts, nameList, yearOf,
+  DOSSIER_TABS, LICENCES, facesThinCatalogue, fontFacts, fontLicence, licenceKey, nameList, yearOf,
 } from '../../src/utils/fontDossier.js'
+
+// The committed table the pop-up loads, read from disk the way the build ships it.
+const realTable = JSON.parse(
+  fs.readFileSync(new URL('../../src/data/fontLicences.json', import.meta.url), 'utf8'),
+)
 
 // The About tab states facts about real typefaces and real people who drew
 // them. Every test here is guarding against the same failure — the panel
@@ -42,13 +48,13 @@ test('the dossier offers exactly the four tabs the founder asked for, in order',
 })
 
 test('a fully-described family states every fact the catalogue holds', () => {
-  const facts = Object.fromEntries(fontFacts(playfair).map(r => [r.k, r.v]))
+  const facts = Object.fromEntries(fontFacts(playfair, realTable).map(r => [r.k, r.v]))
   assert.equal(facts.Classification, 'Serif')
   assert.equal(facts.Designer, 'Claus Eggers Sørensen')
   assert.equal(facts.Weights, '6 — Regular 400 to Black 900')
   assert.equal(facts.Styles, 'Roman and italic')
   assert.equal(facts['Variable axes'], 'Weight')
-  assert.equal(facts.Licence, 'Open source')
+  assert.equal(facts.Licence, 'SIL Open Font License 1.1')
   // Rank is 1-based for a reader; the catalogue index is 0-based.
   assert.equal(facts.Popularity, '#18 by use on Google Fonts')
 })
@@ -132,4 +138,97 @@ test('a malformed date yields no date row rather than a wrong one', () => {
 test('a missing font produces no claims at all', () => {
   assert.deepEqual(fontFacts(null), [])
   assert.deepEqual(fontFacts(undefined), [])
+})
+
+// ── Licence ───────────────────────────────────────────────────────────────
+
+const OPEN_SOURCE = /open[\s-]*source/i
+
+test('Inter is named under the SIL Open Font License 1.1, with its link and summary', () => {
+  const licence = fontLicence({ family: 'Inter' }, realTable)
+  assert.equal(licence.id, 'OFL-1.1')
+  assert.equal(licence.heading, 'SIL Open Font License 1.1')
+  assert.equal(licence.href, 'https://openfontlicense.org')
+  assert.equal(
+    licence.summary,
+    'Free to use in personal and commercial work, including apps and logos. You can\u2019t sell the font files on their own.',
+  )
+  assert.equal(licence.linkLabel, 'Read the licence \u2197')
+  assert.equal(fontFacts({ ...playfair, family: 'Inter' }, realTable).find(r => r.k === 'Licence').v, 'SIL Open Font License 1.1')
+})
+
+test('each licence the table can hold has its own heading and link', () => {
+  const table = { aaa: 'OFL-1.1', bbb: 'Apache-2.0', ccc: 'UFL-1.0' }
+  const got = ['aaa', 'bbb', 'ccc'].map(family => fontLicence({ family }, table))
+  assert.deepEqual(got.map(l => l.heading), [
+    'SIL Open Font License 1.1', 'Apache License 2.0', 'Ubuntu Font Licence 1.0',
+  ])
+  assert.deepEqual(got.map(l => l.href), [
+    'https://openfontlicense.org',
+    'https://www.apache.org/licenses/LICENSE-2.0',
+    'https://ubuntu.com/legal/font-licence',
+  ])
+  assert.equal(new Set(got.map(l => l.summary)).size, 3, 'three licences, three different summaries')
+  assert.deepEqual(Object.keys(LICENCES), ['OFL-1.1', 'Apache-2.0', 'UFL-1.0'])
+})
+
+test('the committed table names Ubuntu under the Ubuntu Font Licence', () => {
+  assert.equal(fontLicence({ family: 'Ubuntu' }, realTable).heading, 'Ubuntu Font Licence 1.0')
+})
+
+test('a family missing from the table falls back to its Google Fonts page and asserts no licence', () => {
+  const licence = fontLicence({ family: 'Not A Real Family' }, realTable)
+  assert.equal(licence.id, null)
+  assert.equal(licence.heading, 'Licence on Google Fonts')
+  assert.equal(licence.href, 'https://fonts.google.com/specimen/Not+A+Real+Family')
+  assert.equal(licence.summary, 'Check the licence on Google Fonts before you ship.')
+  // Even a family the catalogue flags as open source gets no licence name from that flag.
+  const row = rowFor({ ...playfair, family: 'Not A Real Family', openSource: true }, 'Licence')
+  assert.equal(row, undefined)
+  const withTable = fontFacts({ ...playfair, family: 'Not A Real Family', openSource: true }, realTable)
+  assert.equal(withTable.find(r => r.k === 'Licence').v, 'Licence on Google Fonts')
+})
+
+test('an id the module has no text for is treated as unknown, not passed through', () => {
+  const licence = fontLicence({ family: 'Odd' }, { odd: 'MIT' })
+  assert.equal(licence.id, null)
+  assert.equal(licence.heading, 'Licence on Google Fonts')
+})
+
+test('until the table has loaded there is no licence claim at all', () => {
+  for (const table of [undefined, null, 'x']) {
+    assert.equal(fontLicence({ family: 'Inter' }, table), null)
+    assert.equal(fontFacts({ ...playfair, family: 'Inter' }, table).find(r => r.k === 'Licence'), undefined)
+  }
+  assert.equal(fontLicence(null, realTable), null)
+  assert.equal(fontLicence({}, realTable), null)
+})
+
+test('family names are matched the way the repository folders are named', () => {
+  assert.equal(licenceKey('Open Sans'), 'opensans')
+  assert.equal(licenceKey('IBM Plex Sans'), 'ibmplexsans')
+  assert.equal(licenceKey('Rock 3D'), 'rock3d')
+  assert.equal(fontLicence({ family: 'Open Sans' }, realTable).id, 'OFL-1.1')
+  assert.equal(fontLicence({ family: 'OPEN SANS' }, realTable).id, 'OFL-1.1')
+  // A name that is also an Object.prototype key must not read a licence off it.
+  assert.equal(fontLicence({ family: 'constructor' }, realTable).id, null)
+})
+
+test('the committed table only holds licences the pop-up has text for, and is not a stub', () => {
+  const ids = new Set(Object.values(realTable))
+  for (const id of ids) assert.ok(Object.hasOwn(LICENCES, id), `${id} has no heading`)
+  assert.ok(Object.keys(realTable).length > 1500)
+  for (const key of Object.keys(realTable)) assert.equal(key, licenceKey(key), `${key} is not in normalised form`)
+})
+
+test('"Open source" appears in nothing the licence code produces', () => {
+  const families = [...Object.keys(realTable), 'Not A Real Family']
+  for (const table of [undefined, realTable]) {
+    for (const family of families) {
+      const font = { ...playfair, family, openSource: true }
+      const out = JSON.stringify([fontFacts(font, table), fontLicence(font, table)])
+      assert.ok(!OPEN_SOURCE.test(out), `${family} produced "Open source"`)
+    }
+  }
+  assert.ok(!OPEN_SOURCE.test(JSON.stringify(LICENCES)))
 })
