@@ -61,6 +61,10 @@ const EXPECTED_IDS = [
   'moderator-role',
   'feedback-bounds',
   'firebase-deferral',
+  'community-icon',
+  'analytics-counters',
+  'profile-types',
+  'submission-payload',
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -152,7 +156,7 @@ test('all four still apply to the files they were written for', async () => {
     + 'cannot be applied is a design that has to be redone at the worst possible moment. Regenerate '
     + 'the diff from its pull request — do not weaken what it grants to make it fit.',
   )
-  assert.equal(states.size, 4)
+  assert.equal(states.size, EXPECTED_IDS.length)
 })
 
 test('each patch actually grants its rule — applying cleanly is not enough', async () => {
@@ -208,6 +212,38 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   assert.ok(subs.includes("import { loadFirestore, loadAuthSdk } from '../utils/firebaseAccess'"))
   assert.ok(!/^import \{ doc, onSnapshot \} from 'firebase\/firestore'/m.test(subs),
     'SubscriptionContext still imports firebase/firestore statically after the patch')
+})
+
+test('the four rules-audit fixes (M1-M4) each land their rule, and the route half lands too', async () => {
+  // Written out against the planned text for the same reason as the test above:
+  // a detector that had drifted to something trivially true would satisfy the
+  // planner. Each of these is a line only that patch adds.
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const rules = lf(plan.after.get('firestore.rules'))
+  const route = lf(plan.after.get('api/verify-admin.js'))
+
+  // M1 · icon submissions are no longer refused.
+  assert.match(rules, /kind in \['gradient', 'design', 'palette', 'icon'\]/)
+  assert.match(rules, /payload\.svg\.size\(\) <= 8192/)
+  // M2 · a non-admin update keeps every existing key; the admin claim is the exception.
+  assert.match(rules, /keys\(\)\.toSet\(\)\.hasAll\(resource\.data\.keys\(\)\.toSet\(\)\)/)
+  assert.match(rules, /allow update: if dayDocOk\(\)\s*&& \(request\.auth\.token\.admin == true \|\| countersOnlyGrow\(\)\)/)
+  // M3 · the profile keys are typed on create AND update, and the route coerces them.
+  assert.match(rules, /allow create: if isOwner\(\) && createsNoLockedField\(\) && profileTypesOk\(\)/)
+  assert.match(rules, /allow update: if isOwner\(\) && leavesLockedFieldsUntouched\(\) && profileTypesOk\(\)/)
+  assert.doesNotMatch(rules, /function profileTypesOk\(\)[\s\S]{0,900}hasOnly/,
+    'a key allowlist on users/{uid} would refuse the keys the server writes')
+  assert.match(route, /location: profileText\(d\.location, 200\)/)
+  assert.match(route, /company: profileText\(d\.company, 200\)/)
+  // M4 · angle is a number, every stop index up to the 12-stop cap is checked,
+  // and one join types and bounds the palette.
+  assert.match(rules, /p\.angle is number/)
+  assert.match(rules, /payload\.stops\.size\(\) <= 12\)\)/)
+  assert.match(rules, /s\[11\]\.position is number/)
+  assert.doesNotMatch(rules, /s\[12\]/)
+  assert.match(rules, /p\.colors\.join\(''\)\.size\(\) <= 1024/)
+  assert.match(rules, /&& submissionPayloadOk\(\)\s*&& payloadElementsOk\(\)/)
 })
 
 test('nothing the four grant is taken away from the file they land in', async () => {
@@ -328,8 +364,8 @@ test('the plan is deterministic — two runs produce the same bytes', async () =
   const b = await planGatedPatches({ seed: (f) => a.after.get(f) })
   assert.equal(b.failed, false)
   assert.deepEqual(
-    b.steps.map((s) => s.status), ['skipped', 'skipped', 'skipped', 'skipped'],
-    'a second run must find all four already applied and do nothing',
+    b.steps.map((s) => s.status), EXPECTED_IDS.map(() => 'skipped'),
+    'a second run must find every change already applied and do nothing',
   )
   for (const file of TARGET_FILES) {
     assert.equal(lf(b.after.get(file)), lf(a.after.get(file)),

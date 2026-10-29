@@ -173,10 +173,26 @@ function flushAggregate() {
   } catch { /* offline / rules / SDK error — fall back to localStorage only */ }
 }
 
-// Record a page view into the daily aggregate doc (total + per-path counter).
+// Routes in src/App.jsx with a :param segment, as [pattern, template]. The page
+// counter is per route, not per URL: every project id would otherwise add a
+// field to the day document. /learn/help and /learn/principles are their own
+// routes and keep their own counters.
+const DYNAMIC_ROUTES = Object.freeze([
+  [/^\/projects\/[^/]+$/, '/projects/:id'],
+  [/^\/learn\/(?!help$|principles$)[^/]+$/, '/learn/:slug'],
+])
+
+/** The route template for a pathname: `/projects/abc` becomes `/projects/:id`. */
+export function routeTemplate(path) {
+  const clean = String(path ?? '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/'
+  for (const [pattern, template] of DYNAMIC_ROUTES) if (pattern.test(clean)) return template
+  return path
+}
+
+// Record a page view into the daily aggregate doc (total + per-route counter).
 function recordAggregateView(path) {
   bumpAggregate('views', 1)
-  bumpAggregate(aggField(AGG_PREFIX.view, path), 1)
+  bumpAggregate(aggField(AGG_PREFIX.view, routeTemplate(path)), 1)
 }
 
 // Record a tool action into the daily aggregate doc (per-tool counter). A `__`
@@ -523,6 +539,26 @@ export function trackToolOpen(toolId) {
   recordAggregateOpen(toolId)
 }
 
+// A day document holds at most 500 fields (firestore.rules), and every distinct
+// icon copied adds one. A device therefore names at most this many distinct
+// icons per day; a copy past that still counts in `icon-copies` and in its pack
+// tally, which stays bounded by the number of packs. The list is kept in
+// localStorage, per day, so a reload does not reset it. It reduces how fast
+// honest traffic fills the document (about 60 devices still would); a hostile
+// client ignores it, which the rules cannot close.
+const ICON_NAMES_PER_DEVICE_DAY = 8
+const ICON_NAMES_KEY = 'vs-icon-names'
+
+function mayNameIcon(iconKey) {
+  const day = todayStr()
+  const stored = load(ICON_NAMES_KEY, {})
+  const names = stored.day === day && Array.isArray(stored.names) ? stored.names : []
+  if (names.includes(iconKey)) return true
+  if (names.length >= ICON_NAMES_PER_DEVICE_DAY) return false
+  save(ICON_NAMES_KEY, { day, names: [...names, iconKey] })
+  return true
+}
+
 // Icon copies — most-copied icons and packs. Locally in the design-analytics
 // blob; cross-user via per-icon / per-pack fields on the daily aggregate doc.
 export function trackIconCopy(pack, name) {
@@ -535,8 +571,8 @@ export function trackIconCopy(pack, name) {
   if (pack) data.packCopies[pack] = (data.packCopies[pack] || 0) + 1
   saveDesignAnalytics(data)
   bumpAggregate('icon-copies', 1)
-  bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
-  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, pack), 1)
+  if (mayNameIcon(iconKey)) bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
+  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, String(pack).slice(0, 40)), 1)
 }
 
 export function getDesignAnalytics() {

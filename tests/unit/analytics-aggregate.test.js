@@ -266,3 +266,42 @@ test('the Overview shows Opened and Used per tool', () => {
   assert.match(src, /data-col="used"/)
   assert.doesNotMatch(src, /title="Top Tools"/, 'the old single-number tools list is back')
 })
+
+// ── T7: the daily field cap ─────────────────────────────────────────────────
+
+test('a device names at most 8 distinct icons a day; the rest still count in the totals and the pack', async () => {
+  // firestore.rules caps a day document at 500 fields and each distinct icon is
+  // one field, so the writer bounds how many one device can add.
+  const a = await loadAnalytics()
+  for (let i = 0; i < 12; i++) a.trackIconCopy('lucide', `icon-${i}`)
+  a.trackIconCopy('lucide', 'icon-0')
+  flush()
+  const day = store.get(DAY)
+  const named = Object.keys(day).filter(f => f.startsWith('icon__'))
+  assert.equal(named.length, 8, 'only the first eight distinct icons get a field of their own')
+  assert.equal(day['icon__lucide:icon-0'], 2, 'an icon already named keeps counting')
+  assert.equal(day['icon-copies'], 13, 'the headline total counts every copy')
+  assert.equal(day['ipack__lucide'], 13, 'the pack tally counts every copy')
+})
+
+test('two different project ids record the same page field', async () => {
+  // A route with a :param is one field, not one per id: every distinct id would
+  // otherwise add a field to the 500-field day document.
+  const a = await loadAnalytics()
+  a.trackPageView('/projects/abc123')
+  a.trackPageView('/projects/zzz999')
+  a.trackPageView('/projects/zzz999/')
+  a.trackPageView('/projects')
+  a.trackPageView('/learn/color-theory')
+  a.trackPageView('/learn/spacing')
+  a.trackPageView('/learn/help')
+  flush()
+  const day = store.get(DAY)
+  const views = Object.keys(day).filter(f => f.startsWith('view__')).sort()
+  assert.deepEqual(views, [
+    'view__learn_:slug', 'view__learn_help', 'view__projects', 'view__projects_:id',
+  ])
+  assert.equal(day['view__projects_:id'], 3)
+  assert.equal(day['view__learn_:slug'], 2)
+  assert.equal(day.views, 7, 'the headline total still counts every view')
+})

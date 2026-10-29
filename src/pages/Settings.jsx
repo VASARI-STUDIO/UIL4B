@@ -73,7 +73,7 @@ function portalErrorText(e) {
   return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
 }
 
-function EditField({ label, value, onSave, type = 'text', placeholder, options }) {
+function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
@@ -172,6 +172,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
             onKeyDown={onFieldKey}
             onBlur={options ? () => { setSuggestOpen(false); setHi(-1) } : undefined}
             placeholder={placeholder}
+            maxLength={maxLength}
             autoFocus
             readOnly={saving}
             aria-invalid={error ? true : undefined}
@@ -1497,7 +1498,7 @@ export default function Settings({ toast }) {
                       <button type="button" onClick={dismissProfileSyncError}>Dismiss</button>
                     </div>
                   )}
-                  <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" />
+                  <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" maxLength={200} />
                   {/* AWAITED, so a failure stays in the field, in words, and the
                       toast means the confirmation link really went out. */}
                   <EmailEditField
@@ -1506,10 +1507,10 @@ export default function Settings({ toast }) {
                     onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
                     verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
                   />
-                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} />
-                  <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" />
-                  <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" />
-                  <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" />
+                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
+                  <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" maxLength={200} />
+                  <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
+                  <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" maxLength={5000} />
                   <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={(id) => { updateProfile({ flair: id }); toast(id ? 'Flair updated' : 'Flair cleared') }} />
                   <PasswordChange
                     onSave={(current, next) => updatePassword(current, next)}

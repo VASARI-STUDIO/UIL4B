@@ -1,0 +1,88 @@
+diff --git a/firestore.rules b/firestore.rules
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -129,6 +129,66 @@ service cloud.firestore {
+       function isSignedIn() { return request.auth != null; }
+       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
+ 
++      // The elements of the two payload lists. A rule cannot loop, so each
++      // index up to the 12-stop cap (the generator's MAX_STOPS) is checked on
++      // its own term. A term tests the length first, so an index past the end
++      // of a shorter list costs one comparison and the element checks are
++      // skipped. The list is passed in rather than re-read from the request at
++      // every term. A gradient stop is the { color, position } pair
++      // gradientSubmissions.js sanitises to. `keys()` on a non-map and `size()`
++      // on a number both error, and an error in a rule is a deny, so neither
++      // needs an `is` test of its own.
++      function stopsOk(s) {
++        return (s.size() <= 0 || (s[0].keys().hasOnly(['color', 'position'])
++          && s[0].color.size() <= 16
++          && s[0].position is number))
++        && (s.size() <= 1 || (s[1].keys().hasOnly(['color', 'position'])
++          && s[1].color.size() <= 16
++          && s[1].position is number))
++        && (s.size() <= 2 || (s[2].keys().hasOnly(['color', 'position'])
++          && s[2].color.size() <= 16
++          && s[2].position is number))
++        && (s.size() <= 3 || (s[3].keys().hasOnly(['color', 'position'])
++          && s[3].color.size() <= 16
++          && s[3].position is number))
++        && (s.size() <= 4 || (s[4].keys().hasOnly(['color', 'position'])
++          && s[4].color.size() <= 16
++          && s[4].position is number))
++        && (s.size() <= 5 || (s[5].keys().hasOnly(['color', 'position'])
++          && s[5].color.size() <= 16
++          && s[5].position is number))
++        && (s.size() <= 6 || (s[6].keys().hasOnly(['color', 'position'])
++          && s[6].color.size() <= 16
++          && s[6].position is number))
++        && (s.size() <= 7 || (s[7].keys().hasOnly(['color', 'position'])
++          && s[7].color.size() <= 16
++          && s[7].position is number))
++        && (s.size() <= 8 || (s[8].keys().hasOnly(['color', 'position'])
++          && s[8].color.size() <= 16
++          && s[8].position is number))
++        && (s.size() <= 9 || (s[9].keys().hasOnly(['color', 'position'])
++          && s[9].color.size() <= 16
++          && s[9].position is number))
++        && (s.size() <= 10 || (s[10].keys().hasOnly(['color', 'position'])
++          && s[10].color.size() <= 16
++          && s[10].position is number))
++        && (s.size() <= 11 || (s[11].keys().hasOnly(['color', 'position'])
++          && s[11].color.size() <= 16
++          && s[11].position is number));
++      }
++
++      // Without these, `angle` took any type and `stops` and `colors` took any
++      // elements, so a document could still reach 1 MiB inside the list caps.
++      // A palette colour is a hex string: `join` refuses a list with any
++      // non-string element, and 32 colours of at most 32 characters each fit
++      // in 1024 characters, so one test types the list and bounds its size.
++      function payloadElementsOk() {
++        let p = request.resource.data.payload;
++        return (!('angle' in p) || p.angle is number)
++          && (!('stops' in p) || stopsOk(p.stops))
++          && (!('colors' in p) || p.colors.join('').size() <= 1024);
++      }
++
+       // The exact seven keys buildQueueRecord writes. `payload` is bounded by a
+       // key allowlist and a size cap on every field.
+       function submissionPayloadOk() {
+@@ -157,6 +217,6 @@ service cloud.firestore {
+           // Gradient stops and palette colours are lists, capped by length.
+           && (!('stops' in request.resource.data.payload)
+               || (request.resource.data.payload.stops is list
+-                  && request.resource.data.payload.stops.size() <= 32))
++                  && request.resource.data.payload.stops.size() <= 12))
+           && (!('colors' in request.resource.data.payload)
+               || (request.resource.data.payload.colors is list
+@@ -185,7 +245,8 @@ service cloud.firestore {
+           && request.resource.data.authorName.size() <= 60
+           && request.resource.data.createdAt is string
+           && request.resource.data.createdAt.size() <= 40
+-          && submissionPayloadOk();
++          && submissionPayloadOk()
++          && payloadElementsOk();
+       }
+ 
+       // A client may only create its own submission, with status 'pending'.
