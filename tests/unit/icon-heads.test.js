@@ -7,6 +7,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { ICON_PACK_TIERS, anonPerPack } from '../../src/data/iconPackTiers.js'
+import { ANON_ICON_CEILING } from '../../src/data/iconGridRows.js'
 import { matchesRegular } from '../../src/data/iconRegularRules.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
@@ -33,9 +34,10 @@ test('each head is a title and unique, Regular-weight names, at most 250', () =>
 })
 
 test('heads are long enough for the grids built from them', () => {
-  // The signed-out sample takes anonPerPack names from each of its packs, and a
-  // pack that opens the grid must fill the first page of 120 on its own.
-  const need = anonPerPack(PACKS)
+  // The signed-out lists take the ceiling's share of names from each of its packs
+  // (the grid trims them to whole rows), and a pack that opens the grid must fill
+  // the first page of 120 on its own.
+  const need = anonPerPack(PACKS, ANON_ICON_CEILING)
   for (const pack of PACKS.filter((p) => ICON_PACK_TIERS[p].tier === 'anon')) {
     assert.ok(read(pack).names.length >= need, `${pack} is shorter than the signed-out cap of ${need}`)
   }

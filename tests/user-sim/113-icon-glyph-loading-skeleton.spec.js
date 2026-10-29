@@ -1,6 +1,7 @@
 // Hold glyph batches to verify the transparent waiting state before artwork arrives.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { gridColumns, wholeRowCount } from './icon-grid-rows.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, answerIconify, holdIconHeads, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer opening the icon library on a slow connection'
@@ -652,7 +653,8 @@ test('slow catalogues keep the skeleton and loading message until icons arrive',
   const heads = await holdIconHeads(page, { delay: () => 4000 })
   try {
     await go(page, '/create/icons')
-    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    // 1440 is 13 columns, so the 60-icon sample is filled out to five whole rows.
+    await expect(page.locator('.ig-skel')).toHaveCount(65)
     // POSITIVE CONTROL: the hold caught the heads, so the skeleton is waiting on them.
     await expect.poll(() => heads.requested.length, { timeout: 20_000 }).toBe(5)
     heads.release()
@@ -661,7 +663,7 @@ test('slow catalogues keep the skeleton and loading message until icons arrive',
     expect(heads.answered).toEqual([])
     await expect(page.locator('.pl-empty')).toHaveCount(0)
     await expect(page.getByText('No icons to show', { exact: true })).toHaveCount(0)
-    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    await expect(page.locator('.ig-skel')).toHaveCount(65)
     await expect(page.locator('.ig-status')).toHaveText('Loading icons\u2026')
     await expect(page.locator('.ig-status')).toBeVisible()
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
@@ -686,7 +688,9 @@ test('staggered catalogues keep the signed-out first page intact at 768', async 
   const release = heads.release
   try {
     await go(page, '/create/icons')
-    await expect(page.locator('.ig-skel')).toHaveCount(60)
+    await expect(page.locator('.ig-skel').first()).toBeVisible()
+    const wanted = wholeRowCount(await gridColumns(page))
+    await expect(page.locator('.ig-skel')).toHaveCount(wanted)
     await page.evaluate(() => {
       window.__iconCls = 0
       window.__iconCellCounts = []
@@ -703,14 +707,14 @@ test('staggered catalogues keep the signed-out first page intact at 768', async 
     })
     release()
     await expect(page.locator('.ig-skel')).toHaveCount(0)
-    await expect(page.locator('.ig .ic')).toHaveCount(60)
+    await expect(page.locator('.ig .ic')).toHaveCount(wanted)
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     await expect(page.locator('.ig .ig-glyph-wait')).toHaveCount(0)
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     expect(new Set(arrivals).size).toBe(packs.length)
     const counts = await page.evaluate(() => window.__iconCellCounts)
     expect(counts.length, 'the observer recorded the reveal').toBeGreaterThan(0)
-    expect(Math.min(...counts), 'no partial grid replaces the 60-cell skeleton').toBeGreaterThanOrEqual(60)
+    expect(Math.min(...counts), 'no partial grid replaces the whole-row skeleton').toBeGreaterThanOrEqual(wanted)
     expect(await page.evaluate(() => window.__iconCls)).toBeLessThanOrEqual(0.1)
   } finally { release() }
 })
@@ -771,7 +775,7 @@ for (const scheme of ['light', 'dark']) {
               }).observe({ type: 'layout-shift' })
             })
             expect(before.count).toBeGreaterThanOrEqual(before.columns * 4)
-            expect(before.count).toBe(signedIn ? 120 : 60)
+            expect(before.count).toBe(signedIn ? 120 : wholeRowCount(before.columns))
             expect(alphaOf(before.background)).toBeCloseTo(0.06, 3)
             release()
             await expect(page.locator('.ig-skel')).toHaveCount(0)
@@ -984,7 +988,7 @@ test.describe('the search skeleton in a multi-pack scope at 1440', () => {
       await expect(page.locator('.ig-skel').first()).toBeVisible()
       await page.getByLabel('Search icons').first().fill('star')
       await page.waitForRequest((r) => new URL(r.url()).pathname === '/search')
-      await expect(page.locator('.ig.ig--reserve-pack .ig-skel').first()).toBeVisible()
+      await expect(page.locator('.ig .ig-skel').first()).toBeVisible()
       // Offsets from each cell's own top: row position cannot hide a difference.
       const offsets = (selector) => page.locator('.ig').evaluate((grid, sel) => [...grid.children].map((cell) => {
         const box = cell.querySelector(sel).getBoundingClientRect()

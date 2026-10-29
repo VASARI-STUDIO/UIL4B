@@ -939,7 +939,7 @@ for (const weight of ['Regular', 'Bold', 'Fill', 'Duo']) {
     await seg.getByRole('button', { name: new RegExp(`^${weight}`) }).click()
     await expect(page.locator('.ig .ic').first()).toBeVisible()
     if (weight !== 'Regular') {
-      await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', weight === 'Duo' ? /-duotone$/ : weight === 'Bold' ? /-bold$/ : /-(fill|solid|filled)$/)
+      await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', weight === 'Duo' ? /-duotone(, [^,]+)?$/ : weight === 'Bold' ? /-bold(, [^,]+)?$/ : /-(fill|solid|filled)(, [^,]+)?$/)
     }
     await page.locator('.ig .ic').first().click()
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
@@ -1091,6 +1091,9 @@ for (const width of [1440, 390]) {
     if (width === 1440) {
       await expect(cells).toHaveCount(120)
       const firstCell = cells.first()
+      // The pack name shows on hover only: hidden at rest, there under the pointer.
+      await expect(firstCell.locator('.ic-pack')).toBeHidden()
+      await firstCell.hover()
       await expect(firstCell.locator('.ic-pack')).toBeVisible()
       await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('Circle Flags'))
       const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
@@ -1099,6 +1102,7 @@ for (const width of [1440, 390]) {
       await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
       await expect(cells).toHaveCount(expected.length)
       await cells.nth(180).scrollIntoViewIfNeeded()
+      await cells.nth(180).hover()
       await expect(cells.nth(180).locator('.ic-pack')).toBeVisible()
       expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
       await page.evaluate(() => window.scrollTo(0, 0))
