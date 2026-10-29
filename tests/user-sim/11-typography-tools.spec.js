@@ -11,6 +11,7 @@
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
+import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {
   await page.addInitScript(({ exposeFontApi, initialMode }) => {
@@ -88,22 +89,22 @@ test.describe('Type Scale Generator', () => {
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(largest).toContainText('61.04px')
 
-    // The audience control is now the switch that sits above the panel it
-    // changes, not the pair of hero cards that used to sit two screens away
-    // from it. (Tint Scale carried the identical pair and lost it in the same
-    // way in #surface-headers-read-as-ai — see 05-tint-scale-workflows.spec.js
-    // and 55-header-sweep.spec.js. Neither page has hero cards now.)
-    await expect(page.getByRole('tab', { name: /Scale/i })).toHaveAttribute('aria-selected', 'true')
-    await page.getByRole('tab', { name: 'Page' }).click()
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    // At 1440 the work column is wide enough to show the ladder and the page
+    // side by side, so there is no audience switch to press: the page preview is
+    // already there, and so are the steps the controls above just moved. (The
+    // Scale / Page / Code switch below the split is covered in the test after
+    // the keyboard one.)
+    await showTypeScalePage(page)
+    await expect(page.getByRole('tab')).toHaveCount(0)
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 
   test('a developer copies CSS custom properties for the whole scale', async ({ page }) => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    await page.getByRole('tab', { name: 'Code' }).click()
-    await expect(page.locator('#tsc-export')).toBeVisible()
+    // At 1440 the code is in the drawer opened from the docked bar.
+    expect(await showTypeScaleCode(page)).toBe('split')
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
     // joined by clamp(), so a step exports as an interpolation rather than a
@@ -117,6 +118,7 @@ test.describe('Type Scale Generator', () => {
     await expect(code).toContainText('--leading: 1.5;')
     await expect(code).toContainText('--font-heading:')
     await expect(page.getByRole('button', { name: /^Copy CSS$/ })).toBeVisible()
+    await expect(page.locator('.tsc-drawer-copy')).toBeVisible()
 
     await page.getByRole('button', { name: 'Tailwind' }).click()
     await expect(code).toContainText('fontSize: {')
@@ -130,15 +132,22 @@ test.describe('Type Scale Generator', () => {
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
+    // Pressing outside the drawer closes it, so the panel's controls are used
+    // with the drawer shut and the code is opened again to read the result.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
+    await expect(page.locator('#tsc-code-drawer')).toBeHidden()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
+    await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')
     await expect(code).toContainText(`@media (min-width: 1440px)`)
   })
 
   test('the audience tabs are a real tablist for the keyboard', async ({ page }) => {
     watch(page, 'keyboard-only visitor')
+    // 1024 is below the split, where the switch is the only way to Page and Code.
+    await page.setViewportSize({ width: 1024, height: 800 })
     await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('switch')
 
     // ONE tablist, and it is the one beside its own panel. `audience` used to
     // have two controls: hero cards under role="tablist" whose aria-controls
@@ -159,6 +168,31 @@ test.describe('Type Scale Generator', () => {
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await expect(designer).toBeFocused()
+  })
+
+  test('below the split the switch shows one view at a time, and at 1440 there is none', async ({ page }) => {
+    watch(page, 'visitor on a laptop and on a wide screen')
+    await page.setViewportSize({ width: 1024, height: 800 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('switch')
+
+    const panel = page.locator('#tsc-view-panel')
+    await expect(panel).toHaveAttribute('data-view', 'scale')
+    await expect(page.getByRole('tab', { name: 'Scale' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
+    await expect(page.locator('.tsc-article')).toHaveCount(0)
+
+    await page.getByRole('tab', { name: 'Page' }).click()
+    await expect(panel).toHaveAttribute('data-view', 'page')
+    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row')).toHaveCount(0)
+
+    // The same page widened to 1440 drops the switch for the split.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(panel).toHaveAttribute('data-view', 'split')
+    await expect(page.locator('.tsc-view-switch')).toHaveCount(0)
+    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 
   test('the scale stays contained on a small phone', async ({ page }) => {
@@ -199,7 +233,7 @@ test.describe('Type Scale Generator', () => {
     // clamp rather than a lone rem — the extreme value is still carried
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
-    await page.getByRole('tab', { name: 'Code' }).click()
+    await showTypeScaleCode(page)
     await expect(page.locator('#tsc-export')).toContainText('787320px')
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
