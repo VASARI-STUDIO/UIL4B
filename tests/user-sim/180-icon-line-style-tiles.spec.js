@@ -3,16 +3,16 @@
 // Round, Sharp and Crisp are a radiogroup of tiles, each drawing the icon being edited in its own
 // ends and corners. Arrow keys steer through them. "Set ends and corners separately" opens two rows
 // of words; a mix no tile draws leaves every tile unselected and keeps the rows open. For a free or
-// signed-out viewer, pressing Sharp or Crisp opens no dialog and changes the stage, but Copy SVG, the
-// code's Copy, Download SVG and Save to project go off with a reason in a status line, and nothing
-// reaches the clipboard. Pro viewers see no hint and export the style. (Part B of the slice swaps the
-// disabled buttons for the Upgrade button; until then, off is the honest state.)
+// signed-out viewer, pressing Sharp or Crisp opens no dialog and changes the stage, but Copy SVG becomes
+// Upgrade to Pro, the code Copy, Download SVG and Save to project dim (aria-disabled) with a reason, and nothing
+// reaches the clipboard. Pro viewers see no hint and export the style. (The swap itself is covered in
+// 181-icon-pro-preview-swap.spec.js.)
 //
 // HOW TO SEE EACH FAIL (src/utils/iconLineStyle.js, src/utils/iconSize.js, src/pages/IconLibrary.jsx):
 //   isProLineStyle always returns false            -> "pressing Sharp ... turns off" and "a mix no tile draws"
 //   isProSetting ignores cap and join              -> the same two: the buttons stay on
 //   drop `onKeyDown={steerRadios}` from the tiles  -> "arrow keys steer through the tiles"
-//   drop the `.icust-line-block` status line       -> "pressing Sharp ..." (the reason)
+//   the preview line stops saying the style's name   -> "pressing Sharp ..." (the reason)
 //   LINE_STYLES crisp gets join 'miter'            -> "each tile draws its own style"
 //   `hidden={!splitShown}` becomes `hidden={!splitOpen}` -> "a mix no tile draws keeps the rows open"
 //   the Pro hint shows for Pro viewers             -> "a Pro viewer sees no hint"
@@ -21,7 +21,8 @@ import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
 const PERSONA = 'someone choosing a line style for an icon'
-const SHARP_REASON = 'Sharp is a Pro line style. Preview it here; copy, download and save need Pro.'
+const SHARP_REASON = 'Sharp is a Pro line style. Preview it here; saving and export need Pro.'
+const MIX_REASON = 'Custom ends and corners are Pro. Preview them here; saving and export need Pro.'
 
 /** Open the customiser as a signed-in free viewer, a signed-out one, or Pro. */
 async function openAs(browser, plan) {
@@ -46,13 +47,16 @@ async function openAs(browser, plan) {
 
 const group = (page) => page.getByRole('radiogroup', { name: 'Line style' })
 const tile = (page, name) => group(page).getByRole('radio', { name: new RegExp(`^${name}`) })
-const actions = (page) => ({
-  'Copy SVG': page.getByRole('button', { name: 'Copy SVG', exact: true }),
+/** Copy SVG, then Upgrade to Pro: the one node, found by class because its name changes. */
+const primary = (page) => page.locator('.icust-copy')
+/** The ones that dim (aria-disabled) while a Pro setting is previewed. */
+const dimmable = (page) => ({
   'the code Copy': page.locator('.icust-code-box'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
+  'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
 })
-const reason = (page) => page.getByRole('status').filter({ hasText: /Pro line style|mix of ends and corners/ })
+const reason = (page) => page.locator('#icust-preview-line')
 const stageCap = (page) => page.locator('.icust-stage').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
 const toggle = (page) => page.getByRole('button', { name: 'Set ends and corners separately' })
 
@@ -84,10 +88,11 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       await ctx.close()
     })
 
-    test('pressing Sharp previews it, opens no dialog, and turns off Copy, Download and Save with a reason', async ({ browser }) => {
+    test('pressing Sharp previews it, opens no dialog, swaps Copy SVG for Upgrade to Pro and dims the rest, with a reason', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
-      for (const [label, button] of Object.entries(actions(page))) await expect(button, `${label} is on before any Pro style`).toBeEnabled({ timeout: 20_000 })
-      await expect(reason(page), 'no reason before there is something to explain').toHaveCount(0)
+      await expect(primary(page)).toHaveAccessibleName('Copy SVG', { timeout: 20_000 })
+      for (const [label, button] of Object.entries(dimmable(page))) await expect(button, `${label} is on before any Pro style`).toBeEnabled({ timeout: 20_000 })
+      await expect(reason(page), 'no reason before there is something to explain').toHaveText('')
       const dialogs = await page.locator('[role="dialog"]').count()
 
       await tile(page, 'Sharp').click()
@@ -95,22 +100,28 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       expect(await stageCap(page), 'the stage shows square ends').toBe('square')
       await expect(page.locator('[role="dialog"]'), 'a dialog opened').toHaveCount(dialogs)
       await expect(reason(page)).toHaveText(SHARP_REASON)
-      for (const [label, button] of Object.entries(actions(page))) await expect(button, `${label} stays on at a Pro style`).toBeDisabled()
+      await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
+      for (const [label, button] of Object.entries(dimmable(page))) {
+        await expect(button, `${label} is dimmed at a Pro style`).toHaveAttribute('aria-disabled', 'true')
+        await expect(button, `${label} stays focusable (aria-disabled, not disabled)`).not.toHaveAttribute('disabled', /.*/)
+      }
 
       // force skips the actionability wait, so these reach the handlers if the buttons are only styled off.
-      for (const [, button] of Object.entries(actions(page))) await button.click({ force: true, timeout: 2_000 }).catch(() => {})
+      for (const [, button] of Object.entries(dimmable(page))) await button.click({ force: true, timeout: 2_000 }).catch(() => {})
       expect(await page.evaluate(() => window.__clipboardWrites), 'something was copied at a Pro style').toEqual([])
+      await expect(page.locator('[role="dialog"]'), 'a click on a dimmed button opened something').toHaveCount(dialogs)
       await ctx.close()
     })
 
-    test('going back to Round turns everything back on and clears the reason', async ({ browser }) => {
+    test('going back to Round turns everything back on and the preview line says so', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
       await tile(page, 'Crisp').click()
-      await expect(actions(page)['Copy SVG']).toBeDisabled()
+      await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await tile(page, 'Round').click()
-      for (const [label, button] of Object.entries(actions(page))) await expect(button, `${label} stays off after Round`).toBeEnabled()
-      await expect(reason(page)).toHaveCount(0)
-      await actions(page)['Copy SVG'].click()
+      for (const [label, button] of Object.entries(dimmable(page))) await expect(button, `${label} stays dimmed after Round`).toBeEnabled()
+      await expect(primary(page)).toHaveAccessibleName('Copy SVG')
+      await expect(reason(page)).toHaveText('Back to free settings. Copy, download and save are on.')
+      await primary(page).click()
       await expect.poll(() => page.evaluate(() => window.__clipboardWrites.length), { timeout: 10_000 }).toBeGreaterThan(0)
       const written = await page.evaluate(() => window.__clipboardWrites.at(-1))
       expect(written).toMatch(/stroke-linecap="round"/)
@@ -127,9 +138,9 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
 
       await page.getByRole('radiogroup', { name: 'Ends' }).getByRole('radio', { name: 'Square' }).click()
       for (const name of ['Round', 'Sharp', 'Crisp']) await expect(tile(page, name), `${name} is selected at a mix`).toHaveAttribute('aria-checked', 'false')
-      await expect(reason(page)).toContainText('mix of ends and corners')
-      await expect(actions(page)['Copy SVG']).toBeDisabled()
-      // aria-disabled, so the actionability wait would never end: force the press.
+      await expect(reason(page)).toHaveText(MIX_REASON)
+      await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
+      // The toggle is aria-disabled while the rows must stay open, so the actionability wait would never end: force the press.
       await toggle(page).click({ force: true })
       await expect(toggle(page), 'the rows closed while the pair matches no tile').toHaveAttribute('aria-expanded', 'true')
 
@@ -165,9 +176,10 @@ test('a Pro viewer sees no hint, no reason, and exports the style', async ({ bro
   await expect(page.locator('.icust-line-pro')).toHaveCount(0)
   await expect(tile(page, 'Sharp')).toHaveAccessibleName('Sharp')
   await tile(page, 'Sharp').click()
-  await expect(reason(page)).toHaveCount(0)
-  for (const [label, button] of Object.entries(actions(page))) await expect(button, `${label} is off for Pro`).toBeEnabled()
-  await actions(page)['Copy SVG'].click()
+  await expect(reason(page), 'a Pro viewer is told nothing').toHaveText('')
+  await expect(primary(page)).toHaveAccessibleName('Copy SVG')
+  for (const [label, button] of Object.entries(dimmable(page))) await expect(button, `${label} is dimmed for Pro`).toBeEnabled()
+  await primary(page).click()
   await expect.poll(() => page.evaluate(() => window.__clipboardWrites.length), { timeout: 10_000 }).toBeGreaterThan(0)
   const written = await page.evaluate(() => window.__clipboardWrites.at(-1))
   expect(written).toMatch(/stroke-linecap="square"/)
