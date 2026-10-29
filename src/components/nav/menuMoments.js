@@ -1,4 +1,4 @@
-// Hover moments for the mega menu rows (card 7789f1fd77).
+// Hover moments for the mega menu rows.
 //
 // Each tool row can play one short moment on a fine pointer or keyboard focus:
 // the name or the glyph previews what the tool does. The motion itself is CSS
@@ -53,12 +53,15 @@ export function reducedMotion() {
 }
 
 // ── Faces ──
-// Geist Mono is on every page already. Literata and Big Shoulders Display are
-// self-hosted (public/fonts, declared in global.css) and are fetched ONCE, the
-// first time a menu opens on a hover-capable device. Caveat is left out: with it
+// Geist Mono is on every page already, so it counts as ready without a fetch (it
+// is the one face Font Pair and Font Gallery still have when Save-Data is on).
+// The `onPage` flag marks it.
+// Literata and Big Shoulders Display are self-hosted (public/fonts, declared in
+// global.css) and are fetched ONCE, the first time the Create or Discover menu
+// opens on a hover-capable device. Caveat is left out: with it
 // the warm set is 171KB against the 150KB budget; without it, 121KB.
 export const FACES = [
-  { key: 'mono', family: '"Geist Mono", monospace', weight: 500, probe: '500 14.5px "Geist Mono"' },
+  { key: 'mono', family: '"Geist Mono", monospace', weight: 500, probe: '500 14.5px "Geist Mono"', onPage: true },
   { key: 'literata', family: 'Literata, serif', weight: 500, probe: '500 14.5px Literata' },
   { key: 'shoulders', family: '"Big Shoulders Display", sans-serif', weight: 700, probe: '700 14.5px "Big Shoulders Display"' },
 ]
@@ -67,13 +70,14 @@ export const faceByKey = (key) => FACES.find((f) => f.key === key) || null
 const loaded = new Set()
 let warming = null
 
-// A face counts as ready only when its load resolved with a file AND the browser
-// agrees it can paint it now. Nothing is used before that, so a face never pops
+// A face counts as ready only when its load resolved with a file (a face already on
+// the page, Geist Mono, needs no load of ours) AND the browser agrees it can paint
+// it now. Nothing is used before that, so a face never pops
 // in mid-hover and hovering never starts a download.
 export function readyFaces() {
   if (typeof document === 'undefined' || !document.fonts?.check) return []
   return FACES.filter((f) => {
-    if (!loaded.has(f.key)) return false
+    if (!f.onPage && !loaded.has(f.key)) return false
     try { return document.fonts.check(f.probe) } catch { return false }
   })
 }

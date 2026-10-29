@@ -177,10 +177,14 @@ export default function FontLoading() {
           covering every code point and is fetched the first time text in that
           style is drawn. Its stand-in is a pair of local faces, which have no
           file to fetch. Two display faces, a serif and a condensed sans, are
-          whole files too, but only the menu&rsquo;s hover effects use them, so
-          nothing asks for either until a menu opens. The monospace face and the handwritten annotation face
-          are each split at U+0100, and the second file of each pair is only
-          fetched when a character in its range is actually rendered. That is
+          declared the same way, with no range, though their files are already
+          trimmed to the Latin set. The menu fetches them by script, the first
+          time the Create or Discover menu opens on a device with a mouse and
+          without Save-Data, so a phone never downloads either for the menu.
+          The homepage specimens also set text in both. The monospace face and
+          the handwritten annotation face are each split at U+0100, and the
+          second file of each pair is only fetched when a character in its
+          range is actually rendered. That is
           what the last column measures: it asks whether the file that would
           draw the first printable character of each range has been downloaded,
           so the answer changes with what is on the page.

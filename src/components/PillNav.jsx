@@ -1099,7 +1099,16 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
   const activeId = active.section === section.id ? active.id : null
   const activeMode = active.section === section.id ? active.mode : null
   const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
-  const setRow = (id, mode = null) => setActive({ section: section.id, id, mode: id ? mode : null })
+  const setRow = (id, mode = null) => setActive((prev) => (
+    prev.section === section.id && prev.id === id && prev.mode === (id ? mode : null)
+      ? prev
+      : { section: section.id, id, mode: id ? mode : null }
+  ))
+  // Nothing under the pointer: fall back to the row keyboard focus is in, or to none.
+  const settleRow = (grid) => {
+    const f = grid.contains(document.activeElement) ? document.activeElement : null
+    setRow(rowOf(f), keyboardRow(f))
+  }
   const keyboardRow = (el) => (el?.matches?.(':focus-visible') ? 'key' : null)
   const pointerMode = (e) => {
     if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return null
@@ -1130,11 +1139,13 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
   // Faces for the name moments: warmed once, on the first menu open, and used only
   // once ready. data-faces on the root tells the CSS which are.
   const [faces, setFaces] = useState(facesAttr)
+  const warms = section.id === 'create' || section.id === 'discover'
   useEffect(() => {
+    if (!warms) return undefined
     let alive = true
     warmFaces().then(() => { if (alive) setFaces(facesAttr()) })
     return () => { alive = false }
-  }, [])
+  }, [warms])
 
   // Font Gallery: the name swaps through ready faces and lands on a random one.
   const [galleryFace, setGalleryFace] = useState(null)
@@ -1162,8 +1173,8 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
           <div
             className="pnav-grid"
             data-cols={stacks.length}
-            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)) }}
-            onPointerLeave={(e) => { const f = e.currentTarget.contains(document.activeElement) ? document.activeElement : null; setRow(rowOf(f), keyboardRow(f)) }}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)); else settleRow(e.currentTarget) }}
+            onPointerLeave={(e) => settleRow(e.currentTarget)}
             onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id, keyboardRow(e.target)) }}
             onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
           >
@@ -1264,7 +1275,7 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
       </div>
       <div className="pnav-menu-foot">
         <p className="pnav-menu-foot-note pnav-menu-readout" id="pnav-readout">
-          {readoutText ? <><b>{activeRow.label}</b>{readoutText}</> : menuFootNote(section)}
+          {readoutText ? <><b>{activeRow.label}</b>{' '}{readoutText}</> : menuFootNote(section)}
         </p>
         <Link className="pnav-menu-foot-link" to={section.viewAllHref} onClick={onPick} data-pnav-menuitem>
           <span>{menuViewAll(section)}</span>

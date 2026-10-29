@@ -289,7 +289,7 @@ const ICONS = {
 
 const FALLBACK = <circle cx="12" cy="12" r="7" />
 
-// Hover-moment variants (mega menu, card 7789f1fd77). The same glyph at rest, with
+// Hover-moment variants for the mega menu. The same glyph at rest, with
 // its moving parts classed so global.css ("HOVER MOMENTS") can animate them. Only
 // the menu rows ask for these (`moment`), so every other use of an icon is untouched.
 // Rest geometry is identical to ICONS; the extra parts are hidden at rest by CSS.
@@ -331,7 +331,7 @@ const MOMENT_ICONS = {
       <path d="M3.5 20h17" />
       <g className="t1"><path d="M6 20v-4.5M4.5 15.5h3" /></g>
       <g className="t2"><path d="M11.5 20v-9M9.6 11h3.8" /></g>
-      <g><path d="M17.5 20V5.5M15.2 5.5h4.6" /></g>
+      <g className="t3"><path d="M17.5 20V5.5M15.2 5.5h4.6" /></g>
     </g>
   ),
   icons: (
@@ -341,12 +341,13 @@ const MOMENT_ICONS = {
       <path className="i3" d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
     </>
   ),
-  // The face tilts and its right eye winks once.
+  // The face tilts and its right eye winks once: the dot hides and a closed lid shows.
   emoji: (
     <g className="face">
       <circle cx="12" cy="12" r="8.5" />
       <path d="M9 10.5h.01" />
       <path className="er" d="M15 10.5h.01" />
+      <path className="ew" d="M13.3 10.9q1.7-1.5 3.4 0" />
       <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
     </g>
   ),
@@ -415,9 +416,9 @@ const MOMENT_ICONS = {
     <>
       <path d="M4 5.5h16v9H9l-4 3.5v-3.5H4z" />
       <path className="ln" d="M8.5 10h7" />
-      <circle className="d d1" cx="9" cy="10" r="1.1" />
-      <circle className="d d2" cx="12" cy="10" r="1.1" />
-      <circle className="d d3" cx="15" cy="10" r="1.1" />
+      <circle className="d d1" cx="9" cy="10" r="1.25" />
+      <circle className="d d2" cx="12" cy="10" r="1.25" />
+      <circle className="d d3" cx="15" cy="10" r="1.25" />
     </>
   ),
 }

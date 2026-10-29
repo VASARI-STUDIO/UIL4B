@@ -280,7 +280,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 
 
-  // Group labels are the site's Label role (mono retirement, card 539701d2f0):
+  // Group labels are the site's Label role (mono retired from the menu):
   // 13px, weight 500, in the body face, sentence case, untracked, one faint ink,
   // with no rule. Rows carry no category colour in the label. There are no hue rules.
   test('group labels are 13px/500 quiet captions in the body face: one colour, no rule, sentence case', async ({ page }) => {
@@ -671,13 +671,13 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 })
 
-// ── Layout S-B: the readout, the count line, the glyphs, the phone sheet ─────
+// ── Layout: the readout, the count line, the glyphs, the phone sheet ─────
 //
 // Each check below was written to be able to go red: the readout test fails if
 // the foot never changes (or never comes back), the segment test fails if a tab
 // moves the row or shrinks it under 44px, and the glyph test fails the moment two
 // rows in one menu share an SVG.
-test.describe('layout S-B: the foot answers the row, and every row has its own glyph', () => {
+test.describe('layout: the foot answers the row, and every row has its own glyph', () => {
   const footText = (page) => page.locator('#pnav-mega .pnav-menu-readout').innerText()
 
   test('hovering a row says what it is for, and leaving puts the foot note back', async ({ page }) => {
@@ -770,7 +770,7 @@ test.describe('layout S-B: the foot answers the row, and every row has its own g
   })
 })
 
-test.describe('layout S-B: the phone sheet is three segments over a 2-column grid', () => {
+test.describe('layout: the phone sheet is three segments over a 2-column grid', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   async function openSheet(page) {
