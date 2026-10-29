@@ -95,25 +95,26 @@ test('pack labels stay stable across pages of the full result', () => {
   assert.match(src, /useMemo\(\(\) => gridShowsPack\(icons\), \[icons\]\)/)
 })
 
-test('the initial skeleton fits the signed-out cap and the signed-in first page', () => {
+test('the initial skeleton fits the signed-out whole-row cap and the signed-in first page', () => {
   // Run the sizing expressions with catalogue-sized packs, without mounting React.
   const labels = src.slice(src.indexOf('const packOf ='), src.indexOf('const warmSoon ='))
-  const sizing = block('const firstPageSize =', 'const skeletonShowPack = pendingPacks.length > 1')
+  const sizing = block('const firstPageSize =', '}))')
   const pageSize = Number(src.match(/const PAGE_SIZE = (\d+)/)[1])
-  const capSource = readFileSync(new URL('../../src/data/iconPackTiers.js', import.meta.url), 'utf8')
-  const cap = Number(capSource.match(/ANON_ICON_CAP = (\d+)/)[1])
-  const size = new Function('capped', 'perPackCap', 'allowedPacks', 'PAGE_SIZE', 'ANON_ICON_CAP', `
+  const size = new Function('capped', 'perPackCap', 'allowedPacks', 'PAGE_SIZE', 'anonCap', `
     const pack = '', group = null, source = 'all'
     ${labels}
     ${sizing}
-    return { count: skeletonIcons.length, showPack: skeletonShowPack }
+    return skeletonIcons.length
   `)
   const packs = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
-  assert.deepEqual(size(true, cap / packs.length, packs, pageSize, cap), { count: cap, showPack: true })
-  // The label is reserved whenever the scope loads more than one pack, however the first page splits.
-  assert.deepEqual(size(false, 250, packs, pageSize, cap), { count: pageSize, showPack: true })
-  // A scope that loads a single pack never carries the label.
-  assert.deepEqual(size(false, 250, ['lucide'], pageSize, cap), { count: pageSize, showPack: false })
+  // Signed out, the skeleton is the measured whole-row count (13 columns: 65), not a fixed 60.
+  assert.equal(size(true, 15, packs, pageSize, 65), 65)
+  assert.equal(size(true, 15, packs, pageSize, 60), 60)
+  // Signed in, the first page.
+  assert.equal(size(false, 250, packs, pageSize, 65), pageSize)
+  assert.equal(size(false, 250, ['lucide'], pageSize, 65), pageSize)
+  // The skeleton and the grid follow the same cap.
+  assert.ok(src.includes('const firstPageSize = capped ? Math.min(PAGE_SIZE, anonCap)'))
 })
 
 test('the catalogue skeleton holds until a page fills, every pack settles, or a nonempty page times out', () => {

@@ -26,6 +26,7 @@ import {
   ANON_ICON_CAP, ICON_GATE_COPY, ICON_PACK_TIERS, TIER_ORDER,
   anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
 } from '../../src/data/iconPackTiers.js'
+import { ANON_ICON_CEILING, anonCapForCols, anonListMax, capAnonList } from '../../src/data/iconGridRows.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -161,6 +162,82 @@ test('the signed-out cap spreads across every anon pack rather than slicing one'
   assert.ok(per < ANON_ICON_CAP,
     'the per-pack share must be smaller than the cap, or the first pack fills it alone and the other four never appear')
   assert.equal(anonPerPack([]), ANON_ICON_CAP, 'with no anon packs the share degrades to the cap rather than dividing by zero')
+})
+
+test('the signed-out cap fills whole rows: the 60 rounded up to the column count, never past 72', () => {
+  assert.equal(ANON_ICON_CEILING, 72)
+  // The widths Dylan named: 1440 is 13 columns and shows 65.
+  assert.equal(anonCapForCols(13), 65)
+  assert.equal(anonCapForCols(6), 60, '768')
+  assert.equal(anonCapForCols(4), 60, '390 on the four-up phone grid')
+  assert.equal(anonCapForCols(3), 60, '320')
+  assert.equal(anonCapForCols(17), 68, '1920')
+  assert.equal(anonCapForCols(1), 60)
+  assert.equal(anonCapForCols(60), 60)
+  // Rounding up would pass 72 from 19 columns, so it rounds down to whole rows instead.
+  assert.equal(anonCapForCols(18), 72)
+  assert.equal(anonCapForCols(19), 57)
+  assert.equal(anonCapForCols(37), 37)
+  // Past the ceiling in one row there is no whole row to give; the ceiling is the answer.
+  assert.equal(anonCapForCols(100), ANON_ICON_CEILING)
+  // Unmeasured or nonsense column counts fall back to the plain cap rather than NaN.
+  for (const bad of [null, undefined, 0, -3, 2.5, NaN, '13']) assert.equal(anonCapForCols(bad), ANON_ICON_CAP, String(bad))
+  // The property, for every plausible column count: whole rows, and never past the ceiling.
+  for (let cols = 1; cols <= 72; cols++) {
+    const cap = anonCapForCols(cols)
+    assert.equal(cap % cols, 0, `${cols} columns: ${cap} is not whole rows`)
+    assert.ok(cap <= ANON_ICON_CEILING, `${cols} columns: ${cap} passes the ceiling`)
+    assert.ok(cap >= 1, `${cols} columns: empty grid`)
+  }
+})
+
+test('the signed-out lists are fetched wide enough for the ceiling, and trimmed to the cap by pack', () => {
+  const packs = Object.keys(ICON_PACK_TIERS)
+  const anon = packs.filter((p) => tierOf(p) === 'anon')
+  assert.equal(anonPerPack(packs), Math.ceil(ANON_ICON_CAP / anon.length), 'the default share is unchanged')
+  assert.equal(anonPerPack(packs, 65), Math.ceil(65 / anon.length))
+  assert.ok(anonPerPack(packs, ANON_ICON_CEILING) * anon.length >= ANON_ICON_CEILING)
+  assert.equal(anonListMax(packs), anonPerPack(packs, ANON_ICON_CEILING) * anon.length)
+  assert.equal(anonListMax([]), ANON_ICON_CEILING, 'no anon packs: the ceiling, not NaN')
+
+  const names = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+  const list = names.flatMap((pack) => Array.from({ length: 15 }, (_, i) => ({ pack, name: `${pack}-${i}` })))
+  const counts = (out) => names.map((p) => out.filter((i) => i.pack === p).length)
+  const at65 = capAnonList(list, 65)
+  assert.equal(at65.length, 65)
+  assert.deepEqual(counts(at65), [13, 13, 13, 13, 13], 'an even share of every set, not 15 of the first four')
+  assert.deepEqual(at65.map((i) => i.name), list.filter((i) => Number(i.name.split('-')[1]) < 13).map((i) => i.name), 'order is kept')
+  const at68 = capAnonList(list, 68)
+  assert.equal(at68.length, 68)
+  assert.deepEqual(counts(at68), [14, 14, 14, 14, 12], 'the last set takes the shortfall when the cap is not a multiple of five')
+  assert.equal(capAnonList(list, 72).length, 72)
+  // A list that already fits is returned as is, so a memo keyed on it holds.
+  const short = list.slice(0, 40)
+  assert.equal(capAnonList(short, 65), short)
+  // One pack answers most of a search: its extras fill the row once the others run out.
+  const lopsided = [
+    ...Array.from({ length: 40 }, (_, i) => ({ pack: 'lucide', name: `l${i}` })),
+    ...Array.from({ length: 3 }, (_, i) => ({ pack: 'tabler', name: `t${i}` })),
+  ]
+  const filled = capAnonList(lopsided, 13)
+  assert.equal(filled.length, 13, 'topped up to the whole row rather than left at 7 + 3')
+  assert.equal(filled.filter((i) => i.pack === 'tabler').length, 3)
+  // A single pack is a plain slice.
+  assert.deepEqual(capAnonList(lopsided.slice(0, 40), 13).map((i) => i.name), lopsided.slice(0, 13).map((i) => i.name))
+  // Nonsense caps leave the list alone.
+  assert.equal(capAnonList(list, 0), list)
+})
+
+test('IconLibrary cuts the signed-out grid by the measured columns, and refetches nothing on a resize', () => {
+  const page = strip(read(PAGE))
+  // Literal source text: brackets are plain characters here (as a regex they read as groups and never match).
+  const has = (text, why) => assert.ok(page.includes(text), why)
+  has('anonCapForCols(gridCols)', 'the cap comes from the measured column count')
+  has('capAnonList(fetchedIcons, anonCap)', 'the grid trims what was fetched')
+  // The browse callbacks must not depend on the column count, or a resize would refetch.
+  has('const capList = useCallback((list) => (capped ? list.slice(0, anonListMax(ALL_PACKS)) : list), [capped])',
+    'capList is fixed at the ceiling and depends on the tier only: a column change must not rebuild the browse callbacks')
+  has('new ResizeObserver(read)', 'the column count follows the grid as it resizes')
 })
 
 test('IconLibrary consults the table — it does not carry a second copy of the rule', () => {

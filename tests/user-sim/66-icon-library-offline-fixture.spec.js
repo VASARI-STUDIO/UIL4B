@@ -434,7 +434,7 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
   // The cap is enforced on the DATA rather than on the scroll, so nothing the
   // visitor does can walk past it. Asserted by trying.
   const cells = await page.locator('.ig .ic').count()
-  expect(cells, 'the signed-out grid is capped').toBeLessThanOrEqual(60)
+  expect(cells, 'the signed-out grid is capped').toBeLessThanOrEqual(72)
   expect(cells, 'and it is a real sample, not a stub').toBeGreaterThanOrEqual(24)
   await page.mouse.wheel(0, 20000)
   await page.waitForTimeout(1500)
