@@ -1,0 +1,144 @@
+diff --git a/firestore.rules b/firestore.rules
+index 8ccb1b72..ea61fbc9 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -31,6 +31,17 @@ service cloud.firestore {
+             || request.auth.token.moderator == true);
+     }
+ 
++    // A community post (a prompt or a submission) must come with a write, in the
++    // same batch, to the poster's counter document users/{uid}/limits/community,
++    // and that write must name this post. The counter's own rule (below) holds
++    // the 30-second gap and the daily caps; this only ties the post to it.
++    // `lastId` names one document, so one counter write cannot cover two posts
++    // in a batch. getAfter() reads the counter as the batch leaves it.
++    function postLimitsOk(kind, id) {
++      let c = getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/limits/community).data;
++      return c.lastAt == request.time && c.lastKind == kind && c.lastId == id;
++    }
++
+     // User profiles — only the owner can read/write, and never the billing fields
+     match /users/{userId} {
+       function isOwner() {
+@@ -113,6 +124,55 @@ service cloud.firestore {
+       match /projects/{projectId} {
+         allow read, write: if isOwner();
+       }
++
++      // The community-post counter (see postLimitsOk). One document, written
++      // with each post: when the last post was, which one it was, and how many
++      // prompts and submissions the account has sent in the current 24-hour
++      // window. The window starts at the first post and restarts, on a server
++      // time, only once 24 hours have passed. No delete.
++      match /limits/{docId} {
++        function counterShapeOk() {
++          let a = request.resource.data;
++          return docId == 'community'
++            && a.size() == 6
++            && a.lastAt == request.time
++            && a.lastKind in ['prompt', 'submission']
++            && a.lastId is string && a.lastId.size() <= 200
++            && a.prompts is int && a.prompts >= 0 && a.prompts <= 10
++            && a.submissions is int && a.submissions >= 0 && a.submissions <= 10;
++        }
++
++        // The first post: a new window, and this post is the only one in it.
++        function counterStartOk() {
++          let a = request.resource.data;
++          return a.windowStart == request.time
++            && a.prompts == (a.lastKind == 'prompt' ? 1 : 0)
++            && a.submissions == (a.lastKind == 'prompt' ? 0 : 1);
++        }
++
++        // A later post: 30 seconds after the last, and either one more in the
++        // same window (still inside 24 hours of its start) or a new window of
++        // one once the 24 hours are over. The other kind's count is untouched
++        // inside a window and zero in a new one.
++        function counterStepOk() {
++          let a = request.resource.data;
++          let b = resource.data;
++          let p = a.lastKind == 'prompt';
++          return request.time > b.lastAt + duration.value(30, 's')
++            && (a.windowStart == b.windowStart
++                ? (request.time < b.windowStart + duration.value(1, 'd')
++                   && a.prompts == b.prompts + (p ? 1 : 0)
++                   && a.submissions == b.submissions + (p ? 0 : 1))
++                : (a.windowStart == request.time
++                   && request.time >= b.windowStart + duration.value(1, 'd')
++                   && a.prompts == (p ? 1 : 0)
++                   && a.submissions == (p ? 0 : 1)));
++        }
++
++        allow read: if isOwner();
++        allow create: if isOwner() && counterShapeOk() && counterStartOk();
++        allow update: if isOwner() && counterShapeOk() && counterStepOk();
++      }
+     }
+ 
+     // Feedback — reviewers can read, update and delete; clients cannot create.
+@@ -132,10 +192,11 @@ service cloud.firestore {
+       function promptShapeOk() {
+         return request.resource.data.keys().hasOnly([
+                  'title', 'text', 'tags', 'authorName', 'authorUid', 'ownerId',
+-                 'profileLink', 'status', 'createdAt', 'mediaType', 'mediaUrl'])
++                 'profileLink', 'status', 'createdAt', 'mediaType', 'mediaUrl',
++                 'submittedAt'])
+           && request.resource.data.keys().hasAll([
+                  'title', 'text', 'tags', 'authorName', 'authorUid', 'status',
+-                 'profileLink', 'createdAt'])
++                 'profileLink', 'createdAt', 'submittedAt'])
+           // Length caps on each string field.
+           && request.resource.data.title is string
+           && request.resource.data.title.size() <= 300
+@@ -166,10 +227,15 @@ service cloud.firestore {
+                   && request.resource.data.mediaUrl.size() < 900000));
+       }
+ 
++      // Verified accounts only, stamped with the server's clock (the queue is
++      // ordered on submittedAt, which a client cannot choose), and counted.
+       allow create: if request.auth != null
++        && request.auth.token.email_verified == true
+         && request.resource.data.authorUid == request.auth.uid
+         && request.resource.data.status == 'pending'
+-        && promptShapeOk();
++        && request.resource.data.submittedAt == request.time
++        && promptShapeOk()
++        && postLimitsOk('prompt', promptId);
+       // Rules are not filters: a list query must itself be constrained to
+       // status == 'approved' or authorUid == the caller, or it is refused.
+       allow read: if isReviewer()
+@@ -289,7 +355,7 @@ service cloud.firestore {
+       function submissionShapeOk() {
+         return request.resource.data.keys().hasOnly([
+                  'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
+-                 'createdAt', 'localId'])
++                 'createdAt', 'localId', 'submittedAt'])
+           // `localId` is the one optional key. Every submit path sends it
+           // (Community, GradientGenerator, PaletteBuilder) and the "my
+           // submissions" list pairs the server copy with the browser's own
+@@ -300,7 +366,7 @@ service cloud.firestore {
+                   && request.resource.data.localId.size() <= 64))
+           && request.resource.data.keys().hasAll([
+                  'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
+-                 'createdAt'])
++                 'createdAt', 'submittedAt'])
+           && request.resource.data.kind in ['gradient', 'design', 'palette', 'icon']
+           && request.resource.data.name is string
+           && request.resource.data.name.size() <= 80
+@@ -313,10 +379,15 @@ service cloud.firestore {
+       }
+ 
+       // A client may only create its own submission, with status 'pending'.
++      // Verified accounts only, stamped with the server's clock, and counted
++      // (see postLimitsOk).
+       allow create: if isSignedIn()
++        && request.auth.token.email_verified == true
+         && request.resource.data.authorUid == request.auth.uid
+         && request.resource.data.status == 'pending'
+-        && submissionShapeOk();
++        && request.resource.data.submittedAt == request.time
++        && submissionShapeOk()
++        && postLimitsOk('submission', submissionId);
+ 
+       // Rules are not filters: listMySubmissions filters on authorUid and the
+       // reviewers' queue on status, which is what lets those lists through.

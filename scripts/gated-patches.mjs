@@ -132,6 +132,10 @@ const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
 const PROFILE_ROUTE_PATCH = 'docs/design/profile-text-verify-admin.patch'
 const PAYLOAD_PATCH = 'docs/design/submission-payload-rules.patch'
 const UPLOAD_PATCH = 'docs/design/upload-limits-rules.patch'
+const QUEUE_PATCH = 'docs/design/queue-limits-rules.patch'
+const LIMITS_FILE = 'src/utils/communityLimits.js'
+const LIMITS_OFF = 'export const COMMUNITY_LIMITS_ENABLED = false'
+const LIMITS_ON = 'export const COMMUNITY_LIMITS_ENABLED = true'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -392,6 +396,37 @@ export const GATED_PATCHES = [
         detect: (text) => lf(text).includes('function slotAndType(name, mime)'),
         apply: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx) },
         check: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'queue-limits',
+    title: 'Community posts limited',
+    source: 'docs/design/queue-limits-rules.patch + src/utils/communityLimits.js',
+    grants:
+      'only an account with a verified email can send a prompt or a submission to the review '
+      + 'queue, at most one every 30 seconds and ten of each kind per 24 hours, and the queue '
+      + 'is ordered on the time the server received each one, which the sender cannot choose',
+    files: ['firestore.rules', 'src/utils/communityLimits.js'],
+    parts: [
+      {
+        name: 'verified, counted, server-stamped posts',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function postLimitsOk(kind, id)'),
+        apply: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The client writes a counter and a server stamp that the old rules
+        // refuse, so it stays off until the rules are in, as per-project sync does.
+        name: 'the client flag',
+        file: LIMITS_FILE,
+        detect: (text) => lf(text).includes(LIMITS_ON),
+        apply: async (ctx) => {
+          const text = await ctx.read(LIMITS_FILE)
+          if (!lf(text).includes(LIMITS_OFF)) throw new Error(`${LIMITS_OFF} is no longer in ${LIMITS_FILE}`)
+          await ctx.write(LIMITS_FILE, lf(text).replace(LIMITS_OFF, LIMITS_ON))
+        },
       },
     ],
   },
