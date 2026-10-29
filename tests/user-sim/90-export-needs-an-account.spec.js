@@ -134,6 +134,9 @@ test.describe('a file needs a free account', () => {
     // called Export.
     const panel = page.locator('[role="dialog"]').filter({ hasText: /export/i }).first()
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
+    // The popup opens on the Pro book; the style guide is the free file a
+    // visitor can build, so that is the one that has to ask for an account.
+    await panel.getByRole('radio', { name: /^Style guide/ }).click()
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
       .toBeVisible({ timeout: 15000 })
