@@ -272,8 +272,8 @@ test.describe('the nav does not animate layout', () => {
   })
 
   // The App file's hover (lines 138-139, 2036-2042): the row takes an ink .07
-  // wash and its tile turns accent. There is no category rail any more (no hue
-  // colours in the rebuilt menu). The FIRST row is lit at rest, as the file
+  // wash and its tile deepens (a hue tile turns a few points stronger, in the
+  // row's own category colour). There is no category rail. The FIRST row is lit at rest, as the file
   // opens every menu, so the second row is the one pointed at.
   test('a row hover moves nothing — it changes its wash and its tile', async ({ page }) => {
     watch(page, 'a visitor pointing at one tool')
