@@ -1,0 +1,44 @@
+/* The free-export preview (ExportFreePreview): a real render of the kit, the style
+   guide sheet or the first lines of the code, in a box whose height is fixed before
+   anything lands, so nothing below it moves. Hairlines only; no shadows. */
+
+.xfp{--xfp-h:300px;display:grid;gap:var(--s-2);min-width:0;isolation:isolate}
+.xfp-label{margin:0;font-size:var(--fs-caption);line-height:1.4;color:var(--t1)}
+
+.xfp-box{position:relative;height:var(--xfp-h);display:grid;place-items:center;overflow:hidden;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs)}
+
+/* The picture fits the box by height; its own ratio sets the width. */
+.xfp-img{display:block;height:100%;width:auto;max-width:100%;object-fit:contain;outline:1px solid var(--border);outline-offset:-1px;-webkit-user-drag:none}
+
+/* The code fills the box. The last three lines fade out, so the cut reads as "and more". */
+.xfp-code{margin:0;width:100%;height:100%;padding:var(--s-3) var(--s-4);overflow:hidden;box-sizing:border-box;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.5;font-variant-numeric:tabular-nums;color:var(--t0);white-space:pre;-webkit-mask-image:linear-gradient(to bottom,rgb(0 0 0) calc(100% - 4.5em),rgb(0 0 0 / .2));mask-image:linear-gradient(to bottom,rgb(0 0 0) calc(100% - 4.5em),rgb(0 0 0 / .2))}
+.xfp-code code{font:inherit}
+
+.xfp-failed{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-3);padding:var(--s-4);text-align:center;color:var(--t1);font-size:var(--fs-body-s)}
+.xfp-failed p{margin:0;max-width:32ch}
+.xfp-retry{min-height:36px;padding:0 var(--s-4);border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--card);color:var(--t0);font:inherit;font-size:var(--fs-body-s);cursor:pointer;transition:background-color var(--dur-1) var(--ease-out)}
+.xfp-retry:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.xfp-retry:active{background:var(--hvr)}
+@media (hover:hover){
+  .xfp-retry:hover{background:var(--hvr)}
+}
+@media (pointer:coarse){
+  .xfp-retry{min-height:44px}
+}
+
+/* A new picture fades in on opacity alone. */
+.xfp-in{animation:xfp-in 150ms var(--ease-out) both}
+@keyframes xfp-in{from{opacity:0}to{opacity:1}}
+
+/* The reserved height follows the dialog's sizes. */
+@media (max-width:1023px){.xfp{--xfp-h:240px}}
+@media (max-width:767px){.xfp{--xfp-h:220px}}
+@media (max-height:499px){.xfp{--xfp-h:160px}}
+
+/* Reduced motion keeps the fade and caps it at 100ms; nothing moves. */
+@media (prefers-reduced-motion:reduce){
+  .xfp-in{animation-duration:100ms}
+  .xfp-retry{transition-duration:100ms}
+}
+html[data-reduced-motion="true"] .xfp-in{animation-duration:100ms}
+html[data-reduced-motion="true"] .xfp-retry{transition-duration:100ms}
