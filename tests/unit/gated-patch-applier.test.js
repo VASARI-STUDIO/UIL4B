@@ -66,6 +66,7 @@ const EXPECTED_IDS = [
   'profile-types',
   'submission-payload',
   'upload-limits',
+  'queue-limits',
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -105,7 +106,8 @@ test('the applier reaches every file the four are meant to change', () => {
   assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
   assert.ok(TARGET_FILES.includes('storage.rules'))
-  assert.equal(TARGET_FILES.length, 6,'the applier has grown a target nobody reviewed')
+  assert.ok(TARGET_FILES.includes('src/utils/communityLimits.js'))
+  assert.equal(TARGET_FILES.length, 7,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -265,6 +267,21 @@ test('the upload limits land in storage.rules, and reviewers keep read and gain 
   // Reviewers still read every file, and still cannot write or delete.
   assert.match(storage, /match \/community-media\/\{uid\}\/\{allPaths=\*\*\} \{\s*allow read: if isReviewer\(\)/)
   assert.doesNotMatch(storage, /allow (write|create|update|delete)[^;]*isReviewer/, 'a reviewer can write or delete media')
+})
+
+test('the queue limits land in firestore.rules and flip the client flag with them', async () => {
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const rules = lf(plan.after.get('firestore.rules'))
+  const flat = rules.replace(/\s+/g, ' ')
+  assert.ok(flat.includes('function postLimitsOk(kind, id)'))
+  assert.ok(flat.includes('getAfter(/databases/$(database)/documents/users/$(request.auth.uid)/limits/community)'))
+  assert.ok(flat.includes("request.resource.data.submittedAt == request.time && promptShapeOk() && postLimitsOk('prompt', promptId)"))
+  assert.ok(flat.includes("request.resource.data.submittedAt == request.time && submissionShapeOk() && postLimitsOk('submission', submissionId)"))
+  assert.equal(flat.split('request.auth.token.email_verified == true').length - 1, 2)
+  assert.ok(flat.includes("request.time > b.lastAt + duration.value(30, 's')"))
+  assert.ok(lf(plan.after.get('src/utils/communityLimits.js')).includes('export const COMMUNITY_LIMITS_ENABLED = true'),
+    'the rules land and the client stays switched off, which refuses every post')
 })
 
 test('nothing the four grant is taken away from the file they land in', async () => {

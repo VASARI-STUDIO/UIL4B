@@ -45,7 +45,7 @@ test('Admin.jsx builds the prompts query with a status filter and a limit', () =
 
   assert.match(loader, /collection\(db,\s*'community-prompts'\)/)
   assert.match(loader, /where\('status',\s*'==',\s*spec\.status\)/, 'the prompts query lost its status filter')
-  assert.match(loader, /orderBy\('createdAt',\s*'desc'\)/)
+  assert.match(loader, /orderBy\(queueOrderField\(\),\s*'desc'\)/, 'the prompts queue is no longer ordered on the server stamp')
   assert.match(loader, /limit\(spec\.max\)/, 'the prompts query lost its limit')
 })
 

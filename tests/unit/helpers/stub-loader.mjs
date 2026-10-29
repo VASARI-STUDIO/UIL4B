@@ -21,9 +21,14 @@ export function initialize(data) { stubQueueApi = Boolean(data && data.queueApi)
 const STUBS = {
   'stub:firestore': `
     export const collection = (...a) => ({ collection: a.slice(1).join('/') })
-    export const doc = (_db, col, id) => ({ col, id })
+    let autoId = 0
+    export const doc = (first, ...segs) => (first && first.collection !== undefined && segs.length === 0)
+      ? { col: first.collection, id: 'auto' + (++autoId) }
+      : { col: segs.slice(0, -1).join('/'), id: segs[segs.length - 1] }
     export const setDoc = (...a) => globalThis.__FS__.setDoc(...a)
     export const getDoc = (...a) => globalThis.__FS__.getDoc(...a)
+    export const writeBatch = () => globalThis.__FS__.writeBatch()
+    export const serverTimestamp = () => ({ __serverTimestamp: true })
     export const addDoc = () => { throw new Error('addDoc is not stubbed') }
     export const getDocs = () => { throw new Error('getDocs is not stubbed') }
     export const updateDoc = () => { throw new Error('updateDoc is not stubbed') }

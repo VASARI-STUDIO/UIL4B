@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { collection, addDoc } from 'firebase/firestore'
-import { db } from '../../utils/firebase'
+import { publishPrompt } from '../../utils/communityQueueApi'
 import { processImageForUpload } from '../../utils/imageProcessing'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../../utils/mediaUpload'
 import { buildCommunityPromptRecord } from '../../utils/promptSubmission'
@@ -85,7 +84,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
           mediaDropped = !withinLimit
         }
       }
-      await addDoc(collection(db, 'community-prompts'), doc)
+      await publishPrompt(doc)
       toast('Prompt submitted for review')
       if (mediaDropped) toast('Your image was too large to attach (after compression) — the prompt was submitted without it')
       setSubmitTitle('')
@@ -96,8 +95,9 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
       setSubmitMediaPreview(null)
       if (submitFileRef.current) submitFileRef.current.value = ''
       onClose()
-    } catch {
-      toast('Failed to submit — try again')
+    } catch (err) {
+      // The 30-second gap and the daily cap have wording of their own.
+      toast(err?.name === 'PostLimitError' ? err.message : 'Failed to submit — try again')
     } finally {
       setSubmitting(false)
     }
