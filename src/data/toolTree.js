@@ -347,7 +347,7 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 //   render and is not a retired URL.
 const DISCOVER_SPEC = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
-  { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'gradient-gallery', icon: 'gradient-library', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', tool: 'font-gallery' },
   // Reachable from BOTH surfaces on purpose. The page is already a Discover
   // gallery in everything but its URL — #292 put it on the shared Library
@@ -357,7 +357,7 @@ const DISCOVER_SPEC = [
   // no redirect table entry and no change to the prerendered route count. The
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
-  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
+  { id: 'icon-library', icon: 'icon-library', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
   // /community has been live since #472 and this row was still pointing at
   // /discover — the surface the visitor is already standing on — with a Soon
   // badge on it. The mega menu, the mobile sheet and the visual sitemap all
@@ -465,15 +465,16 @@ export const LEARN_TOPIC_ROWS = LEARN_GROUPS.filter(
 // Which NavIcon glyph a tool row shows. Presentation only: an id missing here
 // falls back to the tool's own id, which is what NavIcon keys on anyway.
 const MENU_ICONS = {
+  palette: 'palette-strip',
   'font-gallery': 'type',
-  'type-scale': 'typography',
+  'type-scale': 'type-scale',
   'component-designer': 'component',
   'auto-builder': 'ai',
-  icons: 'icons',
+  icons: 'icon-library',
   emoji: 'emoji',
-  'file-converter': 'imagery',
+  'file-converter': 'file-converter',
   // No cube glyph in NavIcon yet; it shares the imagery mark with the converter.
-  '3d-converter': 'imagery',
+  '3d-converter': '3d-converter',
   'ai-prompt': 'ai',
   'landing-prompts': 'marketing',
 }
@@ -583,13 +584,13 @@ const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
 // beside MENU_ICONS rather than in learnIndex.js — that file has to stay
 // parseable by the Node build scripts and has no business knowing about icons.
 const LEARN_ARTICLE_ICONS = {
-  'colour-contrast': 'contrast',
-  'type-scales': 'typography',
-  'typeface-metrics': 'type',
+  'colour-contrast': 'guide-contrast',
+  'type-scales': 'guide-scale',
+  'typeface-metrics': 'guide-metrics',
   'font-loading': 'loading',
-  'colour-spaces': 'palette',
-  'theme-systems': 'themes',
-  'brand-colour': 'brand',
+  'colour-spaces': 'guide-colour-spaces',
+  'theme-systems': 'guide-theme',
+  'brand-colour': 'guide-brand',
 }
 
 // The articles dealt into the menu's row shape. They are not folded into

@@ -20,6 +20,11 @@ export function liveCreateToolCount() {
   return createTools().filter((t) => !t.soon && !t.beta).length
 }
 
+/** Beta = opens a working tool with a stated limit: listed, not Soon, flagged beta. */
+export function betaCreateToolCount() {
+  return createTools().filter((t) => !t.soon && t.beta).length
+}
+
 export function liveLibraryCount() {
   return DISCOVER_GROUPS.filter((g) => !g.soon).length
 }
@@ -55,7 +60,10 @@ export function menuStacks(section, { showSoon = true } = {}) {
 /** The foot's left-hand line (NAV[i][2] in the file). */
 export function menuFootNote(section) {
   if (section.id === 'create') {
-    return `${numberWord(liveCreateToolCount())} live tools across colour, type, icons, media and AI.`
+    const live = numberWord(liveCreateToolCount())
+    const beta = betaCreateToolCount()
+    const betaPart = beta ? ` and ${numberWord(beta).toLowerCase()} in beta` : ''
+    return `${live} live tools${betaPart}, across colour, type, icons, media and AI.`
   }
   if (section.id === 'discover') return `${numberWord(liveLibraryCount())} libraries, free to browse.`
   return `${numberWord(publishedGuideCount())} published guides, more on the way.`

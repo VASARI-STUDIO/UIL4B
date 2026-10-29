@@ -132,6 +132,85 @@ const ICONS = {
       <path d="M13.5 9.5h5M16 9.5v6" />
     </>
   ),
+  // -- Menu glyphs drawn for the compact mega menu: one distinct mark per tool --
+  'palette-strip': (
+    <>
+      <rect x="3.5" y="6" width="17" height="12" rx="2.5" />
+      <path d="M9.2 6v12M14.8 6v12" />
+    </>
+  ),
+  'type-scale': (
+    <>
+      <path d="M3.5 20h17" />
+      <path d="M6 20v-4.5M4.5 15.5h3" />
+      <path d="M11.5 20v-9M9.6 11h3.8" />
+      <path d="M17.5 20V5.5M15.2 5.5h4.6" />
+    </>
+  ),
+  'icon-library': <path d="m12 4 2.4 5 5.4.7-4 3.7 1.1 5.4L12 16.1l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" />,
+  'file-converter': (
+    <>
+      <path d="M4 8.5h15" />
+      <path d="m15.5 5 3.5 3.5-3.5 3.5" />
+      <path d="M20 15.5H5" />
+      <path d="M8.5 12 5 15.5 8.5 19" />
+    </>
+  ),
+  '3d-converter': (
+    <>
+      <path d="M12 3.5 19.5 7.8v8.4L12 20.5 4.5 16.2V7.8z" />
+      <path d="M4.5 7.8 12 12l7.5-4.2M12 12v8.5" />
+    </>
+  ),
+  // A front gradient square with a second sheet behind it: a library of them,
+  // so it no longer wears the Gradient tool's own mark.
+  'gradient-library': (
+    <>
+      <rect x="3.5" y="8" width="12.5" height="12.5" rx="2.5" />
+      <path d="M3.5 20.5 16 8" />
+      <path d="M8 4.5h10.5a2 2 0 0 1 2 2V17" />
+    </>
+  ),
+  // -- Learn guides: one mark each, none shared with a tool --
+  'guide-contrast': (
+    <>
+      <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </>
+  ),
+  'guide-scale': (
+    <>
+      <path d="M4 18 8.5 6 13 18M5.8 13.5h5.4" />
+      <path d="m15.5 18 2.6-6.5 2.6 6.5M16.4 16h3.4" />
+    </>
+  ),
+  'guide-metrics': (
+    <>
+      <path d="M5 6.5h14M5 17.5h14" />
+      <path d="M12 6.5v11" />
+    </>
+  ),
+  'guide-colour-spaces': (
+    <>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+      <circle cx="9" cy="7" r="1.7" />
+      <circle cx="15" cy="12" r="1.7" />
+      <circle cx="8" cy="17" r="1.7" />
+    </>
+  ),
+  'guide-theme': (
+    <>
+      <circle cx="12" cy="12" r="3.6" />
+      <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18" />
+    </>
+  ),
+  'guide-brand': (
+    <>
+      <path d="M12 3.5 18 12l-6 8.5L6 12z" />
+      <path d="M12 12v4.5" />
+      <circle cx="12" cy="10.5" r="1" />
+    </>
+  ),
   // ── Discover ──
   inspiration: (
     <>
