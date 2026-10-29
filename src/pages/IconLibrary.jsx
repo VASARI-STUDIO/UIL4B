@@ -2040,6 +2040,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
   const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
 
+  // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
+  // of them has more under it (icon-emoji-library.css). The attribute is set straight on the body, so
+  // reading it never renders; it is re-read when a column resizes or its content changes.
+  useEffect(() => {
+    const body = panelRef.current?.querySelector('.icust-body')
+    const cols = body ? [...body.querySelectorAll(':scope > .icust-left, :scope > .icust-right')] : []
+    if (!body || cols.length === 0) return undefined
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      body.toggleAttribute('data-scrolls', cols.some(c => c.scrollHeight - c.clientHeight > 1 && /auto|scroll/.test(getComputedStyle(c).overflowY)))
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    measure()
+    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
+    const changed = new MutationObserver(schedule)
+    cols.forEach(c => {
+      resized?.observe(c)
+      changed.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open'] })
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      resized?.disconnect()
+      changed.disconnect()
+      body.removeAttribute('data-scrolls')
+    }
+  }, [activeIcon])
+
   return (
     <div className="icust-overlay" onMouseDown={onClose}>
       <div
@@ -2260,7 +2288,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           {label}
                         </button>
                       ))}
+                      {/* Portalled to <body>: the right column scrolls on its own above 800px, and an
+                          inline panel hung off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
+                        portal
                         value={color || themeInk}
                         onChange={(v) => { setColor(v); markDirty() }}
                         triggerClassName="icust-chip"
@@ -2397,7 +2428,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <div className="icust-rot">
                 <div className="icust-rot-head">
                   <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
-                  <span className="icust-mono icust-rot-val">{rotate}°</span>
+                  <span className="icust-mono icust-rot-val" aria-hidden="true">{rotate}°</span>
+                  {/* Polite and always mounted, so each press of Rotate is announced. */}
+                  <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
                 </div>
                 <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
                   <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
@@ -2421,7 +2454,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <summary className="icust-code-sum">
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
                 <span className="icust-code-name">SVG code</span>
-                <span className="icust-mono icust-code-val">{size} × {size} · {codeBytes} bytes</span>
+                <span className="icust-code-val"><span className="icust-mono">{size} × {size} · {codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
               </summary>
               <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
                 <button
@@ -2434,7 +2467,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   aria-busy={!baseSvgText && !loadErr}
                   aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
                 >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
-                <code>{serializedOutput}</code>
+                <code tabIndex={0} role="region" aria-label="SVG code">{serializedOutput}</code>
               </div>
             </details>
 

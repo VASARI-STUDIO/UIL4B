@@ -11,7 +11,10 @@
 //   - the head holds the name and "{Pack}, {weight}"; Reset appears only after a change and puts it back;
 //   - Rotate left and right turn the preview, Flip toggles aria-pressed and mirrors it;
 //   - the SVG code is a closed disclosure with the live size, its Copy copies, and while a Pro setting is
-//     only previewed the code cannot be selected.
+//     only previewed the code cannot be selected;
+//   - the phone sheet's stage is its 168px (at most 172), the open code is a named region a keyboard can
+//     scroll, the touch targets are 44px, the rotation is announced, and the foot's hairline and the
+//     custom colour picker both behave in a column that scrolls on its own.
 //
 // HOW TO SEE EACH FAIL (src/styles/pages/icon-emoji-library.css and src/pages/IconLibrary.jsx):
 //   .icust-sub { font-family: var(--mono) }                    -> "no label, caption, pill or count is set in mono"
@@ -29,6 +32,12 @@
 //   handleCopyCode copies the serialised output of another size -> "its Copy copies exactly the code shown"
 //   .icust-code-box.is-locked code loses user-select:none       -> "while a Pro setting is only previewed ..."
 //   .icust-code-caret drops out of the reduced-motion :is(...)  -> "under reduced motion ..."
+//   the (max-width:640px) stage loses `min-height:168px`, or the held note lines go back into it -> "... the stage is at most 172px"
+//   <code> loses tabIndex, role or aria-label                   -> "the open code is a named region ..."
+//   .icust-code-sum loses its pointer:coarse min-height:44px    -> "touch targets ..."
+//   the Rotate buttons stop writing the rotation status         -> "Rotate announces ..."
+//   data-scrolls is never set (or the foot border is always on) -> "the foot's hairline ..."
+//   <ColorPickerPop> loses `portal`                             -> "the custom colour picker opens outside the scrolling column"
 //   src restored byte for byte                                  -> all of them pass again.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -196,6 +205,48 @@ test.describe('layout', () => {
     await ctx.close()
   })
 
+  test("the foot's hairline shows only while a column can scroll", async ({ browser }) => {
+    const edge = (page) => page.evaluate(() => {
+      const foot = document.querySelector('.icust-body > .icust-foot')
+      const body = document.querySelector('.icust-body')
+      const cs = getComputedStyle(foot)
+      return { scrolls: body.hasAttribute('data-scrolls'), colour: cs.borderTopColor, width: cs.borderTopWidth, shadow: cs.boxShadow }
+    })
+    const roomy = await openCustomiser(browser, { width: 1440, height: 900 })
+    const a = await edge(roomy.page)
+    expect(a.scrolls, 'nothing scrolls at 1440x900, so no hairline is called for').toBe(false)
+    expect(a.colour, 'the foot draws a hairline with nothing to scroll').toBe('rgba(0, 0, 0, 0)')
+    expect(a.width, 'the foot changes height when the hairline comes and goes').toBe('1px')
+    await roomy.ctx.close()
+
+    const short = await openCustomiser(browser, { width: 1440, height: 560 })
+    const scrolls = await short.page.evaluate(() => [...document.querySelectorAll('.icust-left, .icust-right')].some((c) => c.scrollHeight > c.clientHeight + 1))
+    expect(scrolls, 'a 560px-tall window should make a column scroll, so this test proves nothing').toBe(true)
+    await expect.poll(async () => (await edge(short.page)).scrolls, { message: 'data-scrolls never appeared' }).toBe(true)
+    const b = await edge(short.page)
+    expect(b.colour, 'the foot has no hairline while a column scrolls').not.toBe('rgba(0, 0, 0, 0)')
+    expect(b.shadow, 'a shadow is back on the foot').toBe('none')
+    expect(await short.page.locator('.icust-right').evaluate((el) => getComputedStyle(el).maskImage), 'the right column is masked again').toBe('none')
+    await short.ctx.close()
+  })
+
+  for (const [w, h] of [[1440, 900], [1366, 768]]) {
+    test(`at ${w}x${h} the custom colour picker opens outside the scrolling column and inside the window`, async ({ browser }) => {
+      const { ctx, page } = await openCustomiser(browser, { width: w, height: h })
+      await page.getByRole('radiogroup', { name: 'Colour', exact: true }).getByRole('radio', { name: 'Custom' }).click()
+      const pop = page.getByRole('dialog', { name: 'Custom colour' })
+      await expect(pop).toBeVisible()
+      expect(await pop.evaluate((el) => !!el.closest('.icust-right, .icust-panel')), 'the picker is still inside a clipping column').toBe(false)
+      const box = await pop.boundingBox()
+      expect(box.x, 'the picker is cut off on the left').toBeGreaterThanOrEqual(0)
+      expect(box.y, 'the picker is cut off at the top').toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width, 'the picker is cut off on the right').toBeLessThanOrEqual(w)
+      expect(box.y + box.height, 'the picker is cut off at the bottom').toBeLessThanOrEqual(h)
+      await expect(pop.locator('.cpk-pad')).toBeInViewport({ ratio: 1 })
+      await ctx.close()
+    })
+  }
+
   test('at 1440 the panel is 760px wide with a 320px left column, the controls beside it, and the foot across both', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser, { width: 1440, height: 900 })
     const b = await boxes(page)
@@ -246,6 +297,9 @@ test.describe('layout', () => {
       expect(radii.top, 'the top corners are rounded').toBeGreaterThan(0)
       expect(radii.bottom, 'the bottom corners are square').toBe(0)
       expect(Math.round(b.right.y), 'one column: the controls are under the left column').toBeGreaterThanOrEqual(Math.round(b.left.b) - 1)
+      // The stage is its 168px, not 168px plus the lines a contrast note might need.
+      const stageBox = await page.locator('.icust-stage').boundingBox()
+      expect(stageBox.height, `the stage is ${stageBox.height}px tall; the sheet gives it 168`).toBeLessThanOrEqual(172)
 
       // The body scrolls (there is more than a screen of controls); the foot does not move while it does.
       const scrollable = await page.locator('.icust-body').evaluate((el) => el.scrollHeight - el.clientHeight)
@@ -349,6 +403,28 @@ test.describe('rotate and flip', () => {
     await ctx.close()
   })
 
+  test('Rotate announces the angle through a polite status, and the angle sits at the right of the header', async ({ browser }) => {
+    const { ctx, page } = await openCustomiser(browser)
+    const status = page.locator('.icust-rot-head [role="status"]')
+    await expect(status).toHaveText('Not rotated')
+    await rotRight(page).click()
+    await expect(status, 'Rotate right says nothing').toHaveText('Rotated 90 degrees')
+    await rotLeft(page).click()
+    await rotLeft(page).click()
+    await expect(status).toHaveText('Rotated 270 degrees')
+    await rotRight(page).click()
+    await expect(status).toHaveText('Not rotated')
+    // The visible angle is not read twice, and it sits beside the buttons, not beside the title.
+    await expect(page.locator('.icust-rot-val')).toHaveAttribute('aria-hidden', 'true')
+    const at = await page.evaluate(() => {
+      const r = (sel) => document.querySelector(sel).getBoundingClientRect()
+      return { title: r('.icust-rot-title'), val: r('.icust-rot-val'), btns: r('.icust-rot-btns') }
+    })
+    expect(at.val.x, 'the angle is not next to the title').toBeGreaterThan(at.title.right + 24)
+    expect(at.val.right, 'the angle runs past the buttons').toBeLessThanOrEqual(at.btns.x)
+    await ctx.close()
+  })
+
   test('Flip horizontally and vertically toggle aria-pressed and mirror the preview', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
     for (const b of [flipH(page), flipV(page)]) await expect(b).toHaveAttribute('aria-pressed', 'false')
@@ -395,7 +471,7 @@ test.describe('SVG code disclosure', () => {
     const details = page.locator('details.icust-code')
     await expect(details).not.toHaveAttribute('open', /.*/)
     await expect(summary(page)).toContainText('SVG code')
-    await expect(page.locator('.icust-code-val')).toHaveText(/^24 × 24 · \d+ bytes$/)
+    await expect(page.locator('.icust-code-val')).toHaveText(/^24 × 24 · [\d,]+ bytes$/)
     await expect(codeBox(page), 'the code shows while closed').toBeHidden()
 
     await summary(page).click()
@@ -407,13 +483,13 @@ test.describe('SVG code disclosure', () => {
       return { shown, bytes: new TextEncoder().encode(text).length }
     })
     const a = await fits()
-    expect(a.shown, 'the summary says another size than the code is').toBe(`24 × 24 · ${a.bytes} bytes`)
+    expect(a.shown, 'the summary says another size than the code is').toBe(`24 × 24 · ${a.bytes.toLocaleString('en-AU')} bytes`)
 
     // Live: another size changes both.
     await sizeRadio(page, '32 pixels').click()
-    await expect(page.locator('.icust-code-val')).toHaveText(/^32 × 32 · \d+ bytes$/)
+    await expect(page.locator('.icust-code-val')).toHaveText(/^32 × 32 · [\d,]+ bytes$/)
     const b = await fits()
-    expect(b.shown).toBe(`32 × 32 · ${b.bytes} bytes`)
+    expect(b.shown).toBe(`32 × 32 · ${b.bytes.toLocaleString('en-AU')} bytes`)
 
     // The keyboard opens and closes it as well.
     await summary(page).focus()
@@ -424,6 +500,62 @@ test.describe('SVG code disclosure', () => {
     await summary(page).click()
     await expect(details).not.toHaveAttribute('open', /.*/)
     await ctx.close()
+  })
+
+  test('the byte count groups its digits, and only the numbers are mono: the word "bytes" is in the UI face', async ({ browser }) => {
+    const { ctx, page } = await openCustomiser(browser)
+    const parts = await page.locator('.icust-code-val').evaluate((el) => {
+      const num = el.querySelector('.icust-mono')
+      return {
+        outer: getComputedStyle(el).fontFamily,
+        inner: getComputedStyle(num).fontFamily,
+        numbers: num.textContent,
+        rest: el.textContent.replace(num.textContent, '').trim(),
+      }
+    })
+    expect(parts.numbers, 'the numbers are 24 × 24 and a byte count with its thousands grouped').toMatch(/^24 × 24 · \d{1,3}(,\d{3})*$/)
+    expect(parts.rest, 'only the unit sits outside the mono span').toBe('bytes')
+    expect(parts.outer, 'the unit is set in mono').not.toBe(parts.inner)
+    await ctx.close()
+  })
+
+  test('the open code is a named region a keyboard can reach and scroll, with a visible focus ring', async ({ browser }) => {
+    const { ctx, page } = await openCustomiser(browser)
+    await summary(page).click()
+    const code = codeBox(page).locator('code')
+    await expect(code).toHaveAttribute('tabindex', '0')
+    await expect(code).toHaveAttribute('role', 'region')
+    await expect(code).toHaveAccessibleName('SVG code')
+    // Tab from the summary: the Copy button first, then the code itself.
+    await summary(page).focus()
+    await page.keyboard.press('Tab')
+    await expect(codeCopy(page)).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(code).toBeFocused()
+    const ring = await code.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }
+    })
+    expect(ring.style, 'the focused code shows no ring').not.toBe('none')
+    expect(ring.width, 'the ring is thinner than 2px').toBeGreaterThanOrEqual(2)
+    await ctx.close()
+  })
+
+  test('touch targets: the summary is 44px on a touch screen; the code Copy is at least 32px on a fine pointer and 44px on touch', async ({ browser }) => {
+    const fine = await openCustomiser(browser)
+    await summary(fine.page).click()
+    const copyFine = await codeCopy(fine.page).boundingBox()
+    expect(Math.round(copyFine.height), 'the code Copy is under 32px on a fine pointer').toBeGreaterThanOrEqual(32)
+    await fine.ctx.close()
+
+    const touch = await openCustomiser(browser, { width: 390, height: 780, touch: true })
+    await summary(touch.page).scrollIntoViewIfNeeded()
+    const sum = await summary(touch.page).boundingBox()
+    expect(Math.round(sum.height), 'the SVG code summary is under 44px on a touch screen').toBeGreaterThanOrEqual(44)
+    await summary(touch.page).click()
+    const copyTouch = await codeCopy(touch.page).boundingBox()
+    expect(Math.round(copyTouch.height), 'the code Copy is under 44px on a touch screen').toBeGreaterThanOrEqual(44)
+    await touch.ctx.close()
   })
 
   test('its Copy copies exactly the code shown, says Copied!, and the code can be selected', async ({ browser }) => {

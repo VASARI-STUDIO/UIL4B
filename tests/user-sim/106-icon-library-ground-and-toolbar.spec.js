@@ -113,20 +113,26 @@ test.describe('the ground switch', () => {
         const chip = (name) => page.getByRole('radio', { name, exact: true })
         const note = page.locator('.icust-ground-note')
         const top = async (name) => (await chip(name).boundingBox()).y
-        // The size rail sits under the note, in the stage's column. The stage gives room to a note
-        // and takes it back, so the rail (and the chips in the other column) never move.
+        // The size rail sits under the note, in the stage's column. Wider than a phone sheet the stage
+        // gives room to a note and takes it back; on the sheet (640 and below) the stage stays its 168px
+        // and the note's lines are held in the note's own box. Either way the rail (and the chips in the
+        // other column) never move.
         const railTop = async () => (await page.locator('.icust-size').boundingBox()).y
+        const stageHeight = async () => (await page.locator('.icust-stage').boundingBox()).height
 
-        // No band is held while there is no note: the box is empty and takes no room of its own.
+        // Above 640 no band is held while there is no note: the box is empty and the stage keeps the room.
         await chip('Text colour').click()
         await expect(note.locator('p')).toHaveCount(0)
         const quietChips = await top('Black')
         const quietRail = await railTop()
+        const quietStage = await stageHeight()
+        if (width <= 640) expect(quietStage, 'the phone stage is taller than its 168px').toBeLessThanOrEqual(172)
         // The icon colour that is hard to see on this theme's page raises the note.
         await chip(scheme === 'dark' ? 'Black' : 'White').click()
         await expect(note.locator('p')).toBeVisible()
         expect(await top('Black'), 'the contrast note moved the colour chips').toBe(quietChips)
         expect(await railTop(), 'the contrast note moved the size rail').toBeCloseTo(quietRail, 0)
+        if (width <= 640) expect(await stageHeight(), 'the contrast note resized the phone stage').toBeCloseTo(quietStage, 0)
         // Back to Text colour: still nothing moves.
         await chip('Text colour').click()
         await expect(note.locator('p')).toHaveCount(0)

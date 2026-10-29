@@ -101,8 +101,8 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
    keeps mono for what a user copies. */
 .iel-page .icust-row>label,
 .iel-page .icust-similar-label{
-  font-family:var(--font);font-size:12.5px;font-weight:560;
-  letter-spacing:0;text-transform:none;color:var(--t2);
+  font-family:var(--font);font-size:13px;font-weight:560;
+  letter-spacing:0;text-transform:none;color:var(--t1);
 }
 /* The segmented controls: the design's selected segment is a 9% ink wash, not
    a lifted white chip — which in dark was `--bg-0` on `--bg-2`, the page
@@ -520,22 +520,26 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-left{display:flex;flex-direction:column;gap:12px;min-width:0;padding:4px 24px 0}
 .iel-page .icust-right{min-width:0;padding:16px 24px 8px}
 .iel-page .icust-left .icust-stage{margin:0;flex:1 1 auto;min-height:216px}
-/* The note's two lines are held, so the size rail under it never moves when a note arrives. */
-/* A note's lines are held only where nothing else could give way. Above 800px the stage is the
-   flexible part of a column of fixed height, so an empty note takes no room and the stage gives up
-   what a note needs; the size rail stays put either way. At 800px and below the column is as tall
-   as its content, so the held lines move into the stage instead: with no note the stage is that
-   much taller, and when one arrives the stage gives the room back. No empty band either way. */
+/* The size rail under the note never moves when a note arrives. Where the room for a note comes
+   from depends on the width. Above 800px the stage is the flexible part of a column of fixed
+   height, so an empty note takes no room and the stage gives up what a note needs. From 641 to
+   800px the column is as tall as its content, so the held lines move into the stage instead: with
+   no note the stage is that much taller, and when one arrives the stage gives the room back. On a
+   phone sheet (640px and below) the stage stays at its 168px and the note's lines are held in the
+   note's own box under it, so nothing below the stage moves and the stage never grows to fill them. */
 .iel-page .icust-left .icust-ground-note{margin:0;padding-top:0;min-height:0}
 .iel-page .icust-left .icust-ground-note:empty{margin-top:-12px}
-@media(max-width:800px){
+@media(min-width:641px) and (max-width:800px){
   .iel-page .icust-left{--stage-rest:216px;--note-lines:1}
   .iel-page .icust-left .icust-ground-note:has(p){min-height:calc(var(--note-lines) * 1.4em)}
   .iel-page .icust-left:not(:has(.icust-ground-note p)) .icust-stage{min-height:calc(var(--stage-rest) + 12px + var(--note-lines) * 1.4 * var(--fs-caption))}
 }
-@media(max-width:640px){.iel-page .icust-left{--stage-rest:180px}}
+@media(max-width:640px){
+  .iel-page .icust-left{--note-lines:1}
+  .iel-page .icust-left .icust-ground-note,
+  .iel-page .icust-left .icust-ground-note:empty{min-height:calc(var(--note-lines) * 1.4em);margin-top:0}
+}
 @media(max-width:560px){.iel-page .icust-left{--note-lines:2}}
-@media(max-width:380px){.iel-page .icust-left{--stage-rest:196px}}
 .iel-page .icust-controls{gap:10px;padding:0}
 .iel-page .icust-line-tile{padding-block:8px}
 .iel-page .icust-line{gap:6px}
@@ -570,20 +574,19 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
   .iel-page .icust-overlay{align-items:flex-end;padding:max(24px,env(safe-area-inset-top,0px)) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
   .iel-page .icust-panel{width:100%;max-height:calc(100dvh - max(24px,env(safe-area-inset-top,0px)));border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-width:1px 0 0}
   .iel-page .icust-head{padding:16px 16px 8px}
-  .iel-page .icust-left .icust-stage{min-height:168px;padding:12px 12px 80px}
+  /* 168px in all: 8px, the 88px drawing, and 72px under it for the caption and the ground switch,
+     which when they stack (390 and 320) take about 71px: an 8px edge, the 38px switch pill, 8px, a caption line. */
+  .iel-page .icust-left .icust-stage{min-height:168px;padding:8px 12px 72px}
   .iel-page .icust-body>.icust-foot .icust-foot-row{padding:12px 16px max(16px,env(safe-area-inset-bottom,0px))}
   .iel-page .icust-foot-row>.icust-copy{flex:1 1 auto}
 }
-/* At 320 the caption and the ground switch stack into three rows, so the stage keeps more room clear of the icon. */
-@media(max-width:380px){
-  .iel-page .icust-left .icust-stage{padding-bottom:96px}
-}
 
-/* Rotate and flip: one group, the angle in its header, four 40px icon buttons. */
+/* Rotate and flip: one group, the angle at the right of its header (beside the buttons, or above them
+   once the group wraps), four 40px icon buttons. */
 .iel-page .icust-rot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
-.iel-page .icust-rot-head{display:flex;align-items:baseline;gap:8px}
+.iel-page .icust-rot-head{display:flex;flex:1 1 auto;align-items:baseline;justify-content:space-between;gap:8px}
 .iel-page .icust-rot-title{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
-.iel-page .icust-rot-val{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
+.iel-page .icust-rot-val{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums;text-align:right}
 .iel-page .icust-rot-btns{display:flex;align-items:center;gap:4px}
 .iel-page .icust-rot-sep{width:1px;height:20px;margin:0 6px;background:var(--border)}
 .iel-page .icust-rot-btn{
@@ -610,12 +613,14 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-code-caret{flex:none;color:var(--t2);transition:transform 150ms var(--ease-out)}
 .iel-page .icust-code[open] .icust-code-caret{transform:rotate(90deg)}
 .iel-page .icust-code-name{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
-.iel-page .icust-code-val{margin-left:auto;font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
+.iel-page .icust-code-val{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
 .iel-page .icust-code-box{position:relative;margin:0 0 8px;padding:40px 12px 12px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s)}
-.iel-page .icust-code-box code{-webkit-user-select:text;user-select:text;cursor:text}
+.iel-page .icust-code-box code{-webkit-user-select:text;user-select:text;cursor:text;border-radius:var(--radius-xs)}
+/* The code scrolls at 120px, so it takes a Tab stop (tabindex="0") and shows where it is. */
+.iel-page .icust-code-box code:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .iel-page .icust-code-box.is-locked code{-webkit-user-select:none;user-select:none;cursor:default;color:var(--t3)}
 .iel-page .icust-code-copy{
-  position:absolute;top:6px;right:6px;min-height:28px;padding:0 12px;
+  position:absolute;top:6px;right:6px;min-height:32px;padding:0 12px;
   border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--card);
   font-family:var(--font);font-size:12px;font-weight:560;color:var(--t1);cursor:pointer;
   transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
@@ -624,6 +629,7 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-code-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .iel-page .icust-code-copy[aria-disabled="true"]{color:var(--t3);cursor:default}
 @media(pointer:coarse){
+  .iel-page .icust-code-sum{min-height:44px}
   .iel-page .icust-code-box{padding-top:56px}
   .iel-page .icust-code-copy{min-height:44px}
 }
@@ -646,28 +652,11 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
   .iel-page .icust-chips{gap:6px}
 }
 
-/* While the right column has more under the foot, its bottom edge fades out, and once it has been
-   scrolled its top edge does too, so a cut-off row reads as "carries on" and never as the end. It
-   is a function of the scroll position (the same recipe as .rail-overflow, turned vertical): with
-   nothing to scroll the timeline is inactive and both fades stay at 0. Engines without scroll-driven
-   animations keep the platform's own scrollbar. */
-@property --icust-t{syntax:'<number>';inherits:false;initial-value:0}
-@property --icust-b{syntax:'<number>';inherits:false;initial-value:0}
-@supports (animation-timeline:scroll()){
-  @media(min-width:801px){
-    .iel-page .icust-right{
-      --icust-t:0;--icust-b:0;
-      animation:icust-edges linear both;animation-timeline:scroll(self block);
-      -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 calc(var(--icust-t) * 20px),#000 calc(100% - var(--icust-b) * 28px),transparent 100%);
-      mask-image:linear-gradient(180deg,transparent 0,#000 calc(var(--icust-t) * 20px),#000 calc(100% - var(--icust-b) * 28px),transparent 100%);
-    }
-    /* The page clamps animation durations under reduced motion; this is a position indicator, not motion. */
-    html .iel-page .icust-right{animation-duration:auto!important}
-  }
-}
-@keyframes icust-edges{
-  0%{--icust-t:0;--icust-b:1}
-  2%{--icust-t:1;--icust-b:1}
-  98%{--icust-t:1;--icust-b:1}
-  100%{--icust-t:1;--icust-b:0}
+/* The foot's top hairline shows only while a column has more under it. Above 800px the two columns
+   scroll on their own, and the line is the cue that a cut-off row carries on; with everything in
+   view there is nothing to say, so the line is transparent (the border stays, so the foot never
+   changes height). IconLibrary.jsx sets data-scrolls on .icust-body while either column overflows. */
+@media(min-width:801px){
+  .iel-page .icust-body>.icust-foot{box-shadow:none;border-top:1px solid transparent}
+  .iel-page .icust-body[data-scrolls]>.icust-foot{border-top-color:var(--border)}
 }
