@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -183,7 +184,9 @@ const COMPARE_ROWS = COMPARE.flatMap((group) => group.rows)
 const ctaLabel = (offer) => (offer.trialDays ? `Start ${offer.trialDays}-day free trial` : 'Upgrade to Pro')
 
 export default function Pricing() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  const navigate = useNavigate()
   const { isPro, loading: subLoading } = useSubscription()
   const location = useLocation()
   // Seeded from `?billing=`, validated against the options the switch can
@@ -224,12 +227,22 @@ export default function Pricing() {
   const otherOffer = offers.find((o) => o.id !== offer.id && o.amountLabel)
   const freeAmount = formatMoney(0, currency)
 
-  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Every paid button goes straight to
-  // /checkout for the chosen cadence, signed in or not. /checkout is a public
-  // route: it shows the plan, the price and the trial, and a signed-out visitor
-  // is asked to log in or create an account there, with the cadence kept.
+  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Every paid button links to
+  // /checkout for the chosen cadence. Signed in, the click follows the link.
+  // Signed out, the login popup opens over this page and, once the visitor has
+  // an account, carries on to that checkout. `from` makes a new account come
+  // back to the same checkout after onboarding. A modified click (new tab or
+  // window) keeps the plain link, and /checkout still asks for an account.
   const proTo = `/checkout?plan=${offer.checkoutPlan}`
   const proBusy = subLoading || !price.loaded
+  const openPro = (event) => {
+    if (proBusy) { event.preventDefault(); return }
+    if (user || authLoading) return
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    requireLogin('pay for Pro', { reasons: ['Pro is attached to your account, so payment needs one.'], from: proTo })
+      .then((back) => { if (back) navigate(proTo) })
+  }
   const label = ctaLabel(offer)
 
   const chooseBilling = (id) => {
@@ -308,7 +321,7 @@ export default function Pricing() {
           <span className="pr-bar-name">Pro<span className="pr-bar-bill"> · billed {BILLED_EVERY[offer.id]}</span></span>
           <span className="pr-bar-amt">{offer.amountLabel ? `${offer.amountLabel} / month` : ''}</span>
         </span>
-        <Link className="pr-bar-btn" to={proTo} tabIndex={-1}>{label}</Link>
+        <Link className="pr-bar-btn" to={proTo} tabIndex={-1} onClick={openPro}>{label}</Link>
       </span>
     </div>
   )
@@ -355,7 +368,7 @@ export default function Pricing() {
         className="pr-cta pr-cta--pro"
         to={proTo}
         aria-disabled={proBusy ? 'true' : undefined}
-        onClick={(event) => { if (proBusy) event.preventDefault() }}
+        onClick={openPro}
       >
         {label}
       </Link>
@@ -425,7 +438,7 @@ export default function Pricing() {
       className="pr-cta pr-cta--pro"
       to={proTo}
       aria-disabled={proBusy ? 'true' : undefined}
-      onClick={(event) => { if (proBusy) event.preventDefault() }}
+      onClick={openPro}
     >
       Choose Pro
     </Link>

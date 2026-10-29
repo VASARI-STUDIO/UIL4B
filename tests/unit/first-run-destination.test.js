@@ -40,13 +40,14 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // no longer describes the flow, and asserting one would just be pinning an
   // arithmetic fact. What B4 actually cared about is asserted instead, and more
   // strictly than before: EVERY navigate() in this file must be accounted for —
-  // the constant, a resume target the user themselves chose, or a first-win
-  // route. Anything else is a new exit that has not been thought about.
+  // the constant, a resume target the user themselves chose, a first-win
+  // route, or a stashed checkout in place of that route (someone who signed up
+  // from a Pro button). Anything else is a new exit that has not been thought about.
   // One level of nesting, so `navigate(takeResumeTarget() || X)` is captured
   // whole rather than truncated at the inner bracket.
   const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
   assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
-  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$/
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$|^navigate\(isCheckoutTarget\(resume\) \? resume : win\.route\)$/
   for (const nav of navigations) {
     assert.match(nav, allowed,
       `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
@@ -56,7 +57,7 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // owns that guarantee and tests/unit/first-win.test.js checks it against
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
-  assert.match(src, /navigate\(win\.route\)/)
+  assert.match(src, /navigate\((?:isCheckoutTarget\(resume\) \? resume : )?win\.route\)/)
   assert.match(src, /FIRST_WINS\.map/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),
