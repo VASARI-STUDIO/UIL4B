@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  filterGalleryTypefaces, filterPickableTypefaces, formatSubsets, isGalleryTypeface,
+  FONT_CATEGORIES, filterGalleryTypefaces, filterPickableTypefaces, formatSubsets, isGalleryTypeface,
   isPickableTypeface, ladderWeights, weightName,
 } from '../../src/utils/fontGallery.js'
 
@@ -177,7 +177,10 @@ const pickerChipIds = () => {
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
   const block = code.match(/const CATS\s*=\s*\[([\s\S]*?)\n\]/)
   assert.ok(block, 'CATS array not found in FontBrowseDialog source')
-  return [...block[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])
+  // The Gallery's own set is spread in from FONT_CATEGORIES; the dialog's extra
+  // entries are written out beside it.
+  const shared = /\.\.\.FONT_CATEGORIES/.test(block[1]) ? FONT_CATEGORIES.map(c => c.id) : []
+  return [...shared, ...[...block[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])]
 }
 
 test('every category the picker can serve has a chip that reaches it', () => {

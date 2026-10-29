@@ -157,6 +157,19 @@ class El {
   }
 
   querySelectorAll(selector) {
+    // The Escape path asks for open menu triggers inside the dialog: elements
+    // carrying aria-haspopup with aria-expanded="true", in tree order.
+    if (selector === '[aria-haspopup][aria-expanded="true"]') {
+      const open = []
+      const walk = (n) => {
+        for (const c of n.children) {
+          if (c.hasAttribute('aria-haspopup') && c.getAttribute('aria-expanded') === 'true') open.push(c)
+          walk(c)
+        }
+      }
+      walk(this)
+      return open
+    }
     // The hook passes one long selector listing focusable tags. Rather than
     // implement CSS, honour the contract it depends on: candidate elements
     // that are focusable and not disabled, in tree order.
@@ -428,6 +441,26 @@ test('with Lenis absent the root lock still holds, and closing does not throw', 
   assert.equal(s.dom.document.documentElement.style.overflow, 'hidden')
   s.close()
   assert.equal(s.dom.document.documentElement.style.overflow, '')
+})
+
+test('Escape is left to a menu open inside the dialog, so only the menu closes', () => {
+  const s = scene()
+  s.first.setAttribute('aria-haspopup', 'true')
+  s.first.setAttribute('aria-expanded', 'true')
+  const event = s.dom.press('Escape')
+  assert.equal(s.closes.length, 0, 'the dialog closed while a menu inside it was open')
+  assert.ok(!event.propagationStopped, 'the dialog swallowed the Escape the open menu needs')
+})
+
+test('a hidden trigger left marked open does not stop Escape closing the dialog', () => {
+  const s = scene()
+  const stale = s.dom.el('button', { visible: false })
+  s.dialog.appendChild(stale)
+  stale.setAttribute('aria-haspopup', 'true')
+  stale.setAttribute('aria-expanded', 'true')
+  const event = s.dom.press('Escape')
+  assert.equal(s.closes.length, 1, 'a stale attribute on a hidden trigger blocked Escape')
+  assert.ok(event.propagationStopped)
 })
 
 test('Escape closes, and does not collapse the surface that opened it', () => {
