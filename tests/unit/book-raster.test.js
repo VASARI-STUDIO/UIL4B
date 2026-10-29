@@ -183,6 +183,25 @@ test('many colours paginate: five a page at most, no stub; the matrix takes up t
   }
 })
 
+test('matrix shading tints the passing cells and leaves the failing ones bare and light', () => {
+  const page = build().pages.find((p) => p.kind === 'matrix')
+  const cells = page.ops.filter((o) => o.op === 'rect' && o.h === 46)
+  const cellAt = (t) => cells.find((r) => t.x > r.x && t.x < r.x + r.w && t.y > r.y && t.y < r.y + r.h)
+  const seen = { Pass: [], Large: [], Fail: [] }
+  for (const t of page.ops.filter((o) => o.op === 'text' && /^\d+\.\d\d:1$/.test(o.text))) {
+    const { word } = matrixClass(parseFloat(t.text))
+    seen[word].push({ t, cell: cellAt(t) })
+  }
+  assert.ok(seen.Pass.length && seen.Large.length && seen.Fail.length, 'the sample has no cell of some class')
+  for (const { t, cell } of seen.Pass) assert.ok(cell, `${t.text} passes and is not tinted`)
+  for (const { t, cell } of seen.Large) assert.ok(cell, `${t.text} is large-text only and is not tinted`)
+  for (const { t, cell } of seen.Fail) assert.equal(cell, undefined, `${t.text} fails and is tinted`)
+  assert.notEqual(seen.Pass[0].cell.fill, seen.Large[0].cell.fill, 'pass and large share one tint')
+  // Weight still carries the class, so it never rests on shading alone.
+  assert.ok(Number(/^(\d+) /.exec(seen.Pass[0].t.font)[1]) > Number(/^(\d+) /.exec(seen.Fail[0].t.font)[1]))
+  assert.notEqual(seen.Fail[0].t.fill, seen.Pass[0].t.fill, 'a failing figure is not muted')
+})
+
 test('with 13 colours the matrix is 15 columns of 35 units, and every figure fits its cell', () => {
   const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(13) } }
   const matrix = build(design).pages.filter((p) => p.kind === 'matrix')

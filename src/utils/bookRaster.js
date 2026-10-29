@@ -663,6 +663,9 @@ export function matrixClass(ratio) {
   return ratio >= 4.5 ? { word: 'Pass', weight: 700 } : ratio >= 3 ? { word: 'Large', weight: 500 } : { word: 'Fail', weight: 400 }
 }
 
+// How much of the ink a cell is tinted with, by class. A failing cell has no tint.
+const MATRIX_TINT = Object.freeze({ pass: 0.08, large: 0.035 })
+
 function matrixOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
@@ -699,8 +702,10 @@ function matrixOps(c, page) {
       }
       const ratio = contrast(row, col)
       const { word, weight } = matrixClass(ratio)
-      if (word === 'Fail') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.06)))
-      else if (word === 'Large') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.025)))
+      // The pairs that work are the ones tinted; a failing pair is left on the paper
+      // and set light. Weight and shading carry the class, never a hue.
+      if (word === 'Pass') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, MATRIX_TINT.pass)))
+      else if (word === 'Large') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, MATRIX_TINT.large)))
       ops.push(text(formatRatio(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, figPx, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
       ops.push(caps(word, x + cw / 2, y + rowH / 2 + 14, c.muted, { px: 6.5, spacing: 1, align: 'center' }, c))
     })
