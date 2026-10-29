@@ -246,10 +246,12 @@ test('every folio is two-digit arabic, with no roman numeral anywhere, contents 
     const folios = page.ops.filter((o) => o.op === 'text' && o.align === 'right' && o.y === FOOT_Y)
     if (page.kind !== 'cover') assert.deepEqual(folios.map((o) => o.text).filter((t) => /^\d+$/.test(t)), [String(page.folio).padStart(2, '0')])
   }
-  const listed = book.pages.find((p) => p.kind === 'contents').ops
-    .filter((o) => o.op === 'text' && o.align === 'right' && /^\d+$/.test(o.text) && o.y < 700).map((o) => o.text)
-  assert.ok(listed.length >= book.contents.length)
-  assert.ok(listed.every((t) => /^\d\d$/.test(t)), `a contents folio is not two digits: ${listed}`)
+  // Every contents entry's page number is drawn padded; the page's fact figures
+  // (colour, step and token counts) are not folios and are left out.
+  const contentsTexts = texts(book.pages.find((p) => p.kind === 'contents'))
+  for (const entry of book.contents) {
+    assert.ok(contentsTexts.includes(String(entry.folio).padStart(2, '0')), `${entry.title}: folio ${entry.folio} is not drawn as two digits`)
+  }
   // Ten or more pages: still two digits, never three.
   const long = build({ ...DESIGN, palette: { ...DESIGN.palette, colors: manyColours(16) } })
   assert.ok(long.pages.some((p) => p.folio >= 10))
