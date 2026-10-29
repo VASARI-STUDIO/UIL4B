@@ -1976,10 +1976,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const body = panelRef.current?.querySelector('.icust-body')
     if (!row || !body) return
     const foot = body.querySelector(':scope > .icust-foot')
+    // The scroller is the left column on the two-column layout, the body below it.
+    let scroller = row.parentElement
+    while (scroller && scroller !== body && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
+    scroller = scroller || body
     const vv = window.visualViewport
     const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
     const over = row.getBoundingClientRect().bottom - floor
-    if (over > 0) body.scrollTop += over
+    if (over > 0) scroller.scrollTop += over
   }, [])
   useEffect(() => {
     const vv = window.visualViewport
@@ -2029,6 +2033,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
+  // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
+  const packName = activeIcon
+    ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
+    : ''
+  const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
+  const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
 
   return (
     <div className="icust-overlay" onMouseDown={onClose}>
@@ -2044,9 +2054,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       >
         <div className="icust-head">
           <div className="icust-head-text">
-            <span className="icust-eyebrow">{addMode && !activeIcon ? 'Add icon' : 'Customise'}</span>
             <h2 className="icust-title" id="icust-title">{title}</h2>
+            {headSub && <p className="icust-sub">{headSub}</p>}
           </div>
+          {/* Reset changes the controls and shows only once something differs. It stays before
+              Close in the tab order. */}
+          {activeIcon && edited && (
+            <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset</button>
+          )}
           <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -2057,7 +2072,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         <div className="icust-body">
         {!activeIcon ? (
           <div className="icust-paste">
-            <p className="icust-paste-help">Paste SVG markup or the full <code>&lt;svg&gt;…&lt;/svg&gt;</code>. Tune it on the stage, then copy — or save it to Custom Icons with Pro.</p>
+            <p className="icust-paste-help">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
             <textarea
               className="icust-paste-input"
               value={pasteText}
@@ -2074,6 +2089,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
+            <div className="icust-left">
             <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
@@ -2132,23 +2148,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
             </div>
 
-            <div className="icust-meta">
-              <div className="icust-tags">
-                <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
-                <span className="icust-tag icust-tag--name" title={activeIcon.name}>{activeIcon.name}</span>
-                {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
-              </div>
-              {/* Reset changes the controls, so it sits with them. It shows only
-                  once something differs; hidden (not removed) so the row holds. */}
-              <button
-                type="button"
-                className={`lib-btn icust-reset${edited ? '' : ' is-hidden'}`}
-                onClick={handleReset}
-                aria-label="Reset to default"
-              >Reset</button>
-            </div>
-
-            <div className="icust-controls">
               <div className="icust-size" ref={railRef}>
                 <div className="icust-size-head">
                   <span className="icust-size-title" id="icust-size-label">Export size</span>
@@ -2220,7 +2219,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   </div>
                 )}
               </div>
+            </div>
 
+            <div className="icust-right">
+            <div className="icust-controls">
               <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
                 <label id="icust-colour-label">Colour</label>
                 {colourRow === 'original' ? (
@@ -2273,7 +2275,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     </div>
                     <p className="icust-colour-help">
                       {choice === 'text'
-                        ? <>The file uses <code>currentColor</code>, so it takes the colour of the text around it.</>
+                        ? <>The file uses <code>currentColor</code>, so it follows the surrounding text.</>
                         : 'The file keeps this colour wherever you use it.'}
                     </p>
                   </>
@@ -2392,38 +2394,64 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               )}
 
-              <div className="icust-row">
-                <label>Rotate</label>
-                <div className="icust-seg">
-                  {[0, 90, 180, 270].map(deg => (
-                    <button key={deg} type="button" className={rotate === deg ? 'active' : ''} onClick={() => { setRotate(deg); markDirty() }}>{deg}°</button>
-                  ))}
+              <div className="icust-rot">
+                <div className="icust-rot-head">
+                  <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
+                  <span className="icust-mono icust-rot-val">{rotate}°</span>
                 </div>
-              </div>
-
-              <div className="icust-row">
-                <label>Flip</label>
-                <div className="icust-seg">
-                  <button type="button" className={flipH ? 'active' : ''} aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>Horizontal</button>
-                  <button type="button" className={flipV ? 'active' : ''} aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>Vertical</button>
+                <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
+                  <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
+                  </button>
+                  <button type="button" className="icust-rot-btn" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
+                  </button>
+                  <span className="icust-rot-sep" aria-hidden="true" />
+                  <button type="button" className="icust-rot-btn" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
+                  </button>
+                  <button type="button" className="icust-rot-btn" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="icust-code">
-              <div className="icust-code-label">SVG</div>
-              <button
-                type="button"
-                className="icust-code-box"
-                onClick={handleCopyCode}
-                disabled={!baseSvgText}
-                aria-disabled={previewing || undefined}
-                aria-describedby={previewing ? 'icust-preview-line' : undefined}
-                aria-busy={!baseSvgText && !loadErr}
-              >
-                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : previewing ? 'Preview only' : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+            <details className="icust-code">
+              <summary className="icust-code-sum">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                <span className="icust-code-name">SVG code</span>
+                <span className="icust-mono icust-code-val">{size} × {size} · {codeBytes} bytes</span>
+              </summary>
+              <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
+                <button
+                  type="button"
+                  className="icust-code-copy"
+                  onClick={handleCopyCode}
+                  disabled={!baseSvgText}
+                  aria-disabled={previewing || undefined}
+                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
+                  aria-busy={!baseSvgText && !loadErr}
+                  aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
+                >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
                 <code>{serializedOutput}</code>
-              </button>
+              </div>
+            </details>
+
+            {savedInProjects.length > 0 && (
+              <p className="icust-savedin">
+                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
+              </p>
+            )}
+
+            {similarList.length > 0 && (
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
+            )}
             </div>
 
             {/* The one preview line. Always mounted, so its first message is announced. With no
@@ -2497,20 +2525,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             </div>
 
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
           </>
         )}
         </div>

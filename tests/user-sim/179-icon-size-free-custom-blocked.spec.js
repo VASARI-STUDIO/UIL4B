@@ -38,6 +38,8 @@ async function openAs(browser, plan) {
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
   await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  // The code sits in a closed disclosure; open it so its Copy can be reached.
+  await page.locator('.icust-code-sum').click()
   await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   return { ctx, page }
 }
@@ -46,7 +48,7 @@ async function openAs(browser, plan) {
 const primary = (page) => page.locator('.icust-copy')
 /** The ones that dim (aria-disabled) while a Pro setting is previewed. */
 const dimmable = (page) => ({
-  'the code Copy': page.locator('.icust-code-box'),
+  'the code Copy': page.locator('.icust-code-copy'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
   'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),

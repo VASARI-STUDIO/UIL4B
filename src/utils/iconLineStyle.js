@@ -17,9 +17,9 @@ export const LINE_CORNERS = Object.freeze([
 
 /** The three tiles. Round is the default and the only free style. */
 export const LINE_STYLES = Object.freeze([
-  Object.freeze({ id: 'round', name: 'Round', cap: 'round', join: 'round', pro: false, note: 'Round ends and corners' }),
-  Object.freeze({ id: 'sharp', name: 'Sharp', cap: 'square', join: 'miter', pro: true, note: 'Square ends, mitred corners' }),
-  Object.freeze({ id: 'crisp', name: 'Crisp', cap: 'butt', join: 'bevel', pro: true, note: 'Flat ends, bevelled corners' }),
+  Object.freeze({ id: 'round', name: 'Round', cap: 'round', join: 'round', pro: false, note: 'Rounded all over' }),
+  Object.freeze({ id: 'sharp', name: 'Sharp', cap: 'square', join: 'miter', pro: true, note: 'Square and mitred' }),
+  Object.freeze({ id: 'crisp', name: 'Crisp', cap: 'butt', join: 'bevel', pro: true, note: 'Flat and bevelled' }),
 ])
 
 export const DEFAULT_LINE_CAP = 'round'

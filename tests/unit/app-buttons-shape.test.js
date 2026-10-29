@@ -53,7 +53,7 @@ const KEEP = {
     'plb-match-btn'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
-    'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',
+    'fg-card-open', 'arc-stat', 'stc-bundle',
     // a size-rail cell is a tile: the icon drawn at its size, with the number under it
     'icust-size-cell',
     // a line-style tile is a card: the icon drawn in that style, its name and note under it

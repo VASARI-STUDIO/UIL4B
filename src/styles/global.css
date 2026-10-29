@@ -3332,13 +3332,6 @@ html.lenis{scroll-behavior:auto!important}
 .icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
 .icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
 .icust-stage.is-abs .icust-stage-host svg,.icust-stage.is-abs .icust-stage-host svg *{vector-effect:non-scaling-stroke}
-/* Tags on the left, Reset on the right: one row that never wraps. The name tag
-   gives way (ellipsis) before anything else does. */
-.icust-meta{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:12px 24px 0}
-.icust-tags{display:flex;gap:6px;min-width:0;flex:0 1 auto}
-.icust-tags .icust-tag{flex:none}
-.icust-tags .icust-tag--name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.icust-tag{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.03em;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 9px}
 /* Controls */
 .icust-controls{display:flex;flex-direction:column;gap:14px;padding:18px 24px 4px}
 .icust-row{display:flex;align-items:center;gap:12px;min-height:32px}
@@ -3547,7 +3540,6 @@ html.lenis{scroll-behavior:auto!important}
 }
 @media(max-width:560px){
   .icust-stage{margin:4px 16px 0;padding:20px}
-  .icust-meta{padding:12px 16px 0}
   .icust-controls{padding:16px 16px 4px}}
 
 @media(max-width:560px){
