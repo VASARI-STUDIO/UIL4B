@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ExportMenu from '../components/tool/ExportMenu'
 import SaveToProjectDialog from '../components/tool/SaveToProjectDialog'
@@ -13,6 +14,8 @@ import { textColorForBg } from '../utils/colors'
 import { bestPole, contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tintContrast'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { refreshScrollLimit } from '../utils/hashLanding'
+import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { resolvePreset } from '../config/exportV3'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
@@ -45,6 +48,12 @@ import '../styles/pages/tint.css'
 // come from the source colour (its picker and hex field); the Lightness and
 // Saturation sliders and the Spacing pills shape every scale, the way Steps and
 // Curve do, and sit at their neutral values (0, 100%, Perceived) on open.
+
+// Code-split: the export dialog loads the first time its menu row is chosen.
+// `lazy` is lazyRoute, which waits for the recovery reload if the file fails to download.
+const ExportDialog = lazy(() => import('../components/export/ExportDialog'))
+// The "Export design system…" row opens the dialog on the CSS stylesheet.
+const TINT_EXPORT_PRESET = resolvePreset({ type: 'code', file: 'css' })
 
 const MAX_SOURCES = 8
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -191,6 +200,7 @@ export default function TintTool({ onCopy, toast }) {
   const holdRef = useRef({ held: null, pending: null, timer: 0, inside: null, last: null })
   const [copiedHex, setCopiedHex] = useState('')
   const [saveOpen, setSaveOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   // Commit the Palette Builder hand-off exactly once (effects only run for a
   // committed tree).
@@ -530,6 +540,7 @@ export default function TintTool({ onCopy, toast }) {
     { id: 'copy-css', label: 'Copy CSS', icon: 'copy', onSelect: copyCss },
     { id: 'save', label: 'Save to project', icon: 'bookmark-simple', hint: accountHint, onSelect: startSave },
     { id: 'download', label: 'Download', icon: 'download-simple', hint: accountHint, onSelect: downloadCss },
+    { id: 'export-system', label: 'Export design system…', icon: 'arrow-square-out', hint: accountHint, onSelect: () => setExportOpen(true) },
   ]
 
   const lightnessLabel = lightness === 0 ? '0' : `${lightness > 0 ? '+' : '\u2212'}${Math.abs(lightness)}`
@@ -553,6 +564,12 @@ export default function TintTool({ onCopy, toast }) {
           onSave={saveTints}
           onClose={() => setSaveOpen(false)}
         />
+      )}
+      {exportOpen && createPortal(
+        <Suspense fallback={null}>
+          <ExportDialog onClose={() => setExportOpen(false)} preset={TINT_EXPORT_PRESET} />
+        </Suspense>,
+        document.querySelector('.app-shell') || document.body,
       )}
       <ToolGrid>
         <ToolMain>

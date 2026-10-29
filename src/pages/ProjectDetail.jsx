@@ -16,11 +16,12 @@ import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 import '../styles/pages/project.css'
-// `lazy` in this file is lazyRoute, not React's: if the file for the export panel
+import { readLastPick, resolvePreset } from '../config/exportV3'
+// `lazy` in this file is lazyRoute, not React's: if the file for the export dialog
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 
-const ExportPanel = lazy(() => import('../components/ExportPanel'))
+const ExportDialog = lazy(() => import('../components/export/ExportDialog'))
 
 // ── ONE PROJECT ─────────────────────────────────────────────────────────────
 //
@@ -79,6 +80,8 @@ function ProjectDetail({ id, toast }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteText, setDeleteText] = useState('')
   const [exporting, setExporting] = useState(false)
+  // The pick the export dialog opens on, fixed when it opens.
+  const [exportPreset, setExportPreset] = useState(null)
   const copyTimer = useRef(null)
 
   const project = projects.find((p) => p.id === id)
@@ -128,7 +131,11 @@ function ProjectDetail({ id, toast }) {
   const freeSlots = Number.isFinite(projectLimit) ? projectLimit : null
 
   const openIn = (route) => { loadProject(project.id); navigate(route) }
-  const startExport = () => { loadProject(project.id); setExporting(true) }
+  const startExport = () => {
+    loadProject(project.id)
+    setExportPreset(resolvePreset(readLastPick()))
+    setExporting(true)
+  }
 
   const statusLine = project.archived
     ? `Archived, ${status.has}`
@@ -384,7 +391,7 @@ function ProjectDetail({ id, toast }) {
 
       {exporting && createPortal(
         <Suspense fallback={null}>
-          <ExportPanel onClose={() => setExporting(false)} />
+          <ExportDialog onClose={() => setExporting(false)} preset={exportPreset} projectId={project.id} />
         </Suspense>,
         document.querySelector('.app-shell'),
       )}
