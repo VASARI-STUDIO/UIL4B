@@ -262,7 +262,7 @@ export default function UIKitGuide({ step }) {
       const id = saveProject(name, { identityName: name, patch: savePatch(design) })
       endGuide()
       setActive(false)
-      navigate(`/projects/${id}`)
+      navigate(`/projects/${id}/export`)
     } catch (err) {
       // The free-plan cap. The design, the name and the flow all stay put.
       setRefusal(err?.message || 'That project could not be saved.')

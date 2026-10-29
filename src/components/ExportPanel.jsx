@@ -254,7 +254,10 @@ export default function ExportPanel({ onClose }) {
     // user cannot reach the artefact by calling this directly either.
     //
     // WHERE IT SENDS YOU: /plans (every Pro CTA goes to /plans, never to a
-    // login popup or a modal). That is also why it runs BEFORE the account
+    // login popup or a modal), with ONE named exception: the export gallery
+    // (pages/ProjectExport.jsx) sends a Pro pick from a free account straight to
+    // /checkout?plan=yearly&from=kit-gallery. That is the gallery's own button, not
+    // this gate, so this gate still goes to /plans. This is also why it runs BEFORE the account
     // gate: the plans page is where a visitor with no account starts one, so
     // asking them to sign in first would put a login popup in front of a Pro
     // CTA. The gate id is still reported, so the funnel can say WHICH wall

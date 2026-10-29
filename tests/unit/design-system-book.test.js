@@ -314,7 +314,7 @@ test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
     'the entitlement check must precede loading and running the book generator')
 
   // And it must bail rather than fall through. The wall goes
-  // to /plans (every Pro CTA goes to /plans, never a
+  // to /plans (every Pro CTA goes to /plans, except the export gallery's own trial button, which goes to checkout; never a
   // modal or a login popup).
   assert.match(PANEL.slice(gate, build), /navigate\('\/plans'\)\s*\n\s*return/,
     'the gate sends the viewer to /plans and returns without exporting')

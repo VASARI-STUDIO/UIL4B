@@ -40,7 +40,11 @@ export const THUMB_SIZE = Object.freeze({
   book: Object.freeze({ width: 120, height: 170 }),
   guidelines: Object.freeze({ width: 160, height: 90 }),
 })
-export const BLUR_PX = 6
+// The thumbnails are 120x170 and 160x90 px, so the radius is small: 6px (the first value) took the whole
+// page down to flat colour slabs. 3px still removes every letter (body text is about 3px tall on the
+// thumbnail, the cover title about 11px with strokes under 2px) and every fine edge, and keeps the cover
+// title as a dark band and the layout blocks. It is baked into the pixels, so nothing sharper is in the page.
+export const BLUR_PX = 3
 
 const INK = '#111318'
 const MUTED = '#5F5F69'
@@ -249,11 +253,11 @@ export function bakeBlur(source, radius = BLUR_PX) {
     bctx.filter = 'none'
   } else {
     // No canvas filter: shrink and enlarge twice with smoothing on. It is a
-    // softer blur than the real one but just as destructive.
+    // softer blur than the real one, matched to BLUR_PX.
     bctx.imageSmoothingEnabled = true
     bctx.imageSmoothingQuality = 'high'
     let from = padded
-    for (const k of [4, 2]) {
+    for (const k of [2, 2]) {
       const step = document.createElement('canvas')
       step.width = Math.max(1, Math.round(from.width / k))
       step.height = Math.max(1, Math.round(from.height / k))

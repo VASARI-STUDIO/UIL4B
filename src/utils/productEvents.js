@@ -28,8 +28,11 @@ export const EVENTS = Object.freeze({
   upgradeGateShown: 'upgrade_gate_shown',
 })
 
-const ALLOWED_KEYS = Object.freeze(['tool', 'kind', 'plan', 'gate'])
+// `from` names the surface a checkout was opened from (the export gallery).
+const ALLOWED_KEYS = Object.freeze(['tool', 'kind', 'plan', 'gate', 'from'])
 const MAX_LEN = 48
+// `from` is a closed list of our own surfaces, never free text from a URL.
+const FROM_VALUES = Object.freeze(['kit-gallery'])
 
 /** Only allowlisted keys, only short primitive values, never an address. */
 export function cleanProps(props) {
@@ -37,6 +40,7 @@ export function cleanProps(props) {
   if (!props || typeof props !== 'object') return out
   for (const key of ALLOWED_KEYS) {
     const v = props[key]
+    if (key === 'from') { if (FROM_VALUES.includes(v)) out[key] = v; continue }
     if (typeof v === 'number' || typeof v === 'boolean') out[key] = v
     else if (typeof v === 'string' && v && !v.includes('@')) out[key] = v.slice(0, MAX_LEN)
   }

@@ -107,6 +107,12 @@
    --t2, which holds 5:1 on --card in both themes. */
 .stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
 .stg .settings-row:last-child { border-bottom: none; }
+/* A profile field row (value + Edit): the action stays top-right beside the
+   label at every width, so a long bio never leaves it floating mid-paragraph or
+   dropped below the value. The 4px nudge puts a one-line row's button where
+   centring put it. */
+.stg .settings-row--field { align-items: flex-start; }
+.stg .settings-row--field > .btn { margin-top: 4px; }
 .stg .settings-row-main { flex: 1 1 auto; min-width: 0; }
 /* The words give way, the action does not: a button that shares a row with a
    paragraph shrinks to its longest word ("Export / JSON") unless it is held at
@@ -116,7 +122,8 @@
 .stg .settings-row > .settings-edit-actions,
 .stg .settings-card-h > .btn { flex: none; white-space: nowrap; }
 .stg .settings-row-label { margin: 0 0 4px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
-.stg .settings-row-value { font-size: 14px; color: var(--t0); overflow-wrap: anywhere; }
+/* 72ch keeps a long bio to a readable line length in a wide column. */
+.stg .settings-row-value { max-width: 72ch; font-size: 14px; color: var(--t0); overflow-wrap: anywhere; }
 .stg .settings-row-meta { margin-top: 2px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
 .stg .settings-row-empty { color: var(--t2); }
 .stg .settings-row--open { flex-direction: column; align-items: stretch; }
@@ -159,7 +166,11 @@
 .stg .settings-avatar-btn:hover .settings-avatar-edit,
 .stg .settings-avatar-btn:focus-visible .settings-avatar-edit { opacity: 1; }
 .stg .settings-profile-info { flex: 1; min-width: 0; }
-.stg .settings-profile-name { font-family: var(--display); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); }
+/* A pasted name can have no spaces to break at: `anywhere` lets it wrap inside
+   the info column (which can shrink, min-width 0) instead of running under Sign
+   out, and two lines is all the header gives it. The Display name row below
+   shows the whole value. */
+.stg .settings-profile-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: var(--display); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); overflow-wrap: anywhere; }
 /* `overflow-wrap:anywhere`: an address has no spaces to break at. */
 .stg .settings-profile-email { margin-top: 2px; font-family: var(--mono); font-size: 12.5px; color: var(--t1); overflow-wrap: anywhere; }
 .stg .settings-avatar-remove { display: inline-flex; align-items: center; min-height: 24px; margin-top: 2px; padding: 0; border: 0; background: none; font-family: var(--font); font-size: 12.5px; color: var(--t1); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
@@ -357,6 +368,7 @@
   .stg .toggle-row { flex-wrap: wrap; gap: 10px; }
   .stg .toggle-row .theme-seg { flex: 1 1 100%; width: auto; }
   .stg .settings-row { flex-wrap: wrap; }
+  .stg .settings-row--field { flex-wrap: nowrap; }
   /* An open edit row: the field on its own line, then Save and Cancel as an
      equal pair. At 334px the field (220) + Save + Cancel is 356, which left
      Cancel alone on a second line. The wider gap keeps "Permanently delete"

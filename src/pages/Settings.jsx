@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
@@ -26,6 +26,8 @@ import UserName from '../components/UserName'
 import ThemeChoice from '../components/ThemeChoice'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
+import { initialOf } from '../utils/initials'
+import { checkWebsite } from '../utils/websiteUrl'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 // The `settings` page stylesheet. Imported here rather than from global.css so
@@ -77,6 +79,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [hi, setHi] = useState(-1)
+  const errId = useId()
 
   // Suggestions only exist while the user is typing: the list opens on input,
   // never on focus, and an exact match (i.e. a just-picked option) yields none.
@@ -102,13 +105,24 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
     return <>{text.slice(0, i)}<strong>{text.slice(i, i + q.length)}</strong>{text.slice(i + q.length)}</>
   }
 
-  const handleSave = () => {
+  // onSave may be async (the display name awaits the profile write), so the
+  // field stays open until it settles and a second Enter or click while it is
+  // pending is ignored. The ref closes the gap before the state re-renders.
+  const savingRef = useRef(false)
+  const [saving, setSaving] = useState(false)
+  const handleSave = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
     try {
-      onSave(val)
+      await onSave(val)
       setEditing(false)
       setError('')
     } catch (e) {
       setError(e.message || 'Failed to save')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
   }
 
@@ -131,17 +145,17 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
       if (e.key === 'Escape' && listOpen) return
     }
     if (e.key === 'Enter') { e.preventDefault(); handleSave() }
-    else if (e.key === 'Escape') { setEditing(false); setError('') }
+    else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
   }
 
   if (!editing) {
     return (
-      <div className="settings-row">
+      <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">{label}</div>
           <div className="settings-row-value">{value || <span className="settings-row-empty">—</span>}</div>
         </div>
-        <button className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit</button>
+        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit</button>
       </div>
     )
   }
@@ -159,6 +173,9 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
             onBlur={options ? () => { setSuggestOpen(false); setHi(-1) } : undefined}
             placeholder={placeholder}
             autoFocus
+            readOnly={saving}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errId : undefined}
             role={options ? 'combobox' : undefined}
             aria-expanded={options ? matches.length > 0 : undefined}
             aria-autocomplete={options ? 'list' : undefined}
@@ -184,10 +201,10 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
             </ul>
           )}
         </div>
-        <button className="btn btn-accent btn-s" onClick={handleSave}>Save</button>
-        <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
+        <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
+        <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
       </div>
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -290,21 +307,51 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [busy, setBusy] = useState(false)
+  // One call in flight at a time. The ref is what stops a second submit in the
+  // same tick; `busy` only repaints the button and the fields.
+  const busyRef = useRef(false)
+  // The panel closes 1.5s after success. Its timer is cleared when a new
+  // attempt starts and when the component goes, so a late tick never closes a
+  // panel that is being used again or sets state on an unmounted one.
+  const closeTimer = useRef(0)
+  const aliveRef = useRef(true)
+  const currentRef = useRef(null)
+  const nextRef = useRef(null)
+  const confirmRef = useRef(null)
+  const errId = useId()
+  useEffect(() => {
+    aliveRef.current = true
+    return () => { aliveRef.current = false; clearTimeout(closeTimer.current) }
+  }, [])
 
   const handleSave = async () => {
+    if (busyRef.current) return
+    clearTimeout(closeTimer.current)
     setError('')
-    if (next.length < 6) { setError('New password must be at least 6 characters'); return }
-    if (next !== confirm) { setError('Passwords do not match'); return }
+    setSuccess(false)
+    if (next.length < 6) { setError('New password must be at least 6 characters'); nextRef.current?.focus(); return }
+    if (next !== confirm) { setError('Passwords do not match'); confirmRef.current?.focus(); return }
+    busyRef.current = true
+    setBusy(true)
     try {
       await onSave(current, next)
+      if (!aliveRef.current) return
       setSuccess(true)
       setCurrent(''); setNext(''); setConfirm('')
-      setTimeout(() => { setSuccess(false); setOpen(false) }, 1500)
+      closeTimer.current = setTimeout(() => { setSuccess(false); setOpen(false) }, 1500)
     } catch (e) {
+      if (!aliveRef.current) return
       if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') setError('Current password is incorrect')
       else if (e.code === 'auth/weak-password') setError('Choose a longer password')
       else if (e.code === 'auth/too-many-requests') setError('Too many attempts. Wait a few minutes and try again.')
       else setError('Your password could not be changed. Nothing was changed. Please try again.')
+      // The disabled submit held focus, which fell to <body>; the person's next
+      // move is the first field, so that is where it goes.
+      currentRef.current?.focus()
+    } finally {
+      busyRef.current = false
+      if (aliveRef.current) setBusy(false)
     }
   }
 
@@ -341,16 +388,18 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
   return (
     <div className="settings-row settings-row--open">
       <div className="settings-row-label">Change password</div>
-      <div className="settings-edit-stack">
-        <input type="password" placeholder="Current password" aria-label="Current password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} autoFocus />
-        <input type="password" placeholder="New password (min. 6 characters)" aria-label="New password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} />
-        <input type="password" placeholder="Confirm new password" aria-label="Confirm new password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} />
-      </div>
-      <div className="settings-edit-actions">
-        <button className="btn btn-accent btn-s" onClick={handleSave}>Update password</button>
-        <button className="btn btn-s" onClick={() => { setOpen(false); setError('') }}>Cancel</button>
-      </div>
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      <form noValidate onSubmit={(e) => { e.preventDefault(); handleSave() }}>
+        <div className="settings-edit-stack">
+          <input ref={currentRef} type="password" placeholder="Current password" aria-label="Current password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} autoFocus />
+          <input ref={nextRef} type="password" placeholder="New password (min. 6 characters)" aria-label="New password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} />
+          <input ref={confirmRef} type="password" placeholder="Confirm new password" aria-label="Confirm new password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} readOnly={busy} aria-disabled={busy || undefined} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} />
+        </div>
+        <div className="settings-edit-actions">
+          <button type="submit" className="btn btn-accent btn-s" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</button>
+          <button type="button" className="btn btn-s" onClick={() => { clearTimeout(closeTimer.current); setOpen(false); setError(''); setSuccess(false) }} disabled={busy}>Cancel</button>
+        </div>
+      </form>
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       {success && <div className="settings-field-ok" role="status">Password updated successfully</div>}
       <div className="settings-reset">
         <button type="button" className="settings-linkbtn" onClick={sendReset} disabled={resetState === 'sending'}>
@@ -376,6 +425,10 @@ const EMAIL_ERRORS = {
   'auth/operation-not-allowed': 'Your email could not be changed here yet. Nothing was changed.',
   'auth/network-request-failed': 'You appear to be offline. Nothing was changed.',
 }
+// Not a full address grammar: one "@", something either side, and a dot in the
+// domain. Firebase has the last word; this only turns an obvious typo away
+// before the password step.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/
 function emailErrorText(e) {
   return EMAIL_ERRORS[e?.code] || 'Your email could not be changed. Nothing was changed. Please try again.'
 }
@@ -423,19 +476,35 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
   // address until that link is opened, so the row says so instead of showing
   // the new one early.
   const [pendingEmail, setPendingEmail] = useState('')
+  const errId = useId()
+  // Closing the field (Escape, Cancel, or a saved change) unmounts the Edit
+  // button's replacement, so focus goes back to Edit once it is drawn again.
+  const editRef = useRef(null)
+  const focusEditOwed = useRef(false)
+  useEffect(() => {
+    if (editing || !focusEditOwed.current) return
+    focusEditOwed.current = false
+    editRef.current?.focus()
+  }, [editing])
+  const closeField = () => { focusEditOwed.current = true; setEditing(false); setError('') }
 
   const handleNext = () => {
-    if (!email || email === value) { setError('Enter a new email address'); return }
+    const typed = email.trim()
+    if (!typed || typed.toLowerCase() === (value || '').toLowerCase()) { setError('Enter a new email address'); return }
+    if (!EMAIL_SHAPE.test(typed)) { setError('That is not a valid email address.'); return }
+    setEmail(typed)
     setStep('confirm')
     setError('')
   }
 
   const handleSave = async () => {
+    if (busy) return
     if (!password) { setError('Password is required'); return }
     setBusy(true)
     try {
       await onSave(email, password)
       setPendingEmail(email)
+      focusEditOwed.current = true
       setEditing(false)
       setStep('email')
       setPassword('')
@@ -464,7 +533,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
 
   if (!editing) {
     return (
-      <div className="settings-row">
+      <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
           <div className="settings-row-value">{value || '—'}</div>
@@ -477,7 +546,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
             </div>
           )}
         </div>
-        <button className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
       </div>
     )
   }
@@ -487,20 +556,23 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
       <div className="settings-row-label">
         {step === 'email' ? 'Email address' : 'Confirm password'}
       </div>
+      {/* A real form per step, so Enter advances or submits. `key` remounts it
+          between steps, which hands autofocus to the new field. `noValidate`
+          keeps the browser's own bubble off: the message is ours, inline. */}
       {step === 'email' ? (
-        <div className="settings-edit-line">
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" aria-label="New email address" autoFocus />
-          <button className="btn btn-accent btn-s" onClick={handleNext}>Next</button>
-          <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
-        </div>
+        <form key="email" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleNext() }} onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); closeField() } }}>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" aria-label="New email address" aria-invalid={!!error} aria-describedby={error ? errId : undefined} autoComplete="email" autoFocus />
+          <button type="submit" className="btn btn-accent btn-s">Next</button>
+          <button type="button" className="btn btn-s" onClick={closeField}>Cancel</button>
+        </form>
       ) : (
-        <div className="settings-edit-line">
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" aria-label="Your password" autoComplete="current-password" autoFocus />
-          <button className="btn btn-accent btn-s" onClick={handleSave} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
-          <button className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }}>Back</button>
-        </div>
+        <form key="confirm" className="settings-edit-line" noValidate onSubmit={(e) => { e.preventDefault(); handleSave() }} onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); setPassword(''); closeField() } }}>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" aria-label="Your password" aria-invalid={!!error} aria-describedby={error ? errId : undefined} autoComplete="current-password" autoFocus />
+          <button type="submit" className="btn btn-accent btn-s" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }} disabled={busy}>Back</button>
+        </form>
       )}
-      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -567,7 +639,14 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
   // above the field says what it is waiting for.
   const needsPassword = !googleOnly && !password
 
-  const handleDelete = async () => {
+  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword('') }
+
+  // Enter in the password field submits (the button is disabled until there is
+  // a password, which blocks the implicit submit too); Escape closes the panel
+  // from anywhere inside it, unless the delete is already running.
+  const handleDelete = async (e) => {
+    e?.preventDefault()
+    if (busy || needsPassword) return
     setBusy(true)
     setError('')
     try {
@@ -589,7 +668,14 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
   }
 
   return (
-    <div className="danger-confirm" ref={panelRef} tabIndex={-1}>
+    <form
+      className="danger-confirm"
+      ref={panelRef}
+      tabIndex={-1}
+      noValidate
+      onSubmit={handleDelete}
+      onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); closePanel() } }}
+    >
       <ul className="danger-confirm-list">
         {isPro && <li>Your subscription is cancelled immediately — you will not be billed again.</li>}
         <li>Your profile, saved projects, icons and synced designs are deleted.</li>
@@ -615,20 +701,21 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
             value={password}
             onChange={e => setPassword(e.target.value)}
             aria-invalid={!!error}
+            aria-describedby={error ? 'del-confirm-err' : undefined}
           />
         </>
       )}
 
       <div className="danger-confirm-actions">
-        <button className="btn danger-confirm-go" onClick={handleDelete} disabled={busy || needsPassword}>
+        <button type="submit" className="btn danger-confirm-go" disabled={busy || needsPassword}>
           {busy ? 'Deleting…' : 'Permanently delete'}
         </button>
-        <button className="btn btn-s" onClick={() => { returnFocus.current = true; setOpen(false); setError(''); setPassword('') }} disabled={busy}>
+        <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
           Cancel
         </button>
       </div>
-      {error && <div className="danger-confirm-err" role="alert">{error}</div>}
-    </div>
+      {error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
+    </form>
   )
 }
 
@@ -811,6 +898,28 @@ export default function Settings({ toast }) {
     } catch (err) {
       toast(err?.message || 'Could not use that image')
     }
+  }
+  // The profile write is awaited before anything is announced, so the toast
+  // never claims a save that failed; a failure keeps the field open with the
+  // reason. A blank name is not refused: the
+  // account's name then shows as the part of the email before the "@" (see
+  // AuthContext's userProfile), and the toast says so.
+  const saveDisplayName = async (raw) => {
+    const name = String(raw ?? '').trim()
+    try {
+      await updateProfile({ displayName: name })
+    } catch {
+      throw new Error('Your display name could not be saved. Nothing was changed. Please try again.')
+    }
+    toast(name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
+  }
+  // Only http(s) addresses are kept (src/utils/websiteUrl.js); a refusal is the
+  // EditField's inline message, and nothing is written.
+  const saveWebsite = async (raw) => {
+    const checked = checkWebsite(raw)
+    if (!checked.ok) throw new Error(checked.error)
+    await updateProfile({ website: checked.value })
+    toast(checked.value ? 'Website updated' : 'Website cleared')
   }
   // "Remove" restores the sign-in provider's photo (Google etc.), or the
   // initial-letter avatar for email accounts.
@@ -1359,7 +1468,7 @@ export default function Settings({ toast }) {
                     {userProfile?.photoURL ? (
                       <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
                     ) : (
-                      <span>{(userProfile?.displayName || user.email || 'U')[0].toUpperCase()}</span>
+                      <span>{initialOf(userProfile?.displayName, user.email)}</span>
                     )}
                     <span className="settings-avatar-edit" aria-hidden="true">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1388,7 +1497,7 @@ export default function Settings({ toast }) {
                       <button type="button" onClick={dismissProfileSyncError}>Dismiss</button>
                     </div>
                   )}
-                  <EditField label="Display name" value={userProfile?.displayName} onSave={(v) => { updateProfile({ displayName: v }); toast('Display name updated') }} placeholder="Enter your display name" />
+                  <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" />
                   {/* AWAITED, so a failure stays in the field, in words, and the
                       toast means the confirmation link really went out. */}
                   <EmailEditField
@@ -1399,7 +1508,7 @@ export default function Settings({ toast }) {
                   />
                   <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} />
                   <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" />
-                  <EditField label="Website" value={userProfile?.website} type="url" onSave={(v) => { updateProfile({ website: v }); toast('Website updated') }} placeholder="https://yoursite.com" />
+                  <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" />
                   <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" />
                   <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={(id) => { updateProfile({ flair: id }); toast(id ? 'Flair updated' : 'Flair cleared') }} />
                   <PasswordChange
@@ -1474,12 +1583,15 @@ export default function Settings({ toast }) {
                     </div>
                   </div>
                   {confirmClear ? (
-                    <div className="settings-edit-actions settings-edit-actions--tight">
-                      <button className="btn btn-s settings-danger-go" onClick={deleteAllData}>Confirm clear</button>
-                      <button ref={clearCancelRef} className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
+                    <div
+                      className="settings-edit-actions settings-edit-actions--tight"
+                      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); setConfirmClear(false) } }}
+                    >
+                      <button type="button" className="btn btn-s settings-danger-go" onClick={deleteAllData}>Confirm clear</button>
+                      <button type="button" ref={clearCancelRef} className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
                     </div>
                   ) : (
-                    <button ref={clearTriggerRef} className="btn btn-s settings-danger" onClick={() => { clearFocusOwed.current = true; setConfirmClear(true) }}>Clear data</button>
+                    <button type="button" ref={clearTriggerRef} className="btn btn-s settings-danger" onClick={() => { clearFocusOwed.current = true; setConfirmClear(true) }}>Clear data</button>
                   )}
                 </div>
               </div>

@@ -34,7 +34,15 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing'
-import { ref, uploadBytes, getBytes, listAll } from 'firebase/storage'
+import {
+  ref,
+  uploadBytes,
+  getBytes,
+  getMetadata,
+  listAll,
+  deleteObject,
+  updateMetadata,
+} from 'firebase/storage'
 
 const RULES_PATH = fileURLToPath(new URL('../../storage.rules', import.meta.url))
 const ALICE = 'alice-uid'
@@ -210,4 +218,78 @@ test('being a reviewer opens reads only, not writes into someone else\'s folder'
   await assertSucceeds(put(aliceStore(), mine('own.webp'), 'image/webp'))
   await assertFails(put(modStore(), mine('moderator-upload.webp'), 'image/webp'))
   await assertFails(put(adminStore(), mine('admin-upload.webp'), 'image/webp'))
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gaps in coverage: delete, size boundary, metadata, deep paths (card a36c027015)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Cases T15 to T18 of the rules audit. Each refusal sits beside a success on
+// the same object or path.
+
+async function refused(label, promise) {
+  try {
+    await assertFails(promise)
+  } catch (error) {
+    throw new Error(`${label} should have been refused: ${error.message}`)
+  }
+}
+
+test('[T15] delete: another user, a reviewer and a signed-out client cannot delete an owner\'s object', async () => {
+  await seedMedia('keep.webp')
+  const target = (store) => ref(store, mine('keep.webp'))
+  // The object is there and its owner can read it.
+  await assertSucceeds(getBytes(target(aliceStore())))
+
+  await refused('Bob delete', deleteObject(target(bobStore())))
+  await refused('moderator delete', deleteObject(target(modStore())))
+  await refused('admin delete', deleteObject(target(adminStore())))
+  await refused('signed-out delete', deleteObject(target(anonStore())))
+
+  await assertSucceeds(getBytes(target(aliceStore())))
+})
+// Not tested: the owner deleting their own object. `allow write` covers delete,
+// where `request.resource` is null, so the size test errors and denies (audit
+// finding L5). It needs a split `allow delete` rule first.
+
+const MIB = 1024 * 1024
+
+test('[T16] size: 25 MiB minus one byte is accepted and 25 MiB is refused, as the same content type', async () => {
+  // The rule is `request.resource.size < 25 * 1024 * 1024`.
+  const upload = (bytes, name) =>
+    uploadBytes(ref(aliceStore(), mine(name)), bytes, { contentType: 'image/webp' })
+  await assertSucceeds(upload(new Uint8Array(25 * MIB - 1), 'just-under.webp'))
+  await refused('exactly 25 MiB', upload(new Uint8Array(25 * MIB), 'at-limit.webp'))
+})
+
+test('[T17] metadata: the owner can change a content type to another image, and not to text/html', async () => {
+  await seedMedia('meta.webp')
+  const target = (store) => ref(store, mine('meta.webp'))
+
+  // updateMetadata is an `update` whose `request.resource` carries the new
+  // content type, so the type check applies again.
+  await assertSucceeds(updateMetadata(target(aliceStore()), { contentType: 'image/png' }))
+  await refused('text/html', updateMetadata(target(aliceStore()), { contentType: 'text/html' }))
+  await refused('Bob changing the type', updateMetadata(target(bobStore()), { contentType: 'image/jpeg' }))
+  await refused('signed-out change', updateMetadata(target(anonStore()), { contentType: 'image/jpeg' }))
+
+  const stored = await assertSucceeds(getMetadata(target(aliceStore())))
+  assert.equal(stored.contentType, 'image/png')
+})
+
+test('[T18] paths: the owner can write and list a nested folder; another user cannot, nor list the uid folder', async () => {
+  const nested = `community-media/${ALICE}/a/b/c`
+  await assertSucceeds(uploadBytes(ref(aliceStore(), `${nested}/x.webp`), BYTES, { contentType: 'image/webp' }))
+  await refused(
+    'Bob deep write',
+    uploadBytes(ref(bobStore(), `${nested}/y.webp`), BYTES, { contentType: 'image/webp' }),
+  )
+
+  const own = await assertSucceeds(listAll(ref(aliceStore(), nested)))
+  assert.deepEqual(own.items.map((i) => i.name), ['x.webp'])
+  await refused('Bob nested list', listAll(ref(bobStore(), nested)))
+  await refused('signed-out nested list', listAll(ref(anonStore(), nested)))
+  // Refused either by the uid mismatch or by no rule matching the folder.
+  await refused('Bob uid-folder list', listAll(ref(bobStore(), `community-media/${ALICE}`)))
+  await refused('signed-out uid-folder list', listAll(ref(anonStore(), `community-media/${ALICE}`)))
 })
