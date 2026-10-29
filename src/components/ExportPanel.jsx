@@ -124,7 +124,7 @@ const PRO_DOCUMENT = {
 }
 
 // What the action button says while a kit or a document is being made.
-const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…', document: 'Preparing your document…' }
+const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…', document: 'Preparing your document…', pages: 'Drawing the pages…' }
 
 // How long an export waits for the plan of an account that signed in at its own
 // gate. The entitlement is one document read, so this is generous; past it the
@@ -267,13 +267,19 @@ export default function ExportPanel({ onClose }) {
     // trip. It is not what protects the document. The server decides, from the
     // account's own record, and the generators are not in this page (see
     // PRO_DOCUMENT above), so a forged `isPro` here reaches a 403 and no file.
+    // A variant of a document (the book as PNG) answers to the same wall as the document.
+    const gateKey = FORMATS.find(f => f.id === format)?.variantOf || format
     if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
-      reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
+      reportUpgradeGate(PRO_GATE[gateKey]?.gate || 'export-pro-format')
       onClose()
       navigate('/plans')
       return
     }
-    const proDocument = Boolean(FORMATS.find(f => f.id === format)?.pro)
+    // A paid file the server builds (the book as PDF, the guidelines) opens a print window; a paid file
+    // drawn here (the book as PNG) does not. Both are behind the same plan check.
+    const paidFile = Boolean(FORMATS.find(f => f.id === format)?.pro)
+    const bookPng = format === 'book-png'
+    const proDocument = paidFile && !bookPng
 
     // The window the document will print in, opened NOW, inside the click. The
     // server round trip below is a network wait, and a window opened after it is
@@ -286,7 +292,7 @@ export default function ExportPanel({ onClose }) {
     // (sign-in only for saving, exporting and account actions). See
     // src/hooks/useExportGate.js for the map that puts the line here.
     const tokenFile = format === 'css' || format === 'json'
-    const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : 'export this style guide'
+    const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : 'export this style guide'
     const signedOut = !user
     if (!(await requireExportAccount(reason))) { closePrintWin(); return }
 
@@ -306,9 +312,9 @@ export default function ExportPanel({ onClose }) {
       }
       proNow = live.current.isPro
       // The same Pro gate as above, read against the plan that just arrived.
-      if (proDocument && !proNow) {
+      if (paidFile && !proNow) {
         closePrintWin()
-        reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
+        reportUpgradeGate(PRO_GATE[gateKey]?.gate || 'export-pro-format')
         onClose()
         navigate('/plans')
         return
@@ -349,6 +355,16 @@ export default function ExportPanel({ onClose }) {
           setStage('')
           keepOpen = true
         }
+      } else if (bookPng) {
+        // The book as page images, drawn on a canvas like the style guide PNG (see
+        // the note at the top of utils/bookRaster.js). Loaded on demand: the pages,
+        // the zip writer and the font wait cost nothing to anyone who never exports
+        // them. The plan check above has already passed.
+        activation = PRO_DOCUMENT.book.activation
+        setStage('pages')
+        const { renderBookPng } = await import('../utils/bookRaster')
+        const blob = await renderBookPng(design, { projectName, watermark: !proNow })
+        savedFile = download(blob, `${slug}-book-2k.zip`)
       } else if (proDocument) {
         // The book and the brand guidelines. The server checks the plan and builds
         // the document; a refusal means there is no file to hand over.
@@ -654,8 +670,9 @@ export default function ExportPanel({ onClose }) {
           />
         </div>
       )}
-      {/* The pictures are drawn in the chosen template, from the person's own design. */}
-      {activeGroup.preview && (
+      {/* The pictures are drawn in the chosen template, from the person's own design. The book as PNG has
+          its own single layout, so the strip of the PDF book's templates is not shown over it. */}
+      {activeGroup.preview && !activeFormat?.variantOf && (
         <ExportProPreview
           kind={activeGroup.preview}
           template={chosenTemplates[activeFormat?.id]}

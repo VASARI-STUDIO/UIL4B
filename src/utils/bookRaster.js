@@ -384,7 +384,7 @@ function pageHead(c, title, lede, { first = true } = {}) {
 
 // ── Pages ───────────────────────────────────────────────────────────────────
 
-function coverOps(c, page) {
+function coverOps(c) {
   const { d } = c
   const ops = [rect(0, 0, PAGE.width, PAGE.height, c.field)]
   ops.push(

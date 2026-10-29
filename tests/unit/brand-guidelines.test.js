@@ -293,7 +293,8 @@ test('the paywall names the document the user clicked, not the other one', () =>
   // modal would describe a token manual to somebody buying a brand book.
   // The wall links to /plans instead of raising the modal, so what is keyed per format is the gate id it
   // reports — which is the half of this test that still means something.
-  assert.match(code, /PRO_GATE\[format\]\?\.gate/, 'the export wall no longer reports its gate per format')
+  // `gateKey` is the format id, or the id of the document a variant (the book as PNG) belongs to.
+  assert.match(code, /PRO_GATE\[gateKey\]\?\.gate/, 'the export wall no longer reports its gate per format')
   for (const f of proOnlyFormats()) {
     assert.match(code, new RegExp(`\\n\\s{2}${f.id}: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)

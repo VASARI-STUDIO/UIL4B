@@ -27,7 +27,7 @@ import { Link } from 'react-router-dom'
 import { contrastRatio, generateTintScale, T_LABELS } from '../utils/colors'
 import { stepName, stepPx } from '../utils/fluidType'
 import { DEFAULT_DESIGN, tintConfigFor } from '../data/designDefaults'
-import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
+import { documentFormats, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 
@@ -300,7 +300,7 @@ export function ExportProof() {
         </div>
       </div>
       <figcaption className="prn-cap">
-        All {EXPORT_FORMATS.length} formats the export panel knows about, split by
+        All {documentFormats().length} formats the export panel knows about, split by
         the same <code>live</code> flag that decides whether its button does
         anything. The third column cannot be sold on any plan.
       </figcaption>
