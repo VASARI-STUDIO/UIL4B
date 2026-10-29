@@ -195,9 +195,8 @@ test.describe('Typography: browsing stays free under every view', () => {
     expect(await page.locator(LOCKED).count(), 'Font Pair rendered a locked placeholder').toBe(0)
 
     await go(page, SCALE)
-    // The export lives in the developer half of the audience tabs.
-    const dev = page.locator('#tsc-tab-developer')
-    if (await dev.count()) await dev.click()
+    // The export is the Code view of the Scale / Page / Code switch.
+    await page.locator('#tsc-tab-code').click()
     const scaleExport = await page.locator('#tsc-export').innerText()
     expect(scaleExport.length, 'Type Scale produced no tokens signed out').toBeGreaterThan(120)
     await expect(page.getByRole('button', { name: /^Copy (CSS|config|SCSS)$/i })).toBeEnabled()

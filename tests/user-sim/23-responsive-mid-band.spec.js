@@ -147,11 +147,15 @@ test.describe('workbench two-column threshold', () => {
 
   const cases = [
     { route: '/color/tint', grid: '.tt .tl-grid', pane: '.tt .tl-main', persona: 'a designer building a tonal ramp' },
-    { route: '/typescale', grid: '.tsc-grid', pane: '.tsc-output', persona: 'a designer reading a type scale back' },
+    // Below 1024 the panel stacks above the work and the work has the whole
+    // row; from 1024 the panel takes the right-hand column. That one step is
+    // the design (fonts build spec, section 3), so the pair that crosses it is
+    // not a shrink.
+    { route: '/typescale', grid: '.tsc-grid', pane: '.tsc-output', persona: 'a designer reading a type scale back', flipAt: 1024 },
     { route: '/fontpairs', grid: '.fpr-grid', pane: '.fpr-output', persona: 'a designer testing a type pairing' },
   ]
 
-  for (const { route, grid, pane, persona } of cases) {
+  for (const { route, grid, pane, persona, flipAt } of cases) {
     test(`${route} never narrows its working column as the window widens`, async ({ page }) => {
       watch(page, persona)
       await page.setViewportSize({ width: WORKBENCH_WIDTHS[0], height: 900 })
@@ -174,6 +178,7 @@ test.describe('workbench two-column threshold', () => {
       const shrinks = seen
         .slice(1)
         .map((row, i) => ({ from: seen[i], to: row }))
+        .filter(({ from, to }) => !(flipAt && from.width < flipAt && to.width >= flipAt))
         .filter(({ from, to }) => to.column < from.column - 1)
         .map(({ from, to }) => `${from.width}px→${to.width}px: ${from.column}px→${to.column}px`)
 

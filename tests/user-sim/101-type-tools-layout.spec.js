@@ -16,7 +16,10 @@
 //
 // MUTATION: move the output after the panel in the JSX (or give the panel
 // `order: -1` below 900px) and the 390 cases fail on the fold check; drop
-// ToolLayout for a plain <div> and every case fails on the toolbar.
+// ToolLayout for a plain <div> and every case fails on the toolbar. (Type Scale
+// is the exception by design: its panel leads below 1024, so its output is the
+// first ladder row under the Base and Ratio strip at 390 and under the panel
+// card at 768.)
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -35,6 +38,10 @@ const TOOLS = [
     route: '/create/type-scale',
     title: 'Type Scale',
     output: '.tsc-page .tsc-row',
+    // At 768 the panel card leads and is about a screen tall, so the first ladder
+    // row starts below the fold by design (fonts build spec, section 3). What
+    // must be on the first screen there is the work itself: Base and Ratio.
+    outputAt: { 768: '.tsc-page .tsc-sec-scale' },
   },
   {
     route: '/create/font-gallery',
@@ -88,7 +95,7 @@ for (const tool of TOOLS) {
             expect(row.height, 'the toolbar is taller than one row').toBeLessThan(72)
             expect(row.right, 'the toolbar runs past the screen').toBeLessThanOrEqual(row.vw)
 
-            const out = page.locator(tool.output).first()
+            const out = page.locator((tool.outputAt && tool.outputAt[width]) || tool.output).first()
             await expect(out, 'the output did not render').toBeVisible()
             const top = await out.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
             const fold = await page.evaluate(() => window.innerHeight)

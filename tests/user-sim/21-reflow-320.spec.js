@@ -107,10 +107,10 @@ test.describe('reflow at 320px', () => {
     })
   }
 
-  test('the type scale truncates its specimens without shrinking the type', async ({ page }) => {
+  test('the type scale wraps its specimens without shrinking the type', async ({ page }) => {
     // The distinction that makes this fix correct rather than convenient: a
     // type-scale tool that shrinks its own specimens to fit is lying about the
-    // scale it exists to demonstrate. Truncating the sentence is fine; changing
+    // scale it exists to demonstrate. Wrapping the sentence is fine; changing
     // the size is not.
     await page.setViewportSize(NARROW)
     watch(page, 'a designer checking a type scale on a phone')
