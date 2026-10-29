@@ -50,6 +50,9 @@ test('H1: a verified account can upload to each of the six slot types', async ()
 
 test('H1: an unverified account is refused, and the same upload from a verified one is accepted', async () => {
   await assertFails(put(unverified(), mine('slot-0.webp'), 'image/webp'))
+  // The storage emulator can keep the object from a refused upload, which `resource == null`
+  // then refuses to overwrite, so the slot is emptied before the accepted upload.
+  await storageEnv.clearStorage()
   await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
 })
 
@@ -69,6 +72,8 @@ test('H1: an unknown slot name, a deep path or a wrong type is refused', async (
   // The extension and the type must agree.
   await assertFails(put(verified(), mine('slot-0.png'), 'image/webp'))
   await assertFails(put(verified(), mine('slot-0.webp'), undefined))
+  // Emptied for the same reason as above: refused uploads can leave an object in the emulator.
+  await storageEnv.clearStorage()
   await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
 })
 
@@ -157,6 +162,14 @@ async function post(db, id, { counter = {}, record = {}, kind = 'submission' } =
     prompts: kind === 'prompt' ? 1 : 0, submissions: kind === 'prompt' ? 0 : 1, ...counter,
   })
   return batch.commit()
+}
+// withSecurityRulesDisabled resolves to nothing, so the read is kept from inside it.
+const readCounter = async () => {
+  let data
+  await fsEnv.withSecurityRulesDisabled(async (ctx) => {
+    data = (await getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community'))).data()
+  })
+  return data
 }
 const seedCounter = (data) => fsEnv.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community'), data)
@@ -263,13 +276,13 @@ test('H2: the batch postWithLimits builds is accepted, for a first post, a later
     return batch.commit()
   }
   await assertSucceeds(send('submission', null))
-  const first = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+  const first = await readCounter()
   assert.equal(first.submissions, 1)
 
   const later = { windowStart: at(HOUR), lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 2, submissions: 3 }
   await seedCounter(later)
   await assertSucceeds(send('prompt', later))
-  const kept = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+  const kept = await readCounter()
   assert.equal(kept.prompts, 3)
   assert.equal(kept.submissions, 3)
 
@@ -301,7 +314,7 @@ async function sendCounted(kind, record, prev) {
 function budgetCase(label, kind, record) {
   test(`H2 budget: ${label}, as a first post (the counter is created)`, async () => {
     await assertSucceeds(sendCounted(kind, record, null))
-    const counter = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+    const counter = await readCounter()
     assert.equal(counter[kind === 'prompt' ? 'prompts' : 'submissions'], 1, 'the counter was not written with the post')
   })
 
@@ -310,7 +323,7 @@ function budgetCase(label, kind, record) {
     const prev = { windowStart: at(3_600_000), lastAt: at(60_000), lastKind: 'prompt', lastId: 'x', prompts: 2, submissions: 3 }
     await seedCounter(prev)
     await assertSucceeds(sendCounted(kind, record, prev))
-    const counter = (await fsEnv.withSecurityRulesDisabled((ctx) => getDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community')))).data()
+    const counter = await readCounter()
     assert.equal(counter[kind === 'prompt' ? 'prompts' : 'submissions'], kind === 'prompt' ? 3 : 4, 'the counter was not stepped with the post')
   })
 }
