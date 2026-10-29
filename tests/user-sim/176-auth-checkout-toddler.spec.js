@@ -276,7 +276,9 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
             }
           }
           const s = submit.getBoundingClientRect()
-          if (name === 'submit at the foot' && (s.top < 0 || s.bottom > window.innerHeight)) out.offScreen.push(name)
+          // 1px of slack: fractional layout (wider Linux fonts) can leave the edge a
+          // sub-pixel past the viewport after scrollIntoView. The numbers ride along.
+          if (name === 'submit at the foot' && (s.top < -1 || s.bottom > window.innerHeight + 1)) out.offScreen.push(`${name}: top ${s.top.toFixed(1)} bottom ${s.bottom.toFixed(1)} of ${window.innerHeight}, scrollY ${Math.round(root.scrollTop)}/${root.scrollHeight - root.clientHeight}`)
           // Only a submit that is on screen can be hit-tested; off screen it is
           // reached by scrolling, which the 'submit at the foot' step covers.
           const onScreen = s.top >= 0 && s.bottom <= window.innerHeight
