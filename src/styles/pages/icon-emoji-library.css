@@ -48,7 +48,7 @@
 .iel-page .icust-preview.is-on{animation:icust-preview-in 150ms var(--ease-out)}
 @keyframes icust-preview-in{from{opacity:0}}
 html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
-@media(prefers-reduced-motion:reduce){.iel-page .icust-preview.is-on{animation:none}}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .iel-page .icust-preview.is-on{animation:none}}
 .iel-page .icust-preview-text{margin:0;min-width:0}
 .iel-page .icust-preview-back{
   position:relative;flex:none;padding:0;border:0;background:none;
