@@ -280,7 +280,8 @@ test('with 13 colours the matrix is 15 columns of 35 units, and every figure fit
     const figures = page.ops.filter((o) => o.op === 'text' && /^\d+\.\d\d:1$/.test(o.text))
     assert.ok(figures.length >= 6 * 14, `${figures.length} figures`)
     for (const o of figures) assert.ok(estimateWidth(o.text, o.font) <= 35, `"${o.text}" is ${Math.round(estimateWidth(o.text, o.font))} wide in a 35 cell`)
-    const rowLabel = page.ops.find((o) => o.op === 'text' && /^#[0-9A-F]{6}$/.test(o.text))
+    // Row labels and column heads read the same hex; the row label is the leftmost one.
+    const rowLabel = page.ops.filter((o) => o.op === 'text' && /^[0-9A-F]{6}$/.test(o.text)).reduce((a, b) => (b.x < a.x ? b : a))
     assert.ok(rowLabel.x + estimateWidth(rowLabel.text, rowLabel.font) <= 52 + 95, 'a row label runs into the first column')
     assert.ok(Math.abs(centres[0] - (52 + 95 + 17.5)) < 0.01, 'the first column does not start after the 95 unit row head')
   }
@@ -710,7 +711,8 @@ test('a colour with no interface role is labelled "unassigned" with its number, 
   assert.ok(!said.some((t) => /not assigned/i.test(t)), 'the "Not assigned to a part of the interface" line is still drawn')
   // A colour with a role keeps its label and its place line.
   assert.ok(said.includes('Primary') && !said.includes('Primary, unassigned'))
-  assert.ok(said.includes('Buttons, links, selected tabs and toggles'))
+  // The place line wraps, so it is checked across the drawn lines.
+  assert.ok(said.join(' ').includes('Buttons, links, selected tabs and toggles'))
 })
 
 test('palette rows have a 24 unit gap between swatches and no rule between rows', () => {
