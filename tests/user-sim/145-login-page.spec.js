@@ -385,7 +385,8 @@ test.describe('the /login page hands the visitor on', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/login')
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toBe('/login')
-    expect(await page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }).count(), 'the log-in form is still showing').toBe(0)
+    // Retries: the URL leaves /login before the page does (see the test below).
+    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }), 'the log-in form is still showing').toHaveCount(0)
   })
 
   // MUTATION: same effect as above. The page then sits on /login after sign-in.
@@ -398,7 +399,11 @@ test.describe('the /login page hands the visitor on', () => {
 
     await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe('/checkout/return')
-    expect(await page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }).count()).toBe(0)
+    // The URL changes before the page does: /checkout/return is a lazy route, and
+    // until its chunk arrives the log-in form is still on screen. A one-shot
+    // count() read it in that gap (13 of 15 runs at 8x CPU throttling), so wait
+    // for the form to be gone.
+    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }), 'the log-in form is still showing').toHaveCount(0)
   })
 
   // MUTATION: in LoginPage.jsx delete `useEffect(() => { stashResumeTarget(from) }, [from])`.

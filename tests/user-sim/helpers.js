@@ -559,6 +559,58 @@ export async function go(page, url) {
   return res
 }
 
+/**
+ * Navigate, but keep the app's entry script (`/assets/index-*.js`, the one that
+ * calls `createRoot`) from running until `untilPainted()` says the prerendered
+ * shell has been painted AND OBSERVED — then release it and wait for the route
+ * to arrive, exactly as `go()` does.
+ *
+ * WHY THIS EXISTS (a flake, root-caused 2026-10-29)
+ * `main.jsx` mounts with `createRoot`, so React throws the shell's DOM away and
+ * builds its own. A `largest-contentful-paint` entry's `element` is resolved when
+ * it is READ, not when the browser painted: once the node it points at has left
+ * the document it reads `null`. A PerformanceObserver callback is a low-priority
+ * task, and on a slow runner (or a CPU-throttled browser) it ran after the swap:
+ * the shell's headline was recorded at 988ms and delivered at 5111ms, by which
+ * time its node was gone, so a spec that names the LCP element saw "(none)" for a
+ * paint that was in fact the headline. Measured on the 65 spec: 2 of 12 runs at 12x CPU
+ * throttling, 0 of 30 unthrottled; the same signature as the CI failures.
+ *
+ * Holding the script makes the order deterministic instead of lucky: the entry is
+ * recorded while the shell is still the page, and everything after hydration
+ * (later, larger candidates — the thing those specs exist to catch) is observed
+ * live and unchanged. Nothing about the page is altered; its script just starts a
+ * little later, as it would on a slow connection.
+ *
+ * `untilPainted` is awaited with the app held, so it must not need the app:
+ * poll something an init-script PerformanceObserver wrote. It is released even
+ * if `untilPainted` throws, and when the page closes.
+ */
+export async function goHoldingApp(page, url, untilPainted) {
+  let release
+  const gate = new Promise((resolve) => { release = resolve })
+  page.once('close', release)
+  let held = false
+  await page.route(/\/assets\/index-[^/]+\.js(\?.*)?$/, async (route) => {
+    held = true
+    await gate
+    await route.continue().catch(() => { /* the page closed while the script was held */ })
+  })
+  // 'commit', not 'domcontentloaded': a module script blocks DOMContentLoaded,
+  // and this one is held, so goto would wait for the very thing it is holding.
+  const res = await goRaw(page, url, { waitUntil: 'commit' })
+  try {
+    await untilPainted()
+    // If the entry bundle is renamed, nothing is held and the old race is back
+    // silently; say so instead of passing on luck.
+    if (!held) throw new Error('goHoldingApp: the entry bundle /assets/index-*.js was never requested, so nothing was held')
+  } finally {
+    release()
+  }
+  await ready(page, url)
+  return res
+}
+
 /* ── Waiting for a LAZY ROUTE to have actually ARRIVED ───────────────────────
  *
  * WHY THIS EXISTS
