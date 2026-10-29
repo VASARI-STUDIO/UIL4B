@@ -118,25 +118,32 @@ test.describe('no result line, and the count is in the toolbar', () => {
   })
 
   // The count shares the row with the search, Filters and Add icon. It must not shove the Add icon button
-  // into the Filters panel where the row had room for it, nor overlap anything.
+  // into the Filters panel where the row had room for it, nor overlap anything. Under 480px the count gives
+  // way, so the search keeps room for its placeholder.
   for (const width of [768, 390]) {
     test(`${width}: the count, Filters and Add icon share the row without overlap`, async ({ page }) => {
       watch(page, SIGNED_IN)
       await open(page, width, { plan: 'free' })
-      await expect(page.locator('.lbry-count')).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+      if (width >= 480) await expect(page.locator('.lbry-count')).toBeVisible({ timeout: 20_000 })
+      else {
+        await expect(page.locator('.lbry-count'), 'under 480px the count gives way').toBeHidden()
+        const search = await page.locator('.ig-toolbar .lbry-search').evaluate((el) => el.getBoundingClientRect().width)
+        expect(search, 'the search keeps room for its placeholder').toBeGreaterThanOrEqual(180)
+      }
       await expect(page.locator('.ig-toolbar .lbry-toolbar-row .ig-addbtn'), 'Add icon stays on the toolbar row').toBeVisible()
       const rects = await page.evaluate(() => {
         const row = document.querySelector('.ig-toolbar .lbry-toolbar-row')
         const r = (el) => { const b = el.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom } }
         return {
           row: r(row),
-          parts: Object.fromEntries(['.lbry-search', '.lbry-count', '.lbry-filterpanel', '.ig-addbtn'].map((s) => [s, row.querySelector(s) ? r(row.querySelector(s)) : null])),
+          parts: Object.fromEntries(['.lbry-search', '.lbry-count', '.lbry-filterpanel', '.ig-addbtn'].map((s) => { const el = row.querySelector(s); return [s, el && el.getClientRects().length ? r(el) : null] })),
           overflow: row.scrollWidth - row.clientWidth,
         }
       })
       expect(rects.overflow, 'the row does not scroll sideways').toBeLessThanOrEqual(0)
       const present = Object.entries(rects.parts).filter(([, b]) => b)
-      expect(present.length, 'search, count and Add icon are all on the row').toBeGreaterThanOrEqual(3)
+      expect(present.length, 'search, Add icon and (from 480px) the count are on the row').toBeGreaterThanOrEqual(width >= 480 ? 3 : 2)
       for (const [name, b] of present) {
         expect(b.l, `${name} starts inside the row`).toBeGreaterThanOrEqual(rects.row.l - 1)
         expect(b.r, `${name} ends inside the row`).toBeLessThanOrEqual(rects.row.r + 1)
@@ -423,6 +430,17 @@ test('a band mounted on a phone is still marked stuck correctly after the window
   })
   expect(pinned.bandTop, 'the band is pinned').toBeLessThanOrEqual(pinned.navBottom + 9)
   expect(pinned.stuck, `the band is pinned (top ${pinned.bandTop}) so it is stuck, even though the page first laid it out in flow`).toBe('true')
+})
+
+// A phone turned sideways is wide enough for the sticky band but too short for it: the nav and a two-row band
+// would cover half the screen.
+test('667 by 375: a landscape phone keeps the toolbar in flow', async ({ page }) => {
+  watch(page, SIGNED_IN)
+  await open(page, 667)
+  await page.setViewportSize({ width: 667, height: 375 })
+  await expect.poll(() => page.locator('.ig-band').evaluate((el) => getComputedStyle(el).position), {
+    message: 'the band sticks on a 375px-tall screen',
+  }).toBe('static')
 })
 
 test('390: the toolbar is not sticky', async ({ page }) => {

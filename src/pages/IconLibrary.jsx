@@ -4307,6 +4307,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
   // band starts to stick, and that sets data-stuck. The band's height goes to a
   // custom property on its parent so a focused cell scrolls clear of it.
+  // The toolbar count. While a new search or pack loads it keeps the last figure,
+  // so the search field and chips do not jump sideways on every keystroke.
+  const shownCount = !capped && !isMyIcons && !gated && icons.length > 0
+    ? `${icons.length.toLocaleString('en-AU')} ${icons.length === 1 ? 'icon' : 'icons'}`
+    : undefined
+  const lastCountRef = useRef(undefined)
+  if (!loading) lastCountRef.current = shownCount
+  const toolbarCount = loading ? lastCountRef.current : shownCount
   const bandRef = useRef(null)
   const bandSentinelRef = useRef(null)
   useEffect(() => {
@@ -4626,7 +4634,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         <LibraryToolbar
           className="ig-toolbar"
           quick={0}
-          count={!capped && !isMyIcons && !gated && !loading && icons.length > 0 ? `${icons.length.toLocaleString()} icons` : undefined}
+          count={toolbarCount}
           activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
           search={{
             value: query,

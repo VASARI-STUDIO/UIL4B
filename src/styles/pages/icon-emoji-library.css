@@ -668,12 +668,13 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
    (--ig-band-h, set where the band is mounted). Phones keep the toolbar in flow. */
 .iel-page .ig-band{margin-bottom:14px}
 .iel-page .ig-band-sentinel{height:1px;margin-bottom:-1px;pointer-events:none}
-@media(min-width:641px){
+/* Short landscape phones keep it in flow too: the nav and a two-row band would take half the screen. */
+@media(min-width:641px) and (min-height:560px){
   .iel-page .ig-band{position:sticky;top:var(--chrome-h);z-index:45;padding:8px 0 12px;background:var(--bg-0);border-bottom:1px solid transparent;margin-bottom:2px}
   .iel-page .ig-band .lbry-toolbar.ig-toolbar{position:relative;top:auto}
   .iel-page .ig-band[data-stuck="true"]{border-bottom-color:var(--border)}
   .iel-page .ig-band[data-stuck="true"] .lbry-toolbar.ig-toolbar{box-shadow:none}
   .iel-page .ig .ic{scroll-margin-top:calc(var(--chrome-h) + var(--ig-band-h,96px) + 8px)}
 }
-/* Under 360px the search, Filters and Add icon need the whole toolbar row, so the count gives way. */
-@media(max-width:359px){.iel-page .lbry-count{display:none}}
+/* Under 480px the search, Filters and Add icon need the whole toolbar row, so the count gives way. */
+@media(max-width:479px){.iel-page .lbry-count{display:none}}
