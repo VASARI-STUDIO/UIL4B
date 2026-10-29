@@ -347,7 +347,7 @@
 .iel-page .icust-line-block{margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t1)}
 .iel-page .icust-line-toggle{
   align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0;padding:0 4px 0 0;
-  border:0;border-radius:var(--radius-xs);background:none;font-family:var(--font);font-size:12.5px;font-weight:560;color:var(--t2);cursor:pointer;
+  border:0;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:12.5px;font-weight:560;color:var(--t2);cursor:pointer;
   transition:color 150ms var(--ease-out);
 }
 .iel-page .icust-line-toggle svg{flex:none;transition:transform 150ms var(--ease-out)}
@@ -367,7 +367,6 @@
   .iel-page .icust-line-toggle{min-height:44px}
   .iel-page .icust-line-split .icust-seg button{min-height:44px}
 }
-@media(prefers-reduced-motion:reduce){.iel-page .icust-line-toggle svg{transition:none}}
 
 
 /* ── The masthead tablist ─────────────────────────────────────────────────
