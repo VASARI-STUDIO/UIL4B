@@ -97,3 +97,60 @@ test('H1: reviewers and the owner can read an object, and another account cannot
   await assertSucceeds(getBytes(target(storageEnv.authenticatedContext('adm', { admin: true }).storage())))
   await assertFails(getBytes(target(verified(BOB))))
 })
+
+// ── H2 · firestore.rules, community queue ───────────────────────────────────
+import { doc, writeBatch, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore'
+
+let fsEnv
+before(async () => {
+  const rules = await fileTextThrough('queue-limits')
+  fsEnv = await initializeTestEnvironment({ projectId: 'demo-uil4b-queue-limits', firestore: { rules } })
+})
+after(async () => { await fsEnv?.cleanup() })
+beforeEach(async () => { await fsEnv.clearFirestore() })
+
+const dbFor = (claims = { email_verified: true }) => fsEnv.authenticatedContext(ALICE, claims).firestore()
+const submission = (extra = {}) => ({
+  kind: 'palette', name: 'Harbour', authorUid: ALICE, authorName: 'Alice', status: 'pending',
+  payload: { colors: ['#0F172A'], category: 'Branding' }, createdAt: '2026-10-29T00:00:00.000Z', ...extra,
+})
+// The batch the client sends: the post and its counter, both stamped by the server.
+async function post(db, id, { counter = {}, record = {}, kind = 'submission' } = {}) {
+  const batch = writeBatch(db)
+  batch.set(doc(db, kind === 'prompt' ? 'community-prompts' : 'community-submissions', id), {
+    ...submission(), submittedAt: serverTimestamp(), ...record,
+  })
+  batch.set(doc(db, 'users', ALICE, 'limits', 'community'), {
+    windowStart: serverTimestamp(), lastAt: serverTimestamp(), lastKind: kind, lastId: id,
+    prompts: kind === 'prompt' ? 1 : 0, submissions: kind === 'prompt' ? 0 : 1, ...counter,
+  })
+  return batch.commit()
+}
+const seedCounter = (data) => fsEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'users', ALICE, 'limits', 'community'), data)
+})
+
+test('H2: the real client batch is accepted from a verified account and refused from an unverified one', async () => {
+  await assertFails(post(dbFor({ email_verified: false }), 's0'))
+  await assertSucceeds(post(dbFor(), 's1'))
+})
+
+test('H2: a client-set submittedAt is refused', async () => {
+  await assertFails(post(dbFor(), 's2', { record: { submittedAt: Timestamp.fromDate(new Date('2999-12-31')) } }))
+  await assertSucceeds(post(dbFor(), 's3'))
+})
+
+test('H2: a second post within 30 seconds is refused, and one after 30 seconds is accepted', async () => {
+  const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+  await seedCounter({ windowStart: at(60_000), lastAt: at(5_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
+  const keep = { windowStart: at(60_000), submissions: 2 }
+  await assertFails(post(dbFor(), 's4', { counter: keep }))
+  await seedCounter({ windowStart: at(60_000), lastAt: at(31_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 1 })
+  await assertSucceeds(post(dbFor(), 's5', { counter: keep }))
+})
+
+test('H2: the 11th submission in a window is refused', async () => {
+  const at = (ms) => Timestamp.fromMillis(Date.now() - ms)
+  await seedCounter({ windowStart: at(3_600_000), lastAt: at(60_000), lastKind: 'submission', lastId: 'x', prompts: 0, submissions: 10 })
+  await assertFails(post(dbFor(), 's6', { counter: { windowStart: at(3_600_000), submissions: 11 } }))
+})
