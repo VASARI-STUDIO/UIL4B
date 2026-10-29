@@ -205,7 +205,7 @@ test('a one-colour kit has no matrix page: its palette page has a full-width swa
   assert.ok(build({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB', '#0F172A'] } }).pages.some((p) => p.kind === 'matrix'))
 })
 
-test('palette pages of three rows or fewer have 200 high swatches 210 apart; fuller pages keep 144 and 150', () => {
+test('palette pages of three rows or fewer have 200 high swatches 224 apart; fuller pages have 130 and 154 (24 between)', () => {
   const chipsOf = (n) => {
     const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } }
     return build(design).pages.filter((p) => p.kind === 'palette').map((page) => {
@@ -217,13 +217,13 @@ test('palette pages of three rows or fewer have 200 high swatches 210 apart; ful
     for (const chips of chipsOf(n)) {
       assert.ok(chips.length >= 1 && chips.length <= 3)
       for (const chip of chips) assert.equal(chip.h, 200, `${n} colours: a swatch is ${chip.h} high`)
-      chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 210, `${n} colours: rows ${chip.y - chips[i].y} apart`))
+      chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 224, `${n} colours: rows ${chip.y - chips[i].y} apart`))
     }
   }
   for (const n of [4, 5]) {
     const [chips] = chipsOf(n)
-    for (const chip of chips) assert.equal(chip.h, 144, `${n} colours: a swatch is ${chip.h} high`)
-    chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 150))
+    for (const chip of chips) assert.equal(chip.h, 130, `${n} colours: a swatch is ${chip.h} high`)
+    chips.slice(1).forEach((chip, i) => assert.equal(chip.y - chips[i].y, 154))
   }
   // The taller band keeps its tints inside it.
   const [three] = chipsOf(3)
@@ -698,4 +698,78 @@ test('labels are sentence case and untracked: no small text has letter spacing o
   assert.ok(all('matrix').includes('Background / text'))
   assert.ok(texts(book.pages[0]).includes('Design system book') && texts(book.pages[0]).includes('Issued 2026-10-29'))
   assert.ok(book.pages.filter((p) => p.kind === 'opening').every((p) => texts(p).includes(`Section ${Number(p.num)}`)))
+})
+
+// ── Final polish: roles, numbers, labels, spacing ───────────────────────────
+
+test('a colour with no interface role is labelled "unassigned" with its number, and has no "not assigned" line', () => {
+  const book = build({ ...DESIGN, palette: { base: '#2563EB', harmony: 'analogous', colors: manyColours(7) } })
+  const said = book.pages.filter((p) => p.kind === 'palette').flatMap(texts)
+  assert.ok(said.includes('Alternative 1, unassigned'), 'the sixth colour is not labelled unassigned')
+  assert.ok(said.includes('Alternative 2, unassigned'), 'the seventh colour has lost its number')
+  assert.ok(!said.some((t) => /not assigned/i.test(t)), 'the "Not assigned to a part of the interface" line is still drawn')
+  // A colour with a role keeps its label and its place line.
+  assert.ok(said.includes('Primary') && !said.includes('Primary, unassigned'))
+  assert.ok(said.includes('Buttons, links, selected tabs and toggles'))
+})
+
+test('palette rows have a 24 unit gap between swatches and no rule between rows', () => {
+  for (const n of [3, 6, 5]) {
+    const book = build({ ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } })
+    inside(book)
+    for (const page of book.pages.filter((p) => p.kind === 'palette')) {
+      const chips = page.ops.filter((o) => o.op === 'rect' && o.w === 170 && o.radius === 3)
+      chips.slice(1).forEach((chip, i) => assert.equal(chip.y - (chips[i].y + chips[i].h), 24, `${n} colours: gap is not 24`))
+      // The running head's rule is above the first swatch and the foot rule is at 972; nothing full-width sits between.
+      assert.ok(!page.ops.some((o) => o.op === 'line' && o.x1 === 52 && o.x2 === 672 && o.y1 > chips[0].y && o.y1 < 960),
+        `${n} colours: a full-width rule runs between rows`)
+    }
+  }
+})
+
+test('a one-colour palette has no swatch number; several colours still number theirs', () => {
+  const one = build({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB'] } }).pages.find((p) => p.kind === 'palette')
+  assert.ok(!texts(one).includes('01'), 'the lone swatch is still numbered')
+  const several = build().pages.find((p) => p.kind === 'palette')
+  assert.ok(texts(several).includes('01'))
+})
+
+test('matrix row labels drop the # so they match the column heads', () => {
+  const matrix = build().pages.find((p) => p.kind === 'matrix')
+  const said = texts(matrix)
+  assert.ok(!said.some((t) => t.startsWith('#')), 'a matrix label still starts with #')
+  for (const hex of matrix.rows) {
+    assert.equal(said.filter((t) => t === hex.slice(1)).length, 2, `${hex}: expected one head and one row label`)
+  }
+})
+
+test('the scale table shows sizes with one decimal, rem and leading with two', () => {
+  const page = build().pages.find((p) => p.kind === 'scale')
+  const column = (x) => page.ops.filter((o) => o.op === 'text' && o.x === x).map((o) => o.text)
+  const sizes = column(52 + 92).filter((t) => /px$/.test(t))
+  const rems = column(52 + 148).filter((t) => /^\d/.test(t))
+  const leads = column(52 + 208).filter((t) => /^\d/.test(t))
+  assert.ok(sizes.length > 3 && sizes.includes('16.0px'), `sizes: ${sizes}`)
+  assert.ok(sizes.every((t) => /^\d+\.\dpx$/.test(t)), `sizes: ${sizes}`)
+  assert.ok(rems.includes('1.00') && rems.every((t) => /^\d+\.\d\d$/.test(t)), `rem: ${rems}`)
+  assert.ok(leads.includes('1.50') && leads.includes('1.15') && leads.every((t) => /^\d+\.\d\d$/.test(t)), `leading: ${leads}`)
+})
+
+test('the contents column rule ends at the last stat rule', () => {
+  const page = build().pages.find((p) => p.kind === 'contents')
+  const rule = page.ops.find((o) => o.op === 'line' && o.x1 === o.x2)
+  const stats = page.ops.filter((o) => o.op === 'line' && o.y1 === o.y2 && o.x1 > rule.x1 && o.x2 === 672)
+  assert.ok(stats.length >= 4)
+  assert.equal(rule.y2, Math.max(...stats.map((o) => o.y1)))
+})
+
+test('the colophon columns end 48 above the sign-off rule, measured from their height', () => {
+  for (const name of ['Acme', 'A project with a rather long name that has to wrap onto a second line of its own']) {
+    const page = build(DESIGN, { projectName: name }).pages.find((p) => p.kind === 'colophon')
+    inside({ pages: [page] })
+    const sign = page.ops.filter((o) => o.op === 'line' && o.x1 === 52 && o.x2 === 672).at(-1)
+    const body = page.ops.filter((o) => o.op === 'text' && /^400 10\.5px/.test(o.font))
+    assert.ok(body.length > 4)
+    assert.equal(Math.max(...body.map((o) => o.y)), sign.y1 - 48, `${name.slice(0, 10)}: the last line is not 48 above the rule`)
+  }
 })

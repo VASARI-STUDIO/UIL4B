@@ -42,7 +42,7 @@
 // reads in familiar CSS pixels and a 1px rule lands on two whole device pixels.
 import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
-import { roleLabel, slotLandsBook } from './paletteRoles.js'
+import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { deriveRoles, hexToOklch, mixHex, softInk } from './exportTemplates/roles.js'
 import { bookTokens } from './bookTokens.js'
@@ -66,12 +66,13 @@ export const FOOT_Y = FOOT_RULE + 24
 const GHOST_GAP = 40
 
 const BANDS_PER_PAGE = 5
-const BAND_H = 144
-const BAND_GAP = 6
+// Five rows and the 24 gaps between them must fit under the first page's lede.
+const BAND_H = 130
+const BAND_GAP = 24
 // A palette page with this many rows or fewer draws them taller and further apart.
 export const ROOMY_MAX_ROWS = 3
 export const ROOMY_BAND_H = 200
-export const ROOMY_BAND_STEP = 210
+export const ROOMY_BAND_STEP = ROOMY_BAND_H + BAND_GAP
 // The matrix is as wide as the palette plus white and black. A cell is 35 units
 // wide at 13 colours (15 columns), the narrowest a ratio still reads in; past that
 // the page says so rather than shrinking the cells. Rows split over pages.
@@ -455,6 +456,9 @@ const labelText = (t, x, y, fill, { px = 8, weight = 500, align, family } = {}, 
 /** "ANALOGOUS −30°" to "Analogous −30°": the role names are stored in capitals. */
 const sentence = (t) => { const s = String(t).toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1) }
 
+/** The role label of a palette slot; a colour past the generated five says it has no place yet. */
+const roleText = (harmony, index) => sentence(roleLabel(harmony, index)) + (slotPlaced(index) ? '' : ', unassigned')
+
 const heading = (c, px) => face(c.d.headingWeight, px, c.d.heading)
 const bodyFont = (c, px, weight = c.d.bodyWeight) => face(weight, px, c.d.body)
 const headSpacing = (c, px) => (c.d.headingSpacing ? { letterSpacing: round(c.d.headingSpacing * px) } : {})
@@ -586,7 +590,9 @@ function contentsOps(c, page, entries) {
   // The aside: what the book is, and four facts about it.
   const ax = MARGIN + listW + 44
   const aw = RIGHT - ax
-  ops.push({ op: 'line', x1: ax - 22, y1: TOP + 100, x2: ax - 22, y2: TOP + 560, stroke: c.rule })
+  // The column rule ends at the last stat rule; its end is set once the stats are placed.
+  const colRule = { op: 'line', x1: ax - 22, y1: TOP + 100, x2: ax - 22, y2: TOP + 560, stroke: c.rule }
+  ops.push(colRule)
   ops.push(labelText('About this book', ax, TOP + 120, c.muted, { px: 8 }, c))
   const prose = [
     `This is the specification for ${c.name}: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.`,
@@ -607,6 +613,7 @@ function contentsOps(c, page, entries) {
     ay += 30
   }
   ops.push(hair(ax, ay - 14, RIGHT, c.rule))
+  colRule.y2 = ay - 14
   return ops
 }
 
@@ -646,7 +653,7 @@ function paletteOps(c, page) {
   const bandH = roomy ? ROOMY_BAND_H : BAND_H
   const step = roomy ? ROOMY_BAND_STEP : BAND_H + BAND_GAP
   const lineH = roomy ? 20 : 15
-  page.items.forEach(({ index, hex }, n) => {
+  page.items.forEach(({ index, hex }) => {
     const { ink, ratio, label } = inkFor(hex)
     const chipW = 170
     ops.push(rect(MARGIN, y, chipW, bandH, hex, 3))
@@ -656,11 +663,12 @@ function paletteOps(c, page) {
 
     const x2 = MARGIN + chipW + 24
     const w2 = 176
-    ops.push(labelText(sentence(roleLabel(d.harmony, index)), x2, y + 16, c.muted, { px: 8 }, c))
+    ops.push(labelText(roleText(d.harmony, index), x2, y + 16, c.muted, { px: 8 }, c))
     const nameLines = wrapText(c.names[index], w2, heading(c, 21), c.headMeasure, { maxLines: 2 })
     nameLines.forEach((line, i) => ops.push(text(line, x2, y + 44 + i * 24, heading(c, 21), c.ink, headSpacing(c, 21))))
     const landsTop = y + 44 + (nameLines.length - 1) * 24 + 22
-    const lands = wrapText(slotLandsBook(index), w2, bodyFont(c, 9.5, 400), c.measure, { maxLines: nameLines.length > 1 ? 2 : 3 })
+    // A colour with no place in the interface has no line here; the label says so.
+    const lands = slotPlaced(index) ? wrapText(slotLandsBook(index), w2, bodyFont(c, 9.5, 400), c.measure, { maxLines: nameLines.length > 1 ? 2 : 3 }) : []
     lands.forEach((line, i) => ops.push(text(line, x2, landsTop + i * 13, bodyFont(c, 9.5, 400), c.muted)))
 
     const x3 = x2 + w2 + 24
@@ -669,7 +677,7 @@ function paletteOps(c, page) {
       ops.push(labelText(k, x3, y + 16 + i * lineH, c.muted, { px: 7.5 }, c))
       ops.push(text(v, x3 + 42, y + 16 + i * lineH, mono(500, 9.5), c.ink))
     })
-    const ruleAt = roomy ? 100 : 74
+    const ruleAt = roomy ? 100 : 68
     ops.push(hair(x3, y + ruleAt, RIGHT, c.rule))
     const cells = [['Ink', label], ['Ratio', formatRatio(ratio)], ['Grade', grade(ratio)]]
     cells.forEach(([k, v], i) => {
@@ -688,7 +696,6 @@ function paletteOps(c, page) {
       if (contrast(tint, c.paper) < NEAR_PAPER) ops.push(outline(tx, chipY, tw, chipH, c.edge))
     })
 
-    if (n < page.items.length - 1) ops.push(hair(MARGIN, y + bandH + (step - bandH) / 2, RIGHT, c.rule))
     y += step
   })
   return ops
@@ -708,16 +715,16 @@ function soloPaletteOps(c, { index, hex }, ops, top) {
   const { w, h } = SOLO_SWATCH
   ops.push(rect(MARGIN, top, w, h, hex, 3))
   if (contrast(hex, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, top, w, h, c.edge, 3))
-  ops.push(text(pad2(index + 1), MARGIN + 22, top + 38, face(600, 13, d.body), ink, { tabular: true }))
+  // One colour needs no number.
   ops.push(text(hex, MARGIN + 22, top + h - 26, face(700, 34, d.body), ink))
 
   let y = top + h + 34
   const left = 270
-  ops.push(labelText(sentence(roleLabel(d.harmony, index)), MARGIN, y, c.muted, { px: 8 }, c))
+  ops.push(labelText(roleText(d.harmony, index), MARGIN, y, c.muted, { px: 8 }, c))
   const nameLines = wrapText(c.names[index], left, heading(c, 28), c.headMeasure, { maxLines: 2 })
   nameLines.forEach((line, i) => ops.push(text(line, MARGIN, y + 34 + i * 32, heading(c, 28), c.ink, headSpacing(c, 28))))
   const landsTop = y + 34 + (nameLines.length - 1) * 32 + 24
-  const lands = wrapText(slotLandsBook(index), left, bodyFont(c, 10, 400), c.measure, { maxLines: 3 })
+  const lands = slotPlaced(index) ? wrapText(slotLandsBook(index), left, bodyFont(c, 10, 400), c.measure, { maxLines: 3 }) : []
   lands.forEach((line, i) => ops.push(text(line, MARGIN, landsTop + i * 14, bodyFont(c, 10, 400), c.muted)))
 
   const x3 = MARGIN + left + 50
@@ -797,7 +804,7 @@ function matrixOps(c, page) {
   page.rows.forEach((row) => {
     ops.push(rect(MARGIN, y + rowH / 2 - 7, 14, 14, row, 7))
     if (contrast(row, c.paper) < NEAR_PAPER) ops.push(outline(MARGIN, y + rowH / 2 - 7, 14, 14, c.edge, 7))
-    ops.push(text(row, MARGIN + 24, y + rowH / 2 + 3.5, mono(500, 10), c.ink))
+    ops.push(text(row.slice(1), MARGIN + 24, y + rowH / 2 + 3.5, mono(500, 10), c.ink))
     axes.forEach((col, i) => {
       const x = MARGIN + rowHeadW + i * cw
       if (row === col) {
@@ -965,9 +972,9 @@ function scaleOps(c, page) {
     const rowH = Math.max(36, Math.round(shown * 1.4))
     const base = y + rowH / 2 + shown * 0.33
     ops.push(text(s.name, cols.step, base, face(600, 10, d.body), c.ink))
-    ops.push(text(`${round(s.px)}px`, cols.size, base, mono(400, 9.5), c.muted))
-    ops.push(text(`${round(s.px / 16)}`, cols.rem, base, mono(400, 9.5), c.muted))
-    ops.push(text(String(isHeading ? 1.15 : d.lineHeight), cols.lead, base, mono(400, 9.5), c.muted))
+    ops.push(text(`${s.px.toFixed(1)}px`, cols.size, base, mono(400, 9.5), c.muted))
+    ops.push(text((s.px / 16).toFixed(2), cols.rem, base, mono(400, 9.5), c.muted))
+    ops.push(text(Number(isHeading ? 1.15 : d.lineHeight).toFixed(2), cols.lead, base, mono(400, 9.5), c.muted))
     ops.push(text(s.name, cols.specimen, base, face(weight, shown, family), c.ink, isHeading ? headSpacing(c, shown) : {}))
     y += rowH
     ops.push(hair(MARGIN, y, RIGHT, c.rule))
@@ -1013,6 +1020,8 @@ function tokensOps(c, page) {
 }
 
 export const COLOPHON_NAME_W = 300
+// The room between the last line of the colophon's text and its sign-off rule.
+const COLOPHON_GAP = 48
 const COLOPHON_NAME_SIZES = [15, 14, 13, 12, 11, 10]
 
 /**
@@ -1046,17 +1055,18 @@ function colophonOps(c, page) {
     ['What this book covers', 'Colour, typography and tokens: the decisions this system actually holds.'],
     ['What it does not', 'A full identity manual would also carry logo construction, imagery direction, tone of voice and applied examples. Those are not in this book because they are not in the system: this document specifies only what was really designed, and states the boundary rather than filling it with placeholders.'],
   ]
-  const column = (blocks, x) => {
+  // The columns are measured first: their last line sits COLOPHON_GAP above the sign-off rule.
+  const place = (blocks) => {
     let y = TOP + 90
-    for (const [label, body] of blocks) {
-      ops.push(labelText(label, x, y, c.ink, { px: 8, weight: 600 }, c))
+    return blocks.map(([label, body]) => {
       const lines = wrapText(body, colW, face(400, 10.5, d.body), c.measure)
-      lines.forEach((line, i) => ops.push(text(line, x, y + 22 + i * 16, face(400, 10.5, d.body), c.ink)))
+      const block = { label, lines, y }
       y += 22 + lines.length * 16 + 28
-    }
+      return block
+    })
   }
-  column(left, MARGIN)
-  column(right, MARGIN + colW + 40)
+  const lastLine = (placed) => placed.reduce((m, b) => Math.max(m, b.y + 22 + (b.lines.length - 1) * 16), 0)
+  const cols = [[place(left), MARGIN], [place(right), MARGIN + colW + 40]]
 
   // The project name wraps to two lines at most and is never cut: if two lines
   // will not hold it at 15px the size steps down. Below the smallest size it takes
@@ -1064,6 +1074,14 @@ function colophonOps(c, page) {
   const { lines: nameLines, size: nameSize } = fitName(c.name, COLOPHON_NAME_W, c.headMeasure, (px) => heading(c, px))
   const nameLh = Math.round(nameSize * 1.25)
   const fy = BOTTOM - 60 - Math.max(0, nameLines.length - 2) * nameLh
+  const drop = Math.max(0, fy - COLOPHON_GAP - Math.max(...cols.map(([placed]) => lastLine(placed))))
+  for (const [placed, x] of cols) {
+    for (const { label, lines, y } of placed) {
+      ops.push(labelText(label, x, y + drop, c.ink, { px: 8, weight: 600 }, c))
+      lines.forEach((line, i) => ops.push(text(line, x, y + drop + 22 + i * 16, face(400, 10.5, d.body), c.ink)))
+    }
+  }
+
   ops.push(hair(MARGIN, fy, RIGHT, c.ink))
   nameLines.forEach((line, i) => ops.push(text(line, MARGIN, fy + 28 + i * nameLh, heading(c, nameSize), c.ink, headSpacing(c, nameSize))))
   ops.push(text(`Issued ${c.iso}`, MARGIN + 330, fy + 28, face(400, 10, d.body), c.muted))
