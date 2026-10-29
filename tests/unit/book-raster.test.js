@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
@@ -221,7 +221,7 @@ test('the colophon names a face that could not load instead of claiming it', () 
 // ── The watermark ───────────────────────────────────────────────────────────
 
 test('the credit line is drawn on every page when asked for, and on none when not', () => {
-  const credit = 'Made with UIL4B — uil4b.com'
+  const credit = CREDIT_LINE
   for (const page of build(DESIGN, { watermark: true }).pages) assert.ok(texts(page).includes(credit), `${page.id} has no credit line`)
   for (const page of build(DESIGN, { watermark: false }).pages) assert.ok(!texts(page).includes(credit), `${page.id} carries a credit line it should not`)
 })
@@ -430,4 +430,40 @@ test('a one-colour cover has no strip and its title block sits 144 lower than wi
   assert.equal(one.bars, 0, 'the one-colour cover still draws a strip')
   assert.equal(one.y - many.y, 144)
   inside(build(kit(['#2563EB'])))
+})
+
+// ── Copy ────────────────────────────────────────────────────────────────────
+
+test('the credit line is one constant, with a middle dot and no em dash anywhere in drawn text', () => {
+  assert.equal(CREDIT_LINE, 'Made with UIL4B · uil4b.com')
+  const book = build(DESIGN, { watermark: true })
+  for (const page of book.pages) {
+    // The glyph specimen shows the em dash as a character to look at; it is the one exception.
+    const drawn = texts(page).filter((t) => !t.includes('“'))
+    assert.ok(!drawn.some((t) => t.includes('—')), `${page.id} draws an em dash`)
+  }
+  const src = read('src/utils/bookRaster.js')
+  assert.equal((src.match(/Made with UIL4B/g) || []).length, 1, 'the credit text is copied rather than shared')
+})
+
+test('a one-colour kit says "1 colour, with the ink...", not a count built on a system', () => {
+  const one = plan({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB'] } }).find((p) => p.kind === 'opening')
+  assert.equal(one.abstract, '1 colour, with the ink that reads on it and the ratio that proves it.')
+  assert.match(plan().find((p) => p.kind === 'opening').abstract, /^6 colours built on an? [a-z-]+ system, each with the ink/)
+})
+
+test('balanceLines never leaves one word alone on the last line, and leaves balanced text alone', () => {
+  const font = '10px "X"'
+  const text = 'aaaaa bbbbb ccccc ddddd eeeee fffff ggggg'
+  // Plain wrapping strands the last word...
+  assert.deepEqual(wrapText(text, 100, font), ['aaaaa bbbbb ccccc', 'ddddd eeeee fffff', 'ggggg'])
+  // ...the balanced version does not, and loses no word.
+  const balanced = balanceLines(text, 100, font)
+  assert.deepEqual(balanced, ['aaaaa bbbbb ccccc', 'ddddd eeeee', 'fffff ggggg'])
+  assert.equal(balanced.join(' '), text)
+  // One line, or already two words on the last, is returned as wrapText gives it.
+  assert.deepEqual(balanceLines('aaaaa bbbbb', 100, font), ['aaaaa bbbbb'])
+  assert.deepEqual(balanceLines('aaaaa bbbbb ccccc ddddd eeeee fffff', 100, font), wrapText('aaaaa bbbbb ccccc ddddd eeeee fffff', 100, font))
+  // It never breaks the line limit: a cut line keeps its ellipsis.
+  assert.ok(balanceLines(text.repeat(3), 100, font, estimateWidth, { maxLines: 2 }).length <= 2)
 })

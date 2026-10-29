@@ -98,6 +98,9 @@ export function darkestColour(palette) {
   return best || DARK_FIELD
 }
 
+/** The credit line, on the cover and the foot of every page when the free-tier mark is on. */
+export const CREDIT_LINE = 'Made with UIL4B · uil4b.com'
+
 const round = (n) => Math.round(n * 100) / 100
 const pad2 = (n) => String(n).padStart(2, '0')
 
@@ -169,6 +172,23 @@ export function wrapText(text, maxWidth, font, measure = estimateWidth, { maxLin
     return kept
   }
   return lines
+}
+
+/**
+ * wrapText for an introduction: if the last line would be one word on its own,
+ * the last word of the line above comes down to keep it company (when the pair
+ * still fits the width and the line above keeps a word).
+ */
+export function balanceLines(text, maxWidth, font, measure = estimateWidth, opts = {}) {
+  const lines = wrapText(text, maxWidth, font, measure, opts)
+  const n = lines.length
+  if (n < 2 || /\s/.test(lines[n - 1]) || lines[n - 1].endsWith('…')) return lines
+  const above = lines[n - 2].split(' ')
+  if (above.length < 2) return lines
+  const moved = above.pop()
+  const last = `${moved} ${lines[n - 1]}`
+  if (measure(last, font) > maxWidth) return lines
+  return [...lines.slice(0, n - 2), above.join(' '), last]
 }
 
 // ── Pagination ──────────────────────────────────────────────────────────────
@@ -311,7 +331,9 @@ export function planBookPages(design, {
     const sys = systemName(d.harmony)
     add('opening', 'Colour', {
       num: '01', title: 'Colour', field: c.field, ink: c.fieldInk,
-      abstract: `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
+      abstract: d.palette.length === 1
+        ? '1 colour, with the ink that reads on it and the ratio that proves it.'
+        : `${d.palette.length} colours built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
     })
     const indexed = d.palette.map((hex, index) => ({ index, hex }))
     balancedChunk(indexed, BANDS_PER_PAGE).forEach((items, gi) => {
@@ -398,7 +420,7 @@ function frame(c, page) {
 function foot(c, page, fill, ruleColour, { rule = true } = {}) {
   const ops = []
   if (rule) ops.push(hair(MARGIN, FOOT_RULE, RIGHT, ruleColour))
-  const left = c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book'
+  const left = c.watermark ? CREDIT_LINE : 'Design system book'
   ops.push(text(left, MARGIN, FOOT_Y, face(400, 9, c.d.body), fill))
   const folio = pad2(page.folio)
   ops.push(text(folio, RIGHT, FOOT_Y, face(600, 10, c.d.body), fill, { align: 'right' }))
@@ -413,7 +435,7 @@ function pageHead(c, title, lede, { first = true } = {}) {
     ops.push(caps('continued', MARGIN + w + 12, TOP + 30, c.muted, { px: 8, spacing: 1.4 }, c))
     return { ops, y: TOP + 56 }
   }
-  const lines = wrapText(lede, 470, bodyFont(c, 11.5, 400), c.measure, { maxLines: 2 })
+  const lines = balanceLines(lede, 470, bodyFont(c, 11.5, 400), c.measure, { maxLines: 2 })
   lines.forEach((line, i) => ops.push(text(line, MARGIN, TOP + 56 + i * 17, bodyFont(c, 11.5, 400), c.muted)))
   return { ops, y: TOP + 56 + Math.max(1, lines.length) * 17 + 18 }
 }
@@ -469,7 +491,7 @@ function coverOps(c) {
     ops.push(rect(x0, stripTop, x1 - x0, PAGE.height - stripTop, hex))
   })
   const creditY = metaY + 22
-  if (c.watermark) ops.push(text('Made with UIL4B — uil4b.com', RIGHT, creditY, face(400, 9, d.body), c.fieldSoft, { align: 'right' }))
+  if (c.watermark) ops.push(text(CREDIT_LINE, RIGHT, creditY, face(400, 9, d.body), c.fieldSoft, { align: 'right' }))
   return ops
 }
 
@@ -550,9 +572,9 @@ function openingOps(c, page) {
   const titleLines = wrapText(page.title, 470, heading(c, size), c.measure, { maxLines: 2 })
   titleLines.forEach((line, i) => ops.push(text(line, MARGIN, 300 + i * 68, heading(c, size), page.ink, headSpacing(c, size))))
   const abstractTop = 300 + (titleLines.length - 1) * 68 + 44
-  const lines = wrapText(page.abstract, 360, bodyFont(c, 13, 400), c.measure, { maxLines: 6 })
+  const lines = balanceLines(page.abstract, 360, bodyFont(c, 13, 400), c.measure, { maxLines: 6 })
   lines.forEach((line, i) => ops.push(text(line, MARGIN, abstractTop + i * 20, bodyFont(c, 13, 400), page.ink)))
-  ops.push(text(c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book', MARGIN, FOOT_Y, face(400, 9, d.body), soft))
+  ops.push(text(c.watermark ? CREDIT_LINE : 'Design system book', MARGIN, FOOT_Y, face(400, 9, d.body), soft))
   ops.push(text(pad2(page.folio), RIGHT, FOOT_Y, face(600, 10, d.body), soft, { align: 'right' }))
   return ops
 }
