@@ -35,7 +35,7 @@
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { answerIconify, fixturePacks, headPackOfUrl, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -98,10 +98,6 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
 
-  const packs = fixturePacks()
-  // The page's own summary line counts the sets that answered. Every pack in
-  // the fixture answered, so it must say so — this is the page consuming the
-  // fixture, not the stub counting itself.
   // The "N sets" text is gone with the result line; the toolbar count says the listing landed, and the
   // one-answer-per-pack behaviour is asserted on the requests below.
   await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 20000 })
