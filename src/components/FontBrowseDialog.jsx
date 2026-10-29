@@ -9,6 +9,8 @@ import useModalDialog from '../hooks/useModalDialog'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from './FontDossier'
 import { FONT_CATEGORIES, filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
+// The dialog brings its own styles: Font Pair opens it without the picker.
+import '../styles/pages/font-picker.css'
 
 // Browse the catalogue and pick a family by LOOKING at it.
 //

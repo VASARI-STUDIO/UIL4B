@@ -44,7 +44,11 @@ async function openBrowser(page, tool, width) {
   if (tool.name === 'Type Scale' && width < 768) {
     await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
   }
-  const trigger = page.locator('.typ-picker-trigger').first()
+  // Type Scale opens it from its family picker; Font Pair from the Browse
+  // button on the heading family row.
+  const trigger = tool.name === 'Font Pair'
+    ? page.getByRole('button', { name: 'Browse heading family' }).first()
+    : page.locator('.typ-picker-trigger').first()
   await trigger.click()
   const dialog = page.locator('.fbd-dialog')
   await expect(dialog).toBeVisible()
