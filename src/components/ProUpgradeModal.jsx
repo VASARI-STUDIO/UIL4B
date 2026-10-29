@@ -71,15 +71,41 @@ import { showsColourRail } from '../utils/proGateProof'
 //    a panel that looks like evidence and is actually decoration. The rail now
 //    renders only where colour IS the product.
 //
+//  · THE HEAD IS PLAIN TEXT. It used to open on an uppercase mono "UIL4B Pro"
+//    label above the title, ticks before every feature line, uppercase mono
+//    plan names and em dashes in the steps. Each one is a default a template
+//    ships with, and together they made the surface read as machine-made. The
+//    title now carries the offer, the features are a plain list, the plan names
+//    are sentence-case sans, and the steps use colons and full stops. Callers
+//    still pass an `eyebrow`; it is ignored here.
+//
+//  · A GATE MAY BRING ITS OWN PROOF. `proof` is a node the caller draws from the
+//    user's own work in the Pro setting (an icon at the previewed line style,
+//    say). It takes the rail's slot where the gate is not a colour gate, so one
+//    gate never shows both. No `proof`, no slot: the dialog stays one column.
+//
 // Prices come from src/config/planLadder.js — the single module — never typed
 // into this file. Read its header before changing any amount.
 
-function Tick() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  )
+// Copy for the walls opened from the icon customiser, keyed by `gate`. A caller
+// that passes its own title or subtitle wins; this fills in when it passes
+// neither, so the three walls say the same thing wherever they are raised.
+// The literal sizes sit in <code>, the one place this dialog uses mono.
+const ICON_GATE_COPY = {
+  'icon-line-style': {
+    title: 'Export icons in Sharp and Crisp',
+    subtitle: 'Pro opens every line style and any export size, on every icon in the library.',
+  },
+  'icon-export-size': {
+    title: 'Export icons at any size',
+    subtitle: (
+      <>Pro lets you type any size from <code>8</code> to <code>1024px</code>, and opens Sharp and Crisp line styles.</>
+    ),
+  },
+  'icon-pro-preview': {
+    title: 'Export your Pro settings',
+    subtitle: 'Pro opens every line style and any export size, on every icon in the library.',
+  },
 }
 
 // /plans' Pro lines, word for word (src/config/planFacts.js). This modal kept
@@ -95,10 +121,10 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
   const uid = useId()
   const [starting, setStarting] = useState(false)
 
+  const gateCopy = ICON_GATE_COPY[opts.gate] || {}
   const {
-    title = 'Unlock everything with Pro',
-    subtitle = 'Keep every tool open and every export clean. Free stays free — Pro removes the ceiling.',
-    eyebrow = 'UIL4B Pro',
+    title = gateCopy.title || 'Unlock everything with Pro',
+    subtitle = gateCopy.subtitle || 'Keep every tool open and every export clean. Free stays free. Pro removes the limits.',
     features = DEFAULT_FEATURES,
     // The exact colour the gate fired on, when the caller knows it. The rail
     // degrades to the last palette this browser worked on, then to the brand
@@ -107,6 +133,8 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     // Which wall fired. Already passed by every call site for analytics; read
     // here to decide whether the colour rail is proof or decoration.
     gate,
+    // A picture of the user's own work in the Pro setting, drawn by the caller.
+    proof,
   } = opts
 
   // THE RAIL IS PROOF, SO IT ONLY APPEARS WHERE IT PROVES SOMETHING.
@@ -122,6 +150,8 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
   // explicit seed — which is how ExportPanel says "this export is about this
   // palette" (it passes design.palette.colors[0]).
   const showColourRail = showsColourRail({ seed, gate })
+  // The caller's proof takes the rail's slot, and only where there is no rail.
+  const showProof = !showColourRail && !!proof
 
   const currency = useMemo(() => detectCurrency(), [])
   const ladder = useMemo(
@@ -162,7 +192,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     <div className="ui-modal-overlay" onMouseDown={onClose}>
       <div
         ref={dialogRef}
-        className={'ui-modal ui-pro' + (showColourRail ? '' : ' ui-pro--norail')}
+        className={'ui-modal ui-pro' + (showColourRail ? '' : showProof ? ' ui-pro--proof' : ' ui-pro--norail')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${uid}-title`}
@@ -175,7 +205,6 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
         </button>
 
         <div className="ui-pro-head">
-          <span className="ui-pro-eyebrow">{eyebrow}</span>
           <h2 className="ui-pro-title" id={`${uid}-title`}>{title}</h2>
           <p className="ui-pro-sub" id={`${uid}-sub`}>{subtitle}</p>
         </div>
@@ -193,6 +222,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             system gate). The rail has no focusable control, so the DOM order
             stays and only the paint order changes; see global.css. */}
         {showColourRail && <ProHarmonyPreview seed={seed} />}
+
+        {/* The caller's proof, in the rail's grid area. Painted between the head
+            and the price on a phone, because it is a single small picture and
+            not the tall strip the rail is. */}
+        {showProof && <div className="ui-pro-proof">{proof}</div>}
 
         <div className="ui-pro-body">
           {/* NO PRICE, NO OFFER — so the outage and its two ways out come
@@ -213,10 +247,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
           )}
           <ul className="ui-pro-list">
             {features.map((f) => (
-              <li className="ui-pro-li" key={f}>
-                <span className="ui-pro-tick"><Tick /></span>
-                <span>{f}</span>
-              </li>
+              <li className="ui-pro-li" key={f}>{f}</li>
             ))}
           </ul>
 
@@ -248,7 +279,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                     <span className="ui-pro-plan-main">
                       <span className="ui-pro-plan-id">
                         <span className="ui-pro-plan-name">{plan.label}</span>
-                        {save > 0 && <span className="ui-pro-plan-save"> · Save {save}%</span>}
+                        {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
                       </span>
                       <span className="ui-pro-plan-rate">
                         <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
@@ -270,16 +301,16 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
               clock, no countdown, no "offer ends". */}
           {settled && choice && !priceUnavailable && (
             <ol className="ui-pro-steps" aria-label="What happens next">
-              <li><strong>Today</strong> — create your account and confirm payment details.</li>
+              <li><strong>Today:</strong> create your account and confirm payment details.</li>
               {hasTrial ? (
                 <>
-                  <li><strong>Days 1&ndash;{choice.trialDays}</strong> — full Pro access. Nothing is charged.</li>
+                  <li><strong>Days 1 to {choice.trialDays}:</strong> full Pro access. Nothing is charged.</li>
                   <li>
-                    <strong>Day {choice.trialDays}</strong> — {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
+                    <strong>Day {choice.trialDays}:</strong> {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
                   </li>
                 </>
               ) : (
-                <li><strong>Then</strong> — {choice.totalLabel} {choice.cadence}, starting today.</li>
+                <li><strong>Then:</strong> {choice.totalLabel} {choice.cadence}, starting today.</li>
               )}
             </ol>
           )}
