@@ -709,6 +709,26 @@ function familiesOps(c, page) {
   return ops
 }
 
+/** The largest a scale specimen is drawn, in layout px. */
+export const SCALE_MAX_PX = 76
+
+/**
+ * The one factor every scale row is shrunk by (1 = true size). The cap is on the
+ * largest step, so a steep ratio keeps its proportions; the factor drops further
+ * only if the widest label would overflow the specimen column.
+ */
+export function scaleFactor(c, specW) {
+  const { d } = c
+  const maxPx = Math.max(1, ...c.ladder.map((s) => s.px))
+  let k = Math.min(1, SCALE_MAX_PX / maxPx)
+  for (const s of c.ladder) {
+    const isHeading = s.exp >= 1
+    const w = c.measure(s.name, face(isHeading ? d.headingWeight : d.bodyWeight, s.px, isHeading ? d.heading : d.body))
+    if (w * k > specW) k = specW / w
+  }
+  return k
+}
+
 function scaleOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
@@ -721,14 +741,14 @@ function scaleOps(c, page) {
     .forEach(([h, x]) => ops.push(caps(h, x, y, c.muted, { px: 7.5 }, c)))
   y += 10
   ops.push(hair(MARGIN, y, RIGHT, c.ink))
+  // One shared factor shrinks every row, so the steps keep their true proportions.
+  const k = scaleFactor(c, specW)
   for (const s of c.ladder) {
     const isHeading = s.exp >= 1
     const family = isHeading ? d.heading : d.body
     const weight = isHeading ? d.headingWeight : d.bodyWeight
-    // The row is clamped so a steep ratio cannot push it off the page, and shrunk
-    // until the label fits its column. The size column always carries the true value.
-    let shown = Math.min(s.px, 44)
-    while (shown > 10 && c.measure(s.name, face(weight, shown, family)) > specW) shown -= 2
+    // The size column always carries the true value.
+    const shown = round(s.px * k)
     const rowH = Math.max(36, Math.round(shown * 1.4))
     const base = y + rowH / 2 + shown * 0.33
     ops.push(text(s.name, cols.step, base, face(600, 10, d.body), c.ink))
@@ -740,7 +760,8 @@ function scaleOps(c, page) {
     ops.push(hair(MARGIN, y, RIGHT, c.rule))
   }
   y += 30
-  const note = `Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.`
+  const reduced = k < 1 ? 'Specimens are shown reduced so the rows fit the page; the size column is always the true value. ' : ''
+  const note = `${reduced}Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.`
   wrapText(note, 500, face(400, 10, d.body), c.measure, { maxLines: 4 })
     .forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
   y += 4 * 15 + 18

@@ -301,3 +301,35 @@ test('bookRaster never imports the Pro HTML generator or its templates', () => {
   assert.match(src, /await import\('jszip'\)/)
   assert.ok(!/^import .*jszip/m.test(src))
 })
+
+// ── The type scale page ─────────────────────────────────────────────────────
+
+const withRatio = (ratio, base = 16) => ({ ...DESIGN, typeScale: { ...DESIGN.typeScale, base, ratio } })
+const sizeOf = (font) => Number(/(\d+(?:\.\d+)?)px/.exec(font)[1])
+// The specimen column of the scale page: [ladder step, size it was drawn at].
+const specimens = (design) => {
+  const { pages, ctx } = planBookPages(design, opts)
+  const built = buildBookPages(design, opts).pages.find((p) => p.kind === 'scale')
+  assert.ok(pages.some((p) => p.kind === 'scale'))
+  const rows = ctx.ladder.map((s) => {
+    const op = built.ops.find((o) => o.op === 'text' && o.x === 52 + 270 && o.text === s.name)
+    assert.ok(op, `no specimen for ${s.name}`)
+    return { step: s, drawn: sizeOf(op.font) }
+  })
+  return { rows, text: texts(built).join(' ') }
+}
+
+test('scale rows share one factor: no 44px cap, the largest sits at 76, the note shows only when reduced', () => {
+  const steep = specimens(withRatio(1.618))
+  const maxPx = Math.max(...steep.rows.map((r) => r.step.px))
+  assert.ok(maxPx > 76, 'the steep scale is not steep enough to test the factor')
+  const k = 76 / maxPx
+  for (const r of steep.rows) assert.ok(Math.abs(r.drawn - r.step.px * k) < 0.02, `${r.step.name}: drawn at ${r.drawn}, expected ${r.step.px * k}`)
+  assert.ok(Math.max(...steep.rows.map((r) => r.drawn)) > 44, 'the old 44px cap is still in force')
+  assert.ok(/shown reduced/.test(steep.text), 'the reduced note is missing on a reduced scale')
+
+  const gentle = specimens(withRatio(1.067, 14))
+  assert.ok(Math.max(...gentle.rows.map((r) => r.step.px)) <= 76)
+  for (const r of gentle.rows) assert.equal(r.drawn, r.step.px, `${r.step.name} was reduced without need`)
+  assert.ok(!/shown reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
+})
