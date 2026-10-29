@@ -410,3 +410,12 @@ test('the plan is deterministic — two runs produce the same bytes', async () =
       `${file} is not byte-identical after a second run — the command is not idempotent`)
   }
 })
+
+test('queue-limits tells the founder to deploy the indexes and run the backfill before applying it', () => {
+  const patch = GATED_PATCHES.find((p) => p.id === 'queue-limits')
+  assert.match(patch.before, /firebase deploy --only firestore:indexes/)
+  assert.match(patch.before, /scripts\/backfill-submitted-at\.mjs/)
+  assert.ok(patch.before.indexOf('firestore:indexes') < patch.before.indexOf('backfill-submitted-at'), 'indexes first, then the backfill')
+  assert.ok(fs.existsSync(path.join(ROOT, 'scripts/backfill-submitted-at.mjs')), 'the script the note names exists')
+  assert.equal(read('scripts/apply-gated-patches.mjs').includes('patch.before'), true, 'the applier prints the note')
+})

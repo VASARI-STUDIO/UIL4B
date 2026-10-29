@@ -408,6 +408,11 @@ export const GATED_PATCHES = [
       + 'queue, at most one every 30 seconds and ten of each kind per 24 hours, and the queue '
       + 'is ordered on the time the server received each one, which the sender cannot choose',
     files: ['firestore.rules', 'src/utils/communityLimits.js'],
+    before:
+      '1) deploy the new indexes: firebase deploy --only firestore:indexes, and wait for them to '
+      + 'finish building. 2) run node --env-file=.env.local scripts/backfill-submitted-at.mjs, check '
+      + 'the list, then run it again with --write --all-statuses, so items already queued keep '
+      + 'their place once the queue is ordered on submittedAt. 3) then apply this',
     parts: [
       {
         name: 'verified, counted, server-stamped posts',

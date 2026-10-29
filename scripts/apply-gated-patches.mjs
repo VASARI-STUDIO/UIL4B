@@ -72,6 +72,7 @@ function describe() {
     out(`     ${patch.grants}.`)
     out(`     files: ${patch.files.join(', ')}`)
     out(`     from:  ${patch.source}`)
+    if (patch.before) out(`     FIRST: ${patch.before}.`)
     if (patch.notCovered) out(`     NOTE:  ${patch.notCovered}`)
     out()
   }
