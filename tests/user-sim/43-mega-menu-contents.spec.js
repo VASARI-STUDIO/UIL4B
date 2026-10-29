@@ -110,6 +110,46 @@ async function settle(page) {
   ))
 }
 
+/** The computed font-family of the site's two faces, read off probes that use the tokens. */
+function fontFaces(page) {
+  return page.evaluate(() => {
+    const read = (token) => {
+      const el = document.createElement('span')
+      el.style.fontFamily = `var(${token})`
+      document.body.appendChild(el)
+      const family = getComputedStyle(el).fontFamily
+      el.remove()
+      return family
+    }
+    return { sans: read('--font'), mono: read('--mono') }
+  })
+}
+
+/**
+ * Every text node under `rootSelector` whose parent computes to the mono face,
+ * as "tag.class: text". The export preview (.pnav-prev) is a picture of a
+ * printed page and is left out.
+ */
+async function monoText(page, rootSelector) {
+  const { mono } = await fontFaces(page)
+  return page.evaluate(({ rootSelector: sel, mono: monoFamily }) => {
+    const out = []
+    for (const root of document.querySelectorAll(sel)) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const text = (n.textContent || '').trim()
+        const el = n.parentElement
+        if (!text || !el || el.closest('.pnav-prev')) continue
+        const family = getComputedStyle(el).fontFamily
+        if (family === monoFamily || /mono|monospace|consolas|menlo/i.test(family)) {
+          out.push(`${el.tagName.toLowerCase()}.${el.className}: ${text.slice(0, 40)}`)
+        }
+      }
+    }
+    return out
+  }, { rootSelector, mono })
+}
+
 async function openWithPointer(page, name) {
   await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByRole('region', { name: `${name} menu` })).toBeVisible()
@@ -240,24 +280,56 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   })
 
 
-  // The App file's group labels (line 135) are one quiet mono caption in the
-  // faint ink, sentence case, with no rule — and its rows carry no category
-  // colour. There are no hue rules.
-  test('group labels are the file\'s quiet mono captions: one colour, no rule, sentence case', async ({ page }) => {
+  // Group labels are the site's Label role (mono retirement, card 539701d2f0):
+  // 13px, weight 500, in the body face, sentence case, untracked, one faint ink,
+  // with no rule. Rows carry no category colour in the label. There are no hue rules.
+  test('group labels are 13px/500 quiet captions in the body face: one colour, no rule, sentence case', async ({ page }) => {
     watch(page, 'a scanner trying to tell six columns apart')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
+    const faces = await fontFaces(page)
     const labels = await page.locator('#pnav-mega .pnav-col-label').evaluateAll((els) => els.map((el) => {
       const cs = getComputedStyle(el)
-      return { color: cs.color, size: cs.fontSize, transform: cs.textTransform, rule: getComputedStyle(el, '::before').content }
+      return {
+        text: el.textContent, color: cs.color, size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily,
+        transform: cs.textTransform, spacing: cs.letterSpacing, rule: getComputedStyle(el, '::before').content,
+      }
     }))
     // Signed out, so a group made only of soon tools is not drawn.
     expect(labels.length).toBeGreaterThanOrEqual(5)
     expect(new Set(labels.map((l) => l.color)).size).toBe(1)
     for (const l of labels) {
-      expect(l.size).toBe('9.5px')
+      expect(l.size, `${l.text} is not 13px`).toBe('13px')
+      expect(l.weight, `${l.text} is not weight 500`).toBe('500')
+      expect(l.family, `${l.text} is not in the body face`).toBe(faces.sans)
+      expect(l.family, `${l.text} is in the mono face`).not.toBe(faces.mono)
       expect(l.transform).toBe('none')
+      expect(['normal', '0px'], `${l.text} is tracked`).toContain(l.spacing)
+      // "AI" is an acronym; anything longer typed in capitals is not sentence case.
+      expect(l.text === l.text.toUpperCase() && l.text.length > 3, `${l.text} is typed in capitals`).toBe(false)
       expect(['none', 'normal']).toContain(l.rule)
+    }
+  })
+
+  // Mono stays only for a code value, and the menus show none. The export
+  // preview in the Create pane is a picture of a printed page (aria-hidden, its
+  // own hex chips), so it is the one place left out.
+  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 11px', async ({ page }) => {
+    watch(page, 'a visitor reading all three menus')
+    await go(page, MENU_ROUTE)
+    for (const name of TRIGGERS) {
+      await page.keyboard.press('Escape')
+      await openWithPointer(page, name)
+      expect(await monoText(page, '.pnav-menu'), `mono text in the ${name} menu`).toEqual([])
+      const badges = await page.locator('.pnav-menu .soon-badge, .pnav-menu .beta-badge').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      for (const b of badges) {
+        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.transform).toBe('none')
+        expect(['normal', '0px']).toContain(b.spacing)
+      }
     }
   })
 
@@ -779,5 +851,47 @@ test.describe('layout S-B: the phone sheet is three segments over a 2-column gri
       await expect(all).toHaveText(/View all .* tools/)
       expect((await all.boundingBox()).height).toBeGreaterThanOrEqual(44)
     }
+  })
+
+  test('no text in the sheet is set in the mono face, and its group labels and badges follow the roles', async ({ page }) => {
+    watch(page, 'a phone visitor reading every tab')
+    await openSheet(page)
+    const faces = await fontFaces(page)
+    for (const name of ['Create', 'Discover', 'Learn']) {
+      await segs(page).filter({ hasText: name }).click()
+      await expect(segs(page).filter({ hasText: name })).toHaveAttribute('aria-expanded', 'true')
+      expect(await monoText(page, '.pnav-sheet'), `mono text in the ${name} tab`).toEqual([])
+      const heads = await page.locator('.pnav-sheet .pnav-acc-colhead').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      expect(heads.length).toBeGreaterThan(0)
+      for (const h of heads) {
+        expect(h.size, `${h.text} is not 13px`).toBe('13px')
+        expect(h.weight, `${h.text} is not weight 500`).toBe('500')
+        expect(h.family).toBe(faces.sans)
+        expect(h.transform).toBe('none')
+        expect(['normal', '0px']).toContain(h.spacing)
+      }
+      const badges = await page.locator('.pnav-sheet .beta-badge, .pnav-sheet .soon-badge').evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
+      }))
+      for (const b of badges) {
+        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.transform).toBe('none')
+        expect(['normal', '0px']).toContain(b.spacing)
+      }
+    }
+    // The Appearance label sits under the tabs, in every tab.
+    const appearance = await page.locator('.pnav-sheet .pnav-sheet-theme .pnav-pop-head').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { size: cs.fontSize, weight: cs.fontWeight, family: cs.fontFamily, transform: cs.textTransform, spacing: cs.letterSpacing }
+    })
+    expect(appearance.size).toBe('13px')
+    expect(appearance.weight).toBe('500')
+    expect(appearance.family).toBe(faces.sans)
+    expect(appearance.transform).toBe('none')
+    expect(['normal', '0px']).toContain(appearance.spacing)
   })
 })

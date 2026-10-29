@@ -2876,7 +2876,7 @@ html.lenis{scroll-behavior:auto!important}
 
 /* ── The account popover: kept, on the file's materials ─────────────────── */
 .pnav .pnav-pop{position:absolute;top:calc(100% + 10px);right:0;z-index:130;width:272px;max-width:calc(100vw - 24px);padding:7px;background:var(--card);border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-2xl);box-shadow:0 30px 70px -30px rgba(var(--shade-rgb),var(--shade-a))}
-.pnav-pop-head{margin:0;padding:8px 10px 4px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:rgba(var(--ink-rgb),var(--ink-faint))}
+.pnav-pop-head{margin:0;padding:8px 10px 4px;font:500 13px/1.3 var(--font);letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-faint))}
 .pnav-pop-row{display:flex;flex-direction:column;gap:8px;padding:6px 6px 10px}
 .pnav-pop-row-label{font-size:13px;font-weight:560;color:rgb(var(--ink-rgb))}
 .pnav-pop-sep{height:1px;margin:4px 6px;background:rgba(var(--ink-rgb),.08)}
@@ -2887,13 +2887,13 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item--danger{color:var(--err-strong,var(--err))}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong,var(--err))}
 .pnav-pop-id{display:flex;align-items:center;gap:12px;padding:10px}
-.pnav-pop-avatar{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--mono);font-size:13px;font-weight:600}
+.pnav-pop-avatar{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--font);font-size:13px;font-weight:600}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:560;color:rgb(var(--ink-rgb));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-pop-tag{padding:3px 6px;border-radius:var(--radius-xs);background:var(--accent-bg);color:var(--accent-mid);font-family:var(--mono);font-size:8.5px;font-style:normal;letter-spacing:.1em;text-transform:uppercase}
+.pnav-pop-tag{padding:2px 8px;border-radius:var(--radius-xs);background:var(--accent-bg);color:var(--accent-mid);font:500 11px/1 var(--font);font-style:normal;letter-spacing:0;text-transform:none}
 .pnav-pop-id-email{font-size:12.5px;color:rgba(var(--ink-rgb),var(--ink-dim));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
-.pnav-pop-acct-avatar{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--mono);font-size:10px;font-weight:600}
+.pnav-pop-acct-avatar{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);object-fit:cover;background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--font);font-size:10px;font-weight:600}
 .pnav-pop-acct-text{display:flex;flex-direction:column;gap:1px;min-width:0}
 .pnav-pop-acct-name{font-size:13.5px;color:rgba(var(--ink-rgb),.86);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct-email{font-size:12px;color:rgba(var(--ink-rgb),var(--ink-dim));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2935,8 +2935,8 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-colstack:last-child{border-right:0}
 .pnav-col{margin-bottom:13px}
 .pnav-col:last-child{margin-bottom:0}
-/* Group labels (App line 135): 9.5px Geist Mono, .16em, sentence case, faint. */
-.pnav-col-label{display:block;margin:0;padding:0 6px 8px;font-family:var(--mono);font-size:9.5px;font-weight:400;letter-spacing:.16em;color:rgba(var(--ink-rgb),var(--ink-faint))}
+/* Group labels: the Label role. 13px Geist, 500, sentence case, untracked, faint. */
+.pnav-col-label{display:block;margin:0;padding:0 6px 8px;font:500 13px/1.3 var(--font);letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-faint))}
 .pnav-toollist{list-style:none;display:grid;gap:1px;margin:0;padding:0}
 /* A row (App lines 138-142): ONE line. A 26px neutral tile, a 13.5px label,
    a badge on the right. No description and no category colour. Hover and
@@ -2977,11 +2977,11 @@ html.lenis{scroll-behavior:auto!important}
 /* Soon: the label drops to ink-faint (App line 2039), still AA: #121418 at
    .72 on #F5F5F2 is 7.05:1, #EFEEEA at .55 on #060607 is 5.55:1. */
 .pnav-tool[data-soon] .pnav-tool-label{color:rgba(var(--ink-rgb),var(--ink-faint))}
-/* Badges (App line 141): 8.5px mono at .1em, 3px 6px, 8px radius, no border.
+/* Badges: the Badge role. 11px Geist, 500, sentence case, 2px 8px, 8px radius, no border.
    Soon is neutral; Beta is the tertiary #E8C547 wash, its label in the file's
    tertiaryText (the tertiary walked 58% toward #0B0C0E in light). */
-.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .soon-badge,.pnav-acc-link .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
-.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .beta-badge{flex:0 0 auto;margin:0;border:0;font-family:var(--mono);font-size:8.5px;font-weight:400;letter-spacing:.1em;line-height:1.2;text-transform:uppercase}
+.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .soon-badge,.pnav-acc-link .beta-badge{padding:2px 8px;border-radius:var(--radius-xs)}
+.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .beta-badge{flex:0 0 auto;margin:0;border:0;font-family:var(--font);font-size:11px;font-weight:500;letter-spacing:0;line-height:1;text-transform:none}
 .pnav-tool .soon-badge{background:rgba(var(--ink-rgb),.07);color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-tool .beta-badge,.pnav-acc-link .beta-badge{background:color-mix(in srgb,var(--tertiary) 16%,transparent);color:var(--tertiary-text)}
 
@@ -3012,13 +3012,13 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-dcount{display:grid;align-content:start;gap:7px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-dcount-strip{display:flex;height:22px;border-radius:var(--radius-xs);overflow:hidden}
 .pnav-dcount-strip > span{flex:1}
-.pnav-dcount-n{font-family:var(--mono);font-size:15px;color:rgb(var(--ink-rgb))}
+.pnav-dcount-n{font-family:var(--font);font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0;color:rgb(var(--ink-rgb))}
 .pnav-dcount-l{font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
 /* Learn: every published guide with its mono reading time (App lines 192-200). */
 .pnav-guides{list-style:none;display:grid;gap:2px;margin:0;padding:0}
 .pnav-guide{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid rgba(var(--ink-rgb),.06)}
 .pnav-guide-label{flex:1 1 auto;min-width:0;font-size:12.5px;color:rgba(var(--ink-rgb),.86);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-guide-mins{font-family:var(--mono);font-size:9.5px;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
+.pnav-guide-mins{font:400 11px/1.45 var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
 /* The foot (App lines 209-214): the section's own line and its view-all in
    the accent's text member (the file's accentMid). */
 .pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 15px;border-top:1px solid rgba(var(--ink-rgb),.06)}
@@ -3097,7 +3097,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-panel{padding:0 0 14px}
 .pnav-acc-cta{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:18px 4px 0;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;text-decoration:none;cursor:pointer}
 .pnav-acc-cta:hover{color:var(--accent-ink);text-decoration:none}
-.pnav-acc-colhead{margin:0;padding:14px 4px 4px;font-size:13px;font-weight:600;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-acc-colhead{margin:0;padding:14px 4px 4px;font-family:var(--font);font-size:13px;font-weight:500;line-height:1.3;letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-acc-col:first-child .pnav-acc-colhead{padding-top:10px}
 .pnav-acc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px}
 .pnav-acc-grid .pnav-acc-link:last-child:nth-child(odd){grid-column:1/-1}
