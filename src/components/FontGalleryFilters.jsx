@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import useModalDialog from '../hooks/useModalDialog'
 import { fontStack, loadFont, bodyWeight } from '../utils/googleFonts'
 
@@ -46,13 +46,69 @@ export function ViewToggle({ view, onChange }) {
   )
 }
 
+// A downward drag on the sheet's head closes it when it goes this far (px) or
+// this fast (px per ms); anything less snaps back. Moves under DRAG_JITTER never
+// count as a flick, so a tap that wobbles cannot close the sheet.
+const DRAG_CLOSE_DY = 96
+const DRAG_CLOSE_SPEED = 0.5
+const DRAG_JITTER = 12
+
 // `faces` maps a category id to the catalogue family that stands for it, so
-// each category pill is drawn in a face from its own class.
+// each category pill is drawn in a face from its own class. `previewFirst` puts
+// the preview text field above Category, where the phone keyboard leaves it in
+// view.
 export default function FiltersSheet({
   onClose, cats, category, onCategory, sorts, sort, onSort, size, sizeMin, sizeMax, onSize,
-  view, onView, previewText, onPreviewText, faces, count, canClear, onClear,
+  view, onView, previewText, onPreviewText, faces, count, canClear, onClear, previewFirst,
 }) {
   const ref = useModalDialog(onClose)
+  const drag = useRef(null)
+
+  // The drag is a phone gesture: from 768px the sheet is a centred dialog.
+  const onDragStart = (e) => {
+    if ((e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button')) return
+    if (!window.matchMedia('(max-width: 767px)').matches) return
+    const sheet = e.currentTarget.closest('.fg-sheet')
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { id: e.pointerId, y: e.clientY, t: e.timeStamp, dy: 0, sheet }
+    sheet.classList.add('is-dragging')
+  }
+  const onDragMove = (e) => {
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    d.dy = Math.max(0, e.clientY - d.y)
+    d.sheet.style.setProperty('--fg-drag', `${d.dy}px`)
+  }
+  const endDrag = (e, cancelled) => {
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    drag.current = null
+    d.sheet.classList.remove('is-dragging')
+    const speed = d.dy / Math.max(1, e.timeStamp - d.t)
+    if (!cancelled && (d.dy > DRAG_CLOSE_DY || (d.dy > DRAG_JITTER && speed > DRAG_CLOSE_SPEED))) {
+      onClose()
+      return
+    }
+    d.sheet.style.removeProperty('--fg-drag')
+  }
+
+  const previewGroup = (
+    <div className="fg-sheet-group">
+      <label className="fg-sheet-k" htmlFor="fg-sheet-preview">Preview text</label>
+      <input
+        id="fg-sheet-preview"
+        className="fg-sheet-field"
+        type="text"
+        value={previewText}
+        maxLength={72}
+        spellCheck="false"
+        enterKeyHint="done"
+        placeholder="Type your own words"
+        onChange={e => onPreviewText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+      />
+    </div>
+  )
 
   useEffect(() => {
     Object.values(faces).forEach(font => { if (font) loadFont(font.family, [bodyWeight(font)]) })
@@ -62,17 +118,26 @@ export default function FiltersSheet({
     <div className="fg-sheet-layer">
       <div className="fg-sheet-scrim" aria-hidden="true" onClick={onClose} />
       <div className="fg-sheet" role="dialog" aria-modal="true" aria-label="Filters" tabIndex={-1} ref={ref}>
-        <span className="fg-sheet-grab" aria-hidden="true" />
-        <div className="fg-sheet-head">
-          <h2 className="fg-sheet-title">Filters</h2>
-          <button type="button" className="fg-sheet-x" onClick={onClose} aria-label="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+        <div
+          className="fg-sheet-drag"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={e => endDrag(e, false)}
+          onPointerCancel={e => endDrag(e, true)}
+        >
+          <span className="fg-sheet-grab" aria-hidden="true" />
+          <div className="fg-sheet-head">
+            <h2 className="fg-sheet-title">Filters</h2>
+            <button type="button" className="fg-sheet-x" onClick={onClose} aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="fg-sheet-body">
+          {previewFirst && previewGroup}
           <div className="fg-sheet-group" role="group" aria-labelledby="fg-sheet-cat">
             <span className="fg-sheet-k" id="fg-sheet-cat">Category</span>
             <div className="fg-sheet-cats">
@@ -142,19 +207,7 @@ export default function FiltersSheet({
             </div>
           </div>
 
-          <div className="fg-sheet-group">
-            <label className="fg-sheet-k" htmlFor="fg-sheet-preview">Preview text</label>
-            <input
-              id="fg-sheet-preview"
-              className="fg-sheet-field"
-              type="text"
-              value={previewText}
-              maxLength={72}
-              spellCheck="false"
-              placeholder="Type your own words"
-              onChange={e => onPreviewText(e.target.value)}
-            />
-          </div>
+          {!previewFirst && previewGroup}
         </div>
 
         <div className="fg-sheet-foot">

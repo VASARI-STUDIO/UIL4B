@@ -85,7 +85,7 @@ const MAX_COMPARE = 3
 const LAYOUTS = {
   wide: { name: 96, floor: 72, ratio: 2.5, grid: 56 },
   tablet: { name: 64, floor: 48, ratio: 3.125, grid: 40 },
-  phone: { name: 40, floor: 32, ratio: 3, grid: 28 },
+  phone: { name: 40, floor: 32, ratio: 3, grid: 24 },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
@@ -167,11 +167,11 @@ function queueFit(job, now) {
 // is written as `--fg-fit`, which the name's font-size multiplies, so the
 // natural width is measured at fit 1 each time. The name is only in the DOM
 // once its face is confirmed, so it is measured in the right face.
-// `off` is the grid view, where a name wraps in its cell instead of shrinking.
-function useFitName(active, label, size, floor, off) {
+// In the grid view `size` is the tile's name size and the cell's width is the
+// room, so a long name shrinks to its cell rather than breaking mid-word.
+function useFitName(active, label, size, floor) {
   const ref = useRef(null)
   useLayoutEffect(() => {
-    if (off) return undefined
     const el = ref.current
     const box = el && el.parentElement
     if (!el || !box) return undefined
@@ -214,7 +214,7 @@ function useFitName(active, label, size, floor, off) {
       if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
       if (ro) ro.disconnect()
     }
-  }, [active, label, size, floor, off])
+  }, [active, label, size, floor])
   return ref
 }
 
@@ -318,14 +318,19 @@ function CloseIcon() {
 // along the bottom, and a compare button on the right. The pangram and the run
 // of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
 // faded in (hover or keyboard focus), so showing it never moves a box.
-function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, floor, tiles }) {
+function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
   const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
   const weights = font.variants.length
   const typed = previewText.trim()
-  const nameRef = useFitName(ready, `${typed}|${font.family}`, nameSize, floor, tiles)
+  const nameRef = useFitName(
+    ready,
+    `${typed}|${font.family}`,
+    tiles ? gridName : nameSize,
+    tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
+  )
   const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
   // With the reader's own words in the name, the family name moves to the meta
   // line so it is still on the band.
@@ -956,6 +961,8 @@ export default function FontGallery({ onCopy, toast }) {
   }, [trayShown])
 
   const tiles = view === 'grid'
+  // The sheet is a phone and tablet surface, so growing to the wide layout closes it.
+  if (mode === 'wide' && sheetOpen) setSheetOpen(false)
   const sheetShown = sheetOpen && mode !== 'wide'
   // One family stands for each category in the Filters sheet, so its pill is set
   // in a face from that class.
@@ -964,8 +971,17 @@ export default function FontGallery({ onCopy, toast }) {
     for (const f of galleryCatalog) if (!out[f.category]) out[f.category] = f
     return out
   }, [galleryCatalog])
-  const canClear = category !== 'all' || query.trim() !== ''
+  // The empty state clears what narrows the list (search and category); the
+  // sheet's own Clear puts back the sheet's controls and leaves the search alone.
   const clearFilters = () => { setQuery(''); setCategory('all') }
+  const sheetDirty = category !== 'all' || sort !== 'popularity' || sizeOverride !== null || view !== 'list' || previewText !== ''
+  const clearSheet = () => {
+    setCategory('all')
+    setSort('popularity')
+    setSizeOverride(null)
+    setView('list')
+    setPreviewText('')
+  }
 
   const layout = LAYOUTS[mode]
   const nameSize = sizeOverride ?? layout.name
@@ -1139,6 +1155,7 @@ export default function FontGallery({ onCopy, toast }) {
                   onToggleCompare={toggleCompare}
                   previewText={previewText}
                   nameSize={nameSize}
+                  gridName={gridName}
                   floor={floor}
                   tiles={tiles}
                 />
@@ -1160,7 +1177,7 @@ export default function FontGallery({ onCopy, toast }) {
       </section>
 
       {trayShown && (
-        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Fonts to compare">
+        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Fonts to compare" aria-live="polite">
           {mode === 'wide' ? (
             <>
               <span className="fg-compare-tray-label">Comparing</span>
@@ -1240,8 +1257,9 @@ export default function FontGallery({ onCopy, toast }) {
           onPreviewText={setPreviewText}
           faces={faces}
           count={filtered.length}
-          canClear={canClear}
-          onClear={clearFilters}
+          canClear={sheetDirty}
+          onClear={clearSheet}
+          previewFirst={mode === 'phone'}
         />
       )}
 

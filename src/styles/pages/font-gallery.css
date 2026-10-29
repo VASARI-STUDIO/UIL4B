@@ -673,7 +673,8 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-
    the tab bar (its bottom edge is the bar's top edge); toasts and the feedback
    button ride above it through `html.fg-tray`. 390 and 768 show the names and
    Compare N; 1440 shows chips with ×, Clear and Compare N. */
-.fg-page { --fg-tray-h: 56px; }
+.fg-page,
+html.fg-tray { --fg-tray-h: 60px; }
 .fg-page .fg-compare-tray {
   position: fixed;
   left: 0;
@@ -709,17 +710,25 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-
 .fg-page .fg-compare-tray .fg-more-btn { min-height: 44px; border-radius: var(--radius-pill); }
 .fg-page .fg-compare-tray .fg-more-btn:disabled,
 .fg-page .fg-sheet-btn:disabled { opacity: .45; cursor: not-allowed; }
-.fg-page .fg-compare-chip { flex: 0 0 auto; border-radius: var(--radius-pill); }
+.fg-page .fg-compare-chip { flex: 0 0 auto; min-height: 36px; border-radius: var(--radius-pill); }
+@media (pointer: coarse) { .fg-page .fg-compare-chip { min-height: 44px; } }
 .fg-page .fg-compare-chip-name { font-family: var(--fg-ff, var(--font)); font-size: 14px; font-weight: 400; }
 .fg-page .fg-compare-tray-names { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.3; color: var(--t1); }
 .fg-page .fg-compare-tray-name { font-family: var(--fg-ff, var(--font)); font-size: 15px; color: var(--t0); }
 .fg-page .fg-compare-head-actions { display: flex; align-items: center; gap: 8px; }
 .fg-page .fg-compare-clear { border-radius: var(--radius-pill); }
-html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 56px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
-html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 56px) + 20px + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 60px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 60px) + 20px + env(safe-area-inset-bottom, 0px)); }
+/* The page and the scroll snap both leave room for the tray, so the last band
+   and a focused control are never hidden behind it. */
+html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 @media (max-width: 767px) {
-  html.fg-tray.has-tabbar body .toast { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 56px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
-  html.fg-tray.has-tabbar body .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 56px) + 14px + env(safe-area-inset-bottom, 0px)); }
+  /* The body already reserves the tab bar, so only the tray is added here. */
+  html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px); }
+  html.fg-tray.has-tabbar { scroll-padding-bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + env(safe-area-inset-bottom, 0px) + 8px); }
+  html.fg-tray.has-tabbar body .toast { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+  html.fg-tray.has-tabbar body .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 14px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── The list / grid toggle ───────────────────────────────────────────────── */
@@ -760,18 +769,25 @@ html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 56px) + 2
 .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) {
   --fg-y: var(--fg-y-max);
   --fg-line: calc(var(--fg-gname, 56px) * 2.2);
-  --fg-right: 60px;
+  --fg-right: 64px;
   height: calc(var(--fg-gname, 56px) * 2.2 + var(--fg-y) * 2 + 30px);
   border-right: 1px solid var(--border);
 }
+@media (max-width: 767px) {
+  .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) { --fg-right: 58px; }
+}
 .fg-page .fg-grid--tiles .fg-card-name {
-  font-size: var(--fg-gname, 56px);
+  font-size: calc(var(--fg-gname, 56px) * var(--fg-fit, 1));
   line-height: 1.1;
   white-space: normal;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
   max-height: 2.2em;
   overflow: hidden;
 }
+/* The meta line runs to the cell's edge, past the compare button's column. */
+.fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); text-overflow: ellipsis; white-space: nowrap; }
 .fg-page .fg-grid--tiles .fg-card-preview { overflow: hidden; }
 .fg-page .fg-grid--tiles .fg-card-reveal { display: none; }
 .fg-page .fg-grid--tiles .fg-card-compare { right: 10px; top: var(--fg-y); }
@@ -788,24 +804,35 @@ html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 56px) + 2
   bottom: 0;
   display: flex;
   flex-direction: column;
-  max-height: min(92dvh, 720px);
+  max-height: min(94dvh, 800px);
   box-sizing: border-box;
   background: var(--card);
   border-top: 1px solid var(--bh);
   border-radius: 22px 22px 0 0;
   animation: fg-sheet-up var(--dur-3) var(--ease-entrance);
 }
+/* On a phone the sheet follows a downward drag of its head (`--fg-drag`, set by
+   the component) and eases back when let go; while the finger is down it tracks
+   with no lag. It stops at 480px wide so a landscape phone does not stretch it. */
+@media (max-width: 767px) {
+  .fg-page .fg-sheet { max-width: 480px; margin-inline: auto; transform: translateY(var(--fg-drag, 0px)); transition: transform 200ms var(--ease-standard); }
+  .fg-page .fg-sheet.is-dragging { transition: none; }
+}
 .fg-page .fg-sheet:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 @keyframes fg-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 @media (min-width: 768px) {
-  .fg-page .fg-sheet { inset: 0; margin: auto; height: fit-content; width: min(480px, calc(100vw - 48px)); border: 1px solid var(--bh); border-radius: var(--radius-3xl); animation: fg-fade var(--dur-2) var(--ease-entrance); }
+  .fg-page .fg-sheet { inset: 0; margin: auto; height: fit-content; max-height: min(92dvh, 820px); width: min(480px, calc(100vw - 48px)); border: 1px solid var(--bh); border-radius: var(--radius-3xl); animation: fg-fade var(--dur-2) var(--ease-entrance); }
 }
 .fg-page .fg-sheet-grab { display: block; flex: 0 0 auto; width: 36px; height: 4px; margin: 8px auto 0; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
 @media (min-width: 768px) { .fg-page .fg-sheet-grab { display: none; } }
-.fg-page .fg-sheet-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px 4px; }
+/* The drag zone: the grab bar and the head, at least a thumb tall. It only
+   claims touch on a phone, where it can be dragged. */
+.fg-page .fg-sheet-drag { flex: 0 0 auto; min-height: 44px; }
+@media (max-width: 767px) { .fg-page .fg-sheet-drag { touch-action: none; } }
+.fg-page .fg-sheet-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px)); }
 .fg-page .fg-sheet-title { margin: 0; font-size: 20px; font-weight: 560; letter-spacing: -.02em; line-height: 1.2; }
 .fg-page .fg-sheet-x { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--t0); background: transparent; border: 1px solid var(--bh); border-radius: var(--radius-pill); cursor: pointer; transition: background-color var(--dur-1) var(--ease-standard); }
-.fg-page .fg-sheet-body { display: grid; flex: 1 1 auto; gap: 24px; min-height: 0; padding: 12px 20px 20px; overflow-y: auto; overscroll-behavior: contain; }
+.fg-page .fg-sheet-body { display: grid; flex: 1 1 auto; gap: 20px; min-height: 0; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 20px max(20px, env(safe-area-inset-left, 0px)); overflow-y: auto; overscroll-behavior: contain; }
 .fg-page .fg-sheet-group { display: grid; gap: 10px; min-width: 0; }
 .fg-page .fg-sheet-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .fg-page .fg-sheet-k { font-size: 13px; line-height: 1.3; color: var(--t1); }
@@ -845,16 +872,17 @@ html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 56px) + 2
 .fg-page .fg-sheet-btn:not(:disabled):active { transform: scale(.97); }
 .fg-page .fg-sheet-range { width: 100%; height: 44px; margin: 0; accent-color: var(--t0); }
 .fg-page .fg-sheet-field { box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; font-family: var(--font); font-size: 16px; color: var(--t0); background: var(--inp); border: 1px solid var(--bh); border-radius: var(--radius-l); }
+.fg-page .fg-sheet-field { scroll-margin-block: 24px; }
 .fg-page .fg-sheet-field::placeholder { color: var(--t2); }
-.fg-page .fg-sheet-foot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); }
+.fg-page .fg-sheet-foot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--border); }
 .fg-page .fg-sheet-btn { min-height: 48px; }
 
 /* Reduced motion: the sheet fades in and the press scale is dropped. */
-html[data-reduced-motion="true"] .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; }
+html[data-reduced-motion="true"] .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
 html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
 html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; }
+  html:not([data-reduced-motion="false"]) .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
   html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
   html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
 }
