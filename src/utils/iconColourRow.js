@@ -36,7 +36,12 @@ export const normaliseGround = (v) => (GROUNDS.includes(v) ? v : GROUND_DEFAULT)
 
 // The ground colours the contrast note measures against. `page` is the theme's own
 // page ground (--bg-0). The checker is measured on its darker square, the harder case.
-const GROUND_HEX = Object.freeze({ light: '#EDEDF0', dark: '#0E0E11', checker: '#D9D9DE' })
+// Light and Dark are each at least 1.2:1 from the page ground they share a theme with
+// (Light #DEDEE2 against #F5F5F2 is 1.23:1, Dark #202024 against #060607 is 1.25:1),
+// so choosing the matching fixed ground visibly changes the stage. White cannot do
+// that on the light page (1.09:1). Keep these in step with the swatch and stage
+// classes in icon-emoji-library.css and library.css; the unit test compares them.
+const GROUND_HEX = Object.freeze({ light: '#DEDEE2', dark: '#202024', checker: '#D9D9DE' })
 const PAGE_HEX = Object.freeze({ light: '#F5F5F2', dark: '#060607' })
 export const groundHex = (ground, theme) => (
   ground === 'page' ? (theme === 'light' ? PAGE_HEX.light : PAGE_HEX.dark) : GROUND_HEX[ground]

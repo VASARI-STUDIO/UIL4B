@@ -243,7 +243,7 @@ const GROUND_OPTS = [
 ]
 
 // Arrow keys inside a radiogroup: focus moves to the neighbour (wrapping) and, unless
-// it only opens a popup, selects it. Keys from anything inside a radio's popup
+// it only opens a popup (marked data-opens-popup), selects it. Keys from anything inside a radio's popup
 // (a colour pad, a hex field) are left alone: only a focused radio steers.
 function steerRadios(e) {
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
@@ -254,7 +254,7 @@ function steerRadios(e) {
   e.preventDefault()
   const next = radios[(at + step + radios.length) % radios.length]
   next.focus()
-  if (!next.hasAttribute('aria-haspopup')) next.click()
+  if (!next.hasAttribute('data-opens-popup')) next.click()
 }
 
 // The customiser's opening values. One table feeds the first-open seeds, what
@@ -1027,7 +1027,7 @@ function nextCustomName(base, existing) {
 }
 
 // WCAG relative luminance of a hex colour (0 = black, 1 = white). Drives the
-// contrast-aware Stage swap so a black icon never disappears on #0E0E11.
+// contrast-aware Stage swap so a black icon never disappears on the Dark ground.
 function relativeLuminance(hex) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex || '')
   if (!m) return 1
@@ -1609,7 +1609,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // its own colours, so there is nothing to measure.
   const contrastNote = isColoredPack ? null : groundContrastNote({ ink: color || themeInk, ground, theme })
   const choice = colourChoice(color)
-  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: 'This colour' }[choice]
+  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: (color || '').toUpperCase() }[choice]
   // Until the stage has its own art, show the glyph the grid drew for this icon
   // (same data: URI, so nothing new is fetched) in the stage's box. The grid's tint
   // is the theme ink, so it only matches while the icon is drawn in that ink (no
@@ -1982,7 +1982,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         value={color || themeInk}
                         onChange={(v) => { setColor(v); markDirty() }}
                         triggerClassName="icust-chip"
-                        triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, tabIndex: choice === 'custom' ? 0 : -1 }}
+                        triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, 'aria-haspopup': undefined, 'data-opens-popup': '', tabIndex: choice === 'custom' ? 0 : -1 }}
                         triggerChildren={(
                           <>
                             <span className={`icust-chip-sw${choice === 'custom' ? '' : ' icust-chip-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
@@ -1994,7 +1994,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <p className="icust-colour-help">
                       {choice === 'text'
                         ? <>The file uses <code>currentColor</code>, so it takes the colour of the text around it.</>
-                        : 'The file sets this colour itself.'}
+                        : 'The file keeps this colour wherever you use it.'}
                     </p>
                   </>
                 )}

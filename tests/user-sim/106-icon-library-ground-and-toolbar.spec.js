@@ -84,6 +84,78 @@ test.describe('the customizer preview ground', () => {
   })
 })
 
+// THE GROUND SWITCH DOES NOT SHIFT THE CONTROLS, AND EACH GROUND IS A VISIBLE STEP.
+//
+// A contrast note that arrives (Black on the dark page) must not push the Colour
+// chips, and the fixed ground that matches the theme must be clearly distinct
+// from the page ground, so pressing it changes what the stage looks like.
+const luminance = (rgb) => {
+  const [r, g, b] = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map((v) => {
+    const c = Number(v) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const ratio = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+test.describe('the ground switch', () => {
+  for (const scheme of ['light', 'dark']) {
+    for (const width of [390, 1440]) {
+      test(`a contrast note does not move the colour chips, and the matching fixed ground is a visible step, ${scheme} ${width}`, async ({ browser }) => {
+        const touch = width <= 768
+        const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width, height: 900 }, hasTouch: touch, isMobile: touch })
+        const page = await ctx.newPage()
+        watch(page, `someone changing the ground at ${width}px in ${scheme} mode`)
+        await openCustomizer(page)
+        const chip = (name) => page.getByRole('radio', { name, exact: true })
+        const note = page.locator('.icust-ground-note')
+        const top = async (name) => (await chip(name).boundingBox()).y
+        const noteHeight = async () => (await note.boundingBox()).height
+
+        // The note's line is held with or without a note.
+        await chip('Text colour').click()
+        await expect(note.locator('p')).toHaveCount(0)
+        const quietChips = await top('Black')
+        const quietHeight = await noteHeight()
+        // The icon colour that is hard to see on this theme's page raises the note.
+        await chip(scheme === 'dark' ? 'Black' : 'White').click()
+        await expect(note.locator('p')).toBeVisible()
+        expect(await top('Black'), 'the contrast note moved the colour chips').toBe(quietChips)
+        expect(await noteHeight(), 'the note box changed height').toBe(quietHeight)
+        // Back to Text colour: still nothing moves.
+        await chip('Text colour').click()
+        await expect(note.locator('p')).toHaveCount(0)
+        expect(await top('Black')).toBe(quietChips)
+
+        // The help line is the same height for every choice.
+        const help = page.locator('.icust-colour-help')
+        const textHelp = (await help.boundingBox()).height
+        await chip('Black').click()
+        expect((await help.boundingBox()).height, 'the help line changed height with the choice').toBe(textHelp)
+
+        // The ground matching the theme is a clear step from the page, and Page is a split.
+        const grounds = page.getByRole('radiogroup', { name: 'Background' })
+        const pageBg = await page.evaluate(() => getComputedStyle(document.querySelector('.icust-stage')).backgroundColor)
+        await grounds.getByRole('radio', { name: scheme === 'dark' ? 'Dark' : 'Light', exact: true }).click()
+        const fixedBg = await page.evaluate(() => getComputedStyle(document.querySelector('.icust-stage')).backgroundColor)
+        expect(ratio(pageBg, fixedBg), `${pageBg} against ${fixedBg}`).toBeGreaterThanOrEqual(1.2)
+        const half = await page.evaluate(() => {
+          const sw = document.querySelector('.icust-ground-sw--page')
+          const own = getComputedStyle(sw)
+          const halfStyle = getComputedStyle(sw, '::before')
+          return { own: own.backgroundColor, other: halfStyle.backgroundColor, image: `${own.backgroundImage} ${halfStyle.backgroundImage}` }
+        })
+        expect(half.own, 'the Page swatch is one flat colour').not.toBe(half.other)
+        expect(half.image, 'the Page swatch paints a gradient').not.toMatch(/gradient/)
+        await ctx.close()
+      })
+    }
+  }
+})
+
 // COLOURED ICONS: NO WHITE BOX.
 //
 // A coloured-pack glyph sits in a transparent slot, and the customizer shows it
