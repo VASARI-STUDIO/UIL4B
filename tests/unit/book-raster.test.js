@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
@@ -351,4 +351,29 @@ test('the colophon wraps the project name to two lines at most, and never cuts i
   assert.equal(small.map((o) => o.text).join(' '), long, 'a long name was cut')
   assert.ok(small.every((o) => !o.text.includes('…')), 'an ellipsis was drawn')
   assert.ok(sizeOf(small[0].font) < 15, 'the size did not step down')
+})
+
+// ── The foot ────────────────────────────────────────────────────────────────
+
+test('an opening\'s section number ends above the folio, by its measured descent; one foot line for all pages', () => {
+  // A measurer that reports a deep descent (as a canvas does through
+  // actualBoundingBoxDescent): the numeral must rise by exactly that much.
+  const descent = 30
+  const measure = Object.assign((t, f) => estimateWidth(t, f), { descent: () => descent })
+  const book = build(DESIGN, { measure })
+  for (const page of book.pages.filter((p) => p.kind === 'opening')) {
+    const numeral = page.ops.find((o) => o.op === 'text' && o.text === page.num && sizeOf(o.font) === 380)
+    const folio = page.ops.find((o) => o.op === 'text' && o.text === String(page.folio).padStart(2, '0') && o.align === 'right')
+    assert.ok(numeral && folio, `${page.id}: numeral or folio missing`)
+    assert.equal(folio.y, FOOT_Y, `${page.id}: the folio is not on the shared foot line`)
+    const folioTop = folio.y - sizeOf(folio.font)
+    assert.ok(numeral.y + descent <= folioTop, `${page.id}: the numeral (bottom ${numeral.y + descent}) touches the folio (top ${folioTop})`)
+    assert.equal(numeral.y, FOOT_Y - 40 - descent)
+  }
+  // Without a canvas the descent is estimated, never zero.
+  const estimated = build().pages.find((p) => p.kind === 'opening')
+  assert.ok(estimated.ops.find((o) => o.op === 'text' && sizeOf(o.font) === 380).y < FOOT_Y - 40)
+  // Content pages foot on the same line.
+  const body = build().pages.find((p) => p.kind === 'palette')
+  assert.ok(body.ops.some((o) => o.op === 'text' && o.y === FOOT_Y && o.align === 'right'))
 })

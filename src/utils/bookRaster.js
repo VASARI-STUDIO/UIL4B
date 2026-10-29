@@ -60,6 +60,10 @@ const RIGHT = PAGE.width - MARGIN                   // 672
 const TOP = 84                                      // first line of a page's content
 const BOTTOM = 944                                  // last line of a page's content
 const FOOT_RULE = 972
+// The baseline of the credit and the folio, on content pages and openings alike.
+export const FOOT_Y = FOOT_RULE + 24
+// The gap between the bottom of an opening's big section number and the foot line.
+const GHOST_GAP = 40
 
 const BANDS_PER_PAGE = 5
 const BAND_H = 144
@@ -98,6 +102,17 @@ export function estimateWidth(text, font) {
   const px = Number(/(\d+(?:\.\d+)?)px/.exec(String(font))?.[1]) || 12
   const advance = String(font).includes('monospace') ? 0.62 : 0.55
   return [...String(text ?? '')].length * px * advance
+}
+
+/**
+ * How far `text` hangs below its baseline in `font`. A canvas measurer carries a
+ * `descent` (actualBoundingBoxDescent); the pure plan has none, so it estimates
+ * 3% of the size, which is more than a lining numeral overshoots.
+ */
+export function glyphDescent(measure, text, font) {
+  if (typeof measure?.descent === 'function') return Math.max(0, measure.descent(text, font))
+  const px = Number(/(\d+(?:\.\d+)?)px/.exec(String(font))?.[1]) || 12
+  return px * 0.03
 }
 
 function ellipsize(text, maxWidth, font, measure) {
@@ -369,9 +384,9 @@ function foot(c, page, fill, ruleColour, { rule = true } = {}) {
   const ops = []
   if (rule) ops.push(hair(MARGIN, FOOT_RULE, RIGHT, ruleColour))
   const left = c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book'
-  ops.push(text(left, MARGIN, FOOT_RULE + 24, face(400, 9, c.d.body), fill))
+  ops.push(text(left, MARGIN, FOOT_Y, face(400, 9, c.d.body), fill))
   const folio = page.kind === 'contents' ? ['i', 'ii', 'iii', 'iv', 'v', 'vi'][page.folio - 1] || String(page.folio) : pad2(page.folio)
-  ops.push(text(folio, RIGHT, FOOT_RULE + 24, face(600, 10, c.d.body), fill, { align: 'right' }))
+  ops.push(text(folio, RIGHT, FOOT_Y, face(600, 10, c.d.body), fill, { align: 'right' }))
   return ops
 }
 
@@ -505,7 +520,10 @@ function openingOps(c, page) {
   // The numeral is a ghost: large enough to read as a shape, close enough to the
   // field that it never competes with the title.
   const ghost = mixHex(page.ink, page.field, 0.16)
-  ops.push(text(page.num, RIGHT + 8, PAGE.height - 92, face(c.d.headingWeight, 380, d.heading), ghost, { align: 'right' }))
+  // Its bottom edge (baseline plus the descent the face really has) sits GHOST_GAP
+  // above the foot line, so it can never touch the folio.
+  const ghostFont = face(c.d.headingWeight, 380, d.heading)
+  ops.push(text(page.num, RIGHT + 8, FOOT_Y - GHOST_GAP - glyphDescent(c.measure, page.num, ghostFont), ghostFont, ghost, { align: 'right' }))
 
   const size = 64
   const titleLines = wrapText(page.title, 470, heading(c, size), c.measure, { maxLines: 2 })
@@ -513,9 +531,8 @@ function openingOps(c, page) {
   const abstractTop = 300 + (titleLines.length - 1) * 68 + 44
   const lines = wrapText(page.abstract, 360, bodyFont(c, 13, 400), c.measure, { maxLines: 6 })
   lines.forEach((line, i) => ops.push(text(line, MARGIN, abstractTop + i * 20, bodyFont(c, 13, 400), page.ink)))
-  const footY = PAGE.height - 48
-  ops.push(text(c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book', MARGIN, footY, face(400, 9, d.body), soft))
-  ops.push(text(pad2(page.folio), RIGHT, footY, face(600, 10, d.body), soft, { align: 'right' }))
+  ops.push(text(c.watermark ? 'Made with UIL4B — uil4b.com' : 'Design system book', MARGIN, FOOT_Y, face(400, 9, d.body), soft))
+  ops.push(text(pad2(page.folio), RIGHT, FOOT_Y, face(600, 10, d.body), soft, { align: 'right' }))
   return ops
 }
 
@@ -968,9 +985,16 @@ export async function ensureBookFonts(d) {
   return missing
 }
 
-const canvasMeasurer = (ctx) => (str, font) => {
-  ctx.font = font
-  return ctx.measureText(str).width
+const canvasMeasurer = (ctx) => {
+  const measure = (str, font) => {
+    ctx.font = font
+    return ctx.measureText(str).width
+  }
+  measure.descent = (str, font) => {
+    ctx.font = font
+    return ctx.measureText(str).actualBoundingBoxDescent || 0
+  }
+  return measure
 }
 
 function newCanvas() {
