@@ -1313,6 +1313,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // not the pack, not the theme (the Page ground follows the theme by itself).
   const [ground, setGround] = useState(readGround)
   const chooseGround = (g) => { setGround(g); writeGround(g) }
+  // The note's button unmounts once the contrast clears, so focus moves to the
+  // swatch it just checked rather than falling to the page.
+  const groundGroupRef = useRef(null)
+  const fixGround = (g) => {
+    chooseGround(g)
+    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.icust-ground-sw--${g}`)?.focus())
+  }
   const [copied, setCopied] = useState('')
   // The file format the Download button hands over; it follows the account.
   const [dlFormat, setDlFormat] = useState(() => readDownloadFormat())
@@ -1878,7 +1885,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
                 </>
               )}
-              <div className="icust-ground" role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+              <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
                 {GROUND_OPTS.map(g => (
                   <button
                     key={g.id}
@@ -1900,7 +1907,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 <p>
                   {choiceName} is hard to see on this background.
                   {contrastNote.suggest && (
-                    <button type="button" className="icust-ground-fix" onClick={() => chooseGround(contrastNote.suggest)}>
+                    <button type="button" className="icust-ground-fix" onClick={() => fixGround(contrastNote.suggest)}>
                       Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
                     </button>
                   )}

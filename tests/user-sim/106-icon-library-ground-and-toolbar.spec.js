@@ -1137,3 +1137,20 @@ test('Text colour copies currentColor with no colour on the root; Black writes o
   await expect.poll(copy, { timeout: 10000 }).toContain('color="#000000"')
   await ctx.close()
 })
+
+test.describe('the contrast note button', () => {
+  test('pressing it hands focus to the ground it chose, not to the page', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    watch(page, 'a keyboard user taking the note up on its offer')
+    await openCustomizer(page)
+    await page.getByRole('radio', { name: 'Black', exact: true }).click()
+    const fix = page.getByRole('button', { name: 'Show on Light', exact: true })
+    await fix.focus()
+    await page.keyboard.press('Enter')
+    const light = page.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Light', exact: true })
+    await expect(light).toBeChecked()
+    await expect(light, 'focus fell to the page when the note went away').toBeFocused()
+    await ctx.close()
+  })
+})
