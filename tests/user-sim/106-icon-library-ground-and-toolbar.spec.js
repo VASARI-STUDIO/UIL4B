@@ -42,7 +42,7 @@ test.describe('the customizer preview ground', () => {
       await openCustomizer(page)
       await expect(page.locator('.icust-panel').getByRole('button', { name: 'Default', exact: true })).toHaveCount(0)
       // Exactly one colour chip is selected, and with nothing picked it is Text colour.
-      const chips = page.getByRole('radiogroup', { name: 'Icon colour' })
+      const chips = page.getByRole('radiogroup', { name: 'Colour', exact: true })
       await expect(chips.getByRole('radio', { checked: true })).toHaveCount(1)
       await expect(chips.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
       const { bg, image, page: pageBg } = await stageAndPage(page)
@@ -66,7 +66,10 @@ test.describe('the customizer preview ground', () => {
       await expect(stage, `pressing ${chip} changed the ground`).toHaveClass(/icust-stage--page/)
       expect((await stageAndPage(page)).bg, `pressing ${chip} repainted the ground`).toBe(before.bg)
     }
+    // Reset clears the colour but is not a ground control either.
+    await page.getByRole('radio', { name: 'White', exact: true }).click()
     await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
     await expect(stage).toHaveClass(/icust-stage--page/)
     expect((await stageAndPage(page)).bg, 'a colour press moved the ground').toBe(before.bg)
     const grounds = page.getByRole('radiogroup', { name: 'Background' })

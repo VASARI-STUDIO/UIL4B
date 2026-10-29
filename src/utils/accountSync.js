@@ -162,6 +162,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-palette-history': { scope: 'device', why: 'Undo log of the palette board, rewritten every edit; the design itself syncs' },
   'vs-pinned-v': { scope: 'device', why: 'Pinned-tools migration marker for this browser' },
   'vs-icon-copy-day': { scope: 'device', why: 'Client-side daily copy meter (the server is not involved)' },
+  'vs-icon-ground': { scope: 'device', why: 'Background behind the icon preview, a viewing preference' },
   'vs-uikit-guide': { scope: 'device', why: 'Mid-walkthrough position on this screen' },
   'vs-first-win-started': { scope: 'device', why: 'Time-to-value timer for local analytics' },
   'vs-analytics': { scope: 'device', why: 'In-browser usage counters' },
