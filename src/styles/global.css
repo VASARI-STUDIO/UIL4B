@@ -3023,6 +3023,17 @@ html.lenis{scroll-behavior:auto!important}
    the accent's text member (the file's accentMid). */
 .pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 15px;border-top:1px solid rgba(var(--ink-rgb),.06)}
 .pnav-menu-foot-note{font-size:12.5px;color:rgba(var(--ink-rgb),var(--ink-faint))}
+/* The readout (the foot's line, which names the row under the pointer or focus).
+   Its height is reserved per menu so a hover never moves the panel: one line on
+   Create (its longest description, Aspect & Resolution, is one line at 1440),
+   two on Discover and Learn (the longest guide line is about 150 characters).
+   At 1240 and under the link beside it squeezes the line, so Create reserves two.
+   No aria-live: the active row points at this paragraph with aria-describedby
+   and nothing is announced unasked. */
+.pnav-menu-readout{flex:1 1 0;min-width:0;max-width:110ch;margin:0;line-height:18px;min-height:18px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden}
+.pnav-menu-readout b{margin-right:8px;font-weight:500;color:rgb(var(--ink-rgb))}
+.pnav-menu[data-menu="discover"] .pnav-menu-readout,.pnav-menu[data-menu="learn"] .pnav-menu-readout{min-height:36px;-webkit-line-clamp:2;line-clamp:2}
+@media(max-width:1240px){.pnav-menu[data-menu="create"] .pnav-menu-readout{min-height:36px;-webkit-line-clamp:2;line-clamp:2}}
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;border-radius:6px;color:var(--accent-mid);font-size:12.5px;text-decoration:none}
 .pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 .pnav-menu-foot-link:focus-visible{outline:2px solid var(--link);outline-offset:2px}

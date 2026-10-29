@@ -3,7 +3,7 @@ import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
 import { localiseTools } from '../data/tools'
-import { searchHints } from '../data/toolIndex'
+import { CREATE_TOOL_SEARCH, searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the
 // same gallery palette and the same inkFor/grade the exporter uses.
 import { LIBRARY_LEAD } from '../data/libraryTotals'
@@ -1072,6 +1072,23 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
   // nothing is hovered, App line 1414); CSS lights it only while no other row
   // is hovered or focused.
   const featId = stacks[0]?.[0]?.tools?.[0]?.id
+
+  // THE READOUT. One row is "active" while the pointer is on it or keyboard focus
+  // is in it; the foot's line then says what that row is for, and goes back to
+  // the section's own line when nothing is. Tracked by delegation on the grid
+  // (pointerover and focus bubble), not a handler per row. The section id rides
+  // along so a row id both menus share (Font Gallery) cannot carry over.
+  const [active, setActive] = useState({ section: section.id, id: null })
+  const activeId = active.section === section.id ? active.id : null
+  const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
+  const setRow = (id) => setActive({ section: section.id, id })
+  const activeRow = activeId
+    ? stacks.flat().flatMap((col) => col.tools).find((t) => t.id === activeId)
+    : null
+  const activeDesc = activeRow
+    ? (section.id === 'create' ? CREATE_TOOL_SEARCH[activeRow.id]?.description : null) || activeRow.desc
+    : null
+  const readoutText = activeRow && activeDesc ? activeDesc : null
   return (
     <div
       ref={ref}
@@ -1086,7 +1103,14 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
     >
       <div className="pnav-menu-body">
         <div className="pnav-menu-cols">
-          <div className="pnav-grid" data-cols={stacks.length}>
+          <div
+            className="pnav-grid"
+            data-cols={stacks.length}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id) }}
+            onPointerLeave={(e) => setRow(e.currentTarget.contains(document.activeElement) ? rowOf(document.activeElement) : null)}
+            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id) }}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
+          >
             {stacks.map((stack) => (
               <div className="pnav-colstack" key={stack[0].label}>
                 {stack.map((col) => (
@@ -1100,6 +1124,8 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                             to={t.route}
                             data-soon={t.soon ? 'true' : undefined}
                             data-hue={t.hue}
+                            data-row-id={t.id}
+                            aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
                             data-feat={t.id === featId ? 'true' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}
@@ -1155,7 +1181,9 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
         </div>
       </div>
       <div className="pnav-menu-foot">
-        <span className="pnav-menu-foot-note">{menuFootNote(section)}</span>
+        <p className="pnav-menu-foot-note pnav-menu-readout" id="pnav-readout">
+          {readoutText ? <><b>{activeRow.label}</b>{readoutText}</> : menuFootNote(section)}
+        </p>
         <Link className="pnav-menu-foot-link" to={section.viewAllHref} onClick={onPick} data-pnav-menuitem>
           <span>{menuViewAll(section)}</span>
           <ArrowRight size={12} />
