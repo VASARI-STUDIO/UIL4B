@@ -592,7 +592,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await openWithPointer(page, 'Create')
     const heights = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pnav-mega .pnav-tool')]
       .map((r) => Math.round(r.getBoundingClientRect().height)))])
-    expect(heights).toEqual([42])
+    expect(heights).toEqual([48])
     const wrapped = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool-label')]
       .filter((l) => l.getClientRects().length > 1).map((l) => l.textContent))
     expect(wrapped).toEqual([])

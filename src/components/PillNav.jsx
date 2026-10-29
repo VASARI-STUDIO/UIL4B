@@ -1099,6 +1099,7 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                             className="pnav-tool"
                             to={t.route}
                             data-soon={t.soon ? 'true' : undefined}
+                            data-hue={t.hue}
                             data-feat={t.id === featId ? 'true' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}

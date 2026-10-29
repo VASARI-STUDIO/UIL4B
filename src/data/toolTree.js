@@ -545,9 +545,28 @@ const CREATE_MENU = buildCreateMenu()
 
 // Discover / Learn have flat groups with no sub-tools; deal them into the same
 // { label, tools } column shape so the menu renderer is uniform. Each group maps
-// to one row: icon = the group id (NavIcon carries a glyph per id) and hue falls
-// back to accent (these surfaces carry no category hue), with the conversion-
-// adjacent Help row flagged `accent`.
+// to one row: icon = the group id (NavIcon carries a glyph per id), `desc` is the
+// group's own line (the menu's readout shows it on hover), and `hue` is the
+// category tile from MENU_ROW_HUE (anything unlisted is neutral).
+//
+// Which category a Discover library or a Learn guide belongs to is presentation,
+// so it is declared here, as the menu drawing has it. Inspiration, Design
+// Principles and Help are in no category and stay neutral.
+const MENU_ROW_HUE = {
+  'palette-library': 'colour',
+  'gradient-gallery': 'colour',
+  'font-gallery': 'type',
+  'icon-library': 'icons',
+  'community-prompts': 'ai',
+  'learn-colour-contrast': 'colour',
+  'learn-type-scales': 'type',
+  'learn-typeface-metrics': 'type',
+  'learn-font-loading': 'type',
+  'learn-colour-spaces': 'colour',
+  'learn-theme-systems': 'colour',
+  'learn-brand-colour': 'colour',
+}
+
 function groupsToMenu(groups, spec) {
   const seen = new Set()
   const toRow = (g) => ({
@@ -555,7 +574,8 @@ function groupsToMenu(groups, spec) {
     label: g.label,
     route: g.route,
     icon: g.icon || g.id,
-    hue: g.accent ? 'accent' : undefined,
+    desc: g.desc,
+    hue: MENU_ROW_HUE[g.id] || 'neutral',
     soon: !!g.soon,
   })
   const cols = spec.map(({ label, ids }) => ({
@@ -602,6 +622,8 @@ const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
   label: a.navLabel,
   route: `/learn/${a.slug}`,
   icon: LEARN_ARTICLE_ICONS[a.slug] || 'principles',
+  desc: a.dek,
+  hue: MENU_ROW_HUE[`learn-${a.slug}`] || 'neutral',
   soon: false,
 }))
 

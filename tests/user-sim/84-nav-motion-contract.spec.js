@@ -295,7 +295,7 @@ test.describe('the nav does not animate layout', () => {
 
     expect(hot.icon, 'the tool icon lifts on hover again').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    expect(hot.tile, 'the tile does not turn accent on hover').not.toBe(rest.tile)
+    expect(hot.tile, 'the tile does not answer the pointer').not.toBe(rest.tile)
   })
 })
 
