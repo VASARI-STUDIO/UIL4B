@@ -31,11 +31,16 @@ before(async () => {
   storageEnv = await initializeTestEnvironment({ projectId: 'demo-uil4b-upload-limits', storage: { rules } })
 })
 after(async () => { await storageEnv?.cleanup() })
-beforeEach(async () => { await storageEnv.clearStorage() })
+// clearStorage leaves objects in place on this emulator, so each test gets its own
+// pair of folders instead, and a slot filled by one test never reaches the next.
+let alice = ALICE
+let bob = BOB
+let folderRun = 0
+beforeEach(() => { folderRun += 1; alice = `${ALICE}-${folderRun}`; bob = `${BOB}-${folderRun}` })
 
-const verified = (uid = ALICE) => storageEnv.authenticatedContext(uid, { email_verified: true }).storage()
-const unverified = (uid = ALICE) => storageEnv.authenticatedContext(uid, { email_verified: false }).storage()
-const mine = (name, uid = ALICE) => `community-media/${uid}/${name}`
+const verified = (uid = alice) => storageEnv.authenticatedContext(uid, { email_verified: true }).storage()
+const unverified = (uid = alice) => storageEnv.authenticatedContext(uid, { email_verified: false }).storage()
+const mine = (name, uid = alice) => `community-media/${uid}/${name}`
 const BYTES = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03])
 const put = (store, path, contentType, bytes = BYTES) =>
   uploadBytes(ref(store, path), bytes, contentType ? { contentType } : undefined)
@@ -73,15 +78,15 @@ test('H1: an unknown slot name, a deep path or a wrong type is refused', async (
 })
 
 test('H1: an account cannot write into another account\'s folder', async () => {
-  await assertFails(put(verified(BOB), mine('slot-0.webp'), 'image/webp'))
-  await assertSucceeds(put(verified(BOB), mine('slot-0.webp', BOB), 'image/webp'))
+  await assertFails(put(verified(bob), mine('slot-0.webp'), 'image/webp'))
+  await assertSucceeds(put(verified(bob), mine('slot-0.webp', bob), 'image/webp'))
 })
 
 test('H1: the owner can delete their own object, and nobody else can', async () => {
   await storageEnv.withSecurityRulesDisabled(async (ctx) => {
     await put(ctx.storage(), mine('slot-0.webp'), 'image/webp')
   })
-  await assertFails(deleteObject(ref(verified(BOB), mine('slot-0.webp'))))
+  await assertFails(deleteObject(ref(verified(bob), mine('slot-0.webp'))))
   await assertFails(deleteObject(ref(storageEnv.authenticatedContext('mod', { moderator: true }).storage(), mine('slot-0.webp'))))
   await assertFails(deleteObject(ref(storageEnv.unauthenticatedContext().storage(), mine('slot-0.webp'))))
   await assertSucceeds(deleteObject(ref(verified(), mine('slot-0.webp'))))
@@ -92,7 +97,7 @@ test('H1: a slot that already holds an object cannot be overwritten, by its owne
   await assertSucceeds(put(verified(), mine('slot-0.webp'), 'image/webp'))
   await assertFails(put(verified(), mine('slot-0.webp'), 'image/webp'))
   await assertFails(put(verified(), mine('slot-0.webp'), 'image/webp', new Uint8Array([1, 2, 3])))
-  await assertFails(put(verified(BOB), mine('slot-0.webp'), 'image/webp'))
+  await assertFails(put(verified(bob), mine('slot-0.webp'), 'image/webp'))
   // The next slot of the same type is still free.
   await assertSucceeds(put(verified(), mine('slot-1.webp'), 'image/webp'))
 })
@@ -120,7 +125,7 @@ test('H1: reviewers and the owner can read an object, and another account cannot
   await assertSucceeds(getBytes(target(verified())))
   await assertSucceeds(getBytes(target(storageEnv.authenticatedContext('mod', { moderator: true }).storage())))
   await assertSucceeds(getBytes(target(storageEnv.authenticatedContext('adm', { admin: true }).storage())))
-  await assertFails(getBytes(target(verified(BOB))))
+  await assertFails(getBytes(target(verified(bob))))
 })
 
 // ── H2 · firestore.rules, community queue ───────────────────────────────────
