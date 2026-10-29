@@ -10,7 +10,7 @@
 // bundled-fallback notice, the retry and the "everything still works" promise
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch } from './helpers.js'
+import { chooseMenuOption, fillGalleryPreviewText, go, watch } from './helpers.js'
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {
   await page.addInitScript(({ exposeFontApi, initialMode }) => {
@@ -330,8 +330,7 @@ test.describe('Font Gallery', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Font Gallery' })).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(24)
 
-    await page.getByLabel('Preview text').fill('Make the words the interface')
-    await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
+    await fillGalleryPreviewText(page, 'Make the words the interface')
     // ONE SPECIMEN PER ROW, AT EVERY WIDTH.
     //
     // This assertion has now been turned twice, and both turns were founder
@@ -657,7 +656,7 @@ test.describe('Font Gallery', () => {
     }] } }))
 
     await go(page, '/create/font-gallery')
-    await page.getByLabel('Preview text').fill('Handgloves')
+    await fillGalleryPreviewText(page, 'Handgloves')
     await page.locator('.fg-card-open').first().click()
 
     const dialog = page.getByRole('dialog')
