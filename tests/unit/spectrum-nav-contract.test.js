@@ -156,7 +156,7 @@ test('Beta is not a second Soon, in the app header', () => {
   const css = stripCss(read(GLOBAL_CSS))
   // The menu-scoped chip changes geometry only; the colours stay with the
   // shared badges, which five other surfaces also render.
-  assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:3px 6px;border-radius:var\(--radius-xs\)\}/)
+  assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:2px 8px;border-radius:var\(--radius-xs\)\}/)
 })
 
 test('the full-screen menu is the design\'s four items and its note — not a mega menu', () => {

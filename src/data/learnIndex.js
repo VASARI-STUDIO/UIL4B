@@ -151,7 +151,7 @@ export const LEARN_ARTICLES = Object.freeze([
     dek: 'A font file is a network request, and the text exists before it finishes. What is painted in the meantime, and what moves when it lands.',
     description: 'The three periods of a webfont load, what font-display block and swap cost the reader, why a line re-breaks on swap, and how unicode-range splits a family.',
     file: 'fontLoading.jsx',
-    words: 1665,
+    words: 1733,
     updated: '2026-09-06',
     toolTo: '/create/font-pair',
     toolLabel: 'Font Pairing tool',

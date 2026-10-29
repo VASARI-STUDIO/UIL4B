@@ -71,7 +71,7 @@ test.describe('the mega menus', () => {
   test('each is one surface, with derived counts and no descriptions', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/projects')
-    const expectFoot = { Create: /^\w+ live tools across colour, type, icons, media and AI\.$/, Discover: /^\w+ libraries, free to browse\.$/, Learn: /^\w+ published guides, more on the way\.$/ }
+    const expectFoot = { Create: /^\w+ live tools and \w+ in beta, across colour, type, icons, media and AI\.$/, Discover: /^\w+ libraries, free to browse\.$/, Learn: /^\w+ published guides, more on the way\.$/ }
     for (const name of ['Create', 'Discover', 'Learn']) {
       await page.locator('.pnav-trigger', { hasText: name }).click()
       const menu = page.locator('#pnav-mega')
