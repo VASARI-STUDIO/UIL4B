@@ -609,7 +609,7 @@ function paletteOps(c, page) {
       ops.push(text(v, x3 + 42, y + 16 + i * 15, mono(500, 9.5), c.ink))
     })
     ops.push(hair(x3, y + 74, RIGHT, c.rule))
-    const cells = [['Ink', label], ['Ratio', `${ratio}:1`], ['Grade', grade(ratio)]]
+    const cells = [['Ink', label], ['Ratio', formatRatio(ratio)], ['Grade', grade(ratio)]]
     cells.forEach(([k, v], i) => {
       const cx = x3 + (w3 / 3) * i
       ops.push(caps(k, cx, y + 92, c.muted, { px: 7.5 }, c))
@@ -629,6 +629,9 @@ function paletteOps(c, page) {
   })
   return ops
 }
+
+/** A contrast ratio as drawn: always two decimals, so 7 reads "7.00:1" and the column aligns. */
+export const formatRatio = (r) => `${Number(r).toFixed(2)}:1`
 
 /** The class of a contrast cell: weight and shading carry it, never a hue. */
 export function matrixClass(ratio) {
@@ -671,7 +674,7 @@ function matrixOps(c, page) {
       const { word, weight } = matrixClass(ratio)
       if (word === 'Fail') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.06)))
       else if (word === 'Large') ops.push(rect(x + 1, y + 1, cw - 2, rowH - 2, mixHex(c.ink, c.paper, 0.025)))
-      ops.push(text(String(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, 11.5, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
+      ops.push(text(formatRatio(ratio), x + cw / 2, y + rowH / 2 + 1, face(weight, 11.5, d.body), word === 'Fail' ? c.muted : c.ink, { align: 'center' }))
       ops.push(caps(word, x + cw / 2, y + rowH / 2 + 14, c.muted, { px: 6.5, spacing: 1, align: 'center' }, c))
     })
     y += rowH

@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines,
+  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
@@ -85,10 +85,10 @@ test('every token is listed exactly once, across the token pages', () => {
 test('the contrast figures are the ones the PDF book states', () => {
   const matrix = build().pages.find((p) => p.kind === 'matrix')
   const shown = texts(matrix)
-  assert.ok(shown.includes(String(contrast('#2563EB', '#FFFFFF'))))
-  assert.ok(shown.includes(String(contrast('#1E40AF', '#93C5FD'))))
+  assert.ok(shown.includes(`${contrast('#2563EB', '#FFFFFF').toFixed(2)}:1`))
+  assert.ok(shown.includes(`${contrast('#1E40AF', '#93C5FD').toFixed(2)}:1`))
   const palette = build().pages.find((p) => p.kind === 'palette')
-  assert.ok(texts(palette).includes(`${inkFor('#2563EB').ratio}:1`))
+  assert.ok(texts(palette).includes(`${inkFor('#2563EB').ratio.toFixed(2)}:1`))
   assert.equal(matrixClass(4.5).word, 'Pass')
   assert.equal(matrixClass(3).word, 'Large')
   assert.equal(matrixClass(2.99).word, 'Fail')
@@ -466,4 +466,21 @@ test('balanceLines never leaves one word alone on the last line, and leaves bala
   assert.deepEqual(balanceLines('aaaaa bbbbb ccccc ddddd eeeee fffff', 100, font), wrapText('aaaaa bbbbb ccccc ddddd eeeee fffff', 100, font))
   // It never breaks the line limit: a cut line keeps its ellipsis.
   assert.ok(balanceLines(text.repeat(3), 100, font, estimateWidth, { maxLines: 2 }).length <= 2)
+})
+
+test('formatRatio always gives two decimals and ":1", and the band and matrix both use it', () => {
+  assert.equal(formatRatio(7), '7.00:1')
+  assert.equal(formatRatio(4.5), '4.50:1')
+  assert.equal(formatRatio(21), '21.00:1')
+  assert.equal(formatRatio(5.173), '5.17:1')
+  assert.equal(formatRatio('3.1'), '3.10:1')
+  const book = build()
+  const matrix = book.pages.find((p) => p.kind === 'matrix')
+  const figures = texts(matrix).filter((t) => /:1$/.test(t))
+  assert.equal(figures.length, matrix.colours.length * (matrix.colours.length + 1), "a matrix cell has no ratio figure")
+
+  assert.ok(figures.every((t) => /^\d+\.\d\d:1$/.test(t)), `a matrix figure is not formatted: ${figures.filter((t) => !/^\d+\.\d\d:1$/.test(t))}`)
+  for (const band of book.pages.filter((p) => p.kind === 'palette')) {
+    for (const t of texts(band).filter((x) => /:1$/.test(x))) assert.match(t, /^\d+\.\d\d:1$/)
+  }
 })
