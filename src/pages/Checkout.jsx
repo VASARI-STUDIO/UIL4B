@@ -11,6 +11,8 @@ import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
 import { verifyErrorText } from '../utils/emailVerification'
+import { checkoutErrorText, checkoutErrorAction, plainError } from '../utils/checkoutError'
+import ReportProblemLink from '../components/ReportProblemLink'
 import useMediaQuery from '../hooks/useMediaQuery'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -97,14 +99,14 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
     let instance = null
     // Only the instance on screen reports a failure: a request for a period
     // the buyer has already left fails quietly and leaves the new one alone.
-    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout', e?.code) }
+    const fail = (e) => { if (live) onFail(e) }
     const created = embedQueue.then(async () => {
       if (!live) return
       let stripe
       try {
         stripe = await getStripe()
       } catch {
-        throw new Error(STRIPE_LOAD_ERROR)
+        throw plainError(STRIPE_LOAD_ERROR)
       }
       if (!stripe || !live) return
       instance = await stripe.createEmbeddedCheckoutPage({
@@ -126,7 +128,7 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
       }
     })
     embedQueue = created.catch(() => {})
-    const timer = setTimeout(() => fail(new Error(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
+    const timer = setTimeout(() => fail(plainError(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
     created.then(() => clearTimeout(timer), (e) => { clearTimeout(timer); fail(e) })
     return () => {
       live = false
@@ -164,7 +166,7 @@ function SignInToPay({ className = '', cadence, onClick }) {
 // reminder bar and Settings send. "I've verified" re-reads the account and mints
 // a fresh ID token first, because the server judges the token's own copy of the
 // flag, then asks for the form again.
-function VerifyEmailPrompt({ email, message, onResend, onRetry }) {
+function VerifyEmailPrompt({ email, onResend, onRetry }) {
   const [state, setState] = useState('idle') // idle | sending | sent | failed
   const [failure, setFailure] = useState('')
   const resend = async () => {
@@ -180,7 +182,6 @@ function VerifyEmailPrompt({ email, message, onResend, onRetry }) {
   }
   return (
     <>
-      <span className="checkout-error-p">{message}</span>
       <span className="checkout-error-p" role="status">
         {state === 'sent'
           ? <> Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
@@ -216,14 +217,17 @@ export default function Checkout() {
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const [error, setError] = useState('')
-  // The server's reason code for the error, when it sent one.
+  // The server's reason code for the error, when it sent one, or 'log-in' when
+  // the sign-in expired (what the panel offers instead of Try again).
   const [errorCode, setErrorCode] = useState('')
   // One failure can report twice (the fetch wrapper, then Stripe's own
   // rejection), so a later call without a code keeps the code already set.
   // Every path that clears the error clears the code with it.
-  const failCheckout = useCallback((message, code) => {
-    setError(message)
-    setErrorCode((prev) => code || prev)
+  const failCheckout = useCallback((err) => {
+    // The buyer reads a sentence of this page's own; the raw text stays here.
+    console.warn('checkout: the payment session failed:', err?.message, { code: err?.code, status: err?.status })
+    setError(checkoutErrorText(err))
+    setErrorCode((prev) => err?.code || checkoutErrorAction(err) || prev)
   }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
@@ -508,7 +512,6 @@ export default function Checkout() {
                   <strong className="checkout-error-h">Verify your email to continue</strong>
                   <VerifyEmailPrompt
                     email={user.email}
-                    message={error}
                     onResend={sendVerificationEmail}
                     onRetry={async () => {
                       await refreshEmailVerified().catch(() => {})
@@ -520,14 +523,23 @@ export default function Checkout() {
                 <>
                   <strong className="checkout-error-h">Checkout unavailable</strong>
                   <span className="checkout-error-p">{error}</span>
-                  {error.includes('Server configuration') && (
-                    <p className="checkout-error-note">
-                      This usually means the Firebase service account key isn't configured on the server.
-                      If you're the site owner, check Vercel environment variables.
-                    </p>
+                  {errorCode === 'log-in' ? (
+                    // The session is no good, so a retry would fail the same way:
+                    // sign in again (forced, though the account looks signed in),
+                    // then ask for the form again.
+                    <button className="btn btn-s checkout-error-retry" onClick={() => {
+                      requireLogin('continue to checkout', { force: true, email: user?.email }).then((back) => {
+                        if (back) { setError(''); setErrorCode('') }
+                      })
+                    }}>Log in</button>
+                  ) : (
+                    <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
                   )}
-                  <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
                 </>
+              )}
+              {/* Quiet, and drawn only where the Feedback bubble is hidden. */}
+              {errorCode !== 'email-unverified' && (
+                <div><ReportProblemLink subject="Problem at checkout" /></div>
               )}
             </div>
           ) : (

@@ -88,7 +88,7 @@ export default function LoginPage() {
         {loading ? (
           <p className="auth-checking" role="status">{t('auth.checking')}</p>
         ) : (
-          <AuthForm mode={mode} onModeChange={changeMode} onSuccess={finished} onBusyChange={setFormBusy} headingLevel={1} showLoginSub />
+          <AuthForm mode={mode} onModeChange={changeMode} onSuccess={finished} onBusyChange={setFormBusy} headingLevel={1} showLoginSub showReport />
         )}
       </section>
       <AuthWall variant={wide ? 'page' : 'band'} still={stillBand} />

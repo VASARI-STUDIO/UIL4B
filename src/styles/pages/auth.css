@@ -61,8 +61,13 @@
 @keyframes auth-spin{to{transform:rotate(360deg)}}
 
 .auth-legal{margin:12px 0 0;font-size:12px;line-height:18px;color:var(--t2)}
-.auth-legal a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+/* Vertical padding on an inline link widens its box to a 25px target without
+   touching the line height, so the paragraph does not move (an inline-block
+   here made the dialog's three legal lines 3px taller each). */
+.auth-legal a{padding:5px 0;color:var(--link);text-decoration:underline;text-underline-offset:2px}
 
+/* With the report link in the row, an item that does not fit drops to the next line. */
+.auth-form-root .auth-links:has(.report-problem){flex-wrap:wrap}
 /* Mode row: each item is its own 44px target. */
 .auth-form-root .auth-links{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:8px;margin-top:16px}
 .auth-link{min-height:44px;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;color:var(--t1);cursor:pointer;text-align:left}

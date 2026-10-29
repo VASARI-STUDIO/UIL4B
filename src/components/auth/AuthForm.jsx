@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
+import ReportProblemLink from '../ReportProblemLink'
+import { passwordProblem, cleanDisplayName, NAME_MAX, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
 
 // The log-in / sign-up / reset / switch form, shared by the modal (and, later,
@@ -58,7 +60,7 @@ const Spinner = () => <span className="auth-spin" aria-hidden="true" />
 
 export default function AuthForm({
   mode, onModeChange, initialEmail = '', lockEmail = false, onSuccess,
-  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false,
+  headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false, showReport = false,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
@@ -105,13 +107,17 @@ export default function AuthForm({
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (offline) return
+    // Refused before any request: a password of spaces satisfies the input's
+    // own minLength, and the server would accept it.
+    const weak = mode === 'signup' ? passwordProblem(password) : null
+    if (weak) { fail(weak); return }
     setError(null)
     setBusy('submit')
     try {
       if (mode === 'reset') {
         await sendReset()
       } else if (mode === 'signup') {
-        const cred = await signup(email, password, displayName)
+        const cred = await signup(email, password, cleanDisplayName(displayName))
         onSuccess(cred?.user)
         return
       } else {
@@ -179,7 +185,8 @@ export default function AuthForm({
   const blocked = disabled || offline
   const errKey = error?.key
   const emailBad = errKey === 'invalidEmail' || errKey === 'emailInUse' || errKey === 'invalidCredential'
-  const pwBad = errKey === 'weakPassword' || errKey === 'invalidCredential'
+  const weakKey = errKey === 'weakPassword' || errKey === 'weakPasswordSpaces'
+  const pwBad = weakKey || errKey === 'invalidCredential'
   // The sent screen has no submit button, so it has no label to look up.
   const submitKey = (busy === 'submit'
     ? { login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }
@@ -189,7 +196,7 @@ export default function AuthForm({
   const emailField = (
     <div className="auth-field">
       <label htmlFor="ui-login-email">{t('auth.email')}</label>
-      <input id="ui-login-email" type="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
+      <input id="ui-login-email" type="email" name="email" maxLength={EMAIL_MAX} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
     </div>
   )
 
@@ -240,7 +247,7 @@ export default function AuthForm({
                 {mode === 'signup' && (
                   <div className="auth-field">
                     <label htmlFor="ui-login-name">{t('auth.name')}</label>
-                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" disabled={disabled} />
+                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" maxLength={NAME_MAX} disabled={disabled} />
                   </div>
                 )}
                 {emailField}
@@ -251,7 +258,7 @@ export default function AuthForm({
                       <input id="ui-login-password" type={showPw ? 'text' : 'password'} name="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={disabled} aria-invalid={pwBad || undefined} aria-describedby={pwBad ? 'ui-login-error' : mode === 'signup' ? 'ui-login-pw-help' : undefined} />
                       <button type="button" className="auth-show" onClick={() => setShowPw((v) => !v)} aria-pressed={showPw} aria-controls="ui-login-password" disabled={disabled}>{showPw ? t('auth.hidePassword') : t('auth.showPassword')}</button>
                     </div>
-                    {mode === 'signup' && <p className={'auth-help' + (errKey === 'weakPassword' ? ' auth-help--err' : '')} id="ui-login-pw-help">{t('auth.passwordHelp')}</p>}
+                    {mode === 'signup' && <p className={'auth-help' + (weakKey ? ' auth-help--err' : '')} id="ui-login-pw-help">{t('auth.passwordHelp')}</p>}
                   </div>
                 )}
                 <button className="btn auth-submit" type="submit" disabled={blocked} aria-describedby={offline ? 'ui-login-offline' : undefined}>
@@ -286,6 +293,9 @@ export default function AuthForm({
               {(mode === 'reset' || mode === 'sent') && (
                 <button type="button" className="auth-link auth-link--quiet" onClick={() => go('login')} disabled={disabled}>{t('auth.backToLogIn')}</button>
               )}
+              {/* Where the Feedback bubble is hidden (small screens). Shares the
+                  links row so the sign-up form keeps its height. */}
+              {showReport && <ReportProblemLink subject="Problem signing in" />}
             </div>
           )}
         </div>

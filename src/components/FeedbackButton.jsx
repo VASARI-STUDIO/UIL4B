@@ -51,6 +51,18 @@ const NO_BUTTON = new Set([
   '/', '/home', '/plans', '/mobile', '/tools', '/welcome', '/onboarding', '/feedback',
 ])
 
+// ROUTES WHERE THE BUTTON STAYS BUT STEPS ASIDE ON A SMALL SCREEN.
+//
+// The sign-in and payment forms fill a phone's width, and the fixed bubble sat
+// over their fields and submit button at 320x640 and 390x640. They keep the
+// button on a roomy screen (a visitor with a sign-in problem can still report
+// it); on a small one global.css hides it and a quiet "Report a problem" link
+// (ReportProblemLink) in the form itself opens this same dialog. The right-click
+// menu is no substitute there: a touch-only phone does not offer it.
+// A pattern, not a second literal list: the test beside NO_BUTTON reads every
+// quoted path in this file as a route the button is absent from.
+const FORM_ROUTE = /^\/(?:login|checkout)$/
+
 export default function FeedbackButton() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -79,17 +91,16 @@ export default function FeedbackButton() {
   // Normalised the same way App.jsx normalises before its chromeless check, so
   // a trailing slash or a capital cannot leak a chromeless route past this and
   // paint a button on a Create tool.
-  const showButton = useMemo(
-    () => !NO_BUTTON.has(location.pathname.toLowerCase().replace(/\/+$/, '') || '/'),
-    [location.pathname],
-  )
+  const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
+  const showButton = useMemo(() => !NO_BUTTON.has(path), [path])
+  const onForm = FORM_ROUTE.test(path)
 
   return (
     <>
       {showButton && (
         <button
           type="button"
-          className="global-feedback-btn"
+          className={'global-feedback-btn' + (onForm ? ' global-feedback-btn--form' : '')}
           onClick={openFromButton}
           title="Share feedback — or right-click anywhere to report what is under your pointer"
           aria-label="Share feedback"
