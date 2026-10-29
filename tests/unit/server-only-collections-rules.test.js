@@ -15,7 +15,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments } from './helpers/source-text.js'
 
-const SERVER_ONLY = ['admin-audit', 'rate-limits']
+const SERVER_ONLY = ['admin-audit', 'rate-limits', 'stripeEvents']
 
 /** Every path in a `match <path> {` line, in file order. */
 function matchPaths(rules) {
@@ -32,7 +32,7 @@ test('the rules parser finds the matches it is supposed to', () => {
   assert.ok(paths.length >= 5, `only ${paths.length} matches found`)
 })
 
-test('neither server-only collection is named anywhere in firestore.rules', () => {
+test('no server-only collection is named anywhere in firestore.rules', () => {
   for (const name of SERVER_ONLY) {
     assert.ok(!rules.includes(name), `firestore.rules mentions ${name}: a client could be given access`)
   }
