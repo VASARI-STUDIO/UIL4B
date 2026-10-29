@@ -218,11 +218,84 @@
 .iel-page .lbry-toolbar-quick>.ig-weight .ig-weight-btn,
 .iel-page .lbry-panel-groups>.ig-weight .ig-weight-btn{flex:1 1 0;min-width:max-content}
 
-/* The customizer's stage, while the icon is in the theme's default ink: the
-   page's own ground (flat, over a hairline), so the preview reads as the page
-   will. A picked colour keeps the light or dark contrast ground. */
-.iel-page .icust-stage--theme{background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border)}
-.iel-page .icust-stage--theme .icust-stage-msg{color:var(--t2)}
+/* The stage's ground switch: four flat swatches in a small pill at the stage's
+   bottom right. Page is the theme's own ground; Light, Dark and Transparent are
+   fixed. It is the only thing that changes the ground, and the ground swaps
+   in the same frame (no transition). The selected swatch wears a ring; focus
+   is the accent outline. Page is drawn half ink, half the page ground, so it
+   reads as "whatever the page is" and never as a fourth fixed colour. */
+.iel-page .icust-ground{
+  position:absolute;right:12px;bottom:12px;z-index:1;
+  display:flex;gap:4px;padding:4px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);
+}
+.iel-page .icust-ground-sw{
+  position:relative;width:20px;height:20px;padding:0;
+  border:1px solid var(--bh);border-radius:50%;cursor:pointer;
+}
+.iel-page .icust-ground-sw--page{background:var(--t0)}
+.iel-page .icust-ground-sw--page::before{content:"";position:absolute;inset:0 0 0 50%;border-radius:0 100% 100% 0 / 0 50% 50% 0;background:var(--bg-0)}
+.iel-page .icust-ground-sw--light{background:#DEDEE2}
+.iel-page .icust-ground-sw--dark{background:#202024}
+.iel-page .icust-ground-sw--checker{background-color:#EDEDF0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E");background-size:12px 12px}
+.iel-page .icust-ground-sw[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg-1),0 0 0 3.5px var(--t0)}
+.iel-page .icust-ground-sw:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+@media(pointer:coarse){
+  .iel-page .icust-ground{gap:16px}
+  .iel-page .icust-ground-sw{width:28px;height:28px}
+  /* 28px plus 8px each side is 44 by 44, and the 16px gap is the pitch less the swatch,
+     so the hit areas meet without overlapping. */
+  .iel-page .icust-ground-sw::after{content:"";position:absolute;inset:-8px}
+}
+@media(max-width:560px){.iel-page .icust-ground{right:8px;bottom:8px}}
+
+/* Icon colour: four chips in one radiogroup, exactly one selected. The header
+   carries the label and, on the right, the value the file will hold (currentColor,
+   or a hex): the only mono here, because it is a literal. The chip selected is a
+   9% ink wash with an ink hairline, the same recipe as the other toggles. */
+.iel-page .icust-row--colour{flex-wrap:wrap;row-gap:8px}
+.iel-page .icust-row--colour>label{flex:1 1 auto}
+.iel-page .icust-colour-value{flex:0 0 auto;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t2)}
+.iel-page .icust-chips{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:8px}
+.iel-page .icust-chip{
+  display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 10px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;
+  font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:0;color:var(--t1);cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out),color 150ms var(--ease-out);
+}
+.iel-page .icust-chips .cpk-wrap{flex:0 0 auto}
+.iel-page .icust-chip.cpk-trigger{width:auto;height:auto;min-height:40px;padding:0 14px 0 10px;border-radius:var(--radius-pill);background:transparent}
+@media(hover:hover){.iel-page .icust-chip:hover{color:var(--t0);border-color:var(--bh)}}
+.iel-page .icust-chip[aria-checked="true"]{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
+.iel-page .icust-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.iel-page .icust-chip,.iel-page .icust-chip.cpk-trigger{min-height:44px}.iel-page .icust-chips{gap:8px}}
+.iel-page .icust-chip-sw{flex:0 0 auto;width:18px;height:18px;border:1px solid var(--bh);border-radius:50%;box-sizing:border-box}
+/* Text colour: half the page ink, half the page ground, so it reads as "whatever
+   the text is". Two flat halves, no gradient. */
+.iel-page .icust-chip-sw--text{background:var(--t0);position:relative;overflow:hidden}
+.iel-page .icust-chip-sw--text::after{content:"";position:absolute;inset:0 0 0 50%;background:var(--bg-0)}
+.iel-page .icust-chip-sw--empty{background:transparent;border-style:dashed}
+/* Two lines are held at every width: the longer sentence wraps in the 412px column
+   at desktop as well as on a phone, and the rows below must not move when the choice
+   changes. */
+.iel-page .icust-colour-help{flex:1 0 100%;margin:0;min-height:calc(2em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+/* The mono face's taller metrics would add a pixel to its line, so the code adds no height. */
+.iel-page .icust-colour-help code{font-family:var(--mono);font-size:.95em;line-height:0;color:var(--t1)}
+
+/* Low contrast between the icon and the ground: one line under the stage and a
+   text button. Never an automatic switch. The wrapper holds the note's space (8px
+   above plus one line, two on a phone) whether or not a note is showing, so the
+   rows below, and the chips under the pointer, never move when one arrives. */
+.iel-page .icust-ground-note{margin:0 24px;padding-top:8px;min-height:calc(8px + 1em * 1.4);font-family:var(--font);font-size:var(--fs-caption);line-height:1.4;color:var(--t1)}
+.iel-page .icust-ground-note p{margin:0}
+.iel-page .icust-ground-fix{
+  position:relative;margin-left:8px;padding:0;border:0;background:none;
+  font:inherit;font-weight:560;color:var(--t0);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+}
+.iel-page .icust-ground-fix:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.iel-page .icust-ground-fix::after{content:"";position:absolute;inset:-14px -8px}}
+@media(max-width:560px){.iel-page .icust-ground-note{margin:0 16px;min-height:calc(8px + 2em * 1.4)}}
 
 /* On a phone "Add icon" keeps its glyph and gives its word's width to the
    search field, which is what the row is for (the design's mock gives the search the
