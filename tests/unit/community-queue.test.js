@@ -312,7 +312,14 @@ test('a submission from the wire is sanitised like one from this browser', () =>
 test('the migration publishes at a fixed document id and treats a refused repeat as already there', () => {
   const src = read('src/utils/communityQueueApi.js')
   const body = src.slice(src.indexOf('export async function publishToQueueOnce'), src.indexOf('export async function listMySubmissions'))
-  assert.match(body, /setDoc\(ref, record\)/, 'a write at a chosen id, not addDoc')
+  assert.match(body, /doc\(db, QUEUE_COLLECTION, id\)/, 'a reference at the chosen id, not an auto id')
+  assert.match(body, /postWithLimits\(ref, record, 'submission'\)/, 'the write goes through the counted path at that reference')
+  assert.ok(!/addDoc/.test(body), 'a write at a chosen id, not addDoc')
+  // postWithLimits is where the write happens now. The same reference is the
+  // target on both sides of the flag, so the fixed id survives inside the batch.
+  const limited = src.slice(src.indexOf('export async function postWithLimits'), src.indexOf('export async function publishToQueue('))
+  assert.match(limited, /setDoc\(ref, record\)/, 'flag off: a plain write at the reference')
+  assert.match(limited, /batch\.set\(ref, \{ \.\.\.record, submittedAt: serverTimestamp\(\) \}\)/, 'flag on: the post stays at the reference inside the batch')
   assert.match(body, /permission-denied/, 'the rules refuse a second write to an existing document')
   assert.match(body, /await getDoc\(ref\)/, 'and the owner reading it back is what proves it is there')
   assert.match(body, /snap\.exists\(\) && snap\.data\(\)\?\.authorUid === uid/, 'and only a document this author wrote counts (behaviour: publish-to-queue-once.test.js)')
