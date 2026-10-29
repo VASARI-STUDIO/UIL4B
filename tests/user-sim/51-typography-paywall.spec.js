@@ -187,6 +187,7 @@ test.describe('Typography: browsing stays free under every view', () => {
     watch(page, 'a developer taking tokens out of the type tools signed out')
 
     await go(page, PAIR)
+    await page.locator('.fpr-delivery > summary').click()
     const pairExport = await page.locator('#fpr-export').innerText()
     expect(pairExport.length, 'Font Pair produced no CSS signed out').toBeGreaterThan(80)
     expect(pairExport, 'the pairing export lost its font-family tokens').toContain('--font-heading')

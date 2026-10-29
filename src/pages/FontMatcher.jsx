@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import FontPicker from '../components/FontPicker'
+import FontBrowseDialog from '../components/FontBrowseDialog'
+import MenuSelect from '../components/tool/MenuSelect'
 import UIKitGuide from '../components/UIKitGuide'
 import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolPills,
 } from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -64,9 +65,79 @@ const SHUFFLE_POOL = 200
 // contrast the tool is for.
 const PAIR_FALLBACK_HEADING = 'Playfair Display'
 
+function useMedia(query) {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
+  const [match, setMatch] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(query)
+    const on = () => setMatch(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [query])
+  return match
+}
+
+// One family of the pair: its name in its own face, the category and weight
+// count on a second line so nothing is cut, then the actions on the name's row.
+// `auto` is the body family's Auto button, placed before Browse. Weights are a
+// pill row (a menu pill on a phone) and never hold anything but weights.
+function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, phone, auto }) {
+  const uid = useId()
+  const [browsing, setBrowsing] = useState(false)
+  const slot = label.split(' ')[0]
+  const count = font.variants.length
+  const weights = font.variants.map((w) => ({ value: w, label: String(w) }))
+  return (
+    <div className="fpr-fam" role="group" aria-labelledby={`${uid}-label`}>
+      <span className="fpr-label" id={`${uid}-label`}>{label}</span>
+      <div className="fpr-fam-row">
+        <div
+          className="fpr-fam-id"
+          ref={(el) => {
+            if (!el) return
+            el.style.setProperty('--fpr-fam-ff', fontStack(font))
+            el.style.setProperty('--fpr-fam-fw', String(weight))
+          }}
+        >
+          <span className="fpr-fam-name">{font.family}</span>
+          <span className="fpr-fam-meta">{font.category} · {count} weight{count === 1 ? '' : 's'}</span>
+        </div>
+        <div className="fpr-fam-acts">
+          {phone && (
+            <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
+          )}
+          {auto}
+          <ToolButton className="fpr-browse" aria-haspopup="dialog" aria-label={`Browse ${label.toLowerCase()}`} onClick={() => setBrowsing(true)}>
+            Browse
+          </ToolButton>
+        </div>
+      </div>
+      {!phone && (
+        <ToolPills label={`${slot} weight`} className="fpr-weights" options={weights} value={weight} onChange={onWeight} />
+      )}
+      {browsing && (
+        <FontBrowseDialog
+          title={label}
+          intent={intent}
+          fonts={fonts}
+          value={font}
+          onPick={onPickFont}
+          onClose={() => setBrowsing(false)}
+        />
+      )}
+    </div>
+  )
+}
+
 export default function FontMatcher({ onCopy, toast }) {
   const navigate = useNavigate()
-  const { design, setFonts } = useProject()
+  const { design, setFonts, canSaveProjects } = useProject()
+  // Below 768 the weights become a menu pill and the docked bar carries Copy CSS;
+  // from 1024 the panel sits beside the work and the bar carries the note.
+  const phone = useMedia('(max-width: 767px)')
+  const desktop = useMedia('(min-width: 1024px)')
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // A selection handed over from the Font Gallery or the Type Scale. Read —
@@ -165,7 +236,7 @@ export default function FontMatcher({ onCopy, toast }) {
       heading: { family: headingFont.family, weight: headingW, category: headingFont.category },
       body: { family: body.family, weight: bw, category: body.category },
     })
-    toast?.(`${headingFont.family} + ${body.family} saved to your kit`)
+    toast?.(`Using ${body.family} with ${headingFont.family}`)
   }, [headingFont, headingW, setFonts, toast])
 
   const shuffle = useCallback(() => {
@@ -241,7 +312,7 @@ export default function FontMatcher({ onCopy, toast }) {
 
   // The toolbar's actions. They exist in every state so the row keeps its
   // shape while the catalogue loads; each one is disabled until it can act.
-  const items = [
+  const allItems = [
     {
       id: 'shuffle',
       priority: 1,
@@ -266,11 +337,11 @@ export default function FontMatcher({ onCopy, toast }) {
       id: 'scale',
       priority: 2,
       render: () => (
-        <ToolButton icon="caret-right" className="fpr-handoff" onClick={openInTypeScale} disabled={!ready} aria-label="Build a scale from this pair">
-          Build a scale
+        <ToolButton icon="caret-right" className="fpr-handoff" onClick={openInTypeScale} disabled={!ready} aria-label="Build a type scale from this pair">
+          Build a type scale
         </ToolButton>
       ),
-      menu: { label: 'Build a scale from this pair', icon: 'caret-right', onSelect: openInTypeScale, disabled: !ready },
+      menu: { label: 'Build a type scale from this pair', icon: 'caret-right', onSelect: openInTypeScale, disabled: !ready },
     },
     { id: 'div', divider: true, align: 'end' },
     {
@@ -282,13 +353,20 @@ export default function FontMatcher({ onCopy, toast }) {
       menu: { label: 'Copy font import', icon: 'copy', onSelect: copyImport, disabled: !importUrl },
     },
   ]
+  // Below 1024 Shuffle lives in the docked bar, and the Font Gallery link and
+  // the import copy fold into More.
+  const items = desktop
+    ? allItems
+    : allItems
+      .filter((it) => it.id !== 'shuffle')
+      .map((it) => (it.id === 'gallery' || it.id === 'import' ? { ...it, inline: false } : it))
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
       Copy CSS
     </ToolButton>
   )
   const layout = (body) => (
-    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" items={items} primary={primary}>
+    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" items={items} primary={phone ? null : primary}>
       {body}
     </ToolLayout>
   )
@@ -325,15 +403,37 @@ export default function FontMatcher({ onCopy, toast }) {
     for (const key of Object.keys(vars)) el.style.setProperty(key, vars[key])
   }
 
-  const weightPills = (font, value, onPick, label) => (
-    <ToolPills
-      mono
-      label={label}
-      className="fpr-weights"
-      options={font.variants.map((w) => ({ value: w, label: String(w) }))}
-      value={value}
-      onChange={onPick}
-    />
+  const keepPair = (e) => {
+    // Signed out, write the pair into this browser's draft before the account
+    // prompt opens; the prompt is the only thing the press opens.
+    if (canSaveProjects || !e.target.closest?.('.svt-trigger')) return
+    setFonts({
+      heading: { family: headingFont.family, weight: headingW, category: headingFont.category },
+      body: { family: bodyFont.family, weight: bodyW, category: bodyFont.category },
+    })
+  }
+  const shuffleButton = (
+    <ToolButton
+      icon="shuffle"
+      variant={phone ? 'square' : 'quiet'}
+      className="fpr-dock-shuffle"
+      onClick={shuffle}
+      disabled={!ready}
+      aria-label={phone ? 'Shuffle the heading face' : undefined}
+      title={phone ? 'Shuffle the heading face' : undefined}
+    >
+      {!phone && 'Shuffle'}
+    </ToolButton>
+  )
+  const saveButton = (
+    <div className="fpr-dock-save" onClickCapture={keepPair}>
+      <SaveTypeSystem
+        gate="type-save-font-pair"
+        label="this pairing"
+        summary={`${headingFont.family} ${headingW} for headings, ${bodyFont.family} ${bodyW} for body.`}
+        toast={toast}
+      />
+    </div>
   )
 
   return layout(
@@ -347,8 +447,69 @@ export default function FontMatcher({ onCopy, toast }) {
       />
 
       <ToolGrid className="fpr-grid">
-        {/* ── The output: the pair set as a page, then what else would pair,
-            then the code. First in the source, so a phone opens on it. ── */}
+        {/* Controls first, so a phone and a tablet read the families, then the
+            preview text, then the specimen. From 1024 the grid puts the panel
+            on the right. */}
+        <ToolPanel label="Font Pair controls" className="fpr-panel fpr-config">
+          <div className="fpr-fams">
+            <FamilyCard
+              label="Heading family"
+              intent="heading"
+              fonts={catalog}
+              font={headingFont}
+              weight={headingW}
+              phone={phone}
+              onPickFont={chooseHeading}
+              onWeight={(w) => {
+                setHeadingW(w)
+                setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
+              }}
+            />
+            <FamilyCard
+              label="Body family"
+              fonts={catalog}
+              font={bodyFont}
+              weight={bodyW}
+              phone={phone}
+              onPickFont={chooseBody}
+              onWeight={(w) => {
+                setBodyW(w)
+                setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
+              }}
+              auto={(
+                <ToolButton
+                  className="fpr-wand"
+                  onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
+                  disabled={!suggestions.length}
+                  title={suggestions.length
+                    ? `Use ${suggestions[0].font.family}, the top suggestion for ${headingFont.family}`
+                    : 'No suggestions yet'}
+                  aria-label="Auto: use the top suggested body face"
+                >
+                  Auto
+                </ToolButton>
+              )}
+            />
+          </div>
+          <div className="fpr-text">
+            <label className="fpr-label" htmlFor="fpr-text">Preview text</label>
+            <input
+              id="fpr-text"
+              className="fpr-input"
+              type="text"
+              value={previewText}
+              placeholder="Your own words…"
+              maxLength={90}
+              spellCheck="false"
+              onChange={e => setPreviewText(e.target.value)}
+            />
+            <p className="fpr-hint">
+              Brand words behave differently from a pangram — try the real headline
+              before you commit to a face.
+            </p>
+          </div>
+        </ToolPanel>
+
         <ToolMain className="fpr-output">
           <section className="fpr-stage" aria-labelledby="fpr-output-title">
             <h2 id="fpr-output-title" className="sr-only">Read the pairing</h2>
@@ -410,11 +571,9 @@ export default function FontMatcher({ onCopy, toast }) {
               )}
             </div>
           </section>
-
           <section className="fpr-suggest" aria-labelledby="fpr-suggest-title">
             <div className="fpr-section-head">
-              <h2 id="fpr-suggest-title">Body faces that work under {headingFont.family}</h2>
-              <p>Scored on popularity and weight range, filtered by what actually contrasts with a {headingFont.category} heading.</p>
+              <h2 id="fpr-suggest-title">Bodies that suit {headingFont.family}</h2>
             </div>
 
             {suggesting ? (
@@ -442,36 +601,18 @@ export default function FontMatcher({ onCopy, toast }) {
                     <li
                       key={font.family}
                       className={active ? 'fpr-card fpr-card--on' : 'fpr-card'}
-                      ref={varsRef({
-                        '--fpr-h-ff': headingStack,
-                        '--fpr-h-fw': String(headingW),
-                        '--fpr-b-ff': fontStack(font),
-                        '--fpr-b-fw': String(bodyWeight(font)),
-                      })}
+                      ref={varsRef({ '--fpr-b-ff': fontStack(font), '--fpr-b-fw': String(bodyWeight(font)) })}
                     >
-                      <p className="fpr-card-heading">{headingFont.family}</p>
-                      <p className="fpr-card-body">
-                        {font.family} carries the body copy — {PANGRAM.toLowerCase()}.
-                      </p>
-                      {/* The reason is one click away rather than always on:
-                          the card previews the pairing, the details say why. */}
+                      <div className="fpr-card-line">
+                        <span className="fpr-card-name">{font.family}</span>
+                        <ToolButton className="fpr-card-apply" onClick={() => applyPair(font)} aria-pressed={active}>
+                          {active ? <><span aria-hidden="true">✓ </span>In use</> : 'Use this pair'}
+                        </ToolButton>
+                      </div>
                       <details className="fpr-card-why">
                         <summary>Why this pairs</summary>
                         <p className="fpr-card-reason">{reason}</p>
                       </details>
-                      <div className="fpr-card-foot">
-                        <span className="fpr-card-name">
-                          {font.family}
-                          <em>{font.category} · {font.variants.length}w</em>
-                        </span>
-                        <ToolButton
-                          className="fpr-card-apply"
-                          onClick={() => applyPair(font)}
-                          aria-pressed={active}
-                        >
-                          {active ? 'In use' : 'Use this pair'}
-                        </ToolButton>
-                      </div>
                     </li>
                   )
                 })}
@@ -479,95 +620,26 @@ export default function FontMatcher({ onCopy, toast }) {
             )}
           </section>
 
-          <section className="fpr-delivery" aria-labelledby="fpr-delivery-title">
-            <div className="fpr-section-head">
-              <h2 id="fpr-delivery-title">Prepare the handoff</h2>
-              <p>One import and one block of CSS — both families at the weights you chose.</p>
-            </div>
+          <details className="fpr-delivery">
+            <summary>Prepare the handoff</summary>
+            <p className="fpr-hint">One import and one block of CSS — both families at the weights you chose.</p>
             <pre id="fpr-export" className="tl-code fpr-export" tabIndex={0} aria-label="CSS for this pair"><code>{cssExport}</code></pre>
-            {/* Copying is free; keeping the pair in a project is the step
-                that asks for an account. */}
-            <div className="fpr-keep">
-              <SaveTypeSystem
-                gate="type-save-font-pair"
-                label="this pairing"
-                summary={`${headingFont.family} ${headingW} for headings, ${bodyFont.family} ${bodyW} for body.`}
-                toast={toast}
-              />
-              <p className="fpr-keep-note">
-                Keeps both families and their weights with the project’s palette and type scale.
-              </p>
-            </div>
-          </section>
+          </details>
         </ToolMain>
-
-        {/* ── Controls ── */}
-        <ToolPanel label="Font Pair controls" className="fpr-panel fpr-config">
-          <ToolSection>
-            <FontPicker
-              label="Heading family"
-              intent="heading"
-              fonts={catalog}
-              value={headingFont}
-              onChange={chooseHeading}
-            />
-            {weightPills(headingFont, headingW, (w) => {
-              setHeadingW(w)
-              setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
-            }, 'Heading weight')}
-          </ToolSection>
-
-          <ToolSection>
-            {/* The wand takes the first suggestion, the same ranking the cards
-                show, so the two can never name different winners. Disabled,
-                not hidden, until there is a suggestion to apply. */}
-            <div className="fpr-bodyrow">
-              <FontPicker
-                label="Body family"
-                fonts={catalog}
-                value={bodyFont}
-                onChange={chooseBody}
-              />
-              <ToolButton
-                icon="magic-wand"
-                className="fpr-wand"
-                onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
-                disabled={!suggestions.length}
-                title={suggestions.length
-                  ? `Use ${suggestions[0].font.family}, the best match for ${headingFont.family}`
-                  : 'No suggestions yet'}
-                aria-label={suggestions.length
-                  ? `Pick a body face automatically: use ${suggestions[0].font.family} with ${headingFont.family}`
-                  : 'Pick a body face automatically — no suggestions yet'}
-              >
-                Auto
-              </ToolButton>
-            </div>
-            {weightPills(bodyFont, bodyW, (w) => {
-              setBodyW(w)
-              setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
-            }, 'Body weight')}
-          </ToolSection>
-
-          <ToolSection>
-            <label className="tl-sec-label" htmlFor="fpr-text">Preview text</label>
-            <input
-              id="fpr-text"
-              className="fpr-input"
-              type="text"
-              value={previewText}
-              placeholder="Your own words…"
-              maxLength={90}
-              spellCheck="false"
-              onChange={e => setPreviewText(e.target.value)}
-            />
-            <p className="fpr-hint">
-              Brand words behave differently from a pangram — try the real headline
-              before you commit to a face.
-            </p>
-          </ToolSection>
-        </ToolPanel>
       </ToolGrid>
+
+      {/* The docked bar: one stack above the tab bar on a phone. */}
+      <div className="fpr-dock" role="group" aria-label="Pair actions">
+        {desktop && <p className="fpr-dock-note">Keeps both families with your project</p>}
+        {!desktop && !phone && shuffleButton}
+        {saveButton}
+        {phone && shuffleButton}
+        {phone && (
+          <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
+            Copy CSS
+          </ToolButton>
+        )}
+      </div>
 
       {/* Step 2 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="fonts" />
