@@ -262,7 +262,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
   }
 })
 
-for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/create/font-pair', null]]) {
+for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair', null]]) {
   test(`${route} · at the free cap on a 390px phone the save menu is not cut off above the screen`, async ({ browser }) => {
     // `.svt-menu` opens UPWARD (bottom: calc(100% + 8px)) from a button that
     // sits mid-screen. At the cap the wall makes it 419px tall, and at 390 the
@@ -278,10 +278,9 @@ for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/crea
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
     if (route === '/create/type-scale') {
-      // Type Scale keeps its save in the toolbar, where a 390px row has moved it
-      // into the More sheet; the menu it opens is the same bottom sheet.
-      await page.getByRole('button', { name: 'More', exact: true }).click()
-      await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Save to a project' }).click()
+      // Type Scale keeps its save in the docked bar above the tab bar ("Save"
+      // at 390); the menu it opens is the same bottom sheet.
+      await page.locator('.tsc-dock .tsc-save').click()
     } else {
       const trigger = page.getByRole('button', { name: 'Save to a project' })
       // The fault depends on where the button sits when it is pressed: the menu
@@ -534,7 +533,7 @@ for (const theme of ['light', 'dark']) {
     test.setTimeout(90_000)
     const failures = []
     for (const [route, sel, tab] of [
-      ['/create/type-scale', '.tsc-copy-primary', 'Developer handoff'],
+      ['/create/type-scale', '.tsc-copy-primary', 'Code'],
       ['/create/tint', '.tt .tl-primary .tl-btn', null],
       ['/create/font-pair', '.fpr-copy-primary', null],
     ]) {

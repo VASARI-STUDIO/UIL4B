@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
@@ -84,11 +84,34 @@ const ROUNDING = [
 // have. Now the ladder resolves each step at this width, so what you see is
 // what the exported clamp() actually computes there.
 const WIDTHS = [
-  { id: 'full', label: 'Desktop', px: null, vw: FLUID_VIEWPORTS.max },
+  { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
   { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
   { id: 'mobile', label: 'Mobile', px: 375, vw: FLUID_VIEWPORTS.min },
 ]
 
+
+// The width the preview opens on is the visitor's own device class, so a phone
+// no longer opens on the desktop sizes: Mobile under 768, Tablet from 768 to
+// 1023, Desktop from 1024.
+function deviceWidth() {
+  if (typeof window === 'undefined') return 'full'
+  const w = window.innerWidth
+  return w < 768 ? 'mobile' : w < 1024 ? 'tablet' : 'full'
+}
+
+function useMedia(query) {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
+  const [match, setMatch] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(query)
+    const on = () => setMatch(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [query])
+  return match
+}
 
 const DEFAULTS = {
   base: 16,
@@ -101,7 +124,9 @@ const DEFAULTS = {
   up: 6,
   down: 2,
   lineHeight: 1.5,
-  headingTrack: -0.02,
+  // Matches the project's own default (data/designDefaults.js, 0), so the first
+  // load and Reset scale read the same letter spacing (K17).
+  headingTrack: 0,
   bodyTrack: 0,
   rounding: 'half',
 }
@@ -113,6 +138,9 @@ const DEFAULTS = {
 // does not overturn it. What it adds is the ability to swap the string for
 // your own words — see `sample` — which is the part that was missing.
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
+// Under 768 the pangram wraps the top step to four lines and pushes the lower
+// steps out of view, so a phone gets a short default. Typed text is never cut.
+const PHONE_SPECIMEN = 'Scale it'
 
 // (stepName lived here. It is now in utils/fluidType.js beside stepPx, because
 // the homepage workbench's Typography preview labels its steps with the same
@@ -184,8 +212,14 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // and what avoids a visible step on resize, but the choice is real — a team
   // with strict per-breakpoint specs needs the other one.
   const [fluid, setFluid] = useState(true)
-  const [width, setWidth] = useState('full')
-  const [audience, setAudience] = useState('designer')
+  const [width, setWidth] = useState(deviceWidth)
+  const [view, setView] = useState('scale')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const phone = useMedia('(max-width: 767px)')
+  const ladderRef = useRef(null)
+  const pageColRef = useRef(null)
+  const sheetRowRef = useRef(null)
+  const [colW, setColW] = useState(0)
   const [format, setFormat] = useState('css')
   // THE WORDS IN THE PREVIEW. Empty means the pangram below.
   //
@@ -262,7 +296,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     const out = []
     for (let exp = up; exp >= -down; exp -= 1) {
       const px = stepPx(base, ratio, exp, rounding)
-      const mobilePx = stepPx(mobileBase, mobileRatio, exp, rounding)
+      // A step is never larger on a phone than on desktop (K19), so a smaller
+      // desktop base can't leave a caption bigger on mobile.
+      const mobilePx = Math.min(stepPx(mobileBase, mobileRatio, exp, rounding), px)
       const isHeading = exp >= 2
       const clamped = fluidClamp(mobilePx, px)
       const previewPx = fluid
@@ -451,19 +487,60 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     navigate('/create/font-pair')
   }
 
-  const handleAudienceKeyDown = (event) => {
+  const VIEWS = [['scale', 'Scale'], ['page', 'Page'], ['code', 'Code']]
+  const handleViewKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
-    const next = event.key === 'ArrowLeft' || event.key === 'Home' ? 'designer' : 'developer'
-    setAudience(next)
-    requestAnimationFrame(() => document.getElementById(`tsc-tab-${next}`)?.focus())
+    const at = VIEWS.findIndex(([id]) => id === view)
+    const next = event.key === 'Home' ? 0
+      : event.key === 'End' ? VIEWS.length - 1
+        : (at + (event.key === 'ArrowRight' ? 1 : -1) + VIEWS.length) % VIEWS.length
+    setView(VIEWS[next][0])
+    requestAnimationFrame(() => document.getElementById(`tsc-tab-${VIEWS[next][0]}`)?.focus())
   }
+
+  // How wide the page column really is, so the width note can say when the
+  // chosen width doesn't fit and lines wrap sooner.
+  useEffect(() => {
+    const el = pageColRef.current
+    if (view !== 'page' || !el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => setColW(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view])
+
+  // The settings sheet is non-modal. Opening it brings the ladder up under the
+  // toolbar, so the steps stay in view above it.
+  const openSheet = () => {
+    setSheetOpen(true)
+    requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
+  }
+  // Closing hides the sheet, so focus goes back to the row that opened it
+  // rather than falling to <body>.
+  const closeSheet = () => {
+    setSheetOpen(false)
+    sheetRowRef.current?.focus({ preventScroll: true })
+  }
+  // Escape closes the open sheet. Escape that belongs to a popup inside it (a
+  // list, the font dialog, the Base value field) is left to that popup.
+  useEffect(() => {
+    if (!sheetOpen) return undefined
+    const onKey = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
+      setSheetOpen(false)
+      sheetRowRef.current?.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [sheetOpen])
 
   const formatLabel = format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'
 
   // Keeping the scale in a project is the one step here that asks for an
-  // account; everything else on the page works signed out. The trigger is a
-  // toolbar action, so it stays on screen while the page scrolls.
+  // account; everything else on the page works signed out. The trigger sits in
+  // the docked bar at the foot of the page, so it stays on screen while the
+  // page scrolls.
   const save = useSaveTypeSystemToolbar({
     gate: 'type-save-type-scale',
     label: 'this type scale',
@@ -501,23 +578,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
     },
-    {
-      id: 'save',
-      priority: 3,
-      render: () => (
-        <ToolButton
-          ref={save.triggerRef}
-          icon="bookmark-simple"
-          className="tsc-save"
-          aria-expanded={save.open}
-          aria-haspopup="dialog"
-          onClick={save.trigger}
-        >
-          Save to a project
-        </ToolButton>
-      ),
-      menu: { label: 'Save to a project', icon: 'bookmark-simple', onSelect: save.trigger },
-    },
   ]
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={() => onExport?.(currentExport)}>
@@ -525,8 +585,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     </ToolButton>
   )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={primary}>
-      <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : primary}>
       {body}
     </ToolLayout>
   )
@@ -535,7 +594,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The string every preview on the page is set in. Trimmed, because a space
   // typed and deleted is not a choice to preview a space.
-  const specimen = sample.trim() || PANGRAM
+  const defaultSpecimen = phone ? PHONE_SPECIMEN : PANGRAM
+  const specimen = sample.trim() || defaultSpecimen
 
   const previewVars = {
     '--tsc-heading-ff': headingStack,
@@ -576,20 +636,19 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       />
 
       <ToolGrid className="tsc-grid">
-        {/* ── The output leads: the scale, stated as base × ratio, then every
-            step at its real size. First in the source, so a phone opens on
-            it; the controls follow in the side panel. ── */}
-        <ToolMain className="tsc-output">
-          <section className="tsc-card" aria-labelledby="tsc-output-title">
-            <h2 id="tsc-output-title" className="sr-only">Read the scale</h2>
-
-            {/* The two numbers that ARE a modular scale sit directly above
-                the ladder they drive, at every width. */}
+        {/* The panel is first in the source, so reading order, Tab order and
+            what's on screen agree below 1024: Base and Ratio, then the
+            families, then the ladder. From 1024 the grid puts it in the right
+            column. Phone: the Base and Ratio strip above the ladder, and
+            everything else in a non-modal sheet. */}
+        <ToolPanel label="Type Scale controls" className="tsc-panel tsc-config">
+          <ToolSection className="tsc-sec-scale">
             <div className="tsc-scale-bar" role="group" aria-label="The scale">
-              <div className="tsc-scale-term">
-                <label className="tl-sec-label" htmlFor="tsc-base">Base size</label>
+              <div className="tsc-scale-term tsc-scale-term--base">
+                <label className="tsc-k" htmlFor="tsc-base">Base size</label>
                 <SnapSlider
                   id="tsc-base"
+                  className="tsc-range"
                   min={10}
                   max={28}
                   value={base}
@@ -602,9 +661,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   ariaLabel="Base font size in pixels"
                 />
               </div>
-              <span className="tsc-scale-x" aria-hidden="true">&times;</span>
               <div className="tsc-scale-term tsc-scale-term--ratio">
-                <label className="tl-sec-label" htmlFor="tsc-ratio">Scale ratio</label>
+                <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
                 <MenuSelect label="Scale ratio"
                   id="tsc-ratio"
                   className="tsc-select tsc-scale-select"
@@ -613,16 +671,17 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                 >
                   {RATIOS.map(r => (
                     <option key={r.id} value={r.id}>
-                      {r.label}{r.value ? ` — ${r.value}` : ''}
+                      {r.label}{r.value ? ` ${r.value}` : ''}
                     </option>
                   ))}
                 </MenuSelect>
               </div>
               {ratioId === 'custom' && (
                 <div className="tsc-scale-term tsc-scale-custom">
-                  <label className="tl-sec-label" htmlFor="tsc-custom">Custom ratio</label>
+                  <label className="tsc-k" htmlFor="tsc-custom">Custom ratio</label>
                   <SnapSlider
                     id="tsc-custom"
+                    className="tsc-range"
                     min={1.05}
                     max={2}
                     step={0.001}
@@ -639,179 +698,62 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                 </div>
               )}
             </div>
-
-            {/* The result of the two terms above, and which end of the scale
-                the ladder is showing. */}
-            <div className="tsc-ladder-head">
-              <p className="tsc-scale-out" aria-live="polite">
-                <strong>{steps.length} step{steps.length === 1 ? '' : 's'}</strong>
-                <span className="tsc-scale-range">
-                  {steps[steps.length - 1].px}px – {steps[0].px}px
-                </span>
-                {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
-              </p>
-              <div className="tsc-width-switch tl-pills" role="group" aria-label="Preview width">
-                {WIDTHS.map(w => (
-                  <button
-                    key={w.id}
-                    type="button"
-                    className={width === w.id ? 'tsc-width-btn tl-pill is-on' : 'tsc-width-btn tl-pill'}
-                    aria-pressed={width === w.id}
-                    onClick={() => setWidth(w.id)}
-                  >
-                    {w.label}{w.px ? ` · ${w.px}px` : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div
-              className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
-              ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
-            >
-              {previewIsFitted && (
-                <p className="tsc-fit-note" role="status">
-                  Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
-                </p>
-              )}
-              {steps.map(s => (
-                <button
-                  key={s.name}
-                  type="button"
-                  className="tsc-row"
-                  onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
-                  aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
-                >
-                  <span className="tsc-row-meta">
-                    <span className="tsc-row-name">--text-{s.name}</span>
-                    {/* The size at the previewed width, with the mobile →
-                        desktop range under it so both ends stay visible. */}
-                    <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
-                    <span className="tsc-row-sub">
-                      {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
-                    </span>
-                  </span>
-                  <span
-                    className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-                    ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
-                  >
-                    {specimen}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="tsc-delivery" aria-labelledby="tsc-delivery-title">
-            <div className="tsc-delivery-head">
-              <h2 id="tsc-delivery-title">{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
-              {/* The one control for `audience`: a tablist directly above the
-                  panel it switches. */}
-              <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
-                {[['designer', 'Design preview'], ['developer', 'Developer handoff']].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    id={`tsc-tab-${id}`}
-                    aria-selected={audience === id}
-                    aria-controls="tsc-audience-panel"
-                    tabIndex={audience === id ? 0 : -1}
-                    className={audience === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
-                    onClick={() => setAudience(id)}
-                    onKeyDown={handleAudienceKeyDown}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="tsc-delivery-note">
-              {audience === 'designer'
-                ? 'The same scale, laid out as a page — check the jumps actually read.'
-                : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
+            <p className="tsc-scale-out" aria-live="polite">
+              <span className="tsc-scale-range">
+                {steps.length} step{steps.length === 1 ? '' : 's'}, {steps[steps.length - 1].px}px to {steps[0].px}px
+              </span>
+              {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
             </p>
+          </ToolSection>
 
-            <div
-              id="tsc-audience-panel"
-              role="tabpanel"
-              aria-labelledby={audience === 'designer' ? 'tsc-tab-designer' : 'tsc-tab-developer'}
-            >
-              {audience === 'designer' ? (
-                <article className="tsc-article" ref={varsRef(previewVars)}>
-                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
-                    {sample.trim() || 'A page set on this scale'}
-                  </h3>
-                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
-                    Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
-                    hand-picked, so the rhythm holds when the page grows.
-                  </p>
-                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
-                    Where the jumps matter
-                  </h4>
-                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
-                    A ratio that looks elegant in isolation can flatten a page: if the step between
-                    body copy and a subheading is too small, the hierarchy stops doing its job.
-                  </p>
-                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
-                    Captions and helper text live down here — check they are still comfortably legible.
-                  </p>
-                </article>
-              ) : (
-                <div className="tsc-developer-view">
-                  <div className="tsc-fmt tl-pills" role="group" aria-label="Export format">
-                    {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
-                      <button
-                        key={id}
-                        type="button"
-                        className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
-                        aria-pressed={format === id}
-                        onClick={() => setFormat(id)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
-                </div>
-              )}
+          <button
+            type="button"
+            ref={sheetRowRef}
+            className="tsc-sheet-row"
+            aria-expanded={sheetOpen}
+            aria-controls="tsc-sheet"
+            onClick={() => (sheetOpen ? closeSheet() : openSheet())}
+          >
+            Families, preview text and fine tuning
+            <ToolIcon name="caret-right" size={13} />
+          </button>
+
+          <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'}>
+            <div className="tsc-sheet-head">
+              <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
+              <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
-          </section>
-        </ToolMain>
+            <div className="tsc-sheet-body">
+              <ToolSection>
+                <FontPicker
+                  label="Heading family"
+                  fonts={catalog}
+                  value={headingFont}
+                  onChange={chooseHeading}
+                />
+                {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                <FontPicker
+                  label="Body family"
+                  fonts={catalog}
+                  value={bodyFont}
+                  onChange={chooseBody}
+                />
+                {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+              </ToolSection>
 
-        {/* ── The panel: the words, the families, and everything else behind
-            one disclosure. Every control keeps its id, label and maths. ── */}
-        <ToolPanel label="Type Scale controls" className="tsc-panel tsc-config">
-          <ToolSection>
-            <label className="tl-sec-label" htmlFor="tsc-sample">Preview text</label>
-            <input
-              id="tsc-sample"
-              type="text"
-              className="tsc-sample-input"
-              value={sample}
-              maxLength={60}
-              placeholder={PANGRAM}
-              autoComplete="off"
-              onChange={e => setSample(e.target.value)}
-            />
-          </ToolSection>
-
-          <ToolSection>
-            <FontPicker
-              label="Heading family"
-              fonts={catalog}
-              value={headingFont}
-              onChange={chooseHeading}
-            />
-            {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
-            <FontPicker
-              label="Body family"
-              fonts={catalog}
-              value={bodyFont}
-              onChange={chooseBody}
-            />
-            {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
-          </ToolSection>
+              <ToolSection>
+                <label className="tsc-k" htmlFor="tsc-sample">Preview text</label>
+                <input
+                  id="tsc-sample"
+                  type="text"
+                  className="tsc-sample-input"
+                  value={sample}
+                  maxLength={60}
+                  placeholder={defaultSpecimen}
+                  autoComplete="off"
+                  onChange={e => setSample(e.target.value)}
+                />
+              </ToolSection>
 
           <ToolSection className="tsc-tuning-sec">
             {/* `hidden` rather than conditional rendering, so aria-controls
@@ -1005,8 +947,157 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               </div>
             </div>
           </ToolSection>
+            </div>
+          </div>
         </ToolPanel>
+
+        {/* The work column. It is a size container (see type-scale.css), so the
+            later ladder-beside-page split can key off the column's own width
+            with the panel already counted. */}
+        <ToolMain className="tsc-output">
+          <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
+            {VIEWS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`tsc-tab-${id}`}
+                aria-selected={view === id}
+                aria-controls="tsc-view-panel"
+                tabIndex={view === id ? 0 : -1}
+                className={view === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
+                onClick={() => setView(id)}
+                onKeyDown={handleViewKeyDown}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            id="tsc-view-panel"
+            role="tabpanel"
+            aria-labelledby={`tsc-tab-${view}`}
+            className="tsc-view"
+            data-view={view}
+            data-width={width}
+            ref={varsRef(previewVars)}
+          >
+            {view === 'scale' && (
+              <div className="tsc-ladder" ref={ladderRef} data-ladder="">
+                <h2 className="sr-only">Read the scale</h2>
+                {previewIsFitted && (
+                  <p className="tsc-fit-note" role="status">
+                    Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
+                  </p>
+                )}
+                {steps.map(s => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    className="tsc-row"
+                    data-step={s.name}
+                    data-px={s.px}
+                    onClick={() => {
+                      onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
+                      toast?.(`Copied --text-${s.name}`)
+                    }}
+                    aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
+                  >
+                    <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
+                    <span
+                      className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
+                      ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.px)}px` })}
+                    >
+                      {specimen}
+                    </span>
+                    <span className="tsc-row-num">{s.px}px<span className="tsc-row-rem"> · {trim(+(s.px / 16).toFixed(4))}rem</span></span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {view === 'page' && (
+              <div className="tsc-page-view">
+                <div className="tsc-page-bar">
+                  <p className="tsc-page-label">Page set on this scale</p>
+                  <MenuSelect
+                    label="Preview width"
+                    id="tsc-width"
+                    className="tsc-select tsc-width-select"
+                    value={width}
+                    onChange={setWidth}
+                  >
+                    {WIDTHS.map(w => <option key={w.id} value={w.id}>{`${w.label} · ${w.px}px`}</option>)}
+                  </MenuSelect>
+                </div>
+                {colW > 0 && colW < activeWidth.px - 1 && (
+                  <p className="tsc-width-note" role="status">
+                    Sizes as on a {activeWidth.px}px screen. Lines wrap sooner here.
+                  </p>
+                )}
+                <div className="tsc-page-col" ref={pageColRef}>
+                  <article className="tsc-article" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
+                    <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.previewPx || steps[0].previewPx, { max: 72 })}px` })}>
+                      {sample.trim() || 'A page set on this scale'}
+                    </h3>
+                    <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.previewPx || base, { max: 28 })}px` })}>
+                      Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
+                      hand-picked, so the rhythm holds when the page grows.
+                    </p>
+                    <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.previewPx || base, { max: 48 })}px` })}>
+                      Where the jumps matter
+                    </h4>
+                    <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 0)?.previewPx || base, { max: 24 })}px` })}>
+                      A ratio that looks elegant in isolation can flatten a page: if the step between
+                      body copy and a subheading is too small, the hierarchy stops doing its job.
+                    </p>
+                    <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.previewPx || base, { max: 18 })}px` })}>
+                      Captions and helper text live down here — check they are still comfortably legible.
+                    </p>
+                  </article>
+                </div>
+              </div>
+            )}
+
+            {view === 'code' && (
+              <div className="tsc-developer-view">
+                <div className="tsc-fmt tl-pills" role="group" aria-label="Export format">
+                  {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
+                      aria-pressed={format === id}
+                      onClick={() => setFormat(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
+              </div>
+            )}
+          </div>
+        </ToolMain>
       </ToolGrid>
+
+      {/* The docked bar. Tablet and wide: Save to a project. Phone: Save and
+          Copy CSS, above the tab bar. The save menu opens from it. */}
+      <div className="tsc-dock" role="group" aria-label={phone ? 'Save and copy' : 'Save'}>
+        <ToolButton
+          ref={save.triggerRef}
+          icon="bookmark-simple"
+          className="tsc-save"
+          aria-expanded={save.open}
+          aria-haspopup="dialog"
+          onClick={save.trigger}
+        >
+          {phone ? 'Save' : 'Save to a project'}
+        </ToolButton>
+        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+        {phone && primary}
+      </div>
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />

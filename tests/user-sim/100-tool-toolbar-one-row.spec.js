@@ -70,8 +70,11 @@ const TOOLS = [
   },
   {
     route: '/create/type-scale',
-    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import', 'Save to a project'],
+    // Save to a project is in the docked bar at every width, never the toolbar;
+    // under 768 Copy CSS is there too.
+    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
     primary: /^Copy CSS/,
+    primaryDockedBelow: 768,
     title: 'Type Scale',
   },
   {
@@ -129,8 +132,15 @@ for (const tool of TOOLS) {
           for (const t of name) expect(t.cut, `${width}px: "${t.text}" is truncated`).toBeLessThanOrEqual(0)
         }
 
-        // The primary, where the tool has one, is always on the row.
-        if (tool.primary) await expect(bar.getByRole('button', { name: tool.primary })).toBeVisible()
+        // The primary, where the tool has one, is always on the row, or in the
+        // docked bar where the tool says so (Type Scale on a phone).
+        if (tool.primary) {
+          const docked = width < (tool.primaryDockedBelow || 0)
+          await expect(docked
+            ? page.locator('.tsc-dock').getByRole('button', { name: tool.primary })
+            : bar.getByRole('button', { name: tool.primary })).toBeVisible()
+          if (docked) await expect(bar.getByRole('button', { name: tool.primary }), `${width}px: the primary is in the dock, not also on the row`).toHaveCount(0)
+        }
 
         // Every action: on the row, or in the overflow.
         await expect(bar, `${width}px: the toolbar is still measuring`).not.toHaveClass(/is-measuring/)
