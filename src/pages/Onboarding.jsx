@@ -22,7 +22,7 @@ const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 
 // /checkout itself, with or without a plan, but not /checkout/return.
-const isCheckoutTarget = (target) => typeof target === 'string' && /^\/checkout(?:\?|$)/.test(target)
+const isCheckoutTarget = (target) => target === '/checkout' || (typeof target === 'string' && target.startsWith('/checkout?'))
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT HAPPENED TO THE SURVEY
