@@ -18,7 +18,7 @@ import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 const REAL_CELL = '.ig .ic:not(.ig-skel)'
 
 const cellNames = (page) => page.evaluate((sel) =>
-  [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '')), REAL_CELL)
+  [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '').replace(/, [^,]+$/, '')), REAL_CELL)
 
 test.describe('the icon weight segment', () => {
   for (const width of [390, 768, 1440]) {

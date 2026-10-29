@@ -444,11 +444,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .ig-skel-slot{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0}
 .ig-skel-slot--mono{width:24px;height:24px}
 .ig-skel .sk{background:color-mix(in oklab,var(--t1) 6%,transparent)}
-.ig-skel-labels{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:calc(34px + var(--fs-micro));flex-shrink:0}
-.ig-skel-labels--single{height:25px}
-.ig-skel-pack{width:40%;max-width:36px;height:8px;border-radius:var(--radius-pill)}
-@media(max-width:980px){.ig-skel-labels{height:25px}.ig-skel-pack{display:none}}
-@media(max-width:640px){.ig-skel-labels{height:12.5px}}
+.ig-skel-labels{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:25px;flex-shrink:0}
 .ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
 .ig-sentinel{width:100%;height:1px}
 .ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
@@ -1126,15 +1122,13 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   background:transparent;
 }
 .lib-surface .ig .ic-name{min-height:25px}
-.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:calc(113px + var(--fs-micro))}
-@media(max-width:980px){.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:104px}}
-/* Glyphs and names start from the cell's top edge, so a cell reserved for a pack
-   line does not float its glyph below the same glyph in a cell without one.
+/* Glyphs and names start from the cell's top edge, so every glyph in a row sits
+   at the same height. The pack label is laid over the corner and takes no row.
    A glyph chip (coloured art, logo or wordmark) is a 36px box that draws its
    24px, 28px or wide artwork centred, so in EVERY cell it takes 24px of layout
    like the mono glyph beside it (it overflows 6px each side into the cell
    padding). The icon slot is one fixed height whatever the art's shape and
-   whether or not the cell carries a pack line: the glyph tops and the name tops
+   whether or not the cell carries a pack label: the glyph tops and the name tops
    line up across any row. Its loading slot takes the same 24px. The loading
    labels sit where the name will appear. */
 .lib-surface .ig .ic{justify-content:flex-start}
@@ -1155,7 +1149,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
   .lib-surface .ig .ig-skel-labels{height:25px}
   /* 1 border + 12 padding + 24 glyph + 6 gap + 25 name + 12 padding + 1 border. */
-  .lib-surface .ig .ic,.lib-surface .ig .ic:has(.ic-pack),.lib-surface .ig .ig-skel:has(.ig-skel-pack),.lib-surface .ig.ig--reserve-pack .ic{min-height:81px}
+  .lib-surface .ig .ic{min-height:81px}
 }
 /* Below 360px a 4-up name box is 60px, too narrow for long names on two lines. */
 @media(max-width:359px){

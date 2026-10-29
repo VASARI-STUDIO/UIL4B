@@ -56,8 +56,9 @@ import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // see src/data/iconPackTiers.js for the rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
-  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeeIcon, canSeePack, isAnimatedPack, isBlockedPack, proOnlyIconCount, tierOf, viewerTier, visibleIconNames, visiblePacks,
+  ANIMATED_PACKS, ICON_GATE_COPY, anonPerPack, canSeeIcon, canSeePack, isAnimatedPack, isBlockedPack, proOnlyIconCount, tierOf, viewerTier, visibleIconNames, visiblePacks,
 } from '../data/iconPackTiers'
+import { ANON_ICON_CEILING, anonCapForCols, anonListMax, capAnonList } from '../data/iconGridRows'
 // THE ANIMATED SETS NEVER TOUCH api.iconify.design FROM THE BROWSER. Their listing
 // and glyphs come only from this client, which calls the server's Pro check.
 import { ANIMATED_BATCH, animatedIcons, classifyAnimatedFailure, isAnimatedName, isPackScopedFailure } from '../utils/animatedIcons'
@@ -839,6 +840,13 @@ const gridShowsPack = (list) => {
   return false
 }
 
+// What a cell is called to assistive tech: the action, the icon, and the pack
+// when the grid mixes packs (the visible label only appears on hover).
+const cellLabel = (icon, packName) => {
+  const base = icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`
+  return packName ? `${base}, ${packName}` : base
+}
+
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
 // passes under the pointer through mouseenter, so warming on enter queued one
 // markup request per cell crossed. One shared timer means only the cell the
@@ -989,13 +997,16 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // it, and scrolling it back into view restores the glyph in place.
 const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack ? packOf(icon) : null
+  // The pack name shows on hover only (see `.ic-pack`), so the accessible name
+  // carries it for everyone who cannot hover.
+  const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
   return (
     <div
       className={picked ? 'ic is-picked' : 'ic'}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
+      aria-label={cellLabel(icon, packName)}
       onClick={() => onPick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
       onMouseEnter={() => onWarm(icon, false)}
@@ -1004,7 +1015,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && pack && <span key="p" className="ic-pack">{icon.logo ? 'Logo.dev' : gridPackLabel(pack)}</span>}
+      {!ghost && packName && <span key="p" className="ic-pack" aria-hidden="true">{packName}</span>}
     </div>
   )
 })
@@ -3079,11 +3090,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const tier = viewerTier({ user, isPro, resolving: authLoading })
   const allowedPacks = useMemo(() => visiblePacks(ALL_PACKS, tier), [tier])
   const canSee = useCallback((p) => canSeePack(p, tier), [tier])
-  // The signed-out cap. 60 icons, spread evenly so all five outlined packs are
-  // represented — see ANON_ICON_CAP for why it is not a flat slice.
+  // The signed-out cap: 60 icons rounded up to whole grid rows, spread evenly so
+  // all five outlined packs are represented — see ANON_ICON_CAP for why it is
+  // not a flat slice. The number depends on the measured column count, which
+  // changes with the window, so the lists are fetched and held at the widest the
+  // cap can be (ANON_ICON_CEILING) and the grid trims them to whole rows at
+  // render (`icons` below). A resize then re-trims what is already held, and
+  // refetches nothing.
   const capped = tier === 'anon'
-  const perPackCap = capped ? anonPerPack(ALL_PACKS) : ALL_INITIAL_PER_PACK
-  const capList = useCallback((list) => (capped ? list.slice(0, ANON_ICON_CAP) : list), [capped])
+  const perPackCap = capped ? anonPerPack(ALL_PACKS, ANON_ICON_CEILING) : ALL_INITIAL_PER_PACK
+  const capList = useCallback((list) => (capped ? list.slice(0, anonListMax(ALL_PACKS)) : list), [capped])
+  // The grid's column count, read off the live grid (see the measuring effect
+  // further down); null until it has been laid out.
+  const [gridCols, setGridCols] = useState(null)
+  const anonCap = anonCapForCols(gridCols)
+  // The count a status line may claim for a capped list: the fetched lists run
+  // past the cap, the grid does not.
+  const anonCapRef = useRef(anonCap)
+  useEffect(() => { anonCapRef.current = anonCap })
+  const shownCount = useCallback((n) => (capped ? Math.min(n, anonCapRef.current) : n), [capped])
 
   /* ── "ALL PACKS" IS A CLAIM, AND FOR A GATED VIEWER IT IS FALSE ──────────
      MEASURED signed out at 1440 before this existed, the status line read
@@ -3107,7 +3132,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
   const [query, setQuery] = useState('')
-  const [icons, setIcons] = useState([])      // full result set (browse or search)
+  const [fetchedIcons, setIcons] = useState([])      // full result set (browse or search)
+  // What the grid shows. Signed out, the fetched set trimmed to whole rows of the
+  // measured columns; everyone else sees it all. Memoised so the list keeps its
+  // identity until the set or the column count changes.
+  const icons = useMemo(
+    () => (capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons),
+    [capped, fetchedIcons, anonCap],
+  )
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
@@ -3460,7 +3492,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${sample ? 'first ' : ''}${names.length.toLocaleString()} icons`)
+        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${sample ? 'first ' : ''}${shownCount(names.length).toLocaleString()} icons`)
         setLoading(false)
       })
       .catch((error) => {
@@ -3472,7 +3504,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope, tier])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, shownCount, refuseScope, failAnimatedScope, tier])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
@@ -3506,13 +3538,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (results.some(r => !r.ok)) setSoftNotice('partial')
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
         // Share the anonymous allowance per pack; a final slice could hide later packs.
-        const groupCap = capped ? Math.floor(ANON_ICON_CAP / packs.length) : PER_PACK_CAP
+        const groupCap = capped ? Math.ceil(ANON_ICON_CEILING / packs.length) : PER_PACK_CAP
         const merged = concatenatePackLists(lists, groupCap)
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
         const hits = results.filter(r => r.names.length).length
-        setMode(`${g.label} · ${merged.length.toLocaleString()} icons · ${hits} packs`)
+        setMode(`${g.label} · ${shownCount(merged.length).toLocaleString()} icons · ${hits} packs`)
         setLoading(false)
       })
       .catch(() => {
@@ -3521,7 +3553,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll, tier])
+  }, [renderLocal, canSee, capped, shownCount, needFor, refuseScope, browseAll, tier])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -3651,7 +3683,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setVisible(PAGE_SIZE)
         const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ')
           || (seesEverything ? 'All packs' : `${allowedPacks.length} sets`)
-        setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
+        setMode(`${shownCount(items.length).toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
       .catch(() => {
@@ -3660,7 +3692,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks, seesEverything])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, shownCount, needFor, refuseScope, failAnimatedScope, tier, allowedPacks, seesEverything])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -4268,17 +4300,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // positions then mean different icons.
   const gridRef = useRef(null)
 
-  /* The blurred rows under the signed-out grid must line up with its columns, so
-     the column count is read from the live grid's resolved template and kept
-     current as the page resizes. The height of a real cell is read the same way
-     so the blurred rows sit on the grid's row pitch. Until they are read the
-     phone/desktop defaults are used; the band is below the fold at first paint,
-     so the correction is not seen. Only measured while the signed-out band is
-     showing. */
-  const [gridCols, setGridCols] = useState(null)
+  /* The signed-out grid is cut to whole rows, and the blurred rows under it
+     must line up with its columns, so the column count is read from the live
+     grid's resolved template and kept current as the page resizes (`gridCols`,
+     declared with the cap). The height of a real cell is read the same way so
+     the blurred rows sit on the grid's row pitch.
+     Measured in a layout effect so the first paint already has the right row
+     length: skeleton and loaded grid are both cut to the same whole rows, and
+     nothing jumps when the numbers arrive. The state is only set when the
+     value differs, so the observer firing after the cut changes the grid's
+     height (the same columns, more rows) re-renders nothing. The columns come
+     from the grid's width, never from how many cells it holds, so the cut
+     cannot feed back into the count it was cut by. */
   const [gridCellH, setGridCellH] = useState(null)
-  useEffect(() => {
-    if (endKind !== 'anon') return
+  useLayoutEffect(() => {
+    if (!capped || gated || isMyIcons) return
     const grid = gridRef.current
     if (!grid) return
     const read = () => {
@@ -4292,7 +4328,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const observer = new ResizeObserver(read)
     observer.observe(grid)
     return () => observer.disconnect()
-  }, [endKind])
+  }, [capped, gated, isMyIcons])
   const teaseCols = gridCols
     || teaseColsFallback(typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches)
   // Built-in icons only, from packs this viewer may browse, and not repeating
@@ -4458,20 +4494,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   }
 
   // Reserve the first page's count and pack layout before catalogue names arrive.
-  const firstPageSize = capped ? Math.min(PAGE_SIZE, ANON_ICON_CAP) : PAGE_SIZE
+  const firstPageSize = capped ? Math.min(PAGE_SIZE, anonCap) : PAGE_SIZE
   const pendingPacks = pack ? [pack] : group ? ICON_GROUPS[group].packs.filter(canSee) : allowedPacks
   const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
     pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
   }))
-  // The loaded grid labels every cell once its result spans more than one pack,
-  // however the first page happens to split, so the skeleton reserves the label
-  // whenever the scope will load more than one pack.
-  const skeletonShowPack = pendingPacks.length > 1
-  // Which pack a search returns is unknown while it loads, so the skeleton
-  // cannot tell a one-pack answer from a many-pack one. In a multi-pack scope
-  // the loaded grid keeps the labelled cell height either way (the same blank
-  // label row the narrow layouts already keep), so neither answer shifts.
-  const gridClass = skeletonShowPack ? 'ig ig--reserve-pack' : 'ig'
+  // The pack name is a hover label over the cell's corner and takes no height,
+  // so a skeleton cell is the same height as a loaded one whatever the scope.
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -4762,14 +4791,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 that failed to fill — the "cell that failed to load" shape this
                 file has been fixed for twice. The wall is the whole answer. */}
             {!gated && (
-              <div className={gridClass} ref={gridRef}>
+              <div className="ig" ref={gridRef}>
                 {loading && icons.length === 0
                   ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
                       <div className={!COLORED_PACKS.has(icon.pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'} />
-                      <div className={skeletonShowPack ? 'ig-skel-labels' : 'ig-skel-labels ig-skel-labels--single'}>
+                      <div className="ig-skel-labels">
                         <div className="sk ig-skel-label" />
-                        {skeletonShowPack && <div className="sk ig-skel-pack" />}
                       </div>
                     </div>
                   ))
@@ -4832,7 +4860,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               <IconEndBand
                 kind="anon"
                 heading={ICON_GATE_COPY.end.anon.heading}
-                body={ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, packsBehindLogin)}
+                body={ICON_GATE_COPY.end.anon.body(icons.length, packsBehindLogin)}
                 action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
                 secondary={ICON_GATE_COPY.end.anon.secondary}

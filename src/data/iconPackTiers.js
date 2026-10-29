@@ -199,10 +199,13 @@ export const ANIMATED_PACKS = Object.freeze(
  * Change ANON_ICON_CAP and ANON_PER_PACK follows. */
 export const ANON_ICON_CAP = 60
 
-/** How many names to take from each `anon` pack so the cap spreads across all of them. */
-export function anonPerPack(packs) {
+/**
+ * How many names to take from each `anon` pack so `cap` spreads across all of
+ * them. With no `cap` it is the share for the plain 60.
+ */
+export function anonPerPack(packs, cap = ANON_ICON_CAP) {
   const n = packs.filter((p) => tierOf(p) === 'anon').length
-  return n > 0 ? Math.ceil(ANON_ICON_CAP / n) : ANON_ICON_CAP
+  return n > 0 ? Math.ceil(cap / n) : cap
 }
 
 /** The tier a pack sits in, or null when the table has never heard of it. */
