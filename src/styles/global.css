@@ -3327,7 +3327,7 @@ html.lenis{scroll-behavior:auto!important}
 .icust-paste .icust-foot{padding:16px 0 0}
 /* Stage: a flat ground the ground switch picks (library.css holds the other three).
    The base is the Page ground, the theme's own. The colour never changes it. */
-.icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border);overflow:hidden;--ig-size:48px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none;--ig-cap:round;--ig-join:round}
+.icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border);overflow:hidden;--ig-size:112px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none;--ig-cap:round;--ig-join:round}
 .icust-stage-host{display:grid;place-items:center;line-height:0}
 .icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
 .icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
@@ -3497,15 +3497,6 @@ html.lenis{scroll-behavior:auto!important}
   .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
 }
 .icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
-.icust-seg--icon svg{display:block;width:22px;height:22px;margin:0 auto;color:var(--t2)}
-.icust-seg--icon button:hover svg{color:var(--t0)}
-.icust-seg--icon button.active svg{color:var(--t0)}
-.icust-pro.is-locked .icust-seg--icon button{cursor:pointer}
-.icust-pro.is-locked .icust-seg--icon svg{opacity:.55}
-.icust-pro.is-locked .icust-seg--icon button.active svg{opacity:1}
-/* Locked panel is fully clickable — any click opens the Pro upgrade modal
-   (no hover veil; less disruptive to the flow). */
-.icust-pro.is-locked{cursor:pointer}
 /* Footer + Pro save-lock — the actions share the row width evenly. On the icon
    page the footer holds one row at every width (see icon-emoji-library.css); the
    wrap here is the fallback for anywhere else it is used. */
@@ -4980,6 +4971,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
      the tap floor. */
   .ui-pro-list{margin-top:12px}
   .ui-pro-plans-err{margin-top:12px;padding:12px}
+}
+/* A phone that is short as well as narrow (390 by 780): the single column puts the proof band
+   (picture and caption, about 160px) above the price, which pushed "Start your 7-day free trial"
+   and "Maybe later" below the fold. The band goes; the title and subtitle still name the setting. */
+@media(max-width:780px) and (max-height:800px){
+  .ui-pro--proof .ui-pro-proof{display:none}
 }
 
 /* -- Accent-text rule enforcement on the auth + popup surfaces --------------

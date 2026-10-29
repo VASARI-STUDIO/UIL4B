@@ -54,6 +54,10 @@ const KEEP = {
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'icust-code-box', 'stc-bundle',
+    // a size-rail cell is a tile: the icon drawn at its size, with the number under it
+    'icust-size-cell',
+    // a line-style tile is a card: the icon drawn in that style, its name and note under it
+    'icust-line-tile',
     // an export template choice without a thumbnail is a bordered card holding its name and description
     'exp-tpl-tile',
     // the Suggest card's main hit area is a button that fills a rounded card, so it takes the card's own radius

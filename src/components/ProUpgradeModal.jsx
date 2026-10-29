@@ -135,6 +135,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     gate,
     // A picture of the user's own work in the Pro setting, drawn by the caller.
     proof,
+    // Called just before the modal sends the visitor to /plans, so a caller can keep its
+    // state for the return trip. Closing the modal without going does not call it.
+    onLeave,
   } = opts
 
   // THE RAIL IS PROOF, SO IT ONLY APPEARS WHERE IT PROVES SOMETHING.
@@ -183,10 +186,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     if (!choice || starting) return
     setStarting(true)
     onClose()
+    onLeave?.()
     navigate(`/plans?plan=${encodeURIComponent(choice.checkoutPlan)}`)
   }
 
-  const seeAllPlans = () => { onClose(); navigate('/plans') }
+  const seeAllPlans = () => { onClose(); onLeave?.(); navigate('/plans') }
 
   return (
     <div className="ui-modal-overlay" onMouseDown={onClose}>
