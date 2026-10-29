@@ -2585,7 +2585,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
               <p className="icust-gate-copy">
                 {Number.isFinite(saveLimit)
-                  ? `Pick where this icon lives — the free plan saves up to ${saveLimit} icons per project.`
+                  ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
                   : 'Pick where this icon lives.'}
               </p>
               {projects.length > 0 && (
@@ -2904,6 +2904,7 @@ function IconPackCredit({ packs }) {
   })
   return (
     <aside className="ig-credit" aria-label="Icon set licences">
+      <p className="ig-credit-label">Icon sets on this page</p>
       {rows.length > 0 && (
         <p className="ig-credit-packs">
           {rows.map((row, i) => (
@@ -2911,13 +2912,13 @@ function IconPackCredit({ packs }) {
               {i > 0 && <span className="ig-credit-sep" aria-hidden="true"> · </span>}
               <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
               {' '}
-              <span className="ig-credit-lic">{row.licenceName}</span>
+              <span className="ig-credit-lic">({row.licenceName})</span>
             </span>
           ))}
         </p>
       )}
       <p className="ig-credit-more">
-        <Link to="/credits">Every set, its author and its licence in full</Link>
+        <Link to="/credits">Every licence in full</Link>
       </p>
     </aside>
   )
@@ -2999,20 +3000,20 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
    with IconEndTease, the free band leaves it empty. A blurred row for free
    viewers would be passed here, as long as it holds no markup of a pack that
    viewer may not load (see src/utils/lockedPreview.js). */
-function IconEndBand({ kind, heading, body, action, onAction, to, secondary, tease }) {
-  const arrow = (
-    <span className="ig-end-pill-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
-  )
+function IconEndBand({ kind, heading, body, names, action, onAction, to, secondary, tease }) {
   return (
     <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
       {tease}
-      <div className="ig-end-copy">
-        <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
-        <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
+      <div className="ig-end-band">
+        <div className="ig-end-copy">
+          <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
+          <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
+          {names && <p className="ig-end-sets">{names}</p>}
+        </div>
         <div className="ig-end-cta">
           {to
-            ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}{arrow}</Link>
-            : <button type="button" className="ig-end-pill" onClick={onAction}>{action}{arrow}</button>}
+            ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}</Link>
+            : <button type="button" className="ig-end-pill" onClick={onAction}>{action}</button>}
           {secondary && <Link to="/plans" className="ig-end-ghost">{secondary}</Link>}
         </div>
       </div>
@@ -3020,7 +3021,7 @@ function IconEndBand({ kind, heading, body, action, onAction, to, secondary, tea
   )
 }
 
-/* Two rows of blurred icons that continue the grid past the cap. They use a
+/* One row of blurred icons that continues the grid past the cap. They use a
    grid of their own (the live grid's column count, passed in) rather than the
    `.ig` class, so anything that looks up the results grid still finds exactly
    one. The glyphs are
@@ -3104,31 +3105,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // further down); null until it has been laid out.
   const [gridCols, setGridCols] = useState(null)
   const anonCap = anonCapForCols(gridCols)
-  // The count a status line may claim for a capped list: the fetched lists run
-  // past the cap, the grid does not.
-  const anonCapRef = useRef(anonCap)
-  useEffect(() => { anonCapRef.current = anonCap })
-  const shownCount = useCallback((n) => (capped ? Math.min(n, anonCapRef.current) : n), [capped])
 
-  /* ── "ALL PACKS" IS A CLAIM, AND FOR A GATED VIEWER IT IS FALSE ──────────
-     MEASURED signed out at 1440 before this existed, the status line read
-     "Showing 60 of 60 · All packs · 60 icons · 5 sets" — forty pixels above a
-     wall saying the grid holds the first 60 icons of the outlined packs. Two
-     sentences on one screen disagreeing about what the library is, and the one
-     in the smaller type was the true one.
-
-     The label is DROPPED rather than reworded. "Showing X of Y" immediately
-     before it already carries both counts, so a viewer loses no information —
-     and no new sentence is invented to describe a scope the product has never
-     had a word for. Whoever really can browse every pack still gets the line
-     they have always had, unchanged.
-
-     Derived from the pack counts, not from the tier: move a pack in the table
-     and this follows, with no second place to remember. */
-  const seesEverything = allowedPacks.length === ALL_PACKS.length
-  const scopeLine = useCallback((count, sets) => (
-    seesEverything ? `All packs · ${count.toLocaleString()} icons · ${sets} sets` : `${sets} sets`
-  ), [seesEverything])
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
   const [query, setQuery] = useState('')
@@ -3141,7 +3118,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     [capped, fetchedIcons, anonCap],
   )
   const [visible, setVisible] = useState(PAGE_SIZE)
-  const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   /* The catalogue is on screen but not all of it, and the notice says which:
@@ -3242,11 +3218,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       cdn: false
     })))
     setVisible(PAGE_SIZE)
-    // "Built-in icons", not "Offline": this branch is reached when the icon
-    // SERVICE refused (a 429 rate limit was measured), and the
-    // browser is online the whole time. The notice above the grid says what
-    // happened; this line says what is being shown.
-    setMode(cdnOk.current === false ? 'Built-in icons' : 'Embedded')
+    // Reached when the icon SERVICE refused (a 429 was measured), not when the
+    // browser is offline; the notice above the grid says what happened.
     setLoading(false)
   }, [activeCat, canSee, capList])
 
@@ -3291,7 +3264,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
-    setVisible(PAGE_SIZE); setMode('')
+    setVisible(PAGE_SIZE)
     // ALLOWED, NOT ALL. This is the line that decides how many packs a visit
     // lists: a signed-out visit lists five instead of twenty-five, and never
     // names a gated pack in a URL.
@@ -3308,7 +3281,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
       const merged = capList(lists.flat())
       setIcons(merged)
-      setMode(scopeLine(merged.length, allowedPacks.length))
       setLoading(false)
       return
     }
@@ -3353,8 +3325,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           const merged = capList(lists.flat())
           // Keep the reserved skeleton intact until reveal exposes the first page.
           if (!holding) setIcons(merged)
-          const sets = lists.filter(l => l.length).length
-          setMode(scopeLine(merged.length, sets))
         })
         .catch(() => { degraded++ /* this pack failed — others may still resolve */ })
         .finally(() => {
@@ -3368,7 +3338,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           }
         })
     })
-  }, [renderLocal, allowedPacks, perPackCap, capList, scopeLine, tier])
+  }, [renderLocal, allowedPacks, perPackCap, capList, tier])
 
   /* ── REFUSING A SCOPE COSTS NOTHING ──────────────────────────────────────
      The whole point of the gate: the browse functions call this INSTEAD of
@@ -3391,7 +3361,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     reqId.current++
     retryRef.current = null
     setGated({ label, need })
-    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    setIcons([]); setVisible(PAGE_SIZE)
     setLoading(false); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
   }, [])
 
@@ -3405,7 +3375,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const failAnimatedScope = useCallback((error) => {
     const kind = classifyAnimatedFailure(error)
     if (!isPackScopedFailure(kind)) return false
-    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    setIcons([]); setVisible(PAGE_SIZE)
     setLoading(false)
     if (kind !== 'stale') setAnimatedNotice(kind)
     return true
@@ -3427,7 +3397,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
-    setMode(`Brand logos · ${LOGODEV_BRANDS.length} popular brands`)
     setLoading(false)
   }, [])
 
@@ -3449,7 +3418,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
     setIcons(results)
     setVisible(PAGE_SIZE)
-    setMode(`Brand logos · ${results.length} for “${term}”`)
     setLoading(false)
   }, [browseLogos])
 
@@ -3475,7 +3443,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // being asked for: it is Regular-weight names, so not for another weight.
     const allowSample = weightRef.current === 'regular' || !!groupKey
     getCollectionNames(packFilter, { ...retryOptions(manualRetry), allowSample })
-      .then(({ names: raw, title, sample }) => {
+      .then(({ names: raw, sample }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
         // A saved or partial list is still shown when its refresh failed; the notice and Try again stay up.
@@ -3486,13 +3454,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // the built-in fallback would show Regular glyphs under a Bold label.
         if (!names.length && weightRef.current !== 'regular' && !groupKey) {
           setIcons([]); setVisible(PAGE_SIZE); setLoading(false)
-          setMode(`${title} · no ${weightRef.current} weight`)
           return
         }
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${sample ? 'first ' : ''}${shownCount(names.length).toLocaleString()} icons`)
         setLoading(false)
       })
       .catch((error) => {
@@ -3504,7 +3470,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos, canSee, capList, shownCount, refuseScope, failAnimatedScope, tier])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope, tier])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
@@ -3543,8 +3509,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
-        const hits = results.filter(r => r.names.length).length
-        setMode(`${g.label} · ${shownCount(merged.length).toLocaleString()} icons · ${hits} packs`)
         setLoading(false)
       })
       .catch(() => {
@@ -3553,7 +3517,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capped, shownCount, needFor, refuseScope, browseAll, tier])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll, tier])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -3571,7 +3535,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const list = readCustomIcons()
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
-    setMode(`Custom Icons · ${list.length.toLocaleString()} saved`)
     setLoading(false)
   }, [])
 
@@ -3606,7 +3569,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // The names are hyphenated, so "arrow up" has to match arrow-up.
       const needle = q.toLowerCase().replace(/\s+/g, '-')
       getCollectionNames(packFilter)
-        .then(({ names, title }) => {
+        .then(({ names }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
           const items = capList(names
@@ -3615,7 +3578,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           if (!items.length) { renderLocal(q, packFilter); return }
           setIcons(items)
           setVisible(PAGE_SIZE)
-          setMode(`${items.length.toLocaleString()} matches · ${title}`)
           setLoading(false)
         })
         .catch((error) => {
@@ -3681,9 +3643,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
-        const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ')
-          || (seesEverything ? 'All packs' : `${allowedPacks.length} sets`)
-        setMode(`${shownCount(items.length).toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
       .catch(() => {
@@ -3692,7 +3651,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, shownCount, needFor, refuseScope, failAnimatedScope, tier, allowedPacks, seesEverything])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -3925,7 +3884,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const handleClearCustom = useCallback(() => {
     writeCustomIcons([])
     setIcons([])
-    setMode('Custom Icons · 0 saved')
   }, [])
 
   const handleClearRecents = useCallback(() => {
@@ -4263,6 +4221,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   )
   // How many packs Pro adds over a free account, derived the same way.
   const packsProAddsCount = useMemo(() => packsProAdds(ALL_PACKS), [])
+  // The signed-out sample's sets, named under the gate so "outline sets" points at something real.
+  const anonPackNames = useMemo(() => ALL_PACKS.filter((p) => tierOf(p) === 'anon').map(packLabel), [])
   const openGate = useCallback((need) => {
     // The reason string follows the convention every gate in this app uses — a
     // short lowercase verb phrase naming the action, which LoginPopup renders
@@ -4342,6 +4302,40 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       canSee,
     })
   }, [endKind, icons, visible, teaseCols, canSee])
+
+  // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
+  // viewport's top edge (inset by the band's own sticky offset) exactly when the
+  // band starts to stick, and that sets data-stuck. The band's height goes to a
+  // custom property on its parent so a focused cell scrolls clear of it.
+  const bandRef = useRef(null)
+  const bandSentinelRef = useRef(null)
+  useEffect(() => {
+    const band = bandRef.current
+    const sentinel = bandSentinelRef.current
+    if (!band || !sentinel || typeof IntersectionObserver === 'undefined') return undefined
+    // The sticky offset only exists from 641px (and follows the nav's height), so the
+    // observer is rebuilt with the band's current top whenever the window resizes.
+    let io = null
+    let topNow = null
+    const watch = () => {
+      const top = Math.ceil(parseFloat(getComputedStyle(band).top) || 0)
+      if (top === topNow) return
+      topNow = top
+      io?.disconnect()
+      io = new IntersectionObserver(([entry]) => { band.dataset.stuck = entry.isIntersecting ? 'false' : 'true' }, { rootMargin: `-${top}px 0px 0px 0px` })
+      io.observe(sentinel)
+    }
+    watch()
+    let frame = 0
+    const onResize = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(watch) }
+    window.addEventListener('resize', onResize)
+    const host = band.parentElement
+    const size = () => host.style.setProperty('--ig-band-h', `${band.offsetHeight}px`)
+    size()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(size)
+    ro?.observe(band)
+    return () => { io?.disconnect(); ro?.disconnect(); window.removeEventListener('resize', onResize); cancelAnimationFrame(frame) }
+  }, [])
 
   const [waitingStatus, setWaitingStatus] = useState(false)
   useEffect(() => {
@@ -4627,9 +4621,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             trade a working control for a matching one. It sits in the toolbar's
             filter row beside the group tray and takes the shared field metrics,
             which is what "consistent" has to mean for a control this size. */}
+        <div className="ig-band-sentinel" ref={bandSentinelRef} aria-hidden="true" />
+        <div className="ig-band" ref={bandRef}>
         <LibraryToolbar
           className="ig-toolbar"
           quick={0}
+          count={!capped && !isMyIcons && !gated && !loading && icons.length > 0 ? `${icons.length.toLocaleString()} icons` : undefined}
           activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
           search={{
             value: query,
@@ -4672,6 +4669,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             options={groupOptions}
           />
         </LibraryToolbar>
+        </div>
 
         {isMyIcons ? (
           // ── My Icons: two distinct collections, each independently clearable ──
@@ -4844,23 +4842,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               </div>
             )}
 
-            {!loading && icons.length > 0 && (
-              <p className="ig-status">
-                Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} · {mode}
-              </p>
-            )}
-
-            {/* THE END BAND. The status line above counts what is on screen; it
-                cannot say that the number is a rule rather than the size of
-                the library, and a count with no explanation is the thing that
-                makes a cap feel punitive. Signed out, the band states the rule
-                and the Log in button is the way past it. Signed in on the free
-                plan, it names what Pro adds and links to the plans. */}
             {endKind === 'anon' && (
               <IconEndBand
                 kind="anon"
                 heading={ICON_GATE_COPY.end.anon.heading}
-                body={ICON_GATE_COPY.end.anon.body(icons.length, packsBehindLogin)}
+                body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, packsBehindLogin)}
+                names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
                 secondary={ICON_GATE_COPY.end.anon.secondary}

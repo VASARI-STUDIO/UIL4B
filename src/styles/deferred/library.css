@@ -311,7 +311,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage--dark{background:#202024;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
 .icust-stage--checker{background-color:#EDEDF0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E");background-size:32px 32px;box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .icust-stage-img{display:block;max-width:100%;height:auto}
-.icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t2)}
+.icust-stage-msg{position:absolute;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
 .icust-stage--light .icust-stage-msg,.icust-stage--checker .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-stage--dark .icust-stage-msg{color:rgba(244,244,245,.55)}
 /* A fact about the art, not a control: plain text in the row's control column, in
@@ -447,7 +447,7 @@ html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
 .ig-skel-labels{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:25px;flex-shrink:0}
 .ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
 .ig-sentinel{width:100%;height:1px}
-.ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
+.ig-status{padding:20px 0;text-align:center;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
 .ig-inv{filter:var(--icon-inv)}
 /* Brand-glyph slot — colored/brand artwork keeps its own colours and sits straight
    on the tile/page background, no box. The chip stays as a transparent 36px slot so
@@ -1546,7 +1546,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
    The rows are decoration: the band's words and buttons are always on screen,
    and the "Log in to see more" chip is an echo for a fine pointer only.
    Opacity steps fade the second row; there is no gradient mask. */
-.ig-end{margin-top:8px}
+.ig-end{margin-top:0}
 
 .ig-end-tease{
   --ig-end-cols:8;
@@ -1591,17 +1591,23 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
 }
 
-.ig-end-copy{padding:56px 0 48px;text-align:center}
+/* The band: one left-aligned row set off by a hairline, 20px under the blurred
+   row. Copy on the left, the two actions on the right; stacked below 768px. */
+.ig-end-band{display:flex;flex-direction:column;gap:20px;margin-top:20px;padding:24px 0 8px;border-top:1px solid var(--border)}
+.ig-end-copy{min-width:0}
 .ig-end .ig-end-h{
-  margin:0 auto;max-width:min(22ch,100%);
-  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.05;letter-spacing:-.015em;
+  margin:0;max-width:min(26ch,100%);
+  font-family:var(--display);font-size:28px;font-weight:560;line-height:1.1;letter-spacing:-.03em;
   color:var(--t0);text-wrap:balance;
 }
-.ig-end .ig-end-p{
-  margin:12px auto 0;max-width:min(52ch,100%);
-  font-size:15px;line-height:1.6;color:var(--t1);text-wrap:balance;
+.ig-end .ig-end-p{margin:12px 0 0;max-width:60ch;font-size:15px;line-height:1.6;color:var(--t1);text-wrap:pretty}
+.ig-end .ig-end-sets{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--t2)}
+.ig-end-cta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:767px){.ig-end-cta{flex-direction:column;align-items:stretch}.ig-end-pill,.ig-end-ghost{justify-content:center}}
+@media(min-width:768px){
+  .ig-end-band{flex-direction:row;align-items:center;justify-content:space-between;gap:48px}
+  .ig-end-cta{flex:0 0 auto;flex-wrap:nowrap}
 }
-.ig-end-cta{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
 
 .ig-end-pill,.ig-end-ghost{
   box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
@@ -1610,15 +1616,9 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   white-space:nowrap;text-decoration:none;cursor:pointer;
 }
 .ig-end-pill{
-  gap:11px;padding:10px 10px 10px 22px;border:0;
+  padding:10px 22px;border:0;
   background:var(--t0);color:var(--bg-0);font-weight:540;
   transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
-}
-.ig-end-pill-icon{
-  flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;
-  border-radius:var(--radius-pill);
-  background:color-mix(in srgb,currentColor 14%,transparent);
-  transition:transform var(--dur-1) cubic-bezier(.23,1,.32,1);
 }
 .ig-end-pill:active{transform:scale(.97)}
 .ig-end-ghost{
@@ -1628,7 +1628,6 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 }
 @media (hover:hover) and (pointer:fine){
   .ig-end-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
-  .ig-end-pill:hover .ig-end-pill-icon{transform:rotate(45deg)}
   .ig-end-ghost:hover{
     background:color-mix(in srgb,var(--t0) 5%,transparent);
     border-color:color-mix(in srgb,var(--t0) 24%,transparent);
@@ -1637,18 +1636,6 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 }
 .ig-end-pill:focus-visible,.ig-end-ghost:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
 
-@media(min-width:641px){
-  .ig-end .ig-end-p{font-size:16px}
-  .ig-end-cta{margin-top:28px}
-}
-@media(min-width:761px){
-  .ig-end-copy{padding:64px 0 56px}
-  .ig-end .ig-end-h{font-size:32px}
-}
-@media(min-width:1200px){
-  .ig-end-copy{padding:72px 0 64px}
-  .ig-end .ig-end-h{font-size:44px}
-}
 @media (forced-colors:active){
   .ig-end-pill{border:1px solid ButtonText}
 }
@@ -1656,13 +1643,11 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 /* Reduced motion: the in-app choice wins in both directions, then the OS
    setting. The chip appears and goes with no fade; the arrow does not rotate
    and the press does not scale. */
-html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-ghost,.ig-end-chip){transition:none}
 html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
-html[data-reduced-motion="true"] .ig-end-pill:hover .ig-end-pill-icon{transform:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-pill-icon,.ig-end-ghost,.ig-end-chip){transition:none}
+  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-ghost,.ig-end-chip){transition:none}
   html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
-  html:not([data-reduced-motion="false"]) .ig-end-pill:hover .ig-end-pill-icon{transform:none}
 }
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */

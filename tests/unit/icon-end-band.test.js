@@ -140,8 +140,8 @@ test('bad input gives an empty tease rather than a throw', () => {
 // ── layout helpers ──────────────────────────────────────────────────────────
 
 test('two rows of whatever the live grid has', () => {
-  assert.equal(teaseCellCount(8), 16)
-  assert.equal(teaseCellCount(3), 6)
+  assert.equal(teaseCellCount(8), 8)
+  assert.equal(teaseCellCount(3), 3)
   assert.equal(teaseCellCount(0), 0)
   assert.equal(teaseColsFallback(true), 3)
   assert.equal(teaseColsFallback(false), 8)

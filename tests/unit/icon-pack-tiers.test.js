@@ -298,15 +298,15 @@ test('the gate copy is complete, count-driven, and reuses the app\'s own action 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), /\b5\b/, 'the body must render the pack count it is handed')
-  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 1), /\bpack\b/, 'one pack is singular')
-  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 2), /\bpacks\b/, 'two packs are plural')
-  assert.match(ICON_GATE_COPY.end.anon.body(ANON_ICON_CAP, 5), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 7), /from 5 outline sets\. .*adds 7 more sets/, "the body must render the counts it is handed")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 1), /1 more set/, "one set is singular")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 2), /2 more sets/, "two sets are plural")
+  assert.match(ICON_GATE_COPY.end.anon.body(65, 5, 7), /65/)
   assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
   assert.doesNotMatch(ICON_GATE_COPY.end.anon.heading + ICON_GATE_COPY.end.free.heading, /\d/,
     'a fixed heading must not quote a count it cannot keep true')
   for (const text of [
-    ICON_GATE_COPY.end.anon.heading, ICON_GATE_COPY.end.anon.body(60, 5), ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.anon.heading, ICON_GATE_COPY.end.anon.body(60, 5, 7), ICON_GATE_COPY.end.anon.chip,
     ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
   ]) {
     assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')
