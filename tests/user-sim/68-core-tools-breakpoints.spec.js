@@ -18,6 +18,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { openPaletteTools, clickPaletteAction } from './palette-helpers.js'
+import { settleTypeScaleView } from './type-scale-view.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -540,7 +541,9 @@ for (const theme of ['light', 'dark']) {
       const { ctx, page } = await at(browser, 1440, theme)
       watch(page, `a developer about to copy the CSS on a ${theme} screen`)
       await go(page, route)
-      if (tab) await page.getByRole('tab', { name: tab }).click()
+      // Type Scale's Copy sits in the docked bar; the Code tab exists only below
+      // the split, so it is pressed only when the page is showing the tabs.
+      if (tab && (await settleTypeScaleView(page)) === 'switch') await page.getByRole('tab', { name: tab }).click()
       const btn = page.locator(sel)
       await btn.scrollIntoViewIfNeeded()
       await expect(btn).toBeVisible()
