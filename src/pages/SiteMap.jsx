@@ -87,7 +87,7 @@ function RouteLine({ route }) {
       {routeSegments(route).map((seg, i) => (
         <Fragment key={`${seg}-${i}`}>
           {i > 0 && <wbr />}
-          <span className="spt-seg">{seg}</span>
+          <span className="spt-route-seg">{seg}</span>
         </Fragment>
       ))}
     </span>

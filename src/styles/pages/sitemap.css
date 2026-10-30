@@ -3,10 +3,17 @@
    under .spt-sitemap. The page uses no mono face: routes and plate values are the sans,
    with tabular figures. */
 
+/* The intro here is a heading and a lede with no CTA beside it, so its bottom padding
+   shrinks as the section's own top padding grows: the gap down to Create stays near 100px. */
+.spt.spt-sitemap .spm-intro { padding-bottom: clamp(0px, calc(100px - 6vw), 48px); }
+/* A jump to a section (the lede's links) leaves its heading clear of the fixed nav:
+   nav height + 24px of air, less the section's own top padding. */
+.spt-sitemap .spt-section[id] { scroll-margin-top: calc(var(--smap-nav-h) + 24px - clamp(40px, 6vw, 88px)); }
+.spt-sitemap { --smap-nav-h: calc(clamp(14px, 2vw, 26px) + 58px); }
 .spt-sitemap .spt-section--last { padding-bottom: clamp(72px, 10vw, 140px); }
 .spt-sitemap .spt-h2 { margin-bottom: 8px; }
 .spt-sitemap .spt-sub { margin: 0; color: var(--sp-dim); }
-.spt-sitemap .spm-lede a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+.spt-sitemap .spm-lede a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 
 /* Hues the tree does not name: the accent family and the neutral Account tiles. */
 .spt-sitemap [data-hue="accent"] { --hue-strong: var(--accent-strong); }
@@ -33,7 +40,7 @@
 .spt-sitemap .spt-row-text .spt-route { display: block; margin-top: 2px; font: 400 13px/1.4 var(--font); font-variant-numeric: tabular-nums; color: var(--sp-dim); }
 /* Wrap only after a slash: each segment is one unit, and only a segment wider than the
    whole column may break inside itself. */
-.spt-sitemap .spt-row-text .spt-seg { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font: inherit; color: inherit; }
+.spt-sitemap .spt-row-text .spt-route-seg { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font: inherit; color: inherit; }
 .spt-sitemap .spt-row--soon .spt-row-text b { color: var(--sp-dim); }
 .spt.spt-sitemap .spt-row--text { grid-template-columns: minmax(0, 1fr) auto; min-height: 64px; }
 @media (hover: hover) {

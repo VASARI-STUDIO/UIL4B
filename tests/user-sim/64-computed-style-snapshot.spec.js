@@ -120,7 +120,7 @@ const ADDED_SELECTORS = {
   // frozen list would keep only the few shell classes. These are the page's own hooks.
   '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
     '.spt-gtile', '.spt-gmeta', '.spt-gdesc', '.spt-rows', '.spt-row', '.spt-row--text', '.spt-thumb', '.spt-row-text',
-    '.spt-lbl', '.spt-note', '.spt-route', '.spt-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
+    '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
     '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
     '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
 }

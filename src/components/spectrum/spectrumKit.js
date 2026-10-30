@@ -88,6 +88,23 @@ export function rampOf(base) {
   })
 }
 
+/** AAA from 7:1, AA from 4.5:1, otherwise Fails. */
+export const verdictOf = (cr) => (cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'Fails')
+
+/** The ramp steps the Contrast demo opens on (foreground, background); the site map's
+ *  Contrast thumb draws the same pair. */
+export const CONTRAST_START = [1, 7]
+
+/** The Type Scale demo: the ratios it offers, the one it opens on, and its base size in px.
+ *  The site map's Type Scale thumb draws the same scale. */
+export const SCALE_RATIOS = [1.2, 1.25, 1.333]
+export const SCALE_RATIO_START = 1
+export const SCALE_BASE_PX = 16
+
+/** The site's display face, named in its own type on the Font Gallery thumb. It names the
+ *  `--display` face in global.css, which has no script-side source. */
+export const DISPLAY_FACE = 'Switzer'
+
 /** The five named roles: seed + harmony decide the hues, and each role carries
  *  its contrast partner. */
 export function rolesOf(base, harmony, fmt) {

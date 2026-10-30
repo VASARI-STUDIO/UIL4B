@@ -6,7 +6,7 @@ import { buildRamp } from '../../utils/tintRamp'
 import { hexToOklchRaw } from '../tool/oklch'
 import { STROKE_PX } from '../../utils/iconStroke'
 import { DEFAULT_EXPORT_SIZE } from '../../utils/iconSize'
-import { BASES, rampOf, ratio } from './spectrumKit'
+import { BASES, CONTRAST_START, DISPLAY_FACE, SCALE_BASE_PX, SCALE_RATIOS, SCALE_RATIO_START, rampOf, ratio, verdictOf } from './spectrumKit'
 import { ICON_PLATE } from './toolArtIcons'
 import measured from './toolMeasured.json'
 
@@ -152,7 +152,7 @@ function Converter({ size }) {
           <div className="spt-fc-lab"><Label ink>{output.format}, quality {output.quality}</Label><Label ink v>{fmtKb(output.kb)}</Label></div>
           <svg className="spt-fc-svg" width="100%" height="16">
             <defs>
-              <pattern id={hatch}width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
+              <pattern id={hatch} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
             </defs>
             <rect className="spt-ghost" x={pct(KEPT - TUCK)} y=".5" width={pct(1 - KEPT + TUCK - INSET)} height="15" rx="4" fill={`url(#${hatch})`} />
             <rect className="spt-cut" x={pct(KEPT - TUCK)} width={pct(1 - KEPT + TUCK)} height="16" rx="4" />
@@ -194,7 +194,7 @@ function Gradient() {
   return (
     <svg viewBox="0 0 160 100">
       <defs>
-        <linearGradient id={gid}gradientUnits="userSpaceOnUse" {...GRAD_LINE}>
+        <linearGradient id={gid} gradientUnits="userSpaceOnUse" {...GRAD_LINE}>
           {GRAD.stops.map((s) => <stop key={s.position} offset={s.position / 100} stopColor={s.color} />)}
         </linearGradient>
       </defs>
@@ -256,17 +256,16 @@ function AltText() {
 }
 
 // Values for the drawings the site map adds. Palette and Contrast read the ramp the
-// Palette and Contrast demos open with; Type Scale the 1.25 ratio the scale demo offers.
+// Palette and Contrast demos open with; Type Scale the ratio and base the scale demo opens on.
 const RAMP = rampOf(BASES[0])
+// Palette draws five of the ramp's nine steps; this subset is the drawing's own choice.
 const PALETTE = [1, 3, 4, 5, 7].map((i) => RAMP[i])
-const CT_FG = RAMP[1].hex
-const CT_BG = RAMP[7].hex
+const CT_FG = RAMP[CONTRAST_START[0]].hex
+const CT_BG = RAMP[CONTRAST_START[1]].hex
 const CT_RATIO = Math.round(ratio(CT_FG, CT_BG) * 10) / 10
-const CT_VERDICT = CT_RATIO >= 7 ? 'AAA' : CT_RATIO >= 4.5 ? 'AA' : 'Fails'
-const SCALE_RATIO = 1.25
-const SCALE = [0, 1, 2, 3, 4].map((n) => Math.round(16 * SCALE_RATIO ** n))
-// The site's own display face, named and set in itself, so no extra font request.
-const DISPLAY_FACE = 'Switzer'
+const CT_VERDICT = verdictOf(CT_RATIO)
+const SCALE_RATIO = SCALE_RATIOS[SCALE_RATIO_START]
+const SCALE = [0, 1, 2, 3, 4].map((n) => Math.round(SCALE_BASE_PX * SCALE_RATIO ** n))
 
 // Set CSS custom properties on a node: the no-inline-styles route for per-item values.
 function varsRef(vars) {

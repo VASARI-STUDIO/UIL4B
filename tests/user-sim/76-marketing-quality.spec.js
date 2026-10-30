@@ -64,7 +64,7 @@ test.describe('/sitemap keeps every route inside its row', () => {
           const rowBox = row.getBoundingClientRect()
           const textBox = text.getBoundingClientRect()
           // Every segment must sit inside the row's text column, which is itself inside the row.
-          for (const seg of route.querySelectorAll('.spt-seg')) {
+          for (const seg of route.querySelectorAll('.spt-route-seg')) {
             const b = seg.getBoundingClientRect()
             const over = Math.max(b.right - textBox.right, textBox.left - b.left, b.right - rowBox.right)
             if (over > 0.5) escaped.push(`${li.getAttribute('data-route')} ${seg.textContent} overflows by ${over.toFixed(1)}px`)
@@ -124,7 +124,7 @@ test.describe('/sitemap keeps every route inside its row', () => {
       await settle(page)
       const rows = await page.evaluate(() => Array.from(document.querySelectorAll('li[data-route]')).map((li) => {
         const route = li.querySelector('.spt-route')
-        const els = route ? [route, ...route.querySelectorAll('.spt-seg')] : []
+        const els = route ? [route, ...route.querySelectorAll('.spt-route-seg')] : []
         return {
           declared: li.getAttribute('data-route'),
           shown: route ? route.textContent.trim() : null,
