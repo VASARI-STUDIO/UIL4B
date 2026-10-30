@@ -1140,8 +1140,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   font-family:var(--font);font-size:12px;line-height:15px;letter-spacing:0;text-transform:none;
   color:var(--t2);pointer-events:none;
 }
-/* The copy tiles on the icon groups page carry a bare name span, kept at its 10px size. */
-.lib-surface .ig .ic>span:not(.ic-name,.ic-pack){margin-top:9px;font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
+/* The copy tiles on the icon groups page carry a bare (classless) name span, kept at its 10px size. Every
+   other span child of a cell has a class (name, pack, chip, wait box), so none of them match. */
+.lib-surface .ig .ic>span:not([class]){margin-top:9px;font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
 /* Glyphs and names start from the cell's top edge, so every glyph in a row sits
    at the same height. A glyph chip (coloured art, logo or wordmark) is a 36px box that draws its
    24px, 28px or wide artwork centred, so in EVERY cell it takes 24px of layout
