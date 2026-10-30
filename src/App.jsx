@@ -20,7 +20,8 @@ import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
-import { DEFAULT_DESCRIPTION, LOGIN_SIGNUP_TITLE, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
+import { LOGIN_SIGNUP_TITLE } from './data/routeMetaMap'
+import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaGated'
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
 import { TOOL_VOTES_ON } from './data/toolVotes'
 import { ProModalProvider } from './contexts/ProModalContext'
@@ -284,7 +285,10 @@ function AppInner({ toast }) {
     // read "UI L4B | Design Toolkit" in the tab, in history and in a bookmark,
     // so a 404 was indistinguishable from the homepage everywhere except the
     // page body. The strings match scripts/prerender.mjs's 404 shell.
-    const missing = isUnknownRoute(location.pathname)
+    // routeMeta.js cannot know /roadmap (it is bundled into api/ and must not read
+    // the flag), so the page that exists only while the flag is on is cleared here.
+    const roadmapPage = TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap'
+    const missing = !roadmapPage && isUnknownRoute(location.pathname)
     // THE LOOKUP KEY IS NORMALISED, and it has to be, because the other two
     // readers of this same pathname already are: canonicalUrl() strips a
     // trailing slash (routeMeta.js) and so does isUnknownRoute() one line

@@ -49,7 +49,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { CREATE_GROUPS, CREATE_HOMES_THAT_RENDER, createRoutes } from '../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../src/data/legacyRoutes.js'
 import { isPrivateRoute, isSoonRoute, robotsFor } from '../src/utils/routeMeta.js'

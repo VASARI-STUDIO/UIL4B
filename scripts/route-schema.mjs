@@ -79,7 +79,8 @@
 // result requires a rating, so without one it renders nothing. Same trade as
 // above, same answer.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
-import { PAGE_TITLES, pageName } from '../src/data/routeMetaMap.js'
+import { pageName } from '../src/data/routeMetaMap.js'
+import { PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { CREATE_HOMES_THAT_RENDER } from './route-matrix.mjs'
 import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
 
