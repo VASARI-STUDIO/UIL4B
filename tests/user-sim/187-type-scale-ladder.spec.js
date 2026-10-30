@@ -6,6 +6,7 @@
 // styles and geometry in a real browser.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
 
 const SIZES = [[1440, 900], [1024, 800], [768, 1024], [390, 844]]
 
@@ -55,7 +56,8 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
       await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', want)
-      await page.getByRole('tab', { name: 'Page' }).click()
+      // Below the split Page is a tab; at 1440 it is already beside the ladder.
+      await showTypeScalePage(page)
       await expect(page.locator('#tsc-width')).toContainText(label)
     }
   })
@@ -153,7 +155,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
     const first = await tracking()
     await page.getByRole('button', { name: 'Reset scale' }).click()
     expect(await tracking(), 'same letter spacing on first load and after Reset').toBe(first)
-    await page.getByRole('tab', { name: 'Code' }).click()
+    await showTypeScaleCode(page)
     const code = await page.locator('#tsc-export').textContent()
     expect(code, 'no "+ -" in a clamp').not.toContain('+ -')
     for (const m of code.matchAll(/\/\* ([\d.]+)px → ([\d.]+)px \*\//g)) {
@@ -334,4 +336,162 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
       expect(Math.round(g.cfgWidth), 'the panel is 336px').toBe(336)
     })
   }
+})
+
+// ── The split and the Code drawer ─────────────────────────────────────────────
+// The work column is measured, not the viewport. From 1024px of column (a 1440
+// window) the ladder and the page sit side by side with no Scale / Page / Code
+// switch, and Code is a drawer opened from the docked bar. Below that the switch
+// stays. The 1024 test is the other half of every claim here: it is what makes
+// "no switch at 1440" a statement about the width and not about the page.
+//
+// MUTATION: raise SPLIT_MIN in TypeScale.jsx past any column and the 1440 tests
+// go red while the 1024 one stays green; drop `hidden={!drawerOpen}` or the Escape
+// branch and the drawer tests go red.
+test.describe('Type Scale · the split and the Code drawer', () => {
+  test('at 1440 the ladder and the page sit side by side and there is no tablist', async ({ page }) => {
+    watch(page, 'designer on a wide screen')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('split')
+
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    await expect(page.locator('.tsc-view-switch')).toHaveCount(0)
+    await expect(page.locator('#tsc-view-panel')).not.toHaveAttribute('role', 'tabpanel')
+
+    // Both halves are rendered at once, not one at a time.
+    await expect(page.locator('.tsc-row')).toHaveCount(9)
+    await expect(page.locator('.tsc-article')).toBeVisible()
+
+    const g = await page.evaluate(() => {
+      const box = sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, width: r.width } }
+      return { ladder: box('.tsc-ladder'), page: box('.tsc-page-col'), out: box('.tsc-output') }
+    })
+    expect(g.ladder.right, 'the ladder is the left half').toBeLessThanOrEqual(g.page.left + 1)
+    expect(Math.abs(g.ladder.top - g.page.top), 'the halves start on the same line').toBeLessThanOrEqual(80)
+    expect(g.ladder.width, 'the ladder has room for its samples').toBeGreaterThan(400)
+    expect(g.page.width, 'the page has room for its article').toBeGreaterThan(400)
+    expect(g.page.right, 'neither half spills out of the work column').toBeLessThanOrEqual(g.out.right + 1)
+  })
+
+  test('at 1440 the page opens on Desktop width and says it is wider than its half', async ({ page }) => {
+    watch(page, 'designer judging a desktop page in half a column')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('split')
+
+    // Visible with no tab to press, and already on the visitor's own size.
+    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', 'full')
+    await expect(page.locator('#tsc-width')).toBeVisible()
+    await expect(page.locator('#tsc-width')).toContainText('Desktop')
+    // The half is narrower than the 1440px page it shows, and the note says so.
+    await expect(page.locator('.tsc-width-note')).toBeVisible()
+    await expect(page.locator('.tsc-width-note')).toContainText('Sizes as on a 1440px screen')
+  })
+
+  test('at 1440 the docked bar is named for Code and save and holds both buttons', async ({ page }) => {
+    watch(page, 'designer keeping a scale on a wide screen')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('split')
+
+    const dock = page.getByRole('group', { name: 'Code and save' })
+    await expect(dock).toBeVisible()
+    const names = await dock.getByRole('button').evaluateAll(els => els.map(el => el.textContent.trim()))
+    expect(names).toEqual(['Code', 'Save to a project'])
+  })
+
+  test('the Code drawer opens with focus inside, does not trap Tab, and Escape closes it and returns focus', async ({ page }) => {
+    watch(page, 'keyboard designer reading the export')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('split')
+
+    const button = page.locator('.tsc-code-btn')
+    const drawer = page.locator('#tsc-code-drawer')
+    const inDrawer = () => drawer.evaluate(el => el.contains(document.activeElement))
+
+    // Closed: the button says what it controls and the drawer is not on screen.
+    await expect(button).toHaveAttribute('aria-controls', 'tsc-code-drawer')
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+    await expect(drawer).toBeHidden()
+    await expect(page.getByRole('dialog', { name: 'Code' })).toHaveCount(0)
+
+    await button.focus()
+    await page.keyboard.press('Enter')
+    await expect(button).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.getByRole('dialog', { name: 'Code' })).toBeVisible()
+    await expect(drawer.locator('#tsc-export')).toContainText('--text-base')
+    await expect(drawer.locator('.tsc-drawer-copy')).toBeVisible()
+    await expect(drawer.locator('.tsc-drawer-close')).toBeVisible()
+
+    // Focus moved into it. It is non-modal: no trap, so Tab walks on out of it.
+    await expect.poll(inDrawer, { message: 'focus is inside the drawer once it opens' }).toBe(true)
+    await expect(drawer).toHaveAttribute('aria-modal', 'false')
+    for (let i = 0; i < 12 && await inDrawer(); i += 1) await page.keyboard.press('Tab')
+    expect(await inDrawer(), 'Tab is not trapped in the drawer').toBe(false)
+
+    await drawer.locator('.tsc-drawer-copy').focus()
+    await page.keyboard.press('Escape')
+    await expect(drawer).toBeHidden()
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+    await expect(button, 'focus goes back to the button that opened the drawer').toBeFocused()
+  })
+
+  test('the Close button and a press outside also close the drawer, but a press in the panel does not', async ({ page }) => {
+    watch(page, 'designer dismissing the export')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('split')
+
+    const button = page.locator('.tsc-code-btn')
+    const drawer = page.locator('#tsc-code-drawer')
+
+    await button.click()
+    await expect(drawer).toBeVisible()
+    await page.locator('.tsc-drawer-close').click()
+    await expect(drawer).toBeHidden()
+    await expect(button, 'Close returns focus to the button').toBeFocused()
+
+    await button.click()
+    await expect(drawer).toBeVisible()
+    // A press in the settings panel beside it leaves it open, and the code follows the control.
+    const exportText = () => drawer.locator('#tsc-export').innerText()
+    const before = await exportText()
+    await page.locator('#tsc-ratio').click()
+    await page.getByRole('listbox').getByRole('option', { name: /^Perfect fifth/ }).click()
+    await expect(drawer, 'a press in the panel keeps the drawer open').toBeVisible()
+    await expect.poll(exportText, { message: 'the code updates as the ratio changes' }).not.toBe(before)
+    await expect(button).toHaveAttribute('aria-expanded', 'true')
+
+    // A press outside both closes it.
+    await page.locator('.tsc-dock').click({ position: { x: 400, y: 4 } })
+    await expect(drawer).toBeHidden()
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+
+    // The button is a toggle: a second press closes what the first opened.
+    await button.click()
+    await expect(drawer).toBeVisible()
+    await button.click()
+    await expect(drawer).toBeHidden()
+  })
+
+  test('at 1024 the switch is still there, Code is a tab, and there is no drawer', async ({ page }) => {
+    watch(page, 'designer on a laptop')
+    await page.setViewportSize({ width: 1024, height: 800 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('switch')
+
+    await expect(page.getByRole('tablist', { name: 'Output view' })).toBeVisible()
+    await expect(page.getByRole('tab')).toHaveText(['Scale', 'Page', 'Code'])
+    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-view', 'scale')
+    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('role', 'tabpanel')
+    await expect(page.locator('.tsc-code-btn')).toHaveCount(0)
+    await expect(page.locator('#tsc-code-drawer')).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Save', exact: true })).toBeVisible()
+
+    await page.getByRole('tab', { name: 'Code' }).click()
+    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-view', 'code')
+    await expect(page.locator('#tsc-export')).toContainText('--text-base')
+  })
 })

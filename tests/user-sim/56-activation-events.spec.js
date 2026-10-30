@@ -30,6 +30,7 @@
 
 import { test, expect } from './base.js'
 import { go, watch, ready } from './helpers.js'
+import { showTypeScaleCode } from './type-scale-view.js'
 
 /** The design-analytics blob this browser has written so far. */
 const usage = page => page.evaluate(() => {
@@ -142,14 +143,32 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
 
-    // Copy CSS sits in the toolbar in every view; the Code view is where the
-    // text being copied can be read. Only one of the three views is ever in the
-    // DOM (they are conditional renders, not hidden siblings), so this is a real
-    // navigation, not a reveal.
-    await page.locator('#tsc-tab-code').click()
+    // Copy CSS sits in the toolbar in every layout; the Code drawer (the Code
+    // view, below the split) is where the text being copied can be read.
+    await showTypeScaleCode(page)
     const copy = page.locator('.tsc-copy-primary')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
+    await clipboard(page).toMatch(/font-size|--/)
+
+    await counter(page, 'activation:type-scale:export').toBe(1)
+  })
+
+  test('the type scale counts the Code drawer\'s own Copy button as its export', async ({ page }) => {
+    watch(page, 'developer copying from the code drawer')
+    await allowClipboard(page)
+    await go(page, '/create/type-scale')
+    await ready(page, '/create/type-scale')
+
+    expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
+
+    expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
+    // Opening the drawer is reading, not exporting: the counter must stay unset.
+    expect(
+      (await usage(page))['activation:type-scale:export'],
+      'opening the code drawer is not a finished piece of work',
+    ).toBe(undefined)
+    await page.locator('.tsc-drawer-copy').click()
     await clipboard(page).toMatch(/font-size|--/)
 
     await counter(page, 'activation:type-scale:export').toBe(1)
