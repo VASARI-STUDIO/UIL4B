@@ -250,6 +250,9 @@ export function specimenScale(ladder, { roomMm, widthMm, padMm, textMm, lineHeig
   return { k, label: k < 1 ? `Specimen, at ${Math.round(k * 100)}%` : 'Specimen' }
 }
 
+/** A count with its noun: "1 colour", "5 colours". */
+export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
 /** A contrast ratio as the books print it: always two decimals ("9.90", never "9.9"). */
 export const fmtRatio = (ratio) => Number(ratio).toFixed(2)
 

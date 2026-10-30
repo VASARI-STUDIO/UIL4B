@@ -8,6 +8,7 @@ import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { contrast, typeLadder } from '../../src/utils/styleGuideExport.js'
 import { fmtRatio, matrixBlocks, pairTally, MATRIX_ROWS, MATRIX_COLS } from '../../src/utils/exportTemplates/shared.js'
 import { FIXED_DATE } from '../helpers/export-samples.js'
+import { BANNED } from '../helpers/banned-copy.js'
 
 const TEMPLATES = ['specification', 'monograph', 'atlas']
 const COLOURS = ['#1F4B8E', '#2E7BB8', '#3FA9A0', '#C7D9E8', '#0D2540', '#B4552D', '#F5EDE3', '#E8B04A', '#7A3E9D', '#2B2B2B', '#F2F2F2', '#5C8A3A', '#D94F70', '#123456', '#654321', '#ABCDEF', '#FEDCBA']
@@ -19,13 +20,6 @@ const design = (n, typeScale = { base: 16, ratio: 1.333, lineHeight: 1.5 }) => (
 })
 const build = (template, d = design(5)) => buildDesignSystemBook(d, { projectName: 'Harbourline', date: FIXED_DATE, template })
 const pages = (html) => html.split('<section class="pg').slice(1)
-
-// Phrases that argue for the document's own honesty. A list, so a new one is one line.
-const BANNED = [
-  /rather than/i, /not estimated/i, /\bproves?\b/i, /Nothing here/i, /eyeball/i, /illustrative/i,
-  /placeholder/i, /predictably/i, /actually holds/i, /happens to be/i, /Set from the system it describes/i,
-  /How this book was made/i, /first (8|eight) colours/i, /checked elsewhere/i, /measured against paper and ink there/i,
-]
 
 test('no layout carries a self-defending phrase, at any palette size', () => {
   for (const template of TEMPLATES) {

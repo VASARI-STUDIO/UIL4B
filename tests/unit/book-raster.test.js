@@ -180,7 +180,7 @@ test('many colours paginate: five a page at most, no stub; the matrix takes up t
     if (n > MATRIX_MAX) {
       assert.match(said, new RegExp(`first ${MATRIX_MAX} colours`))
       assert.ok(!/palette pages/.test(said), 'the matrix still claims the rest are measured on the palette pages')
-    } else assert.ok(!/limited to the first/.test(said))
+    } else assert.ok(!/shows the first/.test(said))
   }
 })
 
@@ -537,12 +537,12 @@ test('scale rows share one factor: no 44px cap, the largest sits at 76, the note
   const k = 76 / maxPx
   for (const r of steep.rows) assert.ok(Math.abs(r.drawn - r.step.px * k) < 0.02, `${r.step.name}: drawn at ${r.drawn}, expected ${r.step.px * k}`)
   assert.ok(Math.max(...steep.rows.map((r) => r.drawn)) > 44, 'the old 44px cap is still in force')
-  assert.ok(/shown reduced/.test(steep.text), 'the reduced note is missing on a reduced scale')
+  assert.ok(/Specimens are reduced/.test(steep.text), 'the reduced note is missing on a reduced scale')
 
   const gentle = specimens(withRatio(1.067, 14))
   assert.ok(Math.max(...gentle.rows.map((r) => r.step.px)) <= 76)
   for (const r of gentle.rows) assert.equal(r.drawn, r.step.px, `${r.step.name} was reduced without need`)
-  assert.ok(!/shown reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
+  assert.ok(!/Specimens are reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
 })
 
 // ── The colophon names the project in full ──────────────────────────────────
@@ -639,10 +639,10 @@ test('the credit line is one constant, with a middle dot and no em dash anywhere
   assert.equal((src.match(/Made with UIL4B/g) || []).length, 1, 'the credit text is copied rather than shared')
 })
 
-test('a one-colour kit says "1 colour, with the ink...", not a count built on a system', () => {
+test('the Colour opening is a count and a tally of pairs, with "1 colour" singular', () => {
   const one = plan({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB'] } }).find((p) => p.kind === 'opening')
-  assert.equal(one.abstract, '1 colour, with the ink that reads on it and the ratio that proves it.')
-  assert.match(plan().find((p) => p.kind === 'opening').abstract, /^6 colours built on an? [a-z-]+ system, each with the ink/)
+  assert.match(one.abstract, /^1 colour\. \d+ of \d+ pairs pass AA for text\.$/)
+  assert.match(plan().find((p) => p.kind === 'opening').abstract, /^6 colours\. \d+ of \d+ pairs pass AA for text\.$/)
 })
 
 test('balanceLines never leaves one word alone on the last line, and leaves balanced text alone', () => {

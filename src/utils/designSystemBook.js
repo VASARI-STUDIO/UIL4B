@@ -46,7 +46,7 @@ import { contrast, grade, inkFor, typeLadder, luminance } from './styleGuideExpo
 import { readBook } from './bookModel.js'
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
-import { esc, orderSections, fitTitle, specimenScale, fmtRatio, matrixBlocks, pairTally, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, fitTitle, specimenScale, fmtRatio, matrixBlocks, pairTally, plural, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, hexToOklch, isNeutral, mixHex } from './exportTemplates/roles.js'
 import { readLogo } from './brandLogo.js'
 import { BOOK_TEMPLATES } from './exportTemplates/book/index.js'
@@ -111,8 +111,6 @@ function darkestField(palette) {
 /** The role label for slot `index`; a colour past the five the preview paints says so. */
 const roleText = (harmony, index) => roleLabel(harmony, index) + (slotPlaced(index) ? '' : ', UNASSIGNED')
 
-/** A count with its noun: "1 colour", "5 colours". */
-const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 function chunk(list, size) {
   const out = []
