@@ -32,7 +32,9 @@ test('colour names are the CSS tokens names, values the same hex (lower case)', 
   const vars = Object.fromEntries(tailwindVars(DESIGN))
   const colours = Object.keys(vars).filter((n) => n.startsWith('--color-'))
   assert.ok(colours.length > 30)
-  for (const n of colours) assert.equal(vars[n], css[n].toLowerCase(), n)
+  // A role the CSS writes as var(--x) is the hex of x in the standalone Tailwind file.
+  const resolved = (n) => (/^var\(--[\w-]+\)$/.test(css[n]) ? resolved(css[n].slice(4, -1)) : css[n])
+  for (const n of colours) assert.equal(vars[n], resolved(n).toLowerCase(), n)
   assert.equal(colours.length, designTokens(DESIGN).filter((t) => t.path[0] === 'color').length)
 })
 
@@ -57,4 +59,17 @@ test('utility names: colours, sizes and families read as Tailwind utilities', ()
   assert.equal(utilityFor('--text-heading-1--line-height'), null)
   assert.equal(utilityFor('--font-body'), 'font-body')
   assert.equal(utilityFor('--leading-body'), 'leading-body')
+})
+
+test('the interface roles are colours, so bg-surface, text-on-surface, border-border and ring-focus exist', () => {
+  const vars = Object.fromEntries(tailwindVars(DESIGN))
+  for (const n of ['background', 'surface', 'on-surface', 'on-surface-muted', 'border', 'primary-hover', 'on-primary', 'focus', 'disabled', 'on-disabled']) {
+    assert.match(vars[`--color-${n}`] || '', /^#[0-9a-f]{6}$/, `--color-${n} is a literal hex in the standalone file`)
+  }
+  assert.equal(vars['--color-surface'], '#ffffff')
+  // Same values as the CSS roles, once var() is followed.
+  const css = {}
+  postcss.parse(buildTokensCss(DESIGN, { watermark: false, date: AT })).walkDecls((d) => { css[d.prop] = d.value })
+  const final = (v) => (/^var\(--[\w-]+\)$/.test(v) ? final(css[v.slice(4, -1)]) : v)
+  for (const n of ['background', 'on-surface', 'primary-hover', 'focus']) assert.equal(vars[`--color-${n}`], final(css[`--color-${n}`]), n)
 })
