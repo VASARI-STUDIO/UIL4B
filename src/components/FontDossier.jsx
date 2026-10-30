@@ -752,7 +752,7 @@ export function FontInUsePanel({ font, id, labelledBy, inline = false }) {
             {/* Said plainly, because the alternative is that a reader concludes
                 it from an empty panel and is wrong. */}
             That is a gap in what we have licensed, not a statement about the typeface. Plenty of
-            families with nothing on this tab are in wide use.
+            families with nothing {here === 'This section' ? 'in this section' : 'on this tab'} are in wide use.
           </p>
           <p className="fdx-empty-body fdx-empty-body--last">
             {examples} is the other half of the question, and it is full: it

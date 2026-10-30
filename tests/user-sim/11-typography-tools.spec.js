@@ -545,9 +545,8 @@ test.describe('Font Gallery', () => {
     await expect(empty).toBeVisible()
     await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
     await expect(empty).toContainText('not a statement about the typeface')
-    // "this tab" is what the copy says today in a pop-up that has no tabs; either
-    // noun keeps the claim this line pins.
-    await expect(empty).toContainText(/Plenty of families with nothing on this (tab|section) are in wide use/)
+    // The pop-up has sections, not tabs, and the copy says so.
+    await expect(empty).toContainText('Plenty of families with nothing in this section are in wide use')
     // The claims it must never make.
     await expect(empty).not.toContainText('No uses of Lora')
     await expect(empty).not.toContainText(/is not used|nobody uses/i)
