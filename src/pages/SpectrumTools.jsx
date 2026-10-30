@@ -11,7 +11,7 @@ import PhGlyph from '../components/spectrum/PhGlyph'
 import PhIcon from '../components/spectrum/PhIcon'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
-import { BASES, FONTS, FONT_SAMPLE, rampOf, ratio } from '../components/spectrum/spectrumKit'
+import { BASES, CONTRAST_START, FONTS, FONT_SAMPLE, SCALE_BASE_PX, SCALE_RATIOS, SCALE_RATIO_START, rampOf, ratio, verdictOf } from '../components/spectrum/spectrumKit'
 import { TOOL_COUNT, numberWord, route } from '../components/spectrum/spectrumFacts'
 import { createTools, NAV_SECTIONS } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
@@ -46,7 +46,6 @@ const BETA = LIVE.filter((t) => t.beta)
 const WORKSHOP = createTools().filter((t) => t.soon).map((t) => t.label)
 const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
 
-const RATIOS = [1.2, 1.25, 1.333]
 const SCALE_STEPS = [2, 1, 0, -1]
 
 function PaletteDemo() {
@@ -68,12 +67,10 @@ function PaletteDemo() {
   )
 }
 
-const verdictOf = (cr) => (cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'Fails')
-
 function ContrastDemo() {
   const ramp = rampOf(BASES[0])
-  const [a, setA] = useState(1)
-  const [b, setB] = useState(7)
+  const [a, setA] = useState(CONTRAST_START[0])
+  const [b, setB] = useState(CONTRAST_START[1])
   const cr = Math.round(ratio(ramp[a].hex, ramp[b].hex) * 10) / 10
   const verdict = verdictOf(cr)
   return (
@@ -107,21 +104,21 @@ function FontDemo() {
 }
 
 function ScaleDemo() {
-  const [r, setR] = useState(1)
+  const [r, setR] = useState(SCALE_RATIO_START)
   return (
     <div className="spt-demo">
       <div className="spt-seg" role="group" aria-label="Scale ratio">
-        {RATIOS.map((v, i) => (
+        {SCALE_RATIOS.map((v, i) => (
           <button key={v} type="button" aria-pressed={r === i} aria-label={`Ratio ${v}`} onClick={() => setR(i)}>{v}</button>
         ))}
       </div>
       <ul className="spt-scale">
         {SCALE_STEPS.map((n) => {
-          const rem = RATIOS[r] ** n
+          const rem = SCALE_RATIOS[r] ** n
           return (
             <li key={n}>
-              <span style={{ fontSize: `${Math.min(rem, 2.6) * 16}px` }}>Ag Heading</span>
-              <span className="spt-num">{rem.toFixed(3)}rem, {Math.round(rem * 16)}px</span>
+              <span style={{ fontSize: `${Math.min(rem, 2.6) * SCALE_BASE_PX}px` }}>Ag Heading</span>
+              <span className="spt-num">{rem.toFixed(3)}rem, {Math.round(rem * SCALE_BASE_PX)}px</span>
             </li>
           )
         })}

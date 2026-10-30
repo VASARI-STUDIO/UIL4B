@@ -209,3 +209,30 @@ html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
   html:not([data-reduced-motion="false"]) .spt .spt-card .spt-cut { animation: none; }
   html:not([data-reduced-motion="false"]) .spt .spt-card .spt-ghost { transition: none; }
 }
+
+/* Row thumbs the site map adds: Palette, Contrast, Font Gallery, Type Scale, 3D, the
+   File Converter bars and the workshop tile. Same 160 x 100 canvas as the thumbs above. */
+.spt .spt-ct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.spt .spt-ct-b { display: grid; place-items: center; width: 36%; aspect-ratio: 1; border-radius: 8px; background: var(--ct-bg); color: var(--ct-fg); box-shadow: inset 0 0 0 1px var(--sp-line-strong); font: 600 22px/1 var(--display); }
+.spt .spt-ct-r { display: grid; gap: 4px; }
+.spt .spt-ct-n { font: 600 20px/1 var(--display); letter-spacing: -.02em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
+.spt .spt-fg-t { font: 600 34px var(--display); letter-spacing: -1px; fill: var(--sp-ink); }
+.spt .spt-ts { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; gap: 6px; padding-top: 28%; font: 600 16px/1 var(--display); color: var(--sp-dim); }
+.spt .spt-ts > span { font-size: calc(var(--ts-px) * 1px); }
+.spt .spt-ts > .spt-ts-top { color: var(--hue-strong); }
+.spt .spt-solid { fill: color-mix(in oklab, var(--hue) 22%, var(--plate)); stroke: var(--hue-strong); stroke-width: 1.5; stroke-linejoin: round; }
+.spt .spt-fct { position: absolute; inset: 12%; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.spt .spt-fct-n { font: 600 20px/1 var(--display); letter-spacing: -.02em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
+.spt .spt-fct-svg { display: block; width: 100%; height: 22px; }
+.spt .spt-art--thumb > .spt-tile { position: absolute; inset: 0; margin: auto; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: color-mix(in oklab, var(--hue) 22%, var(--plate)); color: var(--hue-strong); }
+.spt .spt-tile svg { width: 18px; height: 18px; }
+@container spt-plate (max-width: 150px) {
+  .spt .spt-ct { gap: 8px; }
+  .spt .spt-ct-b { font-size: 15px; border-radius: 6px; }
+  .spt .spt-ct-n { font-size: 14px; }
+  .spt .spt-ct-r .spt-lab { display: none; }
+  .spt .spt-ts { gap: 4px; }
+  .spt .spt-ts > span { font-size: calc(var(--ts-px) * .75px); }
+  .spt .spt-fct { gap: 6px; }
+  .spt .spt-fct-n { font-size: 16px; }
+}

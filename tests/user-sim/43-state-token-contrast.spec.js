@@ -20,10 +20,10 @@
 // bare card — which is a LIGHTER ground than the tint and therefore a kinder
 // number. Nearly every state badge in this app paints text on a tint of its own
 // colour, so that one regex decides whether this spec measures the real thing.
-// With the tint restored, .smap-stage measured 4.39:1 where the rgba-only
-// parser had reported 5.02:1 and passed it.
+// With the tint restored, a tinted state badge measured 4.39:1 where the
+// rgba-only parser had reported 5.02:1 and passed it.
 import { test, expect } from './base.js'
-import { go } from './helpers.js'
+import { go, signIn } from './helpers.js'
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -132,8 +132,8 @@ const WALK = `(() => {
   return { bad, measured }
 })()`
 
-// Routes that actually paint state colours signed out: the sitemap stage pills,
-// the privacy PII table, the contrast checker's own verdict and check marks,
+// Routes that actually paint state colours signed out: the alt-text example
+// tags, the privacy PII table, the contrast checker's own verdict and check marks,
 // and the semantic-colour ramps (the fill mirror).
 const ROUTES = ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color',
   '/create/alt-text', '/discover', '/plans', '/']
@@ -230,19 +230,55 @@ test.describe('state-colour text clears its AA floor', () => {
   // actually see one. If color-mix ever computes to a form `parse` misses, this
   // fails loudly instead of quietly making every badge look safe.
   test('a tinted state badge reports a tinted ground, not the bare card', async ({ page }) => {
-    await go(page, '/sitemap')
+    await go(page, '/create/alt-text')
     await settle(page)
     const seen = await page.evaluate(`(() => {
       ${HELPERS}
-      const el = document.querySelector('.smap-stage')
+      const el = document.querySelector('.alt-example-tag')
       if (!el) return null
       const own = getComputedStyle(el).backgroundColor
       return { own, parsed: parse(own), ground: hex(groundOf(el)) }
     })()`)
-    expect(seen, '.smap-stage is not on this page any more').not.toBeNull()
+    expect(seen, '.alt-example-tag is not on this page any more').not.toBeNull()
     expect(seen.parsed, `computed background ${seen.own} did not parse`).not.toBeNull()
     expect(seen.parsed.a, 'the badge tint should be translucent').toBeLessThan(1)
     expect(seen.ground.toLowerCase(), 'the ground should be the tint, not #ffffff')
       .not.toBe('#ffffff')
   })
+
+  // /sitemap paints no state hue: its group meta ("5 live", "more coming") and its
+  // admin-only Soon pills are dim text, so the state walk above cannot catch them.
+  // They are read here by element instead, against the same floor and ground maths.
+  for (const theme of ['light', 'dark']) {
+    for (const admin of [false, true]) {
+      const who = admin ? 'admin' : 'visitor'
+      test(`/sitemap group meta${admin ? ' and Soon pills' : ''} clear AA for a ${who}, ${theme} theme`, async ({ browser }) => {
+        const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: theme })
+        await ctx.addInitScript((t) => {
+          try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
+        }, theme)
+        const page = await ctx.newPage()
+        if (admin) await signIn(page, { admin: true })
+        await go(page, '/sitemap')
+        await settle(page)
+        const res = await page.evaluate(`(() => {
+          ${HELPERS}
+          const targets = [...document.querySelectorAll('.spt-gmeta, .spt-soon')]
+          const rows = walk().filter((n) => /spt-gmeta|spt-soon/.test(n.cls))
+          return {
+            targets: targets.length,
+            soonPills: document.querySelectorAll('.spt-soon').length,
+            measured: rows.length,
+            bad: rows.filter((n) => n.value < n.floor).map((n) => n.text + ' ' + n.value + ':1 needs ' + n.floor),
+          }
+        })()`)
+        await ctx.close()
+        expect(res.targets, 'no group meta or Soon pill on /sitemap to measure').toBeGreaterThan(0)
+        expect(res.measured, 'the contrast walk skipped some of them (its ground may be an image)').toBeGreaterThanOrEqual(res.targets)
+        if (admin) expect(res.soonPills, 'an admin should see Soon pills').toBeGreaterThan(0)
+        else expect(res.soonPills, 'a visitor should see no Soon pill').toBe(0)
+        expect(res.bad, `/sitemap meta text under AA in ${theme}`).toEqual([])
+      })
+    }
+  }
 })

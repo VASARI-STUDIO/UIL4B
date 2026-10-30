@@ -166,6 +166,19 @@ test.describe('public route contract', () => {
     // Signed out, no unfinished destination is on the map at all.
     await expect(stagedDiscover).toHaveCount(0)
 
+    // Every row on the map is a link to its own route, and no row carries a Soon badge.
+    const rowTargets = await page.locator('li[data-route]').evaluateAll((items) => items.map((li) => ({
+      route: li.getAttribute('data-route'),
+      hrefs: Array.from(li.querySelectorAll('a.spt-row')).map((a) => a.getAttribute('href')),
+      soon: li.hasAttribute('data-soon'),
+    })))
+    expect(rowTargets.length, 'the map should list its rows').toBeGreaterThan(30)
+    for (const { route, hrefs, soon } of rowTargets) {
+      expect(soon, `${route} is flagged Soon for a visitor`).toBe(false)
+      expect(hrefs, `${route} must be one link to itself`).toEqual([route])
+    }
+    await expect(page.locator('.spt-soon')).toHaveCount(0)
+
     // Learn is now BOTH: published guides that are real links, and a topic
     // roadmap whose rows are still non-actionable. The column asserted zero
     // links while every row was Soon; it now asserts the split, which is the
@@ -178,19 +191,21 @@ test.describe('public route contract', () => {
     await expect(learn.locator('[data-soon="true"]')).toHaveCount(0)
     await expect(learn.locator('[data-soon="true"] a')).toHaveCount(0)
     for (const article of LEARN_ARTICLES) {
-      const row = learn.locator(`.smap-link[data-route="/learn/${article.slug}"]`)
+      const row = learn.locator(`li[data-route="/learn/${article.slug}"]`)
+      await expect(row, `${article.slug} must be on the map exactly once`).toHaveCount(1)
       await expect(row).not.toHaveAttribute('data-soon', 'true')
-      await expect(row.locator('a')).toHaveAttribute('href', `/learn/${article.slug}`)
+      await expect(row.locator('a.spt-row')).toHaveAttribute('href', `/learn/${article.slug}`)
     }
 
     // A Create tool still in the workshop is not on the map for a visitor…
-    await expect(page.locator('.smap-link[data-route="/create/box-shadow"]')).toHaveCount(0)
+    await expect(page.locator('li[data-route="/create/box-shadow"]')).toHaveCount(0)
 
     // …while the three typography tools that just shipped are real links.
     for (const route of ['/create/font-gallery', '/create/font-pair', '/create/type-scale']) {
-      const live = page.locator(`.smap-link[data-route="${route}"]`).first()
+      const live = page.locator(`li[data-route="${route}"]`).first()
+      await expect(live, `${route} must be on the map`).toHaveCount(1)
       await expect(live).not.toHaveAttribute('data-soon', 'true')
-      await expect(live.locator('a')).toHaveAttribute('href', route)
+      await expect(live.locator('a.spt-row')).toHaveAttribute('href', route)
     }
   })
 

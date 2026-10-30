@@ -1,40 +1,38 @@
-import { NavLink } from 'react-router-dom'
+import { Fragment, useState } from 'react'
+import { Link } from 'react-router-dom'
+import PillNav from '../components/PillNav'
+import SpectrumWords from '../components/spectrum/SpectrumWords'
+import SpectrumFooter from '../components/spectrum/SpectrumFooter'
+import ToolArt from '../components/spectrum/ToolArt'
+import NavIcon from '../components/NavIcon'
+import PhIcon from '../components/spectrum/PhIcon'
+import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../data/toolTree'
+import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/reading.css'
-import '../styles/deferred/tool-shell.css'
-// THIS PAGE'S OWN SHEET, IMPORTED LAST ON PURPOSE.
-//
-// The `.smap-*` family is split between `deferred/reading.css` — shared with
-// the Help Centre, the Info Centre, Principles and the Learn guides — and the
-// render-blocking `global.css`, where `category-hue-contrast.test.js` asserts
-// four of its rules by their exact text. Neither is this lane's to edit, so the
-// page takes a sheet of its own, emitted with this route's lazy chunk and
-// arriving after both of the sheets it re-dresses. Every rule inside is scoped
-// under `.smap-page` so it cannot reach the four other surfaces.
+import '../styles/pages/spectrum-mobile.css'
+import '../styles/pages/spectrum-tools.css'
+// This page's own rules, imported last so they follow the /tools sheet they build on.
 import '../styles/pages/sitemap.css'
 
-// The full visual site map — a single page that lays out every destination in
-// UIL4B so a visitor (or the founder) can see the whole product at a glance.
+// The full visual site map: every destination in UIL4B on one page, in the /tools
+// page's visual language (Spectrum nav and footer, hue-tile group rails, rows with
+// a drawn thumbnail).
 //
-// The three build surfaces come straight from the tool tree (CREATE_GROUPS +
-// the Discover / Learn group lists), so this map can never drift from the nav
-// or the router. The account / help / legal areas aren't in the tree — those
-// live only in App's route table — so they're described here directly, kept in
-// step by hand. Each Create category carries its `data-hue`, matching the
-// mega-menu and the in-tool shell, and unfinished tools wear the same "Soon"
-// badge as the nav so the map tells the truth about what's live today.
+// The three build surfaces come straight from the tool tree (CREATE_GROUPS and
+// the Discover / Learn group lists), so this map can never drift from the nav or
+// the router. The account / help / legal areas aren't in the tree: they live only
+// in App's route table, so they're described here directly, kept in step by hand.
+// Unfinished pages are listed, badged and not linked, for admins only.
 
 // Non-tool destinations, grouped the way a visitor thinks about them rather
 // than the way the router lists them. Kept in sync with App.jsx by hand.
 const FLAT_SECTIONS = [
   {
-    // `id` is the section anchor and stays as it is — it is a URL, not copy.
+    // `id` is the section anchor and stays as it is: it is a URL, not copy.
     id: 'workspace',
+    icon: 'user',
     label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
@@ -47,6 +45,7 @@ const FLAT_SECTIONS = [
   },
   {
     id: 'help',
+    icon: 'help',
     label: 'Help & community',
     desc: 'Learn the tools and get unstuck.',
     links: [
@@ -60,52 +59,79 @@ const FLAT_SECTIONS = [
   },
   {
     id: 'legal',
+    icon: 'legal',
     label: 'Legal',
     desc: 'The fine print, in plain English.',
     links: [
       { label: 'Privacy', route: '/privacy', note: 'What we store and how we handle data.' },
       { label: 'Terms', route: '/terms', note: 'Usage rules and account policies.' },
       // CREDITS IS A LIVE ROUTE AND CARRIES NO `soon`. It is in routeMetaMap,
-      // sitemap.xml, vercel.json, llms.txt and both footers; this page was the
-      // only surface that did not list it, because this group is hand-kept
-      // rather than read from the tool tree. Several of the packs and faces it
-      // names legally require visible attribution, so a map that promises
-      // "every page in UIL4B" and omits it is the wrong page to omit from.
-      //
-      // The note is NOT written here: it is the first clause of the route's own
-      // meta description in `src/data/routeMetaMap.js`, trimmed to the length
-      // the other rows in this group use. The rest of that sentence names the
-      // four licences and is more than a map row needs; taking the opening of a
-      // sentence the product already ships is how every other note in this file
-      // should have been written.
+      // sitemap.xml, vercel.json, llms.txt and both footers. Several of the packs
+      // and faces it names legally require visible attribution, so a map that
+      // promises "every page in UIL4B" must list it. The note is the first clause
+      // of the route's own meta description in `src/data/routeMetaMap.js`.
       { label: 'Credits', route: '/credits', note: 'Every icon set, typeface and package UI L4B is built on, with its licence.' },
     ],
   },
 ]
 
+// A route as segments that each end on a slash ("/create/semantic-color" becomes
+// "/create/" and "semantic-color"; the leading slash stays with the first word).
+const routeSegments = (route) => route.match(/\/?[^/]+\/?|\//g) || [route]
+
+// Each segment is an unbreakable unit with a <wbr> after its slash, so a line only
+// breaks after a "/" and never at a hyphen.
+function RouteLine({ route }) {
+  return (
+    <span className="spt-route">
+      {routeSegments(route).map((seg, i) => (
+        <Fragment key={`${seg}-${i}`}>
+          {i > 0 && <wbr />}
+          <span className="spt-route-seg">{seg}</span>
+        </Fragment>
+      ))}
+    </span>
+  )
+}
+
+const SoonPill = ({ inline }) => <span className={inline ? 'spt-soon spt-soon--inline' : 'spt-soon'}>Soon</span>
+
 // Live destinations are links. Staged destinations keep their route and context
 // visible, but are deliberately non-interactive so "Soon" never behaves like a
 // shipped action.
-function MapLink({ label, route, note, soon }) {
-  const content = (
+function MapRow({ label, route, note, soon, thumb }) {
+  const cls = `spt-row${thumb ? '' : ' spt-row--text'}${soon ? ' spt-row--soon' : ''}`
+  const inner = (
     <>
-      <span className="smap-link-label">
-        {label}
-        {soon && <span className="smap-soon">Soon</span>}
+      {thumb}
+      <span className="spt-row-text">
+        <span className="spt-lbl">
+          <b>{label}</b>
+          {soon && <SoonPill />}
+        </span>
+        {note && <span className="spt-note">{note}</span>}
+        <RouteLine route={route} />
       </span>
-      <span className="smap-link-route">{route}</span>
-      {note && <span className="smap-link-note">{note}</span>}
+      <span className="spt-row-go" aria-hidden="true">{soon ? null : <PhIcon name="arrow-up-right" />}</span>
     </>
   )
-
   return (
-    <li className="smap-link" data-route={route} data-soon={soon ? 'true' : undefined}>
-      {soon ? (
-        <div className="smap-link-a smap-link-a--soon">{content}</div>
-      ) : (
-        <NavLink to={route} className="smap-link-a">{content}</NavLink>
-      )}
+    <li data-route={route} data-soon={soon ? 'true' : undefined}>
+      {soon ? <div className={cls}>{inner}</div> : <Link className={cls} to={route}>{inner}</Link>}
     </li>
+  )
+}
+
+function Rail({ icon, hue, label, meta, desc }) {
+  return (
+    <div className="spt-rail">
+      <h3>
+        <span className="spt-gtile" data-hue={hue} aria-hidden="true"><NavIcon id={icon} /></span>
+        <span>{label}</span>
+      </h3>
+      {meta && <p className="spt-gmeta">{meta}</p>}
+      {desc && <p className="spt-gdesc">{desc}</p>}
+    </div>
   )
 }
 
@@ -122,154 +148,119 @@ export default function SiteMap() {
     .filter(({ tools }) => tools.length)
   const discoverGroups = DISCOVER_GROUPS.filter((g) => showSoon(g.soon))
   const learnRoadmap = LEARN_ROADMAP.filter((g) => showSoon(g.soon))
+  const [heroLit] = useState(() => typeof document !== 'undefined'
+    && !document.documentElement.hasAttribute('data-hero-prepainted')
+    && !prefersReducedMotion())
 
   return (
-    // `smap-page` is a SCOPE, not a rename: every existing `.smap-*` class is
-    // untouched, and pages/sitemap.css hangs off this co-class so none of its
-    // rules can reach the Help Centre, the Info Centre, Principles or the Learn
-    // guides, which share the same family out of deferred/reading.css.
-    <div className="sec smap-page">
-      <div className="sec-h">
-        {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
-            common AI trait, scan the whole site and remove alot of them where
-            applied." This continues #382 and #386, where he marked this exact
-            element "AI" and it was deleted from the Font Gallery, Font Pair,
-            the Type Scale and the Tint tool. A 10px mono-caps label restating
-            the page's own section, directly above an h1 that names the page,
-            on a route the nav already has lit. Hierarchy is a control, not a
-            label. */}
-        <h1>The whole <em>map</em>.</h1>
-        <p>
-          {isAdmin ? (
-            <>
-              Every page in UIL4B, laid out end to end. Categories still in the workshop
-              keep a <span className="smap-soon smap-soon--inline">Soon</span> badge, so
-              the map only ever promises what&rsquo;s actually live.
-            </>
-          ) : 'Every page in UIL4B, laid out end to end.'}
-        </p>
-      </div>
+    <div className="spectrum spm spt spt-sitemap">
+      <PillNav variant="spectrum" />
+      <div className="sp-grain" aria-hidden="true" />
+      <div className="spm-spacer" aria-hidden="true" />
+      <main id="main" tabIndex={-1}>
+        <section className="spm-intro" aria-labelledby="smap-h1">
+          <div className={heroLit ? 'spm-hero is-in' : 'spm-hero'}>
+            <div className="spm-hero-copy">
+              {/* No taxonomy eyebrow above the h1, and no count in it: a count is a number that can be wrong. */}
+              <h1 className="spm-h1" id="smap-h1"><SpectrumWords text="The whole map." /></h1>
+              <p className="spm-lede">
+                {isAdmin ? (
+                  <>
+                    Every page in UIL4B, laid out end to end. Categories still in the workshop
+                    keep a <SoonPill inline /> badge, so the map only ever promises what&rsquo;s actually live.
+                  </>
+                ) : 'Every page in UIL4B, laid out end to end.'}{' '}
+                Jump to <a href="#create">Create</a>, <a href="#browse">Discover &amp; Learn</a> or <a href="#account">Account &amp; more</a>.
+              </p>
+            </div>
+          </div>
+        </section>
 
-      {/* ── Create: the build surface, straight from the tool tree ── */}
-      <section className="smap-surface" aria-labelledby="smap-create">
-        <div className="smap-surface-h">
-          <h2 id="smap-create">Create</h2>
-          {/* "components" is deleted from this list. The `component` group
-              in toolTree.js is soon:true with both tools soon:true, and the
-              header above promises the map "only ever promises what's
-              actually live". The group still appears below, wearing its
-              Soon badge; the word comes back with the tools. */}
-          <p>Build colour, type, icons, media and AI systems.</p>
-        </div>
-        <div className="smap-grid">
+        {/* Create: the build surface, straight from the tool tree */}
+        <section className="spt-section" id="create" aria-labelledby="smap-create">
+          <h2 className="spt-h2" id="smap-create">Create</h2>
+          {/* "components" is not in this list: the `component` group is soon:true and
+              the page only ever promises what is live. */}
+          <p className="spt-sub">Build colour, type, icons, media and AI systems.</p>
           {createGroups.map(({ group, tools }) => (
-            <div key={group.id} className="smap-cat" data-hue={group.hue}>
-              <div className="smap-cat-h">
-                <span className="smap-cat-dot" aria-hidden="true" />
-                <h3>{group.label}</h3>
-                {group.soon && <span className="smap-soon">Soon</span>}
-              </div>
-              <p className="smap-cat-desc">{group.desc}</p>
-              <ul className="smap-links">
-                {tools.map((tool) => (
-                  <MapLink
-                    key={tool.id}
-                    label={tool.label}
-                    route={tool.route}
-                    soon={group.soon || tool.soon}
-                  />
-                ))}
+            <div key={group.id} className="spt-group" data-hue={group.hue}>
+              <Rail icon={group.hue} hue={group.hue} label={group.label} meta={group.soon ? <SoonPill /> : null} desc={group.desc} />
+              <ul className="spt-rows">
+                {tools.map((tool) => {
+                  const soon = !!(group.soon || tool.soon)
+                  return (
+                    <MapRow
+                      key={tool.id}
+                      label={tool.label}
+                      route={tool.route}
+                      note={CREATE_TOOL_SEARCH[tool.id]?.description}
+                      soon={soon}
+                      thumb={<span className="spt-thumb"><ToolArt id={tool.id} size="thumb" soon={soon} /></span>}
+                    />
+                  )
+                })}
               </ul>
             </div>
           ))}
-        </div>
-      </section>
+        </section>
 
-      {/* ── Discover + Learn: browse and understand ── */}
-      <section className="smap-surface" aria-labelledby="smap-browse">
-        <div className="smap-surface-h">
-          <h2 id="smap-browse">Discover &amp; Learn</h2>
-          <p>Browse curated inspiration, then dig into the why behind it.</p>
-        </div>
-        <div className="smap-grid smap-grid--two">
-          <div className="smap-cat" data-hue="accent" data-sitemap-section="discover">
-            <div className="smap-cat-h">
-              <span className="smap-cat-dot" aria-hidden="true" />
-              <h3>Discover</h3>
-              <span className="smap-stage">
-                {DISCOVER_GROUPS.filter((group) => !group.soon).length} live{isAdmin && <> &middot; more coming</>}
-              </span>
-            </div>
-            {/* The typed description is gone. It read "Community systems,
-                fonts, prompts and curated resources." — and "community
-                systems" is the Inspiration row, which DISCOVER_SPEC marks
-                soon:true; NotFound.jsx had already thrown out the same
-                wording as false for the same reason. Nothing replaces it:
-                every row beneath carries its own `desc` from the registry,
-                so the column describes itself and cannot promise a group
-                the registry does not list. */}
-            <ul className="smap-links">
+        {/* Discover and Learn: browse and understand */}
+        <section className="spt-section" id="browse" aria-labelledby="smap-browse">
+          <h2 className="spt-h2" id="smap-browse">Discover &amp; Learn</h2>
+          <p className="spt-sub">Browse curated inspiration, then dig into the why behind it.</p>
+          <div className="spt-group" data-hue="accent" data-sitemap-section="discover">
+            <Rail icon="inspiration" hue="accent" label="Discover" meta={<>{DISCOVER_GROUPS.filter((group) => !group.soon).length} live{isAdmin && <> &middot; more coming</>}</>} />
+            {/* Nothing typed here: every row carries its own `desc` from the registry,
+                so the column cannot promise a group the registry does not list. */}
+            <ul className="spt-rows">
               {discoverGroups.map((g) => (
-                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
+                <MapRow key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>
           </div>
-          {/* Learn carried a category-level "Soon" badge over eight rows that
-              all pointed at /learn. The live guides go first with their own
-              URLs; the topic roadmap keeps its per-row Soon badges below them,
-              so the map states what exists and what does not in one column.
-
-              LEARN_ROADMAP rather than LEARN_GROUPS: a delivered row carries
-              the SAME route as the guide that delivered it, so listing both
-              would put two .smap-link rows on one data-route — a duplicate for
-              the reader and a strict-mode ambiguity for the spec that walks
-              this column by route. */}
-          <div className="smap-cat" data-hue="accent" data-sitemap-section="learn">
-            <div className="smap-cat-h">
-              <span className="smap-cat-dot" aria-hidden="true" />
-              <h3>Learn</h3>
-            </div>
-            <p className="smap-cat-desc">
-              {isAdmin
+          {/* LEARN_ROADMAP rather than LEARN_GROUPS: a delivered row carries the SAME
+              route as the guide that delivered it, so listing both would put two rows
+              on one data-route. */}
+          <div className="spt-group" data-hue="accent" data-sitemap-section="learn">
+            <Rail
+              icon="principles"
+              hue="accent"
+              label="Learn"
+              desc={isAdmin
                 ? 'Reference guides on colour, type and accessibility, plus the topics still to be written.'
                 : 'Reference guides on colour, type and accessibility.'}
-            </p>
-            <ul className="smap-links">
+            />
+            <ul className="spt-rows">
               {LEARN_ARTICLES.map((a) => (
-                <MapLink key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
+                <MapRow key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
               ))}
-              <MapLink label="Learn" route="/learn" note={isAdmin ? 'The section landing, and what is on the way.' : 'The section landing.'} />
+              <MapRow label="Learn" route="/learn" note={isAdmin ? 'The section landing, and what is on the way.' : 'The section landing.'} />
               {learnRoadmap.map((g) => (
-                <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
+                <MapRow key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Account, help and legal — hand-kept, not in the tool tree ── */}
-      <section className="smap-surface" aria-labelledby="smap-account">
-        <div className="smap-surface-h">
-          <h2 id="smap-account">Account &amp; more</h2>
-          <p>Your account, support and the fine print.</p>
-        </div>
-        <div className="smap-grid">
-          {FLAT_SECTIONS.map((section) => (
-            <div key={section.id} className="smap-cat">
-              <div className="smap-cat-h">
-                <span className="smap-cat-dot" aria-hidden="true" />
-                <h3>{section.label}</h3>
+        {/* Account, help and legal: hand-kept, not in the tool tree */}
+        <section className="spt-section spt-section--last" id="account" aria-labelledby="smap-account">
+          <h2 className="spt-h2" id="smap-account">Account &amp; more</h2>
+          <p className="spt-sub">Your account, support and the fine print.</p>
+          <div className="spt-cols">
+            {FLAT_SECTIONS.map((section) => (
+              <div key={section.id} className="spt-col" data-hue="none">
+                <Rail icon={section.icon} hue="none" label={section.label} desc={section.desc} />
+                <ul className="spt-rows">
+                  {section.links.map((link) => (
+                    <MapRow key={link.route} {...link} />
+                  ))}
+                </ul>
               </div>
-              <p className="smap-cat-desc">{section.desc}</p>
-              <ul className="smap-links">
-                {section.links.map((link) => (
-                  <MapLink key={link.route} {...link} />
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      </main>
+      <SpectrumFooter />
     </div>
   )
 }

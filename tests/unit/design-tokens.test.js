@@ -68,7 +68,7 @@ const RUNTIME_FAMILIES = [
 // Gradient Generator's angle wheel (AngleWheel.jsx) sets two inline: --grd-tick
 // on each tick mark (its own rotation) and --grd-wheel-angle on the hand (the
 // current angle), which the stylesheet reads as `rotate(var(...))`.
-const RUNTIME_EXACT = new Set(['--i', '--grd-tick', '--grd-wheel-angle'])
+const RUNTIME_EXACT = new Set(['--i', '--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()
