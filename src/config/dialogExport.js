@@ -38,8 +38,8 @@ export const EXPORT_TYPES = Object.freeze([
   Object.freeze({
     id: 'code',
     name: 'Code',
-    line: 'CSS or JSON',
-    categories: Object.freeze([category('code', 'Code', 'CSS or JSON', false, ['css', 'json'], null, 'code')]),
+    line: 'CSS, JSON, Tailwind',
+    categories: Object.freeze([category('code', 'Code', 'CSS, JSON, Tailwind', false, ['css', 'json', 'tailwind', 'contrast', 'contrast-json'], null, 'code')]),
   }),
 ])
 

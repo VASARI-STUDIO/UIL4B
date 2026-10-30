@@ -36,6 +36,19 @@ const FILE_COPY = {
   kit: { label: 'HTML', blurb: 'One HTML file. Opens offline and carries its CSS, JSON and fonts.', action: 'Export UI kit' },
   css: { label: 'CSS stylesheet', blurb: 'Custom properties for your palette, tints, semantic colours and type. Drop it into any site.', action: 'Export CSS' },
   json: { label: 'JSON', blurb: 'The same tokens in the W3C Design Tokens format, for token pipelines.', action: 'Export JSON' },
+  tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
+  contrast: { label: 'Contrast CSV', blurb: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result.', action: 'Export contrast pairs' },
+  'contrast-json': { label: 'Contrast JSON', blurb: 'The same pairs as JSON, with each WCAG result as true or false.', action: 'Export contrast pairs' },
+}
+
+// Where the free credit sits in each code file, for the dock line. The contrast
+// files carry none.
+const CREDIT_LINE = {
+  css: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
+  tailwind: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
+  json: 'The file’s description carries a small ‘Made with UIL4B’ credit.',
+  contrast: 'This file carries no credit line.',
+  'contrast-json': 'This file carries no credit line.',
 }
 const copyOf = (id) => FILE_COPY[id] || { label: String(id).toUpperCase(), blurb: '', action: 'Export' }
 
@@ -241,7 +254,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
     } else line = 'Checkout shows the price before you pay.'
   } else if (locked) line = <><strong>Pro</strong> unlocks this file with no watermark.</>
   else if (isPro) line = <><strong>Included in Pro.</strong> No watermark.</>
-  else if (cat.preview === 'code') line = <><strong>Free.</strong> The file starts with a small ‘Made with UIL4B’ credit comment.</>
+  else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>
 
   let label = copyOf(file).action
@@ -259,7 +272,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
       <div className="xd-dock-acts">
         {cat.preview === 'code' && (
           <button type="button" className="btn xd-act" onClick={onCopy} disabled={busy}>
-            Copy {file === 'json' ? 'JSON' : 'CSS'}
+            Copy file
           </button>
         )}
         <button type="button" className="btn btn-accent xd-act xd-primary" ref={primaryRef} onClick={onPrimary} disabled={busy || checking}>
