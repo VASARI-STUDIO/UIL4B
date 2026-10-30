@@ -2,6 +2,8 @@ import { CREATE_GROUPS } from '../../data/toolTree'
 import { LIBRARY_GRADIENT_ROWS } from '../../data/gradientLibrary'
 import { buildRamp } from '../../utils/tintRamp'
 import { hexToOklchRaw } from '../tool/oklch'
+import { STROKE_PX } from '../../utils/iconStroke'
+import { DEFAULT_EXPORT_SIZE } from '../../utils/iconSize'
 import { BASES } from './spectrumKit'
 import { ICON_PLATE } from './toolArtIcons'
 import measured from './toolMeasured.json'
@@ -13,16 +15,25 @@ import measured from './toolMeasured.json'
 
 const HUE = Object.fromEntries(CREATE_GROUPS.flatMap((g) => g.tools.map((t) => [t.id, g.hue])))
 
-// Icon Library: 6 x 3 grid on a 36px pitch, the picked cell on a tile.
+// Icon Library: 6 x 3 grid on a 36px pitch, the picked cell on a tile. The size and
+// stroke are the tool's own defaults; the hover shows the next stroke stop it offers.
 const PITCH = 36
 const PICK = 2
-const ICON_STROKE = 2.25
+const ICON_SIZE = DEFAULT_EXPORT_SIZE
+const STROKE_REST = STROKE_PX.default
+const STROKE_HOVER = STROKE_PX.snaps.find((s) => s > STROKE_REST) ?? STROKE_REST + STROKE_PX.step
 const PICK_NAME = ICON_PLATE[PICK][0]
 
 // File Converter: the saving and the bar fractions come from the measured run.
 const { source, output } = measured.fileConverter
 const KEPT = output.kb / source.kb
 const SAVED = Math.round((1 - KEPT) * 100)
+// Bar geometry is in percent of the bar's width. The removed part's outline starts
+// TUCK under the kept bar so its open left side never shows, and stops INSET short of
+// the right edge so the dashed stroke is not clipped by the svg.
+const TUCK = 0.02
+const INSET = 0.002
+const pct = (f) => `${(f * 100).toFixed(2)}%`
 const fmtKb = (kb) => `${kb.toFixed(1)} KB`
 
 // Tint: the Tint tool's own nine-step ramp off the colour it opens with.
@@ -50,11 +61,6 @@ const FRAMES = [['16:9', 55], ['4:5', 50], ['1:1', 45]].map(([label, h]) => {
   return { label, h, w: Math.round((h * a) / b) }
 })
 
-const varsRef = (vars) => (el) => {
-  if (!el) return
-  for (const k of Object.keys(vars)) el.style.setProperty(k, vars[k])
-}
-
 function Plate({ id, size, children }) {
   return (
     <div className={`spt-art spt-art--${size}`} data-hue={HUE[id]} data-art={id} aria-hidden="true">
@@ -79,15 +85,15 @@ function Icons() {
         </g>
       </svg>
       <div className="spt-ic-pick">
-        <svg className="spt-pick" viewBox="0 0 24 24">
-          <path className="spt-i1" d={ICON_PLATE[PICK][1]} />
-          <path className="spt-i2" d={ICON_PLATE[PICK][1]} strokeWidth={ICON_STROKE} />
+        <svg className="spt-pick" viewBox={`0 0 ${ICON_SIZE} ${ICON_SIZE}`}>
+          <path className="spt-i1" d={ICON_PLATE[PICK][1]} strokeWidth={STROKE_REST} />
+          <path className="spt-i2" d={ICON_PLATE[PICK][1]} strokeWidth={STROKE_HOVER} />
         </svg>
         <div className="spt-meta">
           <Label ink>{PICK_NAME}</Label>
           <span className="spt-swap">
-            <span className="spt-lab spt-l1"><span className="v">24px</span> · stroke <span className="v">1.5</span></span>
-            <span className="spt-lab spt-l2"><span className="v">24px</span> · stroke <span className="v">{ICON_STROKE}</span></span>
+            <span className="spt-lab spt-l1"><span className="v">{ICON_SIZE}px</span> · stroke <span className="v">{STROKE_REST}</span></span>
+            <span className="spt-lab spt-l2"><span className="v">{ICON_SIZE}px</span> · stroke <span className="v">{STROKE_HOVER}</span></span>
           </span>
         </div>
       </div>
@@ -97,7 +103,7 @@ function Icons() {
 
 function Converter() {
   return (
-    <div className="spt-fc" ref={varsRef({ '--fc-kept': String(KEPT), '--fc-grow': String(1 / KEPT), '--fc-kept-pct': `${(KEPT * 100).toFixed(2)}%` })}>
+    <div className="spt-fc">
       <div className="spt-fc-top">
         <span className="spt-big v">−{SAVED}%</span>
         <Label>smaller, same pixels</Label>
@@ -105,21 +111,20 @@ function Converter() {
       <div className="spt-fc-bars">
         <div>
           <div className="spt-fc-lab"><Label ink>Original {source.format}</Label><Label ink v>{fmtKb(source.kb)}</Label></div>
-          <div className="spt-bar spt-bar1" />
+          <svg className="spt-fc-svg" width="100%" height="16">
+            <rect className="spt-bar1" width="100%" height="16" rx="4" />
+          </svg>
         </div>
         <div>
           <div className="spt-fc-lab"><Label ink>{output.format}, quality {output.quality}</Label><Label ink v>{fmtKb(output.kb)}</Label></div>
-          <div className="spt-track">
-            <div className="spt-ghost">
-              <svg width="100%" height="100%" aria-hidden="true">
-                <defs>
-                  <pattern id="spt-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#spt-hatch)" />
-              </svg>
-            </div>
-            <div className="spt-bar spt-bar2" />
-          </div>
+          <svg className="spt-fc-svg" width="100%" height="16">
+            <defs>
+              <pattern id="spt-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
+            </defs>
+            <rect className="spt-ghost" x={pct(KEPT - TUCK)} y=".5" width={pct(1 - KEPT + TUCK - INSET)} height="15" rx="4" fill="url(#spt-hatch)" />
+            <rect className="spt-cut" x={pct(KEPT - TUCK)} width={pct(1 - KEPT + TUCK)} height="16" rx="4" />
+            <rect className="spt-bar2" width={pct(KEPT)} height="16" rx="4" />
+          </svg>
         </div>
       </div>
     </div>

@@ -60,7 +60,7 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --quota- the AI quota meter fill
 const RUNTIME_FAMILIES = [
   '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
-  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--fc-',
+  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-',
 ]
 
 // Exact names set inline by a component, not a family: the /login wall gives

@@ -10,6 +10,8 @@
 .spt .spt-card:nth-child(4n + 2), .spt .spt-card:nth-child(4n + 3) { grid-column: span 5; }
 .spt .spt-card h3 { margin: 4px 0 0; font-size: 22px; font-weight: 600; color: var(--sp-ink); }
 .spt .spt-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--sp-dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* A drawn card reserves two lines of description, so paired plates end on the same line. */
+.spt .spt-card:has(.spt-preview--art) p { min-height: 3em; }
 .spt .spt-card .sp-pill { justify-self: start; min-height: 44px; margin-top: 4px; }
 /* A demo preview is a stage with a minimum height. It grows to hold its demo, so nothing in it is clipped. */
 .spt .spt-preview { display: grid; align-content: center; min-height: 300px; border-radius: 12px; background: var(--sp-wash); padding: 16px; }
@@ -96,7 +98,10 @@ html[data-reduced-motion="true"] .spt .spt-ramp li { transition: none; }
 .spt .spt-art { --plate: var(--sp-wash); --fill: var(--hue); position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; background: var(--plate); outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; container-name: spt-plate; font-family: var(--font); }
 [data-theme="light"] .spt .spt-art { --fill: var(--hue-strong); }
 html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
-.spt .spt-art--card { width: 100%; aspect-ratio: 16 / 10; max-height: 360px; padding: 20px; container-type: size; }
+/* Paired card plates fill their row: height 100% resolves once the grid row is sized, and
+   the 16:10 ratio sizes the row until then. The Icon plate keeps room for its grid and pick. */
+.spt .spt-art--card { width: 100%; height: 100%; aspect-ratio: 16 / 10; max-height: 360px; padding: 20px; container-type: size; }
+.spt .spt-art--card[data-art="icons"] { min-height: 240px; }
 .spt .spt-art--thumb { --plate: var(--sp-wash-2); aspect-ratio: 16 / 10; border-radius: 10px; container-type: inline-size; }
 .spt .spt-art--thumb > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .spt .spt-art svg * { vector-effect: non-scaling-stroke; }
@@ -110,37 +115,47 @@ html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
 .spt .spt-art .v { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .spt .spt-big { font: 600 56px/1 var(--display); letter-spacing: -.03em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
 
-/* Icon Library: a flow layout, so no label can leave the plate. */
-.spt .spt-ic { display: grid; grid-template-columns: minmax(0, 320px) auto; justify-content: space-between; align-items: center; gap: 32px; height: 100%; }
-.spt .spt-ic-grid { display: block; width: 100%; height: auto; max-height: 100%; }
+/* Icon Library: the grid and the pick are one cluster, centred, so there is no hole
+   between them. A flow layout, so no label can leave the plate. */
+.spt .spt-ic { display: flex; justify-content: center; align-items: center; gap: 48px; height: 100%; }
+.spt .spt-ic-grid { display: block; flex: 0 1 320px; min-width: 0; height: auto; max-height: 100%; }
 .spt .spt-ic-pick { display: grid; justify-items: start; gap: 12px; }
-.spt .spt-pick { width: 96px; height: 96px; display: block; fill: none; stroke: var(--hue-strong); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
-.spt .spt-pick .spt-i2 { stroke-width: 2.25; }
+.spt .spt-pick { width: 96px; height: 96px; display: block; fill: none; stroke: var(--hue-strong); stroke-linecap: round; stroke-linejoin: round; }
 .spt .spt-meta { display: grid; gap: 4px; }
 .spt .spt-swap { display: grid; }
 .spt .spt-swap > * { grid-area: 1 / 1; }
 .spt .spt-i2, .spt .spt-l2 { opacity: 0; }
+/* Narrow plates stack the pick under the grid. The grid takes the plate's width up to
+   its own 218-unit size, so its icons draw at their real 24px. */
 @container spt-plate (max-width: 460px) {
-  .spt .spt-ic { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; justify-content: stretch; gap: 12px; }
-  .spt .spt-ic-grid { height: 100%; }
-  .spt .spt-ic-pick { grid-auto-flow: column; align-items: center; justify-content: start; }
+  .spt .spt-ic { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; justify-content: stretch; gap: 12px; }
+  .spt .spt-ic-grid { width: min(100%, 218px); height: 100%; max-height: none; justify-self: center; }
+  .spt .spt-ic-pick { grid-auto-flow: column; align-items: center; justify-content: center; }
   .spt .spt-pick { width: 40px; height: 40px; }
 }
 
-/* File Converter: labels sit above their bars, never on them. --fc-kept-pct, --fc-kept and
-   --fc-grow (the kept fraction and its inverse) are set from the measured run. */
-.spt .spt-fc { display: flex; flex-direction: column; justify-content: flex-start; gap: 16px; height: 100%; min-height: 0; }
+/* File Converter: labels sit above their bars, never on them. Content stacks from the
+   top in a short plate and sits centred in a tall one; auto margins centre it only
+   while there is room to spare, so it can never spill past the plate. The bars are
+   svg rects sized from the measured run. */
+.spt .spt-fc { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; }
+@container spt-plate (min-height: 260px) {
+  .spt .spt-fc > :first-child { margin-top: auto; }
+  .spt .spt-fc > :last-child { margin-bottom: auto; }
+}
 .spt .spt-fc-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .spt .spt-fc-bars { display: grid; gap: 12px; }
 .spt .spt-fc-lab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-bottom: 6px; }
-.spt .spt-bar, .spt .spt-track { height: 16px; }
-.spt .spt-bar1 { border-radius: 4px; background: var(--sp-dim); }
-.spt .spt-track { position: relative; }
-.spt .spt-bar2 { position: absolute; inset: 0 auto 0 0; width: var(--fc-kept-pct); border-radius: 4px 0 0 4px; background: var(--fill); transform-origin: 0 50%; }
-/* The removed part only: dashed, open on its left, so it reads as what was taken away. */
-.spt .spt-ghost { position: absolute; top: 0; bottom: 0; left: var(--fc-kept-pct); right: 0; border: 1px dashed var(--sp-dim); border-left: 0; border-radius: 0 4px 4px 0; opacity: 0; overflow: hidden; }
-.spt .spt-ghost svg { display: block; }
-.spt .spt-ghost pattern path { stroke: var(--sp-dim); stroke-width: 1; opacity: .35; }
+.spt .spt-fc-svg { display: block; width: 100%; height: 16px; }
+.spt .spt-bar1 { fill: var(--sp-dim); }
+.spt .spt-bar2, .spt .spt-cut { fill: var(--fill); }
+/* The removed part only: dashed, open on its left (tucked under the kept bar), so it
+   reads as what was taken away. */
+.spt .spt-ghost { stroke: var(--sp-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+.spt .spt-fc-svg pattern path { stroke: var(--sp-dim); stroke-width: 1; opacity: .35; }
+/* The cut covers the removed part in the bar's colour and shrinks away on hover, so
+   the full-width bar reads as cut down to what was kept. Hidden at rest. */
+.spt .spt-cut { opacity: 0; transform-box: fill-box; transform-origin: 0 50%; }
 @container spt-plate (max-height: 230px) { .spt .spt-big { font-size: 44px; } }
 @container spt-plate (max-width: 330px) { .spt .spt-big { font-size: 40px; } }
 
@@ -175,18 +190,18 @@ html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
   .spt .spt-i1, .spt .spt-i2, .spt .spt-l1, .spt .spt-l2 { transition: opacity 300ms var(--sp-ease); }
   .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-i2, .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-l2 { opacity: 1; }
   .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-i1, .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-l1 { opacity: 0; }
-  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-bar2 { animation: spt-keep 280ms var(--sp-ease) both; }
+  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-cut { animation: spt-keep 280ms var(--sp-ease) both; }
   .spt .spt-ghost { transition: opacity 180ms var(--sp-ease); }
   .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-ghost { opacity: 1; transition-delay: 200ms; }
 }
-@keyframes spt-keep { from { transform: scaleX(var(--fc-grow)); } to { transform: none; } }
+@keyframes spt-keep { from { opacity: 1; transform: none; } to { opacity: 1; transform: scaleX(0); } }
 html[data-reduced-motion="true"] .spt .spt-card .spt-i2, html[data-reduced-motion="true"] .spt .spt-card .spt-l2 { display: none; }
 html[data-reduced-motion="true"] .spt .spt-card .spt-i1, html[data-reduced-motion="true"] .spt .spt-card .spt-l1 { opacity: 1; transition: none; }
-html[data-reduced-motion="true"] .spt .spt-card .spt-bar2 { animation: none; }
+html[data-reduced-motion="true"] .spt .spt-card .spt-cut { animation: none; }
 html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .spt .spt-card .spt-i2, html:not([data-reduced-motion="false"]) .spt .spt-card .spt-l2 { display: none; }
   html:not([data-reduced-motion="false"]) .spt .spt-card .spt-i1, html:not([data-reduced-motion="false"]) .spt .spt-card .spt-l1 { opacity: 1; transition: none; }
-  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-bar2 { animation: none; }
+  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-cut { animation: none; }
   html:not([data-reduced-motion="false"]) .spt .spt-card .spt-ghost { transition: none; }
 }
