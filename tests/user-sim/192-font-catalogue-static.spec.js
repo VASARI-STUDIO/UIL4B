@@ -2,8 +2,8 @@
 // /api/fonts no longer decides whether the tools see the full catalogue.
 // (src/utils/googleFonts.js; public/data/font-catalogue.json)
 //
-// base.js answers /data/font-catalogue.json with a 404 on every context so the
-// other specs keep the catalogue they were written against. These tests
+// base.js answers /data/font-catalogue.json with an empty list on every context
+// (a quiet miss the loader skips past) so the other specs keep the catalogue they were written against. These tests
 // register their own page route for it, which takes precedence.
 //
 // MUTATIONS (each should turn exactly one test red):
@@ -70,7 +70,12 @@ test.describe('font catalogue: static file first', () => {
     await go(page, '/create/font-gallery')
     await expect(page.locator('.fg-card').first()).toBeVisible()
     await expect(page.locator('.typ-notice')).toHaveCount(0)
-    await expect(page.locator('.fg-card', { hasText: 'Saved Sans' }).first()).toBeVisible()
+    // A card's visible name only paints once its Google stylesheet has loaded
+    // (it stays a skeleton here, where fonts.googleapis.com is blocked), so the
+    // family is read from the card's button name, which is always there.
+    await expect(page.getByRole('button', { name: /^Open the Saved Sans specimen/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Open the Saved Serif specimen/ })).toBeVisible()
+    await expect(page.locator('.fg-card')).toHaveCount(2)
   })
 
   test('when both sources fail the banner says what happened and the console says why', async ({ page }) => {

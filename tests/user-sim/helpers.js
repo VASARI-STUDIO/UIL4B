@@ -153,6 +153,14 @@ export function watch(page, persona) {
       && /ERR_FAILED/.test(msg.text())
       && /assets\/(?:Sundial|SlackWater|OrraWorkroom)-/.test(url)
     if (deliberateExampleAbort) return
+    // 192-font-catalogue-static.spec.js aborts /data/font-catalogue.json (and
+    // /api/fonts) ON PURPOSE, to see the saved copy or the banner stand in for
+    // them. Chromium logs the aborted fetch; keyed on the persona AND the file,
+    // so a failed catalogue download in any other spec still surfaces.
+    const deliberateCatalogueAbort = /^(?:returning|first-time) visitor behind a blocker$/.test(persona)
+      && /ERR_FAILED/.test(msg.text())
+      && /\/data\/font-catalogue\.json/.test(url)
+    if (deliberateCatalogueAbort) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`
