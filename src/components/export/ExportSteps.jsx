@@ -24,7 +24,7 @@ import ExportFreePreview from './ExportFreePreview'
 // What each file is called, what it is, and what the button says. Keyed by
 // format id, so the book's PDF and the slides' PDF each keep their own sentence.
 const FILE_COPY = {
-  book: { label: 'PDF', blurb: 'Print-ready. Text stays sharp at any size.', action: 'Export PDF' },
+  book: { label: 'PDF', blurb: 'A4 pages, ready to save as PDF. Text stays sharp at any size.', action: 'Export PDF' },
   'book-png': { label: 'PNG pages', blurb: '2K page images, 1448 by 2048 px, in one zip.', action: 'Export PNG pages' },
   'book-html': { label: 'HTML', blurb: 'Opens offline in any browser.', action: 'Export HTML' },
   guidelines: { label: 'PDF', blurb: 'A 16:9 deck, ready to present or print.', action: 'Export PDF' },

@@ -17,8 +17,8 @@
 //   free — publisher mark and links, a mark at the end of every section, the
 //          print margin credit, CSS and JSON credits, and no personal identity.
 //   pro  — none of those, plus the identity section when a name is supplied.
-// Free input is stripped of personal data before anything is rendered, so a
-// free document cannot carry the project's name even in its embedded data.
+// A free kit is titled with the project's name (`projectName`) and keeps the publisher
+// mark and credit lines. Its description and logo are Pro: a free kit reads neither.
 //
 // THE FIVE PALETTE SLOTS. The template draws exactly five colours with fixed
 // jobs; the app's palette is an ordered list whose first five positions have
@@ -38,9 +38,7 @@
 // the book and the deck show only the palette's own colours. Text falls back to black or white only
 // when no stop clears 4.5:1, and then the swatch says that instead (CONTRAST_NOTE).
 // Colours past position 5 are not drawn as slots; they are in the CSS and JSON downloads.
-// The shares (40 / 25 / 20 / 10 / 5) belong to the slot, not the colour: the
-// app records no proportions, and the template presents them as a starting
-// point for a page.
+// The app records no colour proportions, so the kit shows none.
 
 import { contrast, typeLadder } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
@@ -51,10 +49,10 @@ import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_STEPS } from '../data/semanticPresets.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
-import { readIdentity } from './kitIdentity.js'
+import { readIdentity, IDENTITY_NAME_MAX } from './kitIdentity.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
-import { MAX_SLOTS, fitTitle, clampTitle } from './exportTemplates/shared.js'
+import { MAX_SLOTS, fitTitle, clampTitle, plural } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
 import { manualParts } from './kitManual.js'
 import { showcaseParts } from './kitShowcase.js'
@@ -69,13 +67,10 @@ export const CANVAS_MIN_LUM = 0.7
 // are the document's copy, not example data: none of them names a colour, a
 // typeface or a person.
 
-const FREE_IDENTITY = Object.freeze({
-  name: 'UIL4B',
-  slug: 'uil4b-ui-kit',
-  edition: 'UI kit / Free edition',
-})
+const FREE_EDITION = 'UI kit / Free edition'
+// What the kit is called when no project name is given.
+const UNNAMED = 'UI kit'
 const GUIDE_COPY = Object.freeze({
-  tagline: 'From selections to a system.',
   guideTitle: 'Overview',
   description: 'Your selected colours, typefaces, and interface foundations, brought together in one reference. A practical starting point for the next thing you build.',
   principles: ['Colour & semantic roles', 'Typography & spacing', 'Components & states'],
@@ -90,20 +85,19 @@ const COVER_SCREEN = Object.freeze({ maxLines: 2, steps: [80, 62, 46], measure: 
 const COVER_PHONE = 300
 const COVER_FLOOR = 16
 const COVER_PRINT = Object.freeze({ maxLines: 3, steps: [44, 34, 26], measure: 287 })
+// The "In use" specimen's own words are labels only. Its headline, description and
+// feature line are facts about the project (see kitSelections).
 const WEBSITE_COPY = Object.freeze({
-  headline: 'A place for your next idea.',
-  description: 'Keep the important things clear. Give each action a purpose. Make every detail part of the same system.',
-  button: 'Create a project',
-  feature: 'Built on good foundations.',
+  button: 'Primary action',
   category: 'Interface specimen',
   caption: 'A layout specimen using the selected colours, fonts, and component tokens.',
 })
 export const SLOT_COPY = Object.freeze({
-  citron: { role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', lands: 'highlights and moments that deserve attention', share: 20 },
-  pine: { role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', lands: 'buttons, links and the focus ring', share: 25 },
-  lilac: { role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', lands: 'soft panels, notes and quiet highlights', share: 10 },
-  chalk: { role: 'Canvas', note: 'The breathing room. Let the content come forward.', lands: 'the page behind the content', share: 40 },
-  ink: { role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', lands: 'headings, labels and reading copy', share: 5 },
+  citron: { role: 'Signature accent', lands: 'highlights and moments that deserve attention' },
+  pine: { role: 'Primary brand', lands: 'buttons, links and the focus ring' },
+  lilac: { role: 'Supporting colour', lands: 'soft panels, notes and quiet highlights' },
+  chalk: { role: 'Canvas', lands: 'the page behind the content' },
+  ink: { role: 'Text and detail', lands: 'headings, labels and reading copy' },
 })
 // A palette colour that is not one of the five slots paints nothing in the kit.
 export const UNPLACED_LANDS = 'not assigned to a part of the interface'
@@ -172,6 +166,16 @@ const g = (n) => String(Number(Number(n).toPrecision(6)))
 
 const slugify = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 52)
 
+/** A project name as the kit sets it: a string with its whitespace collapsed and its length capped. */
+const cleanName = (value) => (typeof value === 'string'
+  ? value.replace(/\s+/g, ' ').trim().slice(0, IDENTITY_NAME_MAX)
+  : '')
+
+/** The typefaces as a sentence of facts: "Set in Inter." or "Headings in A, body in B." */
+const typeLine = (display, body) => (display.name === body.name
+  ? `Set in ${display.name}.`
+  : `Headings in ${display.name}, body in ${body.name}.`)
+
 // ── The design → the template's input shape ─────────────────────────────────
 
 /** The project's tint settings, as the tint generator takes them. */
@@ -239,7 +243,7 @@ export function derivedNoteFor(picked) {
 
 /**
  * The five palette slots, from the design. See the note at the top of the file.
- * Each slot: { id, name, hex, role, note, share, scale, source, derived, derivedNote }.
+ * Each slot: { id, name, hex, role, lands, scale, source, token, derived, derivedNote }.
  */
 export function kitPalette(design) {
   const book = readBook(design)
@@ -297,9 +301,10 @@ const FALLBACKS = { serif: 'serif', monospace: 'monospace', handwriting: 'cursiv
 
 /**
  * Everything the template needs, as one record. `tier` must be verified by the
- * caller. A Pro kit's name and description are read from `design.identity`.
+ * caller. A kit is named for `projectName`; a Pro kit's own name and description,
+ * when the person wrote them, are read from `design.identity` and take its place.
  */
-export function kitSelections(design, { tier = 'free', logo = null } = {}) {
+export function kitSelections(design, { tier = 'free', logo = null, projectName = '' } = {}) {
   if (!KIT_TIERS.includes(tier)) throw new Error('tier must be free or pro')
   const free = tier === 'free'
   const book = readBook(design)
@@ -358,32 +363,45 @@ export function kitSelections(design, { tier = 'free', logo = null } = {}) {
     }
   })
 
+  const projectTitle = cleanName(projectName)
+  const { name, description } = readIdentity(design)
+  const title = (free ? '' : name) || projectTitle || UNNAMED
+  const faces = [...new Set([display.name, body.name])]
+  const colourCount = book.palette.length
   const record = {
     tier,
     isExample: false,
     ...GUIDE_COPY,
+    // Facts about the project, for the band under the "In use" specimen.
+    tagline: plural(colourCount, 'colour'),
     palette,
     colours,
     // How many colours the design holds, so a layout that shows only 13 can say so.
-    colourCount: book.palette.length,
+    colourCount,
     semantic,
     fonts: { display, body },
     typeScale,
     spacing: [...SPACING],
     radius: { ...RADIUS },
     interface: iface,
-    website: { ...WEBSITE_COPY },
+    website: {
+      ...WEBSITE_COPY,
+      headline: title,
+      description: `${plural(colourCount, 'colour')}. ${typeLine(display, body)}`,
+      feature: faces.join(' and '),
+    },
     tintToken: slot.pine.token || '--color-primary',
+    name: title,
+    title,
+    slug: slugify(title) && title !== UNNAMED ? `${slugify(title)}-ui-kit` : 'ui-kit',
   }
-  if (free) return { ...record, ...FREE_IDENTITY, title: 'UI kit' }
+  if (free) return { ...record, edition: FREE_EDITION }
 
   // Pro: the identity section appears only when the person has named the work.
-  const { name, description } = readIdentity(design)
   const personalisation = name
     ? { name, ...(description ? { description } : {}), ...(logo?.src ? { logo: { src: logo.src } } : {}) }
     : null
-  const slug = slugify(name) ? `${slugify(name)}-ui-kit` : 'ui-kit'
-  return { ...record, name: name || 'UI kit', title: name || 'UI kit', slug, edition: 'UI kit / Personal edition', personalisation }
+  return { ...record, edition: 'UI kit / Personal edition', personalisation }
 }
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
@@ -554,16 +572,18 @@ const ROLES = [
  *   publisherLicense  Geist's licence text
  *   logo           Pro only: readLogo(design)
  *   date           for the token file header; defaults to now
- * A Pro kit's name and description come from the design (see kitIdentity.js).
+ *   projectName    the kit's title and file name, free or Pro; blank gives "UI kit"
+ * A Pro kit's own name and description come from the design (see kitIdentity.js)
+ * and take the title's place.
  * @returns { html, filename, selections, embedded, missing }
  */
 export function renderUiKit(design, {
   tier = 'free', template, fonts = {}, publisherFonts = [], publisherLicense = '',
-  logo = null, date = new Date(),
+  logo = null, date = new Date(), projectName = '',
 } = {}) {
   if (typeof template !== 'string' || !template.includes('@@DATA@@')) throw new Error('The UI kit template is missing.')
   const safeDesign = withPalette(design)
-  const sel = kitSelections(safeDesign, { tier, logo })
+  const sel = kitSelections(safeDesign, { tier, logo, projectName })
   const free = tier === 'free'
   const tokens = kitTemplateTokens(sel)
   const on = makeOn(sel.palette.find((p) => p.id === 'ink').hex)
@@ -575,7 +595,7 @@ export function renderUiKit(design, {
   // The files the document hands over: the app's own token formats, plus the
   // tokens only the kit documents.
   const extra = kitExtraTokens(sel)
-  const tokenName = free ? 'UI kit' : sel.name
+  const tokenName = sel.name
   const appCss = buildTokensCss(safeDesign, { projectName: tokenName, watermark: false, date, extra })
   // A free kit's JSON names its generator in the DTCG `$extensions` slot, under
   // a reverse-domain key; a Pro kit's JSON carries no metadata at all.
@@ -652,7 +672,7 @@ export function renderUiKit(design, {
     hex: p.hex,
     name: p.name,
     title: p.role,
-    note: `${p.note}${p.derivedNote ? ` ${p.derivedNote}` : ''}`,
+    note: p.derivedNote || '',
     lands: p.lands,
     ratio: p.id === 'chalk' ? contrast(slot.ink.hex, p.hex) : contrast(p.hex, canvasHex),
     basis: p.id === 'chalk' ? 'for text on it' : 'as text on the canvas',
@@ -683,12 +703,13 @@ export function renderUiKit(design, {
   }).join('')
 
   const spacing = sel.spacing.map((s) => `<div class="space-item"><span style="height:${s}px"></span><code>${s}</code></div>`).join('')
-  const byShare = [...sel.palette].sort((a, b) => b.share - a.share)
-  const proportions = byShare.map((p) => `<span style="flex:${p.share};background:${p.hex}" title="${esc(p.name)} ${p.share}%"></span>`).join('')
-  const proportionLabels = byShare.map((p) => `<span><i style="background:${p.hex}"></i>${esc(p.name)} <b>${p.share}%</b></span>`).join('')
-  const contrasts = [['ink', 'chalk'], ['chalk', 'pine'], ['pine', 'citron'], ['ink', 'lilac']].map(([a, b]) => {
-    const ratio = contrast(slot[a].hex, slot[b].hex)
-    return `<div class="contrast-pair"><span style="background:${slot[b].hex};color:${slot[a].hex}">Aa</span><div><strong>${esc(`${slot[a].name} on ${slot[b].name}`)}</strong><small>${ratio.toFixed(2)}:1 · ${ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'Below AA'} text</small></div></div>`
+  // The pairs the kit itself sets: its text on the canvas, and the label that reads on
+  // each coloured slot (the same ink the swatches and buttons use).
+  const contrasts = [['chalk', 'Canvas'], ['pine', 'Primary'], ['citron', 'Accent'], ['lilac', 'Supporting']].map(([id, label]) => {
+    const bg = slot[id].hex
+    const fg = id === 'chalk' ? slot.ink.hex : on(bg)
+    const ratio = contrast(fg, bg)
+    return `<div class="contrast-pair"><span style="background:${bg};color:${fg}">Aa</span><div><strong>${esc(`Text on ${label.toLowerCase()}`)}</strong><small>${ratio.toFixed(2)}:1 · ${gradeOf(ratio)}</small></div></div>`
   }).join('')
 
   const coverText = (opts) => {
@@ -702,12 +723,11 @@ export function renderUiKit(design, {
   const coverTitle = onScreen.text === onPaper.text
     ? `<span class="ct">${esc(onScreen.text)}</span>`
     : `<span class="ct ct-screen">${esc(onScreen.text)}</span><span class="ct ct-print">${esc(onPaper.text)}</span>`
-  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
   const faces = [...new Set([sel.fonts.display.name, sel.fonts.body.name])]
-  const coverFacts = `${plural(sel.colourCount, 'colour', 'colours')} · ${plural(faces.length, 'typeface', 'typefaces')}`
+  const coverFacts = `${plural(sel.colourCount, 'colour')} · ${plural(faces.length, 'typeface')}`
   // The side note is the description when the person wrote one; otherwise the faces, as a fact.
   const identityText = free ? '' : sel.personalisation?.description || ''
-  const coverNote = identityText || (faces.length === 1 ? `Set in ${faces[0]}.` : `Headings in ${sel.fonts.display.name}, body in ${sel.fonts.body.name}.`)
+  const coverNote = identityText || typeLine(sel.fonts.display, sel.fonts.body)
 
   const arrow = icon('arrow')
   const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UIL4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
@@ -733,8 +753,6 @@ export function renderUiKit(design, {
     SEMANTICS: semantics,
     TYPE_ROWS: typeRows,
     SPACING: spacing,
-    PROPORTIONS: proportions,
-    PROPORTION_LABELS: proportionLabels,
     CONTRASTS: contrasts,
     PRINCIPLES: sel.principles.map((v) => `<span>${esc(v)}</span>`).join(''),
     EXAMPLE_NOTICE: sel.isExample ? 'Example selections · Fixed UI kit export' : 'Your selections · Fixed UI kit export',

@@ -45,7 +45,7 @@ test('the kit colour roles kept in spectrumKit.js match the real kit', () => {
   KIT_ROLES.forEach((r, i) => {
     assert.equal(r.id, SLOT_ORDER[i], `slot ${i} is not the kit's ${SLOT_ORDER[i]}`)
     assert.equal(r.role, SLOT_COPY[r.id].role)
-    assert.equal(r.note, SLOT_COPY[r.id].note)
+    assert.equal(r.note, undefined, 'the kit prints no slogan under a role')
   })
   assert.deepEqual(KIT_ROLES.map((r) => r.role),
     ['Signature accent', 'Primary brand', 'Supporting colour', 'Canvas', 'Text and detail'])

@@ -391,7 +391,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,.tbl-wrap:focus-visib
       switch (button.dataset.action) {
         case 'print': window.print(); break;
         case 'html': exportHTML(); break;
-        case 'css': download(data.cssCredit+'/* Download selected font styles separately. */\n'+data.css, '-tokens.css', 'text/css;charset=utf-8'); break;
+        case 'css': download(data.css+(data.cssCredit?'\n'+data.cssCredit:''), '-tokens.css', 'text/css;charset=utf-8'); break;
         case 'json': download(data.json, '-tokens.json', 'application/json;charset=utf-8'); break;
         case 'fonts': {
           const rules = [...document.styleSheets[0].cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE && !rule.style.fontFamily.includes('Publisher ')).map(rule => rule.cssText).join('\n');

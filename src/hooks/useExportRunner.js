@@ -60,10 +60,10 @@ export const PRO_GATE = {
     gate: 'brand-guidelines-export',
     eyebrow: 'UIL4B Pro',
     title: 'Export the brand guidelines',
-    subtitle: 'A 16:9 landscape brand book of your system — cover, numbered sections, swatches carrying a name as well as a hex, boxed alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
+    subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
     features: [
       'A cover and numbered section openings, with a rationale beside every page',
-      'Named swatches — “Optic White”, not just #FCFCFC — with the ink measured on each',
+      'Each swatch with its name, hex and the ink that reads on it',
       'Alphabet grids and a type scale set in your own families',
       'Your logo on white, on black and on every brand colour, with a clear-space rule',
     ],
@@ -190,7 +190,7 @@ export default function useExportRunner() {
   const design = useExportDesign()
   // The template picked for each format lives on the working design, beside the
   // identity, so it follows the project.
-  const { design: working } = useProject()
+  const { design: working, projects } = useProject()
   const chosenTemplates = readExportTemplates(working)
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
@@ -255,7 +255,8 @@ export default function useExportRunner() {
   }
 
   const runExport = async (format, projectId) => {
-    const projectName = design?.name || 'Design System'
+    // The name the dialog shows on the file: the open project's, else the design's own.
+    const projectName = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || 'Design System'
     const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
     const fmt = EXPORT_FORMATS.find((f) => f.id === format)
     if (!fmt?.live) { stop(FAILED_LINE); return { status: 'failed' } }
@@ -347,6 +348,7 @@ export default function useExportRunner() {
         activation = 'ui-kit'
         const { blob, filename, missing } = await buildUiKit(design, {
           tier: proNow ? 'pro' : 'free',
+          projectName,
           template: chosenTemplates.kit,
           onStage: setStage,
         })

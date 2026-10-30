@@ -108,3 +108,21 @@ test('the style guide says what it holds in HTML, Markdown and PNG, with ratios 
     }
   }
 })
+
+// ── Slice 2: the dialog and gate copy make no claim the output cannot meet ───
+
+test('no export copy line holds an em dash, an invented swatch name or a print-ready claim', async () => {
+  const read = (p) => fs.readFileSync(p, 'utf8')
+  const { EXPORT_FORMATS } = await import('../../src/config/exportFormats.js')
+  const lines = [
+    ...EXPORT_FORMATS.flatMap((f) => [f.name, f.desc, f.action]),
+    ...[...read('src/hooks/useExportRunner.js').matchAll(/(?:subtitle|title): '([^']*)'|^\s+'([^'\n]*)',?$/gm)].map((m) => m[1] || m[2]),
+    ...[...read('src/components/export/ExportSteps.jsx').matchAll(/blurb: '([^']*)'/g)].map((m) => m[1]),
+  ].filter(Boolean)
+  assert.ok(lines.length > 25, 'the copy read has gone blind')
+  for (const line of lines) {
+    assert.ok(!line.includes('\u2014'), `an em dash in export copy: ${line}`)
+    assert.ok(!/Optic White/.test(line), `an invented swatch name: ${line}`)
+    assert.ok(!/print-ready/i.test(line), `a print-ready claim the output cannot meet: ${line}`)
+  }
+})

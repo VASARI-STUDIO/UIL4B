@@ -17,7 +17,11 @@
 // document is unit-testable as a string.
 
 import { SITE_ORIGIN } from './routeMeta.js'
-import { fmtRatio } from './exportTemplates/shared.js'
+import { fmtRatio, specimenScale } from './exportTemplates/shared.js'
+
+// What the type table has to fit on the A4 sheet, in mm: the height under its head, the
+// width of the specimen column, a row's padding and its row text.
+const SPECIMEN_FIT = Object.freeze({ roomMm: 165, widthMm: 80, padMm: 5.1, textMm: 5.5, lineHeight: 1.15 })
 
 /** WCAG relative luminance for an #rrggbb string. */
 export function luminance(hex) {
@@ -148,11 +152,13 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
     </figure>`
   }
 
+  // One factor for every step: true size when the ladder fits the page, else the same share of it for all.
+  const { k: specK, label: specLabel } = specimenScale(ladder.map((s) => ({ name: 'Ag', px: s.px })), SPECIMEN_FIT)
   const typeRow = (s) => `<tr>
     <th scope="row">${esc(s.name)}</th>
     <td class="num">${s.px}px</td>
     <td class="num">${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem</td>
-    <td class="spec" style="font-size:${Math.min(s.px, 56)}px;font-family:'${esc(s.exp >= 1 ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${s.exp >= 1 ? d.headingWeight : d.bodyWeight};line-height:1.15">Ag</td>
+    <td class="spec" style="font-size:${Math.round(s.px * specK * 100) / 100}px;font-family:'${esc(s.exp >= 1 ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${s.exp >= 1 ? d.headingWeight : d.bodyWeight};line-height:1.15">Ag</td>
   </tr>`
 
   const pairs = d.palette.slice(0, 4).map(hex => {
@@ -242,7 +248,7 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
   <h2>The scale</h2>
   <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Headings set in ${esc(d.heading)}, body in ${esc(d.body)}.</p>
   <table>
-    <thead><tr><th>Step</th><th>Size</th><th>rem</th><th style="text-align:right">Specimen</th></tr></thead>
+    <thead><tr><th>Step</th><th>Size</th><th>rem</th><th style="text-align:right">${specLabel}</th></tr></thead>
     <tbody>${ladder.map(typeRow).join('')}</tbody>
   </table>
   <div class="note"><strong>Line height</strong> ${d.lineHeight} on body copy. Headings 1.1.</div>

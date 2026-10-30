@@ -249,11 +249,11 @@ export const PROJECTS = [
 // colour and token code into the home chunk; tests/unit/spectrum-kit-roles.test.js
 // fails if the two differ. `at` is the ramp step the picture fills the role with.
 export const KIT_ROLES = [
-  { id: 'citron', role: 'Signature accent', note: 'The spark. Use for moments that deserve attention.', at: 4 },
-  { id: 'pine', role: 'Primary brand', note: 'The anchor. Ground expressive layouts and key actions.', at: 7 },
-  { id: 'lilac', role: 'Supporting colour', note: 'The softer side. Give stories and quiet moments a home.', at: 2 },
-  { id: 'chalk', role: 'Canvas', note: 'The breathing room. Let the content come forward.', at: 0 },
-  { id: 'ink', role: 'Text and detail', note: 'The definition. Keep reading clear and details precise.', at: 8 },
+  { id: 'citron', role: 'Signature accent', at: 4 },
+  { id: 'pine', role: 'Primary brand', at: 7 },
+  { id: 'lilac', role: 'Supporting colour', at: 2 },
+  { id: 'chalk', role: 'Canvas', at: 0 },
+  { id: 'ink', role: 'Text and detail', at: 8 },
 ]
 
 /** The sample files' total after compression, in KB (the file bar's size). */

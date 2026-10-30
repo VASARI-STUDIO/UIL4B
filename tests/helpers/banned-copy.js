@@ -8,6 +8,15 @@ export const BANNED = [
   /not invented|has not invented|invents a lockup/i, /harder to trust/i, /already checked/i, /rebuilt exactly/i,
 ]
 
+// What the UI kit used to state about a project that was never the project's: slogans under the
+// colours, usage shares nobody set, and stock website copy.
+export const KIT_INVENTED = [
+  /The spark/i, /The anchor/i, /The softer side/i, /The breathing room/i, /The definition\b/i,
+  /A place for your next idea/i, /Built on good foundations/i, /From selections to a system/i,
+  /Keep the important things clear/i, /Suggested colour proportions/i,
+  /class="proportions?\b/i, /\b(40|25|20|10|5)%/,
+]
+
 /** The text a reader sees: styles, scripts and tags (so attributes such as placeholder="") are gone. */
 export const visibleText = (html) => String(html)
   .replace(/<(style|script)[\s\S]*?<\/\1>/gi, ' ')
