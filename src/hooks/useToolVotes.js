@@ -25,6 +25,7 @@ export function useToolVotes(list) {
   const { requireLogin, openLogin } = useLoginPrompt()
   const uid = user?.uid || null
   const [phase, setPhase] = useState('loading')
+  const [loadFailed, setLoadFailed] = useState(false) // stays true through a retry, until the counts arrive
   const [counts, setCounts] = useState({})
   const [voted, setVoted] = useState(null)
   const [order, setOrder] = useState(null)
@@ -55,9 +56,10 @@ export function useToolVotes(list) {
           setAsOf(new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }))
         }
         if (v) setVoted(v)
+        setLoadFailed(false)
         setPhase('ready')
       } catch {
-        if (live) setPhase('error')
+        if (live) { setLoadFailed(true); setPhase('error') }
       }
     })()
     return () => { live = false }
@@ -68,7 +70,7 @@ export function useToolVotes(list) {
   const retryLoad = useCallback(() => { setPhase('loading'); setAttempt((n) => n + 1) }, [])
 
   const write = useCallback(async (id, want) => {
-    if (busyRef.current.has(id)) return
+    if (busyRef.current.has(id)) return false
     busyRef.current.add(id)
     setBusy((b) => ({ ...b, [id]: true }))
     const retry = want ? 'vote' : 'takeback'
@@ -76,19 +78,21 @@ export function useToolVotes(list) {
     setVoted((v) => ({ ...v, [id]: want }))
     setCounts((c) => ({ ...c, [id]: { open: true, ...c[id], count: Math.max(0, (c[id]?.count || 0) + step) } }))
     setStatus((s) => ({ ...s, [id]: null }))
+    let saved = false
     const rollback = (kind) => {
       setVoted((v) => ({ ...v, [id]: !want }))
       setCounts((c) => ({ ...c, [id]: { ...c[id], count: Math.max(0, (c[id]?.count || 0) - step) } }))
       setStatus((s) => ({ ...s, [id]: { kind, retry } }))
     }
     try {
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) { rollback('offline'); return }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) { rollback('offline'); return false }
       const fs = await loadFirestore()
       try {
         const next = await setVote(fs, uid, id, want)
         setCounts((c) => ({ ...c, [id]: { open: true, ...c[id], count: next } }))
         setBumps((b) => ({ ...b, [id]: (b[id] || 0) + 1 }))
         setStatus((s) => ({ ...s, [id]: { kind: want ? 'saved' : 'undone' } }))
+        saved = true
       } catch (err) {
         rollback(await classifyFailure(fs, id, err))
       }
@@ -98,6 +102,7 @@ export function useToolVotes(list) {
       busyRef.current.delete(id)
       setBusy((b) => ({ ...b, [id]: false }))
     }
+    return saved
   }, [uid])
 
   const press = useCallback((id) => {
@@ -143,11 +148,18 @@ export function useToolVotes(list) {
   return {
     items: open,
     shipped: list.shipped.map(view),
-    phase, total, asOf, press, retryLoad,
+    phase, loadFailed, total, asOf, press, retryLoad,
     authKnown: !authLoading,
     signedIn: !!uid,
     votesKnown: !uid || !!voted,
     signIn: () => { clearPending(); openLogin({ from: window.location.pathname }) },
-    retryRow: (id) => { const s = status[id]; if (s?.retry) write(id, s.retry === 'vote') },
+    // The Try again button unmounts as the retry starts, so focus would fall to <body>:
+    // put it on the row's Vote button when the retry lands, or on the new Try again (or Open link) if it fails.
+    retryRow: async (id) => {
+      const s = status[id]
+      if (!s?.retry) return
+      if (await write(id, s.retry === 'vote')) focusVote(id)
+      else requestAnimationFrame(() => document.querySelector(`#vote-${id} .vr-status :is(button, a)`)?.focus())
+    },
   }
 }

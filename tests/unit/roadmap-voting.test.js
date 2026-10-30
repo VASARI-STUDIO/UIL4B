@@ -4,7 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTools } from '../../src/data/toolTree.js'
-import { formatShipped, isRecentlyShipped, listTools, orderIds, stageOf } from '../../src/utils/roadmapItems.js'
+import { formatShipped, isRecentlyShipped, listTools, orderIds, stageOf, voteWord } from '../../src/utils/roadmapItems.js'
 import { VoteClosedError, classifyFailure, readCounts, readVoted, setVote } from '../../src/utils/toolVotesApi.js'
 
 // ── isRecentlyShipped ───────────────────────────────────────────────────────
@@ -124,6 +124,13 @@ test('ordering does not reorder the caller\'s list, so an order kept at load sta
   // A later count change only matters if the caller asks again; the first answer is a plain array it can keep.
   orderIds(open, { a: 9, b: 5 })
   assert.deepEqual(first, ['b', 'a'])
+})
+
+test('the word after a count is "vote" for exactly one and "votes" for zero and for many', () => {
+  assert.equal(voteWord(1), 'vote')
+  assert.equal(voteWord(0), 'votes')
+  assert.equal(voteWord(2), 'votes')
+  assert.equal(voteWord(1000), 'votes')
 })
 
 // ── toolVotesApi against a fake Firestore namespace ─────────────────────────

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { STAGE_STEPS, STAGE_WORD, formatShipped } from '../../utils/roadmapItems'
+import { STAGE_STEPS, STAGE_WORD, formatShipped, voteWord } from '../../utils/roadmapItems'
 
 // The roadmap vote list, shared by the /tools foot (compact) and /roadmap (full).
 // `votes` is the useToolVotes() controller; `items` are its rows. Styles: spectrum-tools.css, .vl / .vr.
@@ -30,18 +30,37 @@ function Name({ t, level }) {
   )
 }
 
+// One live region per row, always in the page and empty until there is something to
+// say: a region inserted with its text already in it is often not announced.
 function Status({ t, votes }) {
   const s = t.status
-  if (!s) return null
   const again = <button type="button" onClick={() => votes.retryRow(t.id)}>Try again</button>
-  switch (s.kind) {
-    case 'saved': return <p className="vr-status" role="status">Your vote is in. Press Voted to take it back.</p>
-    case 'undone': return <p className="vr-status" role="status">Vote taken back.</p>
-    case 'already': return <p className="vr-status" role="status">You&rsquo;d already voted for {t.label}.</p>
-    case 'offline': return <p className="vr-status is-err" role="alert">You&rsquo;re offline, so your vote didn&rsquo;t save. {again}</p>
-    case 'closed': return <p className="vr-status" role="status">Voting on {t.label} has closed because it&rsquo;s now live. <Link to={t.route}>Open {t.label}</Link></p>
-    default: return <p className="vr-status is-err" role="alert">{s.retry === 'takeback' ? 'We couldn’t take your vote back.' : 'Your vote didn’t save.'} {again}</p>
+  let body = null
+  let err = false
+  switch (s?.kind) {
+    case undefined: break
+    case 'saved': body = 'Your vote is in. Press Voted to take it back.'; break
+    case 'undone': body = 'Vote taken back.'; break
+    case 'already': body = <>You&rsquo;d already voted for {t.label}.</>; break
+    case 'offline': err = true; body = <>You&rsquo;re offline, so your vote didn&rsquo;t save. {again}</>; break
+    case 'closed': body = <>Voting on {t.label} has closed because it&rsquo;s now live. <Link to={t.route}>Open {t.label}</Link></>; break
+    default: err = true; body = <>{s.retry === 'takeback' ? 'We couldn’t take your vote back.' : 'Your vote didn’t save.'} {again}</>
   }
+  return <p className={err ? 'vr-status is-err' : 'vr-status'} role="status">{body}</p>
+}
+
+// The load-error line. The region is always mounted, and once a load has failed it
+// stays mounted through "Try again" (the button stays too, aria-disabled, so focus
+// keeps its place), so nothing jumps and a screen reader hears the change.
+function LoadLine({ votes }) {
+  const loading = votes.phase === 'loading'
+  let body = null
+  if (votes.loadFailed) {
+    body = loading
+      ? <>Loading the counts&hellip; <button type="button" aria-disabled="true">Try again</button></>
+      : <>The vote counts didn&rsquo;t <span className="nw">load. <button type="button" onClick={votes.retryLoad}>Try again</button></span></>
+  }
+  return <p className={votes.phase === 'error' ? 'vl-more vl-load is-err' : 'vl-more vl-load'} role="status">{body}</p>
 }
 
 function Count({ t, votes }) {
@@ -49,12 +68,12 @@ function Count({ t, votes }) {
     return <div className="count" aria-hidden="true"><span className="sk" /><small>votes</small></div>
   }
   if (t.count === null) {
-    return <div className="count dash"><b aria-label="Count unavailable">&ndash;</b><small>votes</small></div>
+    return <div className="count dash"><b><span aria-hidden="true">&ndash;</span><span className="sr-only">Count unavailable</span></b><small>votes</small></div>
   }
   return (
     <div className="count" id={`c-${t.id}`}>
       <b key={t.count} className={t.bump ? 'is-bump' : undefined}>{t.count.toLocaleString('en-AU')}</b>
-      <small>{t.count === 1 ? 'vote' : 'votes'}</small>
+      <small>{voteWord(t.count)}</small>
     </div>
   )
 }
@@ -135,9 +154,7 @@ export default function VoteList({ items, compact = false, votes, shipped = fals
   return (
     <>
       <ol className="vl" aria-label={label}>{items.map((t) => <Row key={t.id} t={t} votes={votes} compact={compact} />)}</ol>
-      {votes.phase === 'error' && (
-        <p className="vl-more is-err" role="alert">The vote counts didn&rsquo;t <span className="nw">load. <button type="button" onClick={votes.retryLoad}>Try again</button></span></p>
-      )}
+      <LoadLine votes={votes} />
       {items.every((t) => t.stage === 'beta') && <p className="vl-more">Nothing else is in the workshop right now.</p>}
       {votes.authKnown && !votes.signedIn && (
         <p className="vl-more">Voting needs a free account, so each person counts <span className="nw">once. <button type="button" onClick={votes.signIn}>Sign in</button></span></p>

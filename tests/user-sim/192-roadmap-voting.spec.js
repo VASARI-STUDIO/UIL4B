@@ -162,8 +162,65 @@ test.describe('roadmap voting, flag on', () => {
     expect(await page.evaluate(() => sessionStorage.getItem('uil4b.pendingVote'))).toBeNull()
     await expect(button).toHaveText(/^Vote/)
     await expect(button).toHaveAttribute('data-voted', 'false')
-    await expect(row.locator('.vr-status')).toHaveCount(0)
+    // The row's live region stays on the page, empty.
+    await expect(row.locator('.vr-status')).toHaveCount(1)
+    await expect(row.locator('.vr-status')).toBeEmpty()
     expect(writes, 'a signed-out press wrote to Firestore').toEqual([])
+  })
+
+  test('every row has an empty status live region from the start, and the load line is one too', async ({ page }) => {
+    watch(page, PERSONA)
+    await needFlag(page, true)
+    await go(page, '/roadmap')
+    const rows = page.locator('ol.vl[aria-label="Tools you can vote for"] > li.vr')
+    expect(await rows.count()).toBeGreaterThanOrEqual(2)
+    for (const row of await rows.all()) {
+      const region = row.locator('p.vr-status')
+      await expect(region).toHaveCount(1)
+      await expect(region).toHaveAttribute('role', 'status')
+      await expect(region).toBeEmpty()
+    }
+    const line = page.locator('main p.vl-load')
+    await expect(line).toHaveCount(1)
+    await expect(line).toHaveAttribute('role', 'status')
+  })
+
+  test('with the counts failed, Try again keeps the load line on the page and says it is loading', async ({ page }) => {
+    watch(page, PERSONA)
+    await needFlag(page, true)
+    await go(page, '/roadmap')
+    const line = page.locator('main p.vl-load')
+    // Firestore is out of reach for the runner; if the counts load anyway there is no failure to retry.
+    await expect(page.locator('li.vr .count:not(:has(.sk))').first()).toBeVisible({ timeout: 30000 })
+    test.skip(await page.locator('li.vr .count[id^="c-"]').count() > 0, 'the counts loaded, so there is no failed state to retry')
+    await expect(line).toContainText('didn’t load')
+
+    // Record every text the region shows, and keep a handle to the element itself.
+    await line.evaluate((el) => {
+      window.__loadLine = { el, texts: [] }
+      new MutationObserver(() => window.__loadLine.texts.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true })
+    })
+    await line.getByRole('button', { name: 'Try again' }).click()
+    await expect.poll(() => page.evaluate(() => window.__loadLine.texts.some((t) => t.startsWith('Loading the counts'))),
+      'the load line never said it was loading').toBe(true)
+    expect(await page.evaluate(() => window.__loadLine.el.isConnected), 'the load line was removed and rebuilt').toBe(true)
+  })
+
+  test('a count that is unavailable reads through hidden text, not an aria-label on the number', async ({ page }) => {
+    watch(page, PERSONA)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await needFlag(page, true)
+    await go(page, '/roadmap')
+    await expect(page.locator('li.vr .count:not(:has(.sk))').first()).toBeVisible({ timeout: 30000 })
+    const dash = page.locator('li.vr .count.dash b').first()
+    test.skip(await dash.count() === 0, 'the counts loaded, so there is no unavailable count')
+    await expect(dash).not.toHaveAttribute('aria-label', /.*/)
+    await expect(dash.locator('.sr-only')).toHaveText('Count unavailable')
+    await expect(dash.locator('[aria-hidden="true"]')).toHaveText('–')
+    // The slot is wide enough for three digits at the number's own size.
+    const { width, size } = await dash.evaluate((el) => ({ width: el.getBoundingClientRect().width, size: parseFloat(getComputedStyle(el).fontSize) }))
+    expect(width, 'the count slot is narrower than three digits').toBeGreaterThanOrEqual(size * 1.4)
+    expect(await dash.evaluate((el) => getComputedStyle(el).fontVariantNumeric)).toContain('tabular-nums')
   })
 
   test('the /tools foot has a What\'s next group in place of the two sentences, linking to /roadmap', async ({ page }) => {

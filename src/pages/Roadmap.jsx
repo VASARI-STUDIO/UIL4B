@@ -4,7 +4,7 @@ import VoteList, { IdeaLine } from '../components/spectrum/VoteList'
 import { useToolVotes } from '../hooks/useToolVotes'
 import { createTools } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
-import { listTools } from '../utils/roadmapItems'
+import { listTools, voteWord } from '../utils/roadmapItems'
 import '../styles/pages/spectrum-mobile.css'
 import '../styles/pages/spectrum-tools.css'
 
@@ -17,7 +17,7 @@ function Meta({ votes, nothing }) {
   if (votes.phase === 'loading') return <p className="rm-meta">Loading the counts&hellip;</p>
   if (votes.phase === 'error') return <p className="rm-meta">Counts unavailable right now.</p>
   if (votes.total === 0) return <p className="rm-meta">No votes yet. Yours would be the first.</p>
-  return <p className="rm-meta"><b>{votes.total.toLocaleString('en-AU')}</b> votes so far, counted at {votes.asOf}.</p>
+  return <p className="rm-meta"><b>{votes.total.toLocaleString('en-AU')}</b> {voteWord(votes.total)} so far, counted at {votes.asOf}.</p>
 }
 
 export default function Roadmap() {

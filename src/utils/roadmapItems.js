@@ -28,6 +28,9 @@ export function stageOf(tool) {
   return 'live'
 }
 
+/** 'vote' for exactly one, 'votes' otherwise (including 0). */
+export const voteWord = (n) => (n === 1 ? 'vote' : 'votes')
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 /** '2026-10-20' -> '20 Oct 2026'. */
 export function formatShipped(ymd) {

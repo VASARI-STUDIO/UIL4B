@@ -255,6 +255,7 @@ html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
 .spt .vr-name a svg { display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: -1px; color: var(--sp-dim); }
 .spt .vr-desc { margin: 4px 0 0; max-width: 60ch; font-size: 15px; line-height: 1.45; color: var(--sp-dim); }
 .spt .vr-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--sp-ink); }
+.spt .vr-status:empty { margin: 0; }
 .spt .vr-status.is-err, .spt .vl-more.is-err { color: var(--err-strong); }
 .spt .vr-status button, .spt .vl-more button { appearance: none; margin: 0; padding: 4px 0; border: 0; border-radius: 4px; background: none; color: var(--sp-link); font: inherit; font-weight: 540; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .spt .vr-status button:active, .spt .vl-more button:active { transform: none; }
@@ -268,7 +269,8 @@ html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
 
 .spt .votes { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
 .spt .count { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
-.spt .count b { display: block; font-family: var(--display); font-weight: 560; font-size: 18px; line-height: 1; }
+/* min-width in ch of the number's own font, so three digits fit at 18px and at 28px without moving the row. */
+.spt .count b { display: block; min-width: 3ch; font-family: var(--display); font-weight: 560; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
 .spt-road .count b { font-size: 28px; }
 .spt .count small { display: block; margin-top: 4px; font-size: 12px; line-height: 1; color: var(--sp-dim); }
 .spt .count .sk { display: inline-block; width: 3ch; height: 18px; border-radius: 4px; background: var(--sp-wash-2); vertical-align: top; }
@@ -298,6 +300,11 @@ html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
    idea line breaks between its two sentences, so no word is left alone. */
 .spt .vl-more { max-width: 62ch; margin: 24px 0 0; font-size: 14px; line-height: 1.5; color: var(--sp-dim); text-wrap: pretty; }
 .spt .vl-more + .vl-more { margin-top: 8px; }
+/* The load-error line is a live region that is always in the page. Empty, it takes no
+   room and hands its 24px lead-in to the line after it. */
+.spt .vl-more:empty { margin: 0; }
+.spt .vl-more:empty + .vl-more { margin-top: 24px; }
+.spt .vl-more button[aria-disabled="true"] { color: var(--sp-dim); cursor: progress; text-decoration: none; }
 .spt .vl-more.lead { margin-top: 0; }
 .spt .vl-more .nw { white-space: nowrap; }
 .spt .vl-more .sent { display: inline-block; }
