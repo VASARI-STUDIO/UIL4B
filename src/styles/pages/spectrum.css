@@ -777,7 +777,6 @@
 .sp-strip { position: relative; display: flex; gap: 2px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-strip > span:not(.sp-art-over) { position: relative; flex: 1; min-width: 0; height: 152px; overflow: hidden; display: block; }
 .sp-strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.sp-strip small { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); font-size: 12px; color: var(--sp-page); background: rgba(241, 244, 255, .92); border-radius: 8px; padding: 2px 4px; }
 .sp-frames-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
@@ -829,8 +828,7 @@
      Preview row is a 44px target. */
   .sp-find input, .sp-font-ctl input[type="text"] { font-size: 16px; }
   .sp-font-ctl label { min-height: 44px; }
-  .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
-  .sp-strip small { bottom: auto; top: 7px; }
+  .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small { font-size: 12px; }
 }
 
 /* ═══ THE BENCH, POLISHED ═════════════════════════════════════════════════════
@@ -865,14 +863,16 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .sp-tool-foot .sp-pill { min-height: 48px; margin-left: 0; justify-content: space-between; }
 }
 
-/* The windows' depth at 1001px and up: a window is a little smaller and fainter
-   the further its middle is from the viewport's, and sits at full size and ink
-   when centred. The panel's own position in the viewport drives it (a view
-   timeline), so nothing listens to scroll. Where view timelines are missing the
-   windows stay at full size, and the rail still lights the one in view. */
+/* The windows' depth at 1001px and up: a window is a little smaller the further
+   its middle is from the viewport's, and sits at full size when centred. Scale
+   only: fading the window to 0.7 opacity took the dim and faint text under 4.5:1
+   on the windows off-centre. The panel's own position in the viewport drives it
+   (a view timeline), so nothing listens to scroll. Where view timelines are
+   missing the windows stay at full size, and the rail still lights the one in
+   view. */
 @keyframes sp-depth {
-  0%, 100% { transform: scale(.98); opacity: .7; }
-  50% { transform: none; opacity: 1; }
+  0%, 100% { transform: scale(.98); }
+  50% { transform: none; }
 }
 @media (min-width: 1001px) {
   @supports (animation-timeline: view()) {
@@ -1026,8 +1026,8 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-panel .sp-font-pair small { font-size: 12px; }
 @media (max-width: 760px) {
   .sp-panel:has(.sp-fontlist) { max-height: none; }
-  .sp-panel .sp-fontlist { flex: none; height: 440px; overflow: auto; scroll-snap-type: y proximity; scroll-padding-bottom: 0; }
-  .sp-panel .sp-fontrow { scroll-snap-align: start; }
+  .sp-panel .sp-fontlist { flex: none; overflow: visible; }
+  .sp-panel .sp-fontrow:last-child { border-bottom: 0; }
 }
 /* The list is a scroll box above the footer's hairline. Its last row drops its own
    hairline so the two never stack, and the rows are 12px (not 16px) above and
