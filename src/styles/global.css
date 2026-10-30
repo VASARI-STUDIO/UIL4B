@@ -2989,14 +2989,16 @@ html.lenis{scroll-behavior:auto!important}
    tool: the name (Palette, Font Gallery, Font Pair) or the glyph. PillNav sets
    [data-live] on the active row: 80ms after a fine pointer arrives, at once on
    keyboard focus, removed at once on leave, blur or a move onto anything that is
-   not a row. Each moment plays once in 200 to 600ms and holds, except Font Gallery
-   and Icon Library, which loop while the row is live; the exit is 150ms
+   not a row. Every moment loops while the row is live: it plays in 200 to 600ms, holds
+   its end state, returns, rests for about 900ms, and plays again (Font Gallery and Icon Library
+   step through their faces and glyphs instead). The end-state rules below stay as the reduced-motion
+   look and the keyframes at the foot of this section run over them; the exit is 150ms
    ease-in on the base rule. Only transform, opacity, fill-opacity, stroke-width,
    clip-path, background-position, colour and font family change, so the 48px row
    never moves. The name moves with the glyph on every row: it slides 3px along and
    takes the category colour; a row without a moment lifts its glyph instead. Touch and coarse pointers get nothing (the media query
-   below); reduced motion gets the end state at once, because the global
-   reduced-motion rule cuts every duration to 0 (the two loops hold one state instead). These moments deliberately use
+   below); reduced motion gets no loop and the end state at once, because the global
+   reduced-motion rule cuts every transition duration to 0 (Font Gallery and Icon Library hold one state). These moments deliberately use
    gradients, gradient text and motion on a row hover, which the rest of the site
    avoids. */
 .pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450;--mm-bloom:linear-gradient(135deg in oklab,#EAB308,#F9A8D4,#C4B5FD);--mm-ok:var(--ok);--mm-warn:var(--warn);--mm-err:var(--err)}
@@ -3062,29 +3064,29 @@ html.lenis{scroll-behavior:auto!important}
      outside it. Guarded: without `in oklab` the transparent text would have nothing to paint. */
   @supports (background-image:linear-gradient(90deg in oklab,red,blue)){
     .pnav-tool[data-moment="palette"] .pnav-tool-nm{background-image:linear-gradient(90deg in oklab,var(--mm-rainbow) 33.3%,var(--mm-nm-ink) 40%,var(--mm-nm-ink));background-size:300% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;transition:background-position var(--mm-out)}
-    .pnav-tool[data-moment="palette"][data-live] .pnav-tool-nm{background-position:0 0;transition:background-position 480ms var(--mm-ease)}
+    .pnav-tool[data-moment="palette"][data-live] .pnav-tool-nm{background-position:0 0;transition:background-position 480ms var(--mm-ease);animation:mm-palette 2540ms linear infinite}
   }
   /* 2 Gradient: a mini gradient blooms from the glyph's lower-left corner. */
-  .pnav-tool[data-moment="gradient"][data-live] .pnav-fx-g{clip-path:circle(150% at 0 100%);transition:clip-path 420ms var(--mm-ease)}
+  .pnav-tool[data-moment="gradient"][data-live] .pnav-fx-g{clip-path:circle(150% at 0 100%);transition:clip-path 420ms var(--mm-ease);animation:mm-gradient 2420ms linear infinite}
   /* 3 Contrast Checker: the dark half of the disc turns 180deg. */
-  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 360ms var(--mm-ease)}
+  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 360ms var(--mm-ease);animation:mm-contrast 2320ms linear infinite}
   /* 4 Tint: the ramp rises inside the drop. */
-  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 380ms var(--mm-ease)}
+  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 380ms var(--mm-ease);animation:mm-tint 2340ms linear infinite}
   /* 5 Semantic Colour: the bars fill with success, warning and error in turn. */
-  .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease)}
-  .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms}
-  .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms}
+  .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease);animation:mm-bar 2040ms linear infinite backwards}
+  .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms;animation-delay:70ms}
+  .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms;animation-delay:140ms}
   /* 6 Font Gallery: PillNav steps the name through the shuffled ready faces, on a loop (style + data-face). */
   /* 7 Font Pair: "Font" in Literata 600, then "Pair" in Geist Mono 500, 90ms later.
      A face is used only once it is ready (data-faces on the menu root); until then
      "Font" takes Switzer 700 and "Pair" stays as it is. */
-  .pnav-tool[data-moment="font-pair"][data-live] .w1{font-weight:700}
-  .pnav-menu[data-faces~="literata"] .pnav-tool[data-moment="font-pair"][data-live] .w1{font-family:Literata,serif;font-weight:600;font-size-adjust:.5}
-  .pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2{animation:mm-mono 1ms 90ms forwards}
+  .pnav-tool[data-moment="font-pair"][data-live] .w1{font-weight:700;animation:mm-pair-sw 2000ms step-end infinite}
+  .pnav-menu[data-faces~="literata"] .pnav-tool[data-moment="font-pair"][data-live] .w1{font-family:Literata,serif;font-weight:600;font-size-adjust:.5;animation-name:mm-pair-lit}
+  .pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5;animation:mm-pair-mono 2000ms step-end infinite}
   /* 8 Type Scale: the T's grow toward one another, the smallest first and by the most. */
-  .pnav-tool[data-moment="type-scale"][data-live] .t1{transform:scaleY(2.4);transition:transform 340ms var(--mm-ease)}
-  .pnav-tool[data-moment="type-scale"][data-live] .t2{transform:scaleY(1.45);transition:transform 340ms var(--mm-ease) 60ms}
-  .pnav-tool[data-moment="type-scale"][data-live] .t3{transform:scaleY(1.12);transition:transform 340ms var(--mm-ease) 120ms}
+  .pnav-tool[data-moment="type-scale"][data-live] .t1{--mm-to:2.4;transform:scaleY(2.4);transition:transform 340ms var(--mm-ease);animation:mm-grow 2280ms linear infinite backwards}
+  .pnav-tool[data-moment="type-scale"][data-live] .t2{--mm-to:1.45;transform:scaleY(1.45);transition:transform 340ms var(--mm-ease) 60ms;animation:mm-grow 2280ms linear 60ms infinite backwards}
+  .pnav-tool[data-moment="type-scale"][data-live] .t3{--mm-to:1.12;transform:scaleY(1.12);transition:transform 340ms var(--mm-ease) 120ms;animation:mm-grow 2280ms linear 120ms infinite backwards}
   /* 9 Icon Library: star, heart, bolt, bookmark, sun, round and round while the row is live.
      One keyframe serves all five glyphs: each runs it a step behind the one before (negative
      delays of 1440 to 360ms in a 1800ms loop), so every step is 360ms, the Font Gallery's
@@ -3095,41 +3097,87 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-moment="icons"][data-live] .i4{animation-delay:-720ms}
   .pnav-tool[data-moment="icons"][data-live] .i5{animation-delay:-360ms}
   /* 10 Emoji Library: the face tilts 20deg and the right eye closes once (dot out, lid in). */
-  .pnav-tool[data-moment="emoji"][data-live] .face{transform:rotate(-20deg);transition:transform 300ms var(--mm-ease)}
-  .pnav-tool[data-moment="emoji"][data-live] .er{animation:mm-wink 380ms ease-in-out 140ms}
-  .pnav-tool[data-moment="emoji"][data-live] .ew{animation:mm-wink-lid 380ms ease-in-out 140ms}
+  .pnav-tool[data-moment="emoji"][data-live] .face{transform:rotate(-20deg);transition:transform 300ms var(--mm-ease);animation:mm-tilt 2400ms linear infinite}
+  .pnav-tool[data-moment="emoji"][data-live] .er{animation:mm-wink 2400ms linear infinite}
+  .pnav-tool[data-moment="emoji"][data-live] .ew{animation:mm-wink-lid 2400ms linear infinite}
   /* 11 File Converter: the arrows nudge past each other and back as one motion, the return one 60ms
      later; it eases down to 40% and rests there. Neither arrow ever leaves, and the final keyframe
      matches the resting opacity, so nothing steps when the animation ends. */
-  .pnav-tool[data-moment="file-converter"][data-live] .a1{animation:mm-run 480ms cubic-bezier(.4,0,.2,1)}
-  .pnav-tool[data-moment="file-converter"][data-live] .a2{opacity:.4;animation:mm-run-back 480ms cubic-bezier(.4,0,.2,1) 60ms backwards}
+  .pnav-tool[data-moment="file-converter"][data-live] .a1{animation:mm-run 2340ms linear infinite}
+  .pnav-tool[data-moment="file-converter"][data-live] .a2{opacity:.4;animation:mm-run-back 2340ms linear infinite}
   /* 12 Aspect: the inner frame turns from landscape (7 by 5 units) to portrait (5 by 8). */
-  .pnav-tool[data-moment="ratio"][data-live] .in{transform:scale(.714,1.6);transition:transform 340ms var(--mm-ease)}
+  .pnav-tool[data-moment="ratio"][data-live] .in{transform:scale(.714,1.6);transition:transform 340ms var(--mm-ease);animation:mm-frame 2280ms linear infinite}
   /* 13 3D Model Converter: the cube takes light, its three faces at 55 / 28 / 12%. */
-  .pnav-tool[data-moment="model-3d"][data-live] .f{transition:fill-opacity 280ms var(--mm-ease)}
-  .pnav-tool[data-moment="model-3d"][data-live] .f1{fill-opacity:.55}
-  .pnav-tool[data-moment="model-3d"][data-live] .f2{fill-opacity:.28}
-  .pnav-tool[data-moment="model-3d"][data-live] .f3{fill-opacity:.12}
+  .pnav-tool[data-moment="model-3d"][data-live] .f{transition:fill-opacity 280ms var(--mm-ease);animation:mm-light 2280ms linear infinite}
+  .pnav-tool[data-moment="model-3d"][data-live] .f1{--mm-to:.55;fill-opacity:.55}
+  .pnav-tool[data-moment="model-3d"][data-live] .f2{--mm-to:.28;fill-opacity:.28}
+  .pnav-tool[data-moment="model-3d"][data-live] .f3{--mm-to:.12;fill-opacity:.12}
   /* 14 Alt Text: the picture steps back to 30% and the T thickens (1.6 to 2.4). */
-  .pnav-tool[data-moment="alt-text"][data-live] .pic{opacity:.3;transition:opacity 260ms var(--mm-ease)}
-  .pnav-tool[data-moment="alt-text"][data-live] .tx{stroke-width:2.4;transition:stroke-width 260ms var(--mm-ease)}
+  .pnav-tool[data-moment="alt-text"][data-live] .pic{opacity:.3;transition:opacity 260ms var(--mm-ease);animation:mm-pic 2360ms linear infinite}
+  .pnav-tool[data-moment="alt-text"][data-live] .tx{stroke-width:2.4;transition:stroke-width 260ms var(--mm-ease);animation:mm-tx 2360ms linear infinite}
   /* 15 Palette Library: the four swatches fill with Terracotta Dusk, in reading order. */
-  .pnav-tool[data-moment="palette-library"][data-live] .c{opacity:1;transition:opacity 180ms var(--mm-ease)}
-  .pnav-tool[data-moment="palette-library"][data-live] .c2{transition-delay:60ms}
-  .pnav-tool[data-moment="palette-library"][data-live] .c3{transition-delay:120ms}
-  .pnav-tool[data-moment="palette-library"][data-live] .c4{transition-delay:180ms}
+  .pnav-tool[data-moment="palette-library"][data-live] .c{opacity:1;transition:opacity 180ms var(--mm-ease);animation:mm-chip 2060ms linear infinite backwards}
+  .pnav-tool[data-moment="palette-library"][data-live] .c2{transition-delay:60ms;animation-delay:60ms}
+  .pnav-tool[data-moment="palette-library"][data-live] .c3{transition-delay:120ms;animation-delay:120ms}
+  .pnav-tool[data-moment="palette-library"][data-live] .c4{transition-delay:180ms;animation-delay:180ms}
   /* 16 Gradient Library: Sun Flare, then Aurora Sweep fades in over it and holds. */
-  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-a{opacity:1;transition:opacity 160ms var(--mm-ease)}
-  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-b{opacity:1;transition:opacity 200ms var(--mm-ease) 220ms}
+  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-a{opacity:1;transition:opacity 160ms var(--mm-ease);animation:mm-flare 2600ms linear infinite}
+  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-b{opacity:1;transition:opacity 200ms var(--mm-ease) 220ms;animation:mm-aurora 2600ms linear infinite}
   /* 17 Inspiration: the compass needle swings a quarter turn to a new heading. */
-  .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 420ms var(--mm-ease)}
+  .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 420ms var(--mm-ease);animation:mm-needle 2540ms linear infinite}
   /* 18 Prompt Library: the line becomes three dots that each hop once, 2.4 units (about 1.8px) high. */
-  .pnav-tool[data-moment="prompt-library"][data-live] .ln{opacity:0;transition:opacity 120ms ease-out}
-  .pnav-tool[data-moment="prompt-library"][data-live] .d{opacity:1;transition:opacity 120ms ease-out 60ms;animation:mm-hop 300ms var(--mm-ease) 120ms}
-  .pnav-tool[data-moment="prompt-library"][data-live] .d2{animation-delay:190ms}
-  .pnav-tool[data-moment="prompt-library"][data-live] .d3{animation-delay:260ms}
+  .pnav-tool[data-moment="prompt-library"][data-live] .ln{opacity:0;transition:opacity 120ms ease-out;animation:mm-line 2500ms linear infinite}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d{opacity:1;transition:opacity 120ms ease-out 60ms;animation:mm-dots 2500ms linear infinite,mm-hop 2500ms linear 120ms infinite backwards}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d2{animation-delay:0s,190ms}
+  .pnav-tool[data-moment="prompt-library"][data-live] .d3{animation-delay:0s,260ms}
 }
-@keyframes mm-mono{from,to{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5}}
+/* Every loop below is one cycle: play (the moment's own timing), hold the end state, return, then rest at the
+   starting state before the next play. Each keyframe names the rest value outright, because the rule that
+   carries the animation also holds the end state (the reduced-motion look), and a keyframe left blank would
+   read that instead. A stagger is an animation-delay on the later parts, with backwards fill so a part waits at
+   its rest value; the delay is paid once and the offset then holds on every cycle. */
+/* Palette */
+@keyframes mm-palette{0%{background-position:100% 0;animation-timing-function:cubic-bezier(.23,1,.32,1)}18.9%{background-position:0 0;animation-timing-function:cubic-bezier(.4,0,.2,1)}50.39%{background-position:0 0;animation-timing-function:cubic-bezier(.4,0,.2,1)}64.57%{background-position:100% 0}100%{background-position:100% 0}}
+/* Gradient */
+@keyframes mm-gradient{0%{clip-path:circle(0% at 0 100%);animation-timing-function:cubic-bezier(.23,1,.32,1)}17.36%{clip-path:circle(150% at 0 100%);animation-timing-function:cubic-bezier(.4,0,.2,1)}50.41%{clip-path:circle(150% at 0 100%);animation-timing-function:cubic-bezier(.4,0,.2,1)}62.81%{clip-path:circle(0% at 0 100%)}100%{clip-path:circle(0% at 0 100%)}}
+/* Contrast */
+@keyframes mm-contrast{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}15.52%{transform:rotate(180deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.69%{transform:rotate(180deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}61.21%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+/* Tint */
+@keyframes mm-tint{0%{transform:translateY(15.5px);animation-timing-function:cubic-bezier(.23,1,.32,1)}16.24%{transform:translateY(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}46.15%{transform:translateY(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}61.54%{transform:translateY(15.5px)}100%{transform:translateY(15.5px)}}
+/* Semantic */
+@keyframes mm-bar{0%{transform:scaleX(0);animation-timing-function:cubic-bezier(.23,1,.32,1)}10.78%{transform:scaleX(1);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.1%{transform:scaleX(1);animation-timing-function:cubic-bezier(.4,0,.2,1)}55.88%{transform:scaleX(0)}100%{transform:scaleX(0)}}
+/* Type scale */
+@keyframes mm-grow{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.91%{transform:scaleY(var(--mm-to));animation-timing-function:cubic-bezier(.4,0,.2,1)}45.61%{transform:scaleY(var(--mm-to));animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{transform:scaleY(1)}100%{transform:scaleY(1)}}
+/* Ratio */
+@keyframes mm-frame{0%{transform:scale(1);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.91%{transform:scale(.714,1.6);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.61%{transform:scale(.714,1.6);animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{transform:scale(1)}100%{transform:scale(1)}}
+/* 3D */
+@keyframes mm-light{0%{fill-opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}12.28%{fill-opacity:var(--mm-to);animation-timing-function:cubic-bezier(.4,0,.2,1)}47.37%{fill-opacity:var(--mm-to);animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{fill-opacity:0}100%{fill-opacity:0}}
+/* Palette library */
+@keyframes mm-chip{0%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}8.74%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}47.57%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}56.31%{opacity:0}100%{opacity:0}}
+/* Inspiration */
+@keyframes mm-needle{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}16.54%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}48.03%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}64.57%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+/* Alt pic */
+@keyframes mm-pic{0%{opacity:1;animation-timing-function:cubic-bezier(.23,1,.32,1)}11.02%{opacity:.3;animation-timing-function:cubic-bezier(.4,0,.2,1)}49.15%{opacity:.3;animation-timing-function:cubic-bezier(.4,0,.2,1)}61.86%{opacity:1}100%{opacity:1}}
+/* Alt tx */
+@keyframes mm-tx{0%{stroke-width:1.6;animation-timing-function:cubic-bezier(.23,1,.32,1)}11.02%{stroke-width:2.4;animation-timing-function:cubic-bezier(.4,0,.2,1)}49.15%{stroke-width:2.4;animation-timing-function:cubic-bezier(.4,0,.2,1)}61.86%{stroke-width:1.6}100%{stroke-width:1.6}}
+/* Font pair */
+@keyframes mm-pair-lit{0%{font-family:Literata,serif;font-weight:600;font-size-adjust:.5}55%{font-family:inherit;font-weight:inherit;font-size-adjust:none}100%{font-family:inherit;font-weight:inherit;font-size-adjust:none}}
+@keyframes mm-pair-sw{0%{font-weight:700}55%{font-weight:inherit}100%{font-weight:inherit}}
+@keyframes mm-pair-mono{0%{font-family:inherit;font-weight:inherit;font-size-adjust:none}4.5%{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5}59.5%{font-family:inherit;font-weight:inherit;font-size-adjust:none}100%{font-family:inherit;font-weight:inherit;font-size-adjust:none}}
+/* Emoji */
+@keyframes mm-tilt{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}12.5%{transform:rotate(-20deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}50%{transform:rotate(-20deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}62.5%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+@keyframes mm-wink{0%{opacity:1;animation-timing-function:ease-in-out}5.83%{opacity:1;animation-timing-function:ease-in-out}8.67%{opacity:0}18.83%{opacity:0;animation-timing-function:ease-in-out}21.67%{opacity:1}100%{opacity:1}}
+@keyframes mm-wink-lid{0%{opacity:0;animation-timing-function:ease-in-out}5.83%{opacity:0;animation-timing-function:ease-in-out}8.67%{opacity:1}18.83%{opacity:1;animation-timing-function:ease-in-out}21.67%{opacity:0}100%{opacity:0}}
+/* File converter */
+@keyframes mm-run{0%{transform:translateX(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}9.23%{transform:translateX(4px);animation-timing-function:cubic-bezier(.4,0,.2,1)}20.51%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes mm-run-back{0%{transform:translateX(0);opacity:1}2.56%{transform:translateX(0);opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}11.79%{transform:translateX(-4px);opacity:.7;animation-timing-function:cubic-bezier(.4,0,.2,1)}23.08%{transform:translateX(0);opacity:.4}48.72%{transform:translateX(0);opacity:.4;animation-timing-function:cubic-bezier(.4,0,.2,1)}61.54%{transform:translateX(0);opacity:1}100%{transform:translateX(0);opacity:1}}
+/* Gradient library */
+@keyframes mm-flare{0%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}6.15%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}53.85%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}65.38%{opacity:0}100%{opacity:0}}
+@keyframes mm-aurora{0%{opacity:0}8.46%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}16.15%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}53.85%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}65.38%{opacity:0}100%{opacity:0}}
+/* Prompt library */
+@keyframes mm-line{0%{opacity:1;animation-timing-function:ease-out}4.8%{opacity:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}52%{opacity:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}64%{opacity:1}100%{opacity:1}}
+@keyframes mm-dots{0%{opacity:0}2.4%{opacity:0;animation-timing-function:ease-out}7.2%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}52%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}64%{opacity:0}100%{opacity:0}}
+@keyframes mm-hop{0%{transform:translateY(0);animation-timing-function:cubic-bezier(.23,1,.32,1)}6%{transform:translateY(-2.4px);animation-timing-function:cubic-bezier(.23,1,.32,1)}12%{transform:translateY(0)}100%{transform:translateY(0)}}
 /* The star's slot: shown for 14% of the loop, then 6% of cross-fade into the next glyph, dark until the last 6% fades it back in. */
 @keyframes mm-icons{0%,14%{opacity:1}20%,94%{opacity:0}100%{opacity:1}}
 @keyframes mm-wink{0%,100%{opacity:1}18%,82%{opacity:0}}
@@ -3137,10 +3185,15 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes mm-run{0%,100%{transform:none}45%{transform:translateX(4px)}}
 @keyframes mm-run-back{0%{transform:none;opacity:1}45%{transform:translateX(-4px);opacity:.7}100%{transform:none;opacity:.4}}
 @keyframes mm-hop{0%,100%{transform:none}50%{transform:translateY(-2.4px)}}
-/* Reduced motion: the Icons loop never starts, so the row holds its resting glyph (the star). */
+/* Reduced motion: no loop starts. The Icons row holds its resting glyph (the star); every other moment
+   keeps the end-state rule it always had and shows it at once. The pair is the house guard: the site
+   setting first, then the OS query unless the site setting says motion is on. The extra .pnav-menu
+   outranks the Font Pair rules, which are the most specific of the loops. */
 html[data-reduced-motion="true"] .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
+html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.pnav-fx,.mm-gl *){animation:none}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
+  html:not([data-reduced-motion="false"]) .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.pnav-fx,.mm-gl *){animation:none}
 }
 /* Forced colours: the rainbow clip off, the overlay hidden. */
 @media (forced-colors:active){
