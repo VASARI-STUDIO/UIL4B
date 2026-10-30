@@ -383,9 +383,9 @@ test('a strip drawn before the fonts arrived is not kept: coming back to its tem
   expect(oneDraw).toBeGreaterThan(0)
 
   await pick(page, 'guidelines', 'Poster')
-  expect(await fontLoads(page), 'a second template is a second draw').toBe(oneDraw * 2)
+  await expect.poll(() => fontLoads(page), 'a second template is a second draw').toBe(oneDraw * 2)
   await pick(page, 'guidelines', 'Presentation')
-  expect(await fontLoads(page), 'the first template, drawn in the fallback, was not served from the cache').toBe(oneDraw * 3)
+  await expect.poll(() => fontLoads(page), 'the first template, drawn in the fallback, was not served from the cache').toBe(oneDraw * 3)
 })
 
 test('CONTROL: a strip drawn after the fonts arrived is kept: coming back to its template does not draw it again', async ({ page }) => {
