@@ -667,3 +667,222 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-skeleton::after { animation: none; }
   html:not([data-reduced-motion="false"]) .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
 }
+
+/* ── The compare tray ─────────────────────────────────────────────────────
+   A bar fixed to the foot of the screen, full width. On a phone it stands on
+   the tab bar (its bottom edge is the bar's top edge); toasts and the feedback
+   button ride above it through `html.fg-tray`. 390 and 768 show the names and
+   Compare N; 1440 shows chips with ×, Clear and Compare N. */
+.fg-page,
+html.fg-tray { --fg-tray-h: 60px; }
+.fg-page .fg-compare-tray {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  gap: 12px;
+  height: calc(var(--fg-tray-h) + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  padding: 0 var(--fg-padr) env(safe-area-inset-bottom, 0px) var(--fg-padl);
+  background: var(--bg-1);
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 767px) {
+  html.has-tabbar .fg-page .fg-compare-tray {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    height: var(--fg-tray-h);
+    padding-bottom: 0;
+  }
+}
+.fg-page .fg-compare-tray-label { flex: 0 0 auto; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t1); }
+.fg-page .fg-compare-tray-chips { flex: 1 1 auto; flex-wrap: nowrap; overflow: hidden; }
+.fg-page .fg-compare-tray-actions { align-items: center; }
+.fg-page .fg-compare-tray .fg-more-btn { min-height: 44px; border-radius: var(--radius-pill); }
+.fg-page .fg-compare-tray .fg-more-btn:disabled,
+.fg-page .fg-sheet-btn:disabled { opacity: .45; cursor: not-allowed; }
+.fg-page .fg-compare-chip { flex: 0 0 auto; min-height: 36px; border-radius: var(--radius-pill); }
+@media (pointer: coarse) { .fg-page .fg-compare-chip { min-height: 44px; } }
+.fg-page .fg-compare-chip-name { font-family: var(--fg-ff, var(--font)); font-size: 14px; font-weight: 400; }
+.fg-page .fg-compare-tray-names { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.3; color: var(--t1); }
+.fg-page .fg-compare-tray-name { font-family: var(--fg-ff, var(--font)); font-size: 15px; color: var(--t0); }
+.fg-page .fg-compare-head-actions { display: flex; align-items: center; gap: 8px; }
+.fg-page .fg-compare-clear { border-radius: var(--radius-pill); }
+html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 60px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 60px) + 20px + env(safe-area-inset-bottom, 0px)); }
+/* The page and the scroll snap both leave room for the tray, so the last band
+   and a focused control are never hidden behind it. */
+html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
+@media (max-width: 767px) {
+  /* The body already reserves the tab bar, so only the tray is added here. */
+  html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px); }
+  html.fg-tray.has-tabbar { scroll-padding-bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + env(safe-area-inset-bottom, 0px) + 8px); }
+  html.fg-tray.has-tabbar body .toast { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+  html.fg-tray.has-tabbar body .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 14px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── The list / grid toggle ───────────────────────────────────────────────── */
+.fg-page .fg-view { display: inline-flex; align-items: center; gap: 8px; }
+.fg-page .fg-view-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-view-btn.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+@media (hover: hover) {
+  .fg-page .fg-view-btn:not(.is-on):hover { background: var(--hvr); }
+}
+.fg-page .fg-view-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-view-btn:active { transform: scale(.97); }
+.fg-page .fg-view-btn:disabled { opacity: .45; cursor: not-allowed; }
+@media (pointer: coarse) {
+  .fg-page .fg-view-btn { width: 44px; height: 44px; }
+}
+
+/* ── Grid view: 4, 3 and 2 columns of the same bands ─────────────────────────
+   The name wraps in its cell (two lines at most) instead of shrinking, and
+   keeps 60px clear on the right for the compare button. The wake's reveal has
+   no room here, so only the ground flips. The grid is one pixel wider than its
+   parent so the last column's hairline falls outside the clip. */
+.fg-page .fg-results--tiles { overflow-x: clip; }
+.fg-page .fg-grid--tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: calc(100% + 1px); }
+@media (max-width: 1023px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) {
+  --fg-y: var(--fg-y-max);
+  --fg-line: calc(var(--fg-gname, 56px) * 2.2);
+  --fg-right: 64px;
+  height: calc(var(--fg-gname, 56px) * 2.2 + var(--fg-y) * 2 + 30px);
+  border-right: 1px solid var(--border);
+}
+@media (max-width: 767px) {
+  .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) { --fg-right: 58px; }
+}
+.fg-page .fg-grid--tiles .fg-card-name {
+  font-size: calc(var(--fg-gname, 56px) * var(--fg-fit, 1));
+  line-height: 1.1;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  max-height: 2.2em;
+  overflow: hidden;
+}
+/* The meta line runs to the cell's edge, past the compare button's column. */
+.fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); text-overflow: ellipsis; white-space: nowrap; }
+.fg-page .fg-grid--tiles .fg-card-preview { overflow: hidden; }
+.fg-page .fg-grid--tiles .fg-card-reveal { display: none; }
+.fg-page .fg-grid--tiles .fg-card-compare { right: 10px; top: var(--fg-y); }
+
+/* ── The Filters sheet ───────────────────────────────────────────────────────
+   A modal bottom sheet on a phone, a centred dialog from 768px. It sits above
+   the tab bar. Every control applies at once; the foot says what is showing. */
+.fg-page .fg-sheet-layer { position: fixed; inset: 0; z-index: 140; font-family: var(--font); color: var(--t0); }
+.fg-page .fg-sheet-scrim { position: absolute; inset: 0; background: var(--scrim, rgba(3, 3, 4, .6)); }
+.fg-page .fg-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(94dvh, 800px);
+  box-sizing: border-box;
+  background: var(--card);
+  border-top: 1px solid var(--bh);
+  border-radius: 22px 22px 0 0;
+  animation: fg-sheet-up var(--dur-3) var(--ease-entrance);
+}
+/* On a phone the sheet follows a downward drag of its head (`--fg-drag`, set by
+   the component) and eases back when let go; while the finger is down it tracks
+   with no lag. It stops at 480px wide so a landscape phone does not stretch it. */
+@media (max-width: 767px) {
+  .fg-page .fg-sheet { max-width: 480px; margin-inline: auto; transform: translateY(var(--fg-drag, 0px)); transition: transform 200ms var(--ease-standard); }
+  .fg-page .fg-sheet.is-dragging { transition: none; }
+}
+.fg-page .fg-sheet:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@keyframes fg-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@media (min-width: 768px) {
+  .fg-page .fg-sheet { inset: 0; margin: auto; height: fit-content; max-height: min(92dvh, 820px); width: min(480px, calc(100vw - 48px)); border: 1px solid var(--bh); border-radius: var(--radius-3xl); animation: fg-fade var(--dur-2) var(--ease-entrance); }
+}
+.fg-page .fg-sheet-grab { display: block; flex: 0 0 auto; width: 36px; height: 4px; margin: 8px auto 0; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
+@media (min-width: 768px) { .fg-page .fg-sheet-grab { display: none; } }
+/* The drag zone: the grab bar and the head, at least a thumb tall. It only
+   claims touch on a phone, where it can be dragged. */
+.fg-page .fg-sheet-drag { flex: 0 0 auto; min-height: 44px; }
+@media (max-width: 767px) { .fg-page .fg-sheet-drag { touch-action: none; } }
+.fg-page .fg-sheet-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px)); }
+.fg-page .fg-sheet-title { margin: 0; font-size: 20px; font-weight: 560; letter-spacing: -.02em; line-height: 1.2; }
+.fg-page .fg-sheet-x { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--t0); background: transparent; border: 1px solid var(--bh); border-radius: var(--radius-pill); cursor: pointer; transition: background-color var(--dur-1) var(--ease-standard); }
+.fg-page .fg-sheet-body { display: grid; flex: 1 1 auto; gap: 20px; min-height: 0; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 20px max(20px, env(safe-area-inset-left, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+.fg-page .fg-sheet-group { display: grid; gap: 10px; min-width: 0; }
+.fg-page .fg-sheet-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fg-page .fg-sheet-k { font-size: 13px; line-height: 1.3; color: var(--t1); }
+.fg-page .fg-sheet-v { font-size: 13px; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fg-page .fg-sheet-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.fg-page .fg-sheet-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.fg-page .fg-sheet-pill,
+.fg-page .fg-sheet-btn {
+  min-height: 44px;
+  padding: 0 20px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.2;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-sheet-pill--face { min-height: 52px; font-family: var(--fg-ff, var(--font)); font-size: 18px; font-weight: 400; }
+.fg-page .fg-sheet-pill.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+.fg-page .fg-sheet-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: var(--accent-fill); }
+@media (hover: hover) {
+  .fg-page .fg-sheet-pill:not(.is-on):hover,
+  .fg-page .fg-sheet-btn:not(.fg-sheet-btn--primary):not(:disabled):hover,
+  .fg-page .fg-sheet-x:hover { background: var(--hvr); }
+  .fg-page .fg-sheet-btn--primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+}
+.fg-page .fg-sheet-pill:focus-visible,
+.fg-page .fg-sheet-btn:focus-visible,
+.fg-page .fg-sheet-x:focus-visible,
+.fg-page .fg-sheet-range:focus-visible,
+.fg-page .fg-sheet-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-sheet-pill:active,
+.fg-page .fg-sheet-btn:not(:disabled):active { transform: scale(.97); }
+.fg-page .fg-sheet-range { width: 100%; height: 44px; margin: 0; accent-color: var(--t0); }
+.fg-page .fg-sheet-field { box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; font-family: var(--font); font-size: 16px; color: var(--t0); background: var(--inp); border: 1px solid var(--bh); border-radius: var(--radius-l); }
+.fg-page .fg-sheet-field { scroll-margin-block: 24px; }
+.fg-page .fg-sheet-field::placeholder { color: var(--t2); }
+.fg-page .fg-sheet-foot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--border); }
+.fg-page .fg-sheet-btn { min-height: 48px; }
+
+/* Reduced motion: the sheet fades in and the press scale is dropped. */
+html[data-reduced-motion="true"] .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
+}

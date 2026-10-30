@@ -817,6 +817,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
 .toast-info .toast-ico{background:var(--accent-bg);color:var(--accent-mid)}
+.toast-warning .toast-ico{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 /* The dismiss control. The toast itself stays pointer-events:none — it must
    never block what is under it — so the one thing that is meant to be pressed
    opts back in. Negative margins keep the box the same height it was. */
