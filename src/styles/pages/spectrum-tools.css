@@ -236,3 +236,114 @@ html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
   .spt .spt-fct { gap: 6px; }
   .spt .spt-fct-n { font-size: 16px; }
 }
+
+/* Roadmap voting: the /tools foot group and the /roadmap page. Sans only; the
+   group is .spt-group, so the rail, gap and stacking breakpoint are inherited. */
+.spt { --vote-line: rgba(var(--sp-ink-rgb), .38); --vote-line-hover: rgba(var(--sp-ink-rgb), .6); --vote-w: 96px; }
+[data-theme="light"] .spt { --vote-line: rgba(var(--sp-ink-rgb), .48); --vote-line-hover: rgba(var(--sp-ink-rgb), .7); }
+.spt .spt-group--vote > header h2, .spt .spt-group--vote > header h3 { margin: 0; padding-top: 12px; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.spt .spt-group--vote > header p { margin: 12px 0 0; max-width: 30ch; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
+.spt .spt-group--vote > header a { display: inline-block; margin-top: 12px; padding-block: 4px; font-size: 14px; }
+.spt .spt-group--first { margin-top: 0; }
+.spt .vl { margin: 0 -12px; padding: 0; list-style: none; }
+.spt .vr { display: grid; grid-template-columns: minmax(0, 1fr) 168px auto; column-gap: 32px; align-items: center; min-height: 64px; padding: 12px; border-top: 1px solid var(--sp-line); }
+.spt .vl > .vr:last-child { border-bottom: 1px solid var(--sp-line); }
+.spt-road .vr { min-height: 104px; padding: 20px 12px; }
+.spt .vr-name { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; }
+.spt .vr-name a { padding-block: 4px; color: inherit; text-decoration: none; }
+.spt .vr-name .nw { white-space: nowrap; }
+.spt .vr-name a svg { display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: -1px; color: var(--sp-dim); }
+.spt .vr-desc { margin: 4px 0 0; max-width: 60ch; font-size: 15px; line-height: 1.45; color: var(--sp-dim); }
+.spt .vr-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--sp-ink); }
+.spt .vr-status:empty { margin: 0; }
+.spt .vr-status.is-err, .spt .vl-more.is-err { color: var(--err-strong); }
+.spt .vr-status button, .spt .vl-more button { appearance: none; margin: 0; padding: 4px 0; border: 0; border-radius: 4px; background: none; color: var(--sp-link); font: inherit; font-weight: 540; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.spt .vr-status button:active, .spt .vl-more button:active { transform: none; }
+
+/* Stage track: three steps, the current one filled. */
+.spt .stage { display: grid; gap: 6px; justify-items: start; }
+.spt .track { display: flex; gap: 3px; }
+.spt .track i { display: block; width: 20px; height: 4px; border-radius: 2px; background: var(--sp-line-strong); }
+.spt .track i.on { background: var(--sp-ink); }
+.spt .stage span { font-size: 13px; line-height: 1; color: var(--sp-dim); }
+
+.spt .votes { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+.spt .count { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+/* min-width in ch of the number's own font, so three digits fit at 18px and at 28px without moving the row. */
+.spt .count b { display: block; min-width: 3ch; font-family: var(--display); font-weight: 560; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
+.spt-road .count b { font-size: 28px; }
+.spt .count small { display: block; margin-top: 4px; font-size: 12px; line-height: 1; color: var(--sp-dim); }
+.spt .count .sk { display: inline-block; width: 3ch; height: 18px; border-radius: 4px; background: var(--sp-wash-2); vertical-align: top; }
+.spt .count.dash b { color: var(--sp-dim); }
+.spt .count b.is-bump { animation: vr-count-in 150ms var(--sp-ease) both; }
+@keyframes vr-count-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* The Vote button: .sp-ghost's pill with its own 3:1 outline. [type="button"]
+   lifts it above the shared .spectrum button transition. The focus ring is the
+   shared one (.spectrum :focus-visible); the radius sits here, at rest. */
+.spt .vote[type="button"] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: var(--vote-w); height: 40px; padding: 0 16px 0 12px; border: 1px solid var(--vote-line); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), .86); font: 540 14px/1 var(--font); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--sp-ease); }
+.spt .vote svg { width: 16px; height: 16px; flex: none; }
+.spt .vote[type="button"]:active { transform: scale(.97); }
+.spt .vote[type="button"][data-voted="true"] { background: var(--accent-fill); border-color: transparent; color: var(--accent-ink); }
+.spt .vote[type="button"][aria-disabled="true"] { border-color: var(--sp-line); background: transparent; color: rgba(var(--sp-ink-rgb), .4); cursor: not-allowed; }
+.spt .vote[type="button"][aria-disabled="true"]:active { transform: none; }
+.spt .vote[type="button"][aria-busy="true"] { cursor: progress; }
+@media (hover: hover) {
+  .spt .vr-name a:hover { text-decoration: underline; }
+  .spt .vote[type="button"]:not([aria-disabled="true"]):hover { background: rgba(var(--sp-ink-rgb), .055); border-color: var(--vote-line-hover); }
+  .spt .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--accent-fill) 88%, #000); border-color: transparent; }
+}
+/* Shipped rows have no button; this keeps their count in the open rows' column. */
+.spt .vote-slot { flex: none; width: var(--vote-w); }
+
+/* Lines under a list. Each action is glued to the word before it (.nw), and the
+   idea line breaks between its two sentences, so no word is left alone. */
+.spt .vl-more { max-width: 62ch; margin: 24px 0 0; font-size: 14px; line-height: 1.5; color: var(--sp-dim); text-wrap: pretty; }
+.spt .vl-more + .vl-more { margin-top: 8px; }
+/* The load-error line is a live region that is always in the page. Empty, it takes no
+   room and hands its 24px lead-in to the line after it. */
+.spt .vl-more:empty { margin: 0; }
+.spt .vl-more:empty + .vl-more { margin-top: 24px; }
+.spt .vl-more button[aria-disabled="true"] { color: var(--sp-dim); cursor: progress; text-decoration: none; }
+.spt .vl-more.lead { margin-top: 0; }
+.spt .vl-more .nw { white-space: nowrap; }
+.spt .vl-more .sent { display: inline-block; }
+.spt .vl-more a { padding-block: 4px; color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* /roadmap head and "How voting works". */
+.spt .rm-hero { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(48px, 8vw, 120px) var(--sp-gutter) 0; }
+.spt .rm-h1 { margin: 0; max-width: 18ch; font-family: var(--display); font-weight: 560; font-size: clamp(34px, 5vw, 64px); line-height: 1; letter-spacing: -.026em; text-wrap: balance; }
+.spt .rm-lede { max-width: 54ch; margin: 20px 0 0; font-size: 16px; line-height: 1.6; color: var(--sp-dim); text-wrap: pretty; }
+.spt .rm-meta { margin: 16px 0 0; font-size: 14px; color: var(--sp-dim); font-variant-numeric: tabular-nums; }
+.spt .rm-meta b { color: var(--sp-ink); font-weight: 600; }
+.spt .rm-dl { margin: 0; padding: 0; }
+.spt .rm-dl > div { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 8px 32px; padding: 16px 0; border-top: 1px solid var(--sp-line); }
+.spt .rm-dl > div:last-child { border-bottom: 1px solid var(--sp-line); }
+.spt .rm-dl dt { font-size: 15px; font-weight: 600; }
+.spt .rm-dl dd { max-width: 62ch; margin: 0; font-size: 15px; line-height: 1.5; color: var(--sp-dim); }
+
+@media (max-width: 860px) {
+  .spt .spt-group--vote > header { padding-bottom: 16px; }
+  .spt .spt-group--vote > header h2, .spt .spt-group--vote > header h3 { padding: 0 0 8px; }
+  .spt .spt-group--vote > header p { max-width: 52ch; margin-top: 0; }
+}
+@media (max-width: 760px) {
+  .spt { --vote-w: 92px; }
+  .spt .vr, .spt-road .vr { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "text votes" "stage votes"; gap: 8px 16px; padding: 14px 12px; }
+  .spt .vr-text { grid-area: text; }
+  .spt .stage { grid-area: stage; display: flex; align-items: center; gap: 8px; }
+  .spt .votes { grid-area: votes; align-self: center; }
+  .spt-road .vr { grid-template-areas: "text text" "stage votes"; row-gap: 12px; }
+  .spt .vote[type="button"] { height: 44px; }
+  .spt .rm-dl > div { grid-template-columns: 1fr; }
+  .spt-road .count b { font-size: 22px; }
+}
+@media (max-width: 340px) { .spt .count small { display: none; } }
+html[data-reduced-motion="true"] .spt .vote[type="button"] { transition: none; }
+html[data-reduced-motion="true"] .spt .vote[type="button"]:active { transform: none; }
+html[data-reduced-motion="true"] .spt .count b.is-bump { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .spt .vote[type="button"] { transition: none; }
+  html:not([data-reduced-motion="false"]) .spt .vote[type="button"]:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .spt .count b.is-bump { animation: none; }
+}

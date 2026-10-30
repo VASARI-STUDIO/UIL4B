@@ -10,8 +10,11 @@
    nav height + 24px of air, less the section's own top padding. */
 .spt-sitemap .spt-section[id] { scroll-margin-top: calc(var(--smap-nav-h) + 24px - clamp(40px, 6vw, 88px)); }
 .spt-sitemap { --smap-nav-h: calc(clamp(14px, 2vw, 26px) + 58px); }
-.spt-sitemap .spt-section--last { padding-bottom: clamp(72px, 10vw, 140px); }
-.spt-sitemap .spt-h2 { margin-bottom: 8px; }
+/* These two (and the .spt-group, .spt-row-text b rules below) override /tools rules of the
+   same weight, so they carry .spt too. The two sheets load as separate chunks, and which
+   one comes last depends on the route graph; the override cannot rest on load order. */
+.spt.spt-sitemap .spt-section--last { padding-bottom: clamp(72px, 10vw, 140px); }
+.spt.spt-sitemap .spt-h2 { margin-bottom: 8px; }
 .spt-sitemap .spt-sub { margin: 0; color: var(--sp-dim); }
 .spt-sitemap .spm-lede a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 
@@ -35,7 +38,7 @@
    below name themselves with three classes to win over it. */
 .spt-sitemap .spt-row { border-radius: 12px; }
 .spt-sitemap .spt-row-text .spt-lbl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: inherit; color: var(--sp-ink); }
-.spt-sitemap .spt-row-text b { line-height: 1.3; }
+.spt.spt-sitemap .spt-row-text b { line-height: 1.3; }
 .spt-sitemap .spt-row-text .spt-note { display: block; max-width: 68ch; }
 .spt-sitemap .spt-row-text .spt-route { display: block; margin-top: 2px; font: 400 13px/1.4 var(--font); font-variant-numeric: tabular-nums; color: var(--sp-dim); }
 /* Wrap only after a slash: each segment is one unit, and only a segment wider than the
@@ -51,7 +54,7 @@
 .spt-sitemap .spt-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; margin-top: 48px; }
 .spt-sitemap .spt-col .spt-rows { margin-top: 8px; }
 .spt.spt-sitemap .spt-col .spt-row { min-height: 56px; }
-.spt-sitemap .spt-col .spt-row-text b { font-size: 16px; }
+.spt.spt-sitemap .spt-col .spt-row-text b { font-size: 16px; }
 .spt-sitemap .spt-col .spt-row-text .spt-note { font-size: 14px; }
 .spt-sitemap .spt-col .spt-row-text .spt-route { font-size: 12px; }
 
@@ -65,6 +68,6 @@
   .spt.spt-sitemap .spt-group h3, .spt.spt-sitemap .spt-col h3 { padding: 0 0 4px; }
 }
 @media (max-width: 760px) {
-  .spt-sitemap .spt-group, .spt-sitemap .spt-cols { margin-top: 32px; }
-  .spt-sitemap .spt-row-text b { font-size: 17px; }
+  .spt.spt-sitemap .spt-group, .spt.spt-sitemap .spt-cols { margin-top: 32px; }
+  .spt.spt-sitemap .spt-row-text b { font-size: 17px; }
 }

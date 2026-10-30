@@ -7,6 +7,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
+import { TOOL_VOTES_ON } from '../../data/toolVotes'
 import '../../styles/pages/spectrum-chrome.css'
 
 // The marketing footer — `UIL4B - Spectrum.dc.html` lines 1595-1633.
@@ -62,6 +63,7 @@ const EXPLORE = [
   ['/community', 'Community'],
   ['/learn/principles', 'Design principles'],
   ['/plans', 'Plans'],
+  ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
   ['/sitemap', 'Sitemap'],
   ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],

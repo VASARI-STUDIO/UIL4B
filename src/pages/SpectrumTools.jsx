@@ -15,6 +15,8 @@ import { BASES, CONTRAST_START, FONTS, FONT_SAMPLE, SCALE_BASE_PX, SCALE_RATIOS,
 import { TOOL_COUNT, numberWord, route } from '../components/spectrum/spectrumFacts'
 import { createTools, NAV_SECTIONS } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
+import WhatsNext from '../components/spectrum/WhatsNext'
 import '../styles/pages/spectrum-mobile.css'
 import '../styles/pages/spectrum-tools.css'
 
@@ -206,15 +208,19 @@ export default function SpectrumTools() {
               <ul className="spt-rows">{g.tools.map((t) => <Row key={t.id} tool={t} />)}</ul>
             </div>
           ))}
-          {BETA.length > 0 && (
-            <p className="spt-more spt-beta">
-              In beta:{' '}
-              {BETA.map((t, i) => (
-                <span key={t.id}>{i > 0 ? (i === BETA.length - 1 ? ' and ' : ', ') : ''}<Link to={route(t.id)}>{t.label}</Link></span>
-              ))}.
-            </p>
+          {TOOL_VOTES_ON ? <WhatsNext /> : (
+            <>
+              {BETA.length > 0 && (
+                <p className="spt-more spt-beta">
+                  In beta:{' '}
+                  {BETA.map((t, i) => (
+                    <span key={t.id}>{i > 0 ? (i === BETA.length - 1 ? ' and ' : ', ') : ''}<Link to={route(t.id)}>{t.label}</Link></span>
+                  ))}.
+                </p>
+              )}
+              {WORKSHOP.length > 0 && <p className="spt-more">In the workshop: {joinNames(WORKSHOP)}.</p>}
+            </>
           )}
-          {WORKSHOP.length > 0 && <p className="spt-more">In the workshop: {joinNames(WORKSHOP)}.</p>}
         </section>
 
         <section className="sp-close" aria-labelledby="spt-close-h">

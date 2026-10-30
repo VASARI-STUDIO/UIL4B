@@ -153,6 +153,13 @@ export function watch(page, persona) {
       && /ERR_FAILED/.test(msg.text())
       && /assets\/(?:Sundial|SlackWater|OrraWorkroom)-/.test(url)
     if (deliberateExampleAbort) return
+    // 192-roadmap-voting.spec.js reads vote counts from Firestore, which this
+    // runner cannot reach, so the roadmap shows its counts-failed state. The SDK
+    // logs the unreachable backend once per page; keyed on the persona and the
+    // SDK's own message, so a different failure still surfaces.
+    const roadmapCountsUnreachable = persona === 'signed-out visitor looking at the roadmap'
+      && /Could not reach Cloud Firestore backend/.test(msg.text())
+    if (roadmapCountsUnreachable) return
     // 192-font-catalogue-static.spec.js aborts /data/font-catalogue.json (and
     // /api/fonts) ON PURPOSE, to see the saved copy or the banner stand in for
     // them. Chromium logs the aborted fetch; keyed on the persona AND the file,
