@@ -205,6 +205,8 @@ test.describe('Contrast Checker · the ratio on a narrow screen', () => {
     const { ctx, page } = await open(browser, { width: 390, height: 844, phone: true })
     watch(page, 'someone checking a pair on their phone')
     await expect(page.locator('.cc-ratio-num')).toBeVisible()
+    await expect(page.locator('.cc-pairbar')).toBeVisible()
+    await expect(page.locator('.cc-pv')).toBeVisible()
     const read = await page.evaluate(() => {
       const r = (sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom) } }
       const tabs = document.querySelector('.pnav-tabs')
