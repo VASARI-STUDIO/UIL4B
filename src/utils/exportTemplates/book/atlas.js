@@ -4,7 +4,7 @@
 // headings are the user's own face. There are no section openings: the plates are
 // the sections.
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale, fmtRatio } from '../shared.js'
 import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
@@ -98,7 +98,7 @@ function plate(ctx, s, slots) {
     inner: `<div class="pl-in">
     <header><p class="pl-role">${esc(sentenceCase(s.role))}</p><h2 class="pl-name">${esc(s.name)}</h2></header>
     <div class="pl-data">
-      <p class="pl-lands${s.placed ? '' : ' is-unplaced'}"><span>Where it lands</span>${esc(s.lands)}</p>
+      ${s.lands ? `<p class="pl-lands"><span>Where it lands</span>${esc(s.lands)}</p>` : ''}
       <dl class="pl-vals">
         <div><dt>Hex</dt><dd>${esc(s.hex)}</dd></div>
         <div><dt>RGB</dt><dd>${esc(s.rgb)}</dd></div>
@@ -136,16 +136,16 @@ function matrix(ctx, slots) {
     all += 1
     if (r >= 4.5) {
       pass += 1
-      return `<div class="pt pt-ok" style="background:${safeHex(g.hex, 'GrayText')};color:${safeHex(t.hex, 'CanvasText')}"><b>Aa</b><span>${r}</span></div>`
+      return `<div class="pt pt-ok" style="background:${safeHex(g.hex, 'GrayText')};color:${safeHex(t.hex, 'CanvasText')}"><b>Aa</b><span>${fmtRatio(r)}</span></div>`
     }
-    return `<div class="pt pt-no"><span>${r}</span></div>`
+    return `<div class="pt pt-no"><span>${fmtRatio(r)}</span></div>`
   }).join('')}`).join('')
   const cut = ctx.d.palette.length > n
   return [{
     leaf: 'Pairings',
     inner: `<div class="pg-body">
     <header class="pg-head"><h3>Pairings</h3>
-      <p class="lede">Each row is a ground and each column is text on it. A tile is drawn only where the pair passes AA for text, 4.5:1. Every other pair shows its ratio alone, so it is never read as usable.</p></header>
+      <p class="lede">Each row is a ground and each column is text on it. A tile is drawn where the pair passes AA for text, 4.5:1. Other pairs show the ratio only.</p></header>
     <div class="pairs" style="--n:${n};--t:${size}mm"><div></div>${head}${rows}</div>
     <p class="pr-sum">${pass} of ${all} pairs pass AA.${cut ? ` The first ${n} of ${ctx.d.palette.length} colours are shown; all ${ctx.d.palette.length} are listed in Tokens.` : ''}</p>
   </div>`,

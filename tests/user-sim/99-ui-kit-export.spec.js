@@ -4,7 +4,8 @@
 // the same create-account gate as every other file export, with nothing
 // downloaded. With a free account the same press hands over one HTML file that
 // carries the UIL4B attribution and embeds its fonts; with Pro the attribution
-// is gone. A font whose licence cannot be fetched is not embedded, and both the
+// is gone. Either way the kit is titled with the project's name and saved as
+// `{slug}-ui-kit.html`, and it shows no invented usage shares or slogans. A font whose licence cannot be fetched is not embedded, and both the
 // panel and the kit say so.
 //
 // The font requests the export makes (fetch, not the app's own stylesheet
@@ -13,6 +14,7 @@ import fs from 'node:fs'
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
+import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const PRIMARY = '#1F4B8E'
 const BOARD = `/create/palette?c=${PRIMARY.slice(1)},2E7BB8,3FA9A0`
@@ -82,6 +84,24 @@ async function placeInPanel(locator) {
   })
 }
 
+// What a person reads in the kit, with its styles, scripts and markup taken away.
+const visibleText = (html) => html
+  .replace(/<(style|script)[\s\S]*?<\/\1>/gi, ' ')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/\s+/g, ' ')
+
+function savedProject(name) {
+  const design = structuredClone(DEFAULT_DESIGN)
+  design.palette.colors = [PRIMARY, '#2E7BB8', '#3FA9A0']
+  design.fonts.heading.family = 'Manrope'
+  design.fonts.body.family = 'Manrope'
+  design.typeScale.base = 17
+  design.typeScale.ratio = 1.333
+  design.tints.scale = [PRIMARY, '#2E7BB8', '#3FA9A0']
+  const now = new Date().toISOString()
+  return { id: 'kit-project', name, design, createdAt: now, updatedAt: now }
+}
+
 const SIZES = [{ width: 390, height: 844 }, { width: 1440, height: 900 }]
 
 test.describe('the UI kit export', () => {
@@ -102,7 +122,8 @@ test.describe('the UI kit export', () => {
       try { return JSON.parse(localStorage.getItem('vs-current-design') || '{}').palette?.colors?.[0] || '' } catch { return '' }
     })).toBe(PRIMARY)
     const { filename, body } = await exportKit(page)
-    expect(filename).toBe('uil4b-ui-kit.html')
+    // No saved project here, so the export runner's own fallback name is the title.
+    expect(filename).toBe('design-system-ui-kit.html')
     expect(body.length, 'the kit is a real, self-contained document').toBeGreaterThan(60000)
     expect(body).toContain('<span class="edition">Free edition</span>')
     expect(body).toContain('<span class="section-watermark">Made with')
@@ -115,7 +136,43 @@ test.describe('the UI kit export', () => {
     // Recorded in Recent exports, like every other export.
     await expect.poll(() => page.evaluate(() => {
       try { return JSON.parse(localStorage.getItem('vs-recent-exports') || '[]').map((e) => e.filename) } catch { return [] }
-    })).toContain('uil4b-ui-kit.html')
+    })).toContain('design-system-ui-kit.html')
+  })
+
+  test('free: the kit is titled with the open project’s name and invents no usage shares or slogans', async ({ page }) => {
+    watch(page, 'a free account exporting the UI kit of a saved project called Harbour')
+    await fontFixtures(page, { licence: true })
+    // The saved project sets its type in Manrope, so the font request is answered for Manrope.
+    await page.route(/fonts\.googleapis\.com\/css2/, (route) => (route.request().resourceType() === 'fetch'
+      ? route.fulfill({ status: 200, contentType: 'text/css', body: CSS2.replace("'Inter'", "'Manrope'") })
+      : route.continue()))
+    await signIn(page, { plan: 'free', projects: [savedProject('Harbour')] })
+    await go(page, '/projects')
+    await page.locator('.uh-card-name[data-project="Harbour"]').click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
+    await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project', exact: true }).click()
+    const panel = exportPanel(page)
+    await expect(panel).toBeVisible()
+    await chooseFormat(panel, 'kit')
+    const cta = primaryButton(panel)
+    await expect(cta).toHaveText('Export UI kit')
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
+    expect.soft(download.suggestedFilename(), 'the file is named for the project, not the product').toBe('harbour-ui-kit.html')
+    const body = await readDownload(download)
+
+    // Each check below is reported on its own, so a kit that breaks several says so at once.
+    expect.soft(body).toContain('<title>Harbour | UI kit</title>')
+    const heading = body.match(/<h1 class="cover-title"[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? ''
+    expect.soft(heading.replace(/<[^>]+>/g, ''), 'the cover heading is the project name').toBe('Harbour')
+    expect.soft(body).toContain(PRIMARY)
+
+    const text = visibleText(body)
+    expect.soft(text, 'no usage-share percentage anywhere a person can read').not.toMatch(/\d\s*%/)
+    expect.soft(body, 'no share bar').not.toMatch(/class="proportion/)
+    expect.soft(text, 'no proportions section').not.toMatch(/proportion/i)
+    expect.soft(text, 'the invented tagline is gone').not.toContain('From selections to a system')
+    expect.soft(text, 'the invented website headline is gone').not.toContain('A place for your next idea')
+    expect.soft(body.match(/<title>[^<]*<\/title>/)?.[0] ?? '','the product name is not the kit’s title').not.toMatch(/UIL4B/i)
   })
 
   test('Pro: the same kit without the attribution', async ({ page }) => {

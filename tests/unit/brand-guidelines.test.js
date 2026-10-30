@@ -367,7 +367,7 @@ test('the clear-space page draws the geometry it states', () => {
   // drawing and the sentence have to agree — and the sentence has to admit it is
   // a default.
   assert.match(DOC, /X = ½ the height of the mark/, 'the rule is no longer printed')
-  assert.match(DOC, /the default rule this document applies, not a decision already taken/,
+  assert.match(DOC, /the default rule, not a decision already taken/,
     'the page no longer admits the rule is the document\'s default rather than the brand\'s')
   const box = /class="cs-box" style="width:([\d.]+)mm;height:([\d.]+)mm;padding:([\d.]+)mm"/.exec(DOC)
   assert.ok(box, 'the keep-out box is not drawn')

@@ -81,7 +81,7 @@ function swatch(s, span, contrast) {
       <div class="sw-id">
         <p class="sw-role">${esc(sentence(s.role))}</p>
         <p class="sw-name">${esc(s.name)}</p>
-        <p class="sw-lands">${esc(s.lands)}</p>
+        ${s.lands ? `<p class="sw-lands">${esc(s.lands)}</p>` : ''}
       </div>
       <dl class="sw-spec">
         <div><dt>Hex</dt><dd>${esc(s.hex)}</dd></div>
@@ -278,11 +278,11 @@ function css({ d, fontData, roles }) {
 
   /* ── matrix ─────────────────────────────────────────────────────────── */
   .mx{width:100%;border-collapse:collapse;font-size:7.5pt;table-layout:fixed}
-  .mx th,.mx td{padding:4.6mm 1mm;text-align:center;border-bottom:.4pt solid var(--hair)}
+  .mx th,.mx td{padding:4.6mm .3mm;text-align:center;border-bottom:.4pt solid var(--hair)}
   .mx thead th{border-bottom:.8pt solid var(--ink);font-weight:600;color:var(--mut)}
-  .mx-h{font-family:var(--mono);font-size:7pt;display:block;margin-top:1mm}
+  .mx-h{font-family:var(--mono);font-size:7pt;display:block;margin-top:1mm;overflow-wrap:anywhere}
   .mx-corner{font-size:7pt;color:var(--mut)}
-  .mx tbody th{text-align:left;font-family:var(--mono);font-weight:400;white-space:nowrap}
+  .mx tbody th{text-align:left;font-family:var(--mono);font-weight:400;white-space:nowrap;padding-left:1mm}
   .mx td{font-family:var(--mono);font-variant-numeric:tabular-nums}
   /* Pass/fail is carried by WEIGHT, never by colour: the colours on this page
      are the subject, so a red or green cell would read as a property of the

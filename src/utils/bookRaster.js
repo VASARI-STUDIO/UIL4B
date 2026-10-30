@@ -46,6 +46,7 @@ import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { deriveRoles, hexToOklch, mixHex, softInk } from './exportTemplates/roles.js'
 import { bookTokens } from './bookTokens.js'
+import { pairTally, plural, matrixBlocks } from './exportTemplates/shared.js'
 
 // ── Geometry ────────────────────────────────────────────────────────────────
 
@@ -73,11 +74,6 @@ const BAND_GAP = 24
 export const ROOMY_MAX_ROWS = 3
 export const ROOMY_BAND_H = 200
 export const ROOMY_BAND_STEP = ROOMY_BAND_H + BAND_GAP
-// The matrix is as wide as the palette plus white and black. A cell is 35 units
-// wide at 13 colours (15 columns), the narrowest a ratio still reads in; past that
-// the page says so rather than shrinking the cells. Rows split over pages.
-export const MATRIX_MAX = 13
-export const MATRIX_ROWS_PER_PAGE = 7
 const TOKENS_ROW_PAD = 10
 const TOKENS_LINE = 14
 // The token table: where it starts under the introduction on the first page and
@@ -274,7 +270,6 @@ const SYSTEM_NAMES = {
   monochromatic: 'monochromatic', custom: 'custom',
 }
 const systemName = (harmony) => SYSTEM_NAMES[harmony] || 'tonal'
-const article = (word) => (/^[aeiou]/i.test(String(word)) ? 'an' : 'a')
 
 function rgbOf(hex) {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')
@@ -373,12 +368,10 @@ export function planBookPages(design, {
   add('contents', 'Contents')
 
   if (c.hasPalette) {
-    const sys = systemName(d.harmony)
+    const tally = pairTally(d.palette, ['#FFFFFF', '#000000'], contrast)
     add('opening', 'Colour', {
       num: '01', title: 'Colour', field: c.field, ink: c.fieldInk,
-      abstract: d.palette.length === 1
-        ? '1 colour, with the ink that reads on it and the ratio that proves it.'
-        : `${d.palette.length} colours built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
+      abstract: `${plural(d.palette.length, 'colour')}. ${tally.pass} of ${tally.total} pairs pass AA for text.`,
     })
     const indexed = d.palette.map((hex, index) => ({ index, hex }))
     balancedChunk(indexed, BANDS_PER_PAGE).forEach((items, gi) => {
@@ -386,12 +379,12 @@ export function planBookPages(design, {
     })
     // One colour has nothing to be measured against but white and black, which the
     // palette page already shows as its ink ratios: no matrix page.
-    const colours = d.palette.length > 1 ? d.palette.slice(0, MATRIX_MAX) : []
-    const groups = colours.length ? balancedChunk(colours, MATRIX_ROWS_PER_PAGE) : []
-    groups.forEach((rows, gi) => {
+    // Every colour is a row. A wide palette is cut into column groups and row pages, as the HTML book does.
+    const blocks = d.palette.length > 1 ? matrixBlocks(d.palette, ['#FFFFFF', '#000000']) : []
+    blocks.forEach((block, gi) => {
       add('matrix', 'Colour', {
-        colours, rows, first: gi === 0, capped: d.palette.length > MATRIX_MAX, left: d.palette.length - colours.length,
-        leaf: groups.length > 1 ? `Contrast matrix (${gi + 1} of ${groups.length})` : 'Contrast matrix',
+        rows: block.rows, cols: block.cols, first: block.first,
+        leaf: gi === 0 ? 'Contrast matrix' : null,
       })
     })
   }
@@ -399,7 +392,7 @@ export function planBookPages(design, {
 
   add('opening', 'Typography', {
     num: '02', title: 'Typography', field: c.dark, ink: inkFor(c.dark).ink,
-    abstract: `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
+    abstract: `${[...new Set([d.heading, d.body])].join(' and ')}, ${d.ratio} scale from ${d.baseSize}px.`,
   })
   add('families', 'Typography', { leaf: 'The families' })
   add('scale', 'Typography', { leaf: 'The scale' })
@@ -407,7 +400,7 @@ export function planBookPages(design, {
   const tokenField = d.palette[1] || d.palette[0] || DARK_FIELD
   add('opening', 'Tokens', {
     num: '03', title: 'Tokens', field: tokenField, ink: inkFor(tokenField).ink,
-    abstract: `${c.tokens.length} custom properties: the whole system as code, ready to paste into a stylesheet.`,
+    abstract: `${plural(c.tokens.length, 'custom property', 'custom properties')}, named by role.`,
   })
   const valueW = TOKEN_COLS.valueWidth
   const rows = c.tokens.map((t) => {
@@ -594,10 +587,7 @@ function contentsOps(c, page, entries) {
   const colRule = { op: 'line', x1: ax - 22, y1: TOP + 100, x2: ax - 22, y2: TOP + 560, stroke: c.rule }
   ops.push(colRule)
   ops.push(labelText('About this book', ax, TOP + 120, c.muted, { px: 8 }, c))
-  const prose = [
-    `This is the specification for ${c.name}: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.`,
-    'Every contrast figure in it was measured, not estimated. Nothing here is illustrative: each value is the value the system actually holds.',
-  ]
+  const prose = [`The colour, type and token specification for ${c.name}.`]
   let ay = TOP + 148
   for (const para of prose) {
     const lines = wrapText(para, aw, bodyFont(c, 10, 400), c.measure, { maxLines: 8 })
@@ -780,9 +770,9 @@ const MATRIX_TINT = Object.freeze({ pass: 0.08, large: 0.035 })
 function matrixOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
-  const head = pageHead(c, 'Contrast matrix', 'Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.', { first: page.first })
+  const head = pageHead(c, 'Contrast matrix', 'Contrast ratio for each pair. Read a row as the background and a column as the text on it.', { first: page.first })
   ops.push(...head.ops)
-  const axes = [...page.colours, '#FFFFFF', '#000000']
+  const axes = page.cols
   const rowHeadW = 95
   const cw = Math.min(64, (CONTENT_W - rowHeadW) / axes.length)
   // The ratio is set at the largest size that fits its cell (35 units wide at 13 colours).
@@ -826,9 +816,9 @@ function matrixOps(c, page) {
 
   y += 30
   const key = [
-    ['Pass', 'reads as normal text, 4.5:1 or more'],
-    ['Large', 'reads as large text only, 3:1 or more'],
-    ['Fail', 'is a fill, not a text pair'],
+    ['Pass', '4.5:1 or more, normal text'],
+    ['Large', '3:1 or more, large text'],
+    ['Fail', 'under 3:1, fills only'],
   ]
   key.forEach(([word, rest], i) => {
     const w = c.measure(word, face(700, 10, d.body))
@@ -836,11 +826,6 @@ function matrixOps(c, page) {
     ops.push(text(rest, MARGIN + w + 6, y + i * 18, face(400, 10, d.body), c.muted))
   })
   y += key.length * 18 + 14
-  if (page.capped) {
-    const note = `The matrix is limited to the first ${MATRIX_MAX} colours: with white and black that is ${MATRIX_MAX + 2} columns, the most a page can set at a size a ratio still reads in. The other ${page.left} ${page.left === 1 ? 'colour is' : 'colours are'} not shown in it.`
-    const lines = wrapText(note, 470, face(400, 10, d.body), c.measure, { maxLines: 4 })
-    lines.forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
-  }
   return ops
 }
 
@@ -852,7 +837,7 @@ function gradientOps(c, page) {
   const g = d.gradient
   const css = `linear-gradient(${g.angle}deg, ${g.stops.map((s) => `${s.color} ${s.position}%`).join(', ')})`
   const ops = frame(c, page)
-  const head = pageHead(c, 'The gradient', `A ${g.type.toLowerCase()} blend at ${g.angle}°, specified by stop so it can be rebuilt exactly rather than eyeballed.`)
+  const head = pageHead(c, 'The gradient', `${g.type} gradient at ${g.angle}°, ${plural(g.stops.length, 'stop')}.`)
   ops.push(...head.ops)
   let y = head.y + 4
   ops.push({ op: 'gradient', x: MARGIN, y, w: CONTENT_W, h: 220, angle: g.angle, stops: g.stops, radius: 3 })
@@ -900,7 +885,7 @@ const ALPHABET = [
 function familiesOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
-  const head = pageHead(c, 'The families', 'Two faces carry the system. Every fallback is stated in the colophon, so the document degrades predictably rather than arbitrarily.')
+  const head = pageHead(c, 'The families', `Headings in ${d.heading} ${d.headingWeight}. Body in ${d.body} ${d.bodyWeight}.`)
   ops.push(...head.ops)
   let y = head.y + 6
   const specimens = [
@@ -952,7 +937,7 @@ export function scaleFactor(c, specW) {
 function scaleOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
-  const head = pageHead(c, 'The scale', `A ${d.ratio} ratio from a ${d.baseSize}px base. Each row is set in the face and size it specifies.`)
+  const head = pageHead(c, 'The scale', `${d.ratio} ratio from a ${d.baseSize}px base.`)
   ops.push(...head.ops)
   let y = head.y + 4
   const cols = { step: MARGIN, size: MARGIN + 92, rem: MARGIN + 148, lead: MARGIN + 208, specimen: MARGIN + 270 }
@@ -980,11 +965,12 @@ function scaleOps(c, page) {
     ops.push(hair(MARGIN, y, RIGHT, c.rule))
   }
   y += 30
-  const reduced = k < 1 ? 'Specimens are shown reduced so the rows fit the page; the size column is always the true value. ' : ''
-  const note = `${reduced}Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.`
-  wrapText(note, 500, face(400, 10, d.body), c.measure, { maxLines: 4 })
-    .forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
-  y += 4 * 15 + 18
+  if (k < 1) {
+    const note = 'Specimens are reduced so the scale fits the page. The size column is the true value.'
+    const noteLines = wrapText(note, 500, face(400, 10, d.body), c.measure, { maxLines: 2 })
+    noteLines.forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
+    y += noteLines.length * 15 + 18
+  }
 
   // The body face as running text at the base size and leading.
   const sample = 'A system is a set of decisions written down, so that the next person to open the file makes the same ones. The colours carry the character, the type carries the voice, and the tokens carry both into code.'
@@ -1003,7 +989,7 @@ function tokensOps(c, page) {
   const ops = frame(c, page)
   const head = pageHead(
     c, 'Custom properties',
-    `All ${page.total} tokens, named for the role each colour plays rather than the colour it happens to be, so a palette change does not orphan the name.`,
+    `${plural(page.total, 'custom property', 'custom properties')}, named by role.`,
     { first: page.first },
   )
   ops.push(...head.ops)
@@ -1041,19 +1027,18 @@ function colophonOps(c, page) {
   const { d } = c
   const ops = frame(c, page)
   // The colophon has no lede, so its title stands alone.
-  ops.push(text('How this book was made', MARGIN, TOP + 30, heading(c, 30), c.ink, headSpacing(c, 30)))
+  ops.push(text('Colophon', MARGIN, TOP + 30, heading(c, 30), c.ink, headSpacing(c, 30)))
   const colW = 290
   const missing = c.missingFonts
   const typefaces = missing.length
-    ? `Headings are set in ${d.heading} at ${d.headingWeight}, body in ${d.body} at ${d.bodyWeight}. ${missing.join(' and ')} could not be loaded when this book was drawn, so ${missing.length > 1 ? 'those pages use' : 'its text uses'} the platform sans instead.`
-    : `Headings set in ${d.heading} at ${d.headingWeight}, body in ${d.body} at ${d.bodyWeight}. Both fall back to system-ui, then the platform sans, so a face that cannot load is replaced rather than left blank.`
+    ? `Headings in ${d.heading} ${d.headingWeight}. Body in ${d.body} ${d.bodyWeight}. ${missing.join(' and ')} could not be loaded when this book was drawn, so ${missing.length > 1 ? 'those pages use' : 'its text uses'} the platform sans instead.`
+    : `Headings in ${d.heading} ${d.headingWeight}. Body in ${d.body} ${d.bodyWeight}.`
   const left = [
-    ['Method', 'Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible: the same two hex values always give the same ratio.'],
+    ['Method', 'Contrast: WCAG 2.2 relative luminance (1.4.3, 1.4.11). AA text 4.5:1, large text and UI parts 3:1, AAA 7:1.'],
     ['Typefaces', typefaces],
   ]
   const right = [
-    ['What this book covers', 'Colour, typography and tokens: the decisions this system actually holds.'],
-    ['What it does not', 'A full identity manual would also carry logo construction, imagery direction, tone of voice and applied examples. Those are not in this book because they are not in the system: this document specifies only what was really designed, and states the boundary rather than filling it with placeholders.'],
+    ['Scope', 'This book covers colour, type and tokens. Logo construction, imagery and tone of voice are not part of this system.'],
   ]
   // The columns are measured first: their last line sits COLOPHON_GAP above the sign-off rule.
   const place = (blocks) => {
@@ -1085,7 +1070,6 @@ function colophonOps(c, page) {
   ops.push(hair(MARGIN, fy, RIGHT, c.ink))
   nameLines.forEach((line, i) => ops.push(text(line, MARGIN, fy + 28 + i * nameLh, heading(c, nameSize), c.ink, headSpacing(c, nameSize))))
   ops.push(text(`Issued ${c.iso}`, MARGIN + 330, fy + 28, face(400, 10, d.body), c.muted))
-  ops.push(text('Set from the system it describes', RIGHT, fy + 28, face(400, 10, d.body), c.muted, { align: 'right' }))
   return ops
 }
 

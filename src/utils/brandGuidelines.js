@@ -106,7 +106,7 @@ import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExp
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
-import { esc, orderSections, paletteLayout, specimenScale, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, paletteLayout, specimenScale, fmtRatio, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 import { guidelineNotes } from './exportTemplates/guidelines/notes.js'
@@ -232,7 +232,7 @@ export function guidelineSections(d) {
     sections.push({
       id: 'logo',
       title: 'Logo',
-      abstract: `The mark as supplied, checked on every ground the system provides${clear ? ', and the space it is entitled to keep' : ''}.`,
+      abstract: `The mark as supplied, shown on every ground in the system${clear ? ', with its clear space' : ''}.`,
       leaves: clear ? ['The mark', 'On grounds', 'Clear space'] : ['The mark', 'On grounds'],
     })
   }
@@ -244,14 +244,14 @@ export function guidelineSections(d) {
     sections.push({
       id: 'colour',
       title: 'Colour',
-      abstract: `${said} on ${systemName(d.harmony)} relationships, each named, specified, and shown carrying real type.`,
+      abstract: `${said} on ${systemName(d.harmony)} relationships, each with a name, its values and the ink that reads on it.`,
       leaves: ['The palette', 'In use'],
     })
   }
   sections.push({
     id: 'type',
     title: 'Typography',
-    abstract: `${d.heading} for headings and ${d.body} for reading, set out character by character and step by step.`,
+    abstract: `${[...new Set([d.heading, d.body])].join(' and ')}: the character set and the type scale.`,
     leaves: d.heading === d.body ? ['The typeface', 'The scale'] : ['Headline face', 'Body face', 'The scale'],
   })
   return sections.map((s, i) => ({ ...s, num: String(i + 1).padStart(2, '0') }))
@@ -461,7 +461,7 @@ function inUsePage(ctx, group, first, folio) {
     const { ink, ratio, soft } = inkPair(hex)
     return `<div class="use${fillRow(i, group.length)}" style="background:${hex};color:${ink};--soft:${soft}">
       <p class="use-set">${esc(phrase)}</p>
-      <p class="use-meta">${esc(hex)} · ${ratio}:1 · ${esc(grade(ratio))}</p>
+      <p class="use-meta">${esc(hex)} · ${fmtRatio(ratio)}:1 · ${esc(grade(ratio))}</p>
     </div>`
   }).join('')
   return spread(ctx, {
@@ -577,13 +577,13 @@ function scopeFacts(ctx) {
   const covers = ctx.sections.map(s => `${s.title}: ${s.leaves.join(', ').toLowerCase()}${s.id === 'colour' ? cut : ''}`)
   const absent = []
   if (!d.logo) {
-    absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel and these pages are generated from it.`)
+    absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel to include it.`)
   } else if (!d.logo.aspect) {
-    absent.push('The clear-space rule. Your logo file states no dimensions, so the keep-out box could only have been drawn to a guessed proportion.')
+    absent.push('The clear-space rule. The logo file states no dimensions.')
   }
-  absent.push('Reversed and single-colour versions of the mark. Recolouring supplied artwork invents a lockup nobody approved, so this document checks the mark on each ground instead of redrawing it.')
-  absent.push('Photographic applications: signage, packaging, merchandise, a card in a hand. There is no imagery in this system to build them from, and inventing some would misrepresent a brand rather than document it.')
-  absent.push('Tone of voice, motion and iconography rules. Those are brand decisions taken outside these tools, so this document does not speak for them.')
+  absent.push('Reversed and single-colour versions of the mark. The mark is shown unaltered on each ground.')
+  absent.push('Photographic applications: signage, packaging, merchandise.')
+  absent.push('Tone of voice, motion and iconography rules.')
   return { covers, absent }
 }
 
@@ -616,7 +616,7 @@ const nearPaper = (hex, paper) => contrast(hex, paper) < 1.5
 function buildSlots(d) {
   return d.palette.slice(0, MAX_SLOTS).map((hex, i) => {
     const { ink, ratio } = inkFor(hex)
-    return { i, hex, name: colorName(hex), role: sentence(roleLabel(d.harmony, i)), kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent', ink, ratio, grade: grade(ratio), lands: slotLandsBook(i), placed: slotPlaced(i) }
+    return { i, hex, name: colorName(hex), role: sentence(roleLabel(d.harmony, i)), kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent', ink, ratio: fmtRatio(ratio), grade: grade(ratio), lands: slotLandsBook(i), placed: slotPlaced(i) }
   })
 }
 
@@ -656,7 +656,7 @@ export function buildBrandGuidelines(design, { projectName = 'Design System', da
     markImg: (opts) => markImg(d.logo, opts),
     clearSpaceAt: (mm) => clearSpace(d.logo, mm),
   })
-  ctx.notes = guidelineNotes(d, ctx.slots)
+  ctx.notes = guidelineNotes(d, ctx.slots, {}, ctx.ladder.length)
   ctx.scope = scopeFacts(ctx)
   const pages = [tpl.cover({ ...ctx })]
   const push = (html) => pages.push(html)

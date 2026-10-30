@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  PAGE, PIXELS, SCALE, MATRIX_MAX, planBookPages, buildBookPages, balancedChunk, paginate,
+  PAGE, PIXELS, SCALE, planBookPages, buildBookPages, balancedChunk, paginate,
   wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, ensureBookFonts, uniqueColourNames,
 } from '../../src/utils/bookRaster.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
@@ -150,9 +150,8 @@ test('heading tracking is measured: a spaced long name stays inside the margins 
   assert.ok(coverLines.length >= plain.length, 'tracking made the cover title shorter')
 })
 
-test('many colours paginate: five a page at most, no stub; the matrix takes up to 13 colours, 7 rows a page', () => {
-  assert.equal(MATRIX_MAX, 13)
-  for (const n of [2, 5, 6, 8, 11, 13, 14, 40]) {
+test('many colours paginate: five a page at most, no stub; the matrix has a row for every colour, 7 rows a page', () => {
+  for (const n of [2, 5, 6, 8, 11, 13, 14, 16, 20]) {
     const design = { ...DESIGN, palette: { base: '#2563EB', colors: manyColours(n) } }
     const book = build(design)
     inside(book)
@@ -164,23 +163,17 @@ test('many colours paginate: five a page at most, no stub; the matrix takes up t
       assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1, `${n} colours: uneven pages ${sizes}`)
     }
     const matrices = book.pages.filter((p) => p.kind === 'matrix')
-    const shown = Math.min(n, MATRIX_MAX)
-    assert.equal(matrices[0].colours.length, shown)
-    assert.equal(matrices[0].capped, n > MATRIX_MAX)
-    assert.equal(matrices.length, Math.ceil(shown / 7), `${n} colours: ${matrices.length} matrix pages`)
-    assert.deepEqual(matrices.flatMap((p) => p.rows), matrices[0].colours, `${n} colours: a row is missing or repeated`)
+    // Every colour is a row. A palette wider than a page is cut into column groups, each with every row.
+    const firstGroup = matrices.filter((p) => p.cols.join() === matrices[0].cols.join())
+    assert.deepEqual(firstGroup.flatMap((p) => p.rows), design.palette.colors, `${n} colours: a row is missing or repeated`)
+    assert.deepEqual(new Set(matrices.flatMap((p) => p.cols)), new Set([...design.palette.colors, '#FFFFFF', '#000000']), `${n} colours: a column is missing`)
+    assert.equal(matrices.length, Math.ceil(n / 7) * Math.ceil((n + 2) / 15), `${n} colours: ${matrices.length} matrix pages`)
     for (const p of matrices) assert.ok(p.rows.length <= 7, `${n} colours: ${p.rows.length} rows on a matrix page`)
-    const rowCounts = matrices.map((p) => p.rows.length)
-    assert.ok(Math.max(...rowCounts) - Math.min(...rowCounts) <= 1, `${n} colours: uneven matrix pages ${rowCounts}`)
-    // Every extra matrix page is its own contents entry.
-    assert.equal(book.contents.filter((e) => /^Contrast matrix/.test(e.title)).length, matrices.length)
-    for (const p of matrices) assert.ok(book.contents.some((e) => e.folio === p.folio), `${n} colours: matrix page ${p.folio} is not in the contents`)
-    // The cap is explained on the page, and no longer says the rest are measured elsewhere.
-    const said = texts(matrices[0]).join(' ')
-    if (n > MATRIX_MAX) {
-      assert.match(said, new RegExp(`first ${MATRIX_MAX} colours`))
-      assert.ok(!/palette pages/.test(said), 'the matrix still claims the rest are measured on the palette pages')
-    } else assert.ok(!/limited to the first/.test(said))
+    // The contents list the matrix once, at its first page, like the palette and the tokens.
+    assert.equal(book.contents.filter((e) => /^Contrast matrix/.test(e.title)).length, 1)
+    assert.ok(book.contents.some((e) => e.folio === matrices[0].folio), `${n} colours: the first matrix page is not in the contents`)
+    // Nothing is left out, so no page says a colour is not shown.
+    for (const p of matrices) assert.ok(!/not shown|shows the first/.test(texts(p).join(' ')), `${n} colours: a matrix page still says colours are left out`)
   }
 })
 
@@ -537,12 +530,12 @@ test('scale rows share one factor: no 44px cap, the largest sits at 76, the note
   const k = 76 / maxPx
   for (const r of steep.rows) assert.ok(Math.abs(r.drawn - r.step.px * k) < 0.02, `${r.step.name}: drawn at ${r.drawn}, expected ${r.step.px * k}`)
   assert.ok(Math.max(...steep.rows.map((r) => r.drawn)) > 44, 'the old 44px cap is still in force')
-  assert.ok(/shown reduced/.test(steep.text), 'the reduced note is missing on a reduced scale')
+  assert.ok(/Specimens are reduced/.test(steep.text), 'the reduced note is missing on a reduced scale')
 
   const gentle = specimens(withRatio(1.067, 14))
   assert.ok(Math.max(...gentle.rows.map((r) => r.step.px)) <= 76)
   for (const r of gentle.rows) assert.equal(r.drawn, r.step.px, `${r.step.name} was reduced without need`)
-  assert.ok(!/shown reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
+  assert.ok(!/Specimens are reduced/.test(gentle.text), 'the reduced note shows although nothing is reduced')
 })
 
 // ── The colophon names the project in full ──────────────────────────────────
@@ -639,10 +632,10 @@ test('the credit line is one constant, with a middle dot and no em dash anywhere
   assert.equal((src.match(/Made with UIL4B/g) || []).length, 1, 'the credit text is copied rather than shared')
 })
 
-test('a one-colour kit says "1 colour, with the ink...", not a count built on a system', () => {
+test('the Colour opening is a count and a tally of pairs, with "1 colour" singular', () => {
   const one = plan({ ...DESIGN, palette: { base: '#2563EB', colors: ['#2563EB'] } }).find((p) => p.kind === 'opening')
-  assert.equal(one.abstract, '1 colour, with the ink that reads on it and the ratio that proves it.')
-  assert.match(plan().find((p) => p.kind === 'opening').abstract, /^6 colours built on an? [a-z-]+ system, each with the ink/)
+  assert.match(one.abstract, /^1 colour\. \d+ of \d+ pairs pass AA for text\.$/)
+  assert.match(plan().find((p) => p.kind === 'opening').abstract, /^6 colours\. \d+ of \d+ pairs pass AA for text\.$/)
 })
 
 test('balanceLines never leaves one word alone on the last line, and leaves balanced text alone', () => {
@@ -670,7 +663,7 @@ test('formatRatio always gives two decimals and ":1", and the band and matrix bo
   const book = build()
   const matrix = book.pages.find((p) => p.kind === 'matrix')
   const figures = texts(matrix).filter((t) => /:1$/.test(t))
-  assert.equal(figures.length, matrix.colours.length * (matrix.colours.length + 1), "a matrix cell has no ratio figure")
+  assert.equal(figures.length, matrix.rows.length * (matrix.cols.length - 1), "a matrix cell has no ratio figure")
 
   assert.ok(figures.every((t) => /^\d+\.\d\d:1$/.test(t)), `a matrix figure is not formatted: ${figures.filter((t) => !/^\d+\.\d\d:1$/.test(t))}`)
   for (const band of book.pages.filter((p) => p.kind === 'palette')) {

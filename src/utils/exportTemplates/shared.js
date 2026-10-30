@@ -249,3 +249,63 @@ export function specimenScale(ladder, { roomMm, widthMm, padMm, textMm, lineHeig
   k = Math.max(floorK, Math.floor(k * 100) / 100)
   return { k, label: k < 1 ? `Specimen, at ${Math.round(k * 100)}%` : 'Specimen' }
 }
+
+/** A count with its noun: "1 colour", "5 colours". */
+export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+/** A contrast ratio as the books print it: always two decimals ("9.90", never "9.9"). */
+export const fmtRatio = (ratio) => Number(ratio).toFixed(2)
+
+// The contrast matrix pages hold at most this many rows, and this many columns
+// (the palette plus paper and ink); a cell is 9.9 mm wide at 15 columns on a 172 mm measure.
+export const MATRIX_ROWS = 7
+export const MATRIX_COLS = 15
+
+/** `list` cut into the fewest pages of at most `max`, spread evenly: 13 at 7 a page is 7 and 6, and 8 is 4 and 4. */
+function evenPages(list, max) {
+  if (list.length <= max) return [list]
+  const size = Math.ceil(list.length / Math.ceil(list.length / max))
+  const out = []
+  for (let at = 0; at < list.length; at += size) out.push(list.slice(at, at + size))
+  return out
+}
+
+/**
+ * The contrast matrix cut into pages with no colour left out. Every palette colour is a
+ * row, and the columns are the palette followed by `extras` (paper and ink). A matrix wider
+ * than MATRIX_COLS is split into column groups, and each group is cut into row pages.
+ *
+ * @param {string[]} colours
+ * @param {string[]} extras
+ * @returns {{ rows: string[], cols: string[], first: boolean }[]}
+ */
+export function matrixBlocks(colours, extras) {
+  const rowPages = evenPages(colours, MATRIX_ROWS)
+  const blocks = []
+  for (const cols of evenPages([...colours, ...extras], MATRIX_COLS)) {
+    for (const rows of rowPages) blocks.push({ rows, cols, first: blocks.length === 0 })
+  }
+  return blocks
+}
+
+/**
+ * How many of the matrix's pairs pass AA for text (4.5:1). A pair is counted once, whichever
+ * colour is the text; two copies of one colour and paper against ink are not pairs.
+ *
+ * @param {string[]} colours
+ * @param {string[]} extras
+ * @param {(a: string, b: string) => number} contrast
+ */
+export function pairTally(colours, extras, contrast) {
+  const axes = [...colours, ...extras]
+  let pass = 0
+  let total = 0
+  for (let a = 0; a < axes.length; a += 1) {
+    for (let b = a + 1; b < axes.length; b += 1) {
+      if (a >= colours.length || axes[a] === axes[b]) continue
+      total += 1
+      if (contrast(axes[a], axes[b]) >= 4.5) pass += 1
+    }
+  }
+  return { pass, total }
+}

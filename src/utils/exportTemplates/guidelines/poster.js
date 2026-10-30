@@ -109,7 +109,7 @@ function markSlide(ctx, n) {
 function groundSlide(ctx, g, n) {
   return slide(n, 'On grounds', {
     bg: g.bg, fg: g.ink, cls: 'sl-ground',
-    body: `<div class="pn-stage">${ctx.markImg({ cls: 'pn-mark pn-mark-s' })}</div><p class="pn-cap">${esc(g.label)}. No reversed or single-colour version has been drawn.</p>`,
+    body: `<div class="pn-stage">${ctx.markImg({ cls: 'pn-mark pn-mark-s' })}</div><p class="pn-cap">${esc(g.label)}. No reversed or single-colour version is included.</p>`,
   })
 }
 
@@ -127,7 +127,7 @@ function clearSpaceSlide(ctx, n) {
       <span class="pn-x pn-x-a">X</span>
       <span class="pn-x pn-x-b">X</span>
       <span class="pn-markbox">${ctx.markImg({ cls: 'pn-mark-cs', height: `${cs.markHeight.toFixed(1)}mm` })}</span>
-    </div></div><p class="pn-cap">X is half the height of the mark. This is the default rule this document applies, not a decision already taken.</p>`,
+    </div></div><p class="pn-cap">X is half the height of the mark. This is the default rule, not a decision already taken.</p>`,
   })
 }
 
