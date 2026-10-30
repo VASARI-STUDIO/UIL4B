@@ -510,3 +510,72 @@ test('Conic ends are scored on the first stop and the stop before the seam', () 
   for (const k of ['valueStep', 'chromaBalance', 'hueRelation', 'anchor', 'notSeen']) assert.equal(c[k], l[k], k)
   assert.ok(c.valueStep > 0, 'a dark-to-light pair has a value step; A-to-A would have none')
 })
+
+// ── The type deck (spec gradient-overhaul §8) ───────────────────────────────
+import { drawFromDeck, TYPE_DECK, HUE_RULES, TONE_RULES, USE_RULES, hueInArc } from '../../src/utils/gradientRandom.js'
+import { GRADIENT_TAGS } from '../../src/data/gradientGallery.js'
+import { inkContrasts } from '../../src/utils/gradientScore.js'
+
+test('the deck is 16 Linear, 3 Radial and 1 Conic', () => {
+  const count = (t) => TYPE_DECK.filter((x) => x === t).length
+  assert.deepEqual([TYPE_DECK.length, count('Linear'), count('Radial'), count('Conic')], [20, 16, 3, 1])
+})
+
+test('the deck shows every type within 20 draws, and 40 draws keep the 80/15/5 counts exactly', () => {
+  for (let seed = 1; seed <= 50; seed++) {
+    const rand = mulberry32(seed)
+    const deck = []
+    const drawn = Array.from({ length: 40 }, () => drawFromDeck(deck, rand))
+    for (const half of [drawn.slice(0, 20), drawn.slice(20)]) {
+      for (const t of ['Linear', 'Radial', 'Conic']) assert.ok(half.includes(t), `seed ${seed} had no ${t} in 20`)
+    }
+    const count = (t) => drawn.filter((x) => x === t).length
+    assert.deepEqual([count('Linear'), count('Radial'), count('Conic')], [32, 6, 2], `seed ${seed}`)
+  }
+})
+
+test('a type the filter excludes stays in the deck for later', () => {
+  const rand = mulberry32(3)
+  const deck = []
+  const first = drawFromDeck(deck, rand, ['Conic'])
+  assert.equal(first, 'Conic')
+  assert.equal(deck.filter((t) => t === 'Conic').length, 0)
+  assert.equal(deck.length, 19)
+})
+
+test('Random with a deck reaches every type within 20 presses, kept rather than turned into Linear', () => {
+  for (let seed = 1; seed <= 50; seed++) {
+    const rand = mulberry32(seed)
+    const deck = []
+    const seen = new Set(Array.from({ length: 20 }, () => rollGradient(rand, { deck }).type))
+    assert.deepEqual([...seen].sort(), ['Conic', 'Linear', 'Radial'], `seed ${seed}`)
+  }
+})
+
+test('a type filter or lock ignores the deck', () => {
+  const deck = []
+  const g = rollGradient(mulberry32(1), { deck, types: ['Radial'] })
+  assert.equal(g.type, 'Radial')
+  assert.equal(deck.length, 0)
+})
+
+// ── The mood tables ─────────────────────────────────────────────────────────
+test('the mood words are the gradient library tags', () => {
+  for (const w of [...Object.keys(HUE_RULES), ...Object.keys(TONE_RULES)]) assert.ok(GRADIENT_TAGS.includes(w), w)
+  assert.deepEqual(Object.keys(USE_RULES), ['background', 'hero', 'button', 'card'])
+})
+
+test('warm runs 345 up through 0 to 95 and cool is 175 to 300', () => {
+  const { warm, cool } = HUE_RULES
+  for (const h of [345, 350, 0, 40, 95]) assert.ok(hueInArc(warm.arc, h), `warm ${h}`)
+  for (const h of [96, 200, 344]) assert.ok(!hueInArc(warm.arc, h), `not warm ${h}`)
+  for (const h of [175, 250, 300]) assert.ok(hueInArc(cool.arc, h), `cool ${h}`)
+  for (const h of [174, 301, 20]) assert.ok(!hueInArc(cool.arc, h), `not cool ${h}`)
+})
+
+test('white and near-black ink contrast is the worst case over the whole ramp', () => {
+  const dark = { type: 'Linear', space: 'srgb', stops: [{ color: '#102040', position: 0 }, { color: '#304080', position: 100 }] }
+  const light = { type: 'Linear', space: 'srgb', stops: [{ color: '#F0E0A0', position: 0 }, { color: '#FFF4C0', position: 100 }] }
+  assert.ok(inkContrasts(dark).white >= 4.5 && inkContrasts(dark).dark < 4.5)
+  assert.ok(inkContrasts(light).dark >= 4.5 && inkContrasts(light).white < 4.5)
+})

@@ -9,7 +9,7 @@
 // position, type, angle or interpolation reaches it already applied and comes
 // out unchanged. Pure functions of colours in, numbers out.
 
-import { hexToOklchRaw, mixOklch } from '../components/tool/oklch.js'
+import { hexToOklchRaw, mixOklch, oklchToHex } from '../components/tool/oklch.js'
 import { hexToRgb, luminance, mixHex } from './colors.js'
 import { deltaE2000, hexToLabD50 } from './nearestMatch.js'
 
@@ -229,6 +229,23 @@ export function chooseAmongTop(scored, rand = Math.random) {
     .slice(0, TOP_PICKS)
   return top[Math.min(top.length - 1, Math.floor(Math.min(Math.max(rand(), 0), 0.999999) * top.length))].c.g
 }
+
+/** A button's text must reach this contrast against every point of its gradient. */
+export const BUTTON_INK_MIN = 4.5
+
+/**
+ * The contrast of white ink and of near-black ink (oklch 0.2) against the whole ramp,
+ * each as its worst case over the RAMP_SAMPLES points. A button passes when the
+ * better of the two reaches BUTTON_INK_MIN. `g` is { type, space, stops }.
+ */
+export function inkContrasts(g) {
+  const space = g.space === 'srgb' ? 'srgb' : 'oklch'
+  const ramp = rampOf(g.stops)
+  const lums = Array.from({ length: RAMP_SAMPLES }, (_, i) => lumOf(colourAt(ramp, (i * 100) / (RAMP_SAMPLES - 1), space)))
+  const worst = (ink) => Math.min(...lums.map((l) => ratio(l, ink)))
+  return { white: worst(lumOf('#FFFFFF')), dark: worst(INK_BUTTON_DARK_LUM) }
+}
+const INK_BUTTON_DARK_LUM = lumOf(oklchToHex(0.2, 0, 0))
 
 /** A gradient's two ends as hexes, for the session's memory. */
 export const endsOf = (g) => endsOfRamp(rampOf(g.stops), g.type)

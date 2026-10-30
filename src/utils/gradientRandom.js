@@ -10,6 +10,12 @@
 //   tone    Clear 70% · Muted 15% · Deep 15%
 //   space   Perceived (OKLCH) 70% · Standard (sRGB) 30%, Standard only where it stays clean
 //
+// The filters narrow that (spec gradient-overhaul §8). `hue` and `tone` use the
+// gradient library's own mood words (warm, cool, mono · light, pastel, vivid, dark);
+// `use` shapes the gradient for where it goes; `base` builds round one colour; `deck`
+// makes every type turn up within twenty presses. A roll without those filters draws
+// exactly what it always did, to the same seeded sequence.
+//
 // Random is best of eight (spec gradient-generation-v2 §3): `rollGradient` rolls
 // eight candidates with the narrowed ranges below, scores each (utils/gradientScore)
 // and ships one of the best three at random. A locked part is applied to every
@@ -73,6 +79,93 @@ export const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 // Plain, whatever the filter holds.
 export const STYLE_FAMILIES = []
 export const PLAIN = 'Plain'
+
+// ── Mood filters: Hue, Tone, Use and the type deck ──────────────────────────
+
+export const HUE_WORDS = ['warm', 'cool', 'mono']
+export const TONE_WORDS = ['light', 'pastel', 'vivid', 'dark']
+export const USE_WORDS = ['background', 'hero', 'button', 'card']
+
+/**
+ * Hue moods. `arc` is a span of OKLCH hue in degrees, counted upward from its first
+ * number (warm runs from 345 up through 0 to 95). Warm and cool never take a
+ * complementary harmony, which would reach across the wheel; mono is a harmony, so
+ * its hue is free.
+ */
+export const HUE_RULES = Object.freeze({
+  warm: Object.freeze({ arc: [345, 455], noComplementary: true }),
+  cool: Object.freeze({ arc: [175, 300], noComplementary: true }),
+  mono: Object.freeze({ arc: null, harmony: 'Monochrome' }),
+})
+/** Whether OKLCH hue `H` is inside `arc` (a null arc is any hue). */
+export function hueInArc(arc, H) {
+  if (!arc) return true
+  let h = ((H % 360) + 360) % 360
+  if (h < arc[0]) h += 360
+  return h <= arc[1]
+}
+
+/**
+ * Tone moods. Light, pastel and vivid fix the lightness and chroma of both ends and
+ * take no dark anchor; dark makes one end a dark anchor and keeps the other at
+ * L 0.5 or less, on the Deep ranges. `kind` is the tone family a roll reports.
+ * Vivid stays under the 0.17 neon cap.
+ */
+export const TONE_RULES = Object.freeze({
+  light: Object.freeze({ L: [0.82, 0.93], C: [0.04, 0.12], kind: 'Muted' }),
+  pastel: Object.freeze({ L: [0.84, 0.92], C: [0.04, 0.09], kind: 'Muted' }),
+  vivid: Object.freeze({ L: [0.55, 0.75], C: [0.13, 0.17], kind: 'Clear' }),
+  dark: Object.freeze({ L: null, C: null, anchor: 'dark', kind: 'Deep' }),
+})
+
+/**
+ * Use rules: the shape a gradient takes for where it is going. `types` and `counts`
+ * (null counts mean two or three) narrow the draw, `angles` are the linear angles,
+ * `dL` is the lightness step between the ends, `maxC` caps chroma and `C` fixes it.
+ * A type, a stop count or an angle the person has locked or filtered wins over these.
+ */
+export const USE_RULES = Object.freeze({
+  background: Object.freeze({ types: ['Linear', 'Radial'], counts: [2], angles: [160, 180, 200], dL: [0.03, 0.18], maxC: 0.1 }),
+  hero: Object.freeze({ types: ['Linear', 'Radial'], counts: null, angles: null, dL: [0.25, 0.42], anchor: true }),
+  button: Object.freeze({ types: ['Linear'], counts: [2], angles: [90, 135], dL: [0.06, 0.14], C: [0.1, 0.17], ink: true }),
+  card: Object.freeze({ types: ['Linear'], counts: [2], angles: [135, 160], dL: [0.05, 0.2], soft: true }),
+})
+
+/**
+ * The type deck. With Type on Any, each press draws one card, and the deck is
+ * shuffled again when it runs out. Sixteen Linear, three Radial and one Conic keep the
+ * 80/15/5 weights over the long run and show every type within twenty presses.
+ */
+export const TYPE_DECK = Object.freeze([
+  ...Array(16).fill('Linear'), ...Array(3).fill('Radial'), 'Conic',
+])
+
+// Shuffle a fresh deck with the roll's `rand` and put it under what is left.
+function addToDeck(deck, rand) {
+  const fresh = [...TYPE_DECK]
+  for (let i = fresh.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [fresh[i], fresh[j]] = [fresh[j], fresh[i]]
+  }
+  deck.unshift(...fresh)
+}
+
+/**
+ * Draw the next type from `deck`, an array the caller keeps for the session and this
+ * changes in place. `allowed` is the types a Use rule or filter permits (null is any).
+ * A card that is not allowed stays in the deck; if none left is allowed, a fresh deck
+ * goes under it.
+ */
+export function drawFromDeck(deck, rand, allowed = null) {
+  const ok = (t) => !allowed || allowed.includes(t)
+  if (!deck.length) addToDeck(deck, rand)
+  let at = deck.findLastIndex(ok)
+  if (at < 0) {
+    addToDeck(deck, rand)
+    at = deck.findLastIndex(ok)
+  }
+  return at < 0 ? undefined : deck.splice(at, 1)[0]
+}
 
 /**
  * Pick from `[value, weight]` pairs using a roll in [0, 1).
@@ -375,7 +468,13 @@ function drawColours({ type, n, harmony, tone, types, radialGate }, rand) {
 export function rollShape(filters, rand) {
   const locks = filters.locks || {}
   const types = locks.type ? [locks.type] : (filters.types || [])
-  return { type: drawType(types, rand), n: drawCount(filters.counts || [], rand) }
+  // With Type on Any and a deck, the type is the next card. A Radial or Conic card is
+  // kept like a locked one (`kept`): the colours are re-rolled, never turned into Linear.
+  if (!types.length && Array.isArray(filters.deck)) {
+    const type = drawFromDeck(filters.deck, rand)
+    return { type, n: drawCount(filters.counts || [], rand), kept: type !== 'Linear' }
+  }
+  return { type: drawType(types, rand), n: drawCount(filters.counts || [], rand), kept: false }
 }
 
 /**
@@ -395,8 +494,9 @@ export function rollShape(filters, rand) {
  */
 export function rollCandidate(rand = Math.random, filters = {}, shape = null) {
   const locks = filters.locks || {}
-  const types = locks.type ? [locks.type] : (filters.types || [])
-  const { type: drawnType, n: drawnCount } = shape || rollShape(filters, rand)
+  const { type: drawnType, n: drawnCount, kept } = shape || rollShape(filters, rand)
+  // A kept card (Radial or Conic from the deck) counts as a type filter of its own.
+  const types = kept ? [drawnType] : locks.type ? [locks.type] : (filters.types || [])
   const harmony = pickHarmony(rand())
   const tone = pickTone(rand())
 

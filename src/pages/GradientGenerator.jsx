@@ -1174,13 +1174,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The last ten results of Random and of Shuffle from palette, kept for this visit
   // only. The roll scores a candidate down for sitting close to any of them.
   const recentRolls = useRef({ random: [], palette: [] })
+  // The type deck: with Type on Any, Random deals its types from it so all three show
+  // within twenty presses (utils/gradientRandom drawFromDeck).
+  const typeDeck = useRef([])
 
   // The options for one roll: the Shuffle filters, with the person's locks laid
   // over them (a type lock replaces the Type filter, a stop lock fixes the count).
   // The roll also gets the stops, because it lays the stop locks over each of its
   // candidates before scoring them (utils/gradientRandom), and the recent results.
   const rollOptions = useCallback(
-    (kind) => ({ ...lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops), stops, recent: recentRolls.current[kind] }),
+    (kind) => ({ ...lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops), stops, recent: recentRolls.current[kind], deck: typeDeck.current }),
     [filters, locks, type, angle, space, stops],
   )
 
