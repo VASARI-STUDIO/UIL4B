@@ -48,7 +48,7 @@ const NO_BUTTON = new Set([
   // with the footer attribution.
   // '/plans' and '/mobile' are Spectrum screens now, with the marketing nav and
   // footer like '/', so they take no fixed button either.
-  '/', '/home', '/plans', '/mobile', '/tools', '/welcome', '/onboarding', '/feedback',
+  '/', '/home', '/plans', '/mobile', '/tools', '/sitemap', '/welcome', '/onboarding', '/feedback',
 ])
 
 // ROUTES WHERE THE BUTTON STAYS BUT STEPS ASIDE ON A SMALL SCREEN.

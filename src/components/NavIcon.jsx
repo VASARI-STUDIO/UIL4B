@@ -285,6 +285,19 @@ const ICONS = {
       <path d="M12 16.5h.01" />
     </>
   ),
+  // ── Account (the site map's group tiles) ──
+  user: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 19.5c1.4-3.6 4-5.2 7-5.2s5.6 1.6 7 5.2" />
+    </>
+  ),
+  legal: (
+    <>
+      <path d="M6.5 3.5h7l4 4v13h-11z" />
+      <path d="M13.5 3.5v4h4M9 12.5h6M9 16h6" />
+    </>
+  ),
 }
 
 const FALLBACK = <circle cx="12" cy="12" r="7" />

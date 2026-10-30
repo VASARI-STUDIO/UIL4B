@@ -1,10 +1,12 @@
-import { CREATE_GROUPS } from '../../data/toolTree'
+import { useId } from 'react'
+import NavIcon from '../NavIcon'
+import { CREATE_GROUPS, NAV_SECTIONS } from '../../data/toolTree'
 import { LIBRARY_GRADIENT_ROWS } from '../../data/gradientLibrary'
 import { buildRamp } from '../../utils/tintRamp'
 import { hexToOklchRaw } from '../tool/oklch'
 import { STROKE_PX } from '../../utils/iconStroke'
 import { DEFAULT_EXPORT_SIZE } from '../../utils/iconSize'
-import { BASES } from './spectrumKit'
+import { BASES, rampOf, ratio } from './spectrumKit'
 import { ICON_PLATE } from './toolArtIcons'
 import measured from './toolMeasured.json'
 
@@ -73,7 +75,24 @@ function Label({ children, ink, v, cls = "" }) {
   return <span className={`spt-lab${ink ? " spt-ink" : ""}${v ? " v" : ""} ${cls}`.trim()}>{children}</span>
 }
 
-function Icons() {
+// The thumb is the 3 x 2 corner of the 6 x 3 grid that holds the picked cell.
+const THUMB_ICONS = [0, 1, 2, 6, 7, 8]
+
+function IconsThumb() {
+  return (
+    <svg viewBox="0 0 160 100">
+      <g className="spt-ln" transform="translate(27 14) scale(1.1)">
+        <rect className="spt-mix" x={PICK * PITCH - 6} y="-6" width="36" height="36" rx="9" />
+        {THUMB_ICONS.map((i) => (
+          <path key={ICON_PLATE[i][0]} d={ICON_PLATE[i][1]} className={i === PICK ? 'spt-hs' : undefined} transform={`translate(${(i % 6) * PITCH} ${Math.floor(i / 6) * 48})`} />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+function Icons({ size }) {
+  if (size === 'thumb') return <IconsThumb />
   return (
     <div className="spt-ic">
       <svg className="spt-ic-grid" viewBox="-8 -8 218 136" preserveAspectRatio="xMidYMid meet">
@@ -101,7 +120,21 @@ function Icons() {
   )
 }
 
-function Converter() {
+function ConverterThumb() {
+  return (
+    <div className="spt-fct">
+      <span className="spt-fct-n v">−{SAVED}%</span>
+      <svg className="spt-fct-svg" width="100%" height="22">
+        <rect className="spt-bar1" width="100%" height="8" rx="3" />
+        <rect className="spt-bar2" y="14" width={pct(KEPT)} height="8" rx="3" />
+      </svg>
+    </div>
+  )
+}
+
+function Converter({ size }) {
+  const hatch = `spt-hatch${useId().replace(/:/g, '')}`
+  if (size === 'thumb') return <ConverterThumb />
   return (
     <div className="spt-fc">
       <div className="spt-fc-top">
@@ -119,9 +152,9 @@ function Converter() {
           <div className="spt-fc-lab"><Label ink>{output.format}, quality {output.quality}</Label><Label ink v>{fmtKb(output.kb)}</Label></div>
           <svg className="spt-fc-svg" width="100%" height="16">
             <defs>
-              <pattern id="spt-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
+              <pattern id={hatch}width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
             </defs>
-            <rect className="spt-ghost" x={pct(KEPT - TUCK)} y=".5" width={pct(1 - KEPT + TUCK - INSET)} height="15" rx="4" fill="url(#spt-hatch)" />
+            <rect className="spt-ghost" x={pct(KEPT - TUCK)} y=".5" width={pct(1 - KEPT + TUCK - INSET)} height="15" rx="4" fill={`url(#${hatch})`} />
             <rect className="spt-cut" x={pct(KEPT - TUCK)} width={pct(1 - KEPT + TUCK)} height="16" rx="4" />
             <rect className="spt-bar2" width={pct(KEPT)} height="16" rx="4" />
           </svg>
@@ -155,16 +188,17 @@ function Tint() {
 }
 
 function Gradient() {
+  const gid = `spt-grad${useId().replace(/:/g, '')}`
   const { x, y, w, h } = GRAD_BOX
   const last = GRAD.stops.length - 1
   return (
     <svg viewBox="0 0 160 100">
       <defs>
-        <linearGradient id="spt-grad" gradientUnits="userSpaceOnUse" {...GRAD_LINE}>
+        <linearGradient id={gid}gradientUnits="userSpaceOnUse" {...GRAD_LINE}>
           {GRAD.stops.map((s) => <stop key={s.position} offset={s.position / 100} stopColor={s.color} />)}
         </linearGradient>
       </defs>
-      <rect className="spt-gbar" x={x} y={y} width={w} height={h} rx="8" fill="url(#spt-grad)" />
+      <rect className="spt-gbar" x={x} y={y} width={w} height={h} rx="8" fill={`url(#${gid})`} />
       <path className="spt-ln" d={`M${x} 78h${w}`} />
       {GRAD.stops.map((s, i) => <circle key={s.position} className="spt-gstop" cx={x + (w * s.position) / 100} cy="78" r="6" fill={s.color} data-end={i === 0 || i === last ? '' : undefined} />)}
     </svg>
@@ -221,9 +255,93 @@ function AltText() {
   )
 }
 
-const DRAW = { icons: Icons, 'file-converter': Converter, semantic: Semantic, tint: Tint, gradient: Gradient, 'font-pair': FontPair, emoji: Emoji, ratio: Ratio, 'alt-text': AltText }
+// Values for the drawings the site map adds. Palette and Contrast read the ramp the
+// Palette and Contrast demos open with; Type Scale the 1.25 ratio the scale demo offers.
+const RAMP = rampOf(BASES[0])
+const PALETTE = [1, 3, 4, 5, 7].map((i) => RAMP[i])
+const CT_FG = RAMP[1].hex
+const CT_BG = RAMP[7].hex
+const CT_RATIO = Math.round(ratio(CT_FG, CT_BG) * 10) / 10
+const CT_VERDICT = CT_RATIO >= 7 ? 'AAA' : CT_RATIO >= 4.5 ? 'AA' : 'Fails'
+const SCALE_RATIO = 1.25
+const SCALE = [0, 1, 2, 3, 4].map((n) => Math.round(16 * SCALE_RATIO ** n))
+// The site's own display face, named and set in itself, so no extra font request.
+const DISPLAY_FACE = 'Switzer'
 
-export default function ToolArt({ id, size = 'thumb' }) {
+// Set CSS custom properties on a node: the no-inline-styles route for per-item values.
+function varsRef(vars) {
+  return (el) => {
+    if (!el) return
+    for (const key of Object.keys(vars)) el.style.setProperty(key, vars[key])
+  }
+}
+
+function Palette() {
+  return (
+    <svg viewBox="0 0 160 100">
+      {PALETTE.map((r, i) => <rect key={r.step} className="spt-step" fill={r.hex} x={27 + i * 22} y={i === 2 ? 24 : 28} width="18" height={i === 2 ? 52 : 44} rx="5" />)}
+    </svg>
+  )
+}
+
+function Contrast() {
+  return (
+    <div className="spt-ct">
+      <span className="spt-ct-b" ref={varsRef({ '--ct-bg': CT_BG, '--ct-fg': CT_FG })}>Aa</span>
+      <span className="spt-ct-r">
+        <span className="spt-ct-n v">{CT_RATIO.toFixed(1)}:1</span>
+        <Label>{CT_VERDICT}</Label>
+      </span>
+    </div>
+  )
+}
+
+function FontGallery() {
+  return (
+    <svg viewBox="0 0 160 100">
+      <path className="spt-rule" d="M22 64h116" />
+      <text className="spt-fg-t" x="80" y="64" textAnchor="middle">{DISPLAY_FACE}</text>
+    </svg>
+  )
+}
+
+function TypeScale() {
+  return (
+    <div className="spt-ts">
+      {SCALE.map((px, i) => <span key={px} className={i === SCALE.length - 1 ? 'spt-ts-top' : undefined} ref={varsRef({ '--ts-px': String(px) })}>A</span>)}
+    </div>
+  )
+}
+
+function Model3D() {
+  return (
+    <svg viewBox="0 0 160 100">
+      <g className="spt-ln">
+        <rect x="28" y="40" width="28" height="28" rx="1" />
+        <rect x="38" y="30" width="28" height="28" rx="1" />
+        <path d="M28 40l10-10M56 40l10-10M28 68l10-10M56 68l10-10M72 49h20" />
+      </g>
+      <g className="spt-solid">
+        <path d="M96 40l10-10h28l-10 10z" />
+        <path d="M124 40l10-10v28l-10 10z" />
+        <rect x="96" y="40" width="28" height="28" />
+      </g>
+    </svg>
+  )
+}
+
+// A tool still in the workshop: the menu's own tile for it, centred, nothing invented.
+const MENU_ICON = Object.fromEntries(
+  NAV_SECTIONS.find((s) => s.id === 'create').columns.flat().flatMap((g) => g.tools.map((t) => [t.id, t.icon])),
+)
+function SoonTile({ id }) {
+  return <span className="spt-tile"><NavIcon id={MENU_ICON[id] || id} /></span>
+}
+
+const DRAW = { palette: Palette, contrast: Contrast, 'font-gallery': FontGallery, 'type-scale': TypeScale, '3d-converter': Model3D, icons: Icons, 'file-converter': Converter, semantic: Semantic, tint: Tint, gradient: Gradient, 'font-pair': FontPair, emoji: Emoji, ratio: Ratio, 'alt-text': AltText }
+
+export default function ToolArt({ id, size = 'thumb', soon = false }) {
+  if (soon) return <Plate id={id} size={size}><SoonTile id={id} /></Plate>
   const Draw = DRAW[id]
   if (!Draw) return null
   return <Plate id={id} size={size}><Draw size={size} /></Plate>

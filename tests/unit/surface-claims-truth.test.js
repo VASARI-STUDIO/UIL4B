@@ -280,7 +280,7 @@ test('/info stops calling sign-in optional while taking a file away needs an acc
 
 test('/sitemap does not promise a Soon group in its Create lede or type a Discover blurb', () => {
   const map = stripComments(read('src/pages/SiteMap.jsx'))
-  const lede = map.match(/<h2 id="smap-create">Create<\/h2>\s*(?:\{\}\s*)?<p>([^<]+)<\/p>/)
+  const lede = map.match(/<h2 className="spt-h2" id="smap-create">Create<\/h2>\s*(?:\{\}\s*)?<p className="spt-sub">([^<]+)<\/p>/)
   assert.ok(lede && /colour/.test(lede[1]), 'the Create lede on /sitemap is gone or has changed shape')
   if (CREATE_GROUPS.some((g) => g.id === 'component' && g.soon)) {
     assert.ok(!/\bcomponents\b/i.test(lede[1]),
@@ -300,7 +300,7 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
   const discover = map.slice(start, end)
   assert.ok(discover.includes('note={g.desc}'), "the Discover column no longer renders each group's desc from the registry")
   if (DISCOVER_GROUPS.some((g) => g.soon)) {
-    const typed = discover.match(/<p className="smap-cat-desc">[^{<][^<]*/)
+    const typed = discover.match(/<p className="spt-gdesc">[^{<][^<]*/)
     assert.equal(typed, null,
       `/sitemap types a Discover description again (${typed?.[0]}) while a Discover group is still Soon; `
       + "the rows beneath already carry each group's own desc from toolTree.js")

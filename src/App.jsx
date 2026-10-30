@@ -382,6 +382,18 @@ function AppInner({ toast }) {
       </>
     )
   }
+  // /sitemap wears the /tools shell (Spectrum nav and footer above the app shell),
+  // so it returns here too.
+  if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/sitemap') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <SiteMap />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
   // /plans IS THE PRICING SCREEN: a marketing page with the Spectrum nav and footer, like `/`, so it returns
   // before the app shell rather than rendering inside PillNav + AppFooter. Its
   // own Suspense boundary for the same reason /discover has one: the shell's
