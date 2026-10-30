@@ -274,7 +274,7 @@ test.describe('a new account starts empty', () => {
         // first of them is the Palette Builder, the lead tile of "Start something" on the same page.
         await expect(empty.getByRole('heading', { name: 'Start your first project' })).toBeVisible()
         await expect(empty).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
-        await expect(page.locator('.uh-lead')).toHaveAttribute('href', '/create/palette')
+        await expect(page.locator('a.uh-tool[data-tool="palette"]')).toHaveAttribute('href', '/create/palette')
 
         // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The design's layout puts
         // "Start something" above the recent projects, so on a phone this card
@@ -364,7 +364,7 @@ test.describe('a new account starts empty', () => {
       const panel = document.querySelector('.uh [data-testid="starter-card"]')
       if (!panel) return null
       const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
-      return { found: graphics.length, announced: graphics.filter((g) => g.getAttribute('aria-hidden') !== 'true').length }
+      return { found: graphics.length, announced: graphics.filter((g) => !g.closest('[aria-hidden="true"]')).length }
     })
     expect(marks, 'the empty state panel itself is not on the page').not.toBeNull()
     expect(marks.announced, `${marks.announced} of the empty state’s ${marks.found} graphic(s) are announced`).toBe(0)

@@ -30,7 +30,7 @@
 //   Projects.jsx   `!hasProjects` branch returns null (no starter)  -> "an account with no projects"
 //   projects.css   `.uh .uh-link, .uh .uh-open { min-height: 30px }` and
 //                  `.uh .uh-cta` to 30px                    -> "every button and link on a phone is 44px"
-//   projects.css   `.uh .uh-quick { min-width: 520px }`     -> "no horizontal overflow"
+//   projects.css   `.uh .uh-tools { min-width: 520px }`     -> "no horizontal overflow" (the 390 case; was `.uh-quick`, retired)
 // Round 2 (same method; all made in one build, each named test went red, then restored):
 //   StarterCard    heading always 'Start your first project'      -> "when every project is archived the starter leads"
 //   ProjectRows    drop 'Colour not set · ' from the row            -> "a row whose Colour is not set draws a dashed empty box"
@@ -42,7 +42,7 @@
 //   projects.css   `.uh .uh-steps li` min-height/line-height 44px    -> "the starter's steps are one column ... not links" (32px rows)
 //   projects.css   `.uh-clock-line` font-size 12px                  -> "no text is smaller than 13px" (390 cases)
 //   projects.css   `.uh-today { display: block }` at 641-1000      -> "on a tablet, Today is one row"
-//   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
+//   projects.css   drop the phone's hide rule for Semantic -> "Start something is five tool rows"
 //   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
 //   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
 //   Projects.jsx   StarterCard without `limit`                      -> "when archived projects already fill the Free plan ..."
@@ -185,9 +185,14 @@ for (const size of SIZES) {
       await expect(lead.locator('.uh-continue-name')).toHaveText('Violet Lime')
       await expect(lead.locator('.uh-meta'), 'Ready, two hours ago: from the saved design and its age').toHaveText('Ready · Edited 2 hours ago')
       await expect(lead, 'the archived project is newer, and must not lead').not.toContainText('Old Harbour')
-      // The strip is the project's own five colours, in order.
-      expect(await lead.locator('.uh-strip > span').evaluateAll((s) => s.map((x) => getComputedStyle(x).backgroundColor)))
+      // THE LEAD PLATE IS THE PROJECT'S OWN FIVE COLOURS, in order: a drawn plate in the /tools frame
+      // (.spt-art), one painted column per colour. Read as drawn (computed fill), and as saved (the attribute).
+      const plate = lead.locator('.spt-art[data-hue="none"]')
+      await expect(plate, 'the lead holds one drawn plate').toHaveCount(1)
+      expect(await plate.locator('rect.spt-step').evaluateAll((r) => r.map((x) => getComputedStyle(x).fill)))
         .toEqual(['rgb(26, 11, 46)', 'rgb(75, 31, 158)', 'rgb(139, 92, 246)', 'rgb(201, 242, 77)', 'rgb(245, 243, 255)'])
+      expect(await plate.locator('rect.spt-step').evaluateAll((r) => r.map((x) => x.getAttribute('fill').toUpperCase())), 'the columns are the saved hex values')
+        .toEqual(['#1A0B2E', '#4B1F9E', '#8B5CF6', '#C9F24D', '#F5F3FF'])
       // All four parts done: the next step is the contrast check, and Open goes to the project's page.
       await expect(lead.getByRole('link', { name: 'Check the contrast, Violet Lime' })).toHaveAttribute('href', '/create/contrast')
       await expect(lead.getByRole('link', { name: 'Open project, Violet Lime' })).toHaveAttribute('href', '/projects/p-done')
@@ -243,7 +248,11 @@ for (const size of SIZES) {
 
       const starter = page.getByTestId('starter-card')
       await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
-      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
+      // Four numbered tool plates (the tools that build each part, in the walkthrough's order).
+      await expect(starter.locator('.uh-steps li .uh-step-label'), 'the plates carry their own letters, so read the label under each').toHaveText(['1 Colour', '2 Type', '3 Type scale', '4 Tints'])
+      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveCount(4)
+      expect(await starter.locator('.uh-steps li').evaluateAll((lis) => lis.map((li) => li.querySelector('.spt-art')?.getAttribute('data-art'))), 'each step draws its tool\'s plate')
+        .toEqual(['palette', 'font-pair', 'type-scale', 'tint'])
       // The steps are text: Start the walkthrough is the way in, so the list holds no link.
       await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link'), 'a step is a link again').toHaveCount(0)
       // No lead, no rows, and it is the first block under the title.
@@ -254,9 +263,11 @@ for (const size of SIZES) {
       const start = await box(page, '.uh-start')
       expect(s.top, 'the starter is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
       expect(start.top, 'Start something is above the starter').toBeGreaterThanOrEqual(s.bottom - 1)
-      // Every step is a 32px text row (nothing to tap).
-      const steps = await starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem').evaluateAll((a) => a.map((x) => Math.round(x.getBoundingClientRect().height)))
-      expect(steps, `the starter's steps are not 32px rows: ${steps}`).toEqual([32, 32, 32, 32])
+      // The four plates sit four across from 768 up and two by two on a phone (spec 5.3), all one size.
+      const cells = await starter.locator('.uh-steps li').evaluateAll((a) => a.map((x) => { const r = x.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } }))
+      expect(new Set(cells.map((c) => c.left)).size, `plates per row: ${JSON.stringify(cells)}`).toBe(size.width >= 768 ? 4 : 2)
+      expect(new Set(cells.map((c) => c.top)).size, `rows of plates: ${JSON.stringify(cells)}`).toBe(size.width >= 768 ? 1 : 2)
+      expect(new Set(cells.map((c) => `${c.w}x${c.h}`)).size, `the plates are not one size: ${JSON.stringify(cells)}`).toBe(1)
     })
 
     for (const theme of ['light', 'dark']) {
@@ -304,19 +315,31 @@ test.describe('the first screen', () => {
     expect(cont.bottom, 'Continue is cut by the fold').toBeLessThanOrEqual(900)
     expect(newBtn, `New project is at y=${newBtn}`).toBeLessThan(600)
 
-    // One accent-filled control in the page body on the first screen: Continue. New project is outlined.
-    const filled = await page.evaluate(() => {
-      const probe = document.createElement('i')
-      probe.style.background = 'var(--accent)'
-      document.body.append(probe)
-      const accent = getComputedStyle(probe).backgroundColor
-      probe.remove()
-      return [...document.querySelectorAll('.uh a[href], .uh button')]
-        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight && getComputedStyle(el).backgroundColor === accent })
-        .map((el) => (el.getAttribute('aria-label') || el.innerText).trim())
-    })
-    expect(filled, 'more than one filled button on the first screen').toEqual(['Check the contrast, Violet Lime'])
+    // One filled (ink pill) control in the page body on the first screen: Continue. New project is outlined.
+    expect(await filledOnFirstScreen(page), 'more than one filled button on the first screen').toEqual(['Check the contrast, Violet Lime'])
   })
+
+  // The spec's "one filled button on the first screen", at each width and in each state: Continue when
+  // there is a project, Start the walkthrough when there is none, New project when signed out.
+  for (const size of SIZES) {
+    for (const [label, opts, only] of [
+      ['with a project', {}, 'Check the contrast, Violet Lime'],
+      ['with no project', { projects: [] }, 'Start the walkthrough'],
+    ]) {
+      test(`${label}, at ${size.width}x${size.height} the first screen holds one filled button, and it is ${only}`, async ({ page }) => {
+        watch(page, `a designer opening their workspace on a ${size.name}, ${label}`)
+        await open(page, size, opts)
+        expect(await filledOnFirstScreen(page), 'the filled buttons on the first screen').toEqual([only])
+      })
+    }
+    test(`signed out, at ${size.width}x${size.height} the first screen holds one filled button, and it is New project`, async ({ page }) => {
+      watch(page, `a visitor opening the workspace on a ${size.name}`)
+      await page.setViewportSize({ width: size.width, height: size.height })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      expect(await filledOnFirstScreen(page), 'the filled buttons on the first screen').toEqual(['New project'])
+    })
+  }
 
   test('at 390x844 the Continue button is on the first screen', async ({ page }) => {
     watch(page, 'a designer on a phone reopening a project')
@@ -366,15 +389,21 @@ test.describe('on a phone', () => {
 // Archived-only accounts, rows without a Colour part, the row collapse, the locked Discover cards,
 // the phone's date line / New project / four tools, the tablet's one-row Today, and the type floor.
 
-/** Every accent-filled control that starts on the first screen, by the name a person would give it. */
+/**
+ * Every FILLED control that starts on the first screen, by the name a person would give it. Filled is
+ * what a person sees: a link or button in the page body whose own background is opaque. (The page's fill
+ * is the ink pill; it used to be the accent colour, so this no longer looks for one colour.) Outlined
+ * pills, ruled rows and text links have no background of their own and are not counted.
+ */
 const filledOnFirstScreen = (page) => page.evaluate(() => {
-  const probe = document.createElement('i')
-  probe.style.background = 'var(--accent)'
-  document.body.append(probe)
-  const accent = getComputedStyle(probe).backgroundColor
-  probe.remove()
+  const opaque = (css) => {
+    const m = css.match(/rgba?\(([^)]+)\)/)
+    if (!m) return false
+    const parts = m[1].split(/[ ,/]+/).filter(Boolean)
+    return parts.length < 4 || parseFloat(parts[3]) >= 0.9
+  }
   return [...document.querySelectorAll('.uh a[href], .uh button')]
-    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight && getComputedStyle(el).backgroundColor === accent })
+    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight && opaque(getComputedStyle(el).backgroundColor) })
     .map((el) => (el.getAttribute('aria-label') || el.innerText).trim())
 })
 
@@ -446,14 +475,14 @@ for (const size of SIZES) {
       await expect(rows.locator('.uh-row-name')).toHaveText(['Harbour Rebrand', 'Bare Project'])
       await expect(rows.locator('.uh-row-meta')).toHaveText(['1 of 4 parts · Edited 1 day ago', 'Colour not set · 0 of 4 parts · Edited 3 days ago'])
       // A row with a Colour part draws its colours; the other draws none (the default palette would read as its own).
-      const swatches = await rows.locator('.uh-mini').evaluateAll((els) => els.map((el) => ({
-        empty: el.classList.contains('is-empty'),
-        stops: el.querySelectorAll('span').length,
+      // (The plate replaced the dashed empty box on purpose, spec 5.4: an unset Colour is an empty plate frame, never a dashed box.)
+      const swatches = await rows.locator('.uh-plate').evaluateAll((els) => els.map((el) => ({
+        stops: el.querySelectorAll('rect.spt-step').length,
         border: getComputedStyle(el).borderTopStyle,
       })))
-      expect(swatches).toEqual([{ empty: false, stops: 4, border: 'none' }, { empty: true, stops: 0, border: 'dashed' }])
-      // Both boxes are the same size, so the rows still line up.
-      const sizes = await rows.locator('.uh-mini').evaluateAll((els) => els.map((el) => { const b = el.getBoundingClientRect(); return `${Math.round(b.width)}x${Math.round(b.height)}` }))
+      expect(swatches).toEqual([{ stops: 4, border: 'none' }, { stops: 0, border: 'none' }])
+      // Both plates are the same size, so the rows still line up.
+      const sizes = await rows.locator('.uh-plate').evaluateAll((els) => els.map((el) => { const b = el.getBoundingClientRect(); return `${Math.round(b.width)}x${Math.round(b.height)}` }))
       expect(sizes[0]).toBe(sizes[1])
     })
 
@@ -461,11 +490,17 @@ for (const size of SIZES) {
       watch(page, 'a designer whose only project has no palette')
       await open(page, size, { projects: [bare()] })
       const lead = page.locator('.uh-dash-main > .uh-continue')
-      await expect(lead.locator('.uh-strip'), 'the default palette is drawn as the project\'s own').toHaveCount(0)
-      const empty = lead.locator('.uh-strip-empty')
+      await expect(lead.locator('.uh-plate rect.spt-step'), 'the default palette is drawn as the project\'s own').toHaveCount(0)
+      const empty = lead.locator('.uh-plate-empty')
       await expect(empty).toContainText('Colour not set.')
       await expect(empty.getByRole('link', { name: 'Build the palette' })).toHaveAttribute('href', '/create/palette')
-      expect(await empty.evaluate((el) => getComputedStyle(el).borderBottomStyle)).toBe('dashed')
+      // The words sit inside the plate's frame (spec 5.2): the frame stays, it is not a dashed box.
+      const inside = await page.evaluate(() => {
+        const p = document.querySelector('.uh-dash-main > .uh-continue .uh-plate').getBoundingClientRect()
+        const t = document.querySelector('.uh-dash-main > .uh-continue .uh-plate-empty').getBoundingClientRect()
+        return t.left >= p.left - 1 && t.right <= p.right + 1 && t.top >= p.top - 1 && t.bottom <= p.bottom + 1
+      })
+      expect(inside, 'Colour not set sits inside the plate').toBe(true)
     })
 
     test('past six projects five rows show and Show all opens the rest in place', async ({ page }) => {
@@ -727,20 +762,18 @@ test.describe('the Today card and the chips share one style', () => {
 
   test('in dark the tool and lead chips sit one step up from the card, level with the project badge', async ({ page }) => {
     watch(page, 'a designer on a laptop in dark')
+    // RETIRED ON PURPOSE (spec 6): the tinted icon squares (.uh-tool-ico, .uh-lead-ico) went with the quick-tile
+    // mosaic; the tools are /tools rows with drawn plates and the project badge has no tile. So the old
+    // "chips one step up from the card" check protects nothing. What it guarded against, a tinted square coming
+    // back, is now: none of the retired markup exists, and the badge has no fill of its own.
     await page.emulateMedia({ colorScheme: 'dark' })
     await open(page, SIZES[2])
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-    const bg = (sel) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor)
-    const badge = await bg('.uh-badge')
-    // The surface each chip sits on: its own card (the tool row, the lead tile).
-    const toolCard = await bg('.uh-tool')
-    const leadCard = await bg('.uh-lead')
-    expect(badge, 'the badge is a drawn colour').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
-    expect(badge, 'the badge is not the tool card colour, or this test compares nothing').not.toBe(toolCard)
-    expect(await bg('.uh-tool-ico'), 'a tool chip is the badge colour').toBe(badge)
-    expect(await bg('.uh-lead-ico'), 'the lead chip is the badge colour').toBe(badge)
-    expect(await bg('.uh-tool-ico'), 'a tool chip is not its card colour').not.toBe(toolCard)
-    expect(await bg('.uh-lead-ico'), 'the lead chip is not its card colour').not.toBe(leadCard)
+    await expect(page.locator('.uh-start a.uh-tool'), 'the tool rows are drawn, so a zero below means something').not.toHaveCount(0)
+    for (const gone of ['.uh-quick', '.uh-lead', '.uh-lead-ico', '.uh-tool-ico', '.uh-strip', '.uh-mini', '.uh-pro-eyebrow']) {
+      await expect(page.locator(gone), `${gone} was retired`).toHaveCount(0)
+    }
+    expect(await page.locator('.uh-badge').first().evaluate((el) => getComputedStyle(el).backgroundColor), 'the badge is not a tinted square').toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
   })
 })
 
@@ -925,7 +958,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     expect(where.inFoot, 'the drawn New project is the one under the work').toBe(true)
     expect(where.top, 'it is above the last row').toBeGreaterThanOrEqual(where.rows - 1)
     expect(where.bottom, 'it is below Today').toBeLessThanOrEqual(where.today + 1)
-    expect(where.width, 'it is full width').toBe(phone.width - 24)
+    expect(where.width, 'it is full width of the content column (20px gutters)').toBe(phone.width - 40)
     expect(where.filled, 'it is the outlined one').toBe(false)
     expect(await filledOnFirstScreen(page)).toEqual(['Check the contrast, Violet Lime'])
   })
@@ -943,26 +976,26 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     })
     expect(b.filled).toBe(true)
     expect(b.top, 'it is not under the date line').toBeGreaterThanOrEqual(b.line - 1)
-    expect(b.width).toBe(phone.width - 24)
+    expect(b.width).toBe(phone.width - 40)
   })
 
-  test('Start something is four tools and an "All thirteen tools" row', async ({ page }) => {
+  test('Start something is five tool rows and an "All thirteen tools" row', async ({ page }) => {
     watch(page, 'a designer reaching for a tool on a phone')
     await open(page, phone)
     const start = page.locator('.uh-start')
-    await expect(start.locator('a.uh-tool:visible')).toHaveText([/^Gradient/, /^Tint/, /^Contrast/, /^Icon set/])
+    await expect(start.locator('a.uh-tool:visible .uh-tool-name'), 'the Palette row, then the others the phone keeps (Semantic Colour gives way)').toHaveText(['Palette', 'Gradient', 'Tint', 'Contrast Checker', 'Icon Library'])
     const all = start.locator('.uh-tool--all')
     await expect(all).toBeVisible()
     await expect(all).toHaveText('All thirteen tools')
     await expect(all).toHaveAttribute('aria-haspopup', 'menu')
     await expect(start.locator('.uh-alltools'), 'the heading\'s button gives way to the row').toBeHidden()
     const heights = await start.locator('.uh-tool:visible').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
-    expect(heights.length).toBe(5)
+    expect(heights.length).toBe(6)
     expect(Math.min(...heights), `a tool row is under 56px: ${heights}`).toBeGreaterThanOrEqual(56)
   })
 
   for (const size of [SIZES[1], SIZES[2]]) {
-    test(`at ${size.width}px Start something shows all six tools and no phone row`, async ({ page }) => {
+    test(`at ${size.width}px Start something shows all six rows and no phone row`, async ({ page }) => {
       watch(page, 'a designer on a wider screen')
       await open(page, size)
       await expect(page.locator('.uh-start a.uh-tool:visible')).toHaveCount(6)
@@ -992,9 +1025,9 @@ test.describe('on a tablet, Today is one row', () => {
     await expect(page.locator('.uh-clock-line')).toBeVisible()
   })
 
-  test('at 1001px the rail is back and Today stacks inside it', async ({ page }) => {
+  test('at 1024px the rail is back and Today stacks inside it (the grid now starts at 1024, was 1001)', async ({ page }) => {
     watch(page, 'a designer on the narrowest laptop')
-    await open(page, { width: 1001, height: 900 })
+    await open(page, { width: 1024, height: 900 })
     const b = {}
     for (const sel of ['.uh-today-clock', '.uh-meters', '.uh-dash-main > .uh-continue', '.uh-today']) b[sel] = await box(page, sel)
     expect(b['.uh-today'].left, 'Today is not in the rail beside the work').toBeGreaterThanOrEqual(b['.uh-dash-main > .uh-continue'].right)
@@ -1003,31 +1036,27 @@ test.describe('on a tablet, Today is one row', () => {
 })
 
 test.describe('the starter\'s steps', () => {
+  // The steps were a 32px text list; they are now four numbered tool plates (spec 5.3). What is kept: a
+  // numbered sequence, plain text under each plate, nothing to click or focus (Start the walkthrough is the way in).
   for (const size of SIZES) {
-    test(`at ${size.width}px are one column of numbered plain text in 32px rows, not links`, async ({ page }) => {
+    test(`at ${size.width}px are four numbered plates in order, not links`, async ({ page }) => {
       watch(page, 'a new account reading the walkthrough')
       await open(page, size, { projects: [] })
       const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => ({
         tag: ol.tagName,
-        marker: getComputedStyle(ol).listStyleType,
         interactive: ol.querySelectorAll('a, button, [tabindex]').length,
         rows: [...ol.querySelectorAll('li')].map((li) => {
-          const r = li.getBoundingClientRect()
-          const cs = getComputedStyle(li)
-          return { top: Math.round(r.top), left: Math.round(r.left), height: Math.round(r.height), underline: cs.textDecorationLine, size: cs.fontSize }
+          const label = li.querySelector('.uh-step-label')
+          const cs = getComputedStyle(label)
+          return { n: li.querySelector('.uh-step-n')?.textContent, underline: cs.textDecorationLine, size: cs.fontSize, plate: li.querySelector('.spt-art')?.getAttribute('data-art') }
         }),
       }))
-      expect(steps.tag).toBe('OL')
-      expect(steps.marker, 'the steps are a numbered sequence').toBe('decimal')
+      expect(steps.tag, 'the steps are a numbered sequence').toBe('OL')
       expect(steps.interactive, 'a step is something to click or focus').toBe(0)
-      expect(steps.rows).toHaveLength(4)
-      for (let i = 1; i < steps.rows.length; i++) {
-        expect(steps.rows[i].left, `step ${i + 1} is not in the same column`).toBe(steps.rows[0].left)
-        expect(steps.rows[i].top - steps.rows[i - 1].top, `step ${i + 1} is not 32px under step ${i}`).toBe(32)
-      }
-      expect(steps.rows.map((r) => r.height), 'a step row is not 32px').toEqual([32, 32, 32, 32])
+      expect(steps.rows.map((r) => r.n)).toEqual(['1', '2', '3', '4'])
+      expect(steps.rows.map((r) => r.plate)).toEqual(['palette', 'font-pair', 'type-scale', 'tint'])
       expect(steps.rows.map((r) => r.underline), 'a step looks like a link').toEqual(Array(4).fill('none'))
-      expect(steps.rows.map((r) => r.size), 'a step is not 15px').toEqual(Array(4).fill('15px'))
+      expect(steps.rows.map((r) => r.size), 'a step label is not 14px').toEqual(Array(4).fill('14px'))
     })
   }
 })
@@ -1090,3 +1119,77 @@ test.describe('the greeting holds its place', () => {
     expect(tops, `the title was at ${tops.join(', ')}`).toHaveLength(1)
   })
 })
+
+// ── The /tools language (spec 12: the assertions that are new with the restyle) ─────────────────────
+//
+// MUTATION: each of these fails on origin/main's /projects (the filled `--card` panel round the lead, rows
+// with a `.uh-mini` strip and no hairline inset, `.uh-quick` tiles). Recorded in the commit message.
+for (const size of SIZES) {
+  test.describe(`the workspace in the /tools language at ${size.width}px`, () => {
+    for (const [label, opts] of [['the lead', {}], ['the starter', { projects: [] }]]) {
+      test(`${label} is a drawn plate with no framed panel around it`, async ({ page }) => {
+        watch(page, `a designer looking at ${label} on a ${size.name}`)
+        await open(page, size, opts)
+        const found = await page.evaluate(() => {
+          const lead = document.querySelector('.uh-dash-main > .uh-continue')
+          const plate = lead.querySelector('.spt-art') || null
+          // Every box from the plate up to the page's content column: none may be a frame of its own
+          // (a border, a fill, a shadow or an outline), or the lead is a card inside a card.
+          const framed = []
+          for (let el = plate ? plate.parentElement : null; el && !el.classList.contains('uh-main'); el = el.parentElement) {
+            const cs = getComputedStyle(el)
+            const border = ['Top', 'Right', 'Bottom', 'Left'].some((side) => parseFloat(cs[`border${side}Width`]) > 0 && cs[`border${side}Style`] !== 'none')
+            const fill = !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor) || cs.backgroundImage !== 'none'
+            const ring = cs.boxShadow !== 'none' || (parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== 'none')
+            if (border || fill || ring) framed.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`)
+          }
+          const p = plate && getComputedStyle(plate)
+          return { plate: !!plate, framed, plateFrame: p && { outline: p.outlineStyle, radius: p.borderTopLeftRadius }, text: lead.getBoundingClientRect().height > (plate?.getBoundingClientRect().height || 0) }
+        })
+        expect(found.plate, 'no drawn plate in the lead: the measurement below would be empty').toBe(true)
+        expect(found.framed, 'a framed panel round the lead plate').toEqual([])
+        expect(found.plateFrame.outline, 'the plate is the one frame').not.toBe('none')
+        expect(found.plateFrame.radius, 'the plate is the /tools plate (12px lead, 10px thumb)').toBe(label === 'the lead' ? '12px' : '10px')
+      })
+    }
+
+    test('the hairlines between rows stay inside the content column, in Other projects and Start something', async ({ page }) => {
+      watch(page, `a designer scanning the ruled rows on a ${size.name}`)
+      await open(page, size)
+      const out = await page.evaluate(() => {
+        const main = document.querySelector('.uh-main')
+        const mcs = getComputedStyle(main)
+        const col = { left: main.getBoundingClientRect().left + parseFloat(mcs.paddingLeft), right: main.getBoundingClientRect().right - parseFloat(mcs.paddingRight) }
+        const lines = []
+        for (const row of document.querySelectorAll('.uh-rows .spt-row, .uh-tools .spt-row, .uh-tool--all')) {
+          const r = row.getBoundingClientRect()
+          if (!r.width) continue
+          const host = row.classList.contains('uh-tool--all') ? row.parentElement : row
+          const hr = host.getBoundingClientRect()
+          const b = getComputedStyle(host, '::before')
+          if (b.content === 'none' || b.content === 'normal') continue
+          lines.push({ row: (row.getAttribute('data-tool') || row.getAttribute('data-project') || 'all'), left: hr.left + parseFloat(b.left), right: hr.right - parseFloat(b.right), width: b.borderTopWidth })
+        }
+        return { col, lines }
+      })
+      expect(out.lines.length, 'no ruled row drew a hairline: the sweep measured nothing').toBeGreaterThanOrEqual(8)
+      for (const l of out.lines) {
+        expect(l.width, `${l.row}: the rule is a 1px hairline`).toBe('1px')
+        expect(l.left, `${l.row}: its hairline starts left of the column (${l.left} < ${out.col.left})`).toBeGreaterThanOrEqual(out.col.left - 0.5)
+        expect(l.right, `${l.row}: its hairline runs past the column (${l.right} > ${out.col.right})`).toBeLessThanOrEqual(out.col.right + 0.5)
+      }
+    })
+
+    test('a very long project name does not push the lead, the rows or the page sideways', async ({ page }) => {
+      watch(page, `a designer with an unbroken project name on a ${size.name}`)
+      const long = 'Extraordinarilylongprojectnamewithnospacesatalltotestthetruncation'
+      await open(page, size, { projects: [{ ...complete(), name: long }, { ...half('p-half', long + 'Two', ago(26 * 60 * MINUTE)) }] })
+      const m = await page.evaluate(() => {
+        const de = document.documentElement
+        return { overflow: de.scrollWidth - de.clientWidth, names: [...document.querySelectorAll('.uh-continue-name, .uh-row-name')].filter((el) => { const r = el.getBoundingClientRect(); return r.right > de.clientWidth + 1 || r.left < -1 }).map((el) => el.className + ' ' + Math.round(el.getBoundingClientRect().left) + '-' + Math.round(el.getBoundingClientRect().right) + ' of ' + de.clientWidth) }
+      })
+      await expect(page.locator('.uh-row-name').first()).toContainText('Extraordinarily')
+      expect(m, 'the page scrolls sideways, or a project name is drawn past the viewport').toEqual({ overflow: 0, names: [] })
+    })
+  })
+}

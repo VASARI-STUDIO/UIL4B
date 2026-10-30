@@ -62,7 +62,7 @@ export default function PlanStrip({ planLabel, isPro, ai, slots, asOf }) {
               aria-valuenow={Math.min(slots.used, slots.limit)}
               aria-valuetext={atCap ? `${slots.used} of ${slots.limit}, the Free limit` : `${slots.used} of ${slots.limit}`}
             >
-              <span className="uh-meter-fill" style={{ width: `${slots.pct}%` }} />
+              <span className={`uh-meter-fill${atCap ? ' is-cap' : ''}`} style={{ width: `${slots.pct}%` }} />
             </span>
           </div>
         )}

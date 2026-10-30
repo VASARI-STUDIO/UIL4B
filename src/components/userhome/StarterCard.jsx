@@ -1,19 +1,24 @@
 import { Link } from 'react-router-dom'
 import { partsPresent } from '../../utils/userHome'
+import OpenPill from '../spectrum/OpenPill'
+import PhIcon from '../spectrum/PhIcon'
+import ToolArt from '../spectrum/ToolArt'
+import ProjectPlate from './ProjectPlate'
 
 // The four parts of a project, in the order the starter names them, each with the name the page
-// uses for it.
+// uses for it and the tool that builds it (its drawn plate on /tools).
 const STARTER_STEPS = [
-  { part: 'palette', label: 'Colour' },
-  { part: 'fonts', label: 'Type' },
-  { part: 'type-scale', label: 'Type scale' },
-  { part: 'tints', label: 'Tints' },
+  { part: 'palette', label: 'Colour', art: 'palette' },
+  { part: 'fonts', label: 'Type', art: 'font-pair' },
+  { part: 'type-scale', label: 'Type scale', art: 'type-scale' },
+  { part: 'tints', label: 'Tints', art: 'tint' },
 ]
 
 // What a signed-in account with no project in play sees where the lead would be. It names the one
 // action, shows the working design's colours when the person has already changed them (never the
-// default palette, which would read as theirs), and lists the four parts of a project in order: a
-// true sequence, so it is numbered. The steps are plain text: Start the walkthrough is the way in.
+// default palette, which would read as theirs), and otherwise draws the four parts of a project in
+// order: a true sequence, so it is numbered. The steps are plain text under their plates: Start the
+// walkthrough is the way in.
 //
 // `archived` is the account whose projects are all archived: there is nothing to continue, so the
 // same card leads, says why, and the archived projects follow it as rows.
@@ -29,9 +34,9 @@ export default function StarterCard({ design, onStart, archived = false, limit =
   return (
     <section className="uh-continue uh-starter" aria-labelledby="uh-starter-h" data-testid="starter-card">
       {touched && (
-        <span className="uh-strip" aria-hidden="true">
-          {colors.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
-        </span>
+        <div className="uh-plate-slot">
+          <ProjectPlate colors={colors} size="card" />
+        </div>
       )}
       <div className="uh-continue-body">
         <h2 id="uh-starter-h" className="uh-continue-name">{limit ? 'Your Free plan is full' : archived ? 'Start a new project' : 'Start your first project'}</h2>
@@ -40,13 +45,25 @@ export default function StarterCard({ design, onStart, archived = false, limit =
             ? `All your projects are archived, and archived projects count toward the Free plan's ${limit}. Open one below to delete it, or go Pro to keep them all and start another.`
             : `${archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and tints, and saves as you go.`}
         </p>
-        {!limit && <ol className="uh-steps" aria-label="The walkthrough">
-          {STARTER_STEPS.map((s) => <li key={s.part}>{s.label}</li>)}
-        </ol>}
+        {!limit && !touched && (
+          <ol className="uh-steps uh-steps--plates" aria-label="The walkthrough">
+            {STARTER_STEPS.map((s, i) => (
+              <li key={s.part}>
+                <span className="spt-thumb"><ToolArt id={s.art} size="thumb" /></span>
+                <span className="uh-step-label"><span className="uh-step-n">{i + 1}</span>{' '}<span className="uh-step-name">{s.label}</span></span>
+              </li>
+            ))}
+          </ol>
+        )}
         <div className="uh-continue-actions">
           {limit
-            ? <Link className="uh-cta" to="/plans">See plans</Link>
-            : <button type="button" className="uh-cta" onClick={onStart}>Start the walkthrough</button>}
+            ? <OpenPill to="/plans" className="uh-cta">See plans</OpenPill>
+            : (
+              <button type="button" className="sp-pill uh-cta" onClick={onStart}>
+                <span>Start the walkthrough</span>
+                <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+              </button>
+            )}
           <Link className="uh-link" to="/learn/help">How projects work</Link>
         </div>
       </div>
