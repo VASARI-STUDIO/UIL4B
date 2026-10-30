@@ -44,7 +44,7 @@
 .typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 .typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
 .typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .typ-picker-cue{grid-column:2;grid-row:1/span 2;align-self:center;flex-shrink:0;padding:6px 11px;font-size:11px;font-weight:700;color:var(--accent-text);background:var(--accent-wash);border-radius:var(--radius-pill)}
 /* Kept: Font Pair's "reload the catalogue" recovery button still uses it. */
 .typ-picker-clear{margin-top:6px;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}

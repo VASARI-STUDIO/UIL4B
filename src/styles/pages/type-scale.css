@@ -383,7 +383,7 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .typ-picker .typ-picker-trigger { padding: 4px 0; border: 0; background: transparent; border-radius: 0; }
 .tsc-page .typ-picker .typ-picker-face { font-size: 22px; }
 .tsc-page .typ-picker .typ-picker-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.tsc-page .typ-picker .typ-picker-meta { font-family: var(--font); font-size: 12px; color: var(--tl-dim); text-transform: capitalize; }
+.tsc-page .typ-picker .typ-picker-meta { font-family: var(--font); font-size: 12px; color: var(--tl-dim); }
 .tsc-page .typ-picker .typ-picker-cue { display: inline-flex; align-items: center; min-height: 36px; }
 
 /* Fine tuning: a text disclosure, then groups separated by hairlines. */
