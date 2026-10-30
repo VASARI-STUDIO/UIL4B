@@ -120,12 +120,12 @@ test.describe('public UI quality release', () => {
   // from the header's Upgrade pill.
   test('reading pages have exactly one footer landmark, app pages none, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/learn', '/privacy', '/learn/help']) {
+    for (const route of ['/', '/learn', '/privacy', '/learn/help', '/create/icons']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
     }
-    for (const route of ['/discover', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
+    for (const route of ['/discover', '/create/palette', '/create/aspect-ratio']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} is an app page and draws no site footer`).toHaveCount(0)
       await expect(page.locator('.pnav a[href="/plans"]').first()).toBeVisible()

@@ -147,10 +147,23 @@ async function choosePack(page, pack) {
   }
 }
 
-/** Scroll to the foot of the page until `count` cells are mounted. */
+/**
+ * Bring the end of the grid to the foot of the window: the sentinel that reveals the next page, or
+ * the "Show N more icons" button that replaces it after three automatic pages. The page no longer
+ * ends at the grid (the close, the spectrum strip and the footer follow it), so the document's
+ * foot is well beyond the sentinel's 600px margin and scrolling there reveals nothing.
+ */
+const scrollToGridEnd = (page) => page.evaluate(() => {
+  const end = document.querySelector('.ig-sentinel, .ig-more')
+  if (end) end.scrollIntoView({ block: 'end' })
+  else window.scrollTo(0, document.documentElement.scrollHeight)
+})
+
+/** Scroll the grid on until `count` cells are mounted, pressing "Show more icons" where the scroll stops. */
 async function revealCells(page, count) {
   await expect.poll(async () => {
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await scrollToGridEnd(page)
+    await page.evaluate(() => document.querySelector('.ig-more button')?.click())
     return page.locator('.ig .ic').count()
   }, { timeout: 30_000, message: `the grid never revealed ${count} cells` }).toBeGreaterThanOrEqual(count)
 }
@@ -394,7 +407,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
 
     // Start the next page's reveal and stop it part-way: some of its cells are in, not all.
     await page.evaluate(() => { window.__rafDelay = 2500 })
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await scrollToGridEnd(page)
     await expect.poll(cells, { timeout: 10_000 }).toBeGreaterThan(base)
     expect(await cells(), 'positive control: the reveal is part-way, not done').toBeLessThan(base + 120)
 
@@ -451,7 +464,8 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     expect(beyondMargin, 'the sentinel is inside the 600px margin, so the second page starts without a scroll and cannot be held').toBeGreaterThan(600)
 
     // Start the second page at the foot of the grid; part-way through it, its first cells are in and the rest are held back.
-    await page.evaluate(() => { window.__rafDelay = 2500; window.scrollTo(0, document.documentElement.scrollHeight) })
+    await page.evaluate(() => { window.__rafDelay = 2500 })
+    await scrollToGridEnd(page)
     await expect.poll(cells, { timeout: 15_000 }).toBeGreaterThan(pageSize)
     const mid = await cells()
     expect(mid, 'positive control: the second page is part-way, not done').toBeLessThan(2 * pageSize)

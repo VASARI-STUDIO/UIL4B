@@ -445,8 +445,12 @@ test.describe('the catalogue tools name the thing they are for', () => {
   // 122 tab stops at 390px. The tabpanel it lives in is named ("Emoji") but a
   // tabpanel is not a landmark and never appears in this list.
   //
+  // Since the icon pages took the sales pages' ending, the page also carries the
+  // close (a region named by its headline, inside main) and the footer after it
+  // (contentinfo and its Footer navigation); the grid's region still comes first.
+  //
   // MUTATION: drop aria-labelledby from `.emoji-results` in EmojiLibrary.jsx
-  // and both halves go red on the four-landmark list.
+  // and both halves go red on the landmark list.
   test('/create/emoji · the grid is a region, in both states', async ({ page }) => {
     watch(page, 'a screen-reader user looking for the emoji grid by landmark')
     await go(page, '/create/emoji')
@@ -460,6 +464,9 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("Showing all 1655 emojis")',
+      'region("Now pick the colours and type.")',
+      'contentinfo',
+      'navigation("Footer")',
     ])
 
     await page.locator('.emoji-toolbar input').first().fill('zzzzqqq')
@@ -470,6 +477,9 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("0 emojis for zzzzqqq")',
+      'region("Now pick the colours and type.")',
+      'contentinfo',
+      'navigation("Footer")',
     ])
   })
 })
