@@ -1189,6 +1189,30 @@ export async function keyToRest(page, key, what = 'the page') {
   return restAfterMove(page, before, what)
 }
 
+// Type into the Font Gallery's Preview text the way a visitor reaches it. The field
+// sits on the toolbar only where the row has room for it (about 1440px and wider, and
+// the exact edge moves with font metrics). Elsewhere it is in the "More filters" menu
+// (1024 and up) or the Filters sheet (below 1024), so open whichever the page offers,
+// type, check the value took, and close it again.
+export async function fillGalleryPreviewText(page, text) {
+  const bar = page.locator('[data-tool-toolbar]')
+  await expect(bar, 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
+  const onRow = bar.getByRole('textbox', { name: 'Preview text' })
+  if (await onRow.isVisible()) {
+    await onRow.fill(text)
+    await expect(onRow).toHaveValue(text)
+    return
+  }
+  const panelName = /^(More filters|Filters)$/
+  await page.getByRole('button', { name: panelName }).click()
+  const panel = page.getByRole('dialog', { name: panelName })
+  const field = panel.getByRole('textbox', { name: 'Preview text' })
+  await field.fill(text)
+  await expect(field).toHaveValue(text)
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+}
+
 // Click a listbox option. A label choice is found by its accessible name; a value
 // choice by the option's data-value (not by name: an option with a one-line
 // description has a name that runs on into the description).

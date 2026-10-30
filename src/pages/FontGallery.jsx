@@ -7,6 +7,7 @@ import useModalDialog from '../hooks/useModalDialog'
 import {
   ToolLayout, ToolButton, ToolPills, ToolSelect,
 } from '../components/tool/ToolLayout'
+import FiltersSheet, { ViewToggle } from '../components/FontGalleryFilters'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from '../components/FontDossier'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -82,9 +83,9 @@ const MAX_COMPARE = 3
 // `ratio` turns the size into the band's height, so changing the size moves the
 // whole list once and never one band on its own.
 const LAYOUTS = {
-  wide: { name: 96, floor: 72, ratio: 2.5 },
-  tablet: { name: 64, floor: 48, ratio: 3.125 },
-  phone: { name: 40, floor: 32, ratio: 3 },
+  wide: { name: 96, floor: 72, ratio: 2.5, grid: 56 },
+  tablet: { name: 64, floor: 48, ratio: 3.125, grid: 40 },
+  phone: { name: 40, floor: 32, ratio: 3, grid: 24 },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
@@ -166,6 +167,8 @@ function queueFit(job, now) {
 // is written as `--fg-fit`, which the name's font-size multiplies, so the
 // natural width is measured at fit 1 each time. The name is only in the DOM
 // once its face is confirmed, so it is measured in the right face.
+// In the grid view `size` is the tile's name size and the cell's width is the
+// room, so a long name shrinks to its cell rather than breaking mid-word.
 function useFitName(active, label, size, floor) {
   const ref = useRef(null)
   useLayoutEffect(() => {
@@ -315,14 +318,19 @@ function CloseIcon() {
 // along the bottom, and a compare button on the right. The pangram and the run
 // of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
 // faded in (hover or keyboard focus), so showing it never moves a box.
-function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, floor }) {
+function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
   const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
   const weights = font.variants.length
   const typed = previewText.trim()
-  const nameRef = useFitName(ready, `${typed}|${font.family}`, nameSize, floor)
+  const nameRef = useFitName(
+    ready,
+    `${typed}|${font.family}`,
+    tiles ? gridName : nameSize,
+    tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
+  )
   const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
   // With the reader's own words in the name, the family name moves to the meta
   // line so it is still on the band.
@@ -402,7 +410,7 @@ function SkeletonRows({ count = 4, vars }) {
 
 /* ── Compare dialog ────────────────────────────────────────────────────────── */
 
-function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
+function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
   const ref = useModal(onClose)
   const [text, setText] = useState('')
   const [size, setSize] = useState(40)
@@ -426,9 +434,12 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
             <span className="fg-detail-label">Compare</span>
             <h2 className="fg-compare-title" id="fg-compare-title">{fonts.length} typefaces, side by side</h2>
           </div>
-          <button type="button" className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close the comparison">
-            <CloseIcon />
-          </button>
+          <div className="fg-compare-head-actions">
+            {onClear && <button type="button" className="fg-more-btn fg-compare-clear" onClick={onClear}>Clear</button>}
+            <button type="button" className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close the comparison">
+              <CloseIcon />
+            </button>
+          </div>
         </div>
 
         <div className="fg-compare-controls">
@@ -845,6 +856,8 @@ export default function FontGallery({ onCopy, toast }) {
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
   const [showCompare, setShowCompare] = useState(false)
+  const [view, setView] = useState('list')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const sentinelRef = useRef(null)
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
@@ -894,7 +907,7 @@ export default function FontGallery({ onCopy, toast }) {
     setCompare(prev => {
       if (prev.some(f => f.family === font.family)) return prev.filter(f => f.family !== font.family)
       if (prev.length >= MAX_COMPARE) {
-        toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
+        toast?.(`You can compare ${MAX_COMPARE} fonts at a time.`, 'warning')
         return prev
       }
       return [...prev, font]
@@ -936,29 +949,50 @@ export default function FontGallery({ onCopy, toast }) {
 
   const ready = status !== 'loading'
 
+  // The tray is a bar fixed to the foot of the screen (on the tab bar at 390).
+  // Toasts and the feedback button read this class to ride above it. A phone and
+  // a tablet only show it once there is something to compare.
+  const trayShown = compare.length > 0 && !showCompare && (mode === 'wide' || compare.length >= 2)
+  useEffect(() => {
+    if (!trayShown) return undefined
+    const root = document.documentElement
+    root.classList.add('fg-tray')
+    return () => root.classList.remove('fg-tray')
+  }, [trayShown])
+
+  const tiles = view === 'grid'
+  // The sheet is a phone and tablet surface, so growing to the wide layout closes it.
+  if (mode === 'wide' && sheetOpen) setSheetOpen(false)
+  const sheetShown = sheetOpen && mode !== 'wide'
+  // One family stands for each category in the Filters sheet, so its pill is set
+  // in a face from that class.
+  const faces = useMemo(() => {
+    const out = {}
+    for (const f of galleryCatalog) if (!out[f.category]) out[f.category] = f
+    return out
+  }, [galleryCatalog])
+  // The empty state clears what narrows the list (search and category); the
+  // sheet's own Clear puts back the sheet's controls and leaves the search alone.
+  const clearFilters = () => { setQuery(''); setCategory('all') }
+  const sheetDirty = category !== 'all' || sort !== 'popularity' || sizeOverride !== null || view !== 'list' || previewText !== ''
+  const clearSheet = () => {
+    setCategory('all')
+    setSort('popularity')
+    setSizeOverride(null)
+    setView('list')
+    setPreviewText('')
+  }
+
   const layout = LAYOUTS[mode]
   const nameSize = sizeOverride ?? layout.name
   const floor = Math.min(layout.floor, nameSize)
   const band = Math.max(MIN_BAND, Math.round(nameSize * layout.ratio))
-  const bandVars = varsRef({ '--fg-name': `${nameSize}px`, '--fg-band': `${band}px` })
+  // The grid name follows the same Size choice, scaled to its cell.
+  const gridName = Math.max(16, Math.round(nameSize * layout.grid / layout.name))
+  const bandVars = varsRef({ '--fg-name': `${nameSize}px`, '--fg-band': `${band}px`, '--fg-gname': `${gridName}px` })
 
-  // The slider is the control on a tablet and a phone (inside Filters); the
-  // wide toolbar has room for a menu that reads "Size 96".
-  const sizeSlider = (
-    <label className="fg-size">
-      <span className="fg-size-k">Size</span>
-      <input
-        type="range"
-        min={SIZE_MIN}
-        max={SIZE_MAX}
-        value={nameSize}
-        onChange={e => setSizeOverride(+e.target.value)}
-        aria-label="Specimen size"
-        aria-valuetext={`${nameSize} pixels`}
-      />
-      <span className="fg-size-v" aria-hidden="true">{nameSize}px</span>
-    </label>
-  )
+  // The wide toolbar has room for a menu that reads "Size 96"; a tablet and a
+  // phone set the size with the slider in the Filters sheet.
   const sizeSelect = (
     <ToolSelect
       label="Size"
@@ -1016,6 +1050,12 @@ export default function FontGallery({ onCopy, toast }) {
       Build a font pair
     </ToolButton>
   )
+  const viewToggle = <ViewToggle view={view} onChange={setView} />
+  const filtersButton = (
+    <ToolButton onClick={() => setSheetOpen(true)} disabled={!ready} aria-haspopup="dialog" aria-expanded={sheetShown}>
+      Filters
+    </ToolButton>
+  )
   const pairItem = {
     id: 'pair',
     priority: 9,
@@ -1027,10 +1067,10 @@ export default function FontGallery({ onCopy, toast }) {
   // One item set per layout. The row never wraps: whatever does not fit goes
   // into the Filters overflow, lowest priority first.
   //   wide    every control on the row
-  //   tablet  category pills on the row; search and the pair link sit on a
-  //           second row; the rest is in Filters
-  //   phone   the pair link on the row; search on a second row; the rest is
-  //           in Filters
+  //   tablet  category pills and Filters on the row; search, the view toggle and
+  //           the pair link sit on a second row
+  //   phone   the pair link on the row; search and Filters on a second row; the
+  //           rest is in the Filters sheet
   let items
   if (mode === 'wide') {
     items = [
@@ -1040,17 +1080,13 @@ export default function FontGallery({ onCopy, toast }) {
       { id: 'div', divider: true, align: 'end' },
       { id: 'sort', priority: 3, render: () => sortSelect, menu: () => sortSelect },
       { id: 'size', priority: 2, render: () => sizeSelect, menu: () => sizeSelect },
+      { id: 'view', priority: 2, render: () => viewToggle, menu: () => viewToggle },
       pairItem,
     ]
+  } else if (mode === 'tablet') {
+    items = [categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }]
   } else {
-    const filters = [
-      { id: 'sort', inline: false, menu: () => sortSelect },
-      { id: 'size', inline: false, menu: () => sizeSlider },
-      { id: 'preview', inline: false, menu: () => previewField(true) },
-    ]
-    items = mode === 'tablet'
-      ? [categoryItem, ...filters]
-      : [pairItem, { id: 'category', inline: false, menu: () => categoryPills }, ...filters]
+    items = [pairItem]
   }
 
   // The second toolbar row, below the sticky bar, for the layouts that cannot
@@ -1058,6 +1094,8 @@ export default function FontGallery({ onCopy, toast }) {
   const bar2 = mode === 'wide' ? null : (
     <div className="fg-bar2">
       {searchField}
+      {mode === 'phone' && filtersButton}
+      {mode === 'tablet' && viewToggle}
       {mode === 'tablet' && pairLink}
     </div>
   )
@@ -1067,7 +1105,7 @@ export default function FontGallery({ onCopy, toast }) {
   // filters never run over an empty list.
   if (!ready) {
     return (
-      <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
+      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
         {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows vars={bandVars} />
@@ -1082,7 +1120,7 @@ export default function FontGallery({ onCopy, toast }) {
     + `${sort === 'popularity' ? ', most popular first' : ''}`
 
   return (
-    <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
+    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
       <FontCatalogNotice
         online={online}
         degraded={degraded}
@@ -1095,18 +1133,18 @@ export default function FontGallery({ onCopy, toast }) {
 
       {/* The results are a region named by the live count line, so it stays
           in the landmark list in the empty state too. */}
-      <section className="fg-results" aria-labelledby="fg-count" ref={bandVars}>
+      <section className={tiles ? 'fg-results fg-results--tiles' : 'fg-results'} aria-labelledby="fg-count" ref={bandVars}>
         <p className="fg-count" id="fg-count" aria-live="polite">{countText}</p>
 
         {filtered.length === 0 ? (
           <LibraryEmpty
             className="fg-empty"
             title="Nothing matches that yet."
-            onClear={() => { setQuery(''); setCategory('all') }}
+            onClear={clearFilters}
           />
         ) : (
           <>
-            <div className="fg-grid">
+            <div className={tiles ? 'fg-grid fg-grid--tiles' : 'fg-grid'}>
               {paged.map(font => (
                 <GalleryCard
                   key={font.family}
@@ -1117,7 +1155,9 @@ export default function FontGallery({ onCopy, toast }) {
                   onToggleCompare={toggleCompare}
                   previewText={previewText}
                   nameSize={nameSize}
+                  gridName={gridName}
                   floor={floor}
+                  tiles={tiles}
                 />
               ))}
             </div>
@@ -1136,27 +1176,41 @@ export default function FontGallery({ onCopy, toast }) {
         )}
       </section>
 
-      {compare.length > 0 && !showCompare && (
-        <div className="fg-compare-tray">
-          <div className="fg-compare-tray-chips">
-            <span className="fg-compare-tray-label">Comparing</span>
-            {compare.map(f => (
-              <button
-                key={f.family}
-                type="button"
-                className="fg-compare-chip"
-                onClick={() => toggleCompare(f)}
-                aria-label={`Remove ${f.family} from the comparison`}
-              >
-                {f.family}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            ))}
-          </div>
+      {trayShown && (
+        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Fonts to compare" aria-live="polite">
+          {mode === 'wide' ? (
+            <>
+              <span className="fg-compare-tray-label">Comparing</span>
+              <div className="fg-compare-tray-chips">
+                {compare.map(f => (
+                  <button
+                    key={f.family}
+                    type="button"
+                    className="fg-compare-chip"
+                    onClick={() => toggleCompare(f)}
+                    aria-label={`Remove ${f.family} from the comparison`}
+                    ref={varsRef({ '--fg-ff': fontStack(f) })}
+                  >
+                    <span className="fg-compare-chip-name">{f.family}</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="fg-compare-tray-names">
+              {compare.map((f, i) => (
+                <span key={f.family}>
+                  {i > 0 && (i === compare.length - 1 ? ' and ' : ', ')}
+                  <span className="fg-compare-tray-name" ref={varsRef({ '--fg-ff': fontStack(f) })}>{f.family}</span>
+                </span>
+              ))}
+            </p>
+          )}
           <div className="fg-compare-tray-actions">
-            <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>
+            {mode === 'wide' && <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>}
             <button
               type="button"
               className="fg-more-btn fg-more-btn--primary"
@@ -1180,6 +1234,32 @@ export default function FontGallery({ onCopy, toast }) {
           }}
           onOpen={(f) => { setShowCompare(false); setSelected(f) }}
           onCopy={onCopy}
+          onClear={mode === 'wide' ? undefined : () => { setCompare([]); setShowCompare(false) }}
+        />
+      )}
+
+      {sheetShown && (
+        <FiltersSheet
+          onClose={() => setSheetOpen(false)}
+          cats={CATS}
+          category={category}
+          onCategory={setCategory}
+          sorts={SORTS}
+          sort={sort}
+          onSort={setSort}
+          size={nameSize}
+          sizeMin={SIZE_MIN}
+          sizeMax={SIZE_MAX}
+          onSize={setSizeOverride}
+          view={view}
+          onView={setView}
+          previewText={previewText}
+          onPreviewText={setPreviewText}
+          faces={faces}
+          count={filtered.length}
+          canClear={sheetDirty}
+          onClear={clearSheet}
+          previewFirst={mode === 'phone'}
         />
       )}
 
