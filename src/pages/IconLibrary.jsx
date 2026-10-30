@@ -3733,20 +3733,35 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // (AUTO_REVEAL_LIMIT). From there the sentinel is a "Show more icons" button,
   // so the close and footer under the grid can be reached by scrolling, by
   // keyboard and by landmark; one press reveals the next page the same way.
+  //
+  // `visible` and `icons.length` are read through refs, not the closure. An
+  // observer callback can already be queued when the last chunk lands, and it
+  // still holds the revealPage built for the render before it (visible 440): it
+  // would start one more page from there and overshoot the limit to 560. The
+  // refs always hold the latest count, so that late callback sees 480 and stops.
+  // They are written in render so a stale passive effect can never move them back.
   const revealRef = useRef(0)
-  const revealPage = useCallback(() => {
+  const visibleRef = useRef(visible)
+  const totalRef = useRef(icons.length)
+  visibleRef.current = visible
+  totalRef.current = icons.length
+  // Only the button passes `manual`; the observer stops at AUTO_REVEAL_LIMIT.
+  const revealPage = useCallback((manual) => {
     if (revealRef.current) return
-    const target = Math.min(visible + PAGE_SIZE, icons.length)
-    if (target <= visible) return
-    let upTo = visible
+    const from = visibleRef.current
+    if (manual !== true && from >= AUTO_REVEAL_LIMIT) return
+    const target = Math.min(from + PAGE_SIZE, totalRef.current)
+    if (target <= from) return
+    let upTo = from
     const step = () => {
       revealRef.current = 0
       upTo = Math.min(upTo + REVEAL_CHUNK, target)
+      visibleRef.current = upTo
       setVisible(upTo)
       if (upTo < target) revealRef.current = requestAnimationFrame(step)
     }
     step()
-  }, [icons.length, visible])
+  }, [])
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -4817,7 +4832,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               ? <div ref={sentinelRef} className="ig-sentinel" />
               : (
                 <div className="ig-more">
-                  <button type="button" className="lib-btn" onClick={revealPage}>
+                  <button type="button" className="lib-btn" onClick={() => revealPage(true)}>
                     {`Show ${Math.min(PAGE_SIZE, icons.length - visible).toLocaleString()} more icons`}
                   </button>
                 </div>

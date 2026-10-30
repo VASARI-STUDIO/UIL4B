@@ -361,11 +361,8 @@ test.describe('Show N more icons', () => {
     const cells = () => page.locator('.ig .ic').count()
     const more = page.locator('.ig-more').getByRole('button')
     // Three automatic pages: the first 120 and three more, each as the end of the grid scrolls into view,
-    // then the button. KNOWN PRODUCT BUG (reported, src untouched): revealPage (IconLibrary.jsx, "const
-    // revealPage = useCallback") reads `visible` from the render that built the observer, so an observer
-    // callback queued during the last chunk (440) starts one more page from the old value after the limit
-    // was reached. Measured 2 runs in 6: the grid stops at 560, not 480. So this asserts the contract that
-    // holds either way (it stops, as a button, within one page of the limit) and counts from where it stopped.
+    // then the button. The grid must stop at exactly 480: an observer callback queued during the last chunk
+    // (at 440) used to start one more page from a stale count and reach 560.
     await expect.poll(async () => {
       await page.evaluate(() => document.querySelector('.ig-sentinel, .ig-more')?.scrollIntoView({ block: 'end' }))
       return page.locator('.ig-more').count()
@@ -375,8 +372,7 @@ test.describe('Show N more icons', () => {
     let was = -1
     await expect.poll(async () => { const c = await cells(); const same = c === was; was = c; return same }, { intervals: [300], timeout: 10_000 }).toBe(true)
     const auto = await cells()
-    expect(auto, 'at least the first page and three automatic ones').toBeGreaterThanOrEqual(480)
-    expect(auto, 'and no whole extra page past the limit').toBeLessThan(600)
+    expect(auto, 'the first page and three automatic ones, and not a cell more').toBe(480)
     await expect(more).toHaveText(`Show ${Math.min(120, TOTAL - auto)} more icons`)
     await expect(page.locator('.ig-sentinel')).toHaveCount(0)
 
