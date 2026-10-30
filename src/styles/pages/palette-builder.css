@@ -922,6 +922,15 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .plb-save .tl-btn-label { display: none; }
 }
 
+/* ── Preview: a main action, quiet (hairline) but in full ink so it reads
+   ahead of the other quiet buttons without a second accent fill. Under 360px
+   it is the icon alone, keeping its accessible name. ─────────────────────── */
+.plb .tl-btn.plb-preview-btn { font-weight: 600; color: var(--t0); }
+@media (max-width: 359.98px) {
+  .plb .plb-preview-btn .tl-btn-label { display: none; }
+  .plb .tl-btn.plb-preview-btn { width: 44px; padding: 0; justify-content: center; }
+}
+
 /* ── Suggest panel: Variations and Brands. A pick paints the board and the panel
    stays open; the user's own palette is pinned at the top. ──────────────── */
 .plb .plb-galpopup--suggest { width: min(640px, calc(100vw - 32px)); }

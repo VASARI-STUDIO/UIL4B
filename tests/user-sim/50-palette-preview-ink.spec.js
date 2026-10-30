@@ -149,7 +149,7 @@ test.describe('Palette Builder preview ink', () => {
     }, PALETTE)
 
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const scene = page.locator('.pvs')

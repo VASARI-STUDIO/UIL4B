@@ -247,10 +247,10 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
   // instead: /create/contrast is the other colour surface with a swatch and no
   // Preview control of its own.
   const contrast = stripComments(read('src/pages/ContrastChecker.jsx'))
-  // The control is the Tools overflow's "Preview on a UI" row since the drawn
+  // The control is the Preview button on the toolbar row (a row in Extra tools if it ever leaves) since the drawn
   // toolbar.
-  assert.ok(builder.includes("label: 'Preview on a UI'"), 'PaletteBuilder.jsx has lost its Preview control')
-  assert.ok(!contrast.includes('Preview on a UI') && !contrast.includes('aria-label="Preview"'),
+  assert.ok(builder.includes("label: 'Preview', icon: 'eye'"), 'PaletteBuilder.jsx has lost its Preview control')
+  assert.ok(!contrast.includes("label: 'Preview'") &&!contrast.includes('aria-label="Preview"'),
     'ContrastChecker.jsx now has a Preview control too, so the link target is ambiguous; revisit this test')
 
   const link = INFO.match(/<Link to=(\{[^}]+\}|"[^"]+")>Preview<\/Link>/)

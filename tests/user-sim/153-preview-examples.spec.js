@@ -126,7 +126,7 @@ async function seed(page, colors) {
 async function openDialog(page, { plan = 'pro' } = {}) {
   if (plan) await signIn(page, { plan })
   await go(page, '/create/palette')
-  await clickPaletteAction(page, 'Preview on a UI')
+  await clickPaletteAction(page, 'Preview')
   const dialog = page.getByRole('dialog', { name: 'Palette preview' })
   await expect(dialog).toBeVisible()
   return dialog
@@ -940,7 +940,7 @@ test.describe('the preview dialog fails to download', () => {
       return undefined
     })
 
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     await expect.poll(() => held.length, { message: 'the failed dialog chunk should have asked for exactly one reload' }).toBe(1)
     await expect.poll(() => probe.find((p) => p.startsWith('reload pending')), { message: 'the in-page probe never reported, so this test read nothing', timeout: 10000 }).toBeTruthy()
     expect(failed.count, 'the dialog chunk request must actually have been failed').toBeGreaterThan(0)

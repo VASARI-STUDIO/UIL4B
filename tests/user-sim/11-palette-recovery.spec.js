@@ -236,9 +236,10 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('Space activates interactive Palette controls without invoking the global randomise shortcut', async ({ page }) => {
     watch(page, 'keyboard designer using controls, popovers and modals')
-    // Preview is a button on the toolbar row at 1440px and a row in the Extra
-    // tools overflow at 768px. Each is pressed with Space (in the overflow, the
-    // trigger too), and none may reach the page's randomise.
+    // Preview is a button on the toolbar row at every width: 1440px, and 390px
+    // where the Extra tools overflow is a phone sheet. It is pressed with Space,
+    // and that may not reach the page's randomise. At 768px the Extra tools
+    // trigger is pressed with Space too (the overflow's own rows).
     const swatchHexes = page.locator('.plb-col .plb-hex')
     const liveMessage = page.locator('.plb > .tl-body > p[aria-live="polite"]')
     for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 768 }]) {
@@ -255,25 +256,19 @@ test.describe('Palette Builder recovery and tool continuity', () => {
         await expect(liveMessage).toHaveText('')
       }
 
-      const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview on a UI', exact: true })
-      let preview
-      if (where === 'row') {
-        preview = onRow
-        await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
-      } else {
-        await expect(onRow, `${width}px: Preview has left the row`).toHaveCount(0)
+      const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview', exact: true })
+      const preview = onRow
+      await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
+      if (where === 'overflow') {
+        // Space on the Extra tools trigger opens its panel and leaves the palette alone.
         const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
         await tools.focus()
         await expect(tools).toBeFocused()
         await page.keyboard.press('Space')
         await expect(tools).toHaveAttribute('aria-expanded', 'true')
-        const overflow = page.getByRole('dialog', { name: 'Extra tools' })
-        preview = overflow.getByRole('button', { name: 'Preview on a UI' })
-        await expect(preview).toBeVisible()
-        // The popover moves focus to its first control one frame after it
-        // opens. A row focused before that lands is overridden, and Space then
-        // presses the wrong control. Wait for the hand-off to finish.
-        await expect(overflow.locator(':focus')).toHaveCount(1)
+        await expect(page.getByRole('dialog', { name: 'Extra tools' }).locator(':focus')).toHaveCount(1)
+        await page.keyboard.press('Escape')
+        await expect(tools).toHaveAttribute('aria-expanded', 'false')
       }
       await expectUnchangedPalette()
       await preview.focus()
@@ -321,7 +316,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(insertMenu.getByRole('menuitem')).toHaveCount(4)
 
     await page.keyboard.press('Escape')
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')

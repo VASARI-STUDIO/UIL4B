@@ -42,7 +42,7 @@ const TOOLS = [
       { row: 'Suggest variations and brands', menu: 'Suggest' },
       // Lower-priority buttons (icon-only below 768px): on the row where there is room, else in Extra tools.
       'Explore palettes',
-      'Preview on a UI',
+      'Preview',
       'Undo',
       'Redo',
       'Randomise',

@@ -2726,6 +2726,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const historyButton = (kind) => (kind === 'undo'
     ? <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
     : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
+  const openPreview = () => {
+    closeAllMenus()
+    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null })
+  }
   const toolbarItems = [
     {
       id: 'back', priority: 2,
@@ -2771,12 +2775,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
     },
+    // Preview outranks every other action, so it is the last one to leave the
+    // row (Save or share, the primary, never leaves). Its label shows from
+    // 360px; under that it keeps its icon and its name (palette-builder.css).
     {
-      id: 'preview', priority: 3, align: 'end',
+      id: 'preview', priority: 6, align: 'end',
       render: () => (
-        <ToolButton icon="eye" collapse {...warmPreview} onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+        <ToolButton icon="eye" className="plb-preview-btn" {...warmPreview} onClick={openPreview} aria-label="Preview" title="Preview your palette on real designs" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
-      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) } },
+      menu: { label: 'Preview', icon: 'eye', onSelect: openPreview },
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },

@@ -330,7 +330,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   test('all eight scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     await expect(page.locator('.pvs')).toHaveCount(1)
 
     const VARS = ['--pv-canvas', '--pv-surface', '--pv-raised', '--pv-border', '--pv-border-strong',
