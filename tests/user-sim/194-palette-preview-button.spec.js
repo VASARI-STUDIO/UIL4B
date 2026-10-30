@@ -97,4 +97,48 @@ test.describe('Preview is a main toolbar button', () => {
     await expect(panel.getByRole('button', { name: 'Explore palettes', exact: true })).toBeVisible()
     await expect(panel.getByRole('button', { name: 'Preview', exact: true }), 'Preview is not doubled in Extra tools').toHaveCount(0)
   })
+
+  test('reopens on the last preview viewed, and never on a locked one for a free account', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    await settle(page)
+    const dialog = page.getByRole('dialog', { name: 'Palette preview' })
+    const options = dialog.getByRole('listbox', { name: 'Previews' }).getByRole('option')
+    const open = () => paletteToolbar(page).locator('.plb-preview-btn').click()
+
+    await open()
+    await expect(options.filter({ hasText: /^Editorial hero/ })).toHaveAttribute('aria-selected', 'true')
+    await options.filter({ hasText: /^Trail run app/ }).click()
+    await page.getByRole('button', { name: 'Close preview' }).click()
+    await open()
+    await expect(options.filter({ hasText: /^Trail run app/ }), 'a free preview is where it reopens').toHaveAttribute('aria-selected', 'true')
+
+    await options.filter({ hasText: /^Spending card/ }).click()
+    await expect(page.getByRole('button', { name: 'Unlock preview' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close preview' }).click()
+    await open()
+    await expect(options.filter({ hasText: /^Editorial hero/ }), 'a locked preview is not where a free account lands').toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+  })
+
+  test('on a phone the system Back button closes the viewer and leaves the page where it was', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await go(page, '/create/palette')
+    await settle(page)
+    const before = page.url()
+    await paletteToolbar(page).locator('.plb-preview-btn').click()
+    const dialog = page.getByRole('dialog', { name: 'Palette preview' })
+    await expect(dialog).toBeVisible()
+    await page.goBack()
+    await expect(dialog).toHaveCount(0)
+    expect(page.url()).toBe(before)
+
+    // Closing with the X takes its history entry off again: Back then leaves the builder, not a dead entry.
+    await paletteToolbar(page).locator('.plb-preview-btn').click()
+    await expect(dialog).toBeVisible()
+    await page.getByRole('button', { name: 'Close preview' }).click()
+    await expect(dialog).toHaveCount(0)
+    await page.waitForTimeout(150)
+    expect(await page.evaluate(() => Boolean(window.history.state && window.history.state.dialogBack))).toBe(false)
+  })
 })

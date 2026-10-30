@@ -35,7 +35,7 @@ import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // The preview dialog: the scene list and the role legend. Its own chunk, loaded
 // when Preview is first pointed at or opened (previewLoader.js).
-import { DEFAULT_SCENE } from '../data/palettePreviewScenes'
+import { DEFAULT_SCENE, openingScene } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import HarmonyWheel from '../components/palette/HarmonyWheel'
@@ -1117,6 +1117,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
   const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
+  // The last preview viewed this visit: closing and reopening returns to it. Not saved, so a reload starts on the default.
+  const [lastScene, setLastScene] = useState(DEFAULT_SCENE)
   const [saveName, setSaveName] = useState('')
   // The save runs here, not in doSave: right after the sign-in resolves, doSave's
   // closure still holds the signed-out `saveProject`, which throws "Sign in to
@@ -2728,7 +2730,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
   const openPreview = () => {
     closeAllMenus()
-    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null })
+    setPreview({ mode: 'light', scene: openingScene(lastScene, isPro && planKnown), compare: null })
   }
   const toolbarItems = [
     {
@@ -3650,7 +3652,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         <Suspense fallback={null}>
           <PalettePreviewDialog
             preview={preview}
-            onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
+            onChange={(patch) => { if (patch.scene) setLastScene(patch.scene); setPreview((p) => (p ? { ...p, ...patch } : p)) }}
             onClose={closePreview}
             colors={adjusted}
             paletteScore={paletteScore}
@@ -3660,7 +3662,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}
-            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'See your palette on all eight previews, in light and dark.' })}
             onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
           />
         </Suspense>

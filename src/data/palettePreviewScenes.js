@@ -38,6 +38,14 @@ export const DEFAULT_SCENE = 'editorial'
 const sceneIs = (id) => (s) => s.id === id
 export const sceneById = (id) => PREVIEW_SCENES.find(sceneIs(id)) || PREVIEW_SCENES.find(sceneIs(DEFAULT_SCENE))
 
+// The scene the viewer opens on: the last one viewed, unless it is a Pro
+// preview and the plan is not known to be Pro (still loading counts as not
+// Pro), so a free account never opens onto a blurred scene.
+export const openingScene = (lastId, canSeePro) => {
+  const last = PREVIEW_SCENES.find(sceneIs(lastId))
+  return last && (last.free || canSeePro) ? last.id : DEFAULT_SCENE
+}
+
 // ── Sample content ───────────────────────────────────────────────────────────
 
 export const FERNWAY = {
