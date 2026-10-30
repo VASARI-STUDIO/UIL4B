@@ -1507,7 +1507,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   const mixed = await read()
   expect(mixed.labels, 'every cell in a mixed set carries its pack').toBe(mixed.cells)
-  // The hover label is 12px UI sans, laid over the cell's corner.
+  // The hover label is 12px UI sans, on a second line under the cell's name.
   expect(mixed.fontSize, 'the pack label is 12px')
     .toBe(12)
   expect(mixed.textTransform, 'quiet label: normal case').toBe('none')

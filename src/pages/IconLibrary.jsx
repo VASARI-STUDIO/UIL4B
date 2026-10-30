@@ -997,12 +997,13 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // it, and scrolling it back into view restores the glyph in place.
 const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack ? packOf(icon) : null
-  // The pack name shows on hover only (see `.ic-pack`), so the accessible name
-  // carries it for everyone who cannot hover.
+  // The pack name shows under the icon name, and on hover-capable devices only
+  // with it (see `.ic-pack`), so the accessible name carries it for everyone who
+  // cannot hover.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
   return (
     <div
-      className={picked ? 'ic is-picked' : 'ic'}
+      className={['ic', picked && 'is-picked', packName && 'has-pack'].filter(Boolean).join(' ')}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
