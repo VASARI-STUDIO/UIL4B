@@ -136,6 +136,79 @@ export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) 
 }
 
 /**
+ * THE ONE PRICE STATE every Pro button and price slot reads (/plans, /checkout,
+ * Settings). Exactly one of:
+ *   loading          the fetch has not settled
+ *   retrying         the fetch has not settled, after a Retry the person pressed
+ *   unreachable      settled, and Stripe has no live price for any cadence
+ *   no-currency      Stripe has a live price, but none in this currency
+ *   cadence-missing  the selected cadence has no price here, another one does
+ *   live             the selected cadence has a price: the only state that sells
+ *
+ * `price` is useProPrice(); `offers` is resolveOffers().offers.
+ */
+export function priceState({ price, offers, selectedId, retrying = false } = {}) {
+  if (!price?.loaded) return retrying ? 'retrying' : 'loading'
+  const live = (id) => price.source?.[id] === 'live'
+  const noLiveSource = !price.serviceAvailable || !BILLING_OPTIONS.some((o) => live(o.id))
+  if (noLiveSource) return 'unreachable'
+  const list = offers || []
+  const selected = list.find((o) => o.id === selectedId) || list[0]
+  if (selected?.amountLabel) return 'live'
+  return list.some((o) => o.amountLabel) ? 'cadence-missing' : 'no-currency'
+}
+
+/** Only a live price may open a checkout. Every other state links nowhere. */
+export const canCheckout = (state) => state === 'live'
+
+/** A Retry is the action in the states where asking again can change the answer. */
+export const canRetryPrice = (state) => state === 'unreachable' || state === 'no-currency' || state === 'retrying'
+
+/**
+ * THE ONLY PLACE OUTAGE WORDS LIVE. Each surface imports these, so /plans,
+ * /checkout and Settings cannot describe one outage three ways. "Unavailable"
+ * is said once, in the price slot.
+ *   word    the price slot (instead of an amount)
+ *   line1   the note's first line      line2  its second line, or ''
+ *   button  the label of the action in the Pro button slot, or null for the
+ *           surface's normal Pro label
+ *   under   the line under the button
+ * `ctx` is { currencyLabel, selectedLabel, otherLabel }.
+ */
+const FREE_KEEPS_WORKING = 'Everything on Free keeps working.'
+const RETRY_LABEL = 'Retry live pricing'
+export const PRICE_STATE_COPY = Object.freeze({
+  loading: () => ({ word: '—', line1: 'Checking the live price…', line2: '', button: null, under: '' }),
+  retrying: () => ({ word: '—', line1: 'Checking the live price…', line2: '', button: 'Checking Stripe…', under: '' }),
+  unreachable: () => ({
+    word: 'Unavailable',
+    line1: 'Stripe didn’t answer, so no checkout can start.',
+    line2: 'Your card isn’t asked for until it does.',
+    button: RETRY_LABEL,
+    under: FREE_KEEPS_WORKING,
+  }),
+  'no-currency': ({ currencyLabel }) => ({
+    word: 'Unavailable',
+    line1: `Pro has no ${currencyLabel} price yet.`,
+    line2: 'Checkout opens once it has one.',
+    button: RETRY_LABEL,
+    under: FREE_KEEPS_WORKING,
+  }),
+  'cadence-missing': ({ currencyLabel, selectedLabel, otherLabel }) => ({
+    word: 'Unavailable',
+    line1: `No ${currencyLabel} price for ${selectedLabel} yet.`,
+    line2: `${otherLabel} can be bought in ${currencyLabel}.`,
+    button: `Switch to ${otherLabel}`,
+    under: FREE_KEEPS_WORKING,
+  }),
+  // A live state has no outage words: the surface prints the amount and its own terms.
+  live: () => ({ word: null, line1: '', line2: '', button: null, under: '' }),
+})
+
+/** The words for one state, from the one table above. */
+export const priceStateCopy = (state, ctx = {}) => PRICE_STATE_COPY[state](ctx)
+
+/**
  * Which cadence a live subscription is on, or null when the record cannot say.
  *
  * The subscription document carries Stripe's `recurring.interval` (see
