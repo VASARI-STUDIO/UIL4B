@@ -10,6 +10,8 @@ import ToolIcon from './ToolIcon'
 // Applying a tint is a Pro tool. A free account still sees the ramp, so the menu
 // shows what the tool does, but every row is a locked row and pressing it hands
 // off to `onGate` (the caller raises the Pro modal) instead of changing the stop.
+// The ramp's hex values are the Pro value, so a locked row never carries one:
+// the hex slot holds a blurred stand-in and the accessible name has no hex.
 //
 // It is a menu, not a dialog: one tab stop, arrow keys between rows, Escape or a
 // press outside closes it and focus goes back to the control that opened it.
@@ -18,6 +20,9 @@ import ToolIcon from './ToolIcon'
 
 const EDGE = 8
 const GAP = 4
+
+// What a locked row shows in the hex slot: the width of a hex, no digits.
+const LOCKED_HEX = '#••••••'
 
 // Where the menu goes when it hangs off a control (`anchor`): below it if the
 // whole menu fits, else above, else beside it (the side with more room), and
@@ -162,7 +167,7 @@ export default function StopTintMenu({
           role="menuitem"
           className="grd-tintmenu-item"
           aria-disabled={!isPro || undefined}
-          aria-label={isPro ? `Apply tint ${t.label}, ${t.hex.toUpperCase()}` : `Tint ${t.label}, ${t.hex.toUpperCase()} (Pro)`}
+          aria-label={isPro ? `Apply tint ${t.label}, ${t.hex.toUpperCase()}` : `Tint ${t.label} (Pro)`}
           onClick={() => {
             if (!isPro) { onGate(); onClose(); return }
             onApply(t.hex.toUpperCase(), t.label)
@@ -172,7 +177,11 @@ export default function StopTintMenu({
         >
           <span className="grd-tintmenu-chip" style={{ background: t.hex }} aria-hidden="true" />
           <span className="grd-tintmenu-label">{t.label}</span>
-          <span className="grd-tintmenu-hex">{t.hex.toUpperCase()}</span>
+          {isPro ? (
+            <span className="grd-tintmenu-hex">{t.hex.toUpperCase()}</span>
+          ) : (
+            <span className="grd-tintmenu-hex grd-tintmenu-hex--locked" aria-hidden="true">{LOCKED_HEX}</span>
+          )}
         </button>
       ))}
     </div>,

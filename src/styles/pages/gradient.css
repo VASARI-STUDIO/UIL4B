@@ -853,6 +853,8 @@
 .grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
 .grd-tintmenu-label { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t1); }
+/* A locked row's stand-in for the hex: blurred like the other Pro previews, not selectable. */
+.grd-tintmenu-hex--locked { filter: blur(3px); user-select: none; -webkit-user-select: none; pointer-events: none; }
 @media (pointer: coarse) { .grd-tintmenu-item { min-height: 44px; } }
 @media (forced-colors: active) {
   .grd-tintmenu-chip { forced-color-adjust: none; }
