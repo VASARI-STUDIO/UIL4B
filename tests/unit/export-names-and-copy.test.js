@@ -263,5 +263,5 @@ test('an empty value reads "None", not a lone dash', () => {
 
 test('the contents line on the book no longer has the dash from the report', () => {
   const book = buildDesignSystemBook(FULL, PRO)
-  assert.match(book, /<p>This is the specification for <b>Harbour<\/b>: the colour, typography and token decisions/)
+  assert.match(book, /<p>The colour, type and token specification for <b>Harbour<\/b>\.<\/p>/)
 })

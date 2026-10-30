@@ -8,13 +8,14 @@
 // column with a 6 mm gap. Recto pages (odd folios) put the margin column on the
 // outer right edge; verso pages mirror it, so a printed spread reads as a book.
 
-import { esc, safeHex, inkName, paletteLayout, chromeFor, clampTitle } from '../shared.js'
+import { esc, safeHex, inkName, paletteLayout, chromeFor, clampTitle, specimenScale, fmtRatio, matrixBlocks } from '../shared.js'
 import { mixHex } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Literata', weights: '200 900', file: 'literata-latin.woff2' })
 
-// The most colours the matrix lays out; past this the cells stop being legible.
-const MATRIX_MAX = 8
+// What the type scale has to fit, in mm: the height under its head, the specimen column's width
+// (110 mm, less a margin for faces wider than the 0.6 em the fit assumes), a row's padding and its row text (the margin column's two lines).
+const SCALE_FIT = Object.freeze({ roomMm: 195, widthMm: 96, padMm: 6.25, textMm: 10.4, lineHeight: 1.15 })
 // The longest run of neutrals one shared page carries (two columns of six).
 const NEUTRALS_PER_PAGE = 12
 
@@ -100,7 +101,7 @@ function specs(s) {
     ['Hex', s.hex], ['RGB', s.rgb], ['HSL', s.hsl], ['OKLCH', s.oklch],
     ['Ink', `${inkName(s.ink)}, ${s.ratio}:1, ${s.grade}`],
   ])}
-    <p class="lands"><b>Where it lands</b>${esc(s.lands)}</p>`
+    ${s.lands ? `<p class="lands"><b>Where it lands</b>${esc(s.lands)}</p>` : ''}`
 }
 
 function swatches(ctx, slots) {
@@ -113,7 +114,7 @@ function swatches(ctx, slots) {
         <p class="role">${esc(roleName(s.role))}</p>
         <p class="nm">${esc(s.name)}</p>
         <p class="hx">${esc(s.hex)}</p>
-        <p class="lands">${esc(s.lands)}</p>
+        ${s.lands ? `<p class="lands">${esc(s.lands)}</p>` : ''}
       </div>`
   }).join('')}</div>`).join('')
   const cut = d.palette.length > slots.length
@@ -148,32 +149,33 @@ function swatches(ctx, slots) {
     <div class="wide chips">${group.map((s) => `<div class="chip">
         <i style="background:${safeHex(s.hex, 'GrayText')}"></i>
         <div><p class="role">${esc(roleName(s.role))}</p><p class="nm">${esc(s.name)}</p>
-        <p class="hx">${esc(s.hex)} &middot; ${s.ratio}:1 ${esc(s.grade)}</p><p class="lands">${esc(s.lands)}</p></div>
+        <p class="hx">${esc(s.hex)} &middot; ${s.ratio}:1 ${esc(s.grade)}</p>${s.lands ? `<p class="lands">${esc(s.lands)}</p>` : ''}</div>
       </div>`).join('')}</div>`,
     })
   }
   return pages
 }
 
-function matrix(ctx, slots) {
-  const cols = slots.slice(0, MATRIX_MAX).map((s) => s.hex)
-  const axes = [...cols, ctx.white, ctx.black]
-  const head = axes.map((c) => `<th scope="col"><i class="dot" style="background:${safeHex(c, 'GrayText')}"></i><span>${esc(c.replace('#', ''))}</span></th>`).join('')
-  const rows = cols.map((row) => `<tr><th scope="row"><i class="dot" style="background:${safeHex(row, 'GrayText')}"></i>${esc(row)}</th>${axes.map((col) => {
-    if (row === col) return '<td class="mx-self">&mdash;</td>'
-    const r = ctx.contrast(row, col)
-    const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
-    return `<td class="${cls}">${r}<span>${word}</span></td>`
-  }).join('')}</tr>`).join('')
-  const capped = ctx.d.palette.length > MATRIX_MAX
-  return [{
-    leaf: 'Contrast matrix',
-    inner: `<header class="pg-head"><h3>Contrast matrix</h3>
-      <p class="lede">Every pair measured. Read a row as the background and a column as the text on it.</p></header>
+/** The contrast matrix, every palette colour against every other and against paper and ink, on as many pages as it needs. */
+function matrix(ctx) {
+  const blocks = matrixBlocks(ctx.d.palette, [ctx.white, ctx.black])
+  return blocks.map(({ rows: rowHexes, cols, first }) => {
+    const head = cols.map((c) => `<th scope="col"><i class="dot" style="background:${safeHex(c, 'GrayText')}"></i><span>${esc(c.replace('#', ''))}</span></th>`).join('')
+    const rows = rowHexes.map((row) => `<tr><th scope="row"><i class="dot" style="background:${safeHex(row, 'GrayText')}"></i>${esc(row)}</th>${cols.map((col) => {
+      if (row === col) return '<td class="mx-self">&mdash;</td>'
+      const r = ctx.contrast(row, col)
+      const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
+      return `<td class="${cls}">${fmtRatio(r)}<span>${word}</span></td>`
+    }).join('')}</tr>`).join('')
+    return {
+      leaf: first ? 'Contrast matrix' : null,
+      inner: `<header class="pg-head">${first
+    ? '<h3>Contrast matrix</h3><p class="lede">Contrast ratio for each pair. Read a row as the background and a column as the text on it.</p>'
+    : '<h3 class="cont">Contrast matrix <span>continued</span></h3>'}</header>
     <table class="wide mx"><colgroup><col class="mx-lead"></colgroup><thead><tr><th scope="col"><span>bg / text</span></th>${head}</tr></thead><tbody>${rows}</tbody></table>
-    <p class="mg key"><b>Pass</b> reads as normal text, 4.5:1 or more. <b>Large</b> reads as large text only, 3:1 or more. <b>Fail</b> is a fill, not a text pair.</p>
-    ${capped ? `<p class="note">The matrix shows the first ${MATRIX_MAX} colours. Each colour page gives its own reading ink and ratio.</p>` : ''}`,
-  }]
+    <p class="mg key"><b>Pass</b> 4.5:1 or more, normal text. <b>Large</b> 3:1 or more, large text. <b>Fail</b> under 3:1, fills only.</p>`,
+    }
+  })
 }
 
 function typography(ctx) {
@@ -183,10 +185,12 @@ function typography(ctx) {
       <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ., : ; ! ? ( ) &ndash; @ # % $</p></div>
       <div class="mg"><p class="role">${esc(role)}</p>${dl([['Weight', weight], ['Tracking', spacing ? `${spacing}em` : 'normal']])}</div>
     </div>`
+  // One factor for every step, so the ratios between the specimens stay true.
+  const { k } = specimenScale(ladder, SCALE_FIT)
   const scale = ladder.map((s) => {
     const heading = s.exp >= 1
     return `<div class="rw st">
-      <div class="tx"><p class="sp" style="font-size:${Math.min(s.px, 44)}px;font-family:'${esc(heading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</p></div>
+      <div class="tx"><p class="sp" style="font-size:${(s.px * k).toFixed(1)}px;font-family:'${esc(heading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${heading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</p></div>
       <div class="mg"><p class="hx">${esc(s.name)} &middot; ${s.px}px</p><p class="hx">${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem &middot; ${heading ? 1.15 : d.lineHeight}</p></div>
     </div>`
   }).join('')
@@ -194,15 +198,15 @@ function typography(ctx) {
     {
       leaf: 'The families',
       inner: `<header class="pg-head"><h3>The families</h3>
-      <p class="lede">Two faces carry the system. The colophon states the fallbacks.</p></header>
+      <p class="lede">Headings in ${esc(d.heading)} ${d.headingWeight}. Body in ${esc(d.body)} ${d.bodyWeight}.</p></header>
     ${family('Headings', d.heading, d.headingWeight, d.headingSpacing)}${family('Body', d.body, d.bodyWeight, d.bodySpacing)}`,
     },
     {
       leaf: 'The scale',
       inner: `<header class="pg-head"><h3>The scale</h3>
-      <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Each step is set in its own face.</p></header>
+      <p class="lede">${d.ratio} ratio from a ${d.baseSize}px base.</p></header>
     ${scale}
-    <p class="note">Steps above 44px are shown reduced to fit; the size beside each step is the true value.</p>`,
+    ${k < 1 ? `<p class="note">Specimens are set at ${Math.round(k * 100)}% of their size. The size beside each step is the true value.</p>` : ''}`,
     },
   ]
 }
@@ -213,9 +217,9 @@ function colophon(ctx) {
   const face = chromeFor(CHROME, ctx.fontData) ? ' Running heads, folios and notes are set in Literata.' : ''
   const note = (label, text) => `<div class="rw"><div class="mg"><p class="role">${esc(label)}</p></div><div class="tx"><p>${text}</p></div></div>`
   return `<header class="pg-head"><h3>Notes</h3></header>
-    ${note('Method', 'Contrast is the WCAG 2.2 relative-luminance ratio (&sect;1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible: the same two hex values always give the same ratio.')}
-    ${note('Typefaces', `Headings set in ${esc(d.heading)} at ${d.headingWeight}, body in ${esc(d.body)} at ${d.bodyWeight}. Both fall back to <code>system-ui</code>, then the platform sans, so this document reads correctly offline or behind a blocked font host.${face}`)}
-    ${note('Scope', 'Colour, typography and tokens: the decisions this system actually holds. A full identity manual would also carry logo construction, imagery direction and applied examples; they are not here because they are not in the system.')}
+    ${note('Method', 'Contrast: WCAG 2.2 relative luminance (1.4.3, 1.4.11). AA text 4.5:1, large text and UI parts 3:1, AAA 7:1.')}
+    ${note('Typefaces', `Headings in ${esc(d.heading)} ${d.headingWeight}. Body in ${esc(d.body)} ${d.bodyWeight}. Fonts load from Google Fonts; offline, both fall back to <code>system-ui</code>.${face}`)}
+    ${note('Scope', `This book covers colour, type and tokens. Logo construction, imagery and tone of voice aren't part of this system.`)}
     ${note('This book', `<span class="full">${esc(projectName)}</span><br>Issued ${esc(iso)}`)}`
 }
 
@@ -336,10 +340,10 @@ function css(ctx) {
   .mx{width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--chrome);font-size:8pt}
   .mx th,.mx td{padding:2.2mm 0;text-align:center;border-bottom:.25mm solid var(--rule);font-weight:400}
   .mx thead th{border-bottom:.35mm solid var(--ink);color:var(--muted);font-size:7pt}
-  .mx thead th span,.mx td span{display:block;font-size:7pt;color:var(--muted)}
+  .mx thead th span,.mx td span{display:block;font-size:7pt;color:var(--muted);overflow-wrap:anywhere}
   .mx tbody th{text-align:left;white-space:nowrap}
   .mx td{font-variant-numeric:lining-nums tabular-nums}
-  /* The row heads are hex values with a dot; the other columns share what is left, 13.6 mm each at eight colours. */
+  /* The row heads are hex values with a dot; the other columns share what is left, 9.1 mm each at fifteen columns. */
   .mx col.mx-lead{width:20mm}
   .mx-pass{font-weight:700!important}
   .mx-mid{font-weight:500!important}
