@@ -352,6 +352,11 @@ const MOMENT_ICONS = {
       <path className="i1" d="m12 4 2.4 5 5.4.7-4 3.7 1.1 5.4L12 16.1l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" />
       <path className="i2" d="M12 19s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 7.6a3.8 3.8 0 0 1 7 2.2C19 14.6 12 19 12 19z" />
       <path className="i3" d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
+      <path className="i4" d="M7 4.5h10v15l-5-3.6-5 3.6z" />
+      <g className="i5">
+        <circle cx="12" cy="12" r="3.6" />
+        <path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M6.7 6.7l1.4 1.4M15.9 15.9l1.4 1.4M17.3 6.7l-1.4 1.4M8.1 15.9l-1.4 1.4" />
+      </g>
     </>
   ),
   // The face tilts and its right eye winks once: the dot hides and a closed lid shows.

@@ -2989,13 +2989,14 @@ html.lenis{scroll-behavior:auto!important}
    tool: the name (Palette, Font Gallery, Font Pair) or the glyph. PillNav sets
    [data-live] on the active row: 80ms after a fine pointer arrives, at once on
    keyboard focus, removed at once on leave, blur or a move onto anything that is
-   not a row. Each moment plays once in 200 to 600ms and holds; the exit is 150ms
+   not a row. Each moment plays once in 200 to 600ms and holds, except Font Gallery
+   and Icon Library, which loop while the row is live; the exit is 150ms
    ease-in on the base rule. Only transform, opacity, fill-opacity, stroke-width,
    clip-path, background-position, colour and font family change, so the 48px row
    never moves. The name moves with the glyph on every row: it slides 3px along and
    takes the category colour; a row without a moment lifts its glyph instead. Touch and coarse pointers get nothing (the media query
    below); reduced motion gets the end state at once, because the global
-   reduced-motion rule cuts every duration to 0. These moments deliberately use
+   reduced-motion rule cuts every duration to 0 (the two loops hold one state instead). These moments deliberately use
    gradients, gradient text and motion on a row hover, which the rest of the site
    avoids. */
 .pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450;--mm-bloom:linear-gradient(135deg in oklab,#EAB308,#F9A8D4,#C4B5FD);--mm-ok:var(--ok);--mm-warn:var(--warn);--mm-err:var(--err)}
@@ -3033,7 +3034,7 @@ html.lenis{scroll-behavior:auto!important}
 .mm-gl .t1,.mm-gl .t2,.mm-gl .t3{transform-box:fill-box;transform-origin:50% 100%}
 /* Scaled strokes keep their width: 1.6 units at the 18px glyph is 1.2px. */
 .mm-gl .ts path{vector-effect:non-scaling-stroke;stroke-width:1.2px}
-.mm-gl .i2,.mm-gl .i3{opacity:0}
+.mm-gl :is(.i2,.i3,.i4,.i5){opacity:0}
 .mm-gl .face{transform-origin:12px 12px}
 /* The right eye winks: the dot gives way to a short closed lid, so the wink reads as an eye closing. */
 .mm-gl .ew{opacity:0;fill:none}
@@ -3073,7 +3074,7 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease)}
   .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms}
   .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms}
-  /* 6 Font Gallery: PillNav swaps the name through ready faces (style + data-face). */
+  /* 6 Font Gallery: PillNav steps the name through the shuffled ready faces, on a loop (style + data-face). */
   /* 7 Font Pair: "Font" in Literata 600, then "Pair" in Geist Mono 500, 90ms later.
      A face is used only once it is ready (data-faces on the menu root); until then
      "Font" takes Switzer 700 and "Pair" stays as it is. */
@@ -3084,10 +3085,15 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-moment="type-scale"][data-live] .t1{transform:scaleY(2.4);transition:transform 340ms var(--mm-ease)}
   .pnav-tool[data-moment="type-scale"][data-live] .t2{transform:scaleY(1.45);transition:transform 340ms var(--mm-ease) 60ms}
   .pnav-tool[data-moment="type-scale"][data-live] .t3{transform:scaleY(1.12);transition:transform 340ms var(--mm-ease) 120ms}
-  /* 9 Icon Library: star to heart to bolt, holding on the bolt. */
-  .pnav-tool[data-moment="icons"][data-live] .i1{animation:mm-i1 460ms var(--mm-ease) forwards}
-  .pnav-tool[data-moment="icons"][data-live] .i2{animation:mm-i2 460ms var(--mm-ease) forwards}
-  .pnav-tool[data-moment="icons"][data-live] .i3{animation:mm-i3 460ms var(--mm-ease) forwards}
+  /* 9 Icon Library: star, heart, bolt, bookmark, sun, round and round while the row is live.
+     One keyframe serves all five glyphs: each runs it a step behind the one before (negative
+     delays of 1440 to 360ms in a 1800ms loop), so every step is 360ms, the Font Gallery's
+     GALLERY_STEP_MS. Going quiet drops the animation and the glyph fades back to the star. */
+  .pnav-tool[data-moment="icons"][data-live] :is(.i1,.i2,.i3,.i4,.i5){animation:mm-icons 1800ms linear infinite}
+  .pnav-tool[data-moment="icons"][data-live] .i2{animation-delay:-1440ms}
+  .pnav-tool[data-moment="icons"][data-live] .i3{animation-delay:-1080ms}
+  .pnav-tool[data-moment="icons"][data-live] .i4{animation-delay:-720ms}
+  .pnav-tool[data-moment="icons"][data-live] .i5{animation-delay:-360ms}
   /* 10 Emoji Library: the face tilts 20deg and the right eye closes once (dot out, lid in). */
   .pnav-tool[data-moment="emoji"][data-live] .face{transform:rotate(-20deg);transition:transform 300ms var(--mm-ease)}
   .pnav-tool[data-moment="emoji"][data-live] .er{animation:mm-wink 380ms ease-in-out 140ms}
@@ -3124,14 +3130,18 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-moment="prompt-library"][data-live] .d3{animation-delay:260ms}
 }
 @keyframes mm-mono{from,to{font-family:"Geist Mono",monospace;font-weight:500;font-size-adjust:.5}}
-@keyframes mm-i1{0%{opacity:1}30%,100%{opacity:0}}
-@keyframes mm-i2{0%{opacity:0}30%,60%{opacity:1}85%,100%{opacity:0}}
-@keyframes mm-i3{0%,60%{opacity:0}85%,100%{opacity:1}}
+/* The star's slot: shown for 14% of the loop, then 6% of cross-fade into the next glyph, dark until the last 6% fades it back in. */
+@keyframes mm-icons{0%,14%{opacity:1}20%,94%{opacity:0}100%{opacity:1}}
 @keyframes mm-wink{0%,100%{opacity:1}18%,82%{opacity:0}}
 @keyframes mm-wink-lid{0%,100%{opacity:0}18%,82%{opacity:1}}
 @keyframes mm-run{0%,100%{transform:none}45%{transform:translateX(4px)}}
 @keyframes mm-run-back{0%{transform:none;opacity:1}45%{transform:translateX(-4px);opacity:.7}100%{transform:none;opacity:.4}}
 @keyframes mm-hop{0%,100%{transform:none}50%{transform:translateY(-2.4px)}}
+/* Reduced motion: the Icons loop never starts, so the row holds its resting glyph (the star). */
+html[data-reduced-motion="true"] .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
+}
 /* Forced colours: the rainbow clip off, the overlay hidden. */
 @media (forced-colors:active){
   .pnav-tool[data-moment="palette"] .pnav-tool-nm{background:none;color:CanvasText}
