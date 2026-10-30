@@ -15,9 +15,6 @@ import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 // Builder actually gates. The pill goes to /plans, never to checkout.
 //
 // The panel is flat: the card colour and a hairline, with no gradient, shadow or accent border.
-// The "UIL4B Pro" label above the heading is an open choice; the page keeps it for now. Set this to
-// false to remove it (Pro is still named in the line and the button).
-const SHOW_PRO_LABEL = true
 
 export default function ProPanel() {
   const { currency, loaded } = useProPrice()
@@ -26,7 +23,6 @@ export default function ProPanel() {
   return (
     <section className="uh-pro" aria-labelledby="uh-pro-h">
       <div className="uh-pro-copy">
-        {SHOW_PRO_LABEL && <p className="uh-pro-eyebrow">UIL4B Pro</p>}
         <h2 id="uh-pro-h" className="uh-pro-h">Lift the daily cap and the export mark.</h2>
         <p className="uh-pro-line">{UPGRADE_LINE}</p>
         <div className="uh-pro-cta-row">

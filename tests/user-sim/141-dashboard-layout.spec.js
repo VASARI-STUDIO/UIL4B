@@ -42,7 +42,7 @@
 //   projects.css   `.uh .uh-steps li` min-height/line-height 44px    -> "the starter's steps are one column ... not links" (32px rows)
 //   projects.css   `.uh-clock-line` font-size 12px                  -> "no text is smaller than 13px" (390 cases)
 //   projects.css   `.uh-today { display: block }` at 641-1000      -> "on a tablet, Today is one row"
-//   projects.css   drop the phone's hide rule for Semantic and Palette Library -> "Start something is four tools"
+//   projects.css   drop the phone's hide rule for Semantic -> "Start something is five tool rows"
 //   projects.css   drop the phone's `.uh-today-clock` hide          -> "the date and time are one line under the title"
 //   useProjectIcons  writeIcon without { touch: false }              -> 52 "choosing an icon for an older project ..."
 //   Projects.jsx   StarterCard without `limit`                      -> "when archived projects already fill the Free plan ..."
@@ -770,8 +770,7 @@ test.describe('the Today card and the chips share one style', () => {
     await open(page, SIZES[2])
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await expect(page.locator('.uh-start a.uh-tool'), 'the tool rows are drawn, so a zero below means something').not.toHaveCount(0)
-    for (const gone of ['.uh-quick', '.uh-lead', '.uh-lead-ico', '.uh-tool-ico', '.uh-strip', '.uh-mini']) {
-      // (.uh-pro-eyebrow is left out: the "UIL4B Pro" label stays until the founder decides, SHOW_PRO_LABEL.)
+    for (const gone of ['.uh-quick', '.uh-lead', '.uh-lead-ico', '.uh-tool-ico', '.uh-strip', '.uh-mini', '.uh-pro-eyebrow']) {
       await expect(page.locator(gone), `${gone} was retired`).toHaveCount(0)
     }
     expect(await page.locator('.uh-badge').first().evaluate((el) => getComputedStyle(el).backgroundColor), 'the badge is not a tinted square').toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
@@ -984,7 +983,7 @@ test.describe('on a phone, the page is composed for a thumb', () => {
     watch(page, 'a designer reaching for a tool on a phone')
     await open(page, phone)
     const start = page.locator('.uh-start')
-    await expect(start.locator('a.uh-tool:visible .uh-tool-name'), 'the Palette Builder row, then the four the grid always showed').toHaveText(['Palette Builder', 'Gradient', 'Tint', 'Contrast', 'Icon set'])
+    await expect(start.locator('a.uh-tool:visible .uh-tool-name'), 'the Palette row, then the others the phone keeps (Semantic Colour gives way)').toHaveText(['Palette', 'Gradient', 'Tint', 'Contrast Checker', 'Icon Library'])
     const all = start.locator('.uh-tool--all')
     await expect(all).toBeVisible()
     await expect(all).toHaveText('All thirteen tools')
@@ -996,10 +995,10 @@ test.describe('on a phone, the page is composed for a thumb', () => {
   })
 
   for (const size of [SIZES[1], SIZES[2]]) {
-    test(`at ${size.width}px Start something shows all seven rows and no phone row`, async ({ page }) => {
+    test(`at ${size.width}px Start something shows all six rows and no phone row`, async ({ page }) => {
       watch(page, 'a designer on a wider screen')
       await open(page, size)
-      await expect(page.locator('.uh-start a.uh-tool:visible')).toHaveCount(7)
+      await expect(page.locator('.uh-start a.uh-tool:visible')).toHaveCount(6)
       await expect(page.locator('.uh-tool--all')).toBeHidden()
       await expect(page.locator('.uh-alltools')).toBeVisible()
     })

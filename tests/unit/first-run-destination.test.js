@@ -134,9 +134,9 @@ test('the projects empty state still teaches, since it is now the first thing se
   assert.match(src, /onStart=\{(\(\) => startNew\(\)|startNew)\}/)
   assert.match(src, /<StartSomething \/>/, 'the workspace no longer mounts the tool grid')
   const start = read('src/components/userhome/StartSomething.jsx')
-  // The tools are /tools rows built from one list (the old lead tile, a <Link to={toolRoute('palette')}>,
+  // The tools are /tools rows built from one list of tool ids (the old lead tile, a <Link to={toolRoute('palette')}>,
   // was retired with the /tools restyle). The Palette Builder must still be the first entry, on its route.
-  const tiles = /const TILES = \[\s*\{ id: 'palette'[^}]*?to: toolRoute\('palette'\)/
-  assert.match(start, tiles,
+  assert.match(start, /const TILE_IDS = \['palette',/,
     'the empty workspace should still lead with the tool that produces a project')
+  assert.match(start, /to: toolRoute\(id\)/, 'the rows no longer link to the tool tree routes')
 })

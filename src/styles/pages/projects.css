@@ -199,8 +199,7 @@ div.uh.uh { padding-top: 0; }
 
 /* ── Pro panel ──────────────────────────────────────────────────────────── */
 .uh .uh-pro-copy { min-width: 0; }
-.uh .uh-pro-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; color: var(--ws-acc-text); }
-.uh .uh-pro-h { margin: 12px 0 0; font-family: var(--font); font-size: clamp(22px, 2.6vw, 32px); font-weight: 600; letter-spacing: -.03em; line-height: 1.06; max-width: min(24ch, 100%); color: var(--t0); text-wrap: balance; }
+.uh .uh-pro-h { margin: 0; font-family: var(--font); font-size: clamp(22px, 2.6vw, 32px); font-weight: 600; letter-spacing: -.03em; line-height: 1.06; max-width: min(24ch, 100%); color: var(--t0); text-wrap: balance; }
 .uh .uh-pro-line { margin: 12px 0 0; max-width: min(44ch, 100%); font-size: 14px; line-height: 1.6; color: var(--ws-dim); }
 .uh .uh-pro-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
 .uh .uh-pro-cta {
@@ -397,7 +396,6 @@ h2.uh-continue-name { white-space: normal; }
 .uh .uh-disc-all { font-size: 15px; }
 .uh .uh-disc-name { font-size: 15px; }
 .uh .uh-disc-meta { font-size: 13px; color: var(--t2); }
-.uh .uh-pro-eyebrow { margin: 0; font-family: var(--font); font-size: 15px; font-weight: 560; letter-spacing: 0; color: var(--t1); }
 .uh .uh-pro-h { font-size: 24px; line-height: 1.15; letter-spacing: -.02em; }
 .uh .uh-pro-line { font-size: 15px; color: var(--t2); }
 .uh .uh-pro-cta { gap: var(--s-2); padding: 0 var(--s-5); min-height: 44px; font-size: 15px; transition: background-color 120ms ease, transform 120ms ease; }
@@ -671,7 +669,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-tool-all-item { display: none; }
 @media (max-width: 640px) {
   .uh.uh-spt .uh-start-head .uh-alltools { display: none; }
-  .uh.uh-spt .uh-tool[data-tool="semantic"], .uh.uh-spt .uh-tool[data-tool="palettes"] { display: none; }
+  .uh.uh-spt .uh-tool[data-tool="semantic"] { display: none; }
   .uh.uh-spt .uh-tool-all-item { display: block; }
   /* The button is drawn as a ruled row without carrying .spt-row: that class on a button would make
      every .spt-row rule a button-shape rule. The li takes the rows' 12px corners for the hover wash. */
@@ -709,7 +707,6 @@ h2.uh-continue-name { white-space: normal; }
 @media (max-width: 1000px) {
   .uh.uh-spt .uh-pro { grid-template-columns: minmax(0, 1fr); }
 }
-.uh.uh-spt .uh-pro-eyebrow { font-size: 15px; font-weight: 560; color: var(--sp-dim); }
 .uh.uh-spt .uh-pro-h { font-family: var(--display); font-size: clamp(24px, 3vw, 36px); font-weight: 560; line-height: 1.08; letter-spacing: -.025em; color: var(--sp-ink); }
 .uh.uh-spt .uh-pro-line { max-width: 52ch; font-size: 17px; line-height: 1.5; color: var(--sp-dim); }
 .uh.uh-spt .uh-pro-cta { gap: 10px; padding: 9px 10px 9px 18px; min-height: 44px; background: var(--sp-ink); color: var(--sp-page); font: 540 15px var(--font); }

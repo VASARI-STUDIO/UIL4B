@@ -18,43 +18,19 @@ import { liveToolCount, numberWord } from './workspace'
 // instead of shipping a dead row. None of it needs an account, which is why a signed-out visitor
 // landing here from the sales page gets the same rows.
 
-// TWO CHOICES ARE OPEN. The page keeps its current behaviour for both; each is one line to change.
-//
-// SHOW_PALETTE_LIBRARY_TILE: true keeps the Palette Library row. false drops it; its destination
-// (/discover/palettes) is still linked from "New in Discover".
-const SHOW_PALETTE_LIBRARY_TILE = true
-// TILE_COPY_FROM_TOOL_TREE: false keeps each row's own name and note (TILES below). true takes the
-// name from the tool tree and the note from the tool search index, the words the /tools page uses.
-const TILE_COPY_FROM_TOOL_TREE = false
+// The rows in order, by tool id; each id is also the ToolArt drawing. A row's name comes from the
+// tool tree and its note from the tool search index, the words the /tools page uses, so the two
+// pages cannot disagree. A tool missing from either fails the build rather than drawing a blank row.
+const TILE_IDS = ['palette', 'gradient', 'tint', 'semantic', 'contrast', 'icons']
 
-// The rows in order, each with its current name and note. `art` is the ToolArt drawing; the library
-// row has none of its own, so it draws its own swatch grid (LIBRARY_SWATCHES).
-const TILES = [
-  { id: 'palette', label: 'Palette Builder', note: 'Start from a seed colour and the roles, ramp and tokens follow.', to: toolRoute('palette'), art: 'palette' },
-  { id: 'gradient', label: 'Gradient', note: 'Two stops and an angle', to: toolRoute('gradient'), art: 'gradient' },
-  { id: 'tint', label: 'Tint', note: 'Even ramp steps', to: toolRoute('tint'), art: 'tint' },
-  { id: 'semantic', label: 'Semantic', note: 'Brand and state colours', to: toolRoute('semantic'), art: 'semantic' },
-  { id: 'contrast', label: 'Contrast', note: 'Check any pair for AA', to: toolRoute('contrast'), art: 'contrast' },
-  { id: 'icons', label: 'Icon set', note: 'Search, restyle, export', to: toolRoute('icons'), art: 'icons' },
-  ...(SHOW_PALETTE_LIBRARY_TILE
-    ? [{ id: 'palettes', label: 'Palette Library', note: 'Browse and load a system', to: '/discover/palettes', art: null }]
-    : []),
-]
+const TREE_LABEL = new Map(createTools().map((t) => [t.id, t.label]))
 
-// The Palette Library plate: three rows of four mini swatches in the colour hue, stepping from a
-// quarter to full strength. The hue comes from the plate's data-hue through .spt-fill, as in ToolArt.
-const LIBRARY_SWATCHES = Array.from({ length: 12 }, (_, i) => +(0.25 + (i * 0.75) / 11).toFixed(3))
-
-const TREE_LABEL =new Map(createTools().map((t) => [t.id, t.label]))
-
-/** A row's name and note: its own, or the tool tree's where TILE_COPY_FROM_TOOL_TREE is on. */
-function copyOf(tile) {
-  if (!TILE_COPY_FROM_TOOL_TREE) return { label: tile.label, note: tile.note }
-  return {
-    label: TREE_LABEL.get(tile.id) || tile.label,
-    note: CREATE_TOOL_SEARCH[tile.id]?.description || tile.note,
-  }
-}
+const TILES = TILE_IDS.map((id) => {
+  const label = TREE_LABEL.get(id)
+  const note = CREATE_TOOL_SEARCH[id]?.description
+  if (!label || !note) throw new Error(`StartSomething: no tool name or note for "${id}"`)
+  return { id, label, note, to: toolRoute(id) }
+})
 
 /**
  * Open the header's Create menu from the page.
@@ -105,33 +81,20 @@ export default function StartSomething({ inLead = false }) {
         </button>
       </div>
       <ul className="spt-rows uh-tools">
-        {TILES.map((tile) => {
-          const { label, note } = copyOf(tile)
-          return (
-            <li key={tile.id}>
-              <Link className="spt-row uh-tool" data-tool={tile.id} to={tile.to}>
-                <span className="spt-thumb">
-                  {tile.art
-                    ? <ToolArt id={tile.art} size="thumb" colors={tile.id === 'palette' ? ramp : undefined} />
-                    : (
-                      <div className="spt-art spt-art--thumb" data-hue="colour" data-art={tile.id} aria-hidden="true">
-                        <svg viewBox="0 0 160 100">
-                          {LIBRARY_SWATCHES.map((o, i) => (
-                            <rect key={i} className="spt-step spt-fill" fillOpacity={o} x={16 + (i % 4) * 33} y={16 + Math.floor(i / 4) * 24} width="29" height="20" rx="4" />
-                          ))}
-                        </svg>
-                      </div>
-                    )}
-                </span>
-                <span className="spt-row-text">
-                  <b className="uh-tool-name">{label}</b>
-                  <span className="uh-tool-note">{note}</span>
-                </span>
-                <span className="spt-row-go" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-              </Link>
-            </li>
-          )
-        })}
+        {TILES.map((tile) => (
+          <li key={tile.id}>
+            <Link className="spt-row uh-tool" data-tool={tile.id} to={tile.to}>
+              <span className="spt-thumb">
+                <ToolArt id={tile.id} size="thumb" colors={tile.id === 'palette' ? ramp : undefined} />
+              </span>
+              <span className="spt-row-text">
+                <b className="uh-tool-name">{tile.label}</b>
+                <span className="uh-tool-note">{tile.note}</span>
+              </span>
+              <span className="spt-row-go" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+            </Link>
+          </li>
+        ))}
         {/* The phone shows only the first few rows; this row stands in for the rest and for the heading's button. */}
         <li className="uh-tool-all-item">
           <button type="button" className="uh-tool uh-tool--all" aria-haspopup="menu" onClick={openCreateMenu}>

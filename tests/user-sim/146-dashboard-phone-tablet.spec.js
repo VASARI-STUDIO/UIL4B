@@ -6,7 +6,7 @@
 //   390   section order · the date and time as one line under the title, weekday dropped below 360 ·
 //         project rows (a drawn thumb beside the name over its line) · New project full width under the
 //         work · no sideways scroll at 320 · 44px targets · Feedback and the tab bar clear of the last control
-//   768   Today as one ruled row (date and time fixed at 200px, the meters beside it) · the tools as seven
+//   768   Today as one ruled row (date and time fixed at 200px, the meters beside it) · the tools as six
 //         rows in one column (176px thumbs) · Discover two across, 345.3px a card; 641, 1000 and 640 for the
 //         edges of the band, and 1023 / 1024 for where Discover goes to four across
 //
@@ -30,7 +30,7 @@
 //   global-feedback-btn `bottom` -> 8px                                    -> "Feedback sits above the tab bar" (earlier)
 //   projects.css  `.uh .uh-today { display: grid` -> `block` at 641-1023  -> "Today is one row"
 //   projects.css  `.uh.uh-spt .uh-today` `border: 0` -> `1px solid`        -> "Today is a ruled row, not a framed card"
-//   projects.css  tools two-column rule `min-width: 1100px` -> `700px`     -> "the tools are seven rows in one column"
+//   projects.css  tools two-column rule `min-width: 1100px` -> `700px`     -> "the tools are six rows in one column"
 //   projects.css  Discover `repeat(2` below 1024 -> `repeat(3`              -> "Discover is two across" (768, 641, 1000, 1023)
 //   projects.css  Discover `repeat(4` from 1024 -> `repeat(3`               -> "at 1024px Discover is four across"
 import { test, expect } from './base.js'
@@ -292,7 +292,7 @@ test.describe('on a 390px phone, in a real touch context', () => {
       expect(sizes.actions.length, 'Continue and Open project').toBe(2)
       expect(sizes.rows.length).toBe(2)
       expect(sizes.newProject.length).toBe(1)
-      expect(sizes.tools.length, 'five tool rows (Semantic and the Palette Library are not drawn on a phone)').toBe(5)
+      expect(sizes.tools.length, 'five tool rows (Semantic is not drawn on a phone)').toBe(5)
       expect(sizes.allRow.length, 'the All thirteen tools row').toBe(1)
       for (const group of Object.values(sizes)) for (const c of group) expect(c.height, `${c.text} is ${c.width}x${c.height}`).toBeGreaterThanOrEqual(44)
       // Continue is full width, with Open project under it.
@@ -381,12 +381,12 @@ test.describe('on a tablet', () => {
     expect(s.bg, 'and no fill').toBe('rgba(0, 0, 0, 0)')
   })
 
-  test('at 768px the tools are seven rows in one column, 176px thumbs', async ({ page }) => {
+  test('at 768px the tools are six rows in one column, 176px thumbs', async ({ page }) => {
     await open(page, 768)
     const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
-    expect(tools.length, 'seven rows: Palette Builder, five more tools, the Palette Library').toBe(7)
+    expect(tools.length, 'six rows: the Palette and five more tools').toBe(6)
     expect(distinct(tools.map((t) => t.left)), 'one column').toBe(1)
-    expect(distinct(tools.map((t) => t.top)), 'seven rows down').toBe(7)
+    expect(distinct(tools.map((t) => t.top)), 'six rows down').toBe(6)
     const list = await box(page, '.uh-start .uh-tools')
     for (const t of tools) expect(Math.abs(t.width - list.width), `a row is ${t.width}px wide, the list is ${list.width}px`).toBeLessThanOrEqual(1)
     // Stacked, not overlapping, one height (the /tools row at this size is a 110px thumb in 12px padding: 134px).
@@ -394,10 +394,10 @@ test.describe('on a tablet', () => {
     for (let i = 1; i < sorted.length; i++) expect(sorted[i].top, `row ${i + 1} overlaps the row above`).toBeGreaterThanOrEqual(sorted[i - 1].top + sorted[i - 1].height - 1)
     expect(distinct(tools.map((t) => t.height)), 'the rows are different heights').toBe(1)
     const thumbs = await cells(page, '.uh-start .uh-tools .spt-thumb')
-    expect(thumbs.length).toBe(7)
+    expect(thumbs.length).toBe(6)
     for (const t of thumbs) expect([t.width, t.height], 'a thumb is 176 x 110 (16:10)').toEqual([176, 110])
-    // Palette Builder is the first row, then the order the grid has always had.
-    await expect(page.locator('.uh-start a.uh-tool:visible .uh-tool-name')).toHaveText(['Palette Builder', 'Gradient', 'Tint', 'Semantic', 'Contrast', 'Icon set', 'Palette Library'])
+    // The Palette is the first row, then the tools in the /tools names.
+    await expect(page.locator('.uh-start a.uh-tool:visible .uh-tool-name')).toHaveText(['Palette', 'Gradient', 'Tint', 'Semantic Colour', 'Contrast Checker', 'Icon Library'])
   })
 
   test('at 768px Discover is two across, 345.3px a card', async ({ page }) => {
@@ -412,12 +412,12 @@ test.describe('on a tablet', () => {
   // The edges of the band: 641 is the first width with Today as a row, 1000 a width the old layout held,
   // 1023 the last before the rail. The thumb steps from 112 to 176 at 761.
   for (const [width, thumb] of [[641, 112], [1000, 176], [1023, 176]]) {
-    test(`at ${width}px, the edge of the band, the tools are one column of seven ${thumb}px rows and Discover is 2 x 2`, async ({ page }) => {
+    test(`at ${width}px, the edge of the band, the tools are one column of six ${thumb}px rows and Discover is 2 x 2`, async ({ page }) => {
       await open(page, width)
       const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
-      expect([tools.length, distinct(tools.map((t) => t.left)), distinct(tools.map((t) => t.top))]).toEqual([7, 1, 7])
+      expect([tools.length, distinct(tools.map((t) => t.left)), distinct(tools.map((t) => t.top))]).toEqual([6, 1, 6])
       const thumbs = await cells(page, '.uh-start .uh-tools .spt-thumb')
-      expect(thumbs.map((t) => t.width), 'the thumbs are not all the size for this width').toEqual(Array(7).fill(thumb))
+      expect(thumbs.map((t) => t.width), 'the thumbs are not all the size for this width').toEqual(Array(6).fill(thumb))
       const cards = await cells(page, '.uh-disc-card')
       expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 2, 2])
     })
@@ -434,7 +434,7 @@ test.describe('on a tablet', () => {
     await open(page, 640, 900)
     const cards = await cells(page, '.uh-disc-card')
     expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 2, 2])
-    // Five drawn rows (Semantic and the Palette Library give way) and the All row. A sweep that found
+    // Five drawn rows (Semantic gives way) and the All row. A sweep that found
     // nothing would pass "one column", so the count is asserted too.
     const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
     expect([tools.length, distinct(tools.map((t) => t.left))], 'the tools are not five rows in one column').toEqual([5, 1])

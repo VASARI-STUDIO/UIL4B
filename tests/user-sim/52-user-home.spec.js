@@ -160,10 +160,11 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
 
     // Start something: every tile a real tool route, none gated.
     const start = page.locator('.uh-start')
-    await expect(start.getByRole('link', { name: /Palette Builder/ })).toHaveAttribute('href', '/create/palette')
-    // The links only (the Palette Builder is the first row now, not a lead tile): the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    await expect(start.getByRole('link', { name: /^Palette/ })).toHaveAttribute('href', '/create/palette')
+    // The links only (the Palette row is the first row now, not a lead tile): the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    // The Palette Library is not one of them: its link lives in New in Discover.
     const hrefs = await start.locator('a.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
-    expect(hrefs).toEqual(['/create/palette', '/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons', '/discover/palettes'])
+    expect(hrefs).toEqual(['/create/palette', '/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons'])
     await expect(start.locator('.uh-tool--all'), 'the phone-only row is not drawn at a laptop width').toBeHidden()
 
     // The sign-in sits in Today (the rail), under the date and time. It is a line of text, not a
@@ -303,6 +304,8 @@ test.describe('the plan strip reads the real plan', () => {
     const cta = pro.getByRole('link', { name: 'See Pro', exact: true })
     await expect(cta, 'every upgrade CTA goes to /plans').toHaveAttribute('href', '/plans')
     const text = await pro.innerText()
+    expect(text, 'the panel opens on its heading, with no "UIL4B Pro" label above it').not.toMatch(/UIL4B Pro/)
+    expect((await pro.locator('.uh-pro-copy > *').first().getAttribute('id')), 'the heading is the first thing in the panel').toBe('uh-pro-h')
     expect(text, 'there is no version history').not.toMatch(/version history/i)
     expect(text, 'there is no cancel flow').not.toMatch(/cancel/i)
     expect(text).toContain(`${AI_LIMITS.pro.daily} generations a day`)
@@ -608,9 +611,8 @@ test.describe('the project menu', () => {
 
 test.describe('"Start something" opens every tool for a visitor with no account', () => {
   for (const [label, path] of [
-    ['Palette Builder', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
-    ['Semantic', '/create/semantic-color'], ['Contrast', '/create/contrast'], ['Icon set', '/create/icons'],
-    ['Palette Library', '/discover/palettes'],
+    ['Palette', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
+    ['Semantic Colour', '/create/semantic-color'], ['Contrast Checker', '/create/contrast'], ['Icon Library', '/create/icons'],
   ]) {
     test(`${label} opens ${path} with no sign-in asked`, async ({ page }) => {
       watch(page, `a signed-out visitor opening ${label} from the workspace`)
