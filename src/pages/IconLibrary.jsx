@@ -68,7 +68,7 @@ import {
 // WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
-import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
+import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCredits'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -78,7 +78,6 @@ import '../styles/deferred/tool-shell.css'
 // licence condition should be editable — and reviewable — without opening a
 // 900-line shared stylesheet, and a rule that disappears by accident here is a
 // rule that takes a credit off the screen with it.
-import '../styles/pages/icon-attribution.css'
 
 const API_LIMIT = 999
 
@@ -2738,6 +2737,8 @@ const forgetAnimatedSets = () => purgeAnimatedCaches({
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
+// The first page plus three automatic ones; past this the grid waits for a press.
+const AUTO_REVEAL_LIMIT = PAGE_SIZE * 4
 // Cells mounted per frame when a page is revealed (PAGE_SIZE / 3).
 const REVEAL_CHUNK = 40
 
@@ -2798,7 +2799,17 @@ const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded':
 const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
-/* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
+/* ── THE CREDIT FOR THE GRID ─────────────────────────────────────────────────
+
+   WHERE IT RENDERS. This page reports the packs on screen (creditRows, below the
+   grid's state) to the footer through `onCredits`, and the footer draws the
+   notice (components/library/IconCredits.jsx). A pack with no row in
+   iconPackCredits.js is one a Pro search reached outside the twenty-five this
+   product curates; creditRows credits it by its prefix, linked to the Iconify
+   set page, which states that set's licence. Firing a /collection for it would
+   be more precise and would also put an unbounded number of extra requests
+   behind a keystroke, on the one surface in this app with a measured history of
+   being rate-limited.
 
    WHAT THIS REPLACES. The whole product used to carry one
    attribution string: the `<p className="ig-attrib">` further down, rendered
@@ -2846,17 +2857,6 @@ function packsOnScreen(...lists) {
   return out
 }
 
-/**
- * The persistent licence line.
- *
- * A pack with no row in iconPackCredits.js is one a Pro search reached outside
- * the twenty-five this product curates — the /search endpoint answers from the
- * whole registry when it is left unscoped, which is what a Pro search has always
- * done. It is credited by its prefix, linked to the Iconify set page, which
- * states that set's licence. Firing a /collection for it would be more precise
- * and would also put an unbounded number of extra requests behind a keystroke,
- * on the one surface in this app with a measured history of being rate-limited.
- */
 // The weight segment — Regular / Bold / Fill / Duo, the control the design's phone mock
 // draws under the search (Spectrum "On mobile"). A pill track with the chosen
 // segment lifted onto the card ground, as drawn. A segment the current scope
@@ -2894,35 +2894,6 @@ function IconWeightSeg({ value, stateOf, onChange }) {
         </button>
       ))}
     </div>
-  )
-}
-
-function IconPackCredit({ packs }) {
-  const rows = packs.map((prefix) => packCredit(prefix, liveCredit(prefix)) || {
-    prefix,
-    name: prefix,
-    url: `https://icon-sets.iconify.design/${prefix}/`,
-    licenceName: 'licence on Iconify',
-  })
-  return (
-    <aside className="ig-credit" aria-label="Icon set licences">
-      <p className="ig-credit-label">Icon sets on this page</p>
-      {rows.length > 0 && (
-        <p className="ig-credit-packs">
-          {rows.map((row, i) => (
-            <span className="ig-credit-pack" key={row.prefix}>
-              {i > 0 && <span className="ig-credit-sep" aria-hidden="true"> · </span>}
-              <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
-              {' '}
-              <span className="ig-credit-lic">({row.licenceName})</span>
-            </span>
-          ))}
-        </p>
-      )}
-      <p className="ig-credit-more">
-        <Link to="/credits">Every licence in full</Link>
-      </p>
-    </aside>
   )
 }
 
@@ -3059,7 +3030,7 @@ function IconEndTease({ cells, cols, cellH, chip, onAction }) {
   )
 }
 
-export default function IconLibrary({ onCopy, onCatalogue }) {
+export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const { isPro, plan, planKnown } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
@@ -3668,6 +3639,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // because the fetch lifecycle (reqId, cdnOk, the retry ref) lives here.
   useEffect(() => { onCatalogue?.(loadError ? 'fallback' : 'live') }, [loadError, onCatalogue])
 
+  // The licence rows for every set on screen, reported up to the footer's notice.
+  // UNCONDITIONAL, on purpose: the saved and recently-copied grids under My
+  // Icons are the same third-party glyphs under another heading, the Recent rail
+  // sits above every state including the gated one, and the offline grid is
+  // Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no state of
+  // this page that shows somebody else's work and owes nothing, so no condition
+  // gates this report. It runs after every render because a set's licence can
+  // arrive from the registry after its icons are on screen; the signature check
+  // keeps the parent from re-rendering unless a row actually changed.
+  const creditSig = useRef('')
+  useEffect(() => {
+    if (!onCredits) return
+    const rows = creditRows(packsOnScreen(icons, recents), liveCredit)
+    const sig = JSON.stringify(rows)
+    if (sig === creditSig.current) return
+    creditSig.current = sig
+    onCredits(rows)
+  })
+
   // The animated-icon cache drops any answer that lands while the viewer is not
   // on Pro, so it has to hear the tier before the browse effects below ask for
   // anything. Effects run in the order written: this one stays above them.
@@ -3738,26 +3728,34 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // start a fresh observer. An observer only reports when the sentinel's
   // visibility changes, but a new one always reports once on observe(), so the
   // reveal restarts from the current `visible` instead of waiting for a scroll.
+  //
+  // THE SCROLL STOPS LOADING BY ITSELF after three automatic pages
+  // (AUTO_REVEAL_LIMIT). From there the sentinel is a "Show more icons" button,
+  // so the close and footer under the grid can be reached by scrolling, by
+  // keyboard and by landmark; one press reveals the next page the same way.
   const revealRef = useRef(0)
+  const revealPage = useCallback(() => {
+    if (revealRef.current) return
+    const target = Math.min(visible + PAGE_SIZE, icons.length)
+    if (target <= visible) return
+    let upTo = visible
+    const step = () => {
+      revealRef.current = 0
+      upTo = Math.min(upTo + REVEAL_CHUNK, target)
+      setVisible(upTo)
+      if (upTo < target) revealRef.current = requestAnimationFrame(step)
+    }
+    step()
+  }, [icons.length, visible])
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting || revealRef.current) return
-      const target = Math.min(visible + PAGE_SIZE, icons.length)
-      if (target <= visible) return
-      let upTo = visible
-      const step = () => {
-        revealRef.current = 0
-        upTo = Math.min(upTo + REVEAL_CHUNK, target)
-        setVisible(upTo)
-        if (upTo < target) revealRef.current = requestAnimationFrame(step)
-      }
-      step()
+      if (e.isIntersecting) revealPage()
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [icons, visible])
+  }, [icons, visible, revealPage])
   // A new listing (or leaving the page) ends any page still being revealed.
   useEffect(() => () => { cancelAnimationFrame(revealRef.current); revealRef.current = 0 }, [icons])
 
@@ -4815,7 +4813,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
             {waitingStatus && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
 
-            {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
+            {hasMore && (visible < AUTO_REVEAL_LIMIT
+              ? <div ref={sentinelRef} className="ig-sentinel" />
+              : (
+                <div className="ig-more">
+                  <button type="button" className="lib-btn" onClick={revealPage}>
+                    {`Show ${Math.min(PAGE_SIZE, icons.length - visible).toLocaleString()} more icons`}
+                  </button>
+                </div>
+              ))}
 
             {loading && icons.length > 0 && (
               <p className="ig-status">Loading more…</p>
@@ -4900,14 +4906,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           </>
         )}
       </div>
-      {/* OUTSIDE THE `isMyIcons` BRANCH, AND OUTSIDE EVERY OTHER CONDITION ON
-          this surface. The saved and recently-copied grids under My Icons are
-          the same third-party glyphs under another heading, the Recent rail
-          sits above every state including the gated one, and the offline grid
-          is Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no
-          state of this page that shows somebody else's work and owes nothing,
-          so there is no condition here. */}
-      <IconPackCredit packs={packsOnScreen(icons, recents)} />
       <UIKitGuide step="icons" />
 
       {(selected || addMode) && (

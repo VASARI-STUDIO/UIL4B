@@ -678,3 +678,22 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
 }
 /* Under 480px the search, Filters and Add icon need the whole toolbar row, so the count gives way. */
 @media(max-width:479px){.iel-page .lbry-count{display:none}}
+
+/* ── The page's ending: the sales pages' close and spectrum strip ───────────
+   `.spectrum` brings the close's ink tokens, the pill, the ghost button and the
+   strip (spectrum.css); the footer follows outside <main> (CreateTool). The
+   ground stays the page's own, not `.spectrum`'s paper. Full bleed, because the
+   strip runs edge to edge: the side margins pull the block out of the library's
+   centred column, and the bottom margin cancels <main>'s foot padding so the
+   strip meets the footer, as it does on /tools. */
+.iel-page .ig-close{
+  background:transparent;
+  margin:var(--s-7) calc(50% - 50vw) calc(-1 * var(--s-9));
+}
+@media(max-width:760px){
+  .iel-page .ig-close .sp-close-cta{flex-direction:column;align-items:stretch}
+  .iel-page .ig-close .sp-close-cta>*{justify-content:center;min-height:48px}
+}
+
+/* The press-to-continue button that replaces the automatic load past three pages. */
+.iel-page .ig-more{display:flex;justify-content:center;padding:var(--s-5) 0 var(--s-2)}

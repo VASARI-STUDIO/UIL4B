@@ -12,7 +12,7 @@ import {
   PREMADE_ICON_GROUPS, glyphRequestPlan, groupById, groupNeeds, groupPacks, groupRoute, parseIconRef,
 } from '../data/iconGroups'
 import { viewerTier } from '../data/iconPackTiers'
-import { packCredit } from '../data/iconPackCredits'
+import { creditRows, packCredit } from '../data/iconPackCredits'
 import { partsPresent } from '../utils/userHome'
 import { normalizeHex } from '../utils/colorFormats'
 import { glyphFor, loadGroupGlyphs } from '../utils/iconGroupGlyphs'
@@ -267,12 +267,21 @@ function GroupView({ group, tier, onCopy }) {
   )
 }
 
-export default function IconGroups({ onCopy }) {
+const NO_ROWS = []
+
+export default function IconGroups({ onCopy, onCredits }) {
   const { isPro } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const tier = viewerTier({ user, isPro, resolving: authLoading })
   const [params] = useSearchParams()
   const group = groupById(params.get('group'))
+  // The licences of the sets in an open group, reported to the footer's notice.
+  // The index and a locked group show no glyphs to credit.
+  const rows = useMemo(
+    () => (group && !groupNeeds(group, tier) ? creditRows(groupPacks(group)) : NO_ROWS),
+    [group, tier],
+  )
+  useEffect(() => { onCredits?.(rows) }, [onCredits, rows])
   return (
     <div className="igp-page">
       {group
