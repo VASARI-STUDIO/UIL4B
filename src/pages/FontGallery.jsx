@@ -16,7 +16,7 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
   verifyFontLoaded,
 } from '../utils/googleFonts'
-import { filterGalleryTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
+import { categoryWord, filterGalleryTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -92,9 +92,9 @@ const SIZE_MAX = 120
 const SIZE_CHOICES = [24, 32, 40, 48, 64, 72, 96, 120]
 const MIN_BAND = 72
 
-// Category names as they read in running text (the pills keep Google's casing).
-const CAT_WORDS = { 'sans-serif': 'sans serif', serif: 'serif', display: 'display', handwriting: 'script' }
-const catWord = (category) => CAT_WORDS[category] || String(category || '').toLowerCase()
+// Category names as they read in running text come from the shared helper, so
+// the pop-up, the browser and Font Pair spell them the same.
+const catWord = categoryWord
 const sentence = (word) => word.charAt(0).toUpperCase() + word.slice(1)
 
 function layoutFor() {

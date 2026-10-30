@@ -245,7 +245,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-menu-row{display:flex;gap:8px}
 .plb-menu-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
 .plb-menu-row input:focus{outline:none;border-color:var(--accent)}
-.plb-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
+.plb-menu-sub{font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);margin:12px 2px 6px}
 .plb-menu-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plb-menu-item:hover{background:var(--bg-2);color:var(--t0)}
 /* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1

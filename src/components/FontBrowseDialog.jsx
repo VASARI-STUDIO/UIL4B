@@ -7,7 +7,7 @@ import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from './FontDossier'
-import { FONT_CATEGORIES, filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
+import { FONT_CATEGORIES, categoryLabel, filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightCount, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 // The dialog brings its own styles: Font Pair opens it without the picker.
 import '../styles/pages/font-picker.css'
@@ -126,7 +126,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
           ref={ref}
           aria-pressed={selected}
           onClick={() => onPick(font)}
-          aria-label={`Use ${font.family} — ${font.category}, ${font.variants.length} weights`}
+          aria-label={`Use ${font.family} — ${categoryLabel(font.category)}, ${weightCount(font.variants.length)}`}
         >
           <span
             className={ready ? 'fbd-sample' : 'fbd-sample fbd-sample--pending'}
@@ -170,7 +170,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
         </button>
       )}
       name={font.family}
-      meta={`${font.category} · ${font.variants.length}w`}
+      meta={`${categoryLabel(font.category)} · ${weightCount(font.variants.length)}`}
     />
   )
 }

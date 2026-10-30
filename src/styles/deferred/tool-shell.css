@@ -78,30 +78,16 @@
    three are the shared Library language now (.lbry-filters / .lbry-empty).
    This page ran outlined pills for category beside a filled segment for sort —
    the same two-idioms-in-one-row fault the Gradient Library had. */
-.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-detail-btn:focus-visible,.fg-pair-apply:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fg-more-btn:disabled{opacity:.5;cursor:not-allowed}
-.fg-compare,.fg-detail{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.fg-compare:focus-visible,.fg-detail:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-compare{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
+.fg-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* Detail dialog */
-/* A FRAME, NOT A COLUMN.
-   This dialog ran to 1,763px inside a 900px viewport and scrolled the OVERLAY,
-   which put every action it offers below the fold on arrival — you opened the
-   thing that helps you decide and could see none of the decisions. It is three
-   bands now: identity and controls pinned at the top, actions pinned at the
-   bottom, and only the specimen between them scrolling. `min()` against both
-   the viewport and a content height, so a two-weight family still gets a
-   dialog the size of its contents rather than a fixed slab with a hole in it. */
-.fg-detail{display:flex;flex-direction:column;max-width:860px;max-height:min(88dvh,900px);padding:0;overflow:hidden}
+/* Close button and label shared by the Compare dialog and the AI prompt page. */
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
-.fg-detail-section{margin-bottom:32px}
 .fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
-/* Pinned to the bottom of the frame, so the answer to "I like this one, now
-   what" is on screen from the moment the dialog opens instead of 1,700px down
-   it. `.fg-detail-apply` is gone with the second action bar it belonged to. */
-.fg-detail-actions{display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;padding:16px 28px;border-top:1px solid var(--border);background:var(--bg-1)}
 /* `.snapv-value` keeps its right edge. It is `text-align:right` on a fixed
    56px width so the digits line up under each other down the slider stack at
    phone widths, and a flex container IGNORES `text-align` for its items — so
@@ -113,16 +99,6 @@
 /* 44 under a coarse pointer, on every page (type-scale and the palette board
    already restated it for their own rows; tint did not). */
 @media(pointer:coarse){.snapv-value{min-height:44px}}
-@media(max-width:980px){
-  .fg-detail-actions{padding:14px 22px}}
-
-@media(max-width:560px){
-  /* The frame stays a frame on a phone — that is where a 1,763px dialog hurt
-     most — but takes more of the screen, because there is none to spare. */
-  .fg-detail{max-height:min(92dvh,900px)}}
-
-@media(max-width:560px){
-  .fg-detail-actions{padding:12px 18px}}
 
 .alt-example.good .alt-example-tag{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok-strong)}
 .alt-example.bad .alt-example-tag{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err-strong)}

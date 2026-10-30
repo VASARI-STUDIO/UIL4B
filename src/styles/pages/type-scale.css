@@ -368,6 +368,16 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .tsc-select:focus { border-color: var(--tl-line-on); }
 .tsc-page .tsc-weights { gap: 4px; margin-top: -6px; margin-bottom: 10px; }
 
+/* Heading and body families stack in a narrow panel and sit side by side once
+   the panel itself is wide enough. The container is the wrapper, not the
+   viewport, so the desktop rail stays stacked and the wider panel splits. */
+.tsc-page .tsc-fams { min-width: 0; container: tsc-fams / inline-size; }
+.tsc-page .tsc-fams-grid { display: grid; gap: 10px; }
+.tsc-page .tsc-fam { min-width: 0; }
+@container tsc-fams (min-width: 480px) {
+  .tsc-page .tsc-fams-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+
 /* The family rows: the name in its own face, with Browse; no box. */
 .tsc-page .typ-picker { margin-bottom: 8px; }
 .tsc-page .typ-picker .typ-picker-trigger { padding: 4px 0; border: 0; background: transparent; border-radius: 0; }
