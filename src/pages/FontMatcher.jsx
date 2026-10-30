@@ -14,6 +14,7 @@ import { trackFontCopy } from '../utils/analytics'
 import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, suggestPairings,
 } from '../utils/googleFonts'
+import { categoryLabel, categoryWord, weightCount } from '../utils/fontGallery'
 import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The shared sheets for the font picker, the catalogue notice and the loader,
 // then the page's own sheet, scoped under `.fpr-page`, the page root.
@@ -102,7 +103,7 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           }}
         >
           <span className="fpr-fam-name">{font.family}</span>
-          <span className="fpr-fam-meta">{font.category} · {count} weight{count === 1 ? '' : 's'}</span>
+          <span className="fpr-fam-meta">{categoryLabel(font.category)} · {weightCount(count)}</span>
         </div>
         <div className="fpr-fam-acts">
           {phone && (
@@ -586,7 +587,7 @@ export default function FontMatcher({ onCopy, toast }) {
                 <strong>No suggestions for this family yet.</strong>
                 <span>
                   The catalogue currently loaded doesn&rsquo;t contain a contrasting body face for a
-                  {' '}{headingFont.category} heading. Pick a different heading, or reload the full
+                  {' '}{categoryWord(headingFont.category)} heading. Pick a different heading, or reload the full
                   catalogue and try again.
                 </span>
                 <button type="button" className="typ-picker-clear" onClick={retry} disabled={retrying}>

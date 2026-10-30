@@ -1,6 +1,6 @@
 // THE ONE COMMAND, GUARDED WHERE IT CAN SILENTLY STOP WORKING.
 //
-// `npm run apply:gated` is the founder's whole path to four approved changes he
+// `npm run apply:gated` is the founder's whole path to the approved changes he
 // cannot otherwise get: three of them edit files the Claude Code auto-mode
 // classifier refuses to stage, so no agent can commit them and no agent will
 // notice when they rot. The command is written once and run once, months later,
@@ -15,7 +15,7 @@
 //      wrong tree; it lands cleanly and changes no rule. Worse than stale,
 //      because it reports success.
 //   3. THE APPLIER STOPS COVERING ONE. A patch is quietly dropped from the
-//      registry, and four changes silently become three. The founder is told
+//      registry, and the changes silently become fewer. The founder is told
 //      everything is done.
 //   4. THE SCRIPT ENTRY GOES. `apply:gated` disappears from package.json and
 //      the command in docs/OWNER-ACTIONS.md is a command that does not exist.
@@ -55,7 +55,7 @@ const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)
   + 'decision of 2026-09-16 recorded in .gitignore — so whether it still names the '
   + 'command and shows the diffs cannot be checked here.'
 
-/** The four, by id, in the order the applier applies them. */
+/** Every entry, by id, in the order the applier applies them. */
 const EXPECTED_IDS = [
   'per-project-sync',
   'moderator-role',
@@ -67,13 +67,14 @@ const EXPECTED_IDS = [
   'submission-payload',
   'upload-limits',
   'queue-limits',
+  'tool-votes',
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   1 · The applier still covers all four
+   1 · The applier still covers every entry
    ═══════════════════════════════════════════════════════════════════════════ */
 
-test('the applier covers exactly the four gated changes, in the order that composes', () => {
+test('the applier covers exactly the gated changes, in the order that composes', () => {
   // Guard 3. Written out rather than derived from the registry it is checking —
   // a list read off the thing under test agrees with it by construction and
   // measures nothing.
@@ -96,9 +97,9 @@ test('every patch says what it touches, where it came from, and what it grants',
   }
 })
 
-test('the applier reaches every file the four are meant to change', () => {
+test('the applier reaches every file the changes are meant to change', () => {
   // The three files the classifier blocks are the entire reason this command
-  // exists. If one falls out of the registry, the command still reports four
+  // exists. If one falls out of the registry, the command still reports success
   // successes and the founder still cannot make the change.
   assert.ok(TARGET_FILES.includes('firestore.rules'))
   assert.ok(TARGET_FILES.includes('api/verify-admin.js'))
@@ -107,7 +108,8 @@ test('the applier reaches every file the four are meant to change', () => {
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
   assert.ok(TARGET_FILES.includes('storage.rules'))
   assert.ok(TARGET_FILES.includes('src/utils/communityLimits.js'))
-  assert.equal(TARGET_FILES.length, 7,'the applier has grown a target nobody reviewed')
+  assert.ok(TARGET_FILES.includes('src/data/toolVotes.js'))
+  assert.equal(TARGET_FILES.length, 8,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -143,7 +145,7 @@ test('the moderator role covers BOTH halves — the rules and the route that min
    2 · No patch has gone stale
    ═══════════════════════════════════════════════════════════════════════════ */
 
-test('all four still apply to the files they were written for', async () => {
+test('every gated patch still applies to the files they were written for', async () => {
   // Guard 1, and the reason this file runs on every unit test rather than on
   // the day somebody remembers. `patchStates` plans the whole run against the
   // real tree without writing a byte of it.
@@ -284,7 +286,20 @@ test('the queue limits land in firestore.rules and flip the client flag with the
     'the rules land and the client stays switched off, which refuses every post')
 })
 
-test('nothing the four grant is taken away from the file they land in', async () => {
+test('the tool votes land in firestore.rules, last, and flip the client flag with them', async () => {
+  const plan = await planGatedPatches()
+  assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
+  const rules = lf(plan.after.get('firestore.rules'))
+  assert.match(rules, /match \/toolVotes\/\{toolId\}/)
+  assert.match(rules, /match \/voters\/\{uid\}/)
+  assert.ok(rules.indexOf('match /toolVotes/{toolId}') > rules.indexOf('match /analytics-daily/{day}'),
+    'the tool votes no longer follow the analytics block they anchor on')
+  assert.equal(GATED_PATCHES.at(-1).id, 'tool-votes', 'the tool votes must apply last')
+  assert.ok(lf(plan.after.get('src/data/toolVotes.js')).includes('export const TOOL_VOTES_ENABLED = true'),
+    'the rules land and the client stays switched off, which keeps voting hidden')
+})
+
+test('nothing the patches grant is taken away from the file they land in', async () => {
   // The blast radius, asserted rather than described. The rules patches may
   // replace lines — the moderator role rewrites three of them — so this checks
   // the two properties that would be a real widening if they went: the billing

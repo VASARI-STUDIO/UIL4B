@@ -1,23 +1,23 @@
-// THE FOUR FOUNDER-GATED CHANGES, IN ONE REGISTRY.
+// THE FOUNDER-GATED CHANGES, IN ONE REGISTRY.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHY THIS EXISTS
 // ═══════════════════════════════════════════════════════════════════════════
-// Four reviewed, tested changes cannot be committed from an agent branch.
+// Reviewed, tested changes cannot be committed from an agent branch.
 // `firestore.rules`, `api/verify-admin.js` and `src/contexts/AuthContext.jsx`
 // are refused by the Claude Code auto-mode classifier — a guardrail inside the
 // tool, separate from and stricter than docs/reference/human-validation-zones.md,
 // which refuses AFTER the founder has said yes. So each change ships as a diff
 // that is committed, tested and unapplied, and somebody has to type it in.
 //
-// Five hand-applied diffs across three files is five chances to paste one into
-// the wrong place. This module is the single description of all four — what
+// Hand-applied diffs across several files are as many chances to paste one into
+// the wrong place. This module is the single description of all of them — what
 // each one is, how to tell whether it is already in, how to put it in, and what
 // it grants in a sentence a non-engineer can act on. Two things read it:
 //
 //   · scripts/apply-gated-patches.mjs  (`npm run apply:gated`) — the one
 //     command the founder runs.
-//   · tests/unit/gated-patch-applier.test.js — which fails if any of the four
+//   · tests/unit/gated-patch-applier.test.js — which fails if any of them
 //     goes stale against its target, or if the applier stops covering one.
 //
 // ═══════════════════════════════════════════════════════════════════════════
@@ -32,7 +32,7 @@
 //
 // 2. THE TARGET FILES ARE NEVER WRITTEN UNTIL EVERY PATCH HAS APPLIED. Each
 //    patch lands in a scratch directory inside the repository, in order, and
-//    the results are copied over the originals only once all four have
+//    the results are copied over the originals only once every one has
 //    succeeded. A run that fails halfway leaves the tree exactly as it found
 //    it — which matters most for `firestore.rules`, where a half-applied file
 //    does not compile and locks every client out of its own data.
@@ -40,8 +40,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // THE ORDER IS LOAD-BEARING, AND IT IS NOT THE READING ORDER
 // ═══════════════════════════════════════════════════════════════════════════
-// Three of the four edit `firestore.rules`, and two of them are unified diffs
-// carrying three lines of context. Applying them in the wrong order breaks that
+// Several of them edit `firestore.rules`, and most are unified diffs carrying
+// three lines of context. Applying them in the wrong order breaks that
 // context and `git apply` refuses:
 //
 //   · per-project sync inserts inside `match /users/{userId}`, and its trailing
@@ -53,6 +53,9 @@
 //     feedback bounds insert forty lines between the two. So the moderator role
 //     before the feedback bounds — which is also the order #418 verified
 //     against #390's working copy on the emulator.
+//   · the tool votes append after the end of `match /analytics-daily/{day}`,
+//     and the feedback bounds and the analytics counters both rewrite text
+//     inside that block, so the tool votes go LAST.
 //
 // The moderator role's SECOND part is the only one that edits a file no other
 // patch touches (api/verify-admin.js), so it is order-independent — but it is
@@ -120,7 +123,7 @@ async function gitApplyInto(patchAbs, ws, { check = false } = {}) {
   await execFileAsync('git', args, { cwd: ROOT })
 }
 
-/* ── The four ───────────────────────────────────────────────────────────── */
+/* ── The registry ───────────────────────────────────────────────────────────── */
 
 const PER_PROJECT_PATCH = 'docs/design/per-project-sync-rules.patch'
 const MODERATOR_PATCH = 'docs/design/moderator-role-rules.patch'
@@ -136,6 +139,10 @@ const QUEUE_PATCH = 'docs/design/queue-limits-rules.patch'
 const LIMITS_FILE = 'src/utils/communityLimits.js'
 const LIMITS_OFF = 'export const COMMUNITY_LIMITS_ENABLED = false'
 const LIMITS_ON = 'export const COMMUNITY_LIMITS_ENABLED = true'
+const VOTES_PATCH = 'docs/design/tool-votes-rules.patch'
+const VOTES_FILE = 'src/data/toolVotes.js'
+const VOTES_OFF = 'export const TOOL_VOTES_ENABLED = false'
+const VOTES_ON = 'export const TOOL_VOTES_ENABLED = true'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -167,7 +174,7 @@ function applyPendingAnchors(text) {
 }
 
 /**
- * The registry. `parts` exist because two of the four are a pair that must land
+ * The registry. `parts` exist because some of them are a pair that must land
  * together or not at all — a rule with no client behind it, or a client with no
  * rule, is the exact silent failure these changes abolish. Splitting them means
  * a half-applied change can be COMPLETED rather than refused.
@@ -439,9 +446,41 @@ export const GATED_PATCHES = [
       },
     ],
   },
+  {
+    id: 'tool-votes',
+    title: 'Roadmap voting',
+    source: 'docs/design/tool-votes-rules.patch + src/data/toolVotes.js',
+    grants:
+      'a signed-in account can vote once for each tool that is still being built and take that '
+      + 'vote back, and the public count moves by exactly one, only together with that '
+      + 'account\'s own vote; nobody can set or delete a count, and only your admin sign-in '
+      + 'can close voting on a tool',
+    files: ['firestore.rules', VOTES_FILE],
+    parts: [
+      {
+        name: 'the rule',
+        file: 'firestore.rules',
+        detect: (text) => /match \/toolVotes\/\{toolId\}/.test(lf(text)),
+        apply: async (ctx) => { await gitApplyInto(abs(VOTES_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(VOTES_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The roadmap page is left out of the site while this is false: every
+        // vote it took would be refused by the old rules.
+        name: 'the client flag',
+        file: VOTES_FILE,
+        detect: (text) => lf(text).includes(VOTES_ON),
+        apply: async (ctx) => {
+          const text = await ctx.read(VOTES_FILE)
+          if (!lf(text).includes(VOTES_OFF)) throw new Error(`${VOTES_OFF} is no longer in ${VOTES_FILE}`)
+          await ctx.write(VOTES_FILE, lf(text).replace(VOTES_OFF, VOTES_ON))
+        },
+      },
+    ],
+  },
 ]
 
-/** Every file any of the four touches, de-duplicated, in a stable order. */
+/** Every file any entry touches, de-duplicated, in a stable order. */
 export const TARGET_FILES = [...new Set(GATED_PATCHES.flatMap((p) => p.files))].sort()
 
 /* ── The workspace ──────────────────────────────────────────────────────── */
@@ -486,12 +525,12 @@ export async function openWorkspace(seed) {
 }
 
 /**
- * What each of the four would do to the current tree, without doing any of it.
+ * What each entry would do to the current tree, without doing any of it.
  *
  * @param {object} [opts]
  * @param {(file: string) => string} [opts.seed] file contents to start from,
  *   instead of what is on disk. Used by the tests to plan against HEAD.
- * @param {number} [opts.upTo] apply only the first N of the four. The dirty-tree
+ * @param {number} [opts.upTo] apply only the first N entries. The dirty-tree
  *   check uses it to ask "is this tree HEAD plus a prefix of what I do?".
  * @returns {Promise<{ steps: object[], after: Map<string,string>, before: Map<string,string> }>}
  */
@@ -627,7 +666,7 @@ export async function diffOf(file, beforeText, afterText) {
 /* ── State, for the tests and for the dirty-tree check ───────────────────── */
 
 /**
- * Where each of the four stands against a given set of file contents.
+ * Where each entry stands against a given set of file contents.
  *
  * 'applied'  — the target already carries what the patch grants
  * 'pending'  — the patch is not in, and applies cleanly

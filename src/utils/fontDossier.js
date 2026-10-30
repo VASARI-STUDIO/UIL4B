@@ -1,7 +1,7 @@
 // Explicit .js: this module is imported directly by tests/unit/font-dossier
 // under `node --test`, and node's ESM resolver does not guess extensions the
 // way Vite's does. Vite is happy with the extension either way.
-import { formatSubsets, weightName } from './fontGallery.js'
+import { categoryLabel, formatSubsets, weightName } from './fontGallery.js'
 
 // The facts a font popup can honestly state about a family, and the vocabulary
 // for saying them. Split out of FontDossier.jsx because these are not
@@ -74,12 +74,13 @@ const AXIS_NAMES = {
   FILL: 'Fill',
 }
 
+// Spelled by the shared helper, so About reads the same as the pop-up's hero meta.
 export const CATEGORY_LABEL = {
-  'sans-serif': 'Sans-serif',
-  serif: 'Serif',
-  display: 'Display',
-  handwriting: 'Handwriting',
-  monospace: 'Monospace',
+  'sans-serif': categoryLabel('sans-serif'),
+  serif: categoryLabel('serif'),
+  display: categoryLabel('display'),
+  handwriting: categoryLabel('handwriting'),
+  monospace: categoryLabel('monospace'),
 }
 
 export function titleCase(value) {

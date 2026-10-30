@@ -44,7 +44,7 @@
 .typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 .typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
 .typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .typ-picker-cue{grid-column:2;grid-row:1/span 2;align-self:center;flex-shrink:0;padding:6px 11px;font-size:11px;font-weight:700;color:var(--accent-text);background:var(--accent-wash);border-radius:var(--radius-pill)}
 /* Kept: Font Pair's "reload the catalogue" recovery button still uses it. */
 .typ-picker-clear{margin-top:6px;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
@@ -123,7 +123,12 @@
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */
-.fbd-sample--pending{color:transparent;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;border-radius:var(--radius-xs);animation:fg-shimmer 1.4s linear infinite}
+.fbd-sample--pending{position:relative;color:transparent;background:var(--bg-2);border-radius:var(--radius-xs)}
+/* The pulse lives on an overlay, so the block itself holds still. */
+.fbd-sample--pending::after{content:"";position:absolute;inset:0;background:var(--bg-0);opacity:0;animation:fbd-pulse 1.2s ease-in-out infinite alternate}
+@keyframes fbd-pulse{from{opacity:0}to{opacity:.45}}
+html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
+@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .fbd-sample--pending::after{animation:none}}
 .fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
 .fbd-empty{margin-bottom:8px}
 
@@ -520,7 +525,7 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 .svt-row{display:flex;gap:8px}
 .svt-input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
 .svt-input:focus{outline:none;border-color:var(--accent)}
-.svt-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
+.svt-menu-sub{font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);margin:12px 2px 6px}
 .svt-list{display:flex;flex-direction:column;gap:2px;max-height:min(40vh,220px);overflow-y:auto;overscroll-behavior:contain}
 .svt-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:background-color var(--t),color var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .svt-item:hover{background:var(--bg-2);color:var(--t0)}
