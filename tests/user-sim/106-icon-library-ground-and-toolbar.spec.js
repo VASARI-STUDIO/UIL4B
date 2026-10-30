@@ -1101,10 +1101,12 @@ for (const width of [1440, 390]) {
     if (width === 1440) {
       await expect(cells).toHaveCount(120)
       const firstCell = cells.first()
-      // The pack name shows on hover only: hidden at rest, there under the pointer.
-      await expect(firstCell.locator('.ic-pack')).toBeHidden()
+      // The pack name shows on hover only: transparent at rest (opacity, so still in the render
+      // tree), opaque under the pointer.
+      const packOpacity = (cell) => cell.locator('.ic-pack').evaluate(el => getComputedStyle(el).opacity)
+      await expect.poll(() => packOpacity(firstCell)).toBe('0')
       await firstCell.hover()
-      await expect(firstCell.locator('.ic-pack')).toBeVisible()
+      await expect.poll(() => packOpacity(firstCell)).toBe('1')
       await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('Circle Flags'))
       const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
       // Focus retains the original cell while rows above the viewport are windowed.
@@ -1113,7 +1115,7 @@ for (const width of [1440, 390]) {
       await expect(cells).toHaveCount(expected.length)
       await cells.nth(180).scrollIntoViewIfNeeded()
       await cells.nth(180).hover()
-      await expect(cells.nth(180).locator('.ic-pack')).toBeVisible()
+      await expect.poll(() => packOpacity(cells.nth(180))).toBe('1')
       expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
       await page.evaluate(() => window.scrollTo(0, 0))
     }
