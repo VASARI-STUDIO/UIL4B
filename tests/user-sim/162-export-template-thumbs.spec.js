@@ -349,12 +349,18 @@ async function holdFonts(page) {
   })
 }
 const fontLoads = (page) => page.evaluate(() => window.__fontLoads)
+/** The popup opens on Book, whose strip draws at once: count only after that draw is done. */
+async function bookDrawn(page) {
+  await expect(strip(page), 'the opening Book strip is drawn').toHaveAttribute('data-state', 'ready', { timeout: 10_000 })
+  await expect(stripImgs(page)).toHaveCount(3)
+}
 const stripSrcs = (page) => stripImgs(page).evaluateAll((imgs) => imgs.map((i) => i.src))
 
 test('a strip drawn before the fonts arrived is shown, then drawn again once they have', async ({ page }) => {
   watch(page, 'a designer whose fonts are slow')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
 
   await chooseFormat(page, 'guidelines')
@@ -375,6 +381,7 @@ test('a strip drawn before the fonts arrived is not kept: coming back to its tem
   watch(page, 'a designer whose fonts are slow, trying templates')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
 
   await chooseFormat(page, 'guidelines')
@@ -392,6 +399,7 @@ test('CONTROL: a strip drawn after the fonts arrived is kept: coming back to its
   watch(page, 'a designer with fonts ready, trying templates')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   // Counted, but not held back.
   await page.evaluate(() => { window.__fontLoads = 0 })
 
