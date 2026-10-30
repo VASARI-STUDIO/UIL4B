@@ -14,7 +14,7 @@
 // MUTATION: point the logo back at '/projects' on the dashboard, or put the Back
 // to the site link back into PillNav.jsx, or drop aria-disabled from the empty
 // Export: the matching test below goes red.
-import { chooseFormat } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { readFile } from 'node:fs/promises'
@@ -29,7 +29,7 @@ test('a fresh palette exports the colours on screen without saving the random dr
   await page.locator('.pnav-export').click()
   await chooseFormat(page, 'json')
   const downloaded = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export JSON tokens', exact: true }).click()
+  await primaryButton(page).click()
   const tokens = JSON.parse(await readFile(await (await downloaded).path(), 'utf8'))
   const exported = Object.values(tokens.color).filter((token) => token.$root)
     .map((token) => token.$root.$value.hex.toUpperCase())
@@ -106,7 +106,7 @@ test.describe('app header actions', () => {
     const exportBtn = page.locator('.pnav-export')
     await expect(exportBtn).not.toHaveAttribute('aria-disabled', 'true')
     await exportBtn.click()
-    await expect(page.getByRole('dialog', { name: 'Export your design system' })).toBeVisible()
+    await expect(exportPanel(page)).toBeVisible()
   })
 
   test('a fresh empty converter explains why Export is unavailable', async ({ page }) => {
@@ -152,7 +152,8 @@ test.describe('app header actions', () => {
     const exportBtn = page.locator('.pnav-export')
     await expect(exportBtn).not.toHaveAttribute('aria-disabled', 'true')
     await exportBtn.click()
-    await expect(page.getByRole('dialog', { name: 'Export your design system' })).toBeVisible()
+    await expect(exportPanel(page)).toBeVisible()
+    await expect(exportPanel(page).getByRole('heading', { level: 2 }), 'the popup is named for the saved project').toHaveText('Export Seeded Project 2')
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design'))))
       .toEqual(savedDesign)
   })

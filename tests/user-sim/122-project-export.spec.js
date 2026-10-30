@@ -1,5 +1,6 @@
 import { test, expect } from './base.js'
 import { go, signIn } from './helpers.js'
+import { exportPanel, typeRadio } from './export-rows.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 function savedProject() {
@@ -48,11 +49,11 @@ for (const width of [390, 1440]) {
           }
           await opener.focus()
           await activate(opener)
-          const panel = page.getByRole('dialog', { name: 'Export your design system' })
+          const panel = exportPanel(page)
           await expect(panel).toBeVisible()
-          await expect(panel.getByRole('heading', { name: 'Export your design system' })).toBeFocused()
+          await expect(panel.getByRole('heading', { name: 'Export Harbour' }), 'the popup is named for the project and takes focus').toBeFocused()
           await expect(page.locator('#main')).toHaveAttribute('inert', '')
-          await activate(panel.getByRole('radio', { name: /^UI kit/ }))
+          await activate(typeRadio(panel, 'UI kit'))
 
           const [download] = await Promise.all([
             page.waitForEvent('download'),

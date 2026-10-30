@@ -144,12 +144,13 @@ test('a gate id is a stable identifier, not display copy', () => {
 })
 
 test('every entry of a spread gate table names a gate', () => {
-  // ExportPanel raises its two paid-export walls with `...PRO_GATE[format]`.
-  // The call-site check above accepts that spread, so the table itself is what
-  // has to be complete — otherwise a format added to PRO_GATE without a `gate`
-  // slips through both checks.
-  const panel = read(path.join(SRC, 'components', 'ExportPanel.jsx'))
-  const table = panel.slice(panel.indexOf('const PRO_GATE = {'))
+  // The export engine reports its paid-export walls by looking the gate up in
+  // PRO_GATE (`PRO_GATE[...]?.gate`). The call-site check above cannot see a
+  // lookup, so the table itself is what has to be complete — otherwise a format
+  // added to PRO_GATE without a `gate` slips through both checks.
+  const runner = read(path.join(SRC, 'hooks', 'useExportRunner.js'))
+  assert.match(runner, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/, 'the export engine no longer reports a gate from PRO_GATE')
+  const table = runner.slice(runner.indexOf('const PRO_GATE = {'))
   const body = table.slice(0, table.indexOf('\n}\n') + 1)
   const entries = [...body.matchAll(/^ {2}([a-z][\w]*):\s*\{/gm)].map(m => m[1])
   assert.ok(entries.length >= 2, `expected PRO_GATE entries, found ${entries.length}`)

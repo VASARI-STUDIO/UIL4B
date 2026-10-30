@@ -90,7 +90,7 @@ function everyBodyWith(selector, prop) {
   return set
 }
 
-const OVERLAY_PADDING = ['.icust-overlay', '.exp-overlay', '.fg-overlay', '.fnote-overlay', '.fb-overlay']
+const OVERLAY_PADDING = ['.icust-overlay', '.fg-overlay', '.fnote-overlay', '.fb-overlay']
 
 for (const sel of OVERLAY_PADDING) {
   test(`${sel} keeps its padding clear of the notch at every width`, () => {
@@ -103,11 +103,24 @@ for (const sel of OVERLAY_PADDING) {
 }
 
 test('phone sheets size their height against the top inset', () => {
-  for (const sel of ['.exp-panel', '.fnote', '.fb-modal', '.icust-panel']) {
+  for (const sel of ['.fnote', '.fb-modal', '.icust-panel']) {
     for (const body of everyBodyWith(sel, 'max-height')) {
       assert.match(body, /safe-area-inset-top/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
     }
   }
+})
+
+test('the Export dialog phone sheet keeps its edges clear of the notch and the home indicator', () => {
+  // The sheet is flush with the screen on a phone. Its sides are padded on the card
+  // (every rule that pads it reads both side insets), the top inset sits in the head
+  // and the bottom inset in the dock, so each bar's own colour still reaches the edge.
+  for (const body of everyBodyWith('.xd-card', 'padding')) {
+    assert.match(body, /safe-area-inset-left/, `.xd-card { ${body.trim().slice(0, 90)} ... }`)
+    assert.match(body, /safe-area-inset-right/, `.xd-card { ${body.trim().slice(0, 90)} ... }`)
+  }
+  const padsBy = (sel, inset) => bodies(sel).some((b) => new RegExp(`padding[a-z-]*\\s*:[^;]*safe-area-inset-${inset}`).test(b))
+  assert.ok(padsBy('.xd-head', 'top'), 'the Export dialog head no longer pads itself by the top inset')
+  assert.ok(padsBy('.xd-dock', 'bottom'), 'the Export dialog dock no longer pads itself by the bottom inset')
 })
 
 test('the feedback sheets pad their last block by the bottom inset on a phone', () => {

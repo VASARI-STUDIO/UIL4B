@@ -78,16 +78,15 @@ const walkSrc = (dir, out = []) => {
   return out
 }
 
-test('only the gallery page sends anyone to the gallery checkout address', () => {
+test('only the upgrade rule and the return page name the gallery checkout address', () => {
   const users = walkSrc(path.join(process.cwd(), 'src'))
     .filter((p) => /GALLERY_CHECKOUT|from=kit-gallery/.test(fs.readFileSync(p, 'utf8')))
     .map((p) => path.basename(p))
     .sort()
-  // The page, the helper that defines the address, the panel comment naming the
-  // exception, and the return page's retry link, which keeps a gallery buyer's origin.
-  assert.deepEqual(users, ['CheckoutReturn.jsx', 'ExportPanel.jsx', 'ProjectExport.jsx', 'kitGalleryPick.js'])
-  const panel = fs.readFileSync(path.join(process.cwd(), 'src/components/ExportPanel.jsx'), 'utf8')
-  assert.match(panel, /navigate\('\/plans'\)/, 'the export panel gate still goes to /plans')
+  // The helper that defines the address, the upgrade-target rule that sends a
+  // signed-in account with a project to it, and the return page's retry link,
+  // which keeps a gallery buyer's origin.
+  assert.deepEqual(users, ['CheckoutReturn.jsx', 'dialogExport.js', 'kitGalleryPick.js'])
 })
 
 test('the checkout event carries where the buyer came from, and nothing unsafe', () => {

@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
+import { readLastPick, resolvePreset } from '../config/dialogExport'
 import { localiseTools } from '../data/tools'
 import { CREATE_TOOL_SEARCH, searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the
@@ -42,7 +43,7 @@ import { initialsOf } from '../utils/initials.js'
 // Discover pane's counts too — they render only inside the open Discover menu,
 // and the prompt count comes from a data module nothing else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
-const ExportPanel = lazy(() => import('./ExportPanel'))
+const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
@@ -350,6 +351,9 @@ function AppHeader() {
   const [sheetSection, setSheetSection] = useState('create')
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  // The pick the dialog opens on, fixed when it opens so a re-render of the
+  // header cannot move it.
+  const [exportPreset, setExportPreset] = useState(null)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const sheetRef = useRef(null)
@@ -544,6 +548,7 @@ function AppHeader() {
   const openExport = () => {
     if (exportTarget) loadProject(exportTarget.id)
     closeAll()
+    setExportPreset(resolvePreset(readLastPick()))
     setExportOpen(true)
   }
   // With nothing to export the button explains itself instead of opening the
@@ -1061,7 +1066,7 @@ function AppHeader() {
       )}
       {exportOpen && (
         <Suspense fallback={null}>
-          <ExportPanel onClose={() => setExportOpen(false)} />
+          <ExportDialog onClose={() => setExportOpen(false)} preset={exportPreset} projectId={exportTarget?.id} />
         </Suspense>
       )}
     </>

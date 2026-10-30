@@ -1,11 +1,11 @@
-// The CSS and JSON token files, exported from the nav's Export panel.
+// The CSS and JSON token files, exported from the nav's Export popup (Code).
 //
 // Signed in, each format downloads a file named for the project whose contents
 // hold the palette on the board. Signed out, choosing either one and pressing
 // Export raises the same create-account gate as the style guide, and no file is
 // produced. The free files carry the "Made with UIL4B" line; the Pro files do
 // not, because that line is what Pro removes.
-import { chooseFormat } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
@@ -29,12 +29,16 @@ async function boardWithPalette(page) {
 
 async function exportFormat(page, name, label) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-  const panel = page.getByRole('dialog', { name: /Export your design system/i })
+  const panel = exportPanel(page)
   await expect(panel).toBeVisible()
   await chooseFormat(panel, label.toLowerCase())
-  const cta = panel.getByRole('button', { name: `Export ${label} tokens`, exact: true })
+  const cta = primaryButton(panel)
+  await expect(cta).toHaveText(`Export ${label}`)
   await expect(cta).toBeEnabled()
   const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
+  // The popup stays open and names the file it made; closing it is a separate step.
+  await expect(dockStatus(panel)).toContainText(`Downloaded ${download.suggestedFilename()}`)
+  await page.keyboard.press('Escape')
   await expect(panel).toHaveCount(0)
   return { filename: download.suggestedFilename(), body: await readDownload(download) }
 }
@@ -84,6 +88,21 @@ test.describe('token export, signed in', () => {
 })
 
 test.describe('token export, signed out', () => {
+  test('Copy CSS under Code copies the tokens with no account and no gate', async ({ page, context }) => {
+    // Copying a value is free forever; only producing a file asks for an account.
+    watch(page, 'someone copying their tokens before signing up for anything')
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await boardWithPalette(page)
+    await go(page, '/create/tint')
+    await page.locator('.pnav-export').first().click()
+    const panel = exportPanel(page)
+    await expect(panel).toBeVisible({ timeout: 15000 })
+    await chooseFormat(panel, 'css')
+    await panel.getByRole('button', { name: 'Copy CSS', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(`--color-primary: ${PRIMARY};`)
+    await expect(page.locator('#ui-login-title'), 'copying never raises the create-account gate').toHaveCount(0)
+  })
+
   for (const [name, label] of [['CSS tokens', 'CSS'], ['JSON tokens', 'JSON']]) {
     test(`${name}: the same create-account gate as the style guide, and no file`, async ({ page }) => {
       watch(page, 'someone trying the tools before signing up for anything')
@@ -102,10 +121,11 @@ test.describe('token export, signed out', () => {
       const opener = page.locator('.pnav-export').first()
       await expect(opener).toBeVisible({ timeout: 15000 })
       await opener.click()
-      const panel = page.getByRole('dialog', { name: /Export your design system/i })
+      const panel = exportPanel(page)
       await expect(panel).toBeVisible({ timeout: 15000 })
       await chooseFormat(panel, label.toLowerCase())
-      const cta = panel.getByRole('button', { name: `Export ${label} tokens`, exact: true })
+      const cta = primaryButton(panel)
+      await expect(cta).toHaveText(`Export ${label}`)
       await expect(cta, 'a free format is not relabelled as a Pro unlock').toBeVisible()
       await cta.click()
       await expect(page.locator('#ui-login-title')).toHaveText(/create your free account/i, { timeout: 10000 })

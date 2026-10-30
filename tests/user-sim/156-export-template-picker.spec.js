@@ -17,15 +17,15 @@
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // Each of these was applied to the source, built, and turned the named tests red:
-//   - ExportPanel: the picker `onChange` no longer calls updateDesign -> the keys
+//   - ExportSteps: the picker `onChange` no longer calls updateDesign -> the keys
 //     (stored choice), click-and-reload, and both Free/Pro template tests;
 //   - useRovingRadio: the wrap `(to + count) % count` becomes a clamp  -> the keys test;
 //   - ExportTemplatePicker: tabIndex is 0 on every tile                -> the Tab test;
-//   - the panel AND the picker show with one live template (`> 0`)     -> the tile-count tests;
+//   - the dialog AND the picker show with one live template (`> 0`)     -> the tile-count tests;
 //   - readExportTemplates trusts a stored id instead of isTemplate     -> the stored-id test.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { chooseFormat, exportPanel, actionLabel, groupOfFormat, rowFor } from './export-rows.js'
+import { chooseFormat, exportPanel, actionLabel, typeRadio, categoryRadio } from './export-rows.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
 
@@ -64,12 +64,12 @@ for (const plan of ['free', 'pro']) {
     watch(page, `a ${plan} account looking for a template choice`)
     await openProject(page, plan)
     await chooseFormat(page, 'kit')
-    await expect(rowFor(exportPanel(page), groupOfFormat('kit').name), 'the kit row is chosen').toHaveAttribute('aria-checked', 'true')
+    await expect(typeRadio(page, 'UI kit'), 'the UI kit type is chosen').toHaveAttribute('aria-checked', 'true')
     await expect(group(page), 'the kit row has three templates, so there is a choice').toHaveCount(1)
     await expect(group(page).getByRole('radio')).toHaveText([/Studio/, /Manual/, /Showcase/])
     expect(await state(page), 'the default is chosen and is the only tab stop').toEqual({ checked: ['Studio'], focused: [], tabbable: ['Studio'] })
     await chooseFormat(page, 'book')
-    await expect(rowFor(exportPanel(page), groupOfFormat('book').name)).toHaveAttribute('aria-checked', 'true')
+    await expect(categoryRadio(page, 'Book'), 'the Book category is chosen').toHaveAttribute('aria-checked', 'true')
     await expect(group(page)).toHaveCount(1)
     await expect(group(page).getByRole('radio')).toHaveText([/Specification/, /Monograph/, /Atlas/])
     expect(await state(page), 'the default is chosen and is the only tab stop').toEqual({ checked: ['Specification'], focused: [], tabbable: ['Specification'] })
@@ -86,7 +86,8 @@ test('Free sees the book tiles clear and the preview locked, and the button stil
   await openProject(page, 'free')
   await chooseFormat(page, 'book')
   await expect(group(page).getByRole('radio')).toHaveCount(3)
-  await expect(exportPanel(page).locator('.exp-preview-lock'), 'the page strip is locked for Free').toBeVisible()
+  await expect(exportPanel(page).locator('.xd-lock'), 'the page strip is locked for Free').toHaveText(/Pro export/)
+  await expect(categoryRadio(page, 'Book'), 'and the rail names the document it locks').toHaveAccessibleName('Book, A4 pages, Pro')
   await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i })).toBeVisible()
   // The tiles carry no per-tile lock: all three are Pro, so the row's own mark says it once.
   await expect(group(page).locator('.exp-tpl-tile .exp-preview-tag, .exp-tpl-tile [class*="pro-tag"]')).toHaveCount(0)
@@ -97,7 +98,7 @@ test('Pro sees no lock on the book row, and the button names the export', async 
   await openProject(page, 'pro')
   await chooseFormat(page, 'book')
   await expect(group(page).getByRole('radio')).toHaveCount(3)
-  await expect(exportPanel(page).locator('.exp-preview-lock')).toHaveCount(0)
+  await expect(exportPanel(page).locator('.xd-lock')).toHaveCount(0)
   await expect(exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true })).toBeVisible()
 })
 
@@ -155,7 +156,7 @@ test('Tab enters on the chosen tile, not the first, and leaves the group in one 
 
   await tile(page, 'Studio').focus()
   await page.keyboard.press('ArrowRight') // Manual is now the choice
-  await exportPanel(page).getByRole('radio', { name: /^UI kit/ }).focus()
+  await typeRadio(page, 'UI kit').focus()
   await page.keyboard.press('Tab')
   expect(await state(page), 'Tab from the row list lands on the chosen tile').toEqual({ checked: ['Manual'], focused: ['Manual'], tabbable: ['Manual'] })
 
@@ -171,6 +172,7 @@ test('a click chooses a tile, and the choice is kept on the project and survives
   await go(page, '/projects/seed-1')
   await page.locator('.pnav-export').click()
   await expect(exportPanel(page)).toBeVisible()
+  await chooseFormat(page, 'kit')
   await expect(group(page)).toHaveCount(1)
   expect((await state(page)).checked, 'a project that never chose gets the default').toEqual(['Studio'])
 
@@ -192,6 +194,7 @@ test('a click chooses a tile, and the choice is kept on the project and survives
   await go(page, '/projects/seed-1')
   await page.locator('.pnav-export').click()
   await expect(exportPanel(page)).toBeVisible()
+  await chooseFormat(page, 'kit')
   await expect(group(page)).toHaveCount(1)
   expect((await state(page)).checked, 'the saved project remembers its template').toEqual(['Showcase'])
 })
@@ -387,7 +390,7 @@ test('Free sees the guidelines tiles clear, and the strip and button stay locked
   await chooseFormat(page, 'guidelines')
   await expect(group(page).getByRole('radio')).toHaveText([/Presentation/, /Poster/, /Grid/])
   await expect(strip(page), 'the default template shows the page strip').toBeVisible()
-  await expect(exportPanel(page).locator('.exp-preview-lock'), 'and it is locked for Free').toBeVisible()
+  await expect(exportPanel(page).locator('.xd-lock'), 'and it is locked for Free').toBeVisible()
   await expect(exportPanel(page).locator('.exp-preview-caption')).toHaveText('Your guidelines in Presentation, slides 1 to 3')
   await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i })).toBeVisible()
 
@@ -397,12 +400,12 @@ test('Free sees the guidelines tiles clear, and the strip and button stay locked
     await expect(exportPanel(page).locator('.exp-preview-caption'), `the strip follows the template: ${name}`).toHaveText(`Your guidelines in ${name}, slides 1 to 3`)
     await expect(strip(page)).toHaveAttribute('data-state', 'ready')
     await expect(exportPanel(page).locator('.exp-preview-strip img[data-blurred="true"]'), 'still blurred for Free').toHaveCount(3)
-    await expect(exportPanel(page).locator('.exp-preview-lock'), 'and still locked').toBeVisible()
+    await expect(exportPanel(page).locator('.xd-lock'), 'and still locked').toHaveText(/Pro export/)
     await expect(exportPanel(page).getByRole('button', { name: /Unlock with Pro/i }), 'the button is still locked').toBeVisible()
   }
   await tile(page, 'Presentation').click()
   await expect(exportPanel(page).locator('.exp-preview-caption')).toHaveText('Your guidelines in Presentation, slides 1 to 3')
-  await expect(exportPanel(page).locator('.exp-preview-lock')).toBeVisible()
+  await expect(exportPanel(page).locator('.xd-lock')).toBeVisible()
 })
 
 test('Pro sees no lock on the guidelines row, and the button names the export', async ({ page }) => {
@@ -410,7 +413,7 @@ test('Pro sees no lock on the guidelines row, and the button names the export', 
   await openProject(page, 'pro')
   await chooseFormat(page, 'guidelines')
   await expect(group(page).getByRole('radio')).toHaveCount(3)
-  await expect(exportPanel(page).locator('.exp-preview-lock')).toHaveCount(0)
+  await expect(exportPanel(page).locator('.xd-lock')).toHaveCount(0)
   await expect(exportPanel(page).getByRole('button', { name: actionLabel('guidelines'), exact: true })).toBeVisible()
 })
 

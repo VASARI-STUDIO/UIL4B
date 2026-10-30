@@ -26,6 +26,7 @@ import { buildBrandGuidelines, guidelineSections, readGuidelines } from '../../s
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS, proOnlyFormats } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -33,7 +34,9 @@ const stripComments = (src) => src
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
   .replace(/^\s*\/\/.*$/gm, ' ')
 
-const PANEL = read('src/components/ExportPanel.jsx')
+// The export engine makes the file; the dialog's steps decide what is offered beside it.
+const RUNNER = read('src/hooks/useExportRunner.js')
+const STEPS = read('src/components/export/ExportSteps.jsx')
 
 const DESIGN = {
   palette: {
@@ -272,47 +275,65 @@ test('the export table advertises it, and only because it is built', () => {
     'Pro is back to a single export document — "multiple export variations" is no longer true')
 })
 
-test('ExportPanel actually asks the server for this format', () => {
-  // THE CALL SITE. Reverting the branch in ExportPanel must fail here — a test
+test('the export engine actually asks the server for this format', () => {
+  // THE CALL SITE. Reverting the branch in useExportRunner must fail here — a test
   // that only exercises buildBrandGuidelines() would stay green while nothing
   // in the product could reach it. The generator itself is server-only now, so
-  // the panel's job is the request, the activation name and the file name.
-  const code = stripComments(PANEL)
+  // the engine's job is the request, the activation name and the file name.
+  const code = stripComments(RUNNER)
   assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
     'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
   assert.match(code, /file: 'brand-guidelines\.html'/, 'the file is not named after the document it is')
-  assert.match(code, /requestExportDocument\(\{ format, design, projectName, template: chosenTemplates\[format\] \}/,
-    'the panel is not asking the server for the document')
-  assert.ok(!/brandGuidelines/.test(code), 'ExportPanel imports the guidelines generator again')
+  assert.match(code, /requestExportDocument\(\{ format: documentKey, design, projectName, template: chosenTemplates\[documentKey\] \}/,
+    'the engine is not asking the server for the document')
+  assert.ok(!/brandGuidelines/.test(code), 'useExportRunner imports the guidelines generator again')
+  // Both of its files (PDF and HTML) are the one document, so both ask for it by its own key.
+  assert.match(code, /const documentKey = htmlDocument \? fmt\.variantOf : format/)
+  assert.match(code, /format === 'guidelines-html'/)
 })
 
 test('the paywall names the document the user clicked, not the other one', () => {
-  const code = stripComments(PANEL)
+  const code = stripComments(RUNNER)
   // The gate expression itself is pinned by tests/unit/plans-truth.test.js. What
   // is asserted here is that the COPY behind it is keyed per format — one shared
   // modal would describe a token manual to somebody buying a brand book.
   // The wall links to /plans instead of raising the modal, so what is keyed per format is the gate id it
   // reports — which is the half of this test that still means something.
-  // `gateKey` is the format id, or the id of the document a variant (the book as PNG) belongs to.
-  assert.match(code, /PRO_GATE\[gateKey\]\?\.gate/, 'the export wall no longer reports its gate per format')
-  for (const f of proOnlyFormats()) {
-    assert.match(code, new RegExp(`\\n\\s{2}${f.id}: \\{`),
+  // The key is the format id, or the id of the document a variant (the book as PNG) belongs to.
+  assert.match(code, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/, 'the export wall no longer reports its gate per format')
+  const table = /export const PRO_GATE = \{([\s\S]*?)\r?\n\}/.exec(code)?.[1] || ''
+  assert.ok(table, 'PRO_GATE is no longer a table the engine exports')
+  for (const f of proOnlyFormats().filter(x => !x.variantOf)) {
+    assert.match(table, new RegExp(`\\n\\s{2}${f.id}: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)
   }
   // Distinct analytics ids, or the funnel cannot say which wall converted.
-  const gates = [...code.matchAll(/gate: '([^']+)'/g)].map(m => m[1])
+  const gates = [...table.matchAll(/gate: '([^']+)'/g)].map(m => m[1])
   assert.ok(gates.length >= 2, 'the gate ids are no longer being parsed — this assertion has gone blind')
   assert.equal(new Set(gates).size, gates.length, 'two Pro documents report the same conversion gate')
 })
 
 test('the logo field is offered beside the format that needs it, and nowhere else', () => {
-  const code = stripComments(PANEL)
-  assert.match(code, /import BrandLogoField from '\.\/BrandLogoField'/, 'the logo field is not imported')
-  assert.match(code, /\{activeFormat\?\.logo && <BrandLogoField \/>\}/,
-    'the logo field is not gated on the format table\'s own `logo` flag — it is either always on, or gone')
-  // The flag has to select something, or the gate above hides it for ever.
+  const code = stripComments(STEPS)
+  assert.match(code, /import BrandLogoField from '\.\.\/BrandLogoField'/, 'the logo field is not imported')
+  // The dialog's Details step is one branch per kind of document; the field sits in
+  // the branches of the two brand documents (the book's monograph layout and the
+  // slides both draw the logo) and in none of the others.
+  const details = /let details = null([\s\S]*?)\r?\n\s*return \(/.exec(code)?.[1] || ''
+  const branches = Object.fromEntries(
+    [...details.matchAll(/cat\.preview === '(\w+)'\) \{([\s\S]*?)(?=\r?\n {2}\} else if|\r?\n {2}\}\s*$)/g)].map(m => [m[1], m[2]]))
+  assert.deepEqual(Object.keys(branches).sort(), ['book', 'guide', 'guidelines', 'kit'],
+    'the Details step is no longer parsed — this assertion has gone blind')
+  const withField = Object.keys(branches).filter(k => /<BrandLogoField\b/.test(branches[k])).sort()
+  assert.deepEqual(withField, ['book', 'guidelines'],
+    'the logo field is offered beside a document that has no logo pages, or is gone from one that has')
+  // The format table's own `logo` flag must select a category that offers the field.
   assert.ok(EXPORT_FORMATS.some(f => f.logo), 'no format declares logo pages, so the field can never render')
   assert.ok(EXPORT_FORMATS.some(f => !f.logo), 'every format declares logo pages — the gate is not gating')
+  for (const f of EXPORT_FORMATS.filter(x => x.logo)) {
+    const home = EXPORT_TYPES.flatMap(t => t.categories).find(c => c.files.includes(f.id))
+    assert.ok(home && withField.includes(home.preview), `${f.id} has logo pages but its category does not offer the logo field`)
+  }
 })
 
 test('the panel writes the logo through the shared design store, not a second one', () => {

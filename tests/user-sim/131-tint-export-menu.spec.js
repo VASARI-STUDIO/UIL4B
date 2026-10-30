@@ -51,12 +51,12 @@ async function watchDownloads(page) {
 const downloads = (page) => page.evaluate(() => window.__dl)
 
 test.describe('Tint · Copy or save menu', () => {
-  test('the old Copy variables button is gone and Copy or save lists three rows', async ({ page }) => {
+  test('the old Copy variables button is gone and Copy or save lists four rows', async ({ page }) => {
     watch(page, 'designer looking for the CSS')
     await go(page, '/create/tint')
     await expect(page.getByRole('button', { name: 'Copy variables' })).toHaveCount(0)
     await openMenu(page)
-    await expect(page.getByRole('menuitem')).toHaveText(['Copy CSS', 'Save to projectFree account', 'DownloadFree account'])
+    await expect(page.getByRole('menuitem')).toHaveText(['Copy CSS', 'Save to projectFree account', 'DownloadFree account', 'Export design system…Free account'])
   })
 
   test('the button is not called Export (the header owns that word) and signed out the account rows carry a hint', async ({ page }) => {
@@ -226,9 +226,11 @@ test.describe('Tint · Copy or save menu', () => {
     await page.keyboard.press('ArrowDown')
     await expect(row(page, 'Download')).toBeFocused()
     await page.keyboard.press('ArrowDown')
+    await expect(row(page, 'Export design system…')).toBeFocused()
+    await page.keyboard.press('ArrowDown')
     await expect(row(page, 'Copy CSS'), 'the arrows wrap').toBeFocused()
     await page.keyboard.press('End')
-    await expect(row(page, 'Download')).toBeFocused()
+    await expect(row(page, 'Export design system…')).toBeFocused()
     await page.keyboard.press('Home')
     await expect(row(page, 'Copy CSS')).toBeFocused()
     await page.keyboard.press('Escape')
@@ -239,9 +241,12 @@ test.describe('Tint · Copy or save menu', () => {
     await expect(row(page, 'Copy CSS')).toBeFocused()
     await page.keyboard.press('Escape')
     await page.keyboard.press('ArrowUp')
-    await expect(row(page, 'Download'), 'ArrowUp opens onto the last row').toBeFocused()
+    await expect(row(page, 'Export design system…'), 'ArrowUp opens onto the last row').toBeFocused()
+    // The last row opens the export popup on the stylesheet, with no account asked for.
     await page.keyboard.press('Space')
-    await expect(page.locator('#ui-login-title')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('dialog', { name: /^Export/ })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('radio', { name: 'Code' })).toBeChecked()
+    await expect(page.locator('#ui-login-title')).toHaveCount(0)
   })
 
   test('390: the rows are a bottom sheet with 44px targets and nothing overflows', async ({ page }) => {

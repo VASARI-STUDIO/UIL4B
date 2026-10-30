@@ -39,6 +39,7 @@ import {
   proOnlyFormats,
   unbuiltFormats,
 } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 import * as PLAN_CONFIG from '../../src/config/plans.js'
 const { FREE_SAVE_LIMITS } = PLAN_CONFIG
 
@@ -55,7 +56,7 @@ const PLANS_AND_FACTS = `${PLANS}
 ${PLAN_FACTS_SRC}`
 const MODAL = read('src/components/ProUpgradeModal.jsx')
 const SETTINGS = read('src/pages/Settings.jsx')
-const PANEL = read('src/components/ExportPanel.jsx')
+const RUNNER = read('src/hooks/useExportRunner.js')
 // The one module every paid surface's benefit lines come from. It is itself a paid surface.
 const PLAN_FACTS = read('src/config/planFacts.js')
 
@@ -221,20 +222,27 @@ test('Pricing.jsx derives its figures instead of typing them', () => {
   assert.match(code, /SYSTEMS_TOTAL|COLOUR_SYSTEMS\.length/, 'the colour system total is not derived')
 })
 
-test('the export panel and the pricing page read ONE table', () => {
-  // The whole arrangement collapses if ExportPanel re-declares its own list —
+test('the export dialog and the pricing page read ONE table', () => {
+  // The whole arrangement collapses if the export engine re-declares its own list —
   // the page would then be derived from an array nobody renders. This is the
   // wiring, and it is asserted at the call site rather than on the helper.
-  // (The panel also imports the row groups and helpers from the same module.)
-  assert.match(PANEL, /import \{[^}]*\bEXPORT_FORMATS\b[^}]*\} from '\.\.\/config\/exportFormats'/,
-    'ExportPanel no longer imports the shared table')
-  assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
-    'ExportPanel has re-declared its own format list; the pricing page is now derived from a dead array')
+  assert.match(RUNNER, /import \{[^}]*\bEXPORT_FORMATS\b[^}]*\} from '\.\.\/config\/exportFormats'/,
+    'useExportRunner no longer imports the shared table')
+  assert.ok(!/const (FORMATS|EXPORT_FORMATS) = /.test(RUNNER),
+    'useExportRunner has re-declared its own format list; the pricing page is now derived from a dead array')
 
-  // …and the panel must still gate on the same flag it badges with.
-  const code = stripComments(PANEL)
-  assert.match(code, /FORMATS\.find\(f => f\.id === format\)\?\.pro && !isPro/,
+  // …and the engine must still gate on the same flag the dialog badges with.
+  const code = stripComments(RUNNER)
+  assert.match(code, /const fmt = EXPORT_FORMATS\.find\(\(f\) => f\.id === format\)/,
     'the export entitlement gate no longer reads the shared table')
+  assert.match(code, /fmt\.pro && !isPro/, 'the export entitlement gate no longer reads the shared table')
+
+  // The dialog's rows (src/config/dialogExport.js) only group ids; every one must be a
+  // format of the shared table, or the dialog offers a file the table has never heard of.
+  const known = new Set(EXPORT_FORMATS.map(f => f.id))
+  for (const t of EXPORT_TYPES) for (const c of t.categories) for (const id of c.files) {
+    assert.ok(known.has(id), `the dialog offers "${id}", which is not in the shared format table`)
+  }
 })
 
 test('Pro is only sold on export benefits that exist', () => {

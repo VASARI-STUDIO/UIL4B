@@ -89,7 +89,7 @@ export default function ExportProPreview({ kind, template, design, projectName, 
       {ready.failed && fit
         ? (
           <div className="exp-preview-failed" role="status">
-            <p>Preview didn’t load.</p>
+            <p>The preview didn’t draw. Your file isn’t affected.</p>
             <button
               type="button"
               className="exp-preview-retry"

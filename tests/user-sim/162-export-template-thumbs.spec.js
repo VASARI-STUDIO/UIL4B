@@ -14,11 +14,12 @@
 //      is chosen. Pro gets the same pictures sharp.
 //   4. At 390 neither the tiles nor the strip push the page or the panel sideways; the
 //      strip may scroll inside its own box.
-//   5. The strip's heading sits above the pictures, and the strip's group starts at least
-//      24px under the template picker (book and guidelines, 1440 and 390).
+//   5. The strip leads the column: the template picker sits at least 24px under the pictures
+//      (book and guidelines, 1440 and 390). The popup draws no visible caption of its own (the
+//      step labels and the lock say what is shown); the strip's aria-label still names the template.
 //   6. A draw that beat the fonts (document.fonts.load held back past the 800ms wait) is
 //      shown, is not kept in the cache, and is drawn again once the faces arrive.
-//   7. The picker has a visible "Template" label and the radiogroup is named by it.
+//   7. The radiogroup is named by the Template label and sits under a visible Layout heading.
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // Each was applied to the source, built, and turned the named tests red:
@@ -27,12 +28,12 @@
 //                                                                      -> the files-are-webp test
 //   - ExportProPreview: template is not passed to renderProPreviews    -> the redraw test
 //   - proPreviewKey: the caption's "in" becomes "on"                   -> the caption test
-//   - ExportPanel: blurred={false}                                     -> the Free-stays-blurred test
+//   - ExportSteps (Preview): blurred={false}                                   -> the Free-stays-blurred test
 //   - overlay.css: .exp-preview-strip overflow-x:visible               -> the 390 test
 //   - proPreviews.js: the `stale` flag is never set (the `!fonts.settled` line removed)
 //                                                                      -> the redraw test and the not-kept test
 //   - ExportProPreview: the stale draw never schedules its redraw      -> the redraw test
-//   - overlay.css: `.exp-preview{margin-top:16px}` deleted             -> the gap test at 1440 (book, guidelines)
+//   - export-dialog.css: the step gap (--s-6) removed between Preview and Layout -> the gap test
 //   - overlay.css: `.exp-preview` laid out column-reverse              -> the heading-above test (all four)
 //   - ExportTemplatePicker: aria-labelledby swapped back to aria-label -> the label test (all rows)
 //   - ExportTemplatePicker: the visible "Template" paragraph removed   -> the label test (all rows)
@@ -46,8 +47,9 @@ import { liveTemplates, defaultTemplate } from '../../src/config/exportTemplates
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 const WIDTHS = [240, 480, 720]
 // The hardest edge (see stripSharpness) on the 3-colour board, for every template of both
-// rows: blurred pictures measured 7 to 24, sharp ones 114 to 237. The limits sit between.
-const BLUR_CEILING = 40
+// rows: blurred pictures measured 12 to 40 since the baked blur went from 6px to 3px
+// (commit 355eeb9a; they were 7 to 24 before), sharp ones 114 to 237. The limits sit between.
+const BLUR_CEILING = 60
 const SHARP_FLOOR = 80
 
 async function openProject(page, plan = 'free') {
@@ -222,7 +224,7 @@ for (const [row, names] of STRIP_ROWS) {
       await pick(page, row, name)
       expect(await stripFlags(page), `${name}: every picture is marked blurred`).toEqual(['true', 'true', 'true'])
       for (const alt of await stripImgs(page).evaluateAll((imgs) => imgs.map((i) => i.alt))) expect(alt).toMatch(/^Blurred preview of your /)
-      await expect(exportPanel(page).locator('.exp-preview-lock'), `${name}: the lock is over the strip`).toBeVisible()
+      await expect(exportPanel(page).locator('.xd-lock'), `${name}: the lock is over the strip`).toBeVisible()
       for (const score of await stripSharpness(page)) {
         expect(score, `${name}: the pixels are soft, not a sharp picture behind a CSS filter`).toBeLessThan(BLUR_CEILING)
       }
@@ -236,7 +238,7 @@ for (const [row, names] of STRIP_ROWS) {
     for (const name of others) {
       await pick(page, row, name)
       expect(await stripFlags(page), `${name}: no picture is marked blurred`).toEqual(['false', 'false', 'false'])
-      await expect(exportPanel(page).locator('.exp-preview-lock')).toHaveCount(0)
+      await expect(exportPanel(page).locator('.xd-lock')).toHaveCount(0)
       for (const score of await stripSharpness(page)) {
         expect(score, `${name}: the pixels are sharp, so the Free ceiling really separates the two`).toBeGreaterThan(SHARP_FLOOR)
       }
@@ -259,7 +261,7 @@ test('at 390 the tiles and the strip stay inside the panel; only the strip scrol
       await expect(stripImgs(page)).toHaveCount(3)
     }
     const fit = await page.evaluate(() => {
-      const panel = document.querySelector('.exp-panel')
+      const panel = document.querySelector('.xd-card')
       const p = panel.getBoundingClientRect()
       const within = (b, box) => b.left >= box.left - 0.5 && b.right <= box.right + 0.5
       const tiles = [...document.querySelectorAll('.exp-tpl-tile')]
@@ -302,7 +304,7 @@ const MIN_GAP = 24
 
 for (const [row, noun] of [['book', 'book'], ['guidelines', 'guidelines']]) {
   for (const width of [1440, 390]) {
-    test(`${row} at ${width}: the heading sits above the strip, and the strip starts at least ${MIN_GAP}px under the template picker`, async ({ page }) => {
+    test(`${row} at ${width}: the strip leads the column, and the template picker starts at least ${MIN_GAP}px under it`, async ({ page }) => {
       watch(page, `a designer reading the ${row} strip at ${width}px`)
       await page.setViewportSize({ width, height: 1100 })
       await openProject(page, 'pro')
@@ -310,18 +312,16 @@ for (const [row, noun] of [['book', 'book'], ['guidelines', 'guidelines']]) {
       await expect(strip(page)).toHaveAttribute('data-state', 'ready')
       await expect(stripImgs(page)).toHaveCount(3)
       await expect(caption(page)).toContainText(`Your ${noun} in `)
+      await expect(strip(page)).toHaveAttribute('aria-label', /^Pages of your /)
 
       const box = async (locator) => (await locator.boundingBox())
       const picker = await box(group(page))
-      const heading = await box(caption(page))
       const pictures = await box(strip(page))
-      const where = `${row} at ${width}: ${JSON.stringify({ picker, heading, pictures })}`
+      const where = `${row} at ${width}: ${JSON.stringify({ picker, pictures })}`
 
-      expect(heading.y + heading.height, `the heading ends above the pictures, ${where}`).toBeLessThanOrEqual(pictures.y)
-      expect(pictures.y - (heading.y + heading.height), `the heading is close to what it heads, ${where}`).toBeLessThanOrEqual(16)
-      expect(heading.y, `the heading starts under the tiles, ${where}`).toBeGreaterThanOrEqual(picker.y + picker.height)
-      expect(heading.y - (picker.y + picker.height), `the strip's group is set apart from the tiles, ${where}`).toBeGreaterThanOrEqual(MIN_GAP)
-      expect(pictures.y - (picker.y + picker.height), `the pictures are further from the tiles than the 12px between tiles, ${where}`).toBeGreaterThanOrEqual(MIN_GAP)
+      // The popup shows the result first and the choices under it.
+      expect(picker.y, `the tiles start under the pictures, ${where}`).toBeGreaterThanOrEqual(pictures.y + pictures.height)
+      expect(picker.y - (pictures.y + pictures.height), `the tiles are set apart from the pictures, ${where}`).toBeGreaterThanOrEqual(MIN_GAP)
     })
   }
 }
@@ -349,12 +349,18 @@ async function holdFonts(page) {
   })
 }
 const fontLoads = (page) => page.evaluate(() => window.__fontLoads)
+/** The popup opens on Book, whose strip draws at once: count only after that draw is done. */
+async function bookDrawn(page) {
+  await expect(strip(page), 'the opening Book strip is drawn').toHaveAttribute('data-state', 'ready', { timeout: 10_000 })
+  await expect(stripImgs(page)).toHaveCount(3)
+}
 const stripSrcs = (page) => stripImgs(page).evaluateAll((imgs) => imgs.map((i) => i.src))
 
 test('a strip drawn before the fonts arrived is shown, then drawn again once they have', async ({ page }) => {
   watch(page, 'a designer whose fonts are slow')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
 
   await chooseFormat(page, 'guidelines')
@@ -375,6 +381,7 @@ test('a strip drawn before the fonts arrived is not kept: coming back to its tem
   watch(page, 'a designer whose fonts are slow, trying templates')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   await page.evaluate(() => { window.__holdFonts = true; window.__fontLoads = 0 })
 
   await chooseFormat(page, 'guidelines')
@@ -383,15 +390,16 @@ test('a strip drawn before the fonts arrived is not kept: coming back to its tem
   expect(oneDraw).toBeGreaterThan(0)
 
   await pick(page, 'guidelines', 'Poster')
-  expect(await fontLoads(page), 'a second template is a second draw').toBe(oneDraw * 2)
+  await expect.poll(() => fontLoads(page), 'a second template is a second draw').toBe(oneDraw * 2)
   await pick(page, 'guidelines', 'Presentation')
-  expect(await fontLoads(page), 'the first template, drawn in the fallback, was not served from the cache').toBe(oneDraw * 3)
+  await expect.poll(() => fontLoads(page), 'the first template, drawn in the fallback, was not served from the cache').toBe(oneDraw * 3)
 })
 
 test('CONTROL: a strip drawn after the fonts arrived is kept: coming back to its template does not draw it again', async ({ page }) => {
   watch(page, 'a designer with fonts ready, trying templates')
   await holdFonts(page)
   await openProject(page, 'pro')
+  await bookDrawn(page)
   // Counted, but not held back.
   await page.evaluate(() => { window.__fontLoads = 0 })
 
@@ -407,7 +415,7 @@ test('CONTROL: a strip drawn after the fonts arrived is kept: coming back to its
 /* ── 7. the picker has a visible name ──────────────────────────────────────── */
 
 for (const row of ['kit', 'book', 'guidelines']) {
-  test(`${row}: the template picker has a visible "Template" label, and the radiogroup is named by it`, async ({ page }) => {
+  test(`${row}: the template picker is named by its label and sits under a visible Layout heading`, async ({ page }) => {
     watch(page, `a designer looking at the ${row} template picker`)
     await openProject(page, 'free')
     await chooseFormat(page, row)
@@ -418,9 +426,11 @@ for (const row of ['kit', 'book', 'guidelines']) {
     expect(labelId, 'the group points at a label').toBeTruthy()
     expect(await tiles.getAttribute('aria-label'), 'the name comes from the label, not a second hidden copy').toBeNull()
     const label = exportPanel(page).locator(`[id="${labelId}"]`)
-    await expect(label, 'the label is on screen').toBeVisible()
-    await expect(label).toHaveText('Template')
-    const [l, g] = [await label.boundingBox(), await tiles.boundingBox()]
-    expect(l.y + l.height, 'the label sits above the tiles').toBeLessThanOrEqual(g.y)
+    await expect(label, 'the accessible name is still the Template label').toHaveText('Template')
+    // The popup shows its "Layout" step heading above the tiles instead of a second visible label.
+    const heading = exportPanel(page).getByRole('heading', { level: 3, name: 'Layout' })
+    await expect(heading, 'a visible step heading names the choice').toBeVisible()
+    const [l, g] = [await heading.boundingBox(), await tiles.boundingBox()]
+    expect(l.y + l.height, 'the heading sits above the tiles').toBeLessThanOrEqual(g.y)
   })
 }

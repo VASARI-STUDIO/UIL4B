@@ -169,10 +169,14 @@ test('the logo is drawn on the guidelines covers that carry one, and a book neve
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('the strip is drawn for every template: the panel passes the chosen one and keeps no default-only gate', () => {
-  const panel = read('src/components/ExportPanel.jsx')
-  assert.doesNotMatch(panel, /defaultTemplate\(/, 'the strip no longer hides for a non-default template')
-  assert.match(panel, /<ExportProPreview[^>]*\btemplate=\{chosenTemplates\[activeFormat\?\.id\]\}/s)
+test('the strip is drawn for every template: the dialog passes the chosen one and keeps no default-only gate', () => {
+  const steps = read('src/components/export/ExportSteps.jsx')
+  // The one default is the book as PNG pages, which has a single layout (the
+  // Layout step says so); every other file passes the template picked for its list.
+  assert.equal(steps.match(/defaultTemplate\(/g)?.length, 1, 'the strip no longer hides for a non-default template')
+  assert.match(steps, /const template = file === 'book-png' \? defaultTemplate\('book'\) : chosen\[cat\.layouts\]/)
+  assert.match(steps, /<ExportProPreview[^>]*\btemplate=\{template\}/s)
+  assert.doesNotMatch(steps, /template === defaultTemplate|=== defaultTemplate\(/, 'the strip is gated on the default template')
 })
 
 test('the strip component keys its cache and writes its caption through the shared functions', () => {
