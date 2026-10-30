@@ -106,10 +106,8 @@ export function yearOf(iso) {
 
 /**
  * The facts the loaded catalogue actually holds for a family, in reading order.
- * `licences` is the family-to-SPDX table from src/data/fontLicences.json; it is
- * passed in because that file loads on demand.
  */
-export function fontFacts(font, licences) {
+export function fontFacts(font) {
   if (!font) return []
   const rows = []
 
@@ -155,12 +153,8 @@ export function fontFacts(font, licences) {
   const scripts = formatSubsets(font.subsets)
   if (scripts.length) rows.push({ k: 'Scripts', v: scripts.join(', ') })
 
-  // Named from the licence table, never from the catalogue's open-source flag:
-  // that flag says nothing about which licence applies. Until the table has
-  // loaded there is nothing to name, so the row is left out.
-  const licence = fontLicence(font, licences)
-  if (licence) rows.push({ k: 'Licence', v: licence.heading })
-
+  // The licence is not a row: it has its own block at the end of the About
+  // panel (see fontLicence below), so it is named once.
   if (Number.isFinite(font.popularity)) {
     rows.push({ k: 'Popularity', v: `#${(font.popularity + 1).toLocaleString()} by use on Google Fonts` })
   }
