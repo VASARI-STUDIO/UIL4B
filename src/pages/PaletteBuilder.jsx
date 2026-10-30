@@ -3051,11 +3051,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <button
                     type="button"
                     className="plb-aa plb-aa--locked"
+                    title="Contrast check — Pro"
                     aria-label={`Contrast of ${role} — a Pro check`}
                     onClick={() => openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })}
                   >
-                    <ToolIcon name="lock-simple" size={12} />
-                    AA · Pro
+                    <span>
+                      AA
+                      {i === 0 && <span className="plb-aa-pro"> · Pro</span>}
+                    </span>
                   </button>
                 )}
 
@@ -3153,7 +3156,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         {/* The ADD rail (D:1037-1040). */}
         <button type="button" className="plb-add" onClick={addCol} aria-label="Add a colour">
           <ToolIcon name="plus" size={19} />
-          <span className="plb-add-label">ADD</span>
+          <span className="plb-add-label">Add</span>
         </button>
       </div>
 
