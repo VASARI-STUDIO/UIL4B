@@ -551,10 +551,10 @@ test.describe('/projects tabs in the order it is read', () => {
     /^See plans$/,
   ]
   const PHONE_STOPS = [FIRST_STOPS[1], FIRST_STOPS[2], FIRST_STOPS[3], FIRST_STOPS[4], FIRST_STOPS[0], FIRST_STOPS[5]]
-  const THEN = [/^All \w+ tools$/, /^Palette Builder/, /^Gradient/, /^Palette Library/, /^Browse all/, /^(Upgrade for |See Pro$)/]
+  const THEN = [/^All \w+ tools$/, /^Palette Builder/, /^Gradient/, /^Palette Library/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
   // On a phone the heading's button is not drawn: the "All thirteen tools" row closes the four tools
   // instead, and Palette Library is reached in the Create sheet.
-  const THEN_PHONE = [/^Palette Builder/, /^Gradient/, /^Icon set/, /^All \w+ tools$/, /^Browse all/, /^(Upgrade for |See Pro$)/]
+  const THEN_PHONE = [/^Palette Builder/, /^Gradient/, /^Icon set/, /^All \w+ tools$/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
 
   for (const width of [1440, 768, 390]) {
     test(`Continue, Open project and the rows are met in order, and painted in order, at ${width}px`, async ({ browser }) => {

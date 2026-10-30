@@ -10,7 +10,7 @@
 //         Discover four across (171.5px a card); 641, 1000 and 640 for the edges of the band
 //
 // Every number is hand-checked from the spec: 768 - 2 x 23 = 722px of content; (722 - 3 x 12) / 4 = 171.5px
-// a Discover card; 390 - 2 x 12 = 366px of content; 320 - 24 = 296px.
+// a Discover card; 390 - 2 x 20 = 350px of content (the /tools gutter, was 12); 320 - 40 = 280px.
 //
 // MUTATION (all made in one build, each named test went red, then projects.css was restored):
 //   projects.css  `.uh .uh-rail { order: -1 }` at 640 and under          -> "the sections run in the spec's order"
@@ -151,7 +151,7 @@ test.describe('on a 390px phone, in a real touch context', () => {
       expect(l.top, 'the line is above the title').toBeGreaterThanOrEqual(h1.bottom - 1)
       expect(l.bottom, 'the line is not above the work').toBeLessThanOrEqual(lead.top + 1)
       expect(l.height, 'it is one line').toBeLessThan(30)
-      expect(l.width, 'it runs the width of the content').toBe(366)
+      expect(l.width, 'it runs the width of the content').toBe(350)
       // One sans, tabular: the time is not set in the mono face.
       const clk = await page.locator('.uh-clock-line .uh-clk-time').evaluate((el) => { const cs = getComputedStyle(el); return { family: cs.fontFamily, numeric: cs.fontVariantNumeric } })
       expect(clk.family, `the clock is not mono (${clk.family})`).not.toMatch(/Geist Mono|monospace/i)
@@ -218,7 +218,7 @@ test.describe('on a 390px phone, in a real touch context', () => {
           return { top: r.top + scrollY, bottom: r.bottom + scrollY, width: Math.round(r.width), height: Math.round(r.height), filled: el.classList.contains('is-filled'), name: el.textContent.trim() }
         })
         expect(btn.name).toBe('New project')
-        expect(btn.width, 'New project is not the width of the content').toBe(width - 24)
+        expect(btn.width, 'New project is not the width of the content').toBe(width - 40)
         expect(btn.height, 'New project is under 44px').toBeGreaterThanOrEqual(44)
         expect(btn.top, 'it is not under the rows').toBeGreaterThanOrEqual(rows.bottom - 1)
         expect(btn.bottom, 'it is below Today').toBeLessThanOrEqual(today.top + 1)
