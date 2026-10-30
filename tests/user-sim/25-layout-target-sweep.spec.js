@@ -678,7 +678,6 @@ const FAB_COVER = [
   // Waits on the toolbar, not a chip: in the 641–980 band the trays collapse
   // to triggers, so no `.lbry-filter` is rendered at some of these shapes.
   ['/discover/prompts', '.lbry-toolbar', [...FAB_SHORT, [390, 844]]],
-  ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
 ]
 
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
@@ -713,6 +712,53 @@ test('S5 / S10 · the FAB never permanently covers a control', async ({ browser 
       await ctx.close()
       if (covered.length) damage.push(`${path} ${w}x${h}: ${covered.length} control(s) still fully covered at the scroll end — ${covered.join(', ')}`)
     }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// /sitemap wears the /tools shell (Spectrum nav and footer), which carries feedback
+// in its own menus, so it draws no floating button to cover anything. This pins
+// that, so a button that comes back is measured by FAB_COVER rather than shipped
+// unchecked.
+test('S5 / S10 · /sitemap draws no feedback FAB', async ({ browser }) => {
+  budget(2)
+  for (const [w, h] of [[390, 844], [1440, 900]]) {
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    const fabs = await page.locator('.global-feedback-btn').count()
+    await ctx.close()
+    expect(fabs, `${w}x${h}: /sitemap draws the feedback FAB`).toBe(0)
+  }
+})
+
+// /sitemap is one long list of link rows. Each row is the whole target: at least
+// 44px tall and as wide as the list that holds it, so the thumbnail, the title,
+// the route line and the arrow all hit the same link and a thumb never has to
+// find a small word.
+const SMAP_ROW_SHAPES = [[320, 568], [390, 844], [844, 390], [1024, 768], [1440, 900]]
+
+test('S10 · every /sitemap row is a full-width target at least 44px tall', async ({ browser }) => {
+  budget(SMAP_ROW_SHAPES.length)
+  const damage = []
+  for (const [w, h] of SMAP_ROW_SHAPES) {
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    await settle(page)
+    const { rows, bad } = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('li[data-route] > a.spt-row')]
+      const bad = []
+      for (const a of links) {
+        const r = a.getBoundingClientRect()
+        const list = a.closest('ul').getBoundingClientRect()
+        const name = (a.querySelector('b')?.textContent || a.getAttribute('href')).trim().slice(0, 28)
+        if (r.height < 44) bad.push(`${name} is ${Math.round(r.height)}px tall`)
+        if (Math.abs(r.width - list.width) > 1 || Math.abs(r.left - list.left) > 1) {
+          bad.push(`${name} is ${Math.round(r.width)}px wide in a ${Math.round(list.width)}px list`)
+        }
+      }
+      return { rows: links.length, bad }
+    })
+    await ctx.close()
+    if (rows < 30) damage.push(`${w}x${h}: only ${rows} link rows found on the map`)
+    if (bad.length) damage.push(`${w}x${h}: ${bad.slice(0, 4).join('; ')}${bad.length > 4 ? ` (+${bad.length - 4} more)` : ''}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
