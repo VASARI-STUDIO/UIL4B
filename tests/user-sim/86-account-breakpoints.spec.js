@@ -551,10 +551,12 @@ test.describe('/projects tabs in the order it is read', () => {
     /^See plans$/,
   ]
   const PHONE_STOPS = [FIRST_STOPS[1], FIRST_STOPS[2], FIRST_STOPS[3], FIRST_STOPS[4], FIRST_STOPS[0], FIRST_STOPS[5]]
-  const THEN = [/^All \w+ tools$/, /^Palette Builder/, /^Gradient/, /^Palette Library/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
-  // On a phone the heading's button is not drawn: the "All thirteen tools" row closes the four tools
-  // instead, and Palette Library is reached in the Create sheet.
-  const THEN_PHONE = [/^Palette Builder/, /^Gradient/, /^Icon set/, /^All \w+ tools$/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
+  // The Contrast Checker row's thumbnail draws a ratio and a grade ("Aa 8.9:1 AAA"), which is part of the row's text.
+  const CONTRAST = /^(Aa [\d.]+:1( \w+)? )?Contrast Checker/
+  const THEN = [/^All \w+ tools$/, /^Palette/, /^Gradient/, /^Tint/, /^Semantic Colour/, CONTRAST, /^Icon Library/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
+  // On a phone the heading's button is not drawn: the "All thirteen tools" row closes the five tool
+  // rows instead, and Semantic Colour is not drawn (it is reached in the Create sheet).
+  const THEN_PHONE = [/^Palette/, /^Gradient/, /^Tint/, CONTRAST, /^Icon Library/, /^All \w+ tools$/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
 
   for (const width of [1440, 768, 390]) {
     test(`Continue, Open project and the rows are met in order, and painted in order, at ${width}px`, async ({ browser }) => {
