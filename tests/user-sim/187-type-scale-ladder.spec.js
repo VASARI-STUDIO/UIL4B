@@ -305,7 +305,8 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
         const stop = await page.evaluate(() => {
           const el = document.activeElement
           const zone = el.closest('.tsc-row') ? 'row' : el.closest('.tsc-view-switch') ? 'tabs' : el.closest('.tsc-config') ? 'panel' : 'other'
-          return { zone, top: el.getBoundingClientRect().top + window.scrollY, name: (el.getAttribute('aria-label') || el.textContent || el.id).trim().slice(0, 40) }
+          const fam = el.closest('.tsc-fam')
+          return { zone, fam: fam ? fam.getBoundingClientRect().top + window.scrollY : null, famId: fam ? [...document.querySelectorAll('.tsc-fam')].indexOf(fam) : -1, top: el.getBoundingClientRect().top + window.scrollY, name: (el.getAttribute('aria-label') || el.textContent || el.id).trim().slice(0, 40) }
         })
         stops.push(stop)
         if (stop.zone === 'row') break
@@ -314,6 +315,10 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
       const zones = seen.map(s => s.zone).filter((z, i, all) => z !== all[i - 1])
       expect(zones, `Tab walked ${stops.map(s => `${s.zone}:${s.name}`).join(' > ')}`).toEqual(['panel', 'tabs', 'row'])
       for (let i = 1; i < seen.length; i += 1) {
+        // Family cards side by side are read one card at a time: stepping into
+        // the next card, which starts on the same line, goes back up to its top.
+        const nextCard = seen[i].famId >= 0 && seen[i - 1].famId >= 0 && seen[i].famId !== seen[i - 1].famId
+        if (nextCard && Math.abs(seen[i].fam - seen[i - 1].fam) <= 1) continue
         expect(seen[i].top, `${seen[i].name} is higher on the page than ${seen[i - 1].name}, which Tab visited first`).toBeGreaterThanOrEqual(seen[i - 1].top - 14)
       }
     })

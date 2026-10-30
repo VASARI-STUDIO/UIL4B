@@ -903,20 +903,28 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             </div>
             <div className="tsc-sheet-body">
               <ToolSection>
-                <FontPicker
-                  label="Heading family"
-                  fonts={catalog}
-                  value={headingFont}
-                  onChange={chooseHeading}
-                />
-                {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
-                <FontPicker
-                  label="Body family"
-                  fonts={catalog}
-                  value={bodyFont}
-                  onChange={chooseBody}
-                />
-                {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                <div className="tsc-fams">
+                  <div className="tsc-fams-grid">
+                    <div className="tsc-fam">
+                      <FontPicker
+                        label="Heading family"
+                        fonts={catalog}
+                        value={headingFont}
+                        onChange={chooseHeading}
+                      />
+                      {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                    </div>
+                    <div className="tsc-fam">
+                      <FontPicker
+                        label="Body family"
+                        fonts={catalog}
+                        value={bodyFont}
+                        onChange={chooseBody}
+                      />
+                      {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                    </div>
+                  </div>
+                </div>
               </ToolSection>
 
               <ToolSection>

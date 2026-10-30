@@ -12,6 +12,19 @@ export const FONT_CATEGORIES = [
   { id: 'handwriting', label: 'Script' },
 ]
 
+// Category names as they read in running text (the filter pills keep their own
+// casing). One map so every surface that names a category spells it the same.
+const CATEGORY_WORDS = { 'sans-serif': 'sans serif', serif: 'serif', display: 'display', handwriting: 'script', monospace: 'monospace' }
+export const categoryWord = (category) => CATEGORY_WORDS[category] || String(category || '').toLowerCase()
+// The same word with a capital, for a label or a meta line: "Sans serif".
+export const categoryLabel = (category) => {
+  const word = categoryWord(category)
+  return word.charAt(0).toUpperCase() + word.slice(1)
+}
+
+// "6 weights", "1 weight".
+export const weightCount = (count) => `${count} weight${count === 1 ? '' : 's'}`
+
 // Keep the gallery focused on typefaces intended for reading and display.
 // Google categorises programming families as monospace, while emoji, icon and
 // symbol families are identified by their family names and specialist subsets.

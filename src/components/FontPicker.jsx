@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import FontBrowseDialog from './FontBrowseDialog'
 import { fontStack, headingWeight } from '../utils/googleFonts'
-import { specimenSizeCqw } from '../utils/fontGallery'
+import { categoryLabel, specimenSizeCqw, weightCount } from '../utils/fontGallery'
 // The picker's and the browse dialog's own sheet. Rooted at .typ-picker and
 // .fbd-overlay, so its place in the chunk's CSS order does not matter.
 import '../styles/pages/font-picker.css'
@@ -84,7 +84,7 @@ export default function FontPicker({
           </span>
           {current && (
             <span className="typ-picker-meta">
-              {current.category} · {current.variants.length} weight{current.variants.length === 1 ? '' : 's'}
+              {categoryLabel(current.category)} · {weightCount(current.variants.length)}
             </span>
           )}
         </span>

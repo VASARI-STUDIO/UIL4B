@@ -1357,7 +1357,6 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .danger-confirm-go{background:var(--err);border-color:var(--err);color:var(--err-fg)}
 .danger-confirm-go:disabled{opacity:.65;cursor:progress}
 
-@keyframes fg-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 .fg-more-btn{min-height:38px;padding:9px 18px;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .fg-more-btn:hover:not(:disabled){border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 @keyframes fg-fade{from{opacity:0}to{opacity:1}}
@@ -4082,7 +4081,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    a warning notice should read as a raised control, not as a second wash of
    colour over the first. Measured after: 5.84:1 light, 5.57:1 dark. */
 .typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--btn-radius);border:1px solid var(--accent);background:var(--card);color:var(--accent-text);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.fbd-card .lbry-card-meta{text-transform:capitalize}
 /* `container-type:inline-size` is here so the specimen can size itself off the
    TILE rather than off the viewport — see .fbd-sample for why that matters. */
 .fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
@@ -4269,7 +4267,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    each of them, so the tray reads identically whether one or several are lit. */
 .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--card);box-shadow:var(--shadow-xs)}
 .lbry-filtertrig{display:inline-flex;align-items:center;gap:8px;min-height:var(--search-h);padding:0 14px;color:var(--t1);background:var(--bg-2);border:1px solid transparent;border-radius:var(--btn-radius);font-family:var(--font);font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.lbry-filtertrig:hover{color:var(--t0)}
+@media (hover:hover){.lbry-filtertrig:hover{color:var(--t0)}}
 .lbry-filtertrig[aria-expanded="true"]{color:var(--t0);border-color:var(--border);background:var(--card)}
 /* A collapsed group that is actually filtering has to say so from the outside;
    this is the state the pattern loses if the trigger is left plain. */
@@ -4282,10 +4280,10 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    from the space actually below the trigger, so a long list (12 emoji
    categories) scrolls inside the panel instead of running off the viewport. */
 .lbry-filtermenu{position:absolute;top:calc(100% + 6px);left:0;z-index:60;display:flex;flex-direction:column;gap:2px;min-width:200px;max-width:min(320px,calc(100vw - 32px));max-height:var(--pop-max-h,420px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-panel,var(--shadow-l))}
-.lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}
+@media (hover:hover){.lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}}
 .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-2);color:var(--t0)}
 [data-theme="dark"] .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--bg-3)}
-[data-theme="dark"] .lbry-filtermenu .lbry-filter:hover{background:var(--hvr)}
+@media (hover:hover){[data-theme="dark"] .lbry-filtermenu .lbry-filter:hover{background:var(--hvr)}}
 [data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-3)}
 /* The count is the option's own metadata (1,655 emoji), so it belongs at the
    far end of the row rather than tucked against the label. */

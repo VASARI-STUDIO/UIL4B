@@ -234,7 +234,7 @@
   font-family: var(--font);
   font-size: 13px;
 }
-.stc .stc-save-sub { margin-top: 4px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--tl-faint); }
+.stc .stc-save-sub { margin-top: 4px; font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--t2); }
 .stc .stc-save-item {
   display: flex;
   align-items: center;
