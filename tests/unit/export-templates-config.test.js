@@ -27,7 +27,7 @@ test('the coherence check refuses what it should', () => {
   assert.throws(() => assertTemplatesCoherent({ kit: [t('ab', true)] }), /3 to 16/)
   assert.throws(() => assertTemplatesCoherent({ kit: [t('Abc', true)] }), /3 to 16/)
   assert.throws(() => assertTemplatesCoherent({ kit: [{ ...t('abc', true), live: false }] }), /not live/)
-  assert.throws(() => assertTemplatesCoherent({ tailwind: [t('abc', true)] }, EXPORT_FORMATS), /not a live export format/)
+  assert.throws(() => assertTemplatesCoherent({ assets: [t('abc', true)] }, EXPORT_FORMATS), /not a live export format/)
   assert.throws(() => assertTemplatesCoherent({ nope: [t('abc', true)] }, EXPORT_FORMATS), /not a live export format/)
 })
 

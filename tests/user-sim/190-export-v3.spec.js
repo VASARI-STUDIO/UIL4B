@@ -290,7 +290,7 @@ test.describe('the sizes the spec names', () => {
         expect(Math.round(button.height), `${category.name}: primary height`).toBe(48)
         if (category.name === 'Code') {
           // Copy sits beside the primary, half and half.
-          const copy = await panel.getByRole('button', { name: /^Copy (CSS|JSON)$/ }).boundingBox()
+          const copy = await panel.getByRole('button', { name: /^Copy file$/ }).boundingBox()
           expect(Math.abs(copy.width - button.width), 'Copy and the primary share the dock evenly').toBeLessThanOrEqual(2)
           expect(copy.width + button.width, 'together they span the dock').toBeGreaterThan(dock.width - 48)
         } else {
