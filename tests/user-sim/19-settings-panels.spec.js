@@ -86,7 +86,7 @@ test.describe('settings panels', () => {
       const amount = (await pro.locator('.sub-tier-amount').innerText()).trim()
       expect(amount, `${billing}: the Pro price is blank`).not.toBe('')
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
-      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Stripe didn’t answer')
     }
   })
 
@@ -110,7 +110,7 @@ test.describe('settings panels', () => {
       // POSITIVE CONTROL: this is the no-amount state, not a loaded price.
       await expect(pro.locator('.sub-tier-amount'), `${billing}: a price was found after all`).toHaveText('Unavailable')
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
-      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Stripe didn’t answer')
       await expect(pro.getByRole('button', { name: 'Retry live pricing' }), `${billing}: no Retry`).toBeVisible()
     }
   })
@@ -134,8 +134,8 @@ test.describe('settings panels', () => {
     await page.getByRole('tab', { name: /Yearly/ }).click()
     await expect(pro.locator('.sub-tier-amount'), 'yearly was priced after all').toHaveText('Unavailable')
     await expect(pro.locator('.sub-tier-sub')).not.toContainText('null')
-    await expect(pro.locator('.sub-tier-sub')).toContainText('price for this billing period')
-    await expect(pro.locator('.sub-tier-sub')).not.toContainText('unreachable')
+    await expect(pro.locator('.sub-tier-sub')).toContainText(/price for w+ yet./)
+    await expect(pro.locator('.sub-tier-sub')).not.toContainText('Stripe didn’t answer')
     await expect(pro.getByRole('button', { name: 'Retry live pricing' })).toHaveCount(0)
   })
 })

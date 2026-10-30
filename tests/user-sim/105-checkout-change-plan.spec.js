@@ -520,7 +520,7 @@ test.describe('a cadence with no live price', () => {
 
     const summary = page.locator('.checkout-summary-card')
     await expect(summary.locator('.checkout-plan-amount')).toHaveText('Unavailable')
-    await expect(summary).toContainText('No USD price for this billing period right now')
+    await expect(summary).toContainText('No USD price for Monthly yet.')
     await expect(page.locator('.checkout-form')).toContainText('Checkout unavailable')
     await expect(page.locator('.checkout-form [data-stub-session]'), 'a payment form opened with no live price').toHaveCount(0)
     // The other cadence is live and still buyable.
