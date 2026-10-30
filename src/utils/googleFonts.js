@@ -5,8 +5,16 @@ import { rankPairings } from './fontPairing'
 const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
 const CACHE_TTL = 24 * 60 * 60 * 1000
+// A saved catalogue older than CACHE_TTL is refreshed in the background but
+// still answers instantly, until it is this old.
+const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const LS_KEY = 'vs-gf-catalog'
-export const FONT_CATALOG_SOURCE_TIMEOUT_MS = 2000
+const STATIC_CATALOGUE_URL = '/data/font-catalogue.json'
+const API_PROXY_URL = '/api/fonts'
+// How long one request may wait for its response headers, then for its body.
+export const FONT_CATALOG_SOURCE_TIMEOUT_MS = 8000
+export const FONT_CATALOG_BODY_TIMEOUT_MS = 15000
+const FONT_CATALOG_RETRY_DELAY_MS = 1500
 
 let cache = null
 let cacheTimestamp = 0
@@ -46,10 +54,16 @@ function transformFont(item, index) {
 }
 
 // Catalog sources, in order of preference:
-//   1. Google WebFonts API directly (needs VITE_GOOGLE_FONTS_API_KEY)
-//   2. /api/fonts serverless proxy (works without any client key)
-//   3. Bundled FALLBACK_FONTS so the font tools never render empty
-// Successful fetches are cached in localStorage for a day.
+//   1. A fresh or stale localStorage copy. A stale one is served at once and
+//      refreshed from /api/fonts in the background.
+//   2. /data/font-catalogue.json: the same catalogue as a static, CDN-cached
+//      file, so a cold serverless function can't decide the outcome. Once it
+//      has answered, /api/fonts refreshes the cache in the background.
+//   3. /api/fonts serverless proxy, with one automatic retry.
+//   4. Google WebFonts API directly (needs VITE_GOOGLE_FONTS_API_KEY)
+//   5. Bundled FALLBACK_FONTS so the font tools never render empty
+// Successful fetches are cached in localStorage; a copy up to
+// CACHE_MAX_AGE_MS old is still served rather than the bundled list.
 function throwIfAborted(signal) {
   if (!signal?.aborted) return
   const error = new Error('Font catalogue request cancelled')
@@ -57,80 +71,184 @@ function throwIfAborted(signal) {
   throw error
 }
 
-// Bound each upstream independently. A proxy or API endpoint that accepts the
-// connection but never answers must not leave every typography tool loading.
-async function requestCatalogJson(url, { signal, timeout = FONT_CATALOG_SOURCE_TIMEOUT_MS } = {}) {
+// Why a catalogue request failed. `kind` is what a console reader needs to
+// tell the causes apart: timeout, status (non-2xx), blocked (the request never
+// got an answer: a blocker, an offline browser or a refused connection),
+// malformed (a body that isn't JSON) or empty (JSON with no families).
+class CatalogueError extends Error {
+  constructor(kind, detail, status = 0) {
+    super(detail ? `${kind}: ${detail}` : kind)
+    this.kind = kind
+    // Worth a second try: a server error or a request that got no answer. A 404,
+    // a body that is not JSON or an empty list will not change on its own, and a
+    // timeout already cost a full wait.
+    this.retryable = kind === 'blocked' || (kind === 'status' && status >= 500)
+  }
+}
+
+// The timeout covers waiting for the response headers; the body gets its own,
+// longer bound once headers are in. A slow first byte (a cold function) and a
+// slow download are different problems and shouldn't share one short clock.
+async function requestCatalogJson(url, { signal } = {}) {
   throwIfAborted(signal)
   const controller = new AbortController()
   const cancel = () => controller.abort()
   signal?.addEventListener('abort', cancel, { once: true })
-  const timer = setTimeout(cancel, timeout)
+  let expired = null
+  const arm = (ms, phase) => setTimeout(() => { expired = `${phase} after ${ms} ms`; cancel() }, ms)
+  let timer = arm(FONT_CATALOG_SOURCE_TIMEOUT_MS, 'no response')
   try {
     const response = await fetch(url, { signal: controller.signal })
-    if (!response.ok) return null
+    clearTimeout(timer)
+    if (!response.ok) throw new CatalogueError('status', `HTTP ${response.status}`, response.status)
+    timer = arm(FONT_CATALOG_BODY_TIMEOUT_MS, 'body incomplete')
     return await response.json()
+  } catch (err) {
+    throwIfAborted(signal)
+    if (err instanceof CatalogueError) throw err
+    if (expired) throw new CatalogueError('timeout', expired)
+    if (err?.name === 'SyntaxError') throw new CatalogueError('malformed', 'the body is not JSON')
+    throw new CatalogueError('blocked', `the request got no answer (${err?.message || err?.name || 'unknown'})`)
   } finally {
     clearTimeout(timer)
     signal?.removeEventListener('abort', cancel)
   }
 }
 
+function wait(ms, signal) {
+  return new Promise(resolve => {
+    const done = () => { clearTimeout(id); signal?.removeEventListener('abort', done); resolve() }
+    const id = setTimeout(done, ms)
+    signal?.addEventListener('abort', done, { once: true })
+  })
+}
+
+// One catalogue endpoint, retried up to `retries` times after a retryable
+// failure (and never after a caller-side abort). Resolves to `{ fonts }` or
+// `{ failure }`; it doesn't log, because only the caller knows whether a
+// failure matters.
+async function fetchCatalogueFrom(url, { signal, retries = 0 } = {}) {
+  let failure = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await wait(FONT_CATALOG_RETRY_DELAY_MS, signal)
+      throwIfAborted(signal)
+    }
+    try {
+      const data = await requestCatalogJson(url, { signal })
+      if (Array.isArray(data?.fonts) && data.fonts.length) return { fonts: data.fonts }
+      failure = new CatalogueError('empty', 'the answer had no font families')
+    } catch (err) {
+      throwIfAborted(signal)
+      failure = err instanceof CatalogueError ? err : new CatalogueError('blocked', String(err?.message || err))
+    }
+    if (!failure.retryable) break
+  }
+  return { failure }
+}
+
+function readStoredCatalog() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LS_KEY) || 'null')
+    if (stored && Array.isArray(stored.fonts) && stored.fonts.length
+      && Number.isFinite(stored.t) && Date.now() - stored.t < CACHE_MAX_AGE_MS) return stored
+  } catch {}
+  return null
+}
+
+function adoptCatalog(fonts, source) {
+  cache = fonts
+  cacheTimestamp = Date.now()
+  cacheSource = source
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ t: cacheTimestamp, fonts })) } catch {}
+}
+
+// Only the metadata-backed catalogue carries designers and dates. The proxy
+// answers with the thinner WebFonts list while Google's metadata endpoint is
+// down, and that must not replace a richer copy already in hand.
+const hasMetadata = fonts => Array.isArray(fonts?.[0]?.designers)
+
+// Replaces the cached catalogue with the proxy's answer without touching what
+// the tool on screen is already showing. Shared, so several tools mounting
+// together make one request. A failure is only noted: a usable copy is in hand.
+let refreshing = null
+function refreshInBackground() {
+  if (!refreshing) {
+    refreshing = fetchCatalogueFrom(API_PROXY_URL, { retries: 1 })
+      .then(({ fonts, failure }) => {
+        if (fonts) {
+          if (hasMetadata(fonts) || !hasMetadata(cache)) adoptCatalog(fonts, 'live')
+        } else console.debug(`[font catalogue] background refresh from ${API_PROXY_URL} failed, keeping the copy in use: ${failure.message}`)
+      })
+      .catch(() => {})
+      .finally(() => { refreshing = null })
+  }
+  return refreshing
+}
+
 async function getRawFonts({ force = false, signal } = {}) {
   throwIfAborted(signal)
   if (force) {
+    // A retry must genuinely re-fetch: a cached copy would answer instantly and
+    // make the Retry button look broken. The stored copy is kept, though, as the
+    // answer of last resort before the bundled list.
     cache = null
     cacheTimestamp = 0
     cacheSource = 'fallback'
-    // A retry must genuinely re-fetch: a stale localStorage copy would answer
-    // instantly and make the Retry button look broken.
-    try { localStorage.removeItem(LS_KEY) } catch {}
   }
   if (cache && Date.now() - cacheTimestamp < CACHE_TTL) return cache
 
-  try {
-    const stored = JSON.parse(localStorage.getItem(LS_KEY) || 'null')
-    if (stored && Array.isArray(stored.fonts) && stored.fonts.length && Date.now() - stored.t < CACHE_TTL) {
-      cache = stored.fonts
-      cacheTimestamp = stored.t
-      cacheSource = 'cache'
-      return cache
-    }
-  } catch {}
+  const stored = readStoredCatalog()
+  if (stored && !force) {
+    cache = stored.fonts
+    cacheTimestamp = stored.t
+    cacheSource = 'cache'
+    // Stale-while-revalidate: past the TTL the copy still answers immediately.
+    if (Date.now() - stored.t >= CACHE_TTL) refreshInBackground()
+    return cache
+  }
 
-  let fonts = null
+  const failures = []
+
+  const fromStatic = await fetchCatalogueFrom(STATIC_CATALOGUE_URL, { signal })
+  if (fromStatic.fonts) {
+    adoptCatalog(fromStatic.fonts, 'live')
+    refreshInBackground()
+    return cache
+  }
+  failures.push(`${STATIC_CATALOGUE_URL} ${fromStatic.failure.message}`)
+
+  const fromProxy = await fetchCatalogueFrom(API_PROXY_URL, { signal, retries: 1 })
+  if (fromProxy.fonts) {
+    adoptCatalog(fromProxy.fonts, 'live')
+    return cache
+  }
+  failures.push(`${API_PROXY_URL} ${fromProxy.failure.message}`)
 
   if (API_KEY) {
     try {
       const data = await requestCatalogJson(API_URL, { signal })
-      if (data) {
-        const items = (data.items || []).map(transformFont)
-        if (items.length) fonts = items
+      const items = (data?.items || []).map(transformFont)
+      if (items.length) {
+        adoptCatalog(items, 'live')
+        return cache
       }
-    } catch {
+      failures.push('Google WebFonts API: the answer had no font families')
+    } catch (err) {
       throwIfAborted(signal)
+      failures.push(`Google WebFonts API ${err.message}`)
     }
   }
 
-  if (!fonts) {
-    try {
-      const data = await requestCatalogJson('/api/fonts', { signal })
-      if (data) {
-        if (Array.isArray(data.fonts) && data.fonts.length) fonts = data.fonts
-      }
-    } catch {
-      throwIfAborted(signal)
-    }
-  }
-
-  if (fonts) {
-    cache = fonts
-    cacheTimestamp = Date.now()
-    cacheSource = 'live'
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ t: cacheTimestamp, fonts })) } catch {}
+  if (stored) {
+    console.warn(`[font catalogue] using the saved copy from ${new Date(stored.t).toISOString()}; ${failures.join('; ')}`)
+    cache = stored.fonts
+    cacheTimestamp = stored.t
+    cacheSource = 'cache'
     return cache
   }
 
-  if (import.meta.env.DEV) console.warn('Google Fonts catalog unavailable — using bundled fallback list')
+  console.warn(`[font catalogue] showing the bundled list of ${FALLBACK_FONTS.length} families; ${failures.join('; ')}`)
   // Don't poison the long-lived cache with the fallback: keep it for 5 minutes
   // so a transient network failure recovers quickly.
   cache = FALLBACK_FONTS
@@ -142,9 +260,9 @@ async function getRawFonts({ force = false, signal } = {}) {
 // The catalog PLUS an honest account of where it came from — the three
 // typography tools all render this, so a degraded (bundled-fallback) catalog
 // shows a visible notice and a working Retry instead of quietly pretending the
-// whole of Google Fonts loaded. `force: true` drops both caches so the retry is
-// a real network attempt. Never rejects: the bundled list is always a valid
-// answer, and `source` is what tells the caller the difference.
+// whole of Google Fonts loaded. `force: true` drops the in-memory copy so the
+// retry is a real network attempt. Never rejects: the bundled list is always a
+// valid answer, and `source` is what tells the caller the difference.
 export async function fetchFontCatalog({ force = false, signal } = {}) {
   try {
     const fonts = await getRawFonts({ force, signal })
