@@ -3517,26 +3517,13 @@ html.lenis{scroll-behavior:auto!important}
    times while the icon's own name truncated to make room for it. The second
    half was right, and is the rule now: the label appears when the set holds
    more than one pack and never otherwise.
-   THEN THE LABEL LEFT THE CELL'S FLOW. It used to sit under the name and add a row
-   to every cell of a mixed grid, so the All packs view was a line taller per row
-   than a single pack. It is now laid over the cell's top-left corner, inside the
-   padding, and shows on hover or keyboard focus only. Taking it out of flow means
-   it can appear without moving anything: the cell's box is the same hidden or
-   shown, and cells with and without a label are the same height. Where nothing
-   can hover (touch) it is never drawn; the cell's accessible name carries the
-   pack either way, and the customiser's head names it on a tap.
-   Hidden is `visibility` as well as `opacity`, so it is out of the render tree at
-   rest (not read twice with the cell's name, not "visible" to a check). Fading
-   in is the only transition; hiding is instant. */
-/* The pack name sits in the 20px band the grid cell keeps above its glyph. `span.ic-pack` outranks the
-   shared `.ic span` clamp (a -webkit-box, in mono), so the label is a plain block that can draw its ellipsis. */
+   Where it shows, the label sits on a second line under the name, centred, inside the
+   tile's 30px label band, so a mixed grid is no taller than a single pack. The name and
+   the label are drawn on hover, keyboard focus and the picked tile where a pointer can
+   hover, and never drawn on touch (the cell's accessible name carries the pack either
+   way, and the customiser's head names it on a tap). The tile's box is the same hidden
+   or shown, so nothing moves. Those rules live in library.css under `.lib-surface .ig .ic`. */
 .ic{position:relative}
-.ig .ic{padding-top:20px}
-.ic span.ic-pack{display:block;-webkit-line-clamp:unset;line-clamp:unset;position:absolute;top:3px;left:8px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;font-family:var(--font);font-size:12px;line-height:13px;letter-spacing:0;text-transform:none;white-space:nowrap;color:var(--t2);pointer-events:none;opacity:0;visibility:hidden}
-@media (hover:hover){.ic:hover .ic-pack{opacity:1;visibility:visible;transition:opacity 150ms var(--ease-out)}}
-.ic:focus-visible .ic-pack{opacity:1;visibility:visible;transition:opacity 150ms var(--ease-out)}
-@media (hover:none){.ic span.ic-pack{display:none}}
-@media(max-width:640px){.ig .ic{padding-top:18px}.ic span.ic-pack{top:2px;left:4px;max-width:calc(100% - 8px);line-height:12px}}
 @media(max-width:560px){
   .icust-stage{margin:4px 16px 0;padding:20px}
   .icust-controls{padding:16px 16px 4px}}

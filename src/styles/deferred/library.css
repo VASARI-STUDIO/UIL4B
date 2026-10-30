@@ -1099,8 +1099,9 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 
 /* ── The icon grid ─────────────────────────────────────────────────────────
    Design (icons page, line 313): `minmax(min(92px,30vw),1fr)` at a 10px gap
-   with a 92px floor, 10px sans labels, and the picked tile on the accent wash
-   over an accent hairline.
+   with a 92px floor, 12px sans labels (drawn on hover, focus and the picked tile
+   where a pointer can hover), and the picked tile on the accent wash over an
+   accent hairline.
 
    NO FRAME ON A RESTING TILE. The app file draws a `rgba(ink,.08)` hairline
    round every cell; this build deliberately omits it, so a
@@ -1116,15 +1117,33 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   grid-template-columns:repeat(auto-fill,minmax(min(92px,30vw,calc((100% - 20px)/3)),1fr));
   gap:10px;
 }
-.lib-surface .ic{
-  gap:9px;padding:16px 8px;min-height:92px;
-  border:1px solid transparent;border-radius:var(--radius-2xl);
-  background:transparent;
+/* The tile: 1 border + 14 padding + 24 glyph + 8 gap + 30 label band + 14 padding + 1 border = 92px.
+   Only `transform` transitions; the frame itself shows at once. */
+.lib-surface .ig .ic{
+  gap:0;padding:14px 8px;min-height:92px;
+  border:1px solid transparent;border-radius:var(--radius);
+  background:transparent;transition:transform 120ms var(--ease-out);
 }
-.lib-surface .ig .ic-name{min-height:25px}
+/* The label band is 30px either way: the name on up to two lines, or, in a mixed-pack
+   grid, the name on one line with the pack name on a second. */
+.lib-surface .ig .ic-name{
+  margin-top:8px;min-height:30px;flex-shrink:0;
+  font-family:var(--font);font-size:12px;line-height:15px;letter-spacing:0;color:var(--t0);
+  -webkit-line-clamp:2;line-clamp:2;
+}
+.lib-surface .ig .ic.has-pack .ic-name{min-height:15px;-webkit-line-clamp:1;line-clamp:1}
+/* `span.ic-pack` outranks the shared `.ic span` clamp (a -webkit-box set in mono), so the
+   pack name is a plain block that can draw its ellipsis. */
+.lib-surface .ig .ic span.ic-pack{
+  position:static;display:block;max-width:100%;min-height:15px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center;
+  font-family:var(--font);font-size:12px;line-height:15px;letter-spacing:0;text-transform:none;
+  color:var(--t2);pointer-events:none;
+}
+/* The copy tiles on the icon groups page carry a bare name span, kept at its 10px size. */
+.lib-surface .ig .ic>span:not(.ic-name,.ic-pack){margin-top:9px;font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
 /* Glyphs and names start from the cell's top edge, so every glyph in a row sits
-   at the same height. The pack label is laid over the corner and takes no row.
-   A glyph chip (coloured art, logo or wordmark) is a 36px box that draws its
+   at the same height. A glyph chip (coloured art, logo or wordmark) is a 36px box that draws its
    24px, 28px or wide artwork centred, so in EVERY cell it takes 24px of layout
    like the mono glyph beside it (it overflows 6px each side into the cell
    padding). The icon slot is one fixed height whatever the art's shape and
@@ -1134,22 +1153,44 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ig .ic{justify-content:flex-start}
 .lib-surface .ig .ic .ig-chip{margin-block:-6px}
 .lib-surface .ig .ig-skel .ig-skel-slot{height:24px}
-.lib-surface .ig .ig-skel-labels{justify-content:flex-start;padding-top:2px}
-/* Hover only where a pointer can hover, so a tap does not leave the cell tinted;
-   touch gets the same tint for the length of the press. */
-@media (hover:hover){.lib-surface .ic:hover{background:var(--hvr);border-color:transparent}}
-.lib-surface .ic:active{background:var(--hvr);border-color:transparent}
-.lib-surface .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
-.lib-surface .ic:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.lib-surface .ic>span:not(.ic-pack){font-family:var(--font);font-size:10px;letter-spacing:0;color:var(--t2)}
+.lib-surface .ig .ig-skel-labels{justify-content:flex-start;padding-top:2px;margin-top:8px;height:30px}
+/* Where a pointer can hover, a name is drawn only on the tile under it, the tile with
+   keyboard focus and the picked tile. It is hidden with `opacity`, so the tile keeps its
+   box (rows never shift) and find-in-page still reaches the text. The frame shows at
+   once; only the text fades in. */
+@media (hover:hover){
+  .lib-surface .ig .ic :is(.ic-name,.ic-pack){opacity:0}
+  .lib-surface .ig .ic:is(:hover,:focus-visible,.is-picked) :is(.ic-name,.ic-pack){opacity:1;transition:opacity 120ms var(--ease-out)}
+  .lib-surface .ig .ic:hover{background:var(--hvr);border-color:var(--border)}
+  /* No label bar where the names are hidden. */
+  .lib-surface .ig .ig-skel-labels{visibility:hidden}
+}
+/* Touch has no hover, so names stay visible and the pack name is left to the cell's
+   accessible name and the customiser's head. */
+@media (hover:none){
+  .lib-surface .ig .ic span.ic-pack{display:none}
+  .lib-surface .ig .ic.has-pack .ic-name{min-height:30px;-webkit-line-clamp:2;line-clamp:2}
+}
+/* A press tints the tile like a hover does, so a tap on touch is acknowledged. */
+.lib-surface .ig .ic:focus-visible{background:var(--hvr);border-color:var(--border);outline:2px solid var(--accent);outline-offset:-2px}
+.lib-surface .ig .ic:active{background:var(--hvr);border-color:var(--border);transform:scale(.97)}
+.lib-surface .ig .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
+/* Reduced motion: no fade and no press scale. The house pair: the in-app choice, then
+   the OS preference unless the visitor turned motion back on. */
+html[data-reduced-motion="true"] .lib-surface .ig .ic{transition:none}
+html[data-reduced-motion="true"] .lib-surface .ig .ic:active{transform:none}
+html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.is-picked) :is(.ic-name,.ic-pack){transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .ig .ic{transition:none}
+  html:not([data-reduced-motion="false"]) .lib-surface .ig .ic:active{transform:none}
+  html:not([data-reduced-motion="false"]) .lib-surface .ig .ic:is(:hover,:focus-visible,.is-picked) :is(.ic-name,.ic-pack){transition:none}
+}
 @media(max-width:640px){
   .lib-surface .ig{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
-  .lib-surface .ic{gap:6px;padding:12px 2px;border-radius:var(--radius)}
-  /* Names stay at the base 10px on up to two lines of 12.5px. */
-  .lib-surface .ig .ic-name{line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-height:25px;flex-shrink:0}
-  .lib-surface .ig .ig-skel-labels{height:25px}
-  /* 1 border + 12 padding + 24 glyph + 6 gap + 25 name + 12 padding + 1 border. */
-  .lib-surface .ig .ic{min-height:81px}
+  /* 1 border + 12 padding + 24 glyph + 6 gap + 30 label band + 12 padding + 1 border. */
+  .lib-surface .ig .ic{padding:12px 2px;min-height:86px}
+  .lib-surface .ig .ic-name{margin-top:6px}
+  .lib-surface .ig .ig-skel-labels{margin-top:6px}
 }
 /* Below 360px a 4-up name box is 60px, too narrow for long names on two lines. */
 @media(max-width:359px){
