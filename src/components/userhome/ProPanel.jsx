@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import Glyph from './Glyph'
+import OpenPill from '../spectrum/OpenPill'
 import { usePrices, useProPrice } from '../../hooks/usePrices'
 import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 
@@ -15,6 +15,10 @@ import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 // Builder actually gates. The pill goes to /plans, never to checkout.
 //
 // The panel is flat: the card colour and a hairline, with no gradient, shadow or accent border.
+// The "UIL4B Pro" label above the heading is an open choice; the page keeps it for now. Set this to
+// false to remove it (Pro is still named in the line and the button).
+const SHOW_PRO_LABEL = true
+
 export default function ProPanel() {
   const { currency, loaded } = useProPrice()
   const { prices } = usePrices()
@@ -22,14 +26,11 @@ export default function ProPanel() {
   return (
     <section className="uh-pro" aria-labelledby="uh-pro-h">
       <div className="uh-pro-copy">
-        <p className="uh-pro-eyebrow">UIL4B Pro</p>
+        {SHOW_PRO_LABEL && <p className="uh-pro-eyebrow">UIL4B Pro</p>}
         <h2 id="uh-pro-h" className="uh-pro-h">Lift the daily cap and the export mark.</h2>
         <p className="uh-pro-line">{UPGRADE_LINE}</p>
         <div className="uh-pro-cta-row">
-          <Link to="/plans" className="uh-pro-cta">
-            <span>{upgrade.label}</span>
-            <Glyph name="arrow-up-right" size={14} />
-          </Link>
+          <OpenPill to="/plans" className="uh-pro-cta">{upgrade.label}</OpenPill>
           {upgrade.billed && <span className="uh-pro-billed">{upgrade.billed}</span>}
         </div>
       </div>

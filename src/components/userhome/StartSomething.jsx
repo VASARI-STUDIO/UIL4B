@@ -1,31 +1,56 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useProject } from '../../contexts/ProjectContext'
-import { toolRoute } from '../../data/toolTree'
+import { createTools, toolRoute } from '../../data/toolTree'
+import { CREATE_TOOL_SEARCH } from '../../data/toolIndex'
 import { tintConfigFor } from '../../data/designDefaults'
 import { generateTintScale } from '../../utils/colors'
+import PhIcon from '../spectrum/PhIcon'
+import ToolArt from '../spectrum/ToolArt'
 import Glyph from './Glyph'
 import { liveToolCount, numberWord } from './workspace'
 
-// "Start something" — the quick-start grid: the Palette Builder as a lead tile
-// (a third of the width, with the live ramp at its foot), six tools in one ink
-// as three across and two down, and a button that opens the Create menu. The
-// tools used to wear six unrelated hues; colour that said nothing is gone.
+// "Start something" — the quick-start rows: each tool is a /tools row with its drawn plate (ToolArt),
+// the Palette Builder first with the working design's live ramp drawn in its plate, then the tools
+// the grid has always offered, and a button that opens the Create menu.
 //
-// Every tile is a link to a live route, read from the tool tree, so a renamed
-// route fails the build instead of shipping a dead tile. None of it needs an
-// account, which is why a signed-out visitor landing here from the sales page
-// gets the same grid.
+// Every row is a link to a live route, read from the tool tree, so a renamed route fails the build
+// instead of shipping a dead row. None of it needs an account, which is why a signed-out visitor
+// landing here from the sales page gets the same rows.
 
-// The design's six, in the design's order, with the design's notes.
-const QUICK = [
-  { id: 'gradient', icon: 'gradient', label: 'Gradient', note: 'Two stops and an angle', to: toolRoute('gradient') },
-  { id: 'tint', icon: 'drop-half', label: 'Tint', note: 'Even ramp steps', to: toolRoute('tint') },
-  { id: 'semantic', icon: 'circles-three', label: 'Semantic', note: 'Brand and state colours', to: toolRoute('semantic') },
-  { id: 'contrast', icon: 'check-square', label: 'Contrast', note: 'Check any pair for AA', to: toolRoute('contrast') },
-  { id: 'icons', icon: 'shapes', label: 'Icon set', note: 'Search, restyle, export', to: toolRoute('icons') },
-  { id: 'palettes', icon: 'squares-four', label: 'Palette Library', note: 'Browse and load a system', to: '/discover/palettes' },
+// TWO CHOICES ARE OPEN. The page keeps its current behaviour for both; each is one line to change.
+//
+// SHOW_PALETTE_LIBRARY_TILE: true keeps the Palette Library row. false drops it; its destination
+// (/discover/palettes) is still linked from "New in Discover".
+const SHOW_PALETTE_LIBRARY_TILE = true
+// TILE_COPY_FROM_TOOL_TREE: false keeps each row's own name and note (TILES below). true takes the
+// name from the tool tree and the note from the tool search index, the words the /tools page uses.
+const TILE_COPY_FROM_TOOL_TREE = false
+
+// The rows in order, each with its current name and note. `art` is the ToolArt drawing; the library
+// row has none of its own, so it draws the menu's tile for it.
+const TILES = [
+  { id: 'palette', label: 'Palette Builder', note: 'Start from a seed colour and the roles, ramp and tokens follow.', to: toolRoute('palette'), art: 'palette' },
+  { id: 'gradient', label: 'Gradient', note: 'Two stops and an angle', to: toolRoute('gradient'), art: 'gradient' },
+  { id: 'tint', label: 'Tint', note: 'Even ramp steps', to: toolRoute('tint'), art: 'tint' },
+  { id: 'semantic', label: 'Semantic', note: 'Brand and state colours', to: toolRoute('semantic'), art: 'semantic' },
+  { id: 'contrast', label: 'Contrast', note: 'Check any pair for AA', to: toolRoute('contrast'), art: 'contrast' },
+  { id: 'icons', label: 'Icon set', note: 'Search, restyle, export', to: toolRoute('icons'), art: 'icons' },
+  ...(SHOW_PALETTE_LIBRARY_TILE
+    ? [{ id: 'palettes', label: 'Palette Library', note: 'Browse and load a system', to: '/discover/palettes', art: null }]
+    : []),
 ]
+
+const TREE_LABEL = new Map(createTools().map((t) => [t.id, t.label]))
+
+/** A row's name and note: its own, or the tool tree's where TILE_COPY_FROM_TOOL_TREE is on. */
+function copyOf(tile) {
+  if (!TILE_COPY_FROM_TOOL_TREE) return { label: tile.label, note: tile.note }
+  return {
+    label: TREE_LABEL.get(tile.id) || tile.label,
+    note: CREATE_TOOL_SEARCH[tile.id]?.description || tile.note,
+  }
+}
 
 /**
  * Open the header's Create menu from the page.
@@ -50,15 +75,14 @@ function openCreateMenu() {
   if (sheet && sheet.offsetParent !== null && sheet.getAttribute('aria-expanded') !== 'true') sheet.click()
 }
 
-// `inLead` is the signed-out workspace, where this block moves up into the lead slot and the Palette
-// Builder takes the full width of it, with the six tools under it.
+// `inLead` is the signed-out workspace, where this block moves up into the lead slot and the rows
+// run in one column under the heading.
 export default function StartSomething({ inLead = false }) {
   const { design } = useProject()
 
-  // THE LIVE RAMP. The design's lead tile shows the Palette Builder's current columns.
-  // Ours is the working design: its palette when it has one, otherwise the
-  // eleven-stop ramp the Tint tool builds from its base — the same ramp /learn/help
-  // shows as "what a new project starts from".
+  // THE LIVE RAMP. The Palette Builder row draws the working design's current colours: its
+  // palette when it has one, otherwise the eleven-stop ramp the Tint tool builds from its base — the
+  // same ramp /learn/help shows as "what a new project starts from".
   const ramp = useMemo(() => {
     const colors = (design?.palette?.colors || []).filter(Boolean)
     if (colors.length > 1) return colors
@@ -76,36 +100,38 @@ export default function StartSomething({ inLead = false }) {
           <Glyph name="caret-right" size={12} className="uh-alltools-caret" />
         </button>
       </div>
-      <div className="uh-quick">
-        <Link className="uh-lead" to={toolRoute('palette')}>
-          <span className="uh-lead-top">
-            <span className="uh-lead-ico" aria-hidden="true"><Glyph name="palette" size={18} /></span>
-            <span className="uh-lead-text">
-              <span className="uh-lead-name">Palette Builder</span>
-              <span className="uh-lead-note">Start from a seed colour and the roles, ramp and tokens follow.</span>
-            </span>
-            <span className="uh-lead-go" aria-hidden="true"><Glyph name="arrow-up-right" size={12} /></span>
-          </span>
-          <span className="uh-lead-ramp" aria-hidden="true">
-            {ramp.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
-          </span>
-        </Link>
-        {QUICK.map((q) => (
-          <Link key={q.id} className="uh-tool" data-tool={q.id} to={q.to}>
-            <span className="uh-tool-ico" aria-hidden="true"><Glyph name={q.icon} size={16} /></span>
-            <span className="uh-tool-text">
-              <span className="uh-tool-name">{q.label}</span>
-              <span className="uh-tool-note">{q.note}</span>
-            </span>
-          </Link>
-        ))}
-        {/* The phone shows four tools; this row stands in for the rest and for the heading's button. */}
-        <button type="button" className="uh-tool uh-tool--all" aria-haspopup="menu" onClick={openCreateMenu}>
-          <span className="uh-tool-ico" aria-hidden="true"><Glyph name="squares-four" size={16} /></span>
-          <span className="uh-tool-text"><span className="uh-tool-name">All {numberWord(count)} tools</span></span>
-          <Glyph name="caret-right" size={12} className="uh-alltools-caret" />
-        </button>
-      </div>
+      <ul className="spt-rows uh-tools">
+        {TILES.map((tile) => {
+          const { label, note } = copyOf(tile)
+          return (
+            <li key={tile.id}>
+              <Link className="spt-row uh-tool" data-tool={tile.id} to={tile.to}>
+                <span className="spt-thumb">
+                  {tile.art
+                    ? <ToolArt id={tile.art} size="thumb" colors={tile.id === 'palette' ? ramp : undefined} />
+                    : (
+                      <div className="spt-art spt-art--thumb" data-hue="colour" data-art={tile.id} aria-hidden="true">
+                        <span className="spt-tile"><Glyph name="squares-four" size={18} /></span>
+                      </div>
+                    )}
+                </span>
+                <span className="spt-row-text">
+                  <b className="uh-tool-name">{label}</b>
+                  <span className="uh-tool-note">{note}</span>
+                </span>
+                <span className="spt-row-go" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
+              </Link>
+            </li>
+          )
+        })}
+        {/* The phone shows only the first few rows; this row stands in for the rest and for the heading's button. */}
+        <li className="uh-tool-all-item">
+          <button type="button" className="uh-tool uh-tool--all" aria-haspopup="menu" onClick={openCreateMenu}>
+            <span className="spt-row-text"><b className="uh-tool-name">All {numberWord(count)} tools</b></span>
+            <Glyph name="caret-right" size={12} className="uh-alltools-caret" />
+          </button>
+        </li>
+      </ul>
     </section>
   )
 }
