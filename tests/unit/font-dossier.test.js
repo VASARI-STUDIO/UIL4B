@@ -54,7 +54,8 @@ test('a fully-described family states every fact the catalogue holds', () => {
   assert.equal(facts.Weights, '6 — Regular 400 to Black 900')
   assert.equal(facts.Styles, 'Roman and italic')
   assert.equal(facts['Variable axes'], 'Weight')
-  assert.equal(facts.Licence, 'SIL Open Font License 1.1')
+  // The licence is its own block in the panel, never a row in this list.
+  assert.equal(facts.Licence, undefined)
   // Rank is 1-based for a reader; the catalogue index is 0-based.
   assert.equal(facts.Popularity, '#18 by use on Google Fonts')
 })
@@ -154,7 +155,7 @@ test('Inter is named under the SIL Open Font License 1.1, with its link and summ
     'Free to use in personal and commercial work, including apps and logos. You can\u2019t sell the font files on their own.',
   )
   assert.equal(licence.linkLabel, 'Read the licence \u2197')
-  assert.equal(fontFacts({ ...playfair, family: 'Inter' }, realTable).find(r => r.k === 'Licence').v, 'SIL Open Font License 1.1')
+  assert.equal(fontFacts({ ...playfair, family: 'Inter' }, realTable).find(r => r.k === 'Licence'), undefined)
 })
 
 test('each licence the table can hold has its own heading and link', () => {
@@ -185,8 +186,6 @@ test('a family missing from the table falls back to its Google Fonts page and as
   // Even a family the catalogue flags as open source gets no licence name from that flag.
   const row = rowFor({ ...playfair, family: 'Not A Real Family', openSource: true }, 'Licence')
   assert.equal(row, undefined)
-  const withTable = fontFacts({ ...playfair, family: 'Not A Real Family', openSource: true }, realTable)
-  assert.equal(withTable.find(r => r.k === 'Licence').v, 'Licence on Google Fonts')
 })
 
 test('an id the module has no text for is treated as unknown, not passed through', () => {

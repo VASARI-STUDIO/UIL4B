@@ -10,7 +10,18 @@
 // bundled-fallback notice, the retry and the "everything still works" promise
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch } from './helpers.js'
+import { chooseMenuOption, fillGalleryPreviewText, go, watch } from './helpers.js'
+import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
+
+// The Font Gallery pop-up is one scroll of sections under h3 headings, not a set
+// of tabs. This scrolls to a section and checks it landed inside the scroll
+// region's visible part, so a section that is present but out of reach fails.
+async function showSection(dialog, name) {
+  const heading = dialog.getByRole('heading', { level: 3, name, exact: true })
+  await heading.scrollIntoViewIfNeeded()
+  await expect(heading).toBeInViewport()
+  return heading
+}
 
 async function installFontEvidenceMock(page, { fontApi, mode }) {
   await page.addInitScript(({ exposeFontApi, initialMode }) => {
@@ -88,22 +99,22 @@ test.describe('Type Scale Generator', () => {
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(largest).toContainText('61.04px')
 
-    // The audience control is now the switch that sits above the panel it
-    // changes, not the pair of hero cards that used to sit two screens away
-    // from it. (Tint Scale carried the identical pair and lost it in the same
-    // way in #surface-headers-read-as-ai — see 05-tint-scale-workflows.spec.js
-    // and 55-header-sweep.spec.js. Neither page has hero cards now.)
-    await expect(page.getByRole('tab', { name: /Scale/i })).toHaveAttribute('aria-selected', 'true')
-    await page.getByRole('tab', { name: 'Page' }).click()
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    // At 1440 the work column is wide enough to show the ladder and the page
+    // side by side, so there is no audience switch to press: the page preview is
+    // already there, and so are the steps the controls above just moved. (The
+    // Scale / Page / Code switch below the split is covered in the test after
+    // the keyboard one.)
+    await showTypeScalePage(page)
+    await expect(page.getByRole('tab')).toHaveCount(0)
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 
   test('a developer copies CSS custom properties for the whole scale', async ({ page }) => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    await page.getByRole('tab', { name: 'Code' }).click()
-    await expect(page.locator('#tsc-export')).toBeVisible()
+    // At 1440 the code is in the drawer opened from the docked bar.
+    expect(await showTypeScaleCode(page)).toBe('split')
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
     // joined by clamp(), so a step exports as an interpolation rather than a
@@ -117,6 +128,7 @@ test.describe('Type Scale Generator', () => {
     await expect(code).toContainText('--leading: 1.5;')
     await expect(code).toContainText('--font-heading:')
     await expect(page.getByRole('button', { name: /^Copy CSS$/ })).toBeVisible()
+    await expect(page.locator('.tsc-drawer-copy')).toBeVisible()
 
     await page.getByRole('button', { name: 'Tailwind' }).click()
     await expect(code).toContainText('fontSize: {')
@@ -130,15 +142,22 @@ test.describe('Type Scale Generator', () => {
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
+    // The drawer is not modal: the panel beside it stays usable with the code
+    // open, so a change there is read straight from the drawer.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
+    await expect(page.locator('#tsc-code-drawer')).toBeVisible()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
+    await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')
     await expect(code).toContainText(`@media (min-width: 1440px)`)
   })
 
   test('the audience tabs are a real tablist for the keyboard', async ({ page }) => {
     watch(page, 'keyboard-only visitor')
+    // 1024 is below the split, where the switch is the only way to Page and Code.
+    await page.setViewportSize({ width: 1024, height: 800 })
     await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('switch')
 
     // ONE tablist, and it is the one beside its own panel. `audience` used to
     // have two controls: hero cards under role="tablist" whose aria-controls
@@ -159,6 +178,31 @@ test.describe('Type Scale Generator', () => {
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await expect(designer).toBeFocused()
+  })
+
+  test('below the split the switch shows one view at a time, and at 1440 there is none', async ({ page }) => {
+    watch(page, 'visitor on a laptop and on a wide screen')
+    await page.setViewportSize({ width: 1024, height: 800 })
+    await go(page, '/create/type-scale')
+    expect(await settleTypeScaleView(page)).toBe('switch')
+
+    const panel = page.locator('#tsc-view-panel')
+    await expect(panel).toHaveAttribute('data-view', 'scale')
+    await expect(page.getByRole('tab', { name: 'Scale' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
+    await expect(page.locator('.tsc-article')).toHaveCount(0)
+
+    await page.getByRole('tab', { name: 'Page' }).click()
+    await expect(panel).toHaveAttribute('data-view', 'page')
+    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row')).toHaveCount(0)
+
+    // The same page widened to 1440 drops the switch for the split.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(panel).toHaveAttribute('data-view', 'split')
+    await expect(page.locator('.tsc-view-switch')).toHaveCount(0)
+    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 
   test('the scale stays contained on a small phone', async ({ page }) => {
@@ -199,7 +243,7 @@ test.describe('Type Scale Generator', () => {
     // clamp rather than a lone rem — the extreme value is still carried
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
-    await page.getByRole('tab', { name: 'Code' }).click()
+    await showTypeScaleCode(page)
     await expect(page.locator('#tsc-export')).toContainText('787320px')
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
@@ -330,8 +374,7 @@ test.describe('Font Gallery', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Font Gallery' })).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(24)
 
-    await page.getByLabel('Preview text').fill('Make the words the interface')
-    await expect(page.getByLabel('Preview text')).toHaveValue('Make the words the interface')
+    await fillGalleryPreviewText(page, 'Make the words the interface')
     // ONE SPECIMEN PER ROW, AT EVERY WIDTH.
     //
     // This assertion has now been turned twice, and both turns were founder
@@ -366,8 +409,10 @@ test.describe('Font Gallery', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await expect(dialog).toHaveAttribute('aria-modal', 'true')
-    await expect(dialog.getByRole('heading', { name: 'Lora' })).toBeVisible()
-    await expect(dialog.getByText('Character set')).toBeVisible()
+    // Exact, and the h2: the In use section's empty-state h4 also contains "Lora".
+    await expect(dialog.getByRole('heading', { level: 2, name: 'Lora', exact: true })).toBeVisible()
+    await showSection(dialog, 'Characters')
+    await expect(dialog.locator('.fgd-glyph').first()).toBeVisible()
   })
 
   test('code, emoji, icon and symbol families never enter the gallery', async ({ page }) => {
@@ -416,7 +461,7 @@ test.describe('Font Gallery', () => {
       await page.locator('.fg-card-open').first().click()
       const dialog = page.getByRole('dialog')
       await expect(dialog).toBeVisible()
-      await dialog.getByRole('tab', { name: 'Examples' }).click()
+      await showSection(dialog, 'Examples')
       await expect(dialog.locator('.fdx-ex').first()).toBeVisible()
       const scenes = await dialog.locator('.fdx-ex').evaluateAll(
         els => els.map(el => el.dataset.scene))
@@ -457,9 +502,11 @@ test.describe('Font Gallery', () => {
     await page.getByLabel('Search font families').fill('Lora')
     await page.locator('.fg-card-open').first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: 'Examples' }).click()
+    await showSection(dialog, 'Examples')
 
-    const link = dialog.locator('.fdx-fiu')
+    // Scoped to the Examples section: the In use section below carries its own
+    // copy of the same link, so an unscoped locator would match both.
+    const link = dialog.locator('#fgd-examples .fdx-fiu')
     await expect(link).toBeVisible()
 
     // WORDED AS A SEARCH. fontsinuse.com has no derivable per-typeface URL, so
@@ -481,14 +528,15 @@ test.describe('Font Gallery', () => {
 
     // And the panel says the miss case out loud rather than letting a reader
     // discover it by clicking.
-    await expect(dialog.locator('.fdx-fiu-note')).toContainText('may return nothing')
+    await expect(dialog.locator('#fgd-examples .fdx-fiu-note')).toContainText('may return nothing')
   })
 
-  test('the two example tabs are separate, adjacent, and read as different kinds of thing', async ({ page }) => {
+  test('the two example sections are separate, adjacent, and read as different kinds of thing', async ({ page }) => {
     // The founder's ask, 2026-09-05: "1 tab showing Usage examples using some
     // made mockup use cases, but ... a tab showing real world use applications
-    // for each font and an image to show it". Two tabs, and a reader has to be
-    // able to tell from the strip which one is invented.
+    // for each font and an image to show it". The pop-up now holds them as two
+    // headed sections of one scroll rather than two tabs, and a reader has to be
+    // able to tell from the headings which one is invented.
     watch(page, 'designer looking for what this face does in the world')
     await go(page, '/create/font-gallery')
     await page.getByLabel('Search font families').fill('Lora')
@@ -496,21 +544,26 @@ test.describe('Font Gallery', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    const tabs = await dialog.locator('[role="tab"]').allTextContents()
-    expect(tabs.map((s) => s.trim())).toEqual(['Specimen', 'About', 'Examples', 'In use'])
+    // No tab strip any more: every part of the old four tabs is a heading in the
+    // one scroll, in reading order. "Pairs well with" only appears when the
+    // family has pairings, so it is left out of the comparison.
+    await expect(dialog.getByRole('tab')).toHaveCount(0)
+    const headings = await dialog.getByRole('heading', { level: 3 }).allTextContents()
+    expect(headings.map((s) => s.trim()).filter((s) => s !== 'Pairs well with'))
+      .toEqual(['Weights', 'About', 'Characters', 'Examples', 'In use'])
 
-    // The mockup tab is UNCHANGED and still full. Without this control, "the In
-    // use tab is empty" would be true of a dialog that renders nothing at all.
-    await dialog.getByRole('tab', { name: 'Examples' }).click()
+    // The mockup section is UNCHANGED and still full. Without this control, "the
+    // In use section is empty" would be true of a dialog that renders nothing at all.
+    await showSection(dialog, 'Examples')
     await expect(dialog.locator('.fdx-ex').first()).toBeVisible()
     expect(await dialog.locator('.fdx-ex').count(),
       'the mockup examples tab lost its scenes').toBeGreaterThan(1)
     // And it still says outright that those are drawn, not photographed.
-    await expect(dialog.locator('.fdx-source--lead'))
+    await expect(dialog.locator('#fgd-examples .fdx-source--lead'))
       .toContainText('not screenshots of anyone')
   })
 
-  test('the In use tab is empty on purpose, and never says the typeface is unused', async ({ page }) => {
+  test('the In use section is empty on purpose, and never says the typeface is unused', async ({ page }) => {
     // THE SENTENCE THIS PANEL MUST NOT SAY. An empty tab called "In use" is one
     // careless line from telling a reader that nobody uses this family — a
     // false claim about a real person's work, made from a table this product
@@ -520,13 +573,14 @@ test.describe('Font Gallery', () => {
     await page.getByLabel('Search font families').fill('Lora')
     await page.locator('.fg-card-open').first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: 'In use' }).click()
+    await showSection(dialog, 'In use')
 
     const empty = dialog.locator('.fdx-empty')
     await expect(empty).toBeVisible()
     await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
     await expect(empty).toContainText('not a statement about the typeface')
-    await expect(empty).toContainText('Plenty of families with nothing on this tab are in wide use')
+    // The pop-up has sections, not tabs, and the copy says so.
+    await expect(empty).toContainText('Plenty of families with nothing in this section are in wide use')
     // The claims it must never make.
     await expect(empty).not.toContainText('No uses of Lora')
     await expect(empty).not.toContainText(/is not used|nobody uses/i)
@@ -534,17 +588,19 @@ test.describe('Font Gallery', () => {
     // SHIPS NO PLACEHOLDER IMAGE. Not a stock photo, not a grey box with a
     // picture glyph in it — in a panel about a missing picture, that is
     // indistinguishable from an image that failed to load.
-    expect(await dialog.locator('.fdx-panel img, .fdx-panel svg').count(),
-      'the empty In-use tab drew a placeholder image').toBe(0)
+    // Scoped to the In use section: the About and Examples sections above it
+    // draw their own SVG, and that is not what this check is about.
+    expect(await dialog.locator('#fgd-inuse img, #fgd-inuse svg').count(),
+      'the empty In-use section drew a placeholder image').toBe(0)
     expect(await dialog.locator('.fdx-use, .fdx-use-img').count(),
-      'the empty tab rendered a use row with nothing in it').toBe(0)
+      'the empty section rendered a use row with nothing in it').toBe(0)
 
-    // It sends the reader to the tab that DOES have something.
-    await expect(empty).toContainText('Examples tab beside this one')
+    // It sends the reader to the section that DOES have something.
+    await expect(empty).toContainText('The Examples section above')
   })
 
-  test('the In use tab still offers fontsinuse only as a search', async ({ page }) => {
-    // Same measured trap as the Examples tab: a miss returns HTTP 200 reading
+  test('the In use section still offers fontsinuse only as a search', async ({ page }) => {
+    // Same measured trap as the Examples section: a miss returns HTTP 200 reading
     // "No Uses found" with 47 unrelated popular uses underneath, so the miss
     // case is a page that still looks full. It can only be offered as a query.
     watch(page, 'designer following the off-site link')
@@ -552,7 +608,7 @@ test.describe('Font Gallery', () => {
     await page.getByLabel('Search font families').fill('Lora')
     await page.locator('.fg-card-open').first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: 'In use' }).click()
+    await showSection(dialog, 'In use')
 
     const link = dialog.locator('.fdx-empty .fdx-fiu')
     await expect(link).toBeVisible()
@@ -564,39 +620,31 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.fdx-empty .fdx-fiu-note')).toContainText('may return nothing')
   })
 
-  test('the fourth tab is reachable by arrow keys and the strip stays one tab stop', async ({ page }) => {
-    // The APG tabs contract is written once in FontDossierTabs and a fourth
-    // entry must not break the wrap. Driven rather than read: the roving
-    // tabindex is the kind of thing that survives a source grep and fails in a
-    // browser.
-    watch(page, 'keyboard-only visitor walking the dossier tabs')
+  test('the specimen pop-up has no tab strip, and Tab keeps a keyboard visitor inside it', async ({ page }) => {
+    // The four tabs became sections of one scroll, so the tab roving that used to
+    // be pinned here has nothing to drive. What a keyboard-only visitor still
+    // needs is that the pop-up is a trap: forward and back, focus never reaches
+    // the page behind, and the action bar is part of the loop.
+    watch(page, 'keyboard-only visitor walking the specimen pop-up')
     await go(page, '/create/font-gallery')
     await page.getByLabel('Search font families').fill('Lora')
     await page.locator('.fg-card-open').first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: 'Specimen' }).focus()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('tab')).toHaveCount(0)
 
-    for (const name of ['About', 'Examples', 'In use']) {
-      await page.keyboard.press('ArrowRight')
-      await expect(dialog.getByRole('tab', { name, exact: true })).toBeFocused()
-      await expect(dialog.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true')
+    const inside = () => dialog.evaluate((el) => el.contains(document.activeElement))
+    const reached = new Set()
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press('Tab')
+      expect(await inside(), `Tab ${i + 1} left the pop-up`).toBe(true)
+      reached.add(await page.evaluate(() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()))
     }
-    // Wraps from the last back to the first.
-    await page.keyboard.press('ArrowRight')
-    await expect(dialog.getByRole('tab', { name: 'Specimen', exact: true })).toBeFocused()
-    // And back the other way, onto the new tab.
-    await page.keyboard.press('ArrowLeft')
-    await expect(dialog.getByRole('tab', { name: 'In use', exact: true })).toBeFocused()
-
-    // One tab stop: exactly one tab in the strip is in the tab order.
-    const tabbable = await dialog.locator('[role="tab"]').evaluateAll(
-      (els) => els.filter((el) => el.tabIndex === 0).length)
-    expect(tabbable, 'the tab strip is not a single tab stop').toBe(1)
-
-    // The selected tab points at a panel that exists and is labelled by it.
-    const controls = await dialog.getByRole('tab', { name: 'In use', exact: true }).getAttribute('aria-controls')
-    await expect(page.locator(`#${controls}`)).toBeVisible()
-    await expect(page.locator(`#${controls}`)).toHaveAttribute('role', 'tabpanel')
+    expect([...reached], 'Tab never reached the Find a pairing action').toContain('Find a pairing')
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Shift+Tab')
+      expect(await inside(), `Shift+Tab ${i + 1} left the pop-up`).toBe(true)
+    }
   })
 
   test('a search that matches nothing shows a real empty state with a way out', async ({ page }) => {
@@ -613,7 +661,7 @@ test.describe('Font Gallery', () => {
   test('the specimen dialog fits the viewport and keeps its actions reachable', async ({ page }) => {
     // The defect this replaces: 1,763px of dialog in a 900px viewport, scrolling
     // the OVERLAY, so every action it offers — Find a pairing, Copy import URL,
-    // Add to comparison — was below the fold the moment it opened.
+    // Compare — was below the fold the moment it opened.
     watch(page, 'designer deciding whether to use this family')
     await page.route('**/api/fonts', route => route.fulfill({ json: { fonts: [{
       family: 'Lora', category: 'serif', variants: [100, 200, 300, 400, 500, 600, 700, 800, 900],
@@ -631,7 +679,7 @@ test.describe('Font Gallery', () => {
     expect(box.height, 'the dialog fits the screen it opened on').toBeLessThanOrEqual(viewport)
 
     // Every action is on screen WITHOUT scrolling anything.
-    for (const name of [/Find a pairing/, /Build a type scale/, /Add to comparison/, /Copy import URL/]) {
+    for (const name of [/Find a pairing/, /Build a type scale/, /^Compare$/, /Copy import URL/]) {
       const action = dialog.getByRole('button', { name })
       await expect(action).toBeVisible()
       const ab = await action.boundingBox()
@@ -639,8 +687,8 @@ test.describe('Font Gallery', () => {
       expect(ab.y, `${name} is inside the viewport`).toBeGreaterThanOrEqual(0)
     }
 
-    // The body is what scrolls, not the overlay behind it.
-    const overflows = await dialog.locator('.fg-detail-body').evaluate(
+    // The scroll region is what scrolls, not the overlay behind it.
+    const overflows = await dialog.locator('.fgd-scroll').evaluate(
       (el) => el.scrollHeight > el.clientHeight,
     )
     expect(overflows, 'a nine-weight family overflows the BODY, which is the scrolling part').toBe(true)
@@ -657,34 +705,35 @@ test.describe('Font Gallery', () => {
     }] } }))
 
     await go(page, '/create/font-gallery')
-    await page.getByLabel('Preview text').fill('Handgloves')
+    await fillGalleryPreviewText(page, 'Handgloves')
     await page.locator('.fg-card-open').first().click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
     // One line per cut the family actually ships — no more, no fewer.
-    const rows = dialog.locator('.fg-weight-row')
+    const rows = dialog.locator('.fgd-weight')
     await expect(rows).toHaveCount(3)
-    await expect(dialog.locator('.fg-weight-tag')).toHaveText([
+    await expect(dialog.locator('.fgd-weight-tag')).toHaveText([
       '400 Regular', '600 SemiBold', '700 Bold',
     ])
 
     // Each line is drawn in its own cut, and set in the reader's own words —
     // which the dialog inherited rather than discarding when it opened.
-    const lines = await dialog.locator('.fg-weight-line').evaluateAll(
+    const lines = await dialog.locator('.fgd-weight-line').evaluateAll(
       (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
     )
     expect(lines).toEqual(['Handgloves:400', 'Handgloves:600', 'Handgloves:700'])
 
     // Scripts stated, not counted.
-    await expect(dialog.locator('.fg-tag--scripts')).toHaveText('Latin, Latin Extended, Cyrillic')
+    // The names sit in the hero's meta line, after the category and the weight count.
+    await expect(dialog.locator('.fgd-meta')).toHaveText(/ · 3 weights · Latin, Latin Extended, Cyrillic$/)
     await expect(dialog.getByText('1 subset')).toHaveCount(0)
 
     // Editing the words in the dialog re-sets every cut at once.
     await dialog.getByLabel('Preview text').fill('Ampersand')
-    await expect(dialog.locator('.fg-weight-line').first()).toHaveText('Ampersand')
-    await expect(dialog.locator('.fg-weight-line').last()).toHaveText('Ampersand')
+    await expect(dialog.locator('.fgd-weight-line').first()).toHaveText('Ampersand')
+    await expect(dialog.locator('.fgd-weight-line').last()).toHaveText('Ampersand')
   })
 
   test('the detail dialog is closable from the keyboard and restores focus', async ({ page }) => {
@@ -837,7 +886,7 @@ test.describe('Font Gallery', () => {
     await page.evaluate(() => { window.__fontFaceReady = true })
     await dialog.getByRole('button', { name: 'Retry this font' }).click()
     await expect(dialog.locator('.typ-notice')).toHaveCount(0)
-    await expect(dialog.getByRole('heading', { name: 'Lora' })).toBeVisible()
+    await expect(dialog.getByRole('heading', { level: 2, name: 'Lora', exact: true })).toBeVisible()
   })
 
   test('inconclusive multi-baseline evidence never reveals a fallback specimen as loaded', async ({ page }) => {
@@ -1295,8 +1344,10 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await expectTarget(sheet.getByRole('button', { name: 'All', exact: true }), 'Font Gallery filter')
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
-  await page.locator('.fg-card-compare').first().click()
-  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery clear')
+  // The phone tray stands on the tab bar once two fonts are picked.
+  await page.locator('.fg-card-compare').nth(0).click()
+  await page.locator('.fg-card-compare').nth(1).click()
+  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery compare')
 
   await go(page, '/create/font-pair')
   await expect(page.locator('.fpr-card').first()).toBeVisible()

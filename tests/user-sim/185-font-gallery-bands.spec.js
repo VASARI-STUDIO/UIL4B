@@ -20,7 +20,7 @@
 // tags and the detail dialog still carry uppercase mono labels; slices S3 and
 // S4 own those.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { fillGalleryPreviewText, go, watch } from './helpers.js'
 
 const CATALOGUE = {
   fonts: [
@@ -78,7 +78,7 @@ test.describe('Font Gallery bands', () => {
     await open(page, 1440)
     const offenders = await page.evaluate(() => [...document.querySelectorAll('.fg-page *')]
       .filter((el) => {
-        if (el.closest('.fg-compare-tray, .fg-overlay')) return false
+        if (el.closest('.fg-compare-tray, .fg-overlay, .fgd-overlay')) return false
         const cs = getComputedStyle(el)
         if (cs.display === 'none' || !el.childNodes.length) return false
         const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())
@@ -108,6 +108,18 @@ test.describe('Font Gallery bands', () => {
         const r = n.getBoundingClientRect()
         return [Math.round(r.x * 10), Math.round(r.y * 10), Math.round(r.width * 10), Math.round(r.height * 10)].join(',')
       }))
+      // The faces for the weight ladder arrive after the band is ready, and each
+      // one re-sets the width of its label. A box that moved because a face landed
+      // is not a box that moved because of the hover, so take the "before" set only
+      // once the faces are in and two readings a beat apart agree.
+      await page.evaluate(() => document.fonts.ready)
+      let last = ''
+      await expect.poll(async () => {
+        const now = (await boxes()).join('|')
+        const settled = now === last
+        last = now
+        return settled
+      }, { message: `${width}px: the band's boxes never stopped moving`, intervals: [250], timeout: 10000 }).toBe(true)
       const before = await boxes()
       await card.hover()
       await page.waitForTimeout(400)
@@ -123,7 +135,7 @@ test.describe('Font Gallery bands', () => {
   test('criterion 3: a long name shrinks to its floor and is clipped, never ellipsised', async ({ page }) => {
     watch(page, 'someone typing a long phrase')
     await open(page, 1440)
-    await page.getByLabel('Preview text').fill('Pack my box with five dozen liquor jugs and a quartz sphinx')
+    await fillGalleryPreviewText(page, 'Pack my box with five dozen liquor jugs and a quartz sphinx')
     const nameEl = page.locator('.fg-card-name').first()
     const info = await nameEl.evaluate((el) => ({
       size: parseFloat(getComputedStyle(el).fontSize),

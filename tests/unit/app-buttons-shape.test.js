@@ -46,7 +46,7 @@ const KEEP = {
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
-    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
+    'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
     'xd-type', 'xd-cat',
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
