@@ -11,6 +11,7 @@ import { useIsAdmin } from '../hooks/useIsAdmin'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import '../styles/pages/spectrum-mobile.css'
 import '../styles/pages/spectrum-tools.css'
 // This page's own rules, imported last so they follow the /tools sheet they build on.
@@ -55,6 +56,7 @@ const FLAT_SECTIONS = [
       { label: 'SEO Inspector', route: '/seo', note: 'Live SERP preview and an instant SEO score.' },
       { label: 'Community', route: '/community', note: 'Share designs and find inspiration.' },
       { label: 'Feedback', route: '/feedback', note: 'Report a bug or request a feature.' },
+      ...(TOOL_VOTES_ON ? [{ label: 'Roadmap', route: '/roadmap', note: 'Vote on the tools in beta and in the workshop.' }] : []),
     ],
   },
   {

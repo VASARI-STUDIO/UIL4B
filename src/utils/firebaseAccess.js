@@ -34,7 +34,7 @@ import { auth, db, storage, googleProvider, GOOGLE_CLIENT_ID } from './firebase'
 import {
   doc, getDoc, setDoc, onSnapshot,
   collection, addDoc, getDocs, updateDoc, deleteDoc,
-  query, orderBy, limit, increment, deleteField,
+  query, orderBy, limit, increment, deleteField, runTransaction, serverTimestamp,
 } from 'firebase/firestore'
 import {
   signInWithPopup, signInWithCredential, signInWithEmailAndPassword,
@@ -52,7 +52,7 @@ const firebaseNs = { auth, db, storage, googleProvider, GOOGLE_CLIENT_ID }
 const firestoreNs = {
   db, doc, getDoc, setDoc, onSnapshot,
   collection, addDoc, getDocs, updateDoc, deleteDoc,
-  query, orderBy, limit, increment, deleteField,
+  query, orderBy, limit, increment, deleteField, runTransaction, serverTimestamp,
 }
 const authNs = {
   auth, googleProvider,

@@ -22,6 +22,7 @@ import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
 import { DEFAULT_DESCRIPTION, LOGIN_SIGNUP_TITLE, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
+import { TOOL_VOTES_ON } from './data/toolVotes'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
@@ -75,6 +76,7 @@ const Pricing = lazy(() => import('./pages/Pricing'))
 const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
 // /tools: the tool previews. Lazy, so its live demos load only on that page.
 const SpectrumTools = lazy(() => import('./pages/SpectrumTools'))
+const Roadmap = lazy(() => import('./pages/Roadmap'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
@@ -377,6 +379,18 @@ function AppInner({ toast }) {
       <>
         <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
           <SpectrumTools />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
+  // /roadmap wears the same shell. Behind the roadmap-voting flag, so with it off
+  // the path is an unknown route and answers the 404.
+  if (TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <Roadmap />
         </Suspense>
         <GoogleOneTap />
       </>

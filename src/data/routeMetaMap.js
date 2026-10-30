@@ -13,6 +13,7 @@
 // no entry here), and an article that exists but is missing from this file
 // would render fine in the browser and be invisible to every crawler.
 import { LEARN_PAGE_DESCRIPTIONS, LEARN_PAGE_TITLES } from './learnIndex.js'
+import { TOOL_VOTES_ON } from './toolVotes.js'
 // The 3D Model Converter's description lists its formats from the same table its loader
 // dispatch reads, so it cannot advertise a format the page does not open.
 // Plain data, no three.js — safe in the entry graph and in Node.
@@ -86,6 +87,7 @@ export const PAGE_TITLES = {
   '/terms': 'UI L4B | Terms',
   '/credits': 'UI L4B | Credits & Licences',
   '/sitemap': 'UI L4B | Sitemap',
+  ...(TOOL_VOTES_ON ? { '/roadmap': 'UI L4B | Roadmap' } : {}),
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | Brand Starter',
   '/create/file-converter': 'UI L4B | File Converter',
@@ -188,6 +190,7 @@ export const PAGE_DESCRIPTIONS = {
   // reader is most likely to be looking for rather than describing the page.
   '/credits': 'Every icon set, typeface and package UI L4B is built on, with its licence — CC BY, MIT, Apache 2.0 and the SIL Open Font License — and a link to each project.',
   '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
+  ...(TOOL_VOTES_ON ? { '/roadmap': "See which UI L4B tools are in beta or still being built, and vote for the ones you'd use. Shipped tools stay listed for 90 days after they go live." } : {}),
   '/admin': DEFAULT_DESCRIPTION,
   '/create/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
   // Functional, not marketing: what it opens, what it writes, where the work
