@@ -174,6 +174,10 @@
 }
 .pricing .pr-amt {
   min-width: 2ch;
+  /* A price never breaks mid-number: .pr-c's overflow-wrap would put "A$6.25"
+     on two lines on one cadence only, and the Pro button would jump. */
+  white-space: nowrap;
+  overflow-wrap: normal;
   font-family: var(--display);
   font-weight: 560;
   font-size: 56px;
@@ -183,6 +187,9 @@
   color: var(--sp-ink);
 }
 .pricing .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
+/* The ledger's Pro column is 227px wide at 1024: the size follows the width so
+   "A$10.00" fits it on one line (unmeasured: qa checks 1024, 1090 and 1359). */
+.pricing .pr-c--pro .pr-amt:not(.is-word) { font-size: clamp(40px, 4.2vw, 56px); }
 .pricing .pr-per { font-size: 15px; color: var(--sp-dim); }
 
 .pricing .pr-note {
@@ -201,6 +208,7 @@
 
 .pricing .pr-under {
   display: block;
+  min-height: 1.4em;
   margin: var(--s-3) 0 0;
   font-size: 13px;
   line-height: 1.4;
@@ -473,20 +481,18 @@
   background: var(--sp-wash);
 }
 .pricing .pr-pro-main { display: flex; flex-direction: column; min-width: 0; }
-.pricing .pr-pro-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
+/* The saving is its own line under the plan name, reserved and never wrapped,
+   so it arriving with the prices moves nothing (at 320 it used to wrap). */
+.pricing .pr-pro-top { display: block; }
 .pricing .pr-pro-top .pr-plan { margin: 0; }
 .pricing .pr-save {
   min-height: 1.4em;
-  margin: 0;
+  margin: var(--s-1) 0 0;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
-  text-align: right;
+  white-space: nowrap;
+  text-align: left;
   color: var(--accent-mid);
 }
 .pricing .pr-pro .pr-price { min-height: 48px; margin-top: var(--s-3); }
