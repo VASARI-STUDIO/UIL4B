@@ -287,15 +287,14 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   cursor: pointer;
 }
 .plb .plb-role {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 540;
-  letter-spacing: .18em;
-  /* trailing tracking would pull the centred word off-centre */
-  padding-left: .18em;
-  text-transform: uppercase;
+  font: 500 var(--fs-caption)/1.3 var(--font);
+  letter-spacing: 0;
+  /* The role words are stored in capitals (they feed names and exports), so the
+     screen lowercases them and lifts the first letter: "Primary soft". */
+  text-transform: lowercase;
   color: var(--plb-ink, currentColor);
 }
+.plb .plb-role::first-letter { text-transform: uppercase; }
 .plb .plb-aa {
   display: inline-flex;
   align-self: center;
@@ -310,13 +309,13 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   border-radius: 999px;
   background: color-mix(in srgb, var(--plb-anti, #fff) 22%, transparent);
   color: var(--plb-ink, currentColor);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 540;
-  letter-spacing: .1em;
-  line-height: 1.3;
+  font: 500 12px/1.3 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .plb .plb-aa--locked { min-height: 24px; cursor: pointer; }
+/* The Pro marker beside AA is a plain word, quieter than the check it gates. */
+.plb .plb-aa-pro { font-weight: 400; }
 
 /* Insert-between: a 24px dot on the seam, shown on hover or focus. */
 .plb .plb-gap {
@@ -379,7 +378,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   cursor: pointer;
   transition: background .16s ease, color .16s ease;
 }
-.plb .plb-add-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; }
+.plb .plb-add-label { font: 500 var(--fs-caption)/1.3 var(--font); letter-spacing: 0; }
 @media (hover: hover) and (pointer: fine) {
   .plb .plb-add:hover { background: var(--tl-card); color: var(--tl-ink); }
 }
@@ -411,10 +410,8 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-adjust-actions { display: flex; flex-direction: column; gap: 8px; }
 .plb .plb-adjust-title {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font: 500 var(--fs-caption)/1.3 var(--font);
+  letter-spacing: 0;
   color: var(--tl-dim);
   white-space: nowrap;
 }
@@ -496,10 +493,8 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   outline-offset: 2px;
 }
 .plb .plb-adjust .tl-slider-k {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  font: 500 var(--fs-caption)/1.3 var(--font);
+  letter-spacing: 0;
   color: var(--tl-faint);
 }
 /* Signed values in the fixed column, digits one width and flush right, so the
@@ -1137,6 +1132,15 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    under its button, so it has no handle to drag. */
 @media (min-width: 641px) {
   .plb .plb-galpopup::before { display: none; }
+}
+
+/* Tablet: the panel stays under its button with its right edge on the button's,
+   but narrow and short enough that the board it is repainting stays in view to
+   its left and below. Brands drop to two columns to fit the narrower body. */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .plb .plb-galpopup--suggest { width: min(400px, calc(100vw - 32px)); }
+  .plb .plb-float > .plb-galpopup--suggest { max-height: min(78dvh, 640px); }
+  .plb .plb-galpopup--suggest .plb-sg-grid--brands { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* A scrolling body that has more below it fades out at its bottom edge, so a

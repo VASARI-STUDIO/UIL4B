@@ -1152,13 +1152,22 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
     return () => { alive = false }
   }, [warms])
 
-  // Font Gallery: the name swaps through ready faces and lands on a random one.
+  // Font Gallery: the name steps through the shuffled ready faces and loops while the
+  // row is live. Going quiet resets it; a run of one face (reduced motion) just sets it.
   const [galleryFace, setGalleryFace] = useState(null)
   const galleryLive = liveId === 'font-gallery' && finePointer()
   useEffect(() => {
     if (!galleryLive) return undefined
-    const timers = galleryRun().map((f, i) => setTimeout(() => setGalleryFace(f.key), i * GALLERY_STEP_MS))
-    return () => { timers.forEach(clearTimeout); setGalleryFace(null) }
+    const run = galleryRun()
+    let step = 0
+    let timer = null
+    const tick = () => {
+      setGalleryFace(run[step % run.length].key)
+      step += 1
+      if (run.length > 1) timer = setTimeout(tick, GALLERY_STEP_MS)
+    }
+    if (run.length) timer = setTimeout(tick, 0)
+    return () => { clearTimeout(timer); setGalleryFace(null) }
   }, [galleryLive])
   return (
     <div
