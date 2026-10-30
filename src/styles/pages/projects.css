@@ -323,8 +323,8 @@ html[data-reduced-motion="true"] .uh *:active { transform: none; }
 
 /* The lead card */
 .uh .uh-continue { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-2xl); background: var(--card); overflow: hidden; }
-.uh .uh-continue-body { padding: var(--s-5); display: grid; gap: var(--s-3); }
-.uh .uh-continue-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.uh .uh-continue-body { padding: var(--s-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); min-width: 0; }
+.uh .uh-continue-top { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .uh .uh-continue-name { margin: 0; min-width: 0; font-size: 24px; font-weight: 600; line-height: 1.15; color: var(--t0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 h2.uh-continue-name { white-space: normal; }
 .uh .uh-badge { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius); background: var(--bg-2); color: var(--t1); }
@@ -552,7 +552,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-cap { border-color: var(--sp-line-strong); }
 
 /* Lead, starter, loading and failed states have no frame of their own: the plate is the one frame and the text sits below it. */
-.uh.uh-spt .uh-continue { display: grid; gap: 12px; padding: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+.uh.uh-spt .uh-continue { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 12px; padding: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
 .uh.uh-spt .uh-continue-body { padding: 0; gap: 12px; }
 .uh.uh-spt .uh-continue-name { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--sp-ink); }
 .uh.uh-spt .uh-badge { width: auto; height: auto; background: none; color: var(--sp-ink); }
@@ -613,7 +613,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-rows .spt-row, .uh.uh-spt .uh-tools .spt-row { position: relative; border-top: 0; }
 .uh.uh-spt .uh-rows .spt-row::before, .uh.uh-spt .uh-tools .spt-row::before { content: ""; position: absolute; top: 0; left: 12px; right: 12px; border-top: 1px solid var(--sp-line); pointer-events: none; }
 .uh.uh-spt .uh-rows .spt-row { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 16px; min-height: 88px; border-radius: 12px; }
-.uh.uh-spt .uh-rows .spt-row-text { gap: 4px; }
+.uh.uh-spt .uh-rows .spt-row-text { gap: 4px; min-width: 0; }
 .uh.uh-spt .uh-row-name { color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uh.uh-spt .uh-row-meta { margin-top: 0; }
 .uh.uh-spt .uh-row.is-archived .uh-row-name { color: var(--sp-dim); }
@@ -643,7 +643,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-exports-list { gap: 0; }
 .uh.uh-spt .uh-export { padding: 8px 0; border-top: 1px solid var(--sp-line); border-radius: 0; color: var(--sp-ink); }
 .uh.uh-spt .uh-export:hover { background: none; }
-.uh.uh-spt .uh-export-type { padding: 1px 6px; border: 1px solid var(--sp-line); border-radius: 6px; background: none; font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--sp-dim); }
+.uh.uh-spt .uh-export-type { padding: 1px 6px; border: 1px solid var(--sp-line); border-radius: 6px; background: none; font-family: var(--font); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--sp-dim); }
 .uh.uh-spt .uh-export-meta { font-size: 13px; color: var(--sp-dim); }
 
 /* Section heads */

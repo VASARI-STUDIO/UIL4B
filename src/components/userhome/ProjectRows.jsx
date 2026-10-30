@@ -38,7 +38,7 @@ export default function ProjectRows({ projects, total, label = 'Other projects' 
               >
                 <span className="spt-thumb"><ProjectPlate size="thumb" colors={colourSet ? status.digest.colors : []} /></span>
                 <span className="spt-row-text">
-                  <b className="uh-row-name uh-card-title">{status.digest.name}</b>
+                  <b className="uh-row-name uh-card-title" title={status.digest.name}>{status.digest.name}</b>
                   <span className="uh-row-meta uh-card-line">
                     {p.archived ? 'Archived · ' : ''}{colourSet ? '' : 'Colour not set · '}{status.has}{status.edited ? ` · Edited ${status.edited}` : ''}
                   </span>
