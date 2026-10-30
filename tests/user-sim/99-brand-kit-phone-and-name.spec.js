@@ -441,7 +441,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
     await field.fill('Harbour Studio')
     await nameForm(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
-    await expect(page.getByRole('heading', { name: 'Choose a design for Harbour Studio' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Export Harbour Studio' })).toBeVisible()
 
     const stored = await page.evaluate(([dk, gk]) => ({
       projects: JSON.parse(localStorage.getItem('vs-projects') || '{}'),

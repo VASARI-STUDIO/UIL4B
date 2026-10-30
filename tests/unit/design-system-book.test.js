@@ -22,6 +22,7 @@ import {
 } from '../../src/utils/designSystemBook.js'
 import { contrast, grade } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES, resolveUpgradeTarget } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 // Block comments AND line comments go before any assertion runs. A source
@@ -271,7 +272,11 @@ test('project names and font families cannot inject markup', () => {
 
 /* ── 4 · the entitlement gate, asserted on comment-stripped source ──────── */
 
-const PANEL = stripComments(read('src/components/ExportPanel.jsx'))
+// The engine that makes the file (gates, request, activation) and the dialog that offers it.
+const RUNNER = stripComments(read('src/hooks/useExportRunner.js'))
+const DIALOG = stripComments(read('src/components/export/ExportDialog.jsx'))
+const NAV = stripComments(read('src/components/export/ExportNav.jsx'))
+const STEPS = stripComments(read('src/components/export/ExportSteps.jsx'))
 
 test('the book is a Pro format and the flag drives badge AND gate', () => {
   // The DECLARATION moved to src/config/exportFormats.js on 2026-09-05 so the
@@ -286,75 +291,92 @@ test('the book is a Pro format and the flag drives badge AND gate', () => {
 
   // The CONSUMPTION stays here: one flag for both, so a format can never be
   // badged-but-ungated.
-  // A row is Pro (isGroupPro reads the same `pro` flag) and the viewer is not.
-  assert.match(PANEL, /const paid = isGroupPro\(g\.id\)/)
-  assert.match(PANEL, /const showPro = paid && !isPro/)
-  assert.match(PANEL, /\{showPro && <ExportProTag \/>\}/)
-  assert.match(PANEL, /const locked = Boolean\(activeFormat\?\.pro\) && !isPro/)
-  // …and the panel must still be rendering the table this test just inspected.
-  assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
-    'ExportPanel no longer renders the shared table, so the flags asserted above drive nothing')
+  // A row is Pro (its category's `pro` is every file's `pro`, pinned in
+  // tests/unit/export-v3.test.js) and the viewer is not.
+  const bookRow = EXPORT_TYPES.flatMap((t) => t.categories).find((c) => c.files.includes('book'))
+  assert.equal(bookRow?.pro, true, 'the book sits in a row that is not marked Pro')
+  assert.match(NAV, /\{showTags && \(c\.pro \? <ExportProTag className="xd-pro" \/> : /, 'a Pro row no longer carries the Pro tag')
+  assert.match(DIALOG, /showTags=\{!isPro && !checking\}/, 'the tag is shown to an account that is already Pro, or while the plan loads')
+  // The same flag drives the lock, in the dialog and in the dock under it.
+  assert.match(DIALOG, /const locked = cat\.pro && !isPro/)
+  assert.match(STEPS, /const locked = cat\.pro && !isPro/)
+  assert.match(RUNNER, /if \(fmt\.pro && !isPro\) return goUpgrade\(/, 'the engine no longer gates on the format\'s own flag')
+  // …and the dialog must still be rendering the table this test just inspected.
+  assert.match(DIALOG, /types=\{EXPORT_TYPES\}/,
+    'ExportDialog no longer renders the shared table, so the flags asserted above drive nothing')
 })
 
 test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   // This is the test the whole feature rests on. The gate must be inside the
   // function that builds the file, not merely on the button — a relabelled
   // button is a hint, and runExport is reachable without it.
-  const gate = PANEL.indexOf("?.pro && !isPro")
+  const gate = RUNNER.indexOf('fmt.pro && !isPro')
   assert.ok(gate > -1, 'runExport must check the paid flag against the live entitlement')
 
-  // The generator is not in the browser at all: the panel asks the server for the
+  // The generator is not in the browser at all: the engine asks the server for the
   // finished document, so the request is the "build" this gate must precede.
-  const build = PANEL.indexOf('requestExportDocument(')
-  assert.ok(build > -1, 'the panel asks the server for the document somewhere in this file')
+  const build = RUNNER.indexOf('requestExportDocument(')
+  assert.ok(build > -1, 'the engine asks the server for the document somewhere in this file')
 
   // ORDER IS THE ASSERTION. If the gate ever moves below the import, or is
   // deleted, a free user reaches the artefact and this goes red.
   assert.ok(gate < build,
     'the entitlement check must precede loading and running the book generator')
 
-  // And it must bail rather than fall through. The wall goes
-  // to /plans (every Pro CTA goes to /plans, except the export gallery's own trial button, which goes to checkout; never a
-  // modal or a login popup).
-  assert.match(PANEL.slice(gate, build), /navigate\('\/plans'\)\s*\n\s*return/,
-    'the gate sends the viewer to /plans and returns without exporting')
+  // And it must bail rather than fall through. The wall goes to /plans, or for a
+  // signed-in account with a saved project straight to the trial checkout (never a
+  // modal or a login popup): goUpgrade navigates, and the gate returns its result.
+  assert.match(RUNNER.slice(gate, build), /^fmt\.pro && !isPro\) return goUpgrade\(/,
+    'the gate sends the viewer on to /plans or checkout and returns without exporting')
+  assert.match(RUNNER, /const goUpgrade = [\s\S]*?navigate\(target\.to\)\s*\r?\n\s*return \{ status: 'upgrade'/,
+    'goUpgrade no longer navigates and stops')
+  // A visitor with no account and anyone without a saved project land on /plans.
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: null, signedIn: false }).to, '/plans')
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: 'p1', signedIn: false }).to, '/plans')
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: null, signedIn: true }).to, '/plans')
 })
 
 test('the gate is NAMED so the funnel can say which wall converted', () => {
   // P-001: without a `gate` id, trackUpgradeGate falls back to the modal title,
   // which groups every wall in the product into one number.
-  assert.match(PANEL, /gate: 'design-system-book-export'/)
+  assert.match(RUNNER, /gate: 'design-system-book-export'/)
+  // The book's PNG and HTML are the same wall, so they report the book's id.
+  assert.match(RUNNER, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/)
 })
 
 test('the gate goes to /plans, and asks for no account first', () => {
   // A Pro CTA never opens a login popup or a modal, so
   // the entitlement check now precedes the account check.
-  assert.ok(!/useProModal/.test(PANEL), 'the export wall must not raise the upgrade modal')
-  const pro = PANEL.indexOf('?.pro && !isPro')
-  const account = PANEL.indexOf('requireExportAccount(')
+  for (const [name, src] of [['useExportRunner', RUNNER], ['ExportDialog', DIALOG], ['ExportSteps', STEPS]]) {
+    assert.ok(!/useProModal/.test(src), `${name}: the export wall must not raise the upgrade modal`)
+  }
+  const pro = RUNNER.indexOf('fmt.pro && !isPro')
+  const account = RUNNER.indexOf('requireExportAccount(')
   assert.ok(pro > -1 && account > -1 && pro < account, 'the Pro gate must run before the account gate')
 })
 
 test('a free user is told what they are hitting before they click', () => {
   // P-003, the founder verdict: every gate EXPLICIT rather than silent. The
   // button says so itself, so the modal is a confirmation and not a surprise.
-  assert.match(PANEL, /locked \? 'Unlock with Pro'/)
+  assert.match(STEPS, /else if \(locked\) label = .*'Unlock with Pro'/)
 })
 
 test('the book reports its own activation, not the style guide’s', () => {
   // Otherwise the paid deliverable is averaged into the free one and the single
   // number meant to say whether the product was useful stops distinguishing.
-  assert.match(PANEL, /activation: 'design-system-book'/)
-  assert.match(PANEL, /activation = doc\.activation/)
-  assert.match(PANEL, /trackActivation\(activation, 'export'\)/)
+  assert.match(RUNNER, /activation: 'design-system-book'/)
+  assert.match(RUNNER, /activation = doc\.activation/)
+  assert.match(RUNNER, /trackActivation\(activation, 'export'\)/)
 })
 
-test('the generator is not in the browser: the panel never imports it', () => {
+test('the generator is not in the browser: the export engine and dialog never import it', () => {
   // It used to be a lazy import, which still shipped the book to every visitor
   // who read the bundle. Now the server builds it (api/_lib/exportDocument.js);
   // tests/unit/export-document.test.js walks the whole import graph.
-  assert.ok(!/designSystemBook/.test(PANEL), 'ExportPanel names the book generator again')
-  assert.match(PANEL, /requestExportDocument\(\{ format, design, projectName, template: chosenTemplates\[format\] \}/)
+  for (const [name, src] of [['useExportRunner', RUNNER], ['ExportDialog', DIALOG], ['ExportSteps', STEPS]]) {
+    assert.ok(!/designSystemBook/.test(src), `${name} names the book generator again`)
+  }
+  assert.match(RUNNER, /requestExportDocument\(\{ format: documentKey, design, projectName, template: chosenTemplates\[documentKey\] \}/)
 })
 
 test('the downloaded artefact never receives the print bootstrap', () => {
@@ -363,7 +385,7 @@ test('the downloaded artefact never receives the print bootstrap', () => {
   // every downloaded book would carry executable code.
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/window\.print|<script/.test(src), 'the generator emits no script')
-  assert.match(PANEL, /withPrintBootstrap\(html\)/, 'the bootstrap is applied in the panel, to a copy')
+  assert.match(RUNNER, /withPrintBootstrap\(html\)/, 'the bootstrap is applied in the export engine, to a copy')
   const util = stripComments(read('src/utils/exportDocument.js'))
   assert.match(util, /export function withPrintBootstrap\(html\) \{\s*return html\.replace\(/,
     'the bootstrap is applied by replace, to the copy handed in')

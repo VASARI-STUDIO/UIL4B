@@ -15,6 +15,7 @@ import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { createTools } from '../../src/data/toolTree.js'
 import { GLYPHS } from '../../src/components/userhome/workspaceGlyphs.js'
 import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
+import { exportPanel } from './export-rows.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -503,7 +504,8 @@ test.describe('a project’s own page', () => {
     // THE EXPORT BAR TELLS THE TRUTH: CSS, JSON and Tailwind export are not built.
     await expect(page.locator('.pjd-export-line')).not.toContainText(/CSS|JSON|Tailwind/)
     await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project' }).click()
-    await expect(page.getByRole('dialog').filter({ has: page.locator('#exp-title') })).toBeVisible()
+    await expect(exportPanel(page)).toBeVisible()
+    await expect(exportPanel(page).getByRole('heading', { level: 2 }), 'the popup is named for the project').toHaveText('Export Violet Lime')
   })
 
   test('an empty slot says so and opens the tool that fills it, with THIS project loaded', async ({ page }) => {

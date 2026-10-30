@@ -4,7 +4,7 @@
  * homepage its bytes without ever being used there. It now travels with the
  * lazy route chunks that can actually reach it:
  *
- *   CommandPalette, ExportPanel
+ *   CommandPalette, the export dialog's parts
  *
  * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
  * in global.css, so the cascade between any two of them is the one that was
@@ -45,57 +45,14 @@
 /* The footer's label. It was an inline style object. */
 .cp-footer-brand{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 
-/* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
-   nav search cluster. No real export yet: every format previews and the primary
-   action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
-.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-/* On a desktop the panel has one height whatever it holds: the window less the
-   overlay's top and bottom gutters, capped at 760px. The rows, the options and
-   the dock then stay where they are when a row is chosen or a notice arrives;
-   a taller state scrolls inside the panel and a shorter one leaves quiet panel
-   ground above the dock. The phone sheet below is bottom-anchored and sizes to
-   its content instead. */
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));height:min(calc(100dvh - max(8vh,64px) - 32px),760px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
-.exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
-.exp-sub{font-size:var(--fs-body-s);color:var(--t1);line-height:1.5}
-/* The title takes focus when the dialog opens so a screen reader starts there.
-   It is a heading, not a control and not a Tab stop, so it draws no ring. */
-.exp-title:focus{outline:none}
-.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.exp-formats{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border)}
-.exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
-.exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-/* One line on every row but the chosen one, which wraps in full. */
-.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t1);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.exp-fmt.is-active .exp-fmt-desc{white-space:normal;overflow:visible}
-.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg-0)}
-/* The footer's two actions: the app's rectangle at the 44px the old
-   .ui-pill-md held, so the target does not shrink. */
-.exp-foot .exp-act{min-height:44px;padding:0 18px;justify-content:center}
+/* ══ Export parts (exp-) — the pieces the export dialog reuses: the identity
+   fields, the file-type switch, the preview strip, the template picker and the
+   brand logo field. The dialog's own shell and layout are in
+   styles/pages/export-dialog.css. ══ */
 .exp-logo-acts .btn-s{min-height:40px;padding:0 14px;border-radius:var(--radius-pill)}
 
-
-/* Export panel error. The panel deliberately stays OPEN on a failed export —
-   closing it would leave the user with no file and no explanation, which reads
-   as the button doing nothing. */
-/* A finished export with something left to say (a font the UI kit could not
-   embed): a status, not an error. A hairline-divided line of the dialog, not a
-   box inside it. */
-.exp-notice{margin:0;padding:16px 24px 8px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1);border-top:1px solid var(--border)}
-/* The sentence the panel stayed open to say: full ink at the weight of the
-   format names, no icon and no tint. */
-.exp-notice-lead{font-weight:600;color:var(--t0)}
-/* The notice and its buttons are one group, so no hairline between them and a
-   tighter gap. The button tops do not move: the dock grows upward. */
-.exp-dock:has(.exp-notice) .exp-foot{border-top:0;padding-top:8px}
-
 /* The Pro kit's identity: name and description, then the logo row, as one
-   hairline-divided section directly under the selected kit row, so it is in
-   view when the dialog opens. The format row after it takes the list's
-   hairline back. */
+   hairline-divided section. */
 .exp-identity{display:flex;flex-direction:column;gap:14px;padding:18px 24px 6px;border-top:1px solid var(--border)}
 .exp-identity-title{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-field{display:flex;flex-direction:column;gap:6px}
@@ -106,92 +63,9 @@
 /* 16px on touch screens: smaller field text makes iOS zoom the page on focus. */
 @media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
-/* The dock (the error, the notice, then the footer's actions) stays in reach
-   while the format list scrolls: on a phone the list is taller than the sheet,
-   and both the button and anything the export has to say were below the fold.
-   margin-top:auto holds it to the foot of a panel taller than its content, so
-   the buttons keep one place across states. */
-.exp-dock{position:sticky;bottom:0;z-index:1;margin-top:auto;background:var(--bg-0)}
-/* Scroll cue: while the list has more below the dock, its last visible row fades
-   into the panel ground. A mask on the content that is cut off, not decoration;
-   ExportPanel.jsx toggles .has-more from the panel's scroll position. */
-.exp-dock::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:44px;pointer-events:none;opacity:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg-1) 0%,transparent),var(--bg-1));transition:opacity var(--dur-2) var(--ease-out)}
-.exp-panel.has-more .exp-dock::before{opacity:1}
-/* On the phone sheet the last control sits close to the dock, so the cue is shorter. */
-@media(max-width:560px){.exp-dock::before{height:24px}}
-/* The Soon action is plainly off: a muted surface with a readable label, not the
-   primary fill dimmed (a dimmed blue still reads as live in the moment before
-   the fade settles). Scoped to this footer, so no other primary button moves. */
-.exp-foot .exp-act.btn-accent[aria-disabled="true"],.exp-foot .exp-act.btn-accent[aria-disabled="true"]:hover{opacity:1;background:var(--bg-3);border-color:var(--border);color:var(--t2);cursor:not-allowed}
-@media (pointer:coarse){.exp-close{width:44px;height:44px}}
-/* Buttons are pills; the icon-only close is a circle. */
-.exp-foot .exp-act{border-radius:var(--radius-pill)}
-.exp-close{border-radius:50%}
 @media(max-width:560px){
-  /* One 16px gutter for every row of the dialog on a phone. */
-  .exp-head{padding:20px 16px 12px}
-  .exp-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
-  .exp-notice{padding:16px 16px 8px}
+  /* One 16px gutter for the fields on a phone. */
   .exp-identity{padding:16px 16px 6px}
-  /* On a phone every description at once is a wall of text: the list reads as
-     names, and the chosen format explains itself. */
-  .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
-  /* A bottom sheet on a phone: full width, anchored to the foot of the screen
-     and the thumb, with the dock inside it. */
-  .exp-overlay{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
-  .exp-panel{width:100%;height:auto;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px));border-bottom:0;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;scroll-padding:96px 0 88px}
-  /* The title and close stay put while the list scrolls under them, as the dock
-     does at the foot. An opaque ground, so rows never show through. */
-  .exp-head{position:sticky;top:0;z-index:2;background:var(--bg-1)}
-  /* Once rows have scrolled under the head, a hairline marks its edge. A shadow
-     ring rather than a border, so the head does not grow by a pixel. */
-  .exp-panel.is-scrolled .exp-head{box-shadow:0 1px 0 var(--border)}
-}
-
-/* ── Export panel · the chosen row's options ────────────────────────────────
-   One region under the list: the file-type switch, the preview of a Pro
-   document, the identity and logo fields. A hairline divides it from the list,
-   and nothing inside it is a card. */
-.exp-options{display:flex;flex-direction:column;gap:12px;padding:12px 24px 16px;border-top:1px solid var(--border);animation:exp-options-in 150ms var(--ease-out)}
-@keyframes exp-options-in{from{opacity:0}}
-html[data-reduced-motion="true"] .exp-options{animation:none}
-@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .exp-options{animation:none}}
-/* The kit's identity and the logo row were sections of the list; here they are
-   fields of the region and take its padding and gap. */
-.exp-options .exp-identity{gap:10px;padding:0;border-top:0}
-/* On a desktop panel capped at 760px the Pro kit's name, description and the whole
-   logo row must fit above the dock; the textarea gives back the height its two rows
-   do not need, the labels sit closer to their fields. */
-@media (min-width:561px){
-  .exp-options .exp-identity .exp-field{gap:4px}
-  .exp-options .exp-identity .exp-field textarea{min-height:52px}
-}
-.exp-options .exp-logo,.exp-options .exp-identity + .exp-logo{padding:0;border-top:0}
-
-/* The sticky dock covers the foot of the panel, so a scroll to a control stops above it. */
-.exp-panel{scroll-padding-bottom:88px}
-/* The dock's own buttons are always in view: cancel the padding for them so focusing one never scrolls the panel. */
-.exp-foot .exp-act{scroll-margin-bottom:-88px}
-/* The Pro kit's template cue: the chosen template and a link to the picker, above the identity
-   fields, so the choice is in view when the picker sits below the fold. */
-.exp-tpl-cue{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:var(--fs-body-s);color:var(--t1)}
-.exp-tpl-cue b{font-weight:600;color:var(--t0)}
-.exp-tpl-cue-go{display:inline-flex;align-items:center;min-height:28px;padding:0 4px;border:0;background:none;color:var(--link);font:inherit;font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-@media (hover:hover){.exp-tpl-cue-go:hover{color:var(--link-hover)}}
-@media (pointer:coarse){.exp-tpl-cue-go{min-height:44px}}
-.exp-tpl-cue-go:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-
-/* The quiet line for formats that are not built. Not a row, not a button. It
-   takes the free space of a tall panel and sits as a footnote by the dock; the
-   dock gives up its own auto margin, or the two would split the space. */
-.exp-coming{margin:auto 0 0;padding:12px 24px 16px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
-.exp-formats + .exp-coming{border-top:1px solid var(--border)}
-.exp-coming + .exp-dock{margin-top:0}
-/* On a phone the options and the line share the head and dock's 16px edge. These
-   follow the base rules above: an earlier override loses to them. */
-@media(max-width:560px){
-  .exp-options{padding:16px 16px 20px}
-  .exp-coming{padding:12px 16px 16px}
 }
 
 /* The file-type switch: pills, 44px, one line. If they outgrow the row (a 320px
@@ -229,8 +103,6 @@ html[data-reduced-motion="true"] .exp-options{animation:none}
 
 /* Pro, as plain words with a lock. */
 .exp-pro-lock{flex:0 0 auto}
-.exp-error{margin:0;padding:14px 24px;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border-top:1px solid color-mix(in srgb,var(--err) 30%,transparent)}
-@media(max-width:560px){.exp-error{padding:14px 16px}}
 
 /* ── Export panel · the brand logo field ─────────────────────────────────────
    The one place UIL4B accepts an asset it did not generate. It renders only for

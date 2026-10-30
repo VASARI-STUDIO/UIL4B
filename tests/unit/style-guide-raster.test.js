@@ -11,6 +11,7 @@ import path from 'node:path'
 import { buildStyleGuideLayout, A4, MARGIN } from '../../src/utils/styleGuideRaster.js'
 import { contrast, typeLadder, readDesign } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -192,19 +193,32 @@ test('the export panel offers the raster formats and loads them on demand', () =
   assert.equal(jpeg?.live, true, 'JPEG must be marked live, not "Soon"')
   assert.ok(!png.pro && !jpeg.pro, 'the raster style guides are free-tier formats')
 
-  const panel = read('src/components/ExportPanel.jsx')
-  assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(panel),
+  // The engine that builds the file loads the raster path on demand; the dialog
+  // reaches the formats through src/config/dialogExport.js, which must list both.
+  const runner = read('src/hooks/useExportRunner.js')
+  assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(runner),
     'the raster path must be code-split so an HTML export does not pay for it')
-  assert.ok(/const FORMATS = EXPORT_FORMATS/.test(panel),
-    'the panel must render the shared table, or the assertions above describe an array nobody uses')
+  assert.ok(!/^import .*styleGuideRaster/m.test(runner), 'styleGuideRaster is imported statically')
+  const guide = EXPORT_TYPES.flatMap((t) => t.categories).find((c) => c.id === 'guide')
+  assert.ok(guide?.files.includes('png') && guide.files.includes('jpeg'),
+    'the dialog must offer both raster formats, or the assertions above describe an array nobody uses')
 })
 
-test('a failed export keeps the panel open and explains itself', () => {
+test('a failed export keeps the dialog open and explains itself', () => {
   // Closing on failure leaves the user with no file and no explanation, which
   // reads as the button doing nothing at all.
-  const src = read('src/components/ExportPanel.jsx')
-  assert.ok(/setError\(/.test(src), 'a failure must produce a message')
-  assert.ok(/role="alert"/.test(src), 'that message must be announced')
+  const runner = read('src/hooks/useExportRunner.js')
+  const failure = runner.split('} catch (err)')[1] || ''
+  assert.ok(/setError\(err\?\.message/.test(failure), 'a failure must produce a message')
+  assert.ok(!/onClose|navigate\(/.test(failure), 'a failure must not close the dialog or leave the page')
+  // The dialog closes itself for one outcome only: a Pro file handed on to checkout or /plans.
+  const dialog = read('src/components/export/ExportDialog.jsx')
+  const onPrimary = /const onPrimary = async[\s\S]*?\n {2}\}/.exec(dialog)?.[0] || ''
+  assert.ok(onPrimary, 'the dialog must still have its Export handler')
+  assert.match(onPrimary, /if \(result\?\.status === 'upgrade'\) onCloseRef\.current\(\)/)
+  assert.equal(onPrimary.split('onCloseRef.current()').length - 1, 1, 'the Export handler closes the dialog on something other than an upgrade')
+  assert.ok(/role="alert"/.test(read('src/components/export/ExportSteps.jsx')), 'that message must be announced')
+  assert.ok(/\{error && <p className="xd-error" role="alert">\{error\}<\/p>\}/.test(read('src/components/export/ExportSteps.jsx')), 'the dock must show the runner error')
 })
 
 test('JPEG paints the paper explicitly, because JPEG has no alpha', () => {

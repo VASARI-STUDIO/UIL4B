@@ -1,4 +1,4 @@
-// The UI kit, exported from the nav's Export panel.
+// The UI kit, exported from the nav's Export popup (UI kit).
 //
 // Signed out, the kit is the panel's default format and pressing Export raises
 // the same create-account gate as every other file export, with nothing
@@ -10,6 +10,7 @@
 // The font requests the export makes (fetch, not the app's own stylesheet
 // links) are answered from fixtures, so the result does not depend on Google.
 import fs from 'node:fs'
+import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
 
@@ -47,35 +48,36 @@ async function openPanel(page) {
     await opener.click()
     await page.locator('.pnav-sheet-row', { hasText: 'Export' }).click()
   }
-  const panel = page.getByRole('dialog', { name: /Export your design system/i })
+  const panel = exportPanel(page)
   await expect(panel).toBeVisible()
-  // The kit is the default: selected before anything is touched.
+  // The header Export opens on the Brand book; the kit is a pick like any other.
+  await chooseFormat(page, 'kit')
   await expect(panel.getByRole('radio', { name: /^UI kit/ })).toHaveAttribute('aria-checked', 'true')
   return panel
 }
 
 async function exportKit(page) {
   const panel = await openPanel(page)
-  const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
+  const cta = primaryButton(panel)
+  await expect(cta).toHaveText('Export UI kit')
   await expect(cta).toBeEnabled()
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
   return { panel, filename: download.suggestedFilename(), body: await readDownload(download) }
 }
 
-// Where an element sits against the part of the panel a person can see without
-// scrolling: below the panel's top edge, above the sticky footer and the window.
+// Where an element sits against the part of the popup a person can see: inside the
+// scrolling column, above the dock that is always in view, and inside the window.
 async function placeInPanel(locator) {
   return locator.evaluate((el) => {
-    const panel = el.closest('.exp-panel')
-    const p = panel.getBoundingClientRect()
-    const foot = panel.querySelector('.exp-foot').getBoundingClientRect()
+    const column = el.closest('.xd-scroll')
+    const c = column.getBoundingClientRect()
+    const dock = document.querySelector('.xd-dock').getBoundingClientRect()
     const r = el.getBoundingClientRect()
     return {
-      scrollTop: panel.scrollTop,
       top: Math.round(r.top),
       bottom: Math.round(r.bottom),
-      viewTop: Math.round(Math.max(p.top, 0)),
-      viewBottom: Math.round(Math.min(foot.top, window.innerHeight)),
+      viewTop: Math.round(Math.max(c.top, 0)),
+      viewBottom: Math.round(Math.min(dock.top, window.innerHeight)),
     }
   })
 }
@@ -88,7 +90,7 @@ test.describe('the UI kit export', () => {
     await fontFixtures(page, { licence: true })
     await go(page, BOARD)
     const panel = await openPanel(page)
-    await panel.getByRole('button', { name: 'Export UI kit', exact: true }).click()
+    await primaryButton(panel).click()
     await expect(page.locator('#ui-login-title'), 'a file export asks for a free account')
       .toHaveText(/create your free account/i, { timeout: 10000 })
     await expect(page.getByText(/you were about to export this UI kit/i)).toBeVisible()
@@ -147,17 +149,19 @@ test.describe('the UI kit export', () => {
       try { return JSON.parse(localStorage.getItem('vs-current-design') || '{}').identity || null } catch { return null }
     })).toEqual({ name: 'Harbour Studio', description: 'Moorings and chandlery on the north quay.' })
 
-    const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
+    const cta = primaryButton(panel)
     const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
     expect(download.suggestedFilename()).toBe('harbour-studio-ui-kit.html')
+    await expect(dockStatus(panel), 'the popup names the file it made').toContainText('harbour-studio-ui-kit.html')
     const body = await readDownload(download)
     expect(body).toContain('<div class="identity-name">Harbour Studio</div>')
     expect(body).toContain('<p>Moorings and chandlery on the north quay.</p>')
     expect(body).toContain('<span class="pro-title">Harbour Studio</span>')
 
-    // Reopened, the panel still holds what was typed. The download closed the
-    // panel, which gives its history entry back asynchronously; a reload that
-    // starts before that settles is cancelled by it.
+    // Reopened, the panel still holds what was typed. The popup stays open after a
+    // download, so closing it is a step of its own; it gives its history entry back
+    // asynchronously, and a reload that starts before that settles is cancelled by it.
+    await page.keyboard.press('Escape')
     await expect(panel).toBeHidden()
     await overlaysSettled(page, 'the closed Export panel')
     await page.reload()
@@ -167,7 +171,7 @@ test.describe('the UI kit export', () => {
   })
 
   for (const size of SIZES) {
-    test(`Pro at ${size.width}: the name, description and logo row are in view the moment the panel opens`, async ({ page }) => {
+    test(`Pro at ${size.width}: the name, description and logo row can be reached in the column, above the dock`, async ({ page }) => {
       watch(page, `a Pro subscriber at ${size.width}px opening Export to name their kit`)
       await page.setViewportSize(size)
       await signIn(page, { plan: 'pro' })
@@ -182,19 +186,21 @@ test.describe('the UI kit export', () => {
       await expect(panel.getByRole('button', { name: 'Add logo', exact: true })).toBeVisible()
       for (const [what, target] of Object.entries(targets)) {
         await expect(target, `${what} is offered`).toBeVisible()
+        await target.scrollIntoViewIfNeeded()
         const at = await placeInPanel(target)
-        expect(at.scrollTop, 'the panel opens unscrolled').toBe(0)
         expect(at.top, `${what} starts inside the panel: ${JSON.stringify(at)}`).toBeGreaterThanOrEqual(at.viewTop)
         expect(at.bottom, `${what} ends above the footer and the fold: ${JSON.stringify(at)}`).toBeLessThanOrEqual(at.viewBottom)
       }
-      // In the kit row's options region, under the list of rows.
+      // In the kit's Details step, under the Layout step and the type in the rail.
       const order = await panel.evaluate((el) => {
-        const kit = el.querySelector('.exp-fmt[aria-checked="true"]')
+        const kit = el.querySelector('.xd-type.is-on')
+        const layout = [...el.querySelectorAll('.xd-step-l')].find((h) => h.textContent === 'Layout')
         const fields = el.querySelector('.exp-identity')
         const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
-        return { afterKit: follows(kit, fields), inOptions: Boolean(fields.closest('[role="region"]')) }
+        const step = fields.closest('.xd-step')
+        return { afterKit: follows(kit, fields), afterLayout: follows(layout, fields), inDetails: step?.querySelector('.xd-step-l')?.textContent === 'Details' }
       })
-      expect(order).toEqual({ afterKit: true, inOptions: true })
+      expect(order).toEqual({ afterKit: true, afterLayout: true, inDetails: true })
     })
 
     test(`free at ${size.width}: the panel opens with no identity fields`, async ({ page }) => {
@@ -220,34 +226,34 @@ test.describe('the UI kit export', () => {
         await go(page, BOARD)
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
         const panel = await openPanel(page)
-        await panel.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)))
-        // The buttons themselves, not the footer box: with a notice showing the
-        // footer drops its hairline and tightens its padding, and the dock grows
-        // upward, so the box changes while the buttons stay put. Cancel becomes
-        // Close, which is a different width, so the left button is held to its
-        // row (top and height); the export button is held to its whole box.
+        await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((animation) => animation.finished)))
+        // The export button must not move when the notice appears: the dock keeps
+        // its height and the line sits beside the button, so a notice never shoves it.
         const readActions = (el) => {
-          const [left, right] = [...el.querySelectorAll('.exp-foot .btn')].map((b) => b.getBoundingClientRect().toJSON())
-          return { scrollTop: el.scrollTop, buttons: { left: { top: left.top, bottom: left.bottom, height: left.height }, right } }
+          const right = el.querySelector('.xd-primary').getBoundingClientRect().toJSON()
+          return { scrollTop: el.querySelector('.xd-scroll').scrollTop, buttons: { top: right.top, bottom: right.bottom, height: right.height } }
         }
         const before = await panel.evaluate(readActions)
-        const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
+        const cta = primaryButton(panel)
         await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
-        const notice = panel.getByRole('status')
+        const notice = dockStatus(panel)
         await expect(notice).toContainText('Your UI kit downloaded.')
-        await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
+        await expect(primaryButton(panel)).toHaveText('Export again')
         // Read geometry without scrolling the notice into view. DOM visibility
         // alone also passes when the status is clipped below the format list.
         await expect.poll(async () => notice.evaluate((el) => {
-          const panel = el.closest('.exp-panel')
+          const panel = el.closest('.xd-card')
           const p = panel.getBoundingClientRect()
           const r = el.getBoundingClientRect()
-          const buttons = panel.querySelector('.exp-foot').getBoundingClientRect()
+          const buttons = panel.querySelector('.xd-primary').getBoundingClientRect()
+          // Beside the button on a wide dock, above it on a narrow one; never under it.
+          const clear = r.right <= buttons.left + 0.5 || r.bottom <= buttons.top + 0.5
           return r.top >= Math.max(p.top + panel.clientTop, 0)
-            && r.bottom <= Math.min(p.top + panel.clientTop + panel.clientHeight, buttons.top, window.innerHeight)
+            && r.bottom <= Math.min(p.top + panel.clientTop + panel.clientHeight, window.innerHeight)
             && r.left >= Math.max(p.left + panel.clientLeft, 0)
             && r.right <= Math.min(p.left + panel.clientLeft + panel.clientWidth, window.innerWidth)
-        }), 'the whole notice is inside the visible panel and above its buttons').toBe(true)
+            && clear
+        }), 'the whole notice is inside the visible popup and clear of the export button').toBe(true)
         const after = await panel.evaluate(readActions)
         expect(after.scrollTop, 'reading the notice needs no panel scroll').toBe(before.scrollTop)
         expect(after.buttons, 'the actions keep their position and size').toEqual(before.buttons)
@@ -255,19 +261,19 @@ test.describe('the UI kit export', () => {
     }
   }
 
-  test('free: no identity fields, and a finished export with a notice offers Close', async ({ page }) => {
+  test('free: no identity fields, and a finished export with a notice offers another go and the X', async ({ page }) => {
     watch(page, 'a free account exporting the kit')
     await fontFixtures(page, { licence: false })
     await signIn(page, { plan: 'free' })
     await go(page, BOARD)
     const panel = await openPanel(page)
     await expect(panel.getByRole('group', { name: 'Identity' }), 'a free kit is not personalised').toHaveCount(0)
-    await expect(panel.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
-    const cta = panel.getByRole('button', { name: 'Export UI kit', exact: true })
+    await expect(panel.getByRole('button', { name: 'Close export', exact: true })).toBeVisible()
+    const cta = primaryButton(panel)
     await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
-    await expect(panel.getByRole('status')).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Cancel', exact: true }), 'nothing is left to cancel').toHaveCount(0)
-    await panel.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(dockStatus(panel)).toBeVisible()
+    await expect(cta, 'the button offers another go').toHaveText('Export again')
+    await panel.getByRole('button', { name: 'Close export', exact: true }).click()
     await expect(panel).toHaveCount(0)
   })
 
@@ -279,6 +285,6 @@ test.describe('the UI kit export', () => {
     const { panel, body } = await exportKit(page)
     expect(body).toContain('Inter could not be embedded, so it is shown in the reader’s sans-serif font.')
     expect(body).not.toMatch(/font-family:"Inter";src/)
-    await expect(panel.getByRole('status')).toContainText('Inter could not be embedded')
+    await expect(dockStatus(panel)).toContainText('Inter could not be embedded')
   })
 })

@@ -37,13 +37,14 @@
 //
 // ── MUTATION ───────────────────────────────────────────────────────────────
 //
-// Two call sites, broken one at a time in src/components/ExportPanel.jsx:
+// Two call sites, broken one at a time:
 //
-//   `activeFormat?.live ? (…) : (…Export — Soon…)`  →  forced to `true ? …`
-//        fails "every unbuilt format … refuses in words"; the control passes.
-//   `buildStyleGuideHtml(design, { watermark: !isPro })` → `watermark: false`
+//   src/config/dialogExport.js: a category listing an unbuilt format's id (or a rail row
+//        rendered for it)  →  fails "every unbuilt format … has no row and no button";
+//        the control passes.
+//   src/hooks/useExportRunner.js: `watermark: !proNow` on the style guide → `watermark: false`
 //        fails the watermark test on its FREE half only; everything else passes.
-import { chooseFormat } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
@@ -56,7 +57,7 @@ const FREE_BUILT = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
 
 async function openPanel(page) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-  await expect(page.getByRole('dialog', { name: /Export your design system/i })).toBeVisible()
+  await expect(exportPanel(page)).toBeVisible()
 }
 
 /** The bytes the browser actually handed the user. */
@@ -75,7 +76,7 @@ async function exportStyleGuide(page, plan) {
   await chooseFormat(page, 'html')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export style guide (HTML)', exact: true }).click(),
+    primaryButton(page).click(),
   ])
   return readDownload(download)
 }
@@ -90,16 +91,16 @@ test.describe('the export panel, as a free account', () => {
     await openPanel(page)
 
     expect(UNBUILT.length, 'this test is vacuous if nothing is unbuilt').toBeGreaterThan(0)
-    const panel = page.getByRole('dialog', { name: /Export your design system/i })
+    const panel = exportPanel(page)
 
     for (const fmt of UNBUILT) {
       await expect(panel.getByRole('radio', { name: new RegExp(fmt.name, 'i') }),
         `${fmt.name} is not built, so it must not be a row`).toHaveCount(0)
-      await expect(panel.locator('.exp-coming'),
+      await expect(panel.locator('.xd-coming'),
         `${fmt.name} must be named in the "on the way" line`).toContainText(fmt.coming.replace(/^an? /, ''), { ignoreCase: true })
     }
-    await expect(panel.locator('.exp-fmt-soon')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /Export — Soon/ })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /Soon/ })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /Tailwind|Asset bundle/i }), 'and no button of any kind for them').toHaveCount(0)
   })
 
   test('a built free format hands over a real file — the control', async ({ page }) => {

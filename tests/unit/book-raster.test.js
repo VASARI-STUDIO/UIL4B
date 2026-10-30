@@ -467,10 +467,10 @@ test('the gradient runs corner to corner at 135 degrees and up at 0', () => {
 
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
-test('the book row offers PDF or PNG (2K), and both are Pro', () => {
+test('the book row offers PDF, PNG (2K) or HTML, and all are Pro', () => {
   const formats = groupFormats('book')
-  assert.deepEqual(formats.map((f) => f.id), ['book', 'book-png'])
-  assert.deepEqual(formats.map((f) => f.option), ['PDF', 'PNG (2K)'])
+  assert.deepEqual(formats.map((f) => f.id), ['book', 'book-png', 'book-html'])
+  assert.deepEqual(formats.map((f) => f.option), ['PDF', 'PNG (2K)', 'HTML'])
   assert.ok(formats.every((f) => f.pro && f.live))
   assert.equal(isGroupPro('book'), true)
   assert.equal(assertFormatsCoherent(EXPORT_FORMATS), true)
@@ -484,16 +484,23 @@ test('the PNG is another file of the book, so the plan lines still count one boo
   assert.throws(() => assertFormatsCoherent([{ id: 'a', live: true, group: 'g', variantOf: 'missing' }]), /variantOf/)
 })
 
-test('ExportPanel loads bookRaster only on demand, behind the same Pro check, and names the file', () => {
-  const panel = read('src/components/ExportPanel.jsx')
-  assert.match(panel, /await import\('\.\.\/utils\/bookRaster'\)/, 'the book raster must be code-split')
-  assert.ok(!/^import .*bookRaster/m.test(panel), 'bookRaster is imported statically, so every visitor downloads it')
-  assert.match(panel, /`\$\{slug\}-book-2k\.zip`/)
+test('the export engine loads bookRaster only on demand, behind the same Pro check, and names the file', () => {
+  const runner = read('src/hooks/useExportRunner.js')
+  assert.match(runner, /await import\('\.\.\/utils\/bookRaster'\)/, 'the book raster must be code-split')
+  assert.ok(!/^import .*bookRaster/m.test(runner), 'bookRaster is imported statically, so every visitor downloads it')
+  // Nothing the dialog is built from may pull it in either.
+  for (const f of ['ExportDialog', 'ExportNav', 'ExportSteps', 'ExportFreePreview']) {
+    assert.ok(!/^import .*bookRaster/m.test(read(`src/components/export/${f}.jsx`)), `${f} imports bookRaster statically`)
+  }
+  assert.match(runner, /`\$\{slug\}-book-2k\.zip`/)
   // The PNG branch sits after the plan gate and the account gate in runExport.
-  assert.ok(panel.indexOf("format === 'book-png'") > 0)
-  assert.ok(panel.indexOf('const gateKey') < panel.indexOf('await import(\'../utils/bookRaster\')'))
-  assert.ok(panel.indexOf('requireExportAccount(reason)') < panel.indexOf('await import(\'../utils/bookRaster\')'))
-  assert.match(panel, /if \(paidFile && !proNow\)/, 'a Pro account that signs in at the gate is re-read before the PNG is drawn')
+  const raster = runner.indexOf("await import('../utils/bookRaster')")
+  const proCheck = runner.indexOf('if (fmt.pro && !isPro)')
+  const account = runner.indexOf('requireExportAccount(reason)')
+  assert.ok(raster > 0 && runner.indexOf("format === 'book-png'") > 0)
+  assert.ok(proCheck > 0 && proCheck < raster, 'the Pro check must come before the PNG is drawn')
+  assert.ok(account > 0 && account < raster, 'the account gate must come before the PNG is drawn')
+  assert.match(runner, /if \(paidFile && !proNow\)/, 'a Pro account that signs in at the gate is re-read before the PNG is drawn')
 })
 
 test('bookRaster never imports the Pro HTML generator or its templates', () => {

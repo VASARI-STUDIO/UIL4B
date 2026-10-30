@@ -46,9 +46,11 @@ async function walk(page) {
   await rail(page).getByRole('button', { name: /^Name your project/ }).click()
   await nameField(page).fill('Walkthrough kit')
   await nameForm(page).getByRole('button', { name: 'Save project' }).click()
-  // The walkthrough ends on the export gallery; "Not now" opens the project itself.
+  // The walkthrough ends on the export page with the export popup open; closing
+  // it leaves the page, whose "Open project" opens the project itself.
   await expect(page).toHaveURL(/\/projects\/[^/]+\/export$/)
-  await page.getByRole('link', { name: /^Not now/ }).click()
+  await page.getByRole('button', { name: 'Close export' }).click()
+  await page.getByRole('link', { name: 'Open project' }).click()
   await expect(page).toHaveURL(/\/projects\/[^/]+$/)
   return board
 }
