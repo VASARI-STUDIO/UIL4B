@@ -28,7 +28,7 @@ const SHOW_PALETTE_LIBRARY_TILE = true
 const TILE_COPY_FROM_TOOL_TREE = false
 
 // The rows in order, each with its current name and note. `art` is the ToolArt drawing; the library
-// row has none of its own, so it draws the menu's tile for it.
+// row has none of its own, so it draws its own swatch grid (LIBRARY_SWATCHES).
 const TILES = [
   { id: 'palette', label: 'Palette Builder', note: 'Start from a seed colour and the roles, ramp and tokens follow.', to: toolRoute('palette'), art: 'palette' },
   { id: 'gradient', label: 'Gradient', note: 'Two stops and an angle', to: toolRoute('gradient'), art: 'gradient' },
@@ -41,7 +41,11 @@ const TILES = [
     : []),
 ]
 
-const TREE_LABEL = new Map(createTools().map((t) => [t.id, t.label]))
+// The Palette Library plate: three rows of four mini swatches in the colour hue, stepping from a
+// quarter to full strength. The hue comes from the plate's data-hue through .spt-fill, as in ToolArt.
+const LIBRARY_SWATCHES = Array.from({ length: 12 }, (_, i) => +(0.25 + (i * 0.75) / 11).toFixed(3))
+
+const TREE_LABEL =new Map(createTools().map((t) => [t.id, t.label]))
 
 /** A row's name and note: its own, or the tool tree's where TILE_COPY_FROM_TOOL_TREE is on. */
 function copyOf(tile) {
@@ -111,7 +115,11 @@ export default function StartSomething({ inLead = false }) {
                     ? <ToolArt id={tile.art} size="thumb" colors={tile.id === 'palette' ? ramp : undefined} />
                     : (
                       <div className="spt-art spt-art--thumb" data-hue="colour" data-art={tile.id} aria-hidden="true">
-                        <span className="spt-tile"><Glyph name="squares-four" size={18} /></span>
+                        <svg viewBox="0 0 160 100">
+                          {LIBRARY_SWATCHES.map((o, i) => (
+                            <rect key={i} className="spt-step spt-fill" fillOpacity={o} x={16 + (i % 4) * 33} y={16 + Math.floor(i / 4) * 24} width="29" height="20" rx="4" />
+                          ))}
+                        </svg>
                       </div>
                     )}
                 </span>

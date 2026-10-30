@@ -551,8 +551,8 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-textbtn, .uh.uh-spt .uh-link, .uh.uh-spt .uh-more, .uh.uh-spt .uh-disc-all, .uh.uh-spt .uh-plans-link, .uh.uh-spt .uh-quota-link { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
 .uh.uh-spt .uh-cap { border-color: var(--sp-line-strong); }
 
-/* Lead card, starter, loading and failed states share one frame */
-.uh.uh-spt .uh-continue { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--sp-line); border-radius: 20px; background: none; overflow: visible; }
+/* Lead, starter, loading and failed states have no frame of their own: the plate is the one frame and the text sits below it. */
+.uh.uh-spt .uh-continue { display: grid; gap: 12px; padding: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
 .uh.uh-spt .uh-continue-body { padding: 0; gap: 12px; }
 .uh.uh-spt .uh-continue-name { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--sp-ink); }
 .uh.uh-spt .uh-badge { width: auto; height: auto; background: none; color: var(--sp-ink); }
@@ -574,7 +574,6 @@ h2.uh-continue-name { white-space: normal; }
 }
 @media (max-width: 767px) {
   .uh.uh-spt .uh-plate.spt-art--card, .uh.uh-spt .uh-plate-skel { height: 140px; }
-  .uh.uh-spt .uh-continue { padding: 16px; }
 }
 
 /* Parts and starter steps */
@@ -610,6 +609,9 @@ h2.uh-continue-name { white-space: normal; }
 
 /* Other projects: /tools rows with the project's colours as the thumb */
 .uh.uh-spt .uh-rows-wrap { margin-top: 24px; }
+/* The 12px radius is for the hover wash and focus ring. The divider is an inset line, so it does not curl with the corners or run out past the row's text edge. */
+.uh.uh-spt .uh-rows .spt-row, .uh.uh-spt .uh-tools .spt-row { position: relative; border-top: 0; }
+.uh.uh-spt .uh-rows .spt-row::before, .uh.uh-spt .uh-tools .spt-row::before { content: ""; position: absolute; top: 0; left: 12px; right: 12px; border-top: 1px solid var(--sp-line); pointer-events: none; }
 .uh.uh-spt .uh-rows .spt-row { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 16px; min-height: 88px; border-radius: 12px; }
 .uh.uh-spt .uh-rows .spt-row-text { gap: 4px; }
 .uh.uh-spt .uh-row-name { color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -621,7 +623,8 @@ h2.uh-continue-name { white-space: normal; }
 }
 
 /* Today */
-.uh.uh-spt .uh-today { padding: 20px; border: 1px solid var(--sp-line); border-radius: 20px; background: none; }
+/* A ruled column, not a framed card */
+.uh.uh-spt .uh-today { padding: 20px 0 0; border: 0; border-top: 1px solid var(--sp-line); border-radius: 0; background: none; }
 .uh.uh-spt .uh-today-date { font-size: 15px; font-weight: 400; color: var(--sp-dim); }
 .uh.uh-spt .uh-today-time { font-family: var(--display); font-size: 40px; font-weight: 560; line-height: 1; min-height: 40px; color: var(--sp-ink); }
 .uh.uh-spt .uh-rule { border-top-color: var(--sp-line); }
@@ -673,7 +676,9 @@ h2.uh-continue-name { white-space: normal; }
   /* The button is drawn as a ruled row without carrying .spt-row: that class on a button would make
      every .spt-row rule a button-shape rule. The li takes the rows' 12px corners for the hover wash. */
   .uh.uh-spt .uh-tool-all-item { border-radius: 12px; overflow: hidden; }
-  .uh.uh-spt .uh-tool--all { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 12px; border: 0; border-top: 1px solid var(--sp-line); background: none; text-align: left; font: inherit; color: var(--sp-ink); cursor: pointer; }
+  .uh.uh-spt .uh-tool-all-item { position: relative; }
+  .uh.uh-spt .uh-tool-all-item::before { content: ""; position: absolute; top: 0; left: 12px; right: 12px; border-top: 1px solid var(--sp-line); pointer-events: none; }
+  .uh.uh-spt .uh-tool--all { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 12px; border: 0; background: none; text-align: left; font: inherit; color: var(--sp-ink); cursor: pointer; }
   .uh.uh-spt .uh-tool--all .spt-row-text { display: grid; min-width: 0; }
   .uh.uh-spt .uh-tool--all .spt-row-text b { font-size: 18px; font-weight: 600; }
 }
