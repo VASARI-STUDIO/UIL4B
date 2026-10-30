@@ -226,13 +226,13 @@ export function FontAboutPanel({ font, id, labelledBy, inline = false }) {
         </section>
       )}
 
-      <FontLicenceBlock font={font} />
-
       <p className="fdx-source">
         {thin
           ? 'The catalogue currently loaded is the short bundled list, which carries no designer or date. Reload the full catalogue to see them.'
           : 'Every fact above comes from this family’s entry in the Google Fonts catalogue.'}
       </p>
+
+      <FontLicenceBlock font={font} />
     </div>
   )
 }

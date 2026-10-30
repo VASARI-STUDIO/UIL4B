@@ -16,7 +16,9 @@ import '../styles/pages/font-detail.css'
 // More; at 390 Find a pairing, the compare toggle and More, in a bottom sheet.
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-const GLYPHS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()+-=']
+// 80 glyphs: the grid is 8 columns on the sheet and at 768 and 10 from 1024, and
+// 80 fills the last row of both.
+const GLYPHS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()+-=?.,:;']
 
 // A downward drag on the sheet's handle closes it when it goes this far (px) or
 // this fast (px per ms); anything less snaps back. Moves under DRAG_JITTER never
@@ -24,6 +26,13 @@ const GLYPHS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 const DRAG_CLOSE_DY = 96
 const DRAG_CLOSE_SPEED = 0.5
 const DRAG_JITTER = 12
+// How long the sheet takes to slide off before the pop-up unmounts (ms); a
+// little under the 200ms transform transition in font-detail.css.
+const DRAG_EXIT_MS = 180
+
+// The scheduled removal of the history entry the last pop-up pushed; a pop-up
+// that opens before it runs takes the entry over instead of pushing another.
+let pendingBack = null
 
 // Set CSS custom properties on a node: the no-inline-styles route for values
 // that are genuinely per-item (a family, a weight).
@@ -60,10 +69,12 @@ function DotsIcon() {
   )
 }
 
-// The overflow of the action bar. A menu button that opens upward over the bar;
-// Escape or a press outside closes it, and the dialog's own Escape waits for it
-// (useModalDialog skips a close while an [aria-haspopup][aria-expanded=true]
-// trigger is on screen).
+// The overflow of the action bar. A menu button that opens upward over the bar,
+// or, on the phone sheet, a bottom sheet of its own under a scrim. Escape, a
+// press outside or focus leaving closes it, and the dialog's own Escape waits
+// for it (useModalDialog skips a close while an [aria-haspopup][aria-expanded=true]
+// trigger is on screen). On the sheet the scrim takes the outside press as a
+// click, so it cannot fall through onto the bar's buttons beneath.
 function MoreMenu({ iconOnly, items, family }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
@@ -89,15 +100,23 @@ function MoreMenu({ iconOnly, items, family }) {
     }
     const onPointer = (e) => { if (!rootRef.current?.contains(e.target)) close(false) }
     document.addEventListener('keydown', onKey)
-    document.addEventListener('pointerdown', onPointer)
+    if (!iconOnly) document.addEventListener('pointerdown', onPointer)
     return () => {
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('pointerdown', onPointer)
     }
-  }, [open, close])
+  }, [open, close, iconOnly])
+
+  // Focus moving to another control closes the menu. A null target (a press on
+  // something that takes no focus) is left to the scrim or the pointer handler,
+  // so a press on a menu row cannot close the menu before its click lands.
+  const onBlur = (e) => {
+    const next = e.relatedTarget
+    if (open && next && !rootRef.current?.contains(next)) close(false)
+  }
 
   return (
-    <div className="fgd-more" ref={rootRef}>
+    <div className="fgd-more" ref={rootRef} onBlur={onBlur}>
       <button
         type="button"
         ref={triggerRef}
@@ -109,6 +128,9 @@ function MoreMenu({ iconOnly, items, family }) {
       >
         {iconOnly ? <DotsIcon /> : 'More'}
       </button>
+      {open && iconOnly && (
+        <button type="button" className="fgd-menu-scrim" tabIndex={-1} aria-hidden="true" onClick={() => close(true)} />
+      )}
       {open && (
         <ul className="fgd-menu" role="menu" aria-label={`More actions for ${family}`}>
           {items.map(item => (
@@ -120,9 +142,9 @@ function MoreMenu({ iconOnly, items, family }) {
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => close(false)}
+                  onClick={() => close(true)}
                 >
-                  {item.label}<span aria-hidden="true"> ↗</span>
+                  {item.label}<span className="fgd-ext" aria-hidden="true"> ↗</span>
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               ) : (
@@ -130,7 +152,7 @@ function MoreMenu({ iconOnly, items, family }) {
                   type="button"
                   className="fgd-menu-item"
                   role="menuitem"
-                  onClick={() => { close(false); item.onSelect() }}
+                  onClick={() => { close(true); item.onSelect() }}
                 >
                   {item.label}
                 </button>
@@ -161,10 +183,48 @@ export default function FontDetailDialog({
   const [pinned, setPinned] = useState(false)
   const heroRef = useRef(null)
   const drag = useRef(null)
+  const exitTimer = useRef(null)
+  // Whether the press that ends in an overlay click began on the overlay too.
+  const pressedOverlay = useRef(false)
+  // Read by the history listener, which is set up once.
+  const closeRef = useRef(onClose)
   const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
   const weights = font.variants.length
   const fam = fontStack(font)
   const phone = layout === 'phone'
+
+  useEffect(() => { closeRef.current = onClose }, [onClose])
+
+  // The back button (Android's gesture) closes the pop-up instead of leaving the
+  // page: opening pushes one history entry marked as ours, and a pop off that
+  // entry closes. Closing any other way takes the entry back off, but only while
+  // it is still the current one, so a close that came from navigating away
+  // (Find a pairing) never steps back out of the page it just went to. The
+  // removal waits a tick, which also lets a dev-mode remount keep its entry.
+  useEffect(() => {
+    let popped = false
+    if (pendingBack) {
+      clearTimeout(pendingBack)
+      pendingBack = null
+    } else {
+      window.history.pushState({ ...window.history.state, fgd: true }, '')
+    }
+    // Any pop while open means the reader left our entry, so the pop-up closes.
+    const onPop = () => {
+      popped = true
+      closeRef.current()
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      pendingBack = setTimeout(() => {
+        pendingBack = null
+        if (!popped && window.history.state?.fgd) window.history.back()
+      }, 0)
+    }
+  }, [])
+
+  useEffect(() => () => clearTimeout(exitTimer.current), [])
 
   useEffect(() => {
     let cancelled = false
@@ -210,6 +270,7 @@ export default function FontDetailDialog({
   }
 
   const onDragStart = (e) => {
+    if (exitTimer.current) return
     if (e.pointerType === 'mouse' && e.button !== 0) return
     const sheet = e.currentTarget.closest('.fgd')
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -229,15 +290,15 @@ export default function FontDetailDialog({
     d.sheet.classList.remove('is-dragging')
     const speed = d.dy / Math.max(1, e.timeStamp - d.t)
     if (!cancelled && (d.dy > DRAG_CLOSE_DY || (d.dy > DRAG_JITTER && speed > DRAG_CLOSE_SPEED))) {
-      onClose()
+      // Slide the rest of the way off, then unmount once the slide has played.
+      d.sheet.style.setProperty('--fgd-drag', '100%')
+      exitTimer.current = setTimeout(onClose, DRAG_EXIT_MS)
       return
     }
     d.sheet.style.removeProperty('--fgd-drag')
   }
 
   const googleUrl = `https://fonts.google.com/specimen/${font.family.replace(/ /g, '+')}`
-  const compareLabel = inCompare ? 'In comparison' : 'Add to comparison'
-  const compareName = inCompare ? `Remove ${font.family} from comparison` : `Add ${font.family} to comparison`
 
   // What the bar cannot fit goes into More, in the same order it would have
   // sat on the bar.
@@ -248,7 +309,16 @@ export default function FontDetailDialog({
   ]
 
   return (
-    <div className="fgd-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      className="fgd-overlay"
+      onPointerDown={e => { pressedOverlay.current = e.target === e.currentTarget }}
+      onClick={e => {
+        // A press that began inside the dialog and ended on the scrim (a text
+        // selection drag) must not close it.
+        if (e.target === e.currentTarget && pressedOverlay.current) onClose()
+        pressedOverlay.current = false
+      }}
+    >
       <div
         className="fgd"
         role="dialog"
@@ -331,7 +401,9 @@ export default function FontDetailDialog({
                   maxLength={72}
                   spellCheck="false"
                   placeholder="Type your own words"
+                  enterKeyHint="done"
                   onChange={e => setText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                 />
               </label>
             </div>
@@ -427,19 +499,22 @@ export default function FontDetailDialog({
                 Build a type scale
               </button>
             )}
+            {/* One name whether or not the font is in the comparison: the
+                pressed state says which, and the +/check icon shows it. */}
             {phone ? (
               <button
                 type="button"
                 className="fgd-btn fgd-btn--icon"
                 onClick={() => onCompare(font)}
                 aria-pressed={inCompare}
-                aria-label={compareName}
+                aria-label={`Compare ${font.family}`}
               >
                 <CompareIcon on={inCompare} />
               </button>
             ) : (
-              <button type="button" className="fgd-btn" onClick={() => onCompare(font)} aria-pressed={inCompare}>
-                {compareLabel}
+              <button type="button" className="fgd-btn fgd-btn--compare" onClick={() => onCompare(font)} aria-pressed={inCompare}>
+                <CompareIcon on={inCompare} />
+                Compare
               </button>
             )}
             {layout === 'wide' ? (
@@ -448,7 +523,7 @@ export default function FontDetailDialog({
                   Copy import URL
                 </button>
                 <a className="fgd-btn" href={googleUrl} target="_blank" rel="noopener noreferrer">
-                  View on Google Fonts<span aria-hidden="true"> ↗</span>
+                  View on Google Fonts<span className="fgd-ext" aria-hidden="true"> ↗</span>
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </>
