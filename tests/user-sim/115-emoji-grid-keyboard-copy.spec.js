@@ -46,7 +46,13 @@ test.describe('emoji grid copy', () => {
 
   test('a cell that only mounted after scrolling still copies its own glyph', async ({ page }) => {
     const before = await glyphOf(page.locator(CELL).first())
-    await page.evaluate(() => window.scrollBy(0, 6000))
+    // To the middle of the grid, not a fixed 6000px: the page now ends with the close and the
+    // footer, so it is only ~1800px longer than the grid and a long scroll lands below the
+    // grid, where no cell is mounted at all.
+    await page.evaluate(() => {
+      const grid = document.querySelector('.emoji-virt').getBoundingClientRect()
+      window.scrollTo(0, window.scrollY + grid.top + grid.height / 2 - window.innerHeight / 2)
+    })
     // The first cell of the old window is unmounted; wait for the new window.
     await expect.poll(async () => glyphOf(page.locator(CELL).first())).not.toBe(before)
     // Pin ONE node that is fully on screen. A positional locator (.nth) is
