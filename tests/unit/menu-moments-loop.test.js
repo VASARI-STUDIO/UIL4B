@@ -91,8 +91,10 @@ test('font-gallery: loops on a timer and holds one face under reduced motion', (
 })
 
 test('keyframes only move what cannot cause layout (plus the Font Pair face)', () => {
+  // No fill, fill-opacity, clip-path or background: the glyph stays a line icon, and the only
+  // moving background is the Palette name's text sweep (background-position).
   const allowed = new Set([
-    'transform', 'opacity', 'clip-path', 'fill-opacity', 'stroke-width', 'background-position',
+    'transform', 'opacity', 'stroke-width', 'stroke-dashoffset', 'background-position',
     'animation-timing-function', 'font-family', 'font-weight', 'font-size-adjust',
   ])
   const layout = new Set(['font-family', 'font-weight', 'font-size-adjust'])
@@ -102,6 +104,28 @@ test('keyframes only move what cannot cause layout (plus the Font Pair face)', (
     for (const p of props) assert.ok(allowed.has(p), `@keyframes ${name} animates ${p}`)
     if (props.some((p) => layout.has(p))) assert.match(name, /^mm-pair-/, `${name} changes the typeface; only Font Pair may`)
   }
+})
+
+test('the glyph stays a line icon: no fill, box or background is painted into or behind it', () => {
+  const start = CSS.indexOf('.pnav-tool-nm{display:inline-block')
+  const end = CSS.indexOf('.pnav-editorial{flex:0 0')
+  assert.ok(start > 0 && end > start)
+  const section = CSS.slice(start, end)
+  assert.doesNotMatch(section, /pnav-fx/, 'the .pnav-fx overlay squares are gone')
+  assert.doesNotMatch(section, /fill-opacity|clip-path:\s*circle/)
+  // Moment rules (keyframes are checked above): `fill:none` is the only fill allowed, and a
+  // background belongs to the Palette name's text sweep alone.
+  for (const r of rules) {
+    if (!/\.mm-gl|data-moment/.test(r.selector) || !r.atRules.every((a) => a.startsWith('@media'))) continue
+    for (const m of r.body.matchAll(/(?:^|;)\s*(fill|background[a-z-]*)\s*:\s*([^;]+)/g)) {
+      if (m[1] === 'fill') assert.equal(m[2].trim(), 'none', `${r.selector} sets fill:${m[2]}`)
+      else assert.ok(has(r.selector, 'palette'), `${r.selector} sets ${m[1]}`)
+    }
+  }
+  // The icon source is the same: no moment glyph paints a fill.
+  const src = fs.readFileSync(path.join(process.cwd(), 'src/components/NavIcon.jsx'), 'utf8')
+  const glyphs = src.slice(src.indexOf('const MOMENT_ICONS'), src.indexOf('export default function NavIcon'))
+  assert.doesNotMatch(glyphs, /\bfill="(?!none")|fillOpacity/, 'a moment glyph paints a fill')
 })
 
 test('the moments never use transition: all', () => {

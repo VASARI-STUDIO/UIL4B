@@ -305,38 +305,55 @@ const FALLBACK = <circle cx="12" cy="12" r="7" />
 // Hover-moment variants for the mega menu. The same glyph at rest, with
 // its moving parts classed so global.css ("HOVER MOMENTS") can animate them. Only
 // the menu rows ask for these (`moment`), so every other use of an icon is untouched.
-// Rest geometry is identical to ICONS; the extra parts are hidden at rest by CSS.
+// Rest geometry is identical to ICONS (Contrast aside: its solid half is hatching here); the extra
+// parts are hidden at rest by CSS. Every part is a stroke in the row's hue: a moment moves, turns,
+// draws (stroke-dashoffset) or fades line work, and never paints a fill. A part with the `dr`
+// class is drawn by dashoffset, which needs pathLength="1" on it.
 // A value that is a function gets a unique id, for a clipPath.
 const MOMENT_ICONS = {
+  // The diameter stays; the hatching that marks the shaded half turns with it to the other side.
   contrast: (
     <>
       <circle cx="12" cy="12" r="8" />
-      <path className="half" d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+      <path d="M12 4v16" />
+      <path className="half" d="M14.5 5.2v13.6M17 6.4v11.2M19.3 9.5v5" />
     </>
   ),
-  // The ramp (tint at the top, shade at the bottom) rises inside the drop, which
-  // is the clip; the outline is drawn last so the stroke stays above the fill.
+  // The ramp (tint at the top, shade at the bottom) is three lines that rise inside the drop,
+  // which is the clip; the outline is drawn last so the stroke stays above them.
   tint: (uid) => (
     <>
       <clipPath id={uid}><path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" /></clipPath>
       <g clipPath={`url(#${uid})`}>
-        <g className="rise" stroke="none" fill="currentColor">
-          <rect x="5" y="3" width="14" height="6" fillOpacity=".18" />
-          <rect x="5" y="9" width="14" height="4.6" fillOpacity=".42" />
-          <rect x="5" y="13.6" width="14" height="6" fillOpacity=".75" />
+        <g className="rise">
+          <path d="M5 8.5h14" opacity=".4" />
+          <path d="M5 12h14" opacity=".7" />
+          <path d="M5 15.5h14" />
         </g>
       </g>
       <path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" />
     </>
   ),
+  // A short level line draws along the inside of each bar.
   semantic: (
     <>
-      <rect className="sb s1" x="4" y="5" width="16" height="4.2" rx="2.1" stroke="none" />
-      <rect className="sb s2" x="4" y="10.4" width="16" height="4.2" rx="2.1" stroke="none" />
-      <rect className="sb s3" x="4" y="15.8" width="10" height="4.2" rx="2.1" stroke="none" />
       <rect x="4" y="5" width="16" height="4.2" rx="2.1" />
       <rect x="4" y="10.4" width="16" height="4.2" rx="2.1" />
       <rect x="4" y="15.8" width="10" height="4.2" rx="2.1" />
+      <path className="dr" pathLength="1" d="M8 7.1h8" />
+      <path className="dr dr2" pathLength="1" d="M8 12.5h8" />
+      <path className="dr dr3" pathLength="1" d="M8 17.9h3" />
+    </>
+  ),
+  // Banding lines draw in either side of the diagonal, like the steps of a gradient.
+  gradient: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      <path d="M4 20 20 4" />
+      <path className="dr" pathLength="1" d="M4 8 8 4" />
+      <path className="dr dr2" pathLength="1" d="M4 14 14 4" />
+      <path className="dr dr3" pathLength="1" d="M10 20 20 10" />
+      <path className="dr dr4" pathLength="1" d="M16 20 20 16" />
     </>
   ),
   'type-scale': (
@@ -389,14 +406,14 @@ const MOMENT_ICONS = {
       <rect className="in" x="7" y="9.5" width="7" height="5" rx="1" />
     </>
   ),
-  // Three faces of the cube take light, drawn first so the outline stays above.
+  // Three glint lines draw across the faces of the cube, one per face.
   'model-3d': (
     <>
-      <path className="f f1" d="M12 3.5 19.5 7.8 12 12 4.5 7.8z" />
-      <path className="f f2" d="M4.5 7.8 12 12v8.5L4.5 16.2z" />
-      <path className="f f3" d="M19.5 7.8 12 12v8.5l7.5-4.3z" />
       <path d="M12 3.5 19.5 7.8v8.4L12 20.5 4.5 16.2V7.8z" />
       <path d="M4.5 7.8 12 12l7.5-4.2M12 12v8.5" />
+      <path className="dr" pathLength="1" d="M8 8 12 5.7" />
+      <path className="dr dr2" pathLength="1" d="M8 12.8v3.4" />
+      <path className="dr dr3" pathLength="1" d="M16 12.8v3.4" />
     </>
   ),
   // The picture steps back and the T comes forward.
@@ -410,17 +427,27 @@ const MOMENT_ICONS = {
       <path className="tx" d="M13.5 9.5h5M16 9.5v6" />
     </>
   ),
-  // Terracotta Dusk (paletteGallery.js), filled under the outlines.
+  // A short glint line draws across each swatch, in reading order.
   'palette-library': (
     <>
-      <rect className="c c1" x="4" y="4" width="7" height="7" rx="1.5" fill="#264653" />
-      <rect className="c c2" x="13" y="4" width="7" height="7" rx="1.5" fill="#2A9D8F" />
-      <rect className="c c3" x="4" y="13" width="7" height="7" rx="1.5" fill="#E9C46A" />
-      <rect className="c c4" x="13" y="13" width="7" height="7" rx="1.5" fill="#E76F51" />
       <rect x="4" y="4" width="7" height="7" rx="1.5" />
       <rect x="13" y="4" width="7" height="7" rx="1.5" />
       <rect x="4" y="13" width="7" height="7" rx="1.5" />
       <rect x="13" y="13" width="7" height="7" rx="1.5" />
+      <path className="dr" pathLength="1" d="M6 9l3-3" />
+      <path className="dr dr2" pathLength="1" d="M15 9l3-3" />
+      <path className="dr dr3" pathLength="1" d="M6 18l3-3" />
+      <path className="dr dr4" pathLength="1" d="M15 18l3-3" />
+    </>
+  ),
+  // Banding lines draw into the front square while the sheet behind it slides out.
+  'gradient-library': (
+    <>
+      <rect x="3.5" y="8" width="12.5" height="12.5" rx="2.5" />
+      <path d="M3.5 20.5 16 8" />
+      <path className="dr" pathLength="1" d="M3.5 15.5 11 8" />
+      <path className="dr dr2" pathLength="1" d="M8.5 20.5 16 13" />
+      <path className="sh" d="M8 4.5h10.5a2 2 0 0 1 2 2V17" />
     </>
   ),
   inspiration: (
@@ -434,9 +461,9 @@ const MOMENT_ICONS = {
     <>
       <path d="M4 5.5h16v9H9l-4 3.5v-3.5H4z" />
       <path className="ln" d="M8.5 10h7" />
-      <circle className="d d1" cx="9" cy="10" r="1.25" />
-      <circle className="d d2" cx="12" cy="10" r="1.25" />
-      <circle className="d d3" cx="15" cy="10" r="1.25" />
+      <path className="d d1" d="M9 10h.01" />
+      <path className="d d2" d="M12 10h.01" />
+      <path className="d d3" d="M15 10h.01" />
     </>
   ),
 }

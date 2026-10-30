@@ -2993,21 +2993,18 @@ html.lenis{scroll-behavior:auto!important}
    its end state, returns, rests for about 900ms, and plays again (Font Gallery and Icon Library
    step through their faces and glyphs instead). The end-state rules below stay as the reduced-motion
    look and the keyframes at the foot of this section run over them; the exit is 150ms
-   ease-in on the base rule. Only transform, opacity, fill-opacity, stroke-width,
-   clip-path, background-position, colour and font family change, so the 48px row
+   ease-in on the base rule. The glyph stays a coloured line icon: its moments only
+   transform, fade, thicken or draw (stroke-dashoffset) strokes in the row's own hue, and never
+   paint a fill, a box or a background. Only transform, opacity, stroke-width,
+   stroke-dashoffset, background-position (the Palette name), colour and font family change, so the 48px row
    never moves. The name moves with the glyph on every row: it slides 3px along and
    takes the category colour; a row without a moment lifts its glyph instead. Touch and coarse pointers get nothing (the media query
    below); reduced motion gets no loop and the end state at once, because the global
    reduced-motion rule cuts every transition duration to 0 (Font Gallery and Icon Library hold one state). These moments deliberately use
-   gradients, gradient text and motion on a row hover, which the rest of the site
+   gradient text and motion on a row hover, which the rest of the site
    avoids. */
-.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450;--mm-bloom:linear-gradient(135deg in oklab,#EAB308,#F9A8D4,#C4B5FD);--mm-ok:var(--ok);--mm-warn:var(--warn);--mm-err:var(--err)}
-[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6;--mm-bloom:linear-gradient(135deg in oklab,#A16207,#BE185D,#6D28D9);--mm-ok:var(--ok-strong);--mm-warn:var(--warn-strong);--mm-err:var(--err-strong)}
-/* The Gradient bloom sits under the glyph's own strokes, and the glyph's diagonal runs along the
-   gradient's 50% band, so the middle stop is what the diagonal is drawn on. Every stop is chosen to
-   keep the glyph's strong colour (#854D0E light, #FDE047 dark) above 3:1: light 3.6 to 3.8, dark 3.7 to 5.4. */
-/* Gradient Library's two samples: Sun Flare and Aurora Sweep, copied from src/data/gradientGallery.js. */
-.pnav-menu{--mm-sun:radial-gradient(circle,#FDE68A 0%,#F97316 62%,#7C2D12 100%);--mm-aurora:conic-gradient(from 90deg,#22D3EE 0%,#818CF8 30%,#F472B6 62%,#22D3EE 100%)}
+.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450}
+[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6}
 /* The name: its own box with a fixed 20px line, so a face swap cannot grow the line
    box (a taller face made it 21px) and nudge the name. top-aligned so the font's
    baseline cannot move it either. */
@@ -3019,20 +3016,12 @@ html.lenis{scroll-behavior:auto!important}
 /* Rest states of the moving parts: the glyph looks as it always did. */
 .pnav-tool-ico{position:relative}
 .pnav-tool-ico svg{position:relative}
-.pnav-fx{position:absolute;pointer-events:none}
-.pnav-fx-g{left:10.5px;top:10.5px;width:11px;height:11px;border-radius:1.6px;background:var(--mm-bloom);clip-path:circle(0% at 0 100%)}
-/* Gradient Library: the glyph's front square (3.5 to 16 by 8 to 20.5 in the 24 grid, drawn at 18px
-   in the 32px tile), inset past the 1.2px stroke. Two library gradients stack in it, the glyph's
-   outline drawn above both. Sun Flare and Aurora Sweep are src/data/gradientGallery.js's own stops. */
-.pnav-fx-a,.pnav-fx-b{left:10.2px;top:13.6px;width:8.2px;height:8.2px;border-radius:1.3px;opacity:0}
-.pnav-fx-a{background:var(--mm-sun)}
-.pnav-fx-b{background:var(--mm-aurora)}
 .mm-gl .half{transform-origin:12px 12px}
 .mm-gl .rise{transform:translateY(15.5px)}
-.mm-gl .sb{transform-box:fill-box;transform-origin:0 50%;transform:scaleX(0);fill-opacity:.85}
-.mm-gl .s1{fill:var(--mm-ok)}
-.mm-gl .s2{fill:var(--mm-warn)}
-.mm-gl .s3{fill:var(--mm-err)}
+/* A line that draws in: pathLength is 1, so an offset of 1 hides all of it (the dash is 1 and the
+   gap 2, so no cap is left at the end) and 0 shows all of it. Thinner than the glyph's 1.6 so it
+   reads as detail inside the shape. */
+.mm-gl .dr{stroke-width:1.2;stroke-dasharray:1 2;stroke-dashoffset:1}
 .mm-gl .t1,.mm-gl .t2,.mm-gl .t3{transform-box:fill-box;transform-origin:50% 100%}
 /* Scaled strokes keep their width: 1.6 units at the 18px glyph is 1.2px. */
 .mm-gl .ts path{vector-effect:non-scaling-stroke;stroke-width:1.2px}
@@ -3040,12 +3029,11 @@ html.lenis{scroll-behavior:auto!important}
 .mm-gl .face{transform-origin:12px 12px}
 /* The right eye winks: the dot gives way to a short closed lid, so the wink reads as an eye closing. */
 .mm-gl .ew{opacity:0;fill:none}
-/* The inner frame scales about its own centre; its stroke stays 1.2px (1.6 units at 18px). */
-.mm-gl .in{transform-box:fill-box;transform-origin:50% 50%;vector-effect:non-scaling-stroke;stroke-width:1.2px}
-.mm-gl .f{fill:currentColor;fill-opacity:0;stroke:none}
-.mm-gl .c{opacity:0;stroke:none}
+/* The inner frame turns about its own centre; a turn leaves its stroke as drawn. */
+.mm-gl .in{transform-box:fill-box;transform-origin:50% 50%}
 .mm-gl .needle{transform-origin:12px 12px}
-.mm-gl .d{opacity:0;fill:currentColor;stroke:none}
+/* A dot is a zero-length stroke with a round cap, as the emoji eyes are. */
+.mm-gl .d{opacity:0;stroke-width:2.6}
 @media (hover:hover) and (pointer:fine){
   /* Exit: every moving part goes back in 150ms ease-in. */
   .pnav-tool-label,.pnav-tool-ico svg{transition:transform var(--mm-out),color var(--mm-out)}
@@ -3055,9 +3043,7 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-hue]:not([data-soon]):is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{color:var(--mm-s)}
   /* A row with no moment of its own: the glyph lifts 2px. */
   .pnav-tool:not([data-moment]):is(:hover,:focus-visible) .pnav-tool-ico svg{transform:translateY(-2px);transition:transform 280ms var(--mm-ease)}
-  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),fill-opacity var(--mm-out),stroke-width var(--mm-out)}
-  .pnav-fx-g{transition:clip-path var(--mm-out)}
-  .pnav-fx-a,.pnav-fx-b{transition:opacity var(--mm-out)}
+  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),stroke-dashoffset var(--mm-out),stroke-width var(--mm-out)}
   /* 1 Palette: the name takes a rainbow, swept in from the left. Every stop clears 4.5:1
      on the hover ground in both themes (5.6 to 6.5 light, 6.0 to 10.9 dark). The sweep is a
      window sliding over one fixed gradient in oklab, so no frame holds a colour
@@ -3066,16 +3052,18 @@ html.lenis{scroll-behavior:auto!important}
     .pnav-tool[data-moment="palette"] .pnav-tool-nm{background-image:linear-gradient(90deg in oklab,var(--mm-rainbow) 33.3%,var(--mm-nm-ink) 40%,var(--mm-nm-ink));background-size:300% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;transition:background-position var(--mm-out)}
     .pnav-tool[data-moment="palette"][data-live] .pnav-tool-nm{background-position:0 0;transition:background-position 480ms var(--mm-ease);animation:mm-palette 2540ms linear infinite}
   }
-  /* 2 Gradient: a mini gradient blooms from the glyph's lower-left corner. */
-  .pnav-tool[data-moment="gradient"][data-live] .pnav-fx-g{clip-path:circle(150% at 0 100%);transition:clip-path 420ms var(--mm-ease);animation:mm-gradient 2420ms linear infinite}
-  /* 3 Contrast Checker: the dark half of the disc turns 180deg. */
+  /* The lines that draw in (Gradient, Semantic, 3D Model, Palette Library, Gradient Library): each
+     draws in 220ms, holds, undraws; a later line waits 70ms behind the one before. */
+  .pnav-tool:is([data-moment="gradient"],[data-moment="semantic"],[data-moment="model-3d"],[data-moment="palette-library"],[data-moment="gradient-library"])[data-live] .dr{stroke-dashoffset:0;transition:stroke-dashoffset 220ms var(--mm-ease);animation:mm-draw 2040ms linear infinite backwards}
+  .pnav-tool[data-moment][data-live] .dr2{transition-delay:70ms;animation-delay:70ms}
+  .pnav-tool[data-moment][data-live] .dr3{transition-delay:140ms;animation-delay:140ms}
+  .pnav-tool[data-moment][data-live] .dr4{transition-delay:210ms;animation-delay:210ms}
+  /* 2 Gradient: banding lines draw in either side of the diagonal (the shared rule above). */
+  /* 3 Contrast Checker: the hatching on the shaded half turns 180deg to the other half. */
   .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 360ms var(--mm-ease);animation:mm-contrast 2320ms linear infinite}
-  /* 4 Tint: the ramp rises inside the drop. */
+  /* 4 Tint: the ramp lines rise inside the drop. */
   .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 380ms var(--mm-ease);animation:mm-tint 2340ms linear infinite}
-  /* 5 Semantic Colour: the bars fill with success, warning and error in turn. */
-  .pnav-tool[data-moment="semantic"][data-live] .sb{transform:none;transition:transform 220ms var(--mm-ease);animation:mm-bar 2040ms linear infinite backwards}
-  .pnav-tool[data-moment="semantic"][data-live] .s2{transition-delay:70ms;animation-delay:70ms}
-  .pnav-tool[data-moment="semantic"][data-live] .s3{transition-delay:140ms;animation-delay:140ms}
+  /* 5 Semantic Colour: a level line draws along the inside of each bar (the shared rule above). */
   /* 6 Font Gallery: PillNav steps the name through the shuffled ready faces, on a loop (style + data-face). */
   /* 7 Font Pair: "Font" in Literata 600, then "Pair" in Geist Mono 500, 90ms later.
      A face is used only once it is ready (data-faces on the menu root); until then
@@ -3105,24 +3093,15 @@ html.lenis{scroll-behavior:auto!important}
      matches the resting opacity, so nothing steps when the animation ends. */
   .pnav-tool[data-moment="file-converter"][data-live] .a1{animation:mm-run 2340ms linear infinite}
   .pnav-tool[data-moment="file-converter"][data-live] .a2{opacity:.4;animation:mm-run-back 2340ms linear infinite}
-  /* 12 Aspect: the inner frame turns from landscape (7 by 5 units) to portrait (5 by 8). */
-  .pnav-tool[data-moment="ratio"][data-live] .in{transform:scale(.714,1.6);transition:transform 340ms var(--mm-ease);animation:mm-frame 2280ms linear infinite}
-  /* 13 3D Model Converter: the cube takes light, its three faces at 55 / 28 / 12%. */
-  .pnav-tool[data-moment="model-3d"][data-live] .f{transition:fill-opacity 280ms var(--mm-ease);animation:mm-light 2280ms linear infinite}
-  .pnav-tool[data-moment="model-3d"][data-live] .f1{--mm-to:.55;fill-opacity:.55}
-  .pnav-tool[data-moment="model-3d"][data-live] .f2{--mm-to:.28;fill-opacity:.28}
-  .pnav-tool[data-moment="model-3d"][data-live] .f3{--mm-to:.12;fill-opacity:.12}
+  /* 12 Aspect: the inner frame turns a quarter, from landscape (7 by 5 units) to portrait (5 by 7). */
+  .pnav-tool[data-moment="ratio"][data-live] .in{transform:rotate(90deg);transition:transform 340ms var(--mm-ease);animation:mm-frame 2280ms linear infinite}
+  /* 13 3D Model Converter: a glint line draws across each of the cube's three faces (the shared rule above). */
   /* 14 Alt Text: the picture steps back to 30% and the T thickens (1.6 to 2.4). */
   .pnav-tool[data-moment="alt-text"][data-live] .pic{opacity:.3;transition:opacity 260ms var(--mm-ease);animation:mm-pic 2360ms linear infinite}
   .pnav-tool[data-moment="alt-text"][data-live] .tx{stroke-width:2.4;transition:stroke-width 260ms var(--mm-ease);animation:mm-tx 2360ms linear infinite}
-  /* 15 Palette Library: the four swatches fill with Terracotta Dusk, in reading order. */
-  .pnav-tool[data-moment="palette-library"][data-live] .c{opacity:1;transition:opacity 180ms var(--mm-ease);animation:mm-chip 2060ms linear infinite backwards}
-  .pnav-tool[data-moment="palette-library"][data-live] .c2{transition-delay:60ms;animation-delay:60ms}
-  .pnav-tool[data-moment="palette-library"][data-live] .c3{transition-delay:120ms;animation-delay:120ms}
-  .pnav-tool[data-moment="palette-library"][data-live] .c4{transition-delay:180ms;animation-delay:180ms}
-  /* 16 Gradient Library: Sun Flare, then Aurora Sweep fades in over it and holds. */
-  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-a{opacity:1;transition:opacity 160ms var(--mm-ease);animation:mm-flare 2600ms linear infinite}
-  .pnav-tool[data-moment="gradient-library"][data-live] .pnav-fx-b{opacity:1;transition:opacity 200ms var(--mm-ease) 220ms;animation:mm-aurora 2600ms linear infinite}
+  /* 15 Palette Library: a glint line draws across each swatch, in reading order (the shared rule above). */
+  /* 16 Gradient Library: banding lines draw into the front square (the shared rule above) while the sheet behind slides out. */
+  .pnav-tool[data-moment="gradient-library"][data-live] .sh{transform:translate(1.6px,-1.6px);transition:transform 260ms var(--mm-ease);animation:mm-sheet 2040ms linear infinite}
   /* 17 Inspiration: the compass needle swings a quarter turn to a new heading. */
   .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 420ms var(--mm-ease);animation:mm-needle 2540ms linear infinite}
   /* 18 Prompt Library: the line becomes three dots that each hop once, 2.4 units (about 1.8px) high. */
@@ -3138,22 +3117,18 @@ html.lenis{scroll-behavior:auto!important}
    its rest value; the delay is paid once and the offset then holds on every cycle. */
 /* Palette */
 @keyframes mm-palette{0%{background-position:100% 0;animation-timing-function:cubic-bezier(.23,1,.32,1)}18.9%{background-position:0 0;animation-timing-function:cubic-bezier(.4,0,.2,1)}50.39%{background-position:0 0;animation-timing-function:cubic-bezier(.4,0,.2,1)}64.57%{background-position:100% 0}100%{background-position:100% 0}}
-/* Gradient */
-@keyframes mm-gradient{0%{clip-path:circle(0% at 0 100%);animation-timing-function:cubic-bezier(.23,1,.32,1)}17.36%{clip-path:circle(150% at 0 100%);animation-timing-function:cubic-bezier(.4,0,.2,1)}50.41%{clip-path:circle(150% at 0 100%);animation-timing-function:cubic-bezier(.4,0,.2,1)}62.81%{clip-path:circle(0% at 0 100%)}100%{clip-path:circle(0% at 0 100%)}}
 /* Contrast */
 @keyframes mm-contrast{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}15.52%{transform:rotate(180deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.69%{transform:rotate(180deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}61.21%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
 /* Tint */
 @keyframes mm-tint{0%{transform:translateY(15.5px);animation-timing-function:cubic-bezier(.23,1,.32,1)}16.24%{transform:translateY(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}46.15%{transform:translateY(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}61.54%{transform:translateY(15.5px)}100%{transform:translateY(15.5px)}}
-/* Semantic */
-@keyframes mm-bar{0%{transform:scaleX(0);animation-timing-function:cubic-bezier(.23,1,.32,1)}10.78%{transform:scaleX(1);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.1%{transform:scaleX(1);animation-timing-function:cubic-bezier(.4,0,.2,1)}55.88%{transform:scaleX(0)}100%{transform:scaleX(0)}}
+/* Lines that draw in (Gradient, Semantic, 3D, Palette library, Gradient library) */
+@keyframes mm-draw{0%{stroke-dashoffset:1;animation-timing-function:cubic-bezier(.23,1,.32,1)}10.78%{stroke-dashoffset:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}45.1%{stroke-dashoffset:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}55.88%{stroke-dashoffset:1}100%{stroke-dashoffset:1}}
+/* Gradient library: the sheet behind */
+@keyframes mm-sheet{0%{transform:none;animation-timing-function:cubic-bezier(.23,1,.32,1)}12.75%{transform:translate(1.6px,-1.6px);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.1%{transform:translate(1.6px,-1.6px);animation-timing-function:cubic-bezier(.4,0,.2,1)}57.84%{transform:none}100%{transform:none}}
 /* Type scale */
 @keyframes mm-grow{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.91%{transform:scaleY(var(--mm-to));animation-timing-function:cubic-bezier(.4,0,.2,1)}45.61%{transform:scaleY(var(--mm-to));animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{transform:scaleY(1)}100%{transform:scaleY(1)}}
 /* Ratio */
-@keyframes mm-frame{0%{transform:scale(1);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.91%{transform:scale(.714,1.6);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.61%{transform:scale(.714,1.6);animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{transform:scale(1)}100%{transform:scale(1)}}
-/* 3D */
-@keyframes mm-light{0%{fill-opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}12.28%{fill-opacity:var(--mm-to);animation-timing-function:cubic-bezier(.4,0,.2,1)}47.37%{fill-opacity:var(--mm-to);animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{fill-opacity:0}100%{fill-opacity:0}}
-/* Palette library */
-@keyframes mm-chip{0%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}8.74%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}47.57%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}56.31%{opacity:0}100%{opacity:0}}
+@keyframes mm-frame{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.91%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}45.61%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}60.53%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
 /* Inspiration */
 @keyframes mm-needle{0%{transform:rotate(0deg);animation-timing-function:cubic-bezier(.23,1,.32,1)}16.54%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}48.03%{transform:rotate(90deg);animation-timing-function:cubic-bezier(.4,0,.2,1)}64.57%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
 /* Alt pic */
@@ -3171,9 +3146,6 @@ html.lenis{scroll-behavior:auto!important}
 /* File converter */
 @keyframes mm-run{0%{transform:translateX(0);animation-timing-function:cubic-bezier(.4,0,.2,1)}9.23%{transform:translateX(4px);animation-timing-function:cubic-bezier(.4,0,.2,1)}20.51%{transform:translateX(0)}100%{transform:translateX(0)}}
 @keyframes mm-run-back{0%{transform:translateX(0);opacity:1}2.56%{transform:translateX(0);opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}11.79%{transform:translateX(-4px);opacity:.7;animation-timing-function:cubic-bezier(.4,0,.2,1)}23.08%{transform:translateX(0);opacity:.4}48.72%{transform:translateX(0);opacity:.4;animation-timing-function:cubic-bezier(.4,0,.2,1)}61.54%{transform:translateX(0);opacity:1}100%{transform:translateX(0);opacity:1}}
-/* Gradient library */
-@keyframes mm-flare{0%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}6.15%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}53.85%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}65.38%{opacity:0}100%{opacity:0}}
-@keyframes mm-aurora{0%{opacity:0}8.46%{opacity:0;animation-timing-function:cubic-bezier(.23,1,.32,1)}16.15%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}53.85%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}65.38%{opacity:0}100%{opacity:0}}
 /* Prompt library */
 @keyframes mm-line{0%{opacity:1;animation-timing-function:ease-out}4.8%{opacity:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}52%{opacity:0;animation-timing-function:cubic-bezier(.4,0,.2,1)}64%{opacity:1}100%{opacity:1}}
 @keyframes mm-dots{0%{opacity:0}2.4%{opacity:0;animation-timing-function:ease-out}7.2%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}52%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.2,1)}64%{opacity:0}100%{opacity:0}}
@@ -3190,15 +3162,14 @@ html.lenis{scroll-behavior:auto!important}
    setting first, then the OS query unless the site setting says motion is on. The extra .pnav-menu
    outranks the Font Pair rules, which are the most specific of the loops. */
 html[data-reduced-motion="true"] .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
-html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.pnav-fx,.mm-gl *){animation:none}
+html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.mm-gl *){animation:none}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .pnav-tool[data-moment="icons"] :is(.i1,.i2,.i3,.i4,.i5){animation:none}
-  html:not([data-reduced-motion="false"]) .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.pnav-fx,.mm-gl *){animation:none}
+  html:not([data-reduced-motion="false"]) .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.mm-gl *){animation:none}
 }
-/* Forced colours: the rainbow clip off, the overlay hidden. */
+/* Forced colours: the rainbow clip off. */
 @media (forced-colors:active){
   .pnav-tool[data-moment="palette"] .pnav-tool-nm{background:none;color:CanvasText}
-  .pnav-fx{display:none}
 }
 
 /* The promo content (App lines 151-206): the file's pane, minus its box. It is
