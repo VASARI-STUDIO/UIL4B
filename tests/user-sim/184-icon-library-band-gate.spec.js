@@ -17,7 +17,7 @@
 //   ICON_GATE_COPY.end.anon.heading gets an em dash                           -> "the gate heading" and "no em dash"
 //   TEASE_ROWS goes back to 2 (utils/iconEndBand.js)                           -> "one blurred row"
 //   .ig-end-band loses its border-top / margin-top:20px (deferred/library.css) -> "the band sits 20px under the row"
-//   .ig-credit-lic goes back to font-family: var(--mono)                       -> "no label is set in mono"
+//   .sp-footer-notice-list goes back to font-family: var(--mono)               -> "no label is set in mono"
 //   .iel-page .ig-band top becomes calc(var(--nav-clear) + 8px)                -> "nothing paints between the nav and the band"
 //   .iel-page .ig .ic loses scroll-margin-top                                  -> "a focused cell is never under the band"
 //   the IntersectionObserver never sets data-stuck (IconLibrary.jsx)           -> "the band is marked stuck"
@@ -240,41 +240,19 @@ test.describe('the gate names what is on screen', () => {
 
 test.describe('the footer', () => {
   for (const width of WIDTHS) {
-    test(`${width}: a real page footer, left-aligned with the grid`, async ({ page }) => {
+    test(`${width}: the licence notice sits in the page footer, under the link columns`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, width)
-      const credit = page.locator('.ig-credit')
-      await expect(credit.locator('.ig-credit-label')).toHaveText('Icon sets on this page')
-      const list = (await credit.locator('.ig-credit-packs').textContent()).trim()
-      expect(list, 'the list is plain names with the licence in brackets').toBe('Lucide (ISC) · Tabler Icons (MIT) · Iconoir (MIT) · Heroicons (MIT) · Phosphor (MIT)')
-      await expect(credit.getByRole('link', { name: 'Every licence in full' })).toHaveAttribute('href', '/credits')
-      const spacing = await credit.evaluate((el) => {
-        const cs = getComputedStyle(el)
-        return { top: cs.marginTop, bottom: cs.paddingBottom, rule: cs.borderTopWidth, ruleStyle: cs.borderTopStyle }
-      })
-      expect(spacing, '56px above the hairline, 40px below the list').toEqual({ top: '56px', bottom: '40px', rule: '1px', ruleStyle: 'solid' })
-      const b = await boxes(page, { grid: '.ig', credit: '.ig-credit', label: '.ig-credit-label', packs: '.ig-credit-packs', more: '.ig-credit-more' })
-      expect(Math.abs(b.credit.l - b.grid.l), 'the footer starts where the grid starts').toBeLessThanOrEqual(1)
-      if (width >= 768) {
-        const mid = (x) => (x.t + x.b) / 2
-        expect(Math.abs(mid(b.label) - mid(b.more)), 'one row at 768 and up').toBeLessThanOrEqual(4)
-        expect(b.packs.l, 'the list sits between the label and the link').toBeGreaterThanOrEqual(b.label.r - 1)
-        expect(b.more.l).toBeGreaterThanOrEqual(b.packs.r - 1)
-      } else {
-        expect(b.packs.t, 'stacked: the list under the label').toBeGreaterThanOrEqual(b.label.b - 1)
-        expect(b.more.t, 'stacked: the link under the list').toBeGreaterThanOrEqual(b.packs.b - 1)
-        // A stacked list takes the height of its text. A flex-basis meant for the row would hold it open as a
-        // tall empty box above the link (measured 320px for three lines of text).
-        // The text's own height is measured with a Range: scrollHeight of a box held open is the box's height.
-        const text = await credit.locator('.ig-credit-packs').evaluate((el) => {
-          const range = document.createRange()
-          range.selectNodeContents(el)
-          return range.getBoundingClientRect().height
-        })
-        expect(b.more.t - b.packs.b, 'no empty gap between the list and the link').toBeLessThanOrEqual(16)
-        // A Range covers the glyph boxes, not the lines' leading, so allow one line height over it (the bug was 320px).
-        expect(b.packs.b - b.packs.t, 'the list is no taller than its text').toBeLessThanOrEqual(text + 18)
-      }
+      await expect(page.getByRole('contentinfo')).toHaveCount(1)
+      await expect(page.locator('.ig-credit'), 'the old strip under the grid is gone').toHaveCount(0)
+      const notice = page.getByRole('contentinfo').locator('.sp-footer-notice')
+      await expect(notice.locator('.sp-footer-notice-h')).toHaveText('Icon sets on this page')
+      const list = (await notice.locator('.sp-footer-notice-list').textContent()).replace(/\s+/g, ' ').trim()
+      expect(list, 'the list is names with the licence in brackets, then the link').toBe('Lucide (ISC), Tabler Icons (MIT), Iconoir (MIT), Heroicons (MIT), Phosphor (MIT). Every licence in full')
+      await expect(notice.getByRole('link', { name: 'Every licence in full' })).toHaveAttribute('href', '/credits')
+      const b = await boxes(page, { grid: '.sp-footer-grid', notice: '.sp-footer-notice', legal: '.sp-footer-legal' })
+      expect(b.notice.t, 'the notice is under the columns').toBeGreaterThanOrEqual(b.grid.b - 1)
+      expect(b.legal.t, 'the baseline is under the notice').toBeGreaterThanOrEqual(b.notice.b - 1)
     })
   }
 })
@@ -291,7 +269,7 @@ test('no label in the gate or the footer is set in mono, none is uppercase mono,
     const bad = []
     let seen = 0
     let text = ''
-    for (const root of document.querySelectorAll('.ig-end, .ig-credit')) {
+    for (const root of document.querySelectorAll('.ig-end, .sp-footer-notice')) {
       text += root.innerText
       for (const el of [root, ...root.querySelectorAll('*')]) {
         if (!el.getClientRects().length) continue

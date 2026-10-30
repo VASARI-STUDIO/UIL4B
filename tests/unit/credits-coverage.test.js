@@ -170,20 +170,25 @@ test('a live answer lays over the table without being able to blank it', () => {
  * The defect in one line: the only attribution string in the app rendered when
  * `pack === 'logodev'` and vanished otherwise. */
 
-test('the attribution under the icon grid is unconditional', () => {
-  const rendered = /<IconPackCredit packs=\{packsOnScreen\(([^)]*)\)\} \/>/.exec(ICON_PAGE)
-  assert.ok(rendered, 'IconLibrary.jsx no longer renders <IconPackCredit packs={packsOnScreen(...)} />')
-  // It must sit OUTSIDE the isMyIcons branch and outside the loading, gated and
-  // error conditions. Checked structurally: the render site is after the
-  // fragment that closes the icons branch, at the same depth as <UIKitGuide>.
-  const at = ICON_PAGE.indexOf('<IconPackCredit')
-  const guide = ICON_PAGE.indexOf('<UIKitGuide step="icons" />')
-  assert.ok(at > -1 && guide > at,
-    'the credit no longer renders immediately before <UIKitGuide>, which is the one '
-    + 'place on this surface that is outside every conditional')
-  const line = ICON_PAGE.slice(ICON_PAGE.lastIndexOf('\n', at), guide)
-  assert.ok(!/\{\s*(loading|gated|pack|source|query|isMyIcons)\b/.test(line),
-    `the credit has been wrapped in a condition: ${line.trim()}`)
+test('the attribution for the icon grid is reported unconditionally and drawn in the footer', () => {
+  // The grid reports its licence rows from a top-level effect of the component:
+  // not inside the isMyIcons branch and not behind a loading, gated or error
+  // condition. Checked structurally: the report is an effect whose first
+  // statement is the `onCredits` guard, and the effect body names no state.
+  const at = ICON_PAGE.indexOf('creditRows(packsOnScreen(icons, recents)')
+  assert.ok(at > -1, 'IconLibrary.jsx no longer reports creditRows(packsOnScreen(icons, recents), ...)')
+  const effect = ICON_PAGE.slice(ICON_PAGE.lastIndexOf('useEffect(', at), at)
+  assert.match(effect, /useEffect\(\(\) => \{\s*if \(!onCredits\) return\s*const rows = $/,
+    'the credit report is no longer a plain effect that runs on every render')
+  assert.ok(!/\b(loading|gated|isMyIcons|source|query)\b/.test(effect),
+    `the credit report has been wrapped in a condition: ${effect.trim()}`)
+  // The old strip is gone: the notice lives in the footer, inside contentinfo.
+  assert.ok(!ICON_PAGE.includes('IconPackCredit') && !ICON_PAGE.includes('ig-credit'),
+    'IconLibrary.jsx still draws its own credit strip as well as reporting to the footer')
+  const create = stripComments(read('src/pages/CreateTool.jsx'))
+  assert.match(create, /<SpectrumFooter notice=\{<IconCredits rows=\{credits\.rows\} scope=\{credits\.scope\} \/>\} \/>/,
+    'CreateTool no longer draws the licence notice in the footer on the icon routes')
+  assert.match(create, /onCredits=\{wearsSpectrumFooter \? reportCredits : undefined\}/, 'CreateTool no longer hands the library its credit report')
 })
 
 test('the credit names the packs in view, including the fallback grid’s', () => {
@@ -197,7 +202,8 @@ test('the credit names the packs in view, including the fallback grid’s', () =
 })
 
 test('the credit links to /credits, and /credits is a route', () => {
-  assert.match(ICON_PAGE, /<Link to="\/credits">/, 'the icon grid no longer links to the credits page')
+  assert.match(stripComments(read('src/components/library/IconCredits.jsx')), /<Link to="\/credits">/,
+    'the icon sets\' footer notice no longer links to the credits page')
   assert.ok(PAGE_TITLES['/credits'], '/credits has no title in routeMetaMap.js')
   assert.ok(prerenderRoutes().includes('/credits'),
     '/credits is linked from the icon library but gets no crawlable shell')

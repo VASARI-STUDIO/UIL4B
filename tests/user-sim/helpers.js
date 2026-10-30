@@ -160,6 +160,14 @@ export function watch(page, persona) {
     const roadmapCountsUnreachable = persona === 'signed-out visitor looking at the roadmap'
       && /Could not reach Cloud Firestore backend/.test(msg.text())
     if (roadmapCountsUnreachable) return
+    // 192-font-catalogue-static.spec.js aborts /data/font-catalogue.json (and
+    // /api/fonts) ON PURPOSE, to see the saved copy or the banner stand in for
+    // them. Chromium logs the aborted fetch; keyed on the persona AND the file,
+    // so a failed catalogue download in any other spec still surfaces.
+    const deliberateCatalogueAbort = /^(?:returning|first-time) visitor behind a blocker$/.test(persona)
+      && /ERR_FAILED/.test(msg.text())
+      && /\/data\/font-catalogue\.json/.test(url)
+    if (deliberateCatalogueAbort) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`
@@ -844,7 +852,7 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  *
  *     /api/fonts answered      ready at 188ms   .typ-loading 0   .fg-card 24
  *     /api/fonts held open     ready at 148ms   .typ-loading 1   .fg-card  0
- *                              settled at 2530ms                 .fg-card 24
+ *                              settled at 2530ms (2000ms bound at the time) .fg-card 24
  *
  * Zero rows, from a gallery that was working perfectly. That is the third
  * mechanism in `suite-flake-class-unreproduced`, and it is a different one from
@@ -853,9 +861,9 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  * with ZERO occurrences of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no
  * font-related file, and it passed 8 of 8 in isolation.
  *
- * The 2530ms is the app's own bound, not a guess: `requestCatalogJson` in
- * src/utils/googleFonts.js aborts each source after
- * FONT_CATALOG_SOURCE_TIMEOUT_MS (2000), and `fetchFontCatalog` never rejects —
+ * That settle time is the app's own bound, not a guess: `requestCatalogJson` in
+ * src/utils/googleFonts.js now waits up to
+ * FONT_CATALOG_SOURCE_TIMEOUT_MS (8000) for response headers, and `fetchFontCatalog` never rejects —
  * it always resolves to the 84-family bundled list. So this is a wait for a
  * state the app GUARANTEES terminates, not a widened timeout, and the 20s
  * backstop below is unchanged.
@@ -868,7 +876,9 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  *      no VITE_GOOGLE_FONTS_API_KEY in the test build, googleFonts.js skips the
  *      Google branch entirely and the only request is /api/fonts, which `vite
  *      preview` answers locally with a 404. Measured above: one hit, settled in
- *      188ms.
+ *      188ms. (The one exception is the static /data/font-catalogue.json, which
+ *      `vite preview` would serve for real; base.js answers it with a 404 so
+ *      these specs keep the catalogue they were written against.)
  *   2. The degraded catalogue is a SHIPPED product state with its own notice and
  *      retry, and 33-offline-state and 11-typography-tools exercise it on
  *      purpose. A stub would have to reproduce live/cache/fallback faithfully or
@@ -886,7 +896,7 @@ const DATA_LOADING_HINT = '\n\n  The route arrived and then the TOOL showed its 
   + ' <FontCatalogLoading>, which the typography tools render INSTEAD of their workbench while'
   + ' the Google Fonts catalogue is in flight. A measurement taken here reads the skeleton — the'
   + ' gallery reports zero rows from a gallery that is working. fetchFontCatalog always resolves'
-  + ' (bundled list after a 2000ms bound per source), so a page still in this state after the'
+  + ' (bundled list after an 8000ms header bound per source), so a page still in this state after the'
   + ' backstop means the catalogue request itself is wedged, not merely slow.'
 
 /**

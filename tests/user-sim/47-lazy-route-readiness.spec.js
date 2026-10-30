@@ -408,8 +408,9 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
    * <FontCatalogLoading> INSTEAD of their workbench while the catalogue is in
    * flight, and `ready()` knew only about App.jsx's `.page-loading`.
    *
-   * Held by never answering /api/fonts. The hold releases itself: googleFonts.js
-   * aborts each source after FONT_CATALOG_SOURCE_TIMEOUT_MS (2000) and always
+   * Held by never answering /api/fonts (the static catalogue is a 404 from base.js).
+   * The hold releases itself: googleFonts.js
+   * aborts each source after FONT_CATALOG_SOURCE_TIMEOUT_MS (8000) and always
    * resolves to the bundled list, so this is a wait for a state the app
    * GUARANTEES terminates rather than a widened timeout.
    */
