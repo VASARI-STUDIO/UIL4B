@@ -100,7 +100,7 @@ test.describe('the export panel, as a free account', () => {
         `${fmt.name} must be named in the "on the way" line`).toContainText(fmt.coming.replace(/^an? /, ''), { ignoreCase: true })
     }
     await expect(panel.getByRole('button', { name: /Soon/ })).toHaveCount(0)
-    await expect(panel.getByRole('button', { name: /Tailwind|Asset bundle/i }), 'and no button of any kind for them').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /Asset bundle/i }), 'and no button of any kind for them').toHaveCount(0)
   })
 
   test('a built free format hands over a real file — the control', async ({ page }) => {

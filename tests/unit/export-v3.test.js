@@ -12,6 +12,7 @@ import {
   presetFromGalleryPick, readLastPick, resolvePreset, resolveUpgradeTarget, storeLastPick,
 } from '../../src/config/dialogExport.js'
 import { GALLERY_CHECKOUT, GALLERY_DESIGNS, GALLERY_FORMATS, normalisePick } from '../../src/utils/kitGalleryPick.js'
+import { codeFileName, CODE_FILES, isCodeFile, buildCodeFile } from '../../src/utils/codeFiles.js'
 
 const memory = () => {
   const m = new Map()
@@ -23,7 +24,7 @@ const allCategories = EXPORT_TYPES.flatMap((t) => t.categories)
 
 test('every live format is in exactly one category, and no category lists a format that is not live', () => {
   const live = EXPORT_FORMATS.filter((f) => f.live).map((f) => f.id)
-  assert.deepEqual([...live].sort(), ['book', 'book-html', 'book-png', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png'])
+  assert.deepEqual([...live].sort(), ['book', 'book-html', 'book-png', 'contrast', 'contrast-json', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png', 'tailwind'])
   for (const id of live) {
     const homes = allCategories.filter((c) => c.files.includes(id))
     assert.equal(homes.length, 1, `${id} is in ${homes.length} categories`)
@@ -114,7 +115,7 @@ test('every file resolves to its own category', () => {
       assert.deepEqual(resolvePreset({ file }), { type: home.type.id, category: c.id, file })
     }
   }
-  assert.equal(exportLocation('tailwind'), null)
+  assert.equal(exportLocation('assets'), null)
 })
 
 test('the last pick is kept for the session, resolved, and an unreadable store reads as none', () => {
@@ -161,7 +162,7 @@ test('anyone else goes to /plans: signed out, or no saved project', () => {
 })
 
 test('a free file has no upgrade pick, so it can never be sent to checkout', () => {
-  for (const id of ['kit', 'html', 'md', 'png', 'jpeg', 'css', 'json']) {
+  for (const id of ['kit', 'html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json']) {
     assert.equal(galleryPick(id), null, id)
     assert.equal(resolveUpgradeTarget({ formatId: id, projectId: 'p1', signedIn: true }).to, '/plans')
   }
@@ -198,7 +199,7 @@ test('the gallery offers the book as PNG pages', () => {
 
 test('offline: the book, the slides and the kit need the network; the style guide and the code files do not', () => {
   for (const id of ['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'kit']) assert.equal(needsNetwork(id), true, id)
-  for (const id of ['html', 'md', 'png', 'jpeg', 'css', 'json']) assert.equal(needsNetwork(id), false, id)
+  for (const id of ['html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json']) assert.equal(needsNetwork(id), false, id)
 })
 
 // ── The runner's source ─────────────────────────────────────────────────────
@@ -243,4 +244,37 @@ test('the runner exports one hook with the contract names, and copy() never runs
   assert.ok(copyBody.length > 100)
   assert.doesNotMatch(copyBody, /requireExportAccount|navigate|reportUpgradeGate/)
   assert.match(copyBody, /navigator\.clipboard\.writeText/)
+})
+
+// ── The Code files ──────────────────────────────────────────────────────────
+
+test('the Code category lists the five Code files, in order, and each is built by codeFiles.js', () => {
+  const code = allCategories.find((c) => c.id === 'code')
+  assert.deepEqual([...code.files], ['css', 'json', 'tailwind', 'contrast', 'contrast-json'])
+  assert.deepEqual(Object.keys(CODE_FILES), [...code.files])
+  for (const id of code.files) {
+    assert.equal(isCodeFile(id), true, id)
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    assert.equal(f.live && !f.pro, true, `${id} is live and free`)
+    assert.ok(f.desc.length > 20 && !f.desc.includes('—'), `${id} has an honest one-line description`)
+  }
+  assert.equal(isCodeFile('book'), false)
+})
+
+test('Code files are named {slug}.tokens.css, .tokens.json, -tailwind.css, -contrast-pairs.csv and .json', () => {
+  assert.deepEqual(
+    ['css', 'json', 'tailwind', 'contrast', 'contrast-json'].map((id) => codeFileName(id, 'lumen')),
+    ['lumen.tokens.css', 'lumen.tokens.json', 'lumen-tailwind.css', 'lumen-contrast-pairs.csv', 'lumen-contrast-pairs.json'],
+  )
+})
+
+test('every Code file builds from a design, and only the files with a place for a credit carry one', async () => {
+  const design = { palette: { colors: ['#1F4B8E', '#F4F1EA', '#1B2433'] } }
+  for (const id of Object.keys(CODE_FILES)) {
+    const free = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
+    const pro = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: false })
+    assert.ok(free.length > 100, id)
+    assert.equal(free.includes('Made with UIL4B'), ['css', 'json', 'tailwind'].includes(id), `${id}: credit on a free build`)
+    assert.equal(pro.includes('Made with UIL4B'), false, `${id}: no credit on a Pro build`)
+  }
 })
