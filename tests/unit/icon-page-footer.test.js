@@ -79,10 +79,73 @@ test('the icon library ends with the close and the strip, once, after its panels
   assert.ok(!/data-sp-reveal/.test(read('src/components/spectrum/SpectrumClose.jsx')))
 })
 
-test('the grid stops loading by itself after three pages and offers a button', () => {
+// The reveal rule, run for real. revealPage is lifted out of the page's source and
+// executed against stand-ins for its refs, setVisible and requestAnimationFrame, so
+// the test sees what it does (how far `visible` moves), not how it is spelled.
+function loadRevealPage(src) {
+  const start = src.indexOf('const revealPage = useCallback(')
+  const end = src.indexOf('}, [])', start)
+  assert.ok(start > -1 && end > start, 'revealPage is no longer a useCallback with no dependencies')
+  const body = `return (${src.slice(start, end + 1).replace('const revealPage = useCallback(', '')})`
+  const num = (name) => Number(src.match(new RegExp(`const ${name} = (\\d+)`))[1])
+  const PAGE_SIZE = num('PAGE_SIZE')
+  const REVEAL_CHUNK = num('REVEAL_CHUNK')
+  const AUTO_REVEAL_LIMIT = PAGE_SIZE * Number(src.match(/const AUTO_REVEAL_LIMIT = PAGE_SIZE \* (\d+)/)[1])
+  const make = (visibleAt, total) => {
+    const state = { visible: visibleAt, frames: [] }
+    const raf = (fn) => { state.frames.push(fn); return state.frames.length }
+    const setVisible = (n) => { state.visible = n }
+    const revealPage = new Function(
+      'revealRef', 'visibleRef', 'totalRef', 'AUTO_REVEAL_LIMIT', 'PAGE_SIZE', 'REVEAL_CHUNK', 'setVisible', 'requestAnimationFrame',
+      body,
+    )({ current: 0 }, { current: visibleAt }, { current: total }, AUTO_REVEAL_LIMIT, PAGE_SIZE, REVEAL_CHUNK, setVisible, raf)
+    // Run every queued animation frame, as the browser would.
+    const settle = () => { while (state.frames.length) state.frames.shift()() }
+    return { state, revealPage, settle }
+  }
+  return { make, PAGE_SIZE, AUTO_REVEAL_LIMIT }
+}
+
+test('the grid stops loading by itself after the automatic pages, then offers a button', () => {
   const src = stripComments(read('src/pages/IconLibrary.jsx'))
-  assert.match(src, /const AUTO_REVEAL_LIMIT = PAGE_SIZE \* 4/)
-  assert.match(src, /visible < AUTO_REVEAL_LIMIT\s*\? <div ref=\{sentinelRef\} className="ig-sentinel" \/>/,
-    'the sentinel is no longer swapped for the button past the limit')
-  assert.match(src, /onClick=\{revealPage\}/)
+
+  // 1. At the limit the sentinel is replaced by the button, which forces a reveal.
+  assert.match(src, /hasMore && \(visible < AUTO_REVEAL_LIMIT\s*\? <div ref=\{sentinelRef\} className="ig-sentinel" \/>\s*: \(/,
+    'past the limit the sentinel is no longer swapped for something else')
+  const more = src.slice(src.indexOf('className="ig-more"'))
+  assert.match(more.slice(0, more.indexOf('</div>')), /<button[^>]*onClick=\{\(\) => revealPage\(true\)\}/,
+    'the button no longer forces a reveal')
+  // The observer path calls revealPage with no argument, so it can never force one.
+  assert.match(src, /if \(e\.isIntersecting\) revealPage\(\)\s*\n/, 'the observer must call revealPage() with no force flag')
+
+  const { make, PAGE_SIZE, AUTO_REVEAL_LIMIT } = loadRevealPage(src)
+  const total = AUTO_REVEAL_LIMIT * 3
+
+  // 2. The observer path (no argument) reveals below the limit...
+  const below = make(AUTO_REVEAL_LIMIT - PAGE_SIZE, total)
+  below.revealPage()
+  below.settle()
+  assert.equal(below.state.visible, AUTO_REVEAL_LIMIT, 'the last automatic page did not load')
+
+  // ...and bails at it, which is what a stale observer callback hits after the last chunk.
+  const atLimit = make(AUTO_REVEAL_LIMIT, total)
+  atLimit.revealPage()
+  atLimit.settle()
+  assert.equal(atLimit.state.visible, AUTO_REVEAL_LIMIT, 'the observer path went past AUTO_REVEAL_LIMIT')
+  // A click event object is not a force: only a literal true is.
+  atLimit.revealPage({ type: 'click' })
+  atLimit.settle()
+  assert.equal(atLimit.state.visible, AUTO_REVEAL_LIMIT, 'a non-true argument forced a reveal')
+
+  // 3. The button (revealPage(true)) reveals exactly one more page from the limit.
+  const forced = make(AUTO_REVEAL_LIMIT, total)
+  forced.revealPage(true)
+  forced.settle()
+  assert.equal(forced.state.visible, AUTO_REVEAL_LIMIT + PAGE_SIZE, 'the button did not reveal one page')
+
+  // The forced page stops at the end of the list when fewer than a page remain.
+  const tail = make(AUTO_REVEAL_LIMIT, AUTO_REVEAL_LIMIT + 7)
+  tail.revealPage(true)
+  tail.settle()
+  assert.equal(tail.state.visible, AUTO_REVEAL_LIMIT + 7)
 })
