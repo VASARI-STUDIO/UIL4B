@@ -54,16 +54,24 @@ export function reducedMotion() {
 
 // ── Faces ──
 // Geist Mono is on every page already, so it counts as ready without a fetch (it
-// is the one face Font Pair and Font Gallery still have when Save-Data is on).
-// The `onPage` flag marks it.
+// is the one site face Font Pair and Font Gallery still have when Save-Data is on).
+// The `onPage` flag marks it, and `system` marks the stacks that are installed on
+// the device: neither is ever fetched, and a `system` one is not even loaded.
 // Literata and Big Shoulders Display are self-hosted (public/fonts, declared in
 // global.css) and are fetched ONCE, the first time the Create or Discover menu
 // opens on a hover-capable device. Caveat is left out: with it
-// the warm set is 171KB against the 150KB budget; without it, 121KB.
+// the warm set is 171KB against the 150KB budget; without it, 121KB. The system
+// stacks add nothing to that, which is how the Font Gallery loop gets past
+// three faces. A stack whose font is not installed falls back to its generic
+// family, so a device may show two steps alike; none ever shows an unready face.
 export const FACES = [
   { key: 'mono', family: '"Geist Mono", monospace', weight: 500, probe: '500 14.5px "Geist Mono"', onPage: true },
   { key: 'literata', family: 'Literata, serif', weight: 500, probe: '500 14.5px Literata' },
   { key: 'shoulders', family: '"Big Shoulders Display", sans-serif', weight: 700, probe: '700 14.5px "Big Shoulders Display"' },
+  { key: 'georgia', family: 'Georgia, "Times New Roman", serif', weight: 400, probe: '400 14.5px Georgia', onPage: true, system: true },
+  { key: 'courier', family: '"Courier New", Courier, monospace', weight: 700, probe: '700 14.5px "Courier New"', onPage: true, system: true },
+  { key: 'ui', family: 'system-ui, sans-serif', weight: 600, probe: '600 14.5px system-ui', onPage: true, system: true },
+  { key: 'trebuchet', family: '"Trebuchet MS", sans-serif', weight: 700, probe: '700 14.5px "Trebuchet MS"', onPage: true, system: true },
 ]
 export const faceByKey = (key) => FACES.find((f) => f.key === key) || null
 
@@ -91,24 +99,34 @@ export function warmFaces() {
   if (warming) return warming
   if (typeof document === 'undefined' || !document.fonts?.load) return Promise.resolve()
   if (!finePointer() || navigator.connection?.saveData) return Promise.resolve()
-  warming = Promise.all(FACES.map((f) =>
+  warming = Promise.all(FACES.filter((f) => !f.system).map((f) =>
     document.fonts.load(f.probe).then((r) => { if (r.length) loaded.add(f.key) }).catch(() => {}),
   ))
   return warming
 }
 
 // ── Font Gallery ──
-// Three swaps, 170ms apart, landing on a random ready face and never on the same
-// one twice running. Returns the faces in order; with reduced motion, or only one
-// face ready, it is just the landing face (Literata when it is ready).
-let lastLanding = null
+// The name steps through every ready face, one every GALLERY_STEP_MS, and loops
+// for as long as the row stays live. The order is shuffled once per hover, so no
+// face repeats until the loop has been all the way round; the wrap from the last
+// back to the first differs too, and a hover does not open on the face the last
+// one did. Returns the faces in order; with reduced motion, or only one face
+// ready, it is just the one landing face (Literata when it is ready) and
+// nothing loops.
+let lastOpening = null
 export function galleryRun() {
   const ready = readyFaces()
   if (!ready.length) return []
   if (reducedMotion()) return [ready.find((f) => f.key === 'literata') || ready[0]]
-  const pool = ready.slice().sort(() => Math.random() - 0.5)
-  const land = pool.find((f) => f.key !== lastLanding) || pool[0]
-  lastLanding = land.key
-  return pool.filter((f) => f !== land).slice(0, 2).concat(land)
+  const order = ready.slice()
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[order[i], order[j]] = [order[j], order[i]]
+  }
+  // A rotation keeps every neighbour pair different, wrap included.
+  if (order.length > 2 && order[0].key === lastOpening) order.push(order.shift())
+  lastOpening = order[0].key
+  return order
 }
-export const GALLERY_STEP_MS = 170
+// A calm step, not a flicker. The Icons loop in global.css keeps the same pace.
+export const GALLERY_STEP_MS = 360
