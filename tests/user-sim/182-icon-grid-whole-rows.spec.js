@@ -15,9 +15,9 @@
 //   anonCapForCols returns ANON_ICON_CAP (data/iconGridRows.js)   -> "the grid ends on a full row" (65 becomes 60)
 //   IconLibrary stops trimming with capAnonList(fetchedIcons, anonCap)  -> "the grid ends on a full row" (75 cells)
 //   the measuring effect never calls setGridCols                    -> "the grid ends on a full row" (60 at 1440)
-//   .ic .ic-pack loses opacity:0 and visibility:hidden (global.css) -> "no pack name shows at rest"
-//   .ic .ic-pack loses position:absolute (global.css)               -> "the pack name takes no room in the cell" (the hover test alone stays green: a hidden in-flow label still holds its row)
-//   the :focus-visible rule is deleted (global.css)                 -> "keyboard focus on a cell shows its pack name"
+//   the hover-capable `.ic :is(.ic-name,.ic-pack){opacity:0}` rule (library.css) is deleted -> "no pack name shows at rest"
+//   the label leaves the tile's fixed 30px label band (library.css) -> "the pack name never changes the cell's box"
+//   :focus-visible leaves the `:is(:hover,:focus-visible,.is-picked)` rule (library.css) -> "keyboard focus on a cell shows its pack name"
 //   the @media (hover:none) display:none rule is deleted            -> "where nothing can hover the pack name is never drawn"
 //   cellLabel drops the pack (IconLibrary.jsx)                      -> "every cell's accessible name carries its pack"
 import { test, expect } from './base.js'
@@ -85,11 +85,11 @@ test.describe('the pack name shows on hover only', () => {
     await loadedCells(page)
     const packs = page.locator('.ig .ic .ic-pack')
     expect(await packs.count(), 'the All packs view carries a pack name on every cell').toBe(65)
-    // Rest: none is visible (hidden, not merely transparent).
-    for (const state of await packs.evaluateAll((els) => els.map((el) => getComputedStyle(el).visibility))) {
-      expect(state).toBe('hidden')
+    // Rest: none is drawn. The label stays in the render tree (opacity, not visibility), so it is
+    // transparent rather than hidden, and the cell keeps its box.
+    for (const state of await packs.evaluateAll((els) => els.map((el) => getComputedStyle(el).opacity))) {
+      expect(state).toBe('0')
     }
-    await expect(packs.first()).toBeHidden()
 
     const cell = page.locator('.ig .ic').nth(3)
     const box = (loc) => loc.evaluate((el) => {
@@ -102,24 +102,28 @@ test.describe('the pack name shows on hover only', () => {
     await expect(label).toBeVisible()
     await expect.poll(() => label.evaluate((el) => getComputedStyle(el).opacity), { message: 'the label fades in' }).toBe('1')
     expect(await box(cell), 'the pack name appears without moving the cell').toEqual(before)
-    // It sits in the cell's top-left, inside the cell.
+    // It sits under the name, inside the cell and centred in it.
     const inside = await cell.evaluate((el) => {
       const c = el.getBoundingClientRect()
       const l = el.querySelector('.ic-pack').getBoundingClientRect()
-      return { left: l.left - c.left, top: l.top - c.top, right: c.right - l.right }
+      const n = el.querySelector('.ic-name').getBoundingClientRect()
+      return { left: l.left - c.left, top: l.top - c.top, right: c.right - l.right, bottom: c.bottom - l.bottom, belowName: l.top - n.bottom }
     })
     expect(inside.left).toBeGreaterThanOrEqual(0)
     expect(inside.top).toBeGreaterThanOrEqual(0)
     expect(inside.right).toBeGreaterThanOrEqual(0)
+    expect(inside.bottom).toBeGreaterThanOrEqual(0)
+    expect(inside.belowName, 'the pack name sits on a line under the name').toBeGreaterThanOrEqual(-1)
+    expect(Math.abs(inside.left - inside.right), 'the pack name is centred in the cell').toBeLessThanOrEqual(1)
     expect(await label.evaluate((el) => getComputedStyle(el).fontFamily), 'the label is UI sans, not mono').not.toMatch(/mono/i)
     // Leaving puts it away again, and only that cell showed it.
     await page.mouse.move(2, 2)
-    await expect(label).toBeHidden()
+    await expect.poll(() => label.evaluate((el) => getComputedStyle(el).opacity), { message: 'the label goes away again' }).toBe('0')
     expect(await box(cell)).toEqual(before)
   })
 
   for (const width of [1440, 390]) {
-    test(`at ${width} the pack name takes no room in the cell, shown or not`, async ({ page }) => {
+    test(`at ${width} the pack name never changes the cell's box, shown or not`, async ({ page }) => {
       watch(page, PERSONA)
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/icons')
@@ -132,7 +136,7 @@ test.describe('the pack name shows on hover only', () => {
       }))
       const withLabel = await layout()
       expect(withLabel.length).toBeGreaterThan(0)
-      // Take the label out of the page altogether: if it held a row of its own, everything would now move.
+      // Take the label out of the page altogether: it lives inside the tile's fixed label band, so nothing moves.
       await page.addStyleTag({ content: '.ig .ic .ic-pack { display: none !important }' })
       expect(await layout(), 'with the pack label removed from the page no cell, glyph or name moves').toEqual(withLabel)
       // All the rows are one height, so a row is the same whichever cells it holds.
@@ -154,9 +158,12 @@ test.describe('the pack name shows on hover only', () => {
     expect(landed, 'Tab reaches the grid').toBe(true)
     const focused = page.locator('.ig .ic:focus-visible')
     await expect(focused).toHaveCount(1)
-    await expect(focused.locator('.ic-pack')).toBeVisible()
+    const opaque = () => page.locator('.ig .ic .ic-pack').evaluateAll((els) => els.filter((el) => getComputedStyle(el).opacity === '1').length)
+    await expect.poll(opaque, { message: 'the focused cell shows its pack name, and only it' }).toBe(1)
+    await expect.poll(() => focused.locator('.ic-pack').evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
     await page.keyboard.press('Tab')
-    await expect(page.locator('.ig .ic .ic-pack:visible')).toHaveCount(1)
+    await expect(page.locator('.ig .ic:focus-visible')).toHaveCount(1)
+    await expect.poll(opaque, { message: 'moving on puts the first one away and shows the next' }).toBe(1)
   })
 
   test('where nothing can hover the pack name is never drawn', async ({ browser }) => {

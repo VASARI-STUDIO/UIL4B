@@ -138,8 +138,9 @@ test.describe('the icon grid while glyph images are still loading', () => {
     const afterBox = await page.locator('.ic').first().boundingBox()
     expect(Math.abs(afterBox.y - before.y)).toBeLessThanOrEqual(2)
     expect(afterBox.height).toBeCloseTo(before.height, 1)
-    // The tile transitions its hover/press properties only, never `all`.
-    await expect(page.locator('.ig .ic').first()).toHaveCSS('transition-property', 'background-color, border-color, transform')
+    // The tile transitions its press scale only, never `all`: the frame shows at once and the
+    // name and pack label fade on their own spans.
+    await expect(page.locator('.ig .ic').first()).toHaveCSS('transition-property', 'transform')
   })
 })
 
