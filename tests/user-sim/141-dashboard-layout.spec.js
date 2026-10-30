@@ -30,7 +30,7 @@
 //   Projects.jsx   `!hasProjects` branch returns null (no starter)  -> "an account with no projects"
 //   projects.css   `.uh .uh-link, .uh .uh-open { min-height: 30px }` and
 //                  `.uh .uh-cta` to 30px                    -> "every button and link on a phone is 44px"
-//   projects.css   `.uh .uh-quick { min-width: 520px }`     -> "no horizontal overflow"
+//   projects.css   `.uh .uh-tools { min-width: 520px }`     -> "no horizontal overflow" (the 390 case; was `.uh-quick`, retired)
 // Round 2 (same method; all made in one build, each named test went red, then restored):
 //   StarterCard    heading always 'Start your first project'      -> "when every project is archived the starter leads"
 //   ProjectRows    drop 'Colour not set · ' from the row            -> "a row whose Colour is not set draws a dashed empty box"

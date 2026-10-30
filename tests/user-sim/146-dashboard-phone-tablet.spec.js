@@ -4,29 +4,35 @@
 // (hasTouch + isMobile, so the coarse-pointer rules and the mobile viewport apply):
 //
 //   390   section order · the date and time as one line under the title, weekday dropped below 360 ·
-//         two-line project rows · New project full width under the work · no sideways scroll at 320 ·
-//         44px targets · Feedback and the tab bar clear of the last control
-//   768   Today as one row (date and time fixed at 200px, the meters beside it) · the tools 3 x 2 ·
-//         Discover four across (171.5px a card); 641, 1000 and 640 for the edges of the band
+//         project rows (a drawn thumb beside the name over its line) · New project full width under the
+//         work · no sideways scroll at 320 · 44px targets · Feedback and the tab bar clear of the last control
+//   768   Today as one ruled row (date and time fixed at 200px, the meters beside it) · the tools as seven
+//         rows in one column (176px thumbs) · Discover two across, 345.3px a card; 641, 1000 and 640 for the
+//         edges of the band, and 1023 / 1024 for where Discover goes to four across
 //
-// Every number is hand-checked from the spec: 768 - 2 x 23 = 722px of content; (722 - 3 x 12) / 4 = 171.5px
-// a Discover card; 390 - 2 x 20 = 350px of content (the /tools gutter, was 12); 320 - 40 = 280px.
+// Every number is hand-checked from the spec (the /tools language): the page gutter is clamp(20px, 4vw, 52px),
+// so 768 - 2 x 30.72 = 706.56px of content; Discover's gap is 16px below 1024, so (706.56 - 16) / 2 = 345.28px
+// a card; at 1024 the gutter is 40.96 and the gap 24, so (1024 - 2 x 40.96 - 3 x 24) / 4 = 217.5px a card;
+// 390 - 2 x 20 = 350px of content; 320 - 40 = 280px. A row's thumb is 112 x 70 on a phone (16:10) and
+// 176 x 110 from 761px. The rows run 12px wider than the content each side (the /tools -12px margin).
 //
-// MUTATION (all made in one build, each named test went red, then projects.css was restored):
-//   projects.css  `.uh .uh-rail { order: -1 }` at 640 and under          -> "the sections run in the spec's order"
-//   Projects.jsx  `useMediaQuery('(max-width: 640px)')` -> `false`       -> "the sections run in the spec's order" and "Recent exports follows Discover" (to make)
+// MUTATION (all made in one build, 30 Oct, each named test went red, then projects.css was restored; the
+// three marked "earlier" were made before the restyle and not re-made in that build):
+//   projects.css  `.uh .uh-rail { order: -1 }` at 640 and under          -> "the sections run in the spec's order" (earlier)
+//   Projects.jsx  `useMediaQuery('(max-width: 640px)')` -> `false`       -> "the sections run in the spec's order" and "Recent exports follows Discover" (earlier)
 //   projects.css  the weekday rule at `max-width: 359px` -> `330px`       -> "the weekday is dropped below 360px"
-//   projects.css  `.uh-row-link .uh-mini` `grid-row: 1 / span 2` -> `1`   -> "each project row is two lines"
+//   projects.css  `.uh-rows .spt-row` columns `112px` -> `72px`           -> "each project row is a thumb beside the name over its line"
 //   projects.css  `.uh .uh-new { width: 100% }` -> `auto` at 640            -> "New project is full width under the work"
-//   projects.css  `.uh .uh-quick { min-width: 520px }` at 640             -> "no sideways scroll at 320"
 //   projects.css  `.uh-row-name` `text-overflow: ellipsis` -> `clip`      -> "a long project name is cut with an ellipsis"
-//   projects.css  `.uh .uh-open, .uh .uh-cta` `height: 30px` at 640       -> "the thumb targets are 44px"
-//   projects.css  `.uh .uh-pro-cta { width: 100% }` -> `auto` at 640      -> "the Pro button is full width"
+//   projects.css  `.uh-tool--all` min-height 56px -> 30px and padding 12px -> 0, `.uh-open` min-height -> 30px -> "the thumb targets are 44px"
+//   projects.css  `.uh-pro-cta` width 100% -> auto and `.uh-pro-cta-row .uh-pro-cta` justify-self -> start -> "the Pro button is full width"
 //   projects.css  `.uh .uh-main` padding-bottom -> 0 at 640               -> "the last control clears Feedback and the tab bar"
-//   global-feedback-btn `bottom` -> 8px                                    -> "Feedback sits above the tab bar"
-//   projects.css  tablet tools `repeat(3` -> `repeat(2`                   -> "the tools are three across and two down"
-//   projects.css  tablet Discover `repeat(4` -> `repeat(3`                -> "Discover is four across"
-//   projects.css  `.uh .uh-today { display: grid` -> `block` at 641-1000  -> "Today is one row"
+//   global-feedback-btn `bottom` -> 8px                                    -> "Feedback sits above the tab bar" (earlier)
+//   projects.css  `.uh .uh-today { display: grid` -> `block` at 641-1023  -> "Today is one row"
+//   projects.css  `.uh.uh-spt .uh-today` `border: 0` -> `1px solid`        -> "Today is a ruled row, not a framed card"
+//   projects.css  tools two-column rule `min-width: 1100px` -> `700px`     -> "the tools are seven rows in one column"
+//   projects.css  Discover `repeat(2` below 1024 -> `repeat(3`              -> "Discover is two across" (768, 641, 1000, 1023)
+//   projects.css  Discover `repeat(4` from 1024 -> `repeat(3`               -> "at 1024px Discover is four across"
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -174,34 +180,42 @@ test.describe('on a 390px phone, in a real touch context', () => {
   }
 
   for (const width of [390, 320]) {
-    test(`each project row is two lines at ${width}px: the strip beside both, the name over its meta`, async ({ browser }) => {
+    // A row is the /tools row: a drawn thumb (the project's colours) on the left, the name over its line, the
+    // arrow at the right. The line may wrap to more than one line on a phone (a long meta), so what is held is
+    // that the name stays above it, the thumb stays beside both and centred on them, and nothing runs past the row.
+    test(`each project row is a thumb beside the name over its line at ${width}px`, async ({ browser }) => {
       await onPhone(browser, { width, height: 800 }, async (page) => {
-        const rows = await page.locator('.uh-rows .uh-row-link').evaluateAll((links) => links.map((a) => {
+        const rows = await page.locator('.uh-rows .spt-row').evaluateAll((links) => links.map((a) => {
           const q = (s) => a.querySelector(s).getBoundingClientRect()
           const link = a.getBoundingClientRect()
-          const mini = q('.uh-mini')
+          const thumb = q('.spt-thumb')
           const name = q('.uh-row-name')
-          const meta = q('.uh-row-meta')
+          const meta = a.querySelector('.uh-row-meta')
+          const m = meta.getBoundingClientRect()
+          const go = q('.spt-row-go')
           return {
-            link: { right: link.right, height: link.height },
-            mini: { left: mini.left, right: mini.right, width: mini.width, mid: (mini.top + mini.bottom) / 2 },
+            link: { left: link.left, right: link.right, height: link.height },
+            thumb: { left: thumb.left, right: thumb.right, width: thumb.width, height: thumb.height, mid: (thumb.top + thumb.bottom) / 2, plate: !!a.querySelector('.spt-thumb .uh-plate svg') },
             name: { left: name.left, bottom: name.bottom, top: name.top },
-            meta: { left: meta.left, right: meta.right, top: meta.top, bottom: meta.bottom, height: meta.height },
-            block: { mid: (name.top + meta.bottom) / 2 },
-            nowrap: getComputedStyle(a.querySelector('.uh-row-meta')).whiteSpace,
+            meta: { left: m.left, right: m.right, top: m.top, bottom: m.bottom, clipped: meta.scrollWidth > meta.clientWidth + 1 },
+            go: { left: go.left, right: go.right },
+            block: { mid: (name.top + m.bottom) / 2 },
           }
         }))
         expect(rows.length, 'the sweep found no rows').toBe(2)
         for (const r of rows) {
-          expect(r.name.bottom, 'the name is not above its meta').toBeLessThanOrEqual(r.meta.top + 1)
-          expect(r.meta.left, 'the meta does not start under the name').toBeCloseTo(r.name.left, 0)
-          expect(r.name.left, 'the name is not beside the strip').toBeGreaterThanOrEqual(r.mini.right + 8)
-          expect(r.mini.width, 'the strip is 72px').toBe(72)
-          expect(Math.abs(r.mini.mid - r.block.mid), 'the strip is not centred on the two lines').toBeLessThanOrEqual(3)
-          expect(r.meta.height, 'the meta wraps to a second line').toBeLessThan(26)
-          expect(r.nowrap).toBe('nowrap')
-          expect(r.meta.right, 'the meta runs past the row').toBeLessThanOrEqual(r.link.right + 1)
-          expect(r.link.height, 'a row is under 44px').toBeGreaterThanOrEqual(44)
+          expect(r.thumb.plate, 'the thumb draws the project\'s colours').toBe(true)
+          expect(r.thumb.width, 'the thumb is 112px').toBe(112)
+          expect(r.thumb.height, 'the thumb is 16:10, 70px tall').toBe(70)
+          expect(r.thumb.left, 'the thumb sits 12px in from the row\'s edge').toBeCloseTo(r.link.left + 12, 0)
+          expect(r.name.left, 'the name is a 16px gap from the thumb').toBeCloseTo(r.thumb.right + 16, 0)
+          expect(r.name.bottom, 'the name is not above its line').toBeLessThanOrEqual(r.meta.top + 1)
+          expect(r.meta.left, 'the line does not start under the name').toBeCloseTo(r.name.left, 0)
+          expect(Math.abs(r.thumb.mid - r.block.mid), 'the thumb is not centred on the name and line').toBeLessThanOrEqual(3)
+          expect(r.meta.clipped, 'the line is cut off instead of wrapping').toBe(false)
+          expect(r.meta.right, 'the line runs into the arrow').toBeLessThanOrEqual(r.go.left + 1)
+          expect(r.go.right, 'the arrow runs past the row').toBeLessThanOrEqual(r.link.right + 1)
+          expect(r.link.height, 'a row is shorter than the /tools row (88px)').toBeGreaterThanOrEqual(88)
         }
       })
     })
@@ -270,14 +284,16 @@ test.describe('on a 390px phone, in a real touch context', () => {
           actions: h('.uh-dash-main > .uh-continue .uh-continue-actions a'),
           rows: h('.uh-rows .uh-row-link'),
           newProject: h('.uh-new'),
-          tools: h('.uh-start .uh-tool'),
+          tools: h('.uh-start a.uh-tool'),
+          allRow: h('.uh-start .uh-tool--all'),
         }
       })
       // POSITIVE CONTROL: the sweep found the controls.
       expect(sizes.actions.length, 'Continue and Open project').toBe(2)
       expect(sizes.rows.length).toBe(2)
       expect(sizes.newProject.length).toBe(1)
-      expect(sizes.tools.length, 'four tools and the All thirteen tools row').toBe(5)
+      expect(sizes.tools.length, 'five tool rows (Semantic and the Palette Library are not drawn on a phone)').toBe(5)
+      expect(sizes.allRow.length, 'the All thirteen tools row').toBe(1)
       for (const group of Object.values(sizes)) for (const c of group) expect(c.height, `${c.text} is ${c.width}x${c.height}`).toBeGreaterThanOrEqual(44)
       // Continue is full width, with Open project under it.
       expect(sizes.actions[0].width, 'Continue is not full width').toBe(sizes.actions[0].parent)
@@ -339,7 +355,7 @@ test.describe('on a tablet', () => {
     .map((e) => { const r = e.getBoundingClientRect(); return { left: Math.round(r.left * 10) / 10, top: Math.round((r.top + scrollY) * 10) / 10, width: Math.round(r.width * 10) / 10, height: Math.round(r.height * 10) / 10 } }), selector)
   const distinct = (list) => [...new Set(list)].length
 
-  test('at 768px Today is one row: the date and time at 200px, the meters beside them, the plan line under both', async ({ page }) => {
+  test('at 768px Today is one ruled row: the date and time at 200px, the meters beside them, the plan line under both', async ({ page }) => {
     await open(page, 768)
     const b = {}
     for (const sel of ['.uh-today', '.uh-today-clock', '.uh-meters', '.uh-plan-line', '.uh-rows', '.uh-exports']) b[sel] = await box(page, sel)
@@ -348,53 +364,80 @@ test.describe('on a tablet', () => {
     expect(Math.abs(b['.uh-meters'].top - b['.uh-today-clock'].top), 'they do not start on one line').toBeLessThanOrEqual(8)
     expect(b['.uh-plan-line'].top, 'the plan line is not under both').toBeGreaterThanOrEqual(Math.max(b['.uh-today-clock'].bottom, b['.uh-meters'].bottom) - 1)
     expect(b['.uh-plan-line'].width, 'the plan line runs the width of Today').toBeGreaterThan(b['.uh-today'].width - 60)
-    expect(b['.uh-today'].width, 'Today is one full-width row').toBeCloseTo(722, 0)
+    // The content column is the page less a 4vw gutter each side: 768 - 2 x 30.72. Today has no padding of its own at the sides.
+    expect(b['.uh-today'].width, 'Today is one full-width row').toBeCloseTo(706.6, 0)
     expect(b['.uh-today'].top, 'Today is not under the projects').toBeGreaterThanOrEqual(b['.uh-rows'].bottom - 1)
     expect(b['.uh-exports'].top, 'Recent exports is not under Today').toBeGreaterThanOrEqual(b['.uh-today'].bottom - 1)
   })
 
-  test('at 768px the tools are three across and two down, 240px cells', async ({ page }) => {
+  test('at 768px Today is a ruled row, not a framed card', async ({ page }) => {
     await open(page, 768)
-    const tools = await cells(page, '.uh-start .uh-quick a.uh-tool')
-    expect(tools.length, 'six tools').toBe(6)
-    expect(distinct(tools.map((t) => t.left)), 'three columns').toBe(3)
-    expect(distinct(tools.map((t) => t.top)), 'two rows').toBe(2)
-    for (const t of tools) expect(Math.abs(t.width - 240), `a cell is ${t.width}px wide, the spec says 240`).toBeLessThanOrEqual(2)
-    // One height per row (spec check 18): a note that wraps in one cell does not make its neighbours uneven.
-    for (const top of [...new Set(tools.map((t) => t.top))]) {
-      expect(distinct(tools.filter((t) => t.top === top).map((t) => t.height)), `the cells of the row at y=${top} are different heights`).toBe(1)
-    }
-    // Palette Builder runs the full width above them.
-    const lead = await box(page, '.uh-start .uh-lead')
-    const grid = await box(page, '.uh-start .uh-quick')
-    expect(lead.width, 'Palette Builder is not the full width of the tools').toBeGreaterThanOrEqual(grid.width - 4)
-    expect(Math.min(...tools.map((t) => t.top)), 'Palette Builder is not above the tools').toBeGreaterThanOrEqual(lead.bottom - 1)
+    const s = await page.locator('.uh-today').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { top: cs.borderTopWidth, right: cs.borderRightWidth, bottom: cs.borderBottomWidth, left: cs.borderLeftWidth, radius: cs.borderTopLeftRadius, bg: cs.backgroundColor }
+    })
+    expect([s.top, s.right, s.bottom, s.left], 'one hairline above, no frame').toEqual(['1px', '0px', '0px', '0px'])
+    expect(s.radius, 'a ruled row has square corners').toBe('0px')
+    expect(s.bg, 'and no fill').toBe('rgba(0, 0, 0, 0)')
   })
 
-  test('at 768px Discover is four across, 171.5px a card', async ({ page }) => {
+  test('at 768px the tools are seven rows in one column, 176px thumbs', async ({ page }) => {
+    await open(page, 768)
+    const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
+    expect(tools.length, 'seven rows: Palette Builder, five more tools, the Palette Library').toBe(7)
+    expect(distinct(tools.map((t) => t.left)), 'one column').toBe(1)
+    expect(distinct(tools.map((t) => t.top)), 'seven rows down').toBe(7)
+    const list = await box(page, '.uh-start .uh-tools')
+    for (const t of tools) expect(Math.abs(t.width - list.width), `a row is ${t.width}px wide, the list is ${list.width}px`).toBeLessThanOrEqual(1)
+    // Stacked, not overlapping, one height (the /tools row at this size is a 110px thumb in 12px padding: 134px).
+    const sorted = [...tools].sort((a, b) => a.top - b.top)
+    for (let i = 1; i < sorted.length; i++) expect(sorted[i].top, `row ${i + 1} overlaps the row above`).toBeGreaterThanOrEqual(sorted[i - 1].top + sorted[i - 1].height - 1)
+    expect(distinct(tools.map((t) => t.height)), 'the rows are different heights').toBe(1)
+    const thumbs = await cells(page, '.uh-start .uh-tools .spt-thumb')
+    expect(thumbs.length).toBe(7)
+    for (const t of thumbs) expect([t.width, t.height], 'a thumb is 176 x 110 (16:10)').toEqual([176, 110])
+    // Palette Builder is the first row, then the order the grid has always had.
+    await expect(page.locator('.uh-start a.uh-tool:visible .uh-tool-name')).toHaveText(['Palette Builder', 'Gradient', 'Tint', 'Semantic', 'Contrast', 'Icon set', 'Palette Library'])
+  })
+
+  test('at 768px Discover is two across, 345.3px a card', async ({ page }) => {
     await open(page, 768)
     const cards = await cells(page, '.uh-disc-card')
     expect(cards.length).toBe(4)
-    expect(distinct(cards.map((c) => c.left)), 'four columns').toBe(4)
-    expect(distinct(cards.map((c) => c.top)), 'one row').toBe(1)
-    for (const c of cards) expect(Math.abs(c.width - 171.5), `a card is ${c.width}px wide, the spec says 171.5`).toBeLessThanOrEqual(1)
+    expect(distinct(cards.map((c) => c.left)), 'two columns').toBe(2)
+    expect(distinct(cards.map((c) => c.top)), 'two rows').toBe(2)
+    for (const c of cards) expect(Math.abs(c.width - 345.3), `a card is ${c.width}px wide, the spec says 345.3`).toBeLessThanOrEqual(1)
   })
 
-  for (const width of [641, 1000]) {
-    test(`at ${width}px, the edge of the band, the tools are 3 x 2 and Discover is four across`, async ({ page }) => {
+  // The edges of the band: 641 is the first width with Today as a row, 1000 a width the old layout held,
+  // 1023 the last before the rail. The thumb steps from 112 to 176 at 761.
+  for (const [width, thumb] of [[641, 112], [1000, 176], [1023, 176]]) {
+    test(`at ${width}px, the edge of the band, the tools are one column of seven ${thumb}px rows and Discover is 2 x 2`, async ({ page }) => {
       await open(page, width)
-      const tools = await cells(page, '.uh-start .uh-quick a.uh-tool')
-      expect([tools.length, distinct(tools.map((t) => t.left)), distinct(tools.map((t) => t.top))]).toEqual([6, 3, 2])
+      const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
+      expect([tools.length, distinct(tools.map((t) => t.left)), distinct(tools.map((t) => t.top))]).toEqual([7, 1, 7])
+      const thumbs = await cells(page, '.uh-start .uh-tools .spt-thumb')
+      expect(thumbs.map((t) => t.width), 'the thumbs are not all the size for this width').toEqual(Array(7).fill(thumb))
       const cards = await cells(page, '.uh-disc-card')
-      expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 4, 1])
+      expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 2, 2])
     })
   }
 
-  test('at 640px the phone layout takes over: Discover is two across, the tools are rows', async ({ page }) => {
+  test('at 1024px the rail is back and Discover is four across, 217.5px a card', async ({ page }) => {
+    await open(page, 1024, 900)
+    const cards = await cells(page, '.uh-disc-card')
+    expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 4, 1])
+    for (const c of cards) expect(Math.abs(c.width - 217.5), `a card is ${c.width}px wide, the spec says 217.5`).toBeLessThanOrEqual(1)
+  })
+
+  test('at 640px the phone layout takes over: Discover is two across, the tools are one column with the All row', async ({ page }) => {
     await open(page, 640, 900)
     const cards = await cells(page, '.uh-disc-card')
     expect([cards.length, distinct(cards.map((c) => c.left)), distinct(cards.map((c) => c.top))]).toEqual([4, 2, 2])
-    const tools = await cells(page, '.uh-start .uh-quick a.uh-tool')
-    expect(distinct(tools.map((t) => t.left)), 'the tablet three-column grid carries on below 641px').toBeLessThanOrEqual(2)
+    // Five drawn rows (Semantic and the Palette Library give way) and the All row. A sweep that found
+    // nothing would pass "one column", so the count is asserted too.
+    const tools = await cells(page, '.uh-start .uh-tools a.uh-tool')
+    expect([tools.length, distinct(tools.map((t) => t.left))], 'the tools are not five rows in one column').toEqual([5, 1])
+    expect((await cells(page, '.uh-start .uh-tool--all')).length, 'the All thirteen tools row is not drawn').toBe(1)
   })
 })
