@@ -91,7 +91,7 @@ test('every swatch prints its hex and a real contrast figure', () => {
   const drawn = texts(layout())
   for (const hex of DESIGN.palette.colors) {
     assert.ok(drawn.includes(hex.toUpperCase()), `${hex} is missing its label`)
-    const expected = Math.round(contrast(hex, '#FFFFFF') * 100) / 100
+    const expected = contrast(hex, '#FFFFFF').toFixed(2)
     assert.ok(drawn.some((t) => t.startsWith(`${expected}:1 on white`)),
       `${hex} does not print its measured ${expected}:1 contrast`)
   }

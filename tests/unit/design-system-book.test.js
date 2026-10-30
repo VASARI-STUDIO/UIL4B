@@ -140,7 +140,7 @@ test('the contrast figures agree with the free style guide exactly', () => {
   assert.ok(BOOK.includes(grade(ratio)), 'and the grade derived from it')
   // The matrix measures every pair, including against paper and ink.
   assert.match(BOOK, /class="mx"/)
-  assert.ok(BOOK.includes(String(contrast('#1F4B8E', '#0D2540'))), 'a palette-to-palette pair is measured')
+  assert.ok(BOOK.includes(contrast('#1F4B8E', '#0D2540').toFixed(2)), 'a palette-to-palette pair is measured')
 })
 
 test('the matrix carries pass or fail in WEIGHT, never in colour', () => {
@@ -159,18 +159,18 @@ test('the type ladder is set in the real families at the specified sizes', () =>
   assert.match(BOOK, /Inter/, 'the body family')
   assert.match(BOOK, /48\.8px/, 'the Display step at a 1.25 ratio from 16px')
   assert.match(BOOK, /3\.05rem/, 'and the same step in rem')
-  // The specimen is CLAMPED so it cannot print cut in half. The first cut of
-  // this shipped "Displa" and "Headin" at a 62px clamp.
-  assert.match(BOOK, /font-size:44px/, 'the clamp is applied to the largest step')
-  assert.match(BOOK, /Specimens above 44px are shown reduced/, 'and the book says so')
+  // At a 1.25 ratio the whole scale fits its table, so every specimen prints at its true size.
+  assert.match(BOOK, /font-size:48\.8px/, 'the Display specimen is set at its true size')
+  assert.doesNotMatch(BOOK, /font-size:44px/, 'no step is capped at 44px')
+  assert.doesNotMatch(BOOK, /Specimens are reduced/, 'and nothing says it was reduced')
 })
 
-test('the gradient is specified so it can be rebuilt, not eyeballed', () => {
+test('the gradient is specified so it can be rebuilt', () => {
   // The copyable declaration, the stop table, and the angle stated in prose —
   // all three, because a gradient you cannot rebuild exactly is a picture.
   assert.match(BOOK, /linear-gradient\(135deg, #1F4B8E 0%, #3FA9A0 100%\)/)
   assert.match(BOOK, /background: linear-gradient\(135deg/, 'a copyable CSS declaration')
-  assert.match(BOOK, /blend at 135°/, 'the angle is stated in the section lede')
+  assert.match(BOOK, /Linear gradient at 135°, 2 stops./, 'the angle and stop count are stated in the section lede')
   assert.match(BOOK, /<td class="num">#3FA9A0<\/td>\s*<td class="num">100%<\/td>/, 'every stop is specified')
 })
 
@@ -206,7 +206,7 @@ test('a half-written design produces a shorter book, never a broken one', () => 
     assert.ok(pageCount(html) >= 5, `${label}: still a book`)
     // Always a cover and a colophon, whatever is missing from the system.
     assert.match(html, /class="pg pg-cover"/, `${label}: has a cover`)
-    assert.match(html, /How this book was made/, `${label}: has a colophon`)
+    assert.ok(html.includes('<h3>Colophon</h3>'), `${label}: has a colophon`)
   }
 })
 
@@ -248,15 +248,11 @@ test('the Pro book carries no watermark and has no degraded free variant', () =>
   assert.ok(!/watermark/.test(src), 'the generator has no watermark option to get wrong')
 })
 
-test('the colophon states the boundary instead of filling it with placeholders', () => {
+test('the colophon states the scope in one plain sentence', () => {
   // A full identity manual carries logo construction, imagery, tone of voice
-  // and applied examples. This system holds none of them, so the book names
-  // what it does not cover rather than inventing pages of it.
-  assert.match(BOOK, /What it does not/)
-  assert.match(BOOK, /logo\s*\n?\s*construction, imagery direction, tone of voice/)
-  // "placeholders" is deliberately NOT in this list: the colophon's own honest
-  // sentence uses the word, and a test that forbids naming the problem would
-  // force the book to stop explaining itself.
+  // and applied examples. This system holds none of them, so the colophon says
+  // what the book covers and nothing else is stubbed in.
+  assert.match(BOOK, /This book covers colour, type and tokens. Logo construction, imagery and tone of voice aren't part of this system./)
   assert.ok(!/Lorem ipsum|TBD|Coming soon/i.test(BOOK), 'nothing is stubbed')
 })
 

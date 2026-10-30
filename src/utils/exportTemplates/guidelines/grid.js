@@ -148,7 +148,7 @@ function logoSlide(ctx, n) {
     </div>`).join('')
   const parts = [
     ['The mark', `<div class="stage">${ctx.markImg({ cls: 'gd-mark', alt: `${ctx.projectName} logo` })}</div><dl class="kv">${facts}</dl>`],
-    ['On grounds', `<div class="tiles">${tiles}</div><p class="cap">The same artwork on every ground. No reversed version has been drawn.</p>`],
+    ['On grounds', `<div class="tiles">${tiles}</div><p class="cap">The same artwork on every ground. No reversed version is included.</p>`],
   ]
   const cs = clearSpaceDrawn(ctx)
   if (cs) {
@@ -211,7 +211,7 @@ function scopeSlide(ctx, n, notes) {
 
 /** The deck after the cover. Slide numbers are the real slide numbers (the cover is 1). */
 function slides(ctx) {
-  const notes = guidelineNotes(ctx.d, ctx.slots, WORDS)
+  const notes = guidelineNotes(ctx.d, ctx.slots, WORDS, ctx.ladder.length)
   const build = {
     colour: (n) => colourSlide(ctx, n, notes),
     logo: (n) => logoSlide(ctx, n),

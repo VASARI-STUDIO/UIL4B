@@ -42,11 +42,11 @@
 // styleGuideExport.js rather than reimplemented, so the two documents can never
 // state different ratios for the same pair.
 
-import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
+import { contrast, grade, inkFor, typeLadder, luminance } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
-import { esc, orderSections, fitTitle, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, fitTitle, specimenScale, fmtRatio, matrixBlocks, pairTally, plural, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, hexToOklch, isNeutral, mixHex } from './exportTemplates/roles.js'
 import { readLogo } from './brandLogo.js'
 import { BOOK_TEMPLATES } from './exportTemplates/book/index.js'
@@ -93,10 +93,24 @@ const BANDS_PER_PAGE = 5
 // Token lines per page. The listing is monospace at a fixed leading, so this is
 // a measured fit rather than a guess.
 const TOKENS_PER_PAGE = 34
-// The contrast matrix is square, so it grows quadratically. Past eight colours
-// the cells stop being legible at A4, and the book says so rather than
-// shrinking the type until the evidence is unreadable.
-const MATRIX_MAX = 8
+// What the scale table has to fit, in mm: the height under its head, the width of the
+// specimen column (88 mm, less a margin for faces wider than the 0.6 em the fit assumes),
+// a row's padding and its row text. The row classes are in book/specification.js.
+const SCALE_FIT = Object.freeze({ roomMm: 208, widthMm: 78, padMm: 8.95, textMm: 4.65, lineHeight: 1.1 })
+// The darkest palette colour is the typography opener's field when its relative
+// luminance is under this; otherwise the opener is near-black ink.
+const OPENER_DARK_MAX = 0.03
+const OPENER_FALLBACK = '#111114'
+
+/** The palette's darkest colour if it is dark enough to carry white type, else near-black. */
+function darkestField(palette) {
+  const darkest = palette.reduce((best, hex) => (best === null || luminance(hex) < luminance(best) ? hex : best), null)
+  return darkest !== null && luminance(darkest) < OPENER_DARK_MAX ? darkest : OPENER_FALLBACK
+}
+
+/** The role label for slot `index`; a colour past the five the preview paints says so. */
+const roleText = (harmony, index) => roleLabel(harmony, index) + (slotPlaced(index) ? '' : ', UNASSIGNED')
+
 
 function chunk(list, size) {
   const out = []
@@ -117,11 +131,6 @@ function balancedChunk(list, max) {
   const pages = Math.ceil(list.length / max)
   return chunk(list, Math.ceil(list.length / pages))
 }
-
-/** "a" or "an" for the word that follows. The abstract reads "a analogous
- *  system" without it, which is the kind of thing that makes a paid document
- *  look machine-written. */
-const article = (word) => (/^[aeiou]/i.test(String(word)) ? 'an' : 'a')
 
 /* ── the document ────────────────────────────────────────────────────────── */
 
@@ -208,7 +217,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   // ── 2 · contents (rendered last, placed here) ───────────────────────────
   const contentsSlot = pages.length
   add('')
-  folio = front.length + 1 // the front matter and the contents are numbered in roman; the body continues the count
+  folio = front.length + 1 // the cover is page 1 and the contents page 2; the body continues the count
 
   // Each section adds its own pages; the template decides their order.
   const sections = {}
@@ -216,10 +225,10 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
   // ── colour ──────────────────────────────────────────────────────────────
   sections.colour = () => {
     if (hasPalette) {
-      const sys = systemName(d.harmony)
+      const tally = pairTally(d.palette, [ctx.white, ctx.black], contrast)
       addOpening(
         '01', 'Colour',
-        `${d.palette.length} ${d.palette.length === 1 ? 'colour' : 'colours'} built on ${article(sys)} ${sys} system, each with the ink that reads on it and the ratio that proves it.`,
+        `${plural(d.palette.length, 'colour')}. ${tally.pass} of ${tally.total} pairs pass AA for text.`,
         field, fieldInk,
       )
       if (tpl.swatches) {
@@ -232,7 +241,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
         })
       }
       if (tpl.matrix) addPages(tpl.matrix(ctx, slots), 'Colour')
-      else addNumbered(matrixPage(d), 'Colour', 'Contrast matrix')
+      else matrixPages(d).forEach((inner, i) => addNumbered(inner, 'Colour', i === 0 ? 'Contrast matrix' : null))
     }
 
     if (d.gradient) {
@@ -242,10 +251,11 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 
   // ── typography ──────────────────────────────────────────────────────────
   sections.typography = () => {
+    const typeField = darkestField(d.palette)
     addOpening(
       '02', 'Typography',
-      `${d.heading} for headings, ${d.body} for reading, on a ${d.ratio} scale from ${d.baseSize}px.`,
-      '#111114', '#FFFFFF',
+      `${[...new Set([d.heading, d.body])].join(' and ')}, ${d.ratio} scale from ${d.baseSize}px.`,
+      typeField, '#FFFFFF',
     )
     if (tpl.typography) {
       addPages(tpl.typography(ctx), 'Typography')
@@ -260,7 +270,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
     const tokenField = d.palette[1] || d.palette[0] || '#111114'
     addOpening(
       '03', 'Tokens',
-      `${tokens.length} custom properties: the whole system as code, ready to paste into a stylesheet.`,
+      `${tokens.length} custom properties, named by role.`,
       tokenField, inkFor(tokenField).ink,
     )
     balancedChunk(tokens, tpl.tokensPerPage || TOKENS_PER_PAGE).forEach((group, gi) => {
@@ -281,8 +291,11 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 
   // Section openings are the only entries in the contents: a contents page that
   // lists every leaf is an index, and an index of eleven pages is noise.
-  const contentsData = { d, projectName, contents, tokens, iso, folio: front.length + 1 }
+  const contentsData = { d, projectName, contents, tokens, iso, ladder, folio: front.length + 1 }
   pages[contentsSlot] = tpl.contents ? tpl.contents(ctx, contentsData) : contentsPage(contentsData)
+
+  // The notes in a template's CSS are for the people who maintain it, so they stay out of the document.
+  const styleText = tpl.css(ctx).replace(/\/\*[\s\S]*?\*\//g, '')
 
   return `<!doctype html>
 <html lang="en-AU">
@@ -293,7 +306,7 @@ export function buildDesignSystemBook(design, { projectName = 'Design System', d
 <meta name="description" content="The colour, typography and token specification for ${esc(projectName)}.">
 ${fontHref}
 <style>
-${tpl.css(ctx)}
+${styleText}
 </style>
 </head>
 <body>
@@ -342,12 +355,12 @@ function buildSlots(d, roles) {
       hsl: hslOf(hex),
       oklch: `oklch(${(ok.l * 100).toFixed(1)}% ${ok.c.toFixed(3)} ${Math.round(ok.h)})`,
       name: colorName(hex),
-      role: roleLabel(d.harmony, i),
+      role: roleText(d.harmony, i),
       kind: i === 0 ? 'primary' : isNeutral(hex) ? 'neutral' : 'accent',
       ink,
-      ratio,
+      ratio: fmtRatio(ratio),
       grade: grade(ratio),
-      lands: slotLandsBook(i),
+      lands: slotPlaced(i) ? slotLandsBook(i) : '',
       placed: slotPlaced(i),
       tints: [80, 60, 40, 20].map((pct) => ({ pct, hex: mixHex(hex, roles.paper, pct / 100) })),
     }
@@ -356,9 +369,7 @@ function buildSlots(d, roles) {
 
 /* ── pages ───────────────────────────────────────────────────────────────── */
 
-const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi']
-
-function contentsPage({ d, projectName, contents, tokens, iso, folio = 2 }) {
+function contentsPage({ d, projectName, contents, tokens, iso, ladder, folio = 2 }) {
   const rows = contents.map(c => `<li${c.sub ? ' class="is-sub"' : ''}>
     <span class="ct-num">${c.sub ? '' : esc(c.num)}</span>
     <span class="ct-title">${esc(c.title)}</span>
@@ -373,17 +384,16 @@ function contentsPage({ d, projectName, contents, tokens, iso, folio = 2 }) {
     </div>
     <aside class="ct-aside">
       <p class="lbl">About this book</p>
-      <p>This is the specification for <b>${esc(projectName)}</b>: the colour, typography and token decisions behind the interface, written down so they can be applied consistently and checked.</p>
-      <p>Every contrast figure in it was measured, not estimated. Nothing here is illustrative: each value is the value the system actually holds.</p>
+      <p>The colour, type and token specification for <b>${esc(projectName)}</b>.</p>
       <dl class="ct-facts">
         <div><dt>Colours</dt><dd>${d.palette.length}</dd></div>
-        <div><dt>Type steps</dt><dd>8</dd></div>
+        <div><dt>Type steps</dt><dd>${ladder.length}</dd></div>
         <div><dt>Tokens</dt><dd>${tokens.length}</dd></div>
         <div><dt>Issued</dt><dd>${esc(iso)}</dd></div>
       </dl>
     </aside>
   </div>
-  <footer class="foot"><span>Contents</span><span class="folio">${ROMAN[folio - 1] || folio}</span></footer>
+  <footer class="foot"><span>Contents</span><span class="folio">${folio}</span></footer>
 </section>`
 }
 
@@ -404,9 +414,9 @@ function colourBands(d, group, offset, first) {
         <span class="bd-idx">${String(idx + 1).padStart(2, '0')}</span>
       </div>
       <div class="bd-id">
-        <p class="bd-role">${esc(roleLabel(d.harmony, idx))}</p>
+        <p class="bd-role">${esc(roleText(d.harmony, idx))}</p>
         <p class="bd-name">${esc(colorName(hex))}</p>
-        <p class="bd-lands">${esc(slotLandsBook(idx))}</p>
+        ${slotPlaced(idx) ? `<p class="bd-lands">${esc(slotLandsBook(idx))}</p>` : ''}
       </div>
       <dl class="bd-spec">
         <div><dt>HEX</dt><dd>${esc(hex)}</dd></div>
@@ -415,7 +425,7 @@ function colourBands(d, group, offset, first) {
       </dl>
       <dl class="bd-spec bd-ink">
         <div><dt>Ink</dt><dd>${esc(label)}</dd></div>
-        <div><dt>Ratio</dt><dd>${ratio}:1</dd></div>
+        <div><dt>Ratio</dt><dd>${fmtRatio(ratio)}:1</dd></div>
         <div><dt>Grade</dt><dd>${grade(ratio)}</dd></div>
       </dl>
     </div>`
@@ -431,43 +441,44 @@ function colourBands(d, group, offset, first) {
 }
 
 /**
- * The contrast matrix — every palette colour measured against every other, plus
- * paper and ink. This is the page that cannot be faked and that no template
- * carries: it is the evidence behind the palette rather than a picture of it.
+ * The contrast matrix: every palette colour against every other, plus paper and ink.
+ * One page holds at most MATRIX_ROWS rows, and a palette wider than a page holds
+ * columns is split into column groups, so no colour is left out.
  */
-function matrixPage(d) {
-  const cols = d.palette.slice(0, MATRIX_MAX)
-  const axes = [...cols, '#FFFFFF', '#000000']
-  const head = axes.map(c => `<th scope="col"><span class="dot" style="background:${c}"></span><span class="mx-h">${esc(c.replace('#', ''))}</span></th>`).join('')
-  const rows = cols.map(row => {
-    const cells = axes.map(col => {
-      if (row === col) return '<td class="mx-self">–</td>'
-      const r = contrast(row, col)
-      // Weight, not colour, carries the pass/fail. The book must never use a
-      // colour to mean "status" — the colours here are the SUBJECT, and a green
-      // tick beside a swatch would read as the swatch being green.
-      const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
-      return `<td class="${cls}">${r}<span class="mx-w">${word}</span></td>`
+function matrixPages(d) {
+  const blocks = matrixBlocks(d.palette, ['#FFFFFF', '#000000'])
+  return blocks.map(({ rows: rowHexes, cols, first }) => {
+    const head = cols.map(c => `<th scope="col"><span class="dot" style="background:${c}"></span><span class="mx-h">${esc(c.replace('#', ''))}</span></th>`).join('')
+    const rows = rowHexes.map(row => {
+      const cells = cols.map(col => {
+        if (row === col) return '<td class="mx-self">–</td>'
+        const r = contrast(row, col)
+        // Weight, not colour, carries the pass/fail. The book must never use a
+        // colour to mean "status": the colours here are the SUBJECT, and a green
+        // tick beside a swatch would read as the swatch being green.
+        const [cls, word] = r >= 4.5 ? ['mx-pass', 'Pass'] : r >= 3 ? ['mx-mid', 'Large'] : ['mx-fail', 'Fail']
+        return `<td class="${cls}">${fmtRatio(r)}<span class="mx-w">${word}</span></td>`
+      }).join('')
+      return `<tr><th scope="row"><span class="dot" style="background:${row}"></span>${esc(row)}</th>${cells}</tr>`
     }).join('')
-    return `<tr><th scope="row"><span class="dot" style="background:${row}"></span>${esc(row)}</th>${cells}</tr>`
-  }).join('')
-  const capped = d.palette.length > MATRIX_MAX
-  return `<div class="pg-body">
+    return `<div class="pg-body">
     <header class="pg-head">
-      <h3>Contrast matrix</h3>
-      <p class="lede">Every pair in the palette, measured. Read a row as the background and a column as the text on it. The figure is the same either way.</p>
+      ${first
+    ? '<h3>Contrast matrix</h3><p class="lede">Contrast ratio for each pair. Read a row as the background and a column as the text on it.</p>'
+    : '<h3 class="cont">Contrast matrix <span>continued</span></h3>'}
     </header>
     <table class="mx">
+      <colgroup><col style="width:24mm"></colgroup>
       <thead><tr><th scope="col"><span class="mx-corner">bg ╲ fg</span></th>${head}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="key">
-      <span><b>Pass</b> reads as normal text, 4.5:1 or more</span>
-      <span><b>Large</b> reads as large text only, 3:1 or more</span>
-      <span><b>Fail</b> is a fill, not a text pair</span>
+      <span><b>Pass</b> 4.5:1 or more, normal text</span>
+      <span><b>Large</b> 3:1 or more, large text</span>
+      <span><b>Fail</b> under 3:1, fills only</span>
     </div>
-    ${capped ? `<p class="note">The matrix shows the first ${MATRIX_MAX} colours. Past eight the cells stop being legible at this size, so the remaining colours are specified on the palette pages and measured against paper and ink there.</p>` : ''}
   </div>`
+  })
 }
 
 function gradientPage(d) {
@@ -481,7 +492,7 @@ function gradientPage(d) {
   return `<div class="pg-body">
     <header class="pg-head">
       <h3>The gradient</h3>
-      <p class="lede">A ${esc(g.type.toLowerCase())} blend at ${g.angle}°, specified by stop so it can be rebuilt exactly rather than eyeballed.</p>
+      <p class="lede">${esc(g.type)} gradient at ${g.angle}°, ${plural(g.stops.length, 'stop')}.</p>
     </header>
     <div class="gr-spec" style="background:${css}"></div>
     <table class="tb">
@@ -512,7 +523,7 @@ function familiesPage(d) {
   return `<div class="pg-body">
     <header class="pg-head">
       <h3>The families</h3>
-      <p class="lede">Two faces carry the system. Every fallback is stated in the colophon, so the document degrades predictably rather than arbitrarily.</p>
+      <p class="lede">Headings in ${esc(d.heading)} ${d.headingWeight}. Body in ${esc(d.body)} ${d.bodyWeight}.</p>
     </header>
     ${spec('Headings', d.heading, d.headingWeight, d.headingSpacing)}
     ${spec('Body', d.body, d.bodyWeight, d.bodySpacing)}
@@ -525,36 +536,29 @@ function familiesPage(d) {
  * rows are typeset at the size they describe is a specimen.
  */
 function scalePage(d, ladder) {
+  // One factor for every step, so the ratios between the specimens stay true.
+  const { k, label } = specimenScale(ladder, SCALE_FIT)
   const rows = ladder.map((s) => {
     const isHeading = s.exp >= 1
-    // Clamped so a large ratio cannot push a row off the page. 44px is not a
-    // taste call: the widest step label is nine characters, and at 44px even a
-    // wide face (0.75em average advance) sets it in 78mm against the 84mm the
-    // specimen column has. The first cut of this clamped at 62px and printed
-    // "Displa" and "Headin" — a type specimen with the type cut off.
-    //
-    // The TRUE size is always the number in the column beside it, which is the
-    // authoritative figure; the specimen illustrates it, and the note says so.
-    const shown = Math.min(s.px, 44)
     return `<tr>
       <th scope="row">${esc(s.name)}</th>
       <td class="num">${s.px}px</td>
       <td class="num">${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem</td>
       <td class="num">${isHeading ? 1.15 : d.lineHeight}</td>
-      <td class="sp" style="font-size:${shown}px;font-family:'${esc(isHeading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${isHeading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td>
+      <td class="sp" style="font-size:${(s.px * k).toFixed(1)}px;font-family:'${esc(isHeading ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${isHeading ? d.headingWeight : d.bodyWeight}">${esc(s.name)}</td>
     </tr>`
   }).join('')
   return `<div class="pg-body">
     <header class="pg-head">
       <h3>The scale</h3>
-      <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Each row is set in the face and size it specifies.</p>
+      <p class="lede">${d.ratio} ratio from a ${d.baseSize}px base.</p>
     </header>
     <table class="tb tb-scale">
-      <colgroup><col style="width:28mm"><col style="width:20mm"><col style="width:22mm"><col style="width:18mm"><col></colgroup>
-      <thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>Specimen</th></tr></thead>
+      <colgroup><col style="width:26mm"><col style="width:18mm"><col style="width:20mm"><col style="width:16mm"><col></colgroup>
+      <thead><tr><th>Step</th><th>Size</th><th>rem</th><th>Leading</th><th>${esc(label)}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="note">Specimens above 44px are shown reduced so the row fits the page; the size column is always the true value. Body copy sets at ${d.lineHeight} leading, headings tighten to 1.15, which is what stops a two-line heading reading as two separate lines.</p>
+    ${k < 1 ? '<p class="note">Specimens are reduced so the scale fits the page. The size column is the true value.</p>' : ''}
   </div>`
 }
 
@@ -562,7 +566,7 @@ function tokensPage(group, first, total) {
   const rows = group.map(t => `<tr><td class="tk-n">${esc(t.name)}</td><td class="tk-v">${esc(t.value)}</td></tr>`).join('')
   return `<div class="pg-body">
     <header class="pg-head">
-      ${first ? `<h3>Custom properties</h3><p class="lede">All ${total} tokens, named for the role each colour plays rather than the colour it happens to be, so a palette change does not orphan the name.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
+      ${first ? `<h3>Custom properties</h3><p class="lede">${plural(total, 'custom property', 'custom properties')}, named by role.</p>` : '<h3 class="cont">Custom properties <span>continued</span></h3>'}
     </header>
     <table class="tk">${rows}</table>
   </div>`
@@ -571,26 +575,23 @@ function tokensPage(group, first, total) {
 function colophonPage(d, projectName, iso) {
   return `<div class="pg-body">
     <header class="pg-head">
-      <h3>How this book was made</h3>
+      <h3>Colophon</h3>
     </header>
     <div class="cl-grid">
       <div>
         <p class="lbl">Method</p>
-        <p>Contrast is the WCAG 2.2 relative-luminance ratio (§1.4.3). AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. Every figure is reproducible: the same two hex values always give the same ratio.</p>
+        <p>Contrast: WCAG 2.2 relative luminance (1.4.3, 1.4.11). AA text 4.5:1, large text and UI parts 3:1, AAA 7:1.</p>
         <p class="lbl">Typefaces</p>
-        <p>Headings set in ${esc(d.heading)} at ${d.headingWeight}, body in ${esc(d.body)} at ${d.bodyWeight}. Both fall back to <code>system-ui</code>, then the platform sans, so this document reads correctly offline or behind a blocked font host.</p>
+        <p>Headings in ${esc(d.heading)} ${d.headingWeight}. Body in ${esc(d.body)} ${d.bodyWeight}. Fonts load from Google Fonts; offline, both fall back to <code>system-ui</code>.</p>
       </div>
       <div>
-        <p class="lbl">What this book covers</p>
-        <p>Colour, typography and tokens: the decisions this system actually holds.</p>
-        <p class="lbl">What it does not</p>
-        <p>A full identity manual would also carry logo construction, imagery direction, tone of voice and applied examples. Those are not in this book because they are not in the system: this document specifies only what was really designed, and states the boundary rather than filling it with placeholders.</p>
+        <p class="lbl">Scope</p>
+        <p>This book covers colour, type and tokens. Logo construction, imagery and tone of voice aren't part of this system.</p>
       </div>
     </div>
     <div class="cl-foot">
       <span class="cl-name">${esc(projectName)}</span>
       <span>Issued ${esc(iso)}</span>
-      <span>Set from the system it describes</span>
     </div>
   </div>`
 }
