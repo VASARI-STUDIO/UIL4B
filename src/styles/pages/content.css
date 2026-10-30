@@ -46,13 +46,14 @@
    tinted ground — so the floor here is measured on the COMPOSITED colour, not
    the declared one:
 
-     --t3 (#6C6C66) on --bg-0 (#EFEEE9) ............ 4.59:1  (passes, barely)
-     --t3 on --cpg-wash over --bg-0 (~#E6E5E0) ..... 4.23:1  FAILS
-     --t2 (#5F5F59) on that same wash .............. 5.18:1  passes
+     --t3 (#66665F) on --bg-0 (#EFEEE9) ............ 4.98:1  passes
+     --t3 on --cpg-wash over --bg-0 (~#E6E5E0) ..... 4.59:1  passes, barely
+     --t2 (#5F5F59) on that same wash .............. 5.09:1  passes
 
    So `--cpg-quiet` (--t3) appears only where the ground is the page or a plain
    `--card`, and every label that sits on `--cpg-wash`, `--cpg-wash-2` or an
-   accent wash uses `--cpg-faint` (--t2) instead. Light is the worse theme in
+   accent wash uses `--cpg-faint` (--t2) instead: a wash that is a shade darker
+   than the one quoted takes --t3 under 4.5. Light is the worse theme in
    every one of those pairs, which is why it is the one quoted.                */
 
 .cpg {

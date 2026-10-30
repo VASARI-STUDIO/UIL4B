@@ -83,7 +83,7 @@ const BASE = {
   // --accent is a FILL (one accent, #F4F7FF ink, both themes),
   // so it is measured under its ink in its own test below, not against grounds.
   // --accent-strong is the TEXT member; its base is the resolved --accent-mid.
-  light: { '--t1': '#50504A', '--t2': '#5F5F59', '--t3': '#6C6C66', '--border': '#DAD8CF', '--bh': '#C0BDB0', '--accent-strong': '#2654C9' },
+  light: { '--t1': '#50504A', '--t2': '#5F5F59', '--t3': '#66665F', '--border': '#DAD8CF', '--bh': '#C0BDB0', '--accent-strong': '#2654C9' },
   dark: { '--t1': '#BFBEB6', '--t2': '#9F9F98', '--t3': '#8E8E88', '--border': '#202125', '--bh': '#303136', '--accent-strong': '#7999E9' },
 }
 const GROUNDS = { light: LIGHT_GROUNDS, dark: DARK_GROUNDS }
