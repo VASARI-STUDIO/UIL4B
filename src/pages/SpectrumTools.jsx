@@ -5,6 +5,7 @@ import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import OpenPill from '../components/spectrum/OpenPill'
+import ToolArt from '../components/spectrum/ToolArt'
 import PhGlyph from '../components/spectrum/PhGlyph'
 import PhIcon from '../components/spectrum/PhIcon'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
@@ -13,8 +14,6 @@ import { BASES, FONTS, FONT_SAMPLE, rampOf, ratio } from '../components/spectrum
 import { TOOL_COUNT, numberWord, route } from '../components/spectrum/spectrumFacts'
 import { createTools, NAV_SECTIONS } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
-import { gradientCss } from '../data/gradientGallery'
-import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import '../styles/pages/spectrum-mobile.css'
 import '../styles/pages/spectrum-tools.css'
 
@@ -24,10 +23,10 @@ import '../styles/pages/spectrum-tools.css'
 // THE SIX CARDS are the colour, type, icons and images path, in the order a kit
 // is built. The first four are live: they run the same maths the homepage ships
 // (rampOf, ratio, FONTS, the modular scale). Icon Library and File Converter
-// are real screenshots (SHOTS, from scripts/tool-shots.mjs).
+// are drawn plates (ToolArt), built from the tools' own helpers and one measured run.
 // THE LIST is derived: every listed, live tool that is not a card or in beta,
-// grouped by the nav's own labels. Counts are never typed. A row has a thumbnail
-// when ROW_SHOTS names it: a crop of the tool's window, from the same script.
+// grouped by the nav's own labels. Counts are never typed. A row's thumbnail is
+// the tool's drawn plate (ToolArt).
 // Beta tools are not in the count the heading gives, so they get a line of their
 // own under the list, not a row.
 
@@ -45,42 +44,6 @@ const GROUPS = NAV_SECTIONS.find((s) => s.id === 'create').columns
 const BETA = LIVE.filter((t) => t.beta)
 const WORKSHOP = createTools().filter((t) => t.soon).map((t) => t.label)
 const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
-
-// Alt text for each card screenshot: the tool and the state it is photographed in.
-const SHOTS = {
-  icons: 'Icon Library showing the Lucide pack, the icon grid filled with arrows, chevrons, files and media controls',
-  'file-converter': 'File Converter after compressing a photo to WebP at 70% quality, the result line showing the file size before and after and the saving',
-}
-// The rows with a thumbnail: the tools scripts/tool-shots.mjs crops. The thumbnail
-// is decoration beside the row's own text, so its alt is empty.
-const ROW_SHOTS = ['semantic', 'tint', 'font-pair', 'emoji', 'ratio', 'alt-text']
-const SHOT_THEMES = ['light', 'dark']
-
-// Two pictures per screenshot, one for each theme. The stylesheet hides the one
-// that does not match the page's data-theme (or, before that is set, the
-// system setting), so the other is never painted. `widths` are the two files the
-// script wrote for it: the whole window for a card, a crop for a row.
-function Shot({ id, sizes, width, height, widths = [640, 1280], alt }) {
-  const [small, large] = widths
-  return SHOT_THEMES.map((theme) => (
-    <picture key={theme} className={`spt-shot spt-shot--${theme}`}>
-      <img
-        src={`/tools/${id}-${theme}-${large}.webp`}
-        srcSet={`/tools/${id}-${theme}-${small}.webp ${small}w, /tools/${id}-${theme}-${large}.webp ${large}w`}
-        sizes={sizes}
-        width={width}
-        height={height}
-        loading="lazy"
-        decoding="async"
-        alt={alt ?? SHOTS[id]}
-      />
-    </picture>
-  ))
-}
-
-const CARD_SIZES = '(max-width: 760px) calc(100vw - 80px), 560px'
-const ROW_SIZES = '(max-width: 760px) 112px, 176px'
-const ROW_WIDTHS = [224, 352]
 
 const RATIOS = [1.2, 1.25, 1.333]
 const SCALE_STEPS = [2, 1, 0, -1]
@@ -166,6 +129,7 @@ function ScaleDemo() {
   )
 }
 
+const ART_CARDS = ['icons', 'file-converter']
 const DEMOS = { palette: PaletteDemo, contrast: ContrastDemo, 'font-gallery': FontDemo, 'type-scale': ScaleDemo }
 
 function Card({ id }) {
@@ -174,7 +138,7 @@ function Card({ id }) {
   return (
     <article className="spt-card" data-tool={id}>
       {Demo ? <div className="spt-preview"><Demo /></div> : null}
-      {SHOTS[id] ? <div className="spt-preview spt-preview--shot"><Shot id={id} sizes={CARD_SIZES} width={1280} height={800} /></div> : null}
+      {ART_CARDS.includes(id) ? <div className="spt-preview spt-preview--art"><ToolArt id={id} size="card" /></div> : null}
       <h3>{tool.label}</h3>
       <p>{describe(id)}</p>
       <OpenPill to={route(id)}>{`Open ${tool.label}`}</OpenPill>
@@ -183,14 +147,10 @@ function Card({ id }) {
 }
 
 function Row({ tool }) {
-  const grad = tool.id === 'gradient' ? LIBRARY_GRADIENT_ROWS.find((g) => g.stops) : null
-  const shot = ROW_SHOTS.includes(tool.id)
   return (
     <li>
       <Link className="spt-row" to={route(tool.id)}>
-        <span className="spt-thumb" aria-hidden="true" style={grad ? { background: gradientCss(grad.type, grad.angle, grad.stops) } : undefined}>
-          {shot ? <Shot id={tool.id} sizes={ROW_SIZES} width={352} height={220} widths={ROW_WIDTHS} alt="" /> : null}
-        </span>
+        <span className="spt-thumb"><ToolArt id={tool.id} size="thumb" /></span>
         <span className="spt-row-text">
           <b>{tool.label}</b>
           <span>{describe(tool.id)}</span>
