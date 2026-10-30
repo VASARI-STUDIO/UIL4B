@@ -15,7 +15,7 @@
 
 import { contrast } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
-import { paletteRole } from './designTokens.js'
+import { paletteRole } from './systemRoles.js'
 
 const HEADER = ['foreground', 'foreground_hex', 'background', 'background_hex', 'ratio', 'aa_text', 'aaa_text', 'aa_large_ui', 'aaa_large_text']
 const PAPER = { name: 'white', hex: '#ffffff' }

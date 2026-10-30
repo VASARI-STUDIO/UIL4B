@@ -3,7 +3,9 @@
 // Reads the same token list as the CSS and JSON exports (designTokens), so a name
 // that is in both is the same token with the same value. Each token maps to the
 // Tailwind v4 theme namespace that makes it a utility:
-//   color.*            --color-*            bg-primary, text-primary, border-primary
+//   color.*            --color-*            bg-primary, text-primary, border-primary;
+//                                           the interface roles too: bg-surface,
+//                                           text-on-surface, border-border, ring-focus
 //   font.heading/body  --font-*             font-heading, font-body
 //   font.size.<step>   --text-<step>        text-heading-1, with its --line-height,
 //                                           --letter-spacing and --font-weight
@@ -13,16 +15,16 @@
 // would make a second `font-heading` utility), the type ratio, the gradient, and
 // the base size (Tailwind's `text-base` stays its own).
 //
-// Values are literal: hex colours in lower case, sizes in rem against a 16px root
-// (the px value in a trailing comment). The file is standalone, so it needs no
-// other stylesheet to resolve.
+// Values are literal: hex colours in lower case (a role that is an alias in the
+// CSS and JSON files is its hex here), sizes in rem against a 16px root (the px
+// value in a trailing comment). The file is standalone, so it needs no other
+// stylesheet to resolve.
 //
 // Pure function over a plain design object.
 
-import { designTokens } from './designTokens.js'
+import { designTokens, remOf } from './designTokens.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 
-const rem = (px) => `${Number((px / 16).toFixed(5))}rem`
 const name = (path) => path.filter((p) => p !== '$root').join('-')
 // Steps set in the heading face and weight; the rest use the body's.
 const HEADING_STEPS = new Set(['display', 'heading-1', 'heading-2', 'heading-3', 'lead'])
@@ -40,7 +42,7 @@ export function tailwindVars(design) {
     } else if (group === 'font' && rest[0] === 'size' && rest[1] !== 'base') {
       const step = rest[1]
       const kind = HEADING_STEPS.has(step) ? 'heading' : 'body'
-      out.push([`--text-${step}`, rem(t.value.value), `${t.value.value}px`])
+      out.push([`--text-${step}`, remOf(t.value.value), `${t.value.value}px`])
       out.push([`--text-${step}--line-height`, String(one(`line-height.${kind}`))])
       out.push([`--text-${step}--letter-spacing`, `${one(`letter-spacing.${kind}`)}em`])
       out.push([`--text-${step}--font-weight`, String(one(`font.weight.${kind}`))])
