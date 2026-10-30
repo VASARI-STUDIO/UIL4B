@@ -97,7 +97,7 @@ function Icons() {
 
 function Converter() {
   return (
-    <div className="spt-fc" ref={varsRef({ '--kept': String(KEPT), '--grow': String(1 / KEPT), '--kept-pct': `${(KEPT * 100).toFixed(2)}%` })}>
+    <div className="spt-fc" ref={varsRef({ '--fc-kept': String(KEPT), '--fc-grow': String(1 / KEPT), '--fc-kept-pct': `${(KEPT * 100).toFixed(2)}%` })}>
       <div className="spt-fc-top">
         <span className="spt-big v">−{SAVED}%</span>
         <Label>smaller, same pixels</Label>

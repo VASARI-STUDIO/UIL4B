@@ -45,7 +45,10 @@
 /* Each group is a label rail and one list, so no row is ever alone in a column. The
    list reaches 12px past the rail so the hover wash has room around the content. */
 .spt .spt-group { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 48px; margin-top: 48px; }
-.spt .spt-group h3 { margin: 0; padding-top: 12px; font-size: 24px; font-weight: 600; }
+.spt .spt-group h3 { display: flex; align-items: center; gap: 10px; margin: 0; padding-top: 12px; font-size: 24px; font-weight: 600; }
+/* The group's hue tile: the menu's glyph and 1.6 stroke at 24px. */
+.spt .spt-gtile { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: color-mix(in oklab, var(--hue) 22%, var(--sp-wash)); color: var(--hue-strong); }
+.spt .spt-gtile svg { width: 14px; height: 14px; }
 .spt .spt-rows { margin-inline: -12px; }
 .spt .spt-row { display: grid; grid-template-columns: 176px minmax(0, 1fr) auto; align-items: center; gap: 20px; min-height: 88px; padding: 12px; border-top: 1px solid var(--sp-line); color: var(--sp-ink); text-decoration: none; }
 @media (hover: hover) {
@@ -124,18 +127,18 @@ html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
   .spt .spt-pick { width: 40px; height: 40px; }
 }
 
-/* File Converter: labels sit above their bars, never on them. --kept-pct, --kept and
-   --grow (the kept fraction and its inverse) are set from the measured run. */
-.spt .spt-fc { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 0; }
+/* File Converter: labels sit above their bars, never on them. --fc-kept-pct, --fc-kept and
+   --fc-grow (the kept fraction and its inverse) are set from the measured run. */
+.spt .spt-fc { display: flex; flex-direction: column; justify-content: flex-start; gap: 16px; height: 100%; min-height: 0; }
 .spt .spt-fc-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .spt .spt-fc-bars { display: grid; gap: 12px; }
 .spt .spt-fc-lab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-bottom: 6px; }
 .spt .spt-bar, .spt .spt-track { height: 16px; }
 .spt .spt-bar1 { border-radius: 4px; background: var(--sp-dim); }
 .spt .spt-track { position: relative; }
-.spt .spt-bar2 { position: absolute; inset: 0 auto 0 0; width: var(--kept-pct); border-radius: 4px 0 0 4px; background: var(--fill); transform-origin: 0 50%; }
+.spt .spt-bar2 { position: absolute; inset: 0 auto 0 0; width: var(--fc-kept-pct); border-radius: 4px 0 0 4px; background: var(--fill); transform-origin: 0 50%; }
 /* The removed part only: dashed, open on its left, so it reads as what was taken away. */
-.spt .spt-ghost { position: absolute; top: 0; bottom: 0; left: var(--kept-pct); right: 0; border: 1px dashed var(--sp-dim); border-left: 0; border-radius: 0 4px 4px 0; opacity: 0; overflow: hidden; }
+.spt .spt-ghost { position: absolute; top: 0; bottom: 0; left: var(--fc-kept-pct); right: 0; border: 1px dashed var(--sp-dim); border-left: 0; border-radius: 0 4px 4px 0; opacity: 0; overflow: hidden; }
 .spt .spt-ghost svg { display: block; }
 .spt .spt-ghost pattern path { stroke: var(--sp-dim); stroke-width: 1; opacity: .35; }
 @container spt-plate (max-height: 230px) { .spt .spt-big { font-size: 44px; } }
@@ -176,7 +179,7 @@ html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
   .spt .spt-ghost { transition: opacity 180ms var(--sp-ease); }
   .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-ghost { opacity: 1; transition-delay: 200ms; }
 }
-@keyframes spt-keep { from { transform: scaleX(var(--grow)); } to { transform: none; } }
+@keyframes spt-keep { from { transform: scaleX(var(--fc-grow)); } to { transform: none; } }
 html[data-reduced-motion="true"] .spt .spt-card .spt-i2, html[data-reduced-motion="true"] .spt .spt-card .spt-l2 { display: none; }
 html[data-reduced-motion="true"] .spt .spt-card .spt-i1, html[data-reduced-motion="true"] .spt .spt-card .spt-l1 { opacity: 1; transition: none; }
 html[data-reduced-motion="true"] .spt .spt-card .spt-bar2 { animation: none; }

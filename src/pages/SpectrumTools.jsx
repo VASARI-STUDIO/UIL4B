@@ -6,6 +6,7 @@ import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import OpenPill from '../components/spectrum/OpenPill'
 import ToolArt from '../components/spectrum/ToolArt'
+import NavIcon from '../components/NavIcon'
 import PhGlyph from '../components/spectrum/PhGlyph'
 import PhIcon from '../components/spectrum/PhIcon'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
@@ -201,7 +202,10 @@ export default function SpectrumTools() {
           <h2 className="spt-h2" id="spt-rest-h">And the rest of the bench.</h2>
           {GROUPS.map((g) => (
             <div key={g.label} className="spt-group">
-              <h3>{g.label}</h3>
+              <h3>
+                <span className="spt-gtile" data-hue={g.tools[0].hue} aria-hidden="true"><NavIcon id={g.tools[0].hue} /></span>
+                {g.label}
+              </h3>
               <ul className="spt-rows">{g.tools.map((t) => <Row key={t.id} tool={t} />)}</ul>
             </div>
           ))}
