@@ -28,6 +28,7 @@
 // "presentation only, it never writes a route down" is a claim, and an
 // unchecked claim is just a parallel list with better manners.
 import test from 'node:test'
+import { spawnSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 import {
   CREATE_GROUPS,
@@ -179,11 +180,6 @@ test('the Discover spec writes no /create/ route down', () => {
 
 // ── Links into the Create tree from outside it ──────────────────────────────
 
-/** Every absolute path this .jsx file writes down, comments stripped. */
-function pathLiterals(file) {
-  const src = stripComments(read(file))
-  return [...new Set([...src.matchAll(/(['"])(\/[a-z0-9\-/]*)\1/g)].map((m) => m[2]))]
-}
 
 test('categoryDestination restates CreateTool own rule, and never returns a bounce', () => {
   // The rule lives in CreateTool.jsx as a redirect branch inside a .jsx module
@@ -216,6 +212,27 @@ test('categoryDestination restates CreateTool own rule, and never returns a boun
   assert.throws(() => categoryDestination('not-a-group'), /not a Create group/)
 })
 
+// A footer row spread in as `...(TOOL_VOTES_ON ? [ ... ] : [])` exists only while
+// the roadmap-voting flag is on. The gated rows are split from the always-there
+// ones so the always-there ones keep every check they had.
+const GATE = /\.\.\.\(TOOL_VOTES_ON\s*\?\s*\[([\s\S]*?)\]\s*:\s*\[\]\)/g
+function footerPaths(file) {
+  const src = stripComments(read(file))
+  const literals = (text) => [...new Set([...text.matchAll(/(['"])(\/[a-z0-9\-/]*)\1/g)].map((m) => m[2]))]
+  const gated = literals([...src.matchAll(GATE)].map((m) => m[1]).join('\n'))
+  return { always: literals(src.replace(GATE, '')), gated, src }
+}
+/** What the app shell can render (routeMetaGated adds the flagged pages), with the flag forced on or off; it is read when the module loads. */
+function renderableWithFlag(on) {
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    const { createRoutes } = await import('./src/data/toolTree.js')
+    const { PAGE_TITLES } = await import('./src/data/routeMetaGated.js')
+    process.stdout.write(JSON.stringify([...createRoutes(), ...Object.keys(PAGE_TITLES)]))`],
+  { cwd: process.cwd(), env: { ...process.env, VITE_FORCE_TOOL_VOTES: on ? '1' : '0' }, encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stderr)
+  return new Set(JSON.parse(run.stdout))
+}
+
 test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301', () => {
   // The defect: "Imagery" pointed at /create/imagery, a category home with no
   // screen of its own, so the click was spent arriving at /create/file-converter
@@ -223,12 +240,29 @@ test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301',
   const dead = retired()
   const bounces = bouncingHomes()
   const known = renderable()
-  const paths = pathLiterals('src/components/AppFooter.jsx')
+  const { always: paths } = footerPaths('src/components/AppFooter.jsx')
   assert.ok(paths.length >= 8, `only ${paths.length} paths read out of AppFooter.jsx`)
   for (const to of paths) {
     assert.ok(!bounces.includes(to), `the footer links ${to}, a category home that only redirects`)
     assert.ok(!dead.has(to), `the footer links ${to}, which is a retired URL`)
     assert.ok(known.has(to), `the footer links ${to}, which the app cannot render`)
+  }
+})
+
+test('a footer link behind the roadmap flag is a real page when the flag is on, and an unknown route when it is off', () => {
+  const dead = retired()
+  const bounces = bouncingHomes()
+  const on = renderableWithFlag(true)
+  const off = renderableWithFlag(false)
+  for (const file of ['src/components/AppFooter.jsx', 'src/components/spectrum/SpectrumFooter.jsx']) {
+    const { gated, src } = footerPaths(file)
+    assert.ok(gated.includes('/roadmap'), `${file} lost its flagged Roadmap link, so this check would pass vacuously`)
+    assert.match(src, /import \{ TOOL_VOTES_ON \} from/, `${file} gates a link on a flag it does not import`)
+    for (const to of gated) {
+      assert.ok(!bounces.includes(to) && !dead.has(to), `${file} links ${to}, which bounces or is retired`)
+      assert.ok(on.has(to), `${file} links ${to} with the flag on, and the app cannot render it`)
+      assert.ok(!off.has(to), `${to} renders with the flag off, so the gate on the footer link guards nothing`)
+    }
   }
 })
 
