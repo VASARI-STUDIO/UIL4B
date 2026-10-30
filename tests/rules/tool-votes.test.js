@@ -180,9 +180,11 @@ test('a take-back that lowers the count by 2 is refused', async () => {
 test('a vote paired with a take-back write is refused', async () => {
   // Raising the count while removing the voter document would swap one vote for another.
   await seed({ count: 3, voters: [ALICE] })
-  const batch = writeBatch(dbFor(ALICE))
-  batch.set(counterRef(dbFor(ALICE)), { count: 4, open: true })
-  batch.delete(voterRef(dbFor(ALICE), ALICE))
+  // One context for the whole batch: a ref from another context's firestore() is refused by the SDK.
+  const db = dbFor(ALICE)
+  const batch = writeBatch(db)
+  batch.set(counterRef(db), { count: 4, open: true })
+  batch.delete(voterRef(db, ALICE))
   await assertFails(batch.commit())
 })
 
@@ -200,9 +202,10 @@ test('a second vote by one account is refused, and a different account can still
 test('a voter document with another field, or a time the client chose, is refused', async () => {
   await seed({ count: 3 })
   const withDoc = (data) => {
-    const batch = writeBatch(dbFor(ALICE))
-    batch.set(counterRef(dbFor(ALICE)), { count: 4, open: true })
-    batch.set(voterRef(dbFor(ALICE), ALICE), data)
+    const db = dbFor(ALICE)
+    const batch = writeBatch(db)
+    batch.set(counterRef(db), { count: 4, open: true })
+    batch.set(voterRef(db, ALICE), data)
     return batch.commit()
   }
   await assertFails(withDoc({ at: serverTimestamp(), extra: true }))
@@ -222,9 +225,10 @@ test("a write to another account's voter document is refused, and to one's own i
 
 test("deleting another account's voter document is refused", async () => {
   await seed({ count: 2, voters: [ALICE, BOB] })
-  const batch = writeBatch(dbFor(ALICE))
-  batch.set(counterRef(dbFor(ALICE)), { count: 1, open: true })
-  batch.delete(voterRef(dbFor(ALICE), BOB))
+  const db = dbFor(ALICE)
+  const batch = writeBatch(db)
+  batch.set(counterRef(db), { count: 1, open: true })
+  batch.delete(voterRef(db, BOB))
   await assertFails(batch.commit())
   await assertFails(deleteDoc(voterRef(dbFor(ALICE), BOB)))
   assert.equal(await voterExists(BOB), true)
@@ -283,9 +287,10 @@ test('a counter cannot be deleted, by its voter, another account or an admin', a
   await assertFails(deleteDoc(counterRef(dbFor(BOB))))
   await assertFails(deleteDoc(counterRef(adminDb())))
   await assertFails(deleteDoc(counterRef(anonDb())))
-  const batch = writeBatch(dbFor(ALICE))
-  batch.delete(counterRef(dbFor(ALICE)))
-  batch.delete(voterRef(dbFor(ALICE), ALICE))
+  const db = dbFor(ALICE)
+  const batch = writeBatch(db)
+  batch.delete(counterRef(db))
+  batch.delete(voterRef(db, ALICE))
   await assertFails(batch.commit())
   assert.deepEqual(await readCounter(), { count: 1, open: true })
 })
