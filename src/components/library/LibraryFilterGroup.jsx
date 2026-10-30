@@ -268,11 +268,13 @@ export default function LibraryFilterGroup({
       intrinsicRef.current = { options, width: intrinsic }
     }
 
-    const action = row.querySelector('.lbry-toolbar-action')
+    // The action and the pinned control both claim the row's right end.
+    const reserved = ['.lbry-toolbar-action', '.lbry-toolbar-pinned']
+      .reduce((sum, selector) => sum + (row.querySelector(selector)?.getBoundingClientRect().width || 0), 0)
     setOverflows(trayOverflowsRow({
       intrinsic,
       rowWidth: row.clientWidth,
-      actionWidth: action ? action.getBoundingClientRect().width : 0,
+      actionWidth: reserved,
       searchCap: SEARCH_CAP,
       gap: ROW_GAP,
     }))
