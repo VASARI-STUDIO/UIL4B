@@ -269,7 +269,10 @@ test.describe('the library search field accepts a click anywhere in it', () => {
 
       // POSITIVE CONTROL: the field really is the tall control it looks like,
       // so a passing click cannot come from a collapsed 0px box.
-      expect(geom.wrapHeight, 'the search field should be its full height').toBeGreaterThanOrEqual(40)
+      // The Gallery's search is a toolbar control at 1440 (36px, like the pills
+      // beside it); the icon library's is a page search (44px).
+      const fullHeight = route === '/create/font-gallery' ? 36 : 40
+      expect(geom.wrapHeight, 'the search field should be its full height').toBeGreaterThanOrEqual(fullHeight)
 
       const missed = []
       for (const dy of [3, 8, geom.wrapHeight - 8, geom.wrapHeight - 3]) {

@@ -923,19 +923,48 @@ test('N2 · the gradient stop hex input shows its whole value', async ({ browser
 // already clean and the fix must not disturb them.
 
 const FG_WIDTHS = [320, 360, 380, 430]
+// Under 768 the band's name starts at 40px and may shrink to 32px, not further
+// (Fonts build spec, section 1). Long names shrink to that floor and are then
+// CLIPPED, so a name is only ever cut off once it has nowhere left to shrink to.
+const FG_PHONE_FLOOR = 32
 
-test('N1 · no font family name is truncated down to the 320px floor', async ({ browser }) => {
+test('N1: a font family name is only clipped once it has shrunk to its floor, down to 320px', async ({ browser }) => {
   budget(FG_WIDTHS.length)
   const damage = []
+  const atFloor = []
   for (const w of FG_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/font-gallery', '.fg-card-name')
-    const r = await truncationCensus(page, '.fg-card-name')
+    // A band's name only mounts once its face has loaded, and a face only loads
+    // when its band nears the screen, so bring the first page into view band by
+    // band (two frames each, not a timer) before counting.
+    await page.evaluate(async () => {
+      for (const card of document.querySelectorAll('.fg-card')) {
+        card.scrollIntoView()
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      }
+    })
+    await expect.poll(() => page.locator('.fg-card-name').count(), { message: `${w}px: expected the font bands to have named themselves` }).toBeGreaterThan(20)
+    const r = await page.evaluate(() => {
+      const cut = []
+      let total = 0
+      for (const el of document.querySelectorAll('.fg-card-name')) {
+        total++
+        if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) {
+          cut.push({ text: el.textContent.trim(), needs: el.scrollWidth, has: el.clientWidth, px: parseFloat(getComputedStyle(el).fontSize) })
+        }
+      }
+      return { total, cut }
+    })
     await ctx.close()
     expect(r.total, `${w}px: expected the font cards to have rendered`).toBeGreaterThan(20)
-    if (r.cut.length) {
-      damage.push(`${w}px: ${r.cut.length} of ${r.total} family names truncated — "${r.cut[0].text}" needs ${r.cut[0].needs}px, has ${r.cut[0].has}px`)
+    for (const c of r.cut) {
+      if (c.px > FG_PHONE_FLOOR + 0.5) damage.push(`${w}px: "${c.text}" is clipped at ${c.px}px, above the ${FG_PHONE_FLOOR}px floor (needs ${c.needs}px, has ${c.has}px)`)
+      else atFloor.push(`${w}px "${c.text}" ${c.needs}>${c.has}`)
     }
   }
+  // Names cut off AT the floor are what the spec asks for, but a reader loses
+  // their last letters, so put them in the report rather than hide them.
+  if (atFloor.length) test.info().annotations.push({ type: 'clipped at the floor', description: atFloor.join('; ') })
   expect(damage, damage.join('\n')).toEqual([])
 })
 
