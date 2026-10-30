@@ -46,7 +46,7 @@ import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { deriveRoles, hexToOklch, mixHex, softInk } from './exportTemplates/roles.js'
 import { bookTokens } from './bookTokens.js'
-import { pairTally, plural } from './exportTemplates/shared.js'
+import { pairTally, plural, matrixBlocks } from './exportTemplates/shared.js'
 
 // ── Geometry ────────────────────────────────────────────────────────────────
 
@@ -74,11 +74,6 @@ const BAND_GAP = 24
 export const ROOMY_MAX_ROWS = 3
 export const ROOMY_BAND_H = 200
 export const ROOMY_BAND_STEP = ROOMY_BAND_H + BAND_GAP
-// The matrix is as wide as the palette plus white and black. A cell is 35 units
-// wide at 13 colours (15 columns), the narrowest a ratio still reads in; past that
-// the page says so rather than shrinking the cells. Rows split over pages.
-export const MATRIX_MAX = 13
-export const MATRIX_ROWS_PER_PAGE = 7
 const TOKENS_ROW_PAD = 10
 const TOKENS_LINE = 14
 // The token table: where it starts under the introduction on the first page and
@@ -384,12 +379,12 @@ export function planBookPages(design, {
     })
     // One colour has nothing to be measured against but white and black, which the
     // palette page already shows as its ink ratios: no matrix page.
-    const colours = d.palette.length > 1 ? d.palette.slice(0, MATRIX_MAX) : []
-    const groups = colours.length ? balancedChunk(colours, MATRIX_ROWS_PER_PAGE) : []
-    groups.forEach((rows, gi) => {
+    // Every colour is a row. A wide palette is cut into column groups and row pages, as the HTML book does.
+    const blocks = d.palette.length > 1 ? matrixBlocks(d.palette, ['#FFFFFF', '#000000']) : []
+    blocks.forEach((block, gi) => {
       add('matrix', 'Colour', {
-        colours, rows, first: gi === 0, capped: d.palette.length > MATRIX_MAX, left: d.palette.length - colours.length,
-        leaf: groups.length > 1 ? `Contrast matrix (${gi + 1} of ${groups.length})` : 'Contrast matrix',
+        rows: block.rows, cols: block.cols, first: block.first,
+        leaf: gi === 0 ? 'Contrast matrix' : null,
       })
     })
   }
@@ -777,7 +772,7 @@ function matrixOps(c, page) {
   const ops = frame(c, page)
   const head = pageHead(c, 'Contrast matrix', 'Contrast ratio for each pair. Read a row as the background and a column as the text on it.', { first: page.first })
   ops.push(...head.ops)
-  const axes = [...page.colours, '#FFFFFF', '#000000']
+  const axes = page.cols
   const rowHeadW = 95
   const cw = Math.min(64, (CONTENT_W - rowHeadW) / axes.length)
   // The ratio is set at the largest size that fits its cell (35 units wide at 13 colours).
@@ -831,11 +826,6 @@ function matrixOps(c, page) {
     ops.push(text(rest, MARGIN + w + 6, y + i * 18, face(400, 10, d.body), c.muted))
   })
   y += key.length * 18 + 14
-  if (page.capped) {
-    const note = `The matrix shows the first ${MATRIX_MAX} colours. ${plural(page.left, 'colour')} not shown.`
-    const lines = wrapText(note, 470, face(400, 10, d.body), c.measure, { maxLines: 4 })
-    lines.forEach((line, i) => ops.push(text(line, MARGIN, y + i * 15, face(400, 10, d.body), c.muted)))
-  }
   return ops
 }
 
