@@ -51,6 +51,7 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --tsc-  TypeScale specimen rows
 //   --tt-   Tint tool preview
 //   --fg-   Font Gallery specimen cards
+//   --fgd-  the Font Gallery detail pop-up (each family's face and weights)
 //   --fpr-  Font Pair preview
 //   --plb-  Palette Builder board
 //   --stc-  style-guide preview
@@ -58,7 +59,7 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --cq-   the admin community queue previews
 //   --quota- the AI quota meter fill
 const RUNTIME_FAMILIES = [
-  '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fpr-',
+  '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
   '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-',
 ]
 

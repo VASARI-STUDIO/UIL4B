@@ -78,7 +78,7 @@ test.describe('Font Gallery bands', () => {
     await open(page, 1440)
     const offenders = await page.evaluate(() => [...document.querySelectorAll('.fg-page *')]
       .filter((el) => {
-        if (el.closest('.fg-compare-tray, .fg-overlay')) return false
+        if (el.closest('.fg-compare-tray, .fg-overlay, .fgd-overlay')) return false
         const cs = getComputedStyle(el)
         if (cs.display === 'none' || !el.childNodes.length) return false
         const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())

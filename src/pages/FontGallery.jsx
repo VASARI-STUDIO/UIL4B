@@ -8,15 +8,15 @@ import {
   ToolLayout, ToolButton, ToolPills, ToolSelect,
 } from '../components/tool/ToolLayout'
 import FiltersSheet, { ViewToggle } from '../components/FontGalleryFilters'
-import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from '../components/FontDossier'
+import FontDetailDialog from '../components/FontDetailDialog'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
 import {
-  bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
-  suggestPairings, verifyFontLoaded,
+  bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
+  verifyFontLoaded,
 } from '../utils/googleFonts'
-import { filterGalleryTypefaces, formatSubsets, ladderWeights, weightName } from '../utils/fontGallery'
+import { filterGalleryTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -515,310 +515,6 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
   )
 }
 
-/* ── Specimen dialog ───────────────────────────────────────────────────────── */
-
-// THE POPUP. `FontBrowseDialog.jsx` was the backlog note's guess and it is not
-// this one — that belongs to `FontPicker`, which Font Pair and Type Scale use.
-// What the Font Gallery opens when you click a family is this component, and
-// what was wrong with it, measured at 1440×900:
-//
-//   IT WAS 1,763px TALL IN A 900px VIEWPORT, and it scrolls the overlay rather
-//   than itself, so every action it offers — Find a pairing, Copy import URL,
-//   Add to comparison — sat below the fold on arrival. A dialog whose purpose
-//   is to help you decide opened with none of the decisions visible.
-//
-//   "TYPE SCALE" PRINTED THE SAME SENTENCE SIX TIMES, five of them ellipsised
-//   mid-word at six different points. It was ~40% of that height, it told you
-//   nothing the first line had not, and the tool it imitates is one button away
-//   in the same dialog.
-//
-//   "ALL WEIGHTS" WAS SIX "Ag" TILES. Two letters cannot show what a weight
-//   does to a word, which is the entire question. It was the section that
-//   should have been the heart of the dialog and the least informative in it.
-//
-//   THE TAGS COUNTED FACTS INSTEAD OF STATING THEM — "1 subset" where the data
-//   holds the script names, "6 weights" beside a control that could have shown
-//   them.
-//
-//   THE WEIGHT SLIDER had no job the page could name: it re-set a hero that was
-//   already at heading weight and a type scale that is now gone.
-//
-// So the dialog is a fixed-height frame — pinned identity, scrolling body,
-// pinned actions — and its body is the weight list, one full-width line per
-// real cut, set in your own words. Head and foot are the Readymag specimen
-// modal; the weight list is Pitch's, which renders every style as a real
-// sentence for exactly the reason the Ag tiles failed to.
-function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
-  const ref = useModal(onClose)
-  // Same shape as useFontReady above, and for the same warning: this was
-  // `useState('checking')` with `setLoadState('checking')` as the first
-  // statement of the effect below. The result is recorded against the font it
-  // describes, so a font this dialog has not resolved yet reads 'checking' by
-  // derivation rather than by a second render.
-  const [loaded, setLoaded] = useState(null)
-  const loadState = loaded && loaded.font === font ? loaded.status : 'checking'
-  // Seeded from the gallery's own preview field. Opening a specimen used to
-  // throw away the words you had just typed into the toolbar and hand you a
-  // stock pangram instead — the one moment in the flow where your words matter
-  // most was the one that dropped them.
-  const [text, setText] = useState(previewText)
-  const [pairings, setPairings] = useState([])
-  // The founder's two tabs, on the same shared component the browse dialog
-  // uses. This dialog already WAS the per-family view, so it needed no new
-  // navigation — only somewhere to put About and Examples that does not make
-  // the specimen scroll past them. Everything that was here is now the Specimen
-  // tab, unchanged.
-  const [tab, setTab] = useState('specimen')
-  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
-  const weights = font.variants.length
-
-  useEffect(() => {
-    let cancelled = false
-    loadFont(font.family, font.variants)
-    verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-      if (!cancelled) setLoaded({ font, status })
-    })
-    return () => { cancelled = true }
-  }, [font])
-
-  useEffect(() => {
-    let cancelled = false
-    suggestPairings(font, { limit: 3 }).then(list => {
-      if (cancelled) return
-      list.forEach(s => loadFont(s.font.family, [bodyWeight(s.font)]))
-      setPairings(list)
-    })
-    return () => { cancelled = true }
-  }, [font])
-
-  const retryFont = () => {
-    // Dropping the record is what puts the dialog back to 'checking' — the
-    // derivation above reads a null result as exactly that.
-    setLoaded(null)
-    reloadFont(font.family).then(() =>
-      verifyFontLoaded(font.family, bodyWeight(font)).then(status => setLoaded({ font, status })),
-    )
-  }
-
-  const fam = fontStack(font)
-
-  return (
-    <div className="fg-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div
-        className="fg-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fg-detail-title"
-        tabIndex={-1}
-        ref={ref}
-      >
-        {/* PINNED IDENTITY. The family name, in its own face, and the three
-            facts the catalogue actually holds — stated, not counted. Scripts
-            are the Readymag "Language Support" line: the only answer this
-            dialog has to "can I set my copy in this", and it was being spent
-            on the word "subset". */}
-        <header className="fg-detail-head">
-          <div className="fg-detail-id">
-            <h2
-              className="fg-detail-hero"
-              id="fg-detail-title"
-              ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(headingWeight(font)) })}
-            >
-              {font.family}
-            </h2>
-            <p className="fg-detail-facts">
-              <span className="fg-tag">{font.category}</span>
-              <span className="fg-tag">{weights} weight{weights === 1 ? '' : 's'}</span>
-              {scripts.length > 0 && <span className="fg-tag fg-tag--scripts">{scripts.join(', ')}</span>}
-            </p>
-          </div>
-          <button type="button" className="fg-detail-close" onClick={onClose} aria-label={`Close the ${font.family} specimen`}>
-            <CloseIcon />
-          </button>
-        </header>
-
-        {/* One control, and it drives everything below it. The old dialog had a
-            weight slider that re-set a hero already at heading weight; this sets
-            the words that every cut in the list is drawn with, which is the only
-            variable a person actually wants to change while judging a face. */}
-        <FontDossierTabs
-          value={tab}
-          onChange={setTab}
-          idBase="fg"
-          label={`${font.family} details`}
-        />
-
-        {/* The preview field drives the weight list and nothing else, so it
-            belongs to the Specimen tab rather than sitting above all three as a
-            control that does nothing on two of them. */}
-        {tab === 'specimen' && (
-          <div className="fg-detail-controls">
-            <label className="fg-detail-field">
-              <span>Preview text</span>
-              <input
-                type="text"
-                value={text}
-                maxLength={72}
-                spellCheck="false"
-                placeholder={PANGRAM}
-                onChange={e => setText(e.target.value)}
-              />
-            </label>
-          </div>
-        )}
-
-        <div className="fg-detail-body">
-
-        {loadState === 'unknown' && (
-          <div className="fg-loading-note" role="status">
-            <span className="fg-loading-note-spinner" aria-hidden="true" />
-            <span>Still loading this preview — showing a fallback face until {font.family} arrives.</span>
-          </div>
-        )}
-
-        {loadState === 'failed' && (
-          <div className="typ-notice" role="status">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div>
-              <strong>{font.family} couldn&rsquo;t load, so a fallback is shown.</strong>
-              <span>
-                The stylesheet or font file did not become usable. A privacy extension, dropped
-                connection or unavailable font-loading feature can cause this. The import URL and
-                CSS you copy below are unaffected.
-              </span>
-              <button type="button" className="typ-notice-retry" onClick={retryFont}>Retry this font</button>
-            </div>
-          </div>
-        )}
-
-        {tab === 'specimen' && (
-        <div className="fdx-panel" id="fg-panel-specimen" role="tabpanel" aria-labelledby="fg-tab-specimen" tabIndex={0}>
-        {/* THE BODY IS THE WEIGHT LIST. Every cut the family actually ships,
-            one full-width line each, drawn in that cut, set in the reader's own
-            words. This is the section the six "Ag" tiles were standing in for,
-            and it is the reason the type-scale block could go: a family read at
-            six weights tells you what six copies of one sentence at six sizes
-            never did, and sizes are the neighbouring tool's job. */}
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Every weight, in your words</div>
-          <ol className="fg-weight-rows">
-            {font.variants.map(w => (
-              <li key={w} className="fg-weight-row">
-                <span
-                  className="fg-weight-line"
-                  ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(w) })}
-                >
-                  {text.trim() || PANGRAM}
-                </span>
-                <span className="fg-weight-tag">
-                  <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Character set</div>
-          <div className="fg-charset" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(bodyWeight(font)) })}>
-            <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
-            <div>abcdefghijklmnopqrstuvwxyz</div>
-            <div>0123456789 !@#$%^&amp;*()+-=</div>
-          </div>
-        </div>
-
-        {pairings.length > 0 && (
-          <div className="fg-detail-section">
-            <div className="fg-detail-label">Pairs well with</div>
-            <div className="fg-pair-grid">
-              {pairings.map(({ font: pair, reason }) => (
-                <div
-                  key={pair.family}
-                  className="fg-pair-card"
-                  ref={varsRef({
-                    '--fg-ff': fam,
-                    '--fg-fw-h': String(headingWeight(font)),
-                    '--fg-pair-ff': fontStack(pair),
-                    '--fg-pair-fw': String(bodyWeight(pair)),
-                  })}
-                >
-                  <div className="fg-pair-preview">
-                    <span className="fg-pair-heading">{font.family}</span>
-                    <span className="fg-pair-body">{pair.family} keeps the body copy readable underneath.</span>
-                  </div>
-                  <p className="fg-pair-reason">{reason}</p>
-                  <div className="fg-pair-foot">
-                    <span className="fg-pair-name">{pair.family}</span>
-                    <button type="button" className="fg-pair-apply" onClick={() => onSendToPair(font, pair)}>
-                      Open in Font Pair
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        </div>
-        )}
-
-        {tab === 'about' && (
-          <FontAboutPanel font={font} id="fg-panel-about" labelledBy="fg-tab-about" />
-        )}
-
-        {tab === 'examples' && (
-          <FontExamplesPanel font={font} id="fg-panel-examples" labelledBy="fg-tab-examples" />
-        )}
-
-        {tab === 'inuse' && (
-          <FontInUsePanel font={font} id="fg-panel-inuse" labelledBy="fg-tab-inuse" />
-        )}
-
-        </div>
-
-        {/* PINNED ACTIONS. Every one of these used to sit past 1,700px of dialog
-            on a 900px screen, so the answer to "I like this one, now what" was
-            below the fold at the exact moment it was asked. "Take it further"
-            and the action row were also two bars doing one job — sending the
-            family somewhere — drawn differently. One bar now, with the two
-            hand-offs first because they are the reason this tool sits between
-            Font Pair and Type Scale. */}
-        <footer className="fg-detail-actions">
-          <button type="button" className="fg-detail-btn fg-detail-btn--primary" onClick={() => onSendToPair(font, null)}>
-            Find a pairing &rarr;
-          </button>
-          <button type="button" className="fg-detail-btn" onClick={() => onSendToScale(font)}>
-            Build a type scale &rarr;
-          </button>
-          <button type="button" className="fg-detail-btn" onClick={() => onCompare(font)} aria-pressed={inCompare}>
-            {inCompare ? 'In comparison' : 'Add to comparison'}
-          </button>
-          <button
-            type="button"
-            className="fg-detail-btn"
-            onClick={() => {
-              trackFontCopy(font.family)
-              onCopy?.(getFontImportUrl([{ family: font.family, weights: font.variants.slice(0, 4) }]))
-            }}
-          >
-            Copy import URL
-          </button>
-          <a
-            href={`https://fonts.google.com/specimen/${font.family.replace(/ /g, '+')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fg-detail-btn"
-          >
-            View on Google Fonts
-          </a>
-        </footer>
-      </div>
-    </div>
-  )
-}
-
 /* ── Page ──────────────────────────────────────────────────────────────────── */
 
 export default function FontGallery({ onCopy, toast }) {
@@ -1264,9 +960,11 @@ export default function FontGallery({ onCopy, toast }) {
       )}
 
       {selected && (
-        <DetailDialog
+        <FontDetailDialog
           font={selected}
           previewText={previewText}
+          categoryLabel={sentence(catWord(selected.category))}
+          layout={mode}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
           onCompare={compareFromDetail}

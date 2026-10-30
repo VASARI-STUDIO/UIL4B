@@ -1,0 +1,620 @@
+/* The Font Gallery family pop-up (FontDetailDialog.jsx).
+
+   A bottom sheet under 768px, a 560px dialog from 768px, a 1120px dialog from
+   1024px. Its height is fixed at each size, so nothing jumps between sections:
+   the scroll region is the only part that moves, and the action bar stays on
+   the foot. Everything is a token, so both themes follow. */
+
+/* ── Frame ───────────────────────────────────────────────────────────────── */
+
+.fgd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  animation: fg-fade var(--dur-2) var(--ease-entrance);
+}
+
+.fgd {
+  --fgd-pad: var(--s-4);
+  --fgd-cols: 8;
+  --fgd-bar-pad: 14px;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  height: 90vh;
+  height: 90dvh;
+  overflow: hidden;
+  color: var(--t0);
+  font-family: var(--font);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+  box-shadow: var(--shadow-l);
+  transform: translateY(var(--fgd-drag, 0px));
+  transition: transform 200ms var(--ease-standard);
+  animation: fgd-sheet-in var(--dur-3) var(--ease-entrance);
+}
+
+.fgd.is-dragging { transition: none; }
+.fgd:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@keyframes fgd-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes fgd-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+@media (min-width: 768px) {
+  .fgd-overlay { align-items: center; padding: 16px; }
+  .fgd {
+    --fgd-pad: var(--s-5);
+    --fgd-cols: 8;
+    --fgd-bar-pad: 12px;
+    width: min(560px, 100%);
+    height: min(860px, 100%);
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    transform: none;
+    transition: none;
+    animation: fgd-in var(--dur-3) var(--ease-entrance);
+  }
+}
+
+@media (min-width: 1024px) {
+  .fgd-overlay { padding: 24px 48px; }
+  .fgd {
+    --fgd-pad: var(--s-6);
+    --fgd-cols: 10;
+    --fgd-bar-pad: 16px;
+    width: min(1120px, 100%);
+  }
+}
+
+/* The handle: a drag zone a thumb tall, on the sheet only. */
+.fgd-grab {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-height: 28px;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* The grab zone reaches 16px down into the hero, above the scroll region but
+   under the close button. */
+.fgd-grab::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 -16px;
+}
+
+.fgd-grab-bar {
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--t0) 40%, transparent);
+}
+
+/* ── Scroll region, close button and the name strip ──────────────────────── */
+
+.fgd-main {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.fgd-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 var(--fgd-pad) var(--s-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: 64px;
+}
+
+.fgd-close {
+  position: absolute;
+  z-index: 3;
+  top: var(--s-3);
+  right: var(--s-4);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--t0);
+  background: var(--bg-1);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+}
+
+.fgd-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fgd-close:active { transform: scale(.97); }
+.fgd-close:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* After the hero scrolls away, a 56px strip keeps the name in its face. */
+.fgd-strip {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 56px;
+  padding: 0 calc(var(--fgd-pad) + 48px) 0 var(--fgd-pad);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease-standard), visibility 0s linear var(--dur-2);
+}
+
+.fgd-strip.is-on { opacity: 1; visibility: visible; transition-delay: 0s; }
+
+.fgd-strip-name {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--fgd-ff);
+  font-weight: var(--fgd-fw);
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+
+/* The hero is a size container, so the name scales with the room it has (96px
+   at the widest) and wraps rather than being cut. Its right edge stays clear
+   of the close button. */
+.fgd-hero {
+  container-type: inline-size;
+  padding: var(--s-6) 56px var(--s-4) 0;
+}
+
+.fgd-name {
+  margin: 0;
+  color: var(--t0);
+  font-family: var(--fgd-ff);
+  font-weight: var(--fgd-fw);
+  font-size: clamp(40px, 15cqi, 96px);
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.fgd-meta {
+  margin: var(--s-3) 0 0;
+  color: var(--t1);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.fgd-note {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  color: var(--t1);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fgd-note-spinner {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: fg-spin .7s linear infinite;
+}
+
+.fgd-notice { margin-bottom: var(--s-4); }
+
+.fgd-controls { padding: var(--s-2) 0 var(--s-5); }
+
+/* The first section follows the field directly, so the field's own space is
+   the gap; a rule and a second gap above Weights would double it. */
+.fgd-controls + .fgd-sec { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.fgd-field {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  background: var(--inp);
+  /* A field edge has to reach 3:1 against the sheet; --bh is a soft divider. */
+  border: 1px solid color-mix(in srgb, var(--t0) 50%, var(--bg-1));
+  border-radius: var(--radius-xl);
+  transition: border-color var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
+}
+
+.fgd-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
+.fgd-field > span { flex: 0 0 auto; color: var(--t1); font-size: 13px; font-weight: 500; }
+
+.fgd-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  color: var(--t0);
+  font-family: var(--font);
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.fgd-field input::placeholder { color: var(--t2); }
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+
+.fgd-sec {
+  margin-top: var(--s-6);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--border);
+}
+
+.fgd-h {
+  margin: 0 0 var(--s-4);
+  color: var(--t0);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.3;
+}
+
+/* The About note sits on the sheet as plain text under its heading, set like
+   the licence block below it, instead of a second panel inside the section. */
+.fgd .fdx-note {
+  margin-top: var(--s-5);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.fgd .fdx-note h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.fgd .fdx-note p { max-width: 60ch; }
+
+/* Weights: one full-width line per real cut, drawn in that cut. */
+.fgd-weights { margin: 0; padding: 0; list-style: none; }
+
+.fgd-weight {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-5);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fgd-weight:last-child { border-bottom: 0; }
+
+.fgd-weight-line {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t0);
+  font-family: var(--fgd-ff);
+  font-weight: var(--fgd-fw);
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: -.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fgd-weight-tag {
+  flex: 0 0 auto;
+  color: var(--t2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fgd-weight-tag strong { color: var(--t1); font-weight: 560; }
+
+/* Characters: a glyph grid on hairline cells. */
+.fgd-glyphs {
+  display: grid;
+  grid-template-columns: repeat(var(--fgd-cols), minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.fgd-glyph {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  color: var(--t0);
+  font-family: var(--fgd-ff);
+  font-weight: var(--fgd-fw);
+  font-size: 24px;
+  line-height: 1;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Pairs well with */
+.fgd-pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--s-5) var(--s-4);
+}
+
+/* No outer card: the preview is a well on the sheet, and where the pairs stack
+   a hairline divides the rows (see the phone block below). */
+.fgd-pair {
+  display: flex;
+  flex-direction: column;
+}
+
+.fgd-pair-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 112px;
+  padding: var(--s-4);
+  background: var(--bg-2);
+  border-radius: var(--radius-l);
+}
+
+.fgd-pair-heading {
+  overflow: hidden;
+  color: var(--t0);
+  font-family: var(--fgd-ff);
+  font-weight: var(--fgd-fw-h);
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  text-overflow: ellipsis;
+}
+
+.fgd-pair-body {
+  color: var(--t1);
+  font-family: var(--fgd-pair-ff);
+  font-weight: var(--fgd-pair-fw);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fgd-pair-reason { margin: 0; padding: var(--s-3) 0 0; color: var(--t1); font-size: 13px; line-height: 1.5; }
+
+.fgd-pair-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: auto;
+  padding: var(--s-3) 0 0;
+}
+
+.fgd-pair-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t0);
+  font-size: 13px;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Action bar: one row, never wraps ────────────────────────────────────── */
+
+.fgd-bar {
+  flex: 0 0 auto;
+  padding: var(--fgd-bar-pad) max(var(--fgd-pad), env(safe-area-inset-right, 0px)) calc(var(--fgd-bar-pad) + env(safe-area-inset-bottom, 0px)) max(var(--fgd-pad), env(safe-area-inset-left, 0px));
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+}
+
+.fgd-bar-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s-2); min-width: 0; }
+
+.fgd-btn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  color: var(--t0);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 560;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+}
+
+.fgd-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: var(--accent-fill); }
+.fgd-btn--icon { width: 40px; padding: 0; }
+.fgd-btn--small { min-height: 36px; padding: 0 var(--s-3); font-size: 13px; }
+.fgd-btn--compare { gap: var(--s-2); }
+.fgd-ext { margin-left: .25em; }
+.fgd-btn[aria-pressed="true"] { border-color: var(--t0); }
+
+.fgd-btn:focus-visible,
+.fgd-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fgd-menu-item:focus-visible { outline-offset: -2px; }
+
+.fgd-btn:not(:disabled):active { transform: scale(.97); }
+.fgd-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+@media (hover: hover) {
+  .fgd-btn:not(:disabled):not(.fgd-btn--primary):hover,
+  .fgd-close:hover,
+  .fgd-menu-item:hover { background: var(--hvr); }
+  .fgd-btn--primary:not(:disabled):hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+}
+
+@media (max-width: 1180px) {
+  .fgd-btn { padding: 0 var(--s-3); }
+}
+
+/* On the sheet Find a pairing fills the row; the compare toggle and More are
+   44px squares. */
+@media (max-width: 767px) {
+  .fgd-bar-row .fgd-btn--primary { flex: 1 1 auto; min-width: 0; }
+  .fgd-btn { min-height: 44px; }
+  .fgd-btn--icon { width: 44px; }
+}
+
+@media (pointer: coarse) {
+  .fgd-btn { min-height: 44px; }
+  .fgd-btn--icon { width: 44px; }
+  /* 44px at s-2 ends at 52px, clear of the 56px name strip's rule. */
+  .fgd-close { top: var(--s-2); width: 44px; height: 44px; }
+  .fgd-field input { font-size: 16px; }
+  .fgd-menu-item { min-height: 44px; }
+}
+
+/* More: a menu that opens upward over the bar. */
+.fgd-more { position: relative; flex: 0 0 auto; }
+
+.fgd-menu {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: calc(100% + var(--s-2));
+  min-width: 220px;
+  margin: 0;
+  padding: var(--s-1);
+  list-style: none;
+  background: var(--bg-1);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-m);
+  animation: fg-fade var(--dur-1) var(--ease-entrance);
+}
+
+.fgd-menu-item {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--s-3);
+  color: var(--t0);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.fgd-menu-item:active { background: var(--hvr); }
+
+/* On the phone sheet More is a bottom sheet over the bar, under its own scrim
+   that covers the whole pop-up. */
+@media (max-width: 767px) {
+  .fgd-more { position: static; }
+  .fgd-menu-scrim {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    background: var(--scrim);
+    cursor: default;
+  }
+  .fgd-menu {
+    position: absolute;
+    z-index: 5;
+    inset: auto 0 0 0;
+    min-width: 0;
+    padding: var(--s-2) var(--s-4) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
+    border-width: 1px 0 0;
+    border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+  }
+  .fgd-menu-item { min-height: 48px; font-size: 16px; }
+}
+
+/* ── Phone and tablet sizes ──────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .fgd-sec { margin-top: var(--s-5); padding-top: var(--s-5); }
+  .fgd-weight { flex-direction: column-reverse; align-items: flex-start; gap: 2px; padding: 10px 0; }
+  /* A long line wraps rather than being cut off. */
+  .fgd-weight-line {
+    max-width: 100%;
+    font-size: 20px;
+    line-height: 1.25;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .fgd-pair + .fgd-pair { padding-top: var(--s-5); border-top: 1px solid var(--border); }
+}
+
+@media (min-width: 768px) {
+  .fgd-weight-line { font-size: 24px; }
+}
+
+@media (min-width: 1024px) {
+  .fgd-weight-line { font-size: 28px; }
+}
+
+/* ── Landscape phones: the sheet takes the whole short screen ────────────── */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .fgd-overlay { padding: 0; }
+  .fgd { height: 100dvh; max-height: none; }
+  .fgd-grab { min-height: 16px; }
+  .fgd-hero { padding-top: var(--s-4); padding-bottom: var(--s-2); }
+  .fgd-name { font-size: 28px; }
+  .fgd-controls { padding-bottom: var(--s-3); }
+  .fgd-bar { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── Reduced motion: the pop-up fades and does not rise ──────────────────── */
+
+html[data-reduced-motion="true"] .fgd-note-spinner { animation: none; }
+html[data-reduced-motion="true"] .fgd { animation: fg-fade var(--dur-2) linear; transition: none; }
+html[data-reduced-motion="true"] .fgd-menu { animation: none; }
+html[data-reduced-motion="true"] :is(.fgd-btn, .fgd-close, .fgd-strip, .fgd-field) { transition: none; }
+html[data-reduced-motion="true"] :is(.fgd-btn, .fgd-close):active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fgd-note-spinner { animation: none; }
+  html:not([data-reduced-motion="false"]) .fgd { animation: fg-fade var(--dur-2) linear; transition: none; }
+  html:not([data-reduced-motion="false"]) .fgd-menu { animation: none; }
+  html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close, .fgd-strip, .fgd-field) { transition: none; }
+  html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close):active { transform: none; }
+}
