@@ -1047,7 +1047,11 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
      strip so the whole target takes the press. The ? circle stays 20px. */
   .plb .plb-sw-line { align-items: center; position: relative; z-index: 1; }
   .plb .plb-sw-info, .plb .plb-sw-compare { min-width: 44px; height: 44px; margin-block: -12px; }
-  .plb .plb-sw-info { margin-left: 0; border: 0; background: none; }
+  /* The ? sits inside .plb-sw-detail, which clips (overflow: hidden, for the
+     ellipsis). A negative margin shrinks that box to the 20px line and clips the
+     button to 20px of press; with none, the box grows to 44px and the flex line
+     (fixed 20px, centred) is unchanged. */
+  .plb .plb-sw-info { margin-block: 0; margin-left: 0; border: 0; background: none; }
   .plb .plb-sw-info > span { display: grid; place-items: center; width: 20px; height: 20px; margin: auto; border: 1px solid var(--tl-line-2); border-radius: 999px; }
   .plb .plb-sw-info[aria-expanded="true"] { background: none; }
   .plb .plb-sw-info[aria-expanded="true"] > span { background: var(--tl-wash); color: var(--tl-ink); }
