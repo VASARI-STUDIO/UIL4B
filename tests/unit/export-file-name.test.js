@@ -51,7 +51,7 @@ test('a malformed artefact or extension throws rather than writing a stray name'
 
 test('every format the dialog offers has a name, and the names are the specified ones', () => {
   for (const f of EXPORT_FORMATS.filter((x) => x.live)) assert.ok(hasFormatFile(f.id), `${f.id} has no file name`)
-  const names = Object.fromEntries(['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'html', 'png', 'jpeg', 'md', 'kit', 'css', 'json', 'tailwind', 'contrast', 'contrast-json']
+  const names = Object.fromEntries(['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'html', 'png', 'jpeg', 'md', 'kit', 'css', 'json', 'tailwind', 'contrast', 'contrast-json', 'app-bundle']
     .map((id) => [id, formatFileName('Lumen', id)]))
   assert.deepEqual(names, {
     book: 'lumen-book.pdf',
@@ -69,6 +69,7 @@ test('every format the dialog offers has a name, and the names are the specified
     tailwind: 'lumen-tailwind.css',
     contrast: 'lumen-contrast-pairs.csv',
     'contrast-json': 'lumen-contrast-pairs.json',
+    'app-bundle': 'lumen-app-ready.zip',
   })
   assert.equal(formatFileName('Lumen', 'nope'), '')
   assert.equal(formatFileName('Lumen', 'book', { saved: true }), 'lumen-book.html', 'a print format that is saved is its HTML')

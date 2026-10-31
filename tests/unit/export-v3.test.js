@@ -4,8 +4,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   EXPORT_FORMATS, assertFormatsCoherent, assertGroupsCoherent, groupFormats, isGroupPro,
-  proOnlyFormats, documentFormats,
+  proOnlyFormats, documentFormats, unbuiltFormats,
 } from '../../src/config/exportFormats.js'
+import { formatFileName, hasFormatFile } from '../../src/utils/exportFileName.js'
 import { EXPORT_TEMPLATES, assertTemplatesCoherent } from '../../src/config/exportTemplates.js'
 import {
   DEFAULT_PRESET, EXPORT_TYPES, LAST_PICK_KEY, exportLocation, galleryPick, needsNetwork,
@@ -24,7 +25,7 @@ const allCategories = EXPORT_TYPES.flatMap((t) => t.categories)
 
 test('every live format is in exactly one category, and no category lists a format that is not live', () => {
   const live = EXPORT_FORMATS.filter((f) => f.live).map((f) => f.id)
-  assert.deepEqual([...live].sort(), ['book', 'book-html', 'book-png', 'contrast', 'contrast-json', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png', 'tailwind'])
+  assert.deepEqual([...live].sort(), ['app-bundle', 'book', 'book-html', 'book-png', 'contrast', 'contrast-json', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png', 'tailwind'])
   for (const id of live) {
     const homes = allCategories.filter((c) => c.files.includes(id))
     assert.equal(homes.length, 1, `${id} is in ${homes.length} categories`)
@@ -34,11 +35,12 @@ test('every live format is in exactly one category, and no category lists a form
   }
 })
 
-test('the rail is Brand book (Book, Slides, Style guide), UI kit and Code, and only Brand book has sub-rows', () => {
-  assert.deepEqual(EXPORT_TYPES.map((t) => t.id), ['brand', 'kit', 'code'])
+test('the rail is Brand book (Book, Slides, Style guide), UI kit, Code and App-ready, and only Brand book has sub-rows', () => {
+  assert.deepEqual(EXPORT_TYPES.map((t) => t.id), ['brand', 'kit', 'code', 'apps'])
   assert.deepEqual(EXPORT_TYPES[0].categories.map((c) => c.id), ['book', 'slides', 'guide'])
   assert.equal(EXPORT_TYPES[1].categories.length, 1)
   assert.equal(EXPORT_TYPES[2].categories.length, 1)
+  assert.equal(EXPORT_TYPES[3].categories.length, 1)
   const ids = allCategories.map((c) => c.id)
   assert.equal(new Set(ids).size, ids.length, 'a category id repeats')
 })
@@ -75,9 +77,25 @@ test('the HTML variants pass the coherence asserts and answer to the same wall a
   assert.equal(isGroupPro('guidelines'), true)
 })
 
-test('the new files are not new documents: the plan lines still count one book and one deck', () => {
-  assert.deepEqual(proOnlyFormats().map((f) => f.id), ['book', 'guidelines'])
+test('the new files are not new documents: the plan lines still count one book, one deck and one bundle', () => {
+  assert.deepEqual(proOnlyFormats().map((f) => f.id), ['book', 'guidelines', 'app-bundle'])
   assert.ok(!documentFormats().some((f) => f.id === 'book-html' || f.id === 'guidelines-html'))
+})
+
+test('the app-ready bundle is a live Pro row of its own, with a download name and a place in the dialog', () => {
+  const row = EXPORT_FORMATS.find((f) => f.id === 'app-bundle')
+  assert.ok(row, 'the app-bundle row is gone')
+  assert.deepEqual([row.live, row.pro, row.group, row.variantOf], [true, true, 'apps', undefined])
+  assert.ok(proOnlyFormats().some((f) => f.id === 'app-bundle'))
+  assert.equal(isGroupPro('apps'), true)
+  assert.deepEqual(groupFormats('apps').map((f) => f.id), ['app-bundle'])
+  assert.equal(hasFormatFile('app-bundle'), true)
+  assert.equal(formatFileName('Lumen', 'app-bundle'), 'lumen-app-ready.zip')
+  assert.equal(formatFileName('', 'app-bundle'), 'untitled-app-ready.zip')
+  const home = exportLocation('app-bundle')
+  assert.deepEqual([home.type.id, home.category.id, home.category.pro, home.category.preview], ['apps', 'apps', true, 'bundle'])
+  // The Soon row for the icon and swatch bundle is a different thing and stays unbuilt.
+  assert.ok(unbuiltFormats().some((f) => f.id === 'assets'))
 })
 
 // ── Presets and the last pick ───────────────────────────────────────────────
@@ -168,8 +186,13 @@ test('a free file has no upgrade pick, so it can never be sent to checkout', () 
   }
 })
 
-test('every Pro file is a pick the gallery stores and reads back, and the way back reopens it', () => {
-  const pro = EXPORT_FORMATS.filter((f) => f.live && f.pro).map((f) => f.id)
+test('the app-ready bundle has no gallery pick, so a free account on it goes to /plans, even with a saved project', () => {
+  assert.equal(galleryPick('app-bundle'), null)
+  assert.deepEqual(resolveUpgradeTarget({ formatId: 'app-bundle', projectId: 'p1', signedIn: true }), { to: '/plans', checkout: false, pick: null })
+})
+
+test('every gallery Pro file is a pick the gallery stores and reads back, and the way back reopens it', () => {
+  const pro = EXPORT_FORMATS.filter((f) => f.live && f.pro && f.id !== 'app-bundle').map((f) => f.id)
   assert.deepEqual([...pro].sort(), ['book', 'book-html', 'book-png', 'guidelines', 'guidelines-html'])
   const seen = new Set()
   for (const id of pro) {
@@ -199,7 +222,7 @@ test('the gallery offers the book as PNG pages', () => {
 
 test('offline: the book, the slides and the kit need the network; the style guide and the code files do not', () => {
   for (const id of ['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'kit']) assert.equal(needsNetwork(id), true, id)
-  for (const id of ['html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json']) assert.equal(needsNetwork(id), false, id)
+  for (const id of ['html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json', 'app-bundle']) assert.equal(needsNetwork(id), false, id)
 })
 
 // ── The runner's source ─────────────────────────────────────────────────────

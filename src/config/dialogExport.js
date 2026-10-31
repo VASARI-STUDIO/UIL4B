@@ -41,6 +41,12 @@ export const EXPORT_TYPES = Object.freeze([
     line: 'CSS, JSON, Tailwind',
     categories: Object.freeze([category('code', 'Code', 'CSS, JSON, Tailwind', false, ['css', 'json', 'tailwind', 'contrast', 'contrast-json'], null, 'code')]),
   }),
+  Object.freeze({
+    id: 'apps',
+    name: 'App-ready',
+    line: 'Figma, Adobe, Procreate',
+    categories: Object.freeze([category('apps', 'App-ready bundle', 'One zip', true, ['app-bundle'], null, 'bundle')]),
+  }),
 ])
 
 // Where the header Export opens with no earlier pick this session.

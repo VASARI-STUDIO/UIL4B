@@ -582,3 +582,73 @@ test('an empty or broken design still produces valid files', () => {
     assert.doesNotMatch(json, /undefined|NaN|\[object/)
   }
 })
+
+/* ── dark mode (opt-in `modes`) ──────────────────────────────────────────── */
+
+const OPTS = { projectName: 'Modes', watermark: false, date: AT }
+
+// The CSS from the first line of the dark rule to its closing brace, and the file without it.
+function splitDarkRule(css) {
+  const at = css.indexOf('/* Dark theme')
+  const end = css.indexOf('\n}\n', at) + 3
+  return { rule: css.slice(at, end), rest: css.slice(0, at).replace(/\n$/, '') + css.slice(end).replace(/^\n/, '\n') }
+}
+
+test('modes off is the default: no dark block in the CSS, no dark value in the JSON', () => {
+  const css = buildTokensCss(DESIGN, OPTS)
+  assert.equal(css, buildTokensCss(DESIGN, { ...OPTS, modes: false }))
+  assert.doesNotMatch(css, /\.dark|data-theme/)
+  const json = buildTokensJson(DESIGN, OPTS)
+  assert.equal(json, buildTokensJson(DESIGN, { ...OPTS, modes: false }))
+  assert.doesNotMatch(json, /"dark"/)
+})
+
+test('modes on only adds: removing the dark block / dark values gives the modes-off file', () => {
+  const on = buildTokensCss(DESIGN, { ...OPTS, modes: true })
+  assert.notEqual(on, buildTokensCss(DESIGN, OPTS), 'modes must change the CSS')
+  assert.equal(splitDarkRule(on).rest, buildTokensCss(DESIGN, OPTS))
+
+  const doc = JSON.parse(buildTokensJson(DESIGN, { ...OPTS, modes: true }))
+  walk(doc, 'root', (node) => {
+    if (node?.$extensions?.['com.uil4b']) {
+      delete node.$extensions['com.uil4b'].dark
+      if (!Object.keys(node.$extensions['com.uil4b']).length) delete node.$extensions['com.uil4b']
+      if (!Object.keys(node.$extensions).length) delete node.$extensions
+    }
+  })
+  assert.deepEqual(doc, JSON.parse(buildTokensJson(DESIGN, OPTS)))
+})
+
+test('modes on: a .dark rule after :root redeclares every role and the primary colour', () => {
+  const css = buildTokensCss(DESIGN, { ...OPTS, modes: true })
+  const root = postcss.parse(css).nodes.filter((n) => n.type === 'rule')
+  assert.equal(root[0].selector, ':root')
+  assert.equal(root[1].selector, '.dark,\n[data-theme="dark"]')
+  const dark = new Map()
+  root[1].walkDecls((d) => dark.set(d.prop, d.value))
+  for (const n of [...ROLES, '--color-primary']) assert.ok(dark.has(n), `${n} missing from the dark rule`)
+  assert.equal(dark.size, ROLES.length + 1, 'nothing else is in the dark rule')
+  const light = new Map()
+  root[0].walkDecls((d) => light.set(d.prop, d.value))
+  for (const [prop, value] of dark) {
+    assert.ok(light.has(prop), `${prop} is not a light token`)
+    const ref = value.match(/^var\((--[\w-]+)\)$/)
+    if (ref) assert.ok(light.has(ref[1]) && ref[1] !== prop, `${prop} -> ${value} must point at another light token`)
+    else assert.match(value, /^#[0-9a-f]{6}$/)
+  }
+  assert.notEqual(dark.get('--color-background'), light.get('--color-background'))
+})
+
+test('modes on: the JSON keeps each dark value in $extensions[com.uil4b].dark, as a colour or a reference', () => {
+  const doc = JSON.parse(buildTokensJson(DESIGN, { ...OPTS, modes: true }))
+  const nodes = [
+    doc.color.background, doc.color.surface, doc.color['on-surface'].$root, doc.color['on-surface'].muted, doc.color.border,
+    doc.color.primary.hover, doc.color['on-primary'], doc.color.focus, doc.color.disabled, doc.color['on-disabled'], doc.color.primary.$root,
+  ]
+  for (const node of nodes) {
+    const dark = node.$extensions['com.uil4b'].dark
+    if (typeof dark === 'string') assert.match(dark, /^\{color\.[\w.-]+\}$/)
+    else assert.match(dark.hex, /^#[0-9a-f]{6}$/)
+  }
+  assert.equal(doc.color.primary['500'].$extensions, undefined, 'a plain tint has no dark value')
+})

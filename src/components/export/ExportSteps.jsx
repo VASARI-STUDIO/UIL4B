@@ -41,6 +41,7 @@ const FILE_COPY = {
   tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
   contrast: { label: 'Contrast CSV', blurb: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result.', action: 'Export contrast pairs' },
   'contrast-json': { label: 'Contrast JSON', blurb: 'The same pairs as JSON, with each WCAG result as true or false.', action: 'Export contrast pairs' },
+  'app-bundle': { label: 'ZIP', blurb: 'Figma variables, Adobe and Affinity swatches, a Procreate palette and code tokens, in folders by app, with a README.', action: 'Export app-ready bundle' },
 }
 
 // Where the free credit sits in each code file, for the dock line. The contrast
@@ -288,8 +289,10 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
       const then = price ? `, then ${price} a year until you cancel.` : proPrice.loaded ? ', then billed yearly until you cancel.' : '.'
       line = <><strong>{trialDays} {trialDays === 1 ? 'day' : 'days'} free</strong>{then} Cancel before {trialEnd} and you pay nothing.{proPrice.loaded && !price ? ' Checkout shows the price before you pay.' : ''}</>
     } else line = 'Checkout shows the price before you pay.'
-  } else if (locked) line = <><strong>Pro</strong> unlocks this file with no watermark.</>
-  else if (isPro) line = <><strong>Included in Pro.</strong> No watermark.</>
+  } else if (locked) {
+    // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
+    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</> : <><strong>Pro</strong> unlocks this file with no watermark.</>
+  } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>
 

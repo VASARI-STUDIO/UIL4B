@@ -50,15 +50,14 @@ const shortName = (f) => {
   const inParens = /\(([^)]+)\)\s*$/.exec(f.name)
   return inParens ? inParens[1] : f.name
 }
-const listNames = (formats) => {
-  const names = formats.map(shortName)
-  if (names.length < 2) return names.join('')
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-}
+const joinAnd = (items) => (items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
+const listNames = (formats) => joinAnd(formats.map(shortName))
 export const FREE_EXPORT_NAMES = listNames(freeFormats())
 /** The free formats other than the UI kit, which the Free card names on its own. */
 export const STYLE_GUIDE_EXPORT_NAMES = listNames(styleGuideFormats())
-export const PRO_EXPORT_NAMES = proOnlyFormats().map((f) => f.name).join(' and ')
+export const PRO_EXPORT_NAMES = joinAnd(proOnlyFormats().map((f) => f.name))
 
 /** What Free includes — /plans' Free card, in order. */
 export const FREE_POINTS = Object.freeze([
@@ -71,9 +70,6 @@ export const FREE_POINTS = Object.freeze([
 /** /plans' one minus line on the Free card. */
 export const FREE_EXCLUSION = 'Small mark on exported files'
 
-const joinAnd = (items) => (items.length < 2
-  ? items.join('')
-  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
 const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 
 // The kinds of paid icon pack, in the order the plan lines name them. Every

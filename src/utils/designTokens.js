@@ -38,8 +38,11 @@
 // identical value comes from; `refs` maps a typography composite's members to the
 // tokens they come from.
 //
-// Colours are lower-case hex. The design holds no dark-theme values, so the files
-// have no dark-theme block.
+// Colours are lower-case hex. The interface roles and the primary colour also carry
+// a dark-theme value (`dark: { value, alias? }`, from semanticModes.js). The
+// writers leave it out unless asked with `modes: true`: the CSS then adds a dark
+// block after :root, and the JSON records the value under the token's
+// `$extensions['com.uil4b'].dark`.
 //
 // Pure functions over a plain design object — no React, no DOM.
 
@@ -49,6 +52,7 @@ import { readBook } from './bookModel.js'
 import { typeLadder } from './styleGuideExport.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { paletteRole, kitPalette, kitSemantic, interfaceRoles, ROLE_TOKENS } from './systemRoles.js'
+import { darkInterfaceRoles } from './semanticModes.js'
 import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_ROLES, SEMANTIC_STEPS, SEMANTIC_LABELS } from '../data/semanticPresets.js'
 import { gradientCss } from '../data/gradientGallery.js'
@@ -128,11 +132,25 @@ export function designTokens(design) {
     const rank = (t) => (t.path[t.path.length - 1] === '$root' ? 0 : SEMANTIC_ROLES.includes(t.path[1]) ? 1 : 2)
     const source = new Map()
     for (const t of [...named].sort((a, b) => rank(a) - rank(b))) if (!source.has(t.value)) source.set(t.value, t.path)
-    const roles = interfaceRoles(kitPalette(design), kitSemantic(design))
+    const palette = kitPalette(design)
+    const roles = interfaceRoles(palette, kitSemantic(design))
+    const darkRoles = darkInterfaceRoles(palette, design?.states)
+    // A dark value points at the same kind of source as a light one, but never at
+    // the token it belongs to (that would be a reference to itself).
+    const darkOf = (hex, path) => {
+      const value = lower(hex)
+      const from = source.get(value)
+      const same = from && from.length === path.length && from.every((seg, i) => seg === path[i])
+      return { value, ...(from && !same ? { alias: from } : {}) }
+    }
     for (const [key, rest] of ROLE_TOKENS) {
       const hex = lower(roles[key])
-      add(['color', ...rest], 'color', hex, { section: 'Colour roles', ...(source.has(hex) ? { alias: source.get(hex) } : {}) })
+      const path = ['color', ...rest]
+      add(path, 'color', hex, { section: 'Colour roles', ...(source.has(hex) ? { alias: source.get(hex) } : {}), dark: darkOf(darkRoles[key], path) })
     }
+    // The primary colour is also the dark theme's action fill.
+    const primary = tokens.find((t) => t.path.length === 3 && t.path[1] === 'primary' && t.path[2] === '$root')
+    if (primary) primary.dark = darkOf(darkRoles.primary, primary.path)
   }
 
   // Type.
@@ -227,6 +245,16 @@ const SECTION = {
   ease: null,
 }
 
+/** The dark theme: one rule that redeclares each token that has a dark value. */
+function darkRule(tokens) {
+  const body = tokens.filter((t) => t.dark).map((t) => {
+    const value = t.dark.alias ? `var(${cssVarName(t.dark.alias)})` : t.dark.value
+    return `  ${cssVarName(t.path)}: ${value};`
+  })
+  if (!body.length) return []
+  return ['', '/* Dark theme: add class="dark" or data-theme="dark" to a parent element */', '.dark,', '[data-theme="dark"] {', ...body, '}']
+}
+
 /** The .text-<step> classes: each text style, built from the variables above. */
 function textStyleRules(tokens) {
   const rules = tokens.filter((t) => t.type === 'typography').map((t) => {
@@ -252,8 +280,10 @@ function textStyleRules(tokens) {
  * `extra` appends caller-built tokens of the same shape after the design's own
  * (the UI kit adds its spacing, radii and motion this way); a token may carry
  * `section` to head its group in the stylesheet.
+ * `modes` adds a `.dark, [data-theme="dark"]` rule after :root with the dark value
+ * of every token that has one.
  */
-export function buildTokensCss(design, { projectName = 'Design System', watermark = true, date = new Date(), extra = [] } = {}) {
+export function buildTokensCss(design, { projectName = 'Design System', watermark = true, date = new Date(), extra = [], modes = false } = {}) {
   const tokens = [...designTokens(design), ...extra]
   const semantic = SEMANTIC_ROLES.map((r) => (r === 'info' ? `info (${SEMANTIC_LABELS[r]})` : r)).join(', ')
   const header = [
@@ -303,14 +333,16 @@ export function buildTokensCss(design, { projectName = 'Design System', watermar
     const { value, note } = cssValue(t)
     lines.push(`  ${cssVarName(t.path)}: ${value};${note ? ` /* ${note} */` : ''}`)
   }
-  lines.push('}', ...textStyleRules(tokens))
+  lines.push('}')
+  if (modes) lines.push(...darkRule(tokens))
+  lines.push(...textStyleRules(tokens))
   if (watermark) lines.push('', `/* ${CREDIT} */`)
   return `${lines.join('\n')}\n`
 }
 
 /* ── JSON (DTCG) ──────────────────────────────────────────────────────────── */
 
-function dtcgColor(hex) {
+export function dtcgColor(hex) {
   const h = lower(hex)
   return {
     colorSpace: 'srgb',
@@ -322,7 +354,7 @@ function dtcgColor(hex) {
 /** A token path → a DTCG reference: {color.primary.600}. */
 const dtcgRef = (path) => `{${path.filter((p) => p !== '$root').join('.')}}`
 
-function dtcgToken(token) {
+function dtcgToken(token, modes = false) {
   const v = token.value
   let value
   const out = { $type: token.type }
@@ -343,6 +375,10 @@ function dtcgToken(token) {
     }
   }
   out.$value = value
+  if (modes && token.dark) {
+    const dark = token.dark.alias ? dtcgRef(token.dark.alias) : dtcgColor(token.dark.value)
+    extensions['com.uil4b'] = { ...(extensions['com.uil4b'] || {}), dark }
+  }
   if (token.description) out.$description = token.description
   if (Object.keys(extensions).length) out.$extensions = extensions
   return out
@@ -353,8 +389,10 @@ function dtcgToken(token) {
  * `watermark` puts the free-tier credit in the root description.
  * `extra` appends caller-built tokens, as in buildTokensCss.
  * `extensions`, when given, becomes the root group's DTCG `$extensions` object.
+ * `modes` writes each token's dark value under `$extensions['com.uil4b'].dark`, in
+ * the same form as `$value` (a reference when the dark colour is another token).
  */
-export function buildTokensJson(design, { projectName = 'Design System', watermark = true, extra = [], extensions = null } = {}) {
+export function buildTokensJson(design, { projectName = 'Design System', watermark = true, extra = [], extensions = null, modes = false } = {}) {
   const doc = {
     $description: `${String(projectName ?? '')}: design tokens.${watermark ? ` ${CREDIT}` : ''}`,
   }
@@ -365,7 +403,7 @@ export function buildTokensJson(design, { projectName = 'Design System', waterma
       if (!node[seg]) node[seg] = {}
       node = node[seg]
     })
-    node[t.path[t.path.length - 1]] = dtcgToken(t)
+    node[t.path[t.path.length - 1]] = dtcgToken(t, modes)
   }
   return `${JSON.stringify(doc, null, 2)}\n`
 }
