@@ -251,6 +251,30 @@ test.describe('the sizes the spec names', () => {
       expect([Math.round(card.width), Math.round(card.height)]).toEqual([1120, 820])
       expect(Math.round((await panel.locator('.xd-nav').boundingBox()).width)).toBe(264)
     })
+
+    // To see this fail: make Manifest's `folded` true at every width in ExportSteps.jsx, or drop the formatFileName call.
+    test('the File step lists every file in the category by the name it downloads under, open, with the chosen one marked', async ({ page }) => {
+      watch(page, 'a designer reading the file list at 1440px')
+      await go(page, WORKED_BOARD)
+      const panel = await openFromHeader(page)
+      await typeRadio(panel, 'Code').click()
+      const rows = panel.locator('.xd-man-row')
+      await expect(rows, 'Code lists CSS, JSON, Tailwind and both contrast files').toHaveCount(5)
+      await expect(panel.locator('.xd-man-t'), 'the rows are not folded at 1440').toHaveCount(0)
+      const names = await panel.locator('.xd-man-n').allInnerTexts()
+      expect(names).toEqual([
+        'untitled.tokens.css', 'untitled.tokens.json', 'untitled-tailwind.css',
+        'untitled-contrast-pairs.csv', 'untitled-contrast-pairs.json',
+      ])
+      for (const name of names) expect(name, 'no file is named for the product').not.toMatch(/uil4b|-tokens\.(css|json)$/)
+      await expect(panel.locator('.xd-man-row[aria-current="true"]')).toHaveCount(1)
+      await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n')).toHaveText('untitled.tokens.css')
+      // The preview is headed by the exact name of the chosen file.
+      await expect(panel.locator('.xfp-file')).toHaveText('untitled.tokens.css')
+      await panel.getByRole('radio', { name: 'Tailwind theme' }).click()
+      await expect(panel.locator('.xfp-file')).toHaveText('untitled-tailwind.css')
+      await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n')).toHaveText('untitled-tailwind.css')
+    })
   })
 
   test.describe('at 768', () => {
@@ -297,6 +321,34 @@ test.describe('the sizes the spec names', () => {
           expect(button.width, `${category.name}: the primary spans the dock`).toBeGreaterThan(dock.width - 48)
         }
       }
+    })
+
+    // To see this fail: set `folded` to false in ExportSteps.jsx (the rows show at once), or remove the hidden attribute handling.
+    test('the file list folds to one line, "5 files" for Code, and opens in place', async ({ page }) => {
+      watch(page, 'a designer reading the file list at 390px')
+      await go(page, WORKED_BOARD)
+      const panel = await openFromHeader(page)
+      await typeRadio(panel, 'Code').click()
+      const toggle = panel.locator('.xd-man-t')
+      await expect(toggle).toHaveText('5 files')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(panel.locator('.xd-man-row').first(), 'folded rows are not shown').toBeHidden()
+      expect(Math.round((await toggle.boundingBox()).height), 'the fold is one 44px line').toBeGreaterThanOrEqual(44)
+      const above = await panel.getByRole('radiogroup', { name: /file type/i }).boundingBox()
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await expect(panel.locator('.xd-man-row')).toHaveCount(5)
+      await expect(panel.locator('.xd-man-row').first()).toBeVisible()
+      await expect(panel.locator('.xd-man-n').first()).toHaveText('untitled.tokens.css')
+      // It opens in place: nothing above it moved.
+      const after = await panel.getByRole('radiogroup', { name: /file type/i }).boundingBox()
+      expect(Math.round(after.y)).toBe(Math.round(above.y))
+      await toggle.click()
+      await expect(panel.locator('.xd-man-row').first()).toBeHidden()
+      // A category with one file has nothing to fold.
+      await typeRadio(panel, 'UI kit').click()
+      await expect(panel.locator('.xd-man-t')).toHaveCount(0)
+      await expect(panel.locator('.xd-man-n')).toHaveText('untitled-ui-kit.html')
     })
 
     test('the title, the type control, the file pills and the dock text share one 16px left edge', async ({ page }) => {

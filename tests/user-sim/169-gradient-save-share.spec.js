@@ -464,7 +464,7 @@ test.describe('share and export rows on the gradient', () => {
     await expect(row).not.toHaveAttribute('aria-disabled', 'true')
     const waiting = page.waitForEvent('download')
     await row.click()
-    expect((await waiting).suggestedFilename()).toBe('uil4b-gradient.svg')
+    expect((await waiting).suggestedFilename()).toBe('untitled-gradient.svg')
   })
 
   test('Download SVG asks a signed-out visitor for an account first and downloads nothing', async ({ page }) => {

@@ -122,8 +122,8 @@ test.describe('the UI kit export', () => {
       try { return JSON.parse(localStorage.getItem('vs-current-design') || '{}').palette?.colors?.[0] || '' } catch { return '' }
     })).toBe(PRIMARY)
     const { filename, body } = await exportKit(page)
-    // No saved project here, so the export runner's own fallback name is the title.
-    expect(filename).toBe('design-system-ui-kit.html')
+    // No saved project here, so the file is filed as untitled.
+    expect(filename).toBe('untitled-ui-kit.html')
     expect(body.length, 'the kit is a real, self-contained document').toBeGreaterThan(60000)
     expect(body).toContain('<span class="edition">Free edition</span>')
     expect(body).toContain('<span class="section-watermark">Made with')
@@ -136,7 +136,7 @@ test.describe('the UI kit export', () => {
     // Recorded in Recent exports, like every other export.
     await expect.poll(() => page.evaluate(() => {
       try { return JSON.parse(localStorage.getItem('vs-recent-exports') || '[]').map((e) => e.filename) } catch { return [] }
-    })).toContain('design-system-ui-kit.html')
+    })).toContain('untitled-ui-kit.html')
   })
 
   test('free: the kit is titled with the open project’s name and invents no usage shares or slogans', async ({ page }) => {

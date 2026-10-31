@@ -75,7 +75,7 @@
 
 /* The manifest: one row per file, its name as it will download, then what is in it. Hairlines only. On the phone sheet a button folds the rows to one line. */
 .xd-man{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
-.xd-man-t{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;min-height:44px;padding:0 var(--s-3);font:inherit;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer}
+.xd-man-t{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;min-height:44px;padding:0 var(--s-3);font:inherit;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer}
 .xd-man-t svg{flex:none;color:var(--t1)}
 .xd-man-rows{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:var(--radius-xs)}
 .xd-man-rows[hidden]{display:none}

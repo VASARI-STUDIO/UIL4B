@@ -44,7 +44,7 @@ test('the renderer is deterministic for a fixture project', () => {
   const a = render(DESIGN, { tier: 'free' })
   const b = render(DESIGN, { tier: 'free' })
   assert.equal(a.html, b.html)
-  assert.equal(a.filename, 'ui-kit.html', 'an unnamed kit is never filed under UIL4B')
+  assert.equal(a.filename, 'untitled-ui-kit.html', 'an unnamed kit is never filed under UIL4B')
   assert.ok(!/@@[A-Z_]+@@/.test(a.html), 'a placeholder was left unfilled')
   assert.ok(a.html.length > 30000, 'the kit is a real document')
 })
@@ -96,7 +96,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   const unnamed = render({ ...DESIGN, identity: { description: IDENTITY.description } }, { tier: 'pro', logo })
   assert.ok(!unnamed.html.includes('class="chapter personal-identity"'))
   assert.ok(!unnamed.html.includes(IDENTITY.description))
-  assert.equal(unnamed.filename, 'ui-kit.html')
+  assert.equal(unnamed.filename, 'untitled-ui-kit.html')
 })
 
 test('the identity is read from the working design, never from a field it does not have', () => {
