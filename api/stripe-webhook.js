@@ -577,8 +577,10 @@ async function oldFailureSettled(stripe, existing, invoice, uid) {
 
 /**
  * Flag a failed invoice payment on the customer's account, unless the invoice
- * has been paid since. Returns 'no_account', 'already_paid', 'flagged' or
- * 'kept_newer_failure' (a failure created after this event is already recorded).
+ * has been paid since. Returns 'no_account', 'already_paid', 'flagged',
+ * 'kept_newer_failure' (a failure created after this event is already recorded)
+ * or 'kept_newer_state' (a newer event has stored the same subscription as
+ * healthy).
  *
  * `eventCreated` is the Stripe event's `created` (seconds). It orders failures
  * against each other and against a late healthy customer.subscription.updated.
@@ -624,7 +626,26 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
   const basis = priorFailure
     ? { failedInvoiceId: storedFailedInvoiceId(priorFailure), paymentFailedAt: priorFailure.paymentFailedAt ?? null }
     : null
+  // Why planWrite last returned null, for the caller's outcome.
+  let skipped = 'kept_newer_failure'
   const planWrite = (current) => {
+    // A failure event created BEFORE the newest event stored for the same
+    // subscription, which now grants access, is older news: the subscription has
+    // recovered since. Events created in the same second are not ordered by their
+    // timestamps, so a tie still lands (as in subscriptionWriteDecision). A
+    // different or unknown subscription id is never held back by this rule.
+    const failedSubscriptionId = invoiceSubscription(invoice).id
+    if (failedSubscriptionId && current?.id === failedSubscriptionId
+      && subscriptionStatusGrantsAccess(current)
+      && Number.isFinite(eventCreated) && Number.isFinite(current.stripeEventCreated)
+      && eventCreated < current.stripeEventCreated) {
+      console.warn('stripe-webhook: payment failure skipped — the subscription has a newer healthy state', {
+        uid, invoiceId: invoice.id, eventCreated, storedEventCreated: current.stripeEventCreated,
+      })
+      skipped = 'kept_newer_state'
+      return null
+    }
+    skipped = 'kept_newer_failure'
     const failure = current?.paymentFailed === true ? current : null
     // A failure event created BEFORE the failure on record is older news: it
     // must not move the record back to an older invoice or event time.
@@ -663,13 +684,13 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
   // back to a plain re-read, which narrows the window but does not close it.
   if (typeof database.runTransaction !== 'function') {
     const write = planWrite((await ref.get()).data()?.subscription)
-    if (!write) return 'kept_newer_failure'
+    if (!write) return skipped
     await ref.set(write, { merge: true })
     return 'flagged'
   }
   return database.runTransaction(async (tx) => {
     const write = planWrite((await tx.get(ref)).data()?.subscription)
-    if (!write) return 'kept_newer_failure'
+    if (!write) return skipped
     tx.set(ref, write, { merge: true })
     return 'flagged'
   })

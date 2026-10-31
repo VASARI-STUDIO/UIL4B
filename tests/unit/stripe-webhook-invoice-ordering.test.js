@@ -830,3 +830,78 @@ test('subscriptionWriteDecision holds back only a healthy delivery older than th
   assert.deepEqual(subscriptionWriteDecision(stored, { id: 'sub_2', status: 'active' }, FAILURE_EVENT - 1), { write: true, reason: 'different_subscription' },
     'a resubscribe is a different subscription and is judged by the subscription rules, not held back by the old failure')
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A failure event older than a healthy update already stored for the same subscription
+// ─────────────────────────────────────────────────────────────────────────────
+// The invoice read errors, so the "already paid" check cannot save the account:
+// only the stored event time can say the failure is old news.
+const HEALTHY_EVENT = 1_700_000_300
+const healthyAccount = (subscription = {}) => ({
+  'users/uid_1': {
+    stripeCustomerId: 'cus_1',
+    subscription: { id: 'sub_1', status: 'active', stripeEventCreated: HEALTHY_EVENT, paymentFailed: false, ...subscription },
+  },
+})
+const failedOnSubscription = (id) => ({ ...failedInvoice('in_late', 'https://pay.example/in_late'), ...onSubscription(id) })
+const unreadableInvoices = () => fakeStripe({ error: Object.assign(new Error('stripe is down'), { statusCode: 500 }) })
+
+test('a failure event created before a newer active update for the same subscription is skipped', async (t) => {
+  quiet(t)
+  for (const status of ['active', 'trialing']) {
+    const db = memoryDb(healthyAccount({ status }))
+    const before = structuredClone(db.doc('users/uid_1'))
+
+    const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT - 100)
+
+    assert.equal(outcome, 'kept_newer_state', status)
+    assert.deepEqual(db.doc('users/uid_1'), before, `${status}: nothing written`)
+  }
+})
+
+test('a failure event newer than the stored healthy update still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT + 1)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).paymentFailed, true)
+  assert.equal(stored(db).failedInvoiceId, 'in_late')
+  assert.equal(stored(db).paymentFailedEventCreated, HEALTHY_EVENT + 1)
+})
+
+test('a failure on a different subscription than the stored one still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_2'), db, HEALTHY_EVENT - 100)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).failedInvoiceId, 'in_late')
+})
+
+test('a failure event created in the same second as the stored update still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  // Same-second events cannot be ordered by timestamp; only a strictly older
+  // event is held back (the rule subscriptionWriteDecision uses).
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).paymentFailedEventCreated, HEALTHY_EVENT)
+})
+
+test('a failure older than the stored event still lands when the stored subscription no longer grants access', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount({ status: 'past_due' }))
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT - 100)
+
+  assert.equal(outcome, 'flagged')
+})
