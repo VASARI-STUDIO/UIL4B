@@ -782,7 +782,7 @@ test.describe('when the price service cannot answer', () => {
     await expect(pro(page).locator('.pr-per'), 'a cadence is printed beside no price').toHaveCount(0)
     await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ }), 'a checkout is offered with no price').toHaveCount(0)
     await expect(pro(page).getByRole('button', { name: 'Pricing unavailable right now' })).toHaveCount(0)
-    await expect(pro(page).locator('#pricing-noprice')).toContainText('so no checkout will start')
+    await expect(pro(page).locator('#pricing-noprice')).toContainText('so no checkout can start')
     await expect(page.locator('.pr-billing-save'), 'a saving is claimed with no prices to compute it').toHaveCount(0)
     await expect(page.locator('.pr-bar'), 'the docked bar offers a checkout with no price').not.toHaveClass(/is-on/)
 

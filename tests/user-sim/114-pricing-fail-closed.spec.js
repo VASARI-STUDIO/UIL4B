@@ -172,7 +172,7 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
       expect(Math.max(...lines), 'an unavailable line wrapped').toBeLessThan(Math.min(...lines) * 1.5)
       const sw = pro.getByRole('button', { name: 'Switch to Monthly' })
       await expect(sw).toBeVisible()
-      await expect(pro.locator('.pr-under').filter({ hasText: 'Everything on Free keeps working.' })).toBeVisible()
+      await expect(pro.locator('.pr-under:not(.is-ghost)').filter({ hasText: 'Everything on Free keeps working.' })).toBeVisible()
       expect(await topOf(page), 'the Pro button moved when the cadence landed unavailable').toBe(live)
 
       // The switch buys the live cadence, and focus stays on the Pro button.

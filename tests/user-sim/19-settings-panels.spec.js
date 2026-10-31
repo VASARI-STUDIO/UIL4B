@@ -134,7 +134,7 @@ test.describe('settings panels', () => {
     await page.getByRole('tab', { name: /Yearly/ }).click()
     await expect(pro.locator('.sub-tier-amount'), 'yearly was priced after all').toHaveText('Unavailable')
     await expect(pro.locator('.sub-tier-sub')).not.toContainText('null')
-    await expect(pro.locator('.sub-tier-sub')).toContainText(/price for w+ yet./)
+    await expect(pro.locator('.sub-tier-sub')).toContainText(/price for \w+ yet\./)
     await expect(pro.locator('.sub-tier-sub')).not.toContainText('Stripe didn’t answer')
     await expect(pro.getByRole('button', { name: 'Retry live pricing' })).toHaveCount(0)
   })

@@ -46,9 +46,13 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         watch(page, `someone on ${surfaceName} while pricing is down`)
         await page.setViewportSize({ width, height })
         await stub(page, state.body, state.status)
-        if (surface.support) await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
         if (surface.signedIn) await signIn(page, { plan: 'free' })
         await go(page, surface.path)
+        // On a phone Settings opens on its list of sections; the tablet and desktop layout opens one already.
+        if (surface.support) {
+          if (width <= 720) await page.locator('#settab-support').click()
+          else await page.getByRole('tab', { name: /Subscription/ }).click()
+        }
 
         const slot = page.locator(surface.slot).first()
         const button = page.locator(surface.button).first()
@@ -67,7 +71,12 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         const box = await button.boundingBox()
         const slotBox = await (surfaceName === 'plans' ? button.locator('xpath=..') : slot).boundingBox()
         expect(box.width, 'Retry is not full width').toBeGreaterThan(slotBox.width * 0.7)
-        expect(await button.evaluate((el) => el.scrollHeight <= Math.ceil(parseFloat(getComputedStyle(el).lineHeight) * 1.5) + 40), 'the label wraps').toBe(true)
+        const lines = await button.evaluate((el) => {
+          const range = document.createRange()
+          range.selectNodeContents(el)
+          return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size
+        })
+        expect(lines, 'the label wraps').toBe(1)
 
         // Nothing here may link to checkout.
         if (surfaceName !== 'checkout') expect(await page.locator('main a[href*="/checkout"], .stg a[href*="/checkout"]').count()).toBe(0)
