@@ -54,32 +54,36 @@ async function open(page) {
 
 /** The lock buttons by what they keep. The Selected stop ones are the second match of the stop-row ones for the active stop. */
 const stopList = (page) => page.getByRole('group', { name: 'Stop list' })
-const selectedSection = (page) => panelOf(page).getByRole('group', { name: 'Selected stop' })
-const geometry = (page) => panelOf(page).getByRole('group', { name: 'Geometry' })
+// The Stop N section is named for the highlighted stop ("Stop 2"), or "3 stops" for a selection.
+// It holds the stop's hex, Tints and the position lock; the colour lock lives on each stop row.
+const selectedSection = (page) => panelOf(page).getByRole('group', { name: /^(Stop \d+|\d+ stops)$/ })
+const geometry = (page) => panelOf(page).getByRole('group', { name: 'Shape', exact: true })
 // The angle's label carries its value ("Keep the angle (160°) when you press Random"), so each name takes an optional "(N°)".
 const lockIn = (scope, thing) => scope.getByRole('button', { name: new RegExp(`(^Keep ${thing}(?: \\(\\d+°\\))? when you press Random$)|(^${thing[0].toUpperCase()}${thing.slice(1)}(?: \\(\\d+°\\))? (is|are) kept\\. Press to let Random change (it|them)\\.$)`) })
 const random = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Random$/ })
 const typeOf = (page) => page.evaluate(() => document.querySelector('.grd-canvas').getAttribute('aria-label').replace(' gradient preview', ''))
 const hexOfStop = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) }).getAttribute('aria-label').then((s) => /#[0-9A-F]{6}/i.exec(s)[0].toUpperCase())
 const posOfStop = (page, n) => page.getByRole('button', { name: new RegExp(`^Gradient stop ${n} at `) }).getAttribute('aria-label').then((s) => Number(/at (\d+)%/.exec(s)[1]))
-const settingsDialog = async (page) => {
-  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ }).click()
-  const d = page.getByRole('dialog', { name: 'Shuffle settings' })
+// The Type and Stops filters sit under the Random section's More options. Opening it twice leaves it open.
+const moreOptions = async (page) => {
+  const toggle = panelOf(page).getByRole('button', { name: /^(More|Fewer) options$/ })
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  const d = panelOf(page).locator('#grd-gen-more')
   await expect(d).toBeVisible()
   return d
 }
 
-/** The five lock buttons in Selected stop and Geometry, as [scope, what they keep]. */
+/** The lock buttons the Stop N and Shape sections hold, as [scope, what they keep]. */
 const LOCK_PLACES = (page) => [
-  [selectedSection(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"],
+  [stopList(page), "stop 1's colour"], [selectedSection(page), "stop 1's position"],
   [geometry(page), 'the type'], [geometry(page), 'the angle'], [geometry(page), 'the interpolation'],
 ]
-/** Locking each one in turn moves neither the page, the panel nor Available colours. */
+/** Locking each one in turn moves neither the page, the panel nor the Random section. */
 async function expectLocksKeepHeight(page) {
   const shape = () => page.evaluate(() => ({
     page: document.documentElement.scrollHeight,
     panel: document.querySelector('.tl-panel').getBoundingClientRect().height,
-    avail: document.querySelector('.grd-avail').getBoundingClientRect().height,
+    gen: document.querySelector('.grd-gen').getBoundingClientRect().height,
   }))
   const first = await shape()
   for (const [scope, thing] of LOCK_PLACES(page)) {
@@ -96,7 +100,6 @@ test.describe('the locks at 1440', () => {
     watch(page, 'someone locking each part of a gradient')
     await open(page)
     const places = [
-      ['stop 1\'s colour', selectedSection(page)],
       ['stop 1\'s position', selectedSection(page)],
       ['stop 1\'s colour', stopList(page)],
       ['the type', geometry(page)],
@@ -122,7 +125,7 @@ test.describe('the locks at 1440', () => {
   test('a lock never blocks a hand edit', async ({ page }) => {
     await open(page)
     await lockIn(geometry(page), 'the angle').click()
-    await lockIn(selectedSection(page), "stop 1's colour").click()
+    await lockIn(stopList(page), "stop 1's colour").click()
     const field = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
     await field.fill('33')
     await field.press('Enter')
@@ -145,7 +148,7 @@ test.describe('the locks at 1440', () => {
 
   test('Random keeps a locked position across ten presses', async ({ page }) => {
     await open(page)
-    // Stop 2 is at 55; the Position lock is on the Selected stop section, so make stop 2 the active one first.
+    // Stop 2 is at 55; the Position lock is in the Stop N section, so make stop 2 the active one first.
     await page.getByRole('button', { name: /^Select stop 2, #/ }).click()
     await lockIn(selectedSection(page), "stop 2's position").click()
     for (let i = 0; i < 10; i++) {
@@ -182,41 +185,38 @@ test.describe('the locks at 1440', () => {
   test('a type lock overrules the Type filter and says so; unlocking restores it', async ({ page }) => {
     await open(page)
     // The Type filter is set to Conic first, then the type is locked to Radial.
-    let dialog = await settingsDialog(page)
+    let dialog = await moreOptions(page)
     await dialog.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Conic', exact: true }).click()
-    await page.keyboard.press('Escape')
     await geometry(page).getByRole('button', { name: 'Radial', exact: true }).click()
     await lockIn(geometry(page), 'the type').click()
 
-    dialog = await settingsDialog(page)
+    dialog = await moreOptions(page)
     const row = dialog.getByRole('group', { name: 'Type' })
     await expect(row).toHaveAttribute('aria-disabled', 'true')
-    await expect(dialog.getByText('Type is locked to Radial. Unlock it in Geometry to use this.')).toBeVisible()
+    await expect(dialog.getByText('Type is locked to Radial. Unlock it in Shape to use this.')).toBeVisible()
     // Pills stay visible, and a press on one changes nothing.
     await expect(row.getByRole('button', { name: 'Conic', exact: true })).toBeVisible()
     // Playwright reads aria-disabled on the group as not enabled, so force the press a mouse would make.
     await row.getByRole('button', { name: 'Linear', exact: true }).click({ force: true })
     await expect(row.getByRole('button', { name: 'Conic', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(row.getByRole('button', { name: 'Linear', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await page.keyboard.press('Escape')
 
     await lockIn(geometry(page), 'the type').click()
-    dialog = await settingsDialog(page)
+    dialog = await moreOptions(page)
     await expect(dialog.getByRole('group', { name: 'Type' })).not.toHaveAttribute('aria-disabled', 'true')
     await expect(dialog.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Conic', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(dialog.getByText(/Type is locked to/)).toHaveCount(0)
   })
 
-  test('a stop lock overrules the Stops filter and says so; Shuffle settings no longer holds Keep the angle', async ({ page }) => {
+  test('a stop lock overrules the Stops filter and says so; More options holds no Keep the angle', async ({ page }) => {
     await open(page)
     await lockIn(stopList(page), "stop 1's colour").click()
-    const dialog = await settingsDialog(page)
+    const dialog = await moreOptions(page)
     await expect(dialog.getByRole('group', { name: 'Stops' })).toHaveAttribute('aria-disabled', 'true')
     await expect(dialog.getByText('Locked stops keep the count at 3.')).toBeVisible()
     await expect(dialog.getByRole('button', { name: /Keep the angle/ })).toHaveCount(0)
-    await page.keyboard.press('Escape')
     await lockIn(stopList(page), "stop 1's colour").click()
-    const again = await settingsDialog(page)
+    const again = await moreOptions(page)
     await expect(again.getByRole('group', { name: 'Stops' })).not.toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -227,16 +227,14 @@ test.describe('the locks at 1440', () => {
     await expect(page.locator('.toast.show')).toContainText('Every colour is locked, so only the shape changed.')
   })
 
-  test('a locked stop wears a mark on the rail and the ramp: a lock for colour, a pin for position', async ({ page }) => {
+  test('a locked stop wears a mark on the rail: a lock for colour, a pin for position', async ({ page }) => {
     await open(page)
     await expect(page.locator('.grd-lockmark')).toHaveCount(0)
     await lockIn(stopList(page), "stop 1's colour").click()
     await expect(page.locator('.grd-handle .grd-lockmark-lock')).toHaveCount(1)
-    await expect(page.locator('.grd-ramp-dot .grd-lockmark-lock')).toHaveCount(1)
     await expect(page.locator('.grd-lockmark-pin')).toHaveCount(0)
     await lockIn(selectedSection(page), "stop 1's position").click()
     await expect(page.locator('.grd-handle .grd-lockmark-pin svg')).toHaveCount(1)
-    await expect(page.locator('.grd-ramp-dot .grd-lockmark-pin svg')).toHaveCount(1)
     // Both marks are 12px, so they read at a glance.
     const sizes = await page.locator('.grd-handle .grd-lockmark svg').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)))
     expect(sizes).toEqual([12, 12])
@@ -339,7 +337,7 @@ test.describe('the locks on a finger (390, touch)', () => {
       const r = e.getBoundingClientRect()
       return { name: e.getAttribute('aria-label'), w: Math.round(r.width), h: Math.round(r.height) }
     }))
-    expect(boxes.length, '3 stop rows + the selected stop colour and position + type + angle + interpolation').toBe(8)
+    expect(boxes.length, '3 stop rows + the Stop N position + type + angle + interpolation').toBe(7)
     for (const b of boxes) {
       expect(b.w, `${b.name} width`).toBeGreaterThanOrEqual(44)
       expect(b.h, `${b.name} height`).toBeGreaterThanOrEqual(44)
