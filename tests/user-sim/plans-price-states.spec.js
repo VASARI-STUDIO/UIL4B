@@ -51,7 +51,7 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         // On a phone Settings opens on its list of sections; the tablet and desktop layout opens one already.
         if (surface.support) {
           if (width <= 720) await page.locator('#settab-support').click()
-          else await page.getByRole('tab', { name: /Subscription/ }).click()
+          else await page.getByRole('tab', { name: 'Plan and billing' }).click()
         }
 
         const slot = page.locator(surface.slot).first()

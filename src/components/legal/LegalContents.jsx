@@ -29,7 +29,7 @@ function keepRowVisible(col, row) {
    page's language, on both the rail entry and (set by the page) the clause. */
 export default function LegalContents({ items }) {
   const narrow = useMediaQuery('(max-width: 1000px)')
-  const active = useActiveSection(items, { enabled: !narrow, fromScrollMargin: true, pinLastAtBottom: true })
+  const active = useActiveSection(items, { enabled: !narrow, pinLastAtBottom: true })
   const colRef = useRef(null)
   const detailsRef = useRef(null)
 

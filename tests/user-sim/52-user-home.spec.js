@@ -173,8 +173,9 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
     const card = today.locator('.uh-signin')
     await expect(card.locator('.uh-signin-title')).toHaveText('Sign in to keep what you build')
     await expect(card.getByRole('button', { name: 'Sign in' })).toBeVisible()
-    // A visitor is not offered the starter: that is for an account with no projects.
+    // A visitor is not offered the starter or the first-palette card: those are for an account with no projects.
     await expect(page.getByTestId('starter-card')).toHaveCount(0)
+    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
 
     // New in Discover: four real library palettes and the way to the rest.
     await expect(page.locator('.uh-disc-card')).toHaveCount(4)
@@ -440,36 +441,40 @@ test.describe('a recent project card is read off the project', () => {
 /* ── The empty state ──────────────────────────────────────────────────────── */
 
 test.describe('a new account', () => {
-  test('sees the starter card, minus the sentence that is not true', async ({ page }) => {
+  test('sees the first-palette card, and not the old starter', async ({ page }) => {
     watch(page, 'a new account on its first visit')
     await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    const starter = page.getByTestId('starter-card')
-    await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
-    await expect(starter).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
-    // The four parts, in order: a true sequence, so numbered. Plain text: Start the walkthrough is the way in.
-    await expect(starter.locator('.uh-steps li .uh-step-label')).toHaveText(['1 Colour', '2 Type', '3 Type scale', '4 Tints'])
+    const card = page.getByTestId('first-palette-card')
+    await expect(card.getByRole('heading', { level: 2, name: 'Turn one colour into a full palette' })).toBeVisible()
+    await expect(card).toContainText('Pick a colour or paste a hex code. You get the shades, text colours and contrast checks, and you can keep it here.')
+    await expect(card.getByText('Example: built from one colour')).toBeVisible()
+    // The old starter, its four-step list and its walkthrough button are gone for an account with no project.
+    await expect(page.getByTestId('starter-card')).toHaveCount(0)
+    await expect(page.getByText('Start your first project')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(0)
+    await expect(page.locator('.uh-steps')).toHaveCount(0)
     await expect(page.getByText('No projects yet'), 'an account with no projects is not told it has none').toHaveCount(0)
     // Projects sync to a signed-in account, so "Nothing leaves the browser
     // until you export it" was false and is gone.
     await expect(page.locator('main')).not.toContainText('Nothing leaves the browser')
-    await starter.getByRole('button', { name: 'Start the walkthrough' }).click()
-    await expect(page, 'the starter goes straight into the Palette Builder').toHaveURL(/\/create\/palette$/)
+    await card.getByRole('link', { name: 'Make your first palette' }).click()
+    await expect(page, 'the card goes straight into the Palette Builder').toHaveURL(/\/create\/palette$/)
+    await expect(page.locator('.plb-coach'), 'and opens the first-palette coach').toBeVisible()
   })
 
-  // With no project there is no work to put New project under, so the starter's own button is the
-  // way to make one: it runs the same startNew() as New project. The title row's New project is
-  // hidden on a phone (the page shows the one under the work, which is below the starter).
+  // With no project the card's own button is the first control: the title row's New project is
+  // hidden on a phone (the page shows the one under the work, which is below the card).
   for (const [width, height] of [[390, 844], [360, 740]]) {
-    test(`the first control, Start the walkthrough, is on the first screen of a ${width}px phone`, async ({ browser }) => {
+    test(`the first control, Make your first palette, is on the first screen of a ${width}px phone`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width, height } })
       const page = await context.newPage()
       watch(page, 'a new account on a phone')
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
-      const m = await page.getByRole('button', { name: 'Start the walkthrough' }).evaluate((el) => {
+      const m = await page.getByRole('link', { name: 'Make your first palette' }).evaluate((el) => {
         const r = el.getBoundingClientRect()
         const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
         return { top: r.top, bottom: r.bottom, vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }

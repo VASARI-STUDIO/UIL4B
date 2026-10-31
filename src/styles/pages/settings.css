@@ -89,7 +89,7 @@
 .stg .settings-nav-item.active { background: var(--stg-wash-2); color: var(--t0); }
 .stg .settings-nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 1; color: var(--t2); }
 .stg .settings-nav-item.active svg { color: var(--t0); }
-.stg .settings-content { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+.stg .settings-content { display: flex; flex-direction: column; gap: 32px; min-width: 0; max-width: 720px; }
 
 /* ── Section head and panels ─────────────────────────────────────────────── */
 .stg .settings-section-h { margin-bottom: 16px; }
@@ -97,14 +97,16 @@
 .stg .settings-section-h p { margin: 0; max-width: 60ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
 .stg .settings-card { padding: 0; overflow: visible; border: 1px solid var(--stg-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; }
 .stg .settings-card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--stg-hair); }
-.stg .settings-card-h h3 { margin: 0; font-size: 14px; font-weight: 560; color: var(--t0); }
-.stg .settings-card-h p { margin: 2px 0 0; font-size: 12.5px; color: var(--t1); }
+.stg .settings-card-h h3 { margin: 0; font-family: var(--font); font-size: 15px; font-weight: 560; letter-spacing: -.01em; line-height: 1.3; color: var(--t0); }
+.stg .settings-card-h p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: var(--t1); }
+/* Account: three sibling cards, one job each, a step apart. */
+.stg .settings-cards { display: flex; flex-direction: column; gap: var(--s-6); }
 .stg .settings-card-body { padding: 4px 20px; }
 .stg .settings-card-body--grid { padding: 14px; }
 
 /* ── Rows ─────────────────────────────────────────────────────────────────────
-   Label in the mono caption voice, value in the reading face. The label is
-   --t2, which holds 5:1 on --card in both themes. */
+   Label in the UI sans, a step quieter than the value (--t1 against --t0).
+   Mono is kept for literal values only. */
 .stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
 .stg .settings-row:last-child { border-bottom: none; }
 /* A profile field row (value + Edit): the action stays top-right beside the
@@ -121,11 +123,20 @@
 .stg .settings-row > .btn,
 .stg .settings-row > .settings-edit-actions,
 .stg .settings-card-h > .btn { flex: none; white-space: nowrap; }
-.stg .settings-row-label { margin: 0 0 4px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.stg .settings-row-label { display: block; margin: 0 0 4px; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.4; color: var(--t1); }
 /* 72ch keeps a long bio to a readable line length in a wide column. */
 .stg .settings-row-value { max-width: 72ch; font-size: 14px; color: var(--t0); overflow-wrap: anywhere; }
 .stg .settings-row-meta { margin-top: 2px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
 .stg .settings-row-empty { color: var(--t2); }
+/* A fact: the label in a fixed column, the value beside it, so the eye does not
+   cross the card to match them. Stacked on a phone (520 block below). */
+.stg .settings-row--fact { display: grid; grid-template-columns: 148px minmax(0, 1fr); align-items: baseline; gap: 4px 16px; }
+.stg .settings-row--fact > .settings-row-label { margin: 0; }
+.stg .settings-fact-body { min-width: 0; }
+.stg .sub-ends-note { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--stg-hair); }
+/* Bio: a paragraph, so a textarea, with its count and shortcut underneath. */
+.stg .settings-bio-input { display: block; width: 100%; min-height: 96px; resize: vertical; line-height: 1.5; }
+.stg .settings-count { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; margin-top: 6px; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; color: var(--t2); }
 .stg .settings-row--open { flex-direction: column; align-items: stretch; }
 .stg .settings-row--open > .settings-row-label { margin-bottom: 8px; }
 .stg .settings-row--pad { padding-top: 16px; padding-bottom: 16px; }
@@ -140,7 +151,7 @@
 /* The location field's suggestion list. */
 .stg .settings-suggest-wrap { position: relative; flex: 1; min-width: 0; }
 .stg .settings-suggest-wrap input { width: 100%; }
-.stg .settings-suggest { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60; max-height: 260px; margin: 0; padding: 6px; overflow: auto; list-style: none; border: 1px solid var(--stg-hair-2); border-radius: var(--radius); background: var(--card); box-shadow: 0 16px 36px -18px rgba(0, 0, 0, .3); animation: cp-rise var(--dur-2) var(--ease-entrance); }
+.stg .settings-suggest { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60; max-height: 260px; margin: 0; padding: 6px; overflow: auto; list-style: none; border: 1px solid var(--stg-hair-2); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-m); animation: cp-rise var(--dur-2) var(--ease-entrance); }
 .stg .settings-suggest-item { display: block; width: 100%; min-height: 32px; padding: 8px 10px; border: none; border-radius: var(--radius-s); background: none; font-family: var(--font); font-size: 13.5px; color: var(--t1); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background var(--dur-1) ease; }
 .stg .settings-suggest-item strong { font-weight: 600; color: var(--t0); }
 .stg .settings-suggest-item.on { background: var(--stg-wash-2); color: var(--t0); }
@@ -162,7 +173,7 @@
    the picture on hover or keyboard focus. The hidden file input does the
    picking. */
 .stg .settings-avatar-btn { position: relative; padding: 0; cursor: pointer; }
-.stg .settings-avatar-edit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0, 0, 0, .52); color: #fff; opacity: 0; transition: opacity var(--dur-2) var(--ease-out); }
+.stg .settings-avatar-edit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: color-mix(in srgb, var(--t0) 55%, transparent); color: var(--bg-0); opacity: 0; transition: opacity var(--dur-2) var(--ease-out); }
 .stg .settings-avatar-btn:hover .settings-avatar-edit,
 .stg .settings-avatar-btn:focus-visible .settings-avatar-edit { opacity: 1; }
 .stg .settings-profile-info { flex: 1; min-width: 0; }
@@ -172,7 +183,7 @@
    shows the whole value. */
 .stg .settings-profile-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: var(--display); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); overflow-wrap: anywhere; }
 /* `overflow-wrap:anywhere`: an address has no spaces to break at. */
-.stg .settings-profile-email { margin-top: 2px; font-family: var(--mono); font-size: 12.5px; color: var(--t1); overflow-wrap: anywhere; }
+.stg .settings-profile-email { margin-top: 2px; font-family: var(--font); font-size: 12.5px; color: var(--t1); overflow-wrap: anywhere; }
 .stg .settings-avatar-remove { display: inline-flex; align-items: center; min-height: 24px; margin-top: 2px; padding: 0; border: 0; background: none; font-family: var(--font); font-size: 12.5px; color: var(--t1); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .stg .settings-avatar-remove:hover { color: var(--t0); }
 
@@ -180,24 +191,21 @@
 .stg .flairpick-hint { color: var(--t1); font-size: 12.5px; }
 .stg .flairpick-preview { border: 1px solid var(--stg-hair); border-radius: var(--radius); background: var(--stg-wash); }
 .stg .flairpick-preview-label,
-.stg .flairpick-group-label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.stg .flairpick-group-label { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.4; color: var(--t1); }
 
 /* ── Account: deleting it ─────────────────────────────────────────────────────
    Not a dashed red box. A dashed border reads as a drop target, and a tinted
    red ground under running text is alarm for its own sake. It is the last
-   section of the panel, set off by a rule, with the destructive colour spent on
-   its heading and its one control — which is how Buffer and Descript close
-   their settings. */
-.stg .danger-zone { margin-top: 0; padding: 18px 0 16px; border: 0; border-radius: 0; background: none; }
-.stg .danger-zone-h { margin-bottom: 8px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--err-strong); }
-.stg .danger-zone-h::before { content: none; }
+   card of the panel, apart from the others, with the destructive colour spent
+   on its one control and the armed submit, not on the heading. */
+.stg .danger-zone { margin-top: 0; padding: 14px 0 16px; border: 0; border-radius: 0; background: none; }
 .stg .danger-zone p { max-width: 60ch; font-size: 13px; line-height: 1.6; color: var(--t1); }
 .stg .danger-zone-open,
 .stg .settings-danger { color: var(--err-strong); border-color: color-mix(in srgb, var(--err) 50%, transparent); background: transparent; }
 .stg .danger-zone-open:hover,
 .stg .settings-danger:hover { color: var(--err-strong); border-color: var(--err-strong); background: color-mix(in srgb, var(--err) 7%, transparent); }
 /* The armed, irreversible action: --err-strong under --err-fg (7.6:1 light,
-   8.1:1 dark). The inline style this replaces was #fff on --err: 2.8:1 dark. */
+   8.1:1 dark). A plain white label on --err measured 2.8:1 in dark. */
 .stg .danger-confirm-go,
 .stg .settings-danger-go { background: var(--err-strong); border-color: var(--err-strong); color: var(--err-fg); }
 .stg .danger-confirm-go:hover:not(:disabled),
@@ -256,7 +264,7 @@
 .stg .sub-tiers { gap: 0; margin-top: 4px; }
 .stg .sub-tier { gap: 14px; padding: 22px 20px; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .stg .sub-tier-pro { border-left: 1px solid var(--stg-hair); box-shadow: none; }
-.stg .sub-tier-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--t1); }
+.stg .sub-tier-name { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.4; color: var(--t1); }
 .stg .sub-tier-amount { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: -.015em; font-variant-numeric: tabular-nums; }
 .stg .sub-tier-per { color: var(--t1); }
 /* "Unavailable" is a word, not a figure: set at the reading size so it
@@ -275,6 +283,7 @@
 
 /* Subscription (Pro): the same one surface, as rows. */
 .stg .sub-active { padding: 0; }
+.stg .sub-active > .settings-card-body { flex: 1 1 100%; min-width: 0; }
 .stg .sub-active-title { font-size: 15px; font-weight: 560; }
 .stg .sub-active-meta { font-size: 12.5px; color: var(--t1); }
 .stg .sub-active-actions { flex-wrap: wrap; }
@@ -292,14 +301,14 @@
 
 /* ── Data and privacy ────────────────────────────────────────────────────── */
 .stg .settings-data-note { max-width: 64ch; padding: 12px 0; font-size: 13.5px; line-height: 1.65; color: var(--t1); }
-.stg .settings-facts { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px 0; list-style: none; }
-.stg .settings-facts li { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
-.stg .settings-facts svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-mid); }
+/* Plain facts, no marker: they are statements, not a checklist. */
+.stg .settings-facts { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 14px 0; list-style: none; }
+.stg .settings-facts li { max-width: 64ch; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
 .stg .settings-legal-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding: 14px 0; border-top: 1px solid var(--stg-hair); }
 
 /* The founder credit under the panels. Underlined at rest, so the credit is
    discoverable without hover. */
-.stg .stg-credit { padding: 28px 0 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-align: center; color: var(--t2); }
+.stg .stg-credit { padding: 28px 0 12px; font-family: var(--font); font-size: 12.5px; text-align: center; color: var(--t2); }
 .stg .stg-credit a { display: inline-flex; align-items: center; min-height: 24px; color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 
 .stg :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -338,8 +347,8 @@
   .stg .settings-card-body,
   .stg .settings-profile { padding-left: 16px; padding-right: 16px; }
   .stg .settings-card-body--grid { padding: 10px; }
-  .stg .settings-profile { flex-wrap: wrap; gap: 14px; }
-  .stg .settings-profile-info { flex: 1 1 calc(100% - 72px); }
+  .stg .settings-profile { gap: 14px; }
+  .stg .settings-cards { gap: var(--s-5); }
   .stg .lang-grid { grid-template-columns: 1fr; }
   .stg .sub-billing-toggle { width: auto; max-width: none; margin: 16px 16px 0; }
   .stg .sub-billing-toggle button { flex: 1 1 0; min-width: 0; justify-content: center; gap: 0; min-height: 44px; padding: 0 var(--s-3); }
@@ -368,6 +377,7 @@
   .stg .toggle-row .theme-seg { flex: 1 1 100%; width: auto; }
   .stg .settings-row { flex-wrap: wrap; }
   .stg .settings-row--field { flex-wrap: nowrap; }
+  .stg .settings-row--fact { grid-template-columns: minmax(0, 1fr); }
   /* An open edit row: the field on its own line, then Save and Cancel as an
      equal pair. At 334px the field (220) + Save + Cancel is 356, which left
      Cancel alone on a second line. The wider gap keeps "Permanently delete"
@@ -412,4 +422,22 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
 @media (hover: none) {
   .stg .settings-avatar-edit { inset: auto 0 0 0; height: 36%; border-radius: 0; opacity: 1; }
   .stg .settings-avatar-edit svg { width: 12px; height: 12px; }
+}
+
+/* ── Truth and safety: acknowledgement, sign-out notice, plan check ─────── */
+.stg .danger-confirm-ack { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; min-height: 24px; }
+.stg .danger-confirm-ack input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--err-strong); }
+.stg .danger-confirm-ack label { font-size: 13px; line-height: 1.5; color: var(--t0); cursor: pointer; }
+.stg .danger-confirm-link { padding: 0; border: 0; background: none; font: inherit; color: var(--t0); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.stg .danger-confirm-link:disabled { color: var(--t2); cursor: default; }
+.stg .settings-sync-alert-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; flex-shrink: 0; }
+.stg .settings-sync-alert-actions button { margin-left: 0; }
+.stg .settings-sync-alert button:disabled { color: var(--t2); cursor: default; }
+.stg .settings-clear-warn { color: var(--t0); font-weight: 500; }
+.stg .settings-export-gap { color: var(--warn-strong); }
+.stg .sub-checking .settings-row-value { color: var(--t1); }
+.stg .settings-avatar-btn[data-busy] .settings-avatar-edit { opacity: 1; }
+.stg .settings-avatar-btn:disabled { cursor: progress; }
+@media (pointer: coarse) {
+  .stg .danger-confirm-ack { min-height: 44px; align-items: center; }
 }

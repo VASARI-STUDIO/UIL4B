@@ -150,7 +150,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
       await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(1)
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -603,6 +603,9 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
       const go_ = page.getByRole('button', { name: /Permanently delete/i })
       await expect(go_, 'no password, no delete').toBeDisabled()
       await page.keyboard.type('hunter22')
+      // The password alone is not enough: the "I understand" box is the second step.
+      await expect(go_, 'a password without the box').toBeDisabled()
+      await page.getByLabel(/I understand/).check()
       await expect(go_).toBeEnabled()
       // The way back is as plain as the way through.
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()

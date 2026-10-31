@@ -1,7 +1,8 @@
-import useActiveSection from '../hooks/useActiveSection'
+import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import useActiveSection from '../hooks/useActiveSection'
 import NotFound from './NotFound'
-import { findArticle, nextArticle, readingMinutes } from '../data/learnIndex'
+import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
 import BrandColour from '../data/learn/brandColour'
 import ColourSpaces from '../data/learn/colourSpaces'
@@ -47,7 +48,7 @@ import '../styles/pages/learn-article.css'
 // ── Why the contents are generated from metadata ───────────────────────────
 //
 // `article.sections` in src/data/learnIndex.js is the single list. The contents
-// rail maps it, and so does the prose — each <section id> in the body must
+// (the rail and the phone disclosure) map it, and so does the prose — each <section id> in the body must
 // match an entry, which tests/unit/learn-articles.test.js asserts. A heading
 // that exists in the prose and not in the contents (or the reverse) is the
 // defect this arrangement makes impossible rather than merely unlikely.
@@ -91,32 +92,31 @@ function Article({ article }) {
   const Body = BODIES[article.slug]
   const sources = article.sources || []
   const active = useActiveSection(article.sections)
-  const next = nextArticle(article.slug)
+  const contentsRef = useRef(null)
+  useFocusableHeadings(article.sections)
+  const next = nextInTopic(article.slug)
+  const nextInSameTopic = Boolean(next) && next.topic === article.topic
   const minutes = readingMinutes(article.words)
+
+  // Choosing a section from the phone contents folds it away, then puts focus on
+  // that section's heading. The anchor's own jump runs after this handler, so
+  // the focus waits a frame: a fragment jump onto a non-focusable section
+  // would otherwise take focus back.
+  const chooseSection = (id) => {
+    if (contentsRef.current) contentsRef.current.open = false
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.querySelector('h2')?.focus({ preventScroll: true })
+    })
+  }
 
   return (
     <div className="sec lart">
-      <nav className="lart-crumb" aria-label="Breadcrumb">
-        <Link to="/learn">Learn</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{article.topic}</span>
-      </nav>
-
-      <header className="lart-head">
-        <h1>{article.title}</h1>
-        <p className="lart-dek">{article.dek}</p>
-        <p className="lart-meta">
-          <span className="lart-topic">{article.topic}</span>
-          <span className="lart-meta-sep" aria-hidden="true" />
-          <span>{minutes} min read</span>
-          <span className="lart-meta-sep" aria-hidden="true" />
-          <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
-        </p>
-      </header>
-
       <div className="lart-layout">
+        {/* The wide-screen rail and the phone disclosure below are the same list
+            from article.sections. CSS shows one of them, so only one landmark
+            is ever exposed. */}
         <nav className="lart-toc" aria-labelledby="lart-toc-h">
-          <h2 className="lart-toc-h" id="lart-toc-h">Contents</h2>
+          <h2 className="lart-toc-h" id="lart-toc-h">On this page</h2>
           <ol>
             {article.sections.map((s) => (
               <li key={s.id}>
@@ -126,25 +126,48 @@ function Article({ article }) {
           </ol>
         </nav>
 
-        <article className="lart-prose">
-          <Body />
+        <div className="lart-main">
+          <nav className="lart-crumb" aria-label="Breadcrumb">
+            <Link to="/learn">Learn</Link>
+            <span aria-hidden="true">/</span>
+            <Link to={`/learn#${topicAnchorId(article.topic)}`}>{article.topic}</Link>
+          </nav>
 
-          {sources.length > 0 && (
-            <section className="lart-sources" aria-labelledby="lart-sources-h">
-              <h2 id="lart-sources-h">Sources</h2>
-              <ul>
-                {sources.map((s) => (
-                  <li key={s.href}>
-                    <a href={s.href} target="_blank" rel="noreferrer noopener">{s.label}</a>
+          <header className="lart-head">
+            <h1>{article.title}</h1>
+            <p className="lart-dek">{article.dek}</p>
+            <p className="lart-meta">
+              <span>{minutes} min read</span>
+              <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
+              <span><Link to={article.toolTo}>Use it in the {article.toolLabel}</Link></span>
+            </p>
+          </header>
+
+          <nav className="lart-toc-nav" aria-labelledby="lart-toc-m-h">
+            <details className="lart-toc-m" ref={contentsRef}>
+              <summary>
+                <span className="lart-toc-m-name" id="lart-toc-m-h">On this page</span>
+                <span className="lart-toc-m-count">{article.sections.length} sections</span>
+                <Chevron />
+              </summary>
+              <ol>
+                {article.sections.map((s) => (
+                  <li key={s.id}>
+                    <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
                   </li>
                 ))}
-              </ul>
-            </section>
-          )}
+              </ol>
+            </details>
+          </nav>
 
-          {/* The next step is one link to the tool that does the thing the
-              article describes. Not a panel, not a pitch — the reader has just
-              been told how a number is calculated, and the tool calculates it. */}
+          <article className="lart-prose">
+            <Body />
+          </article>
+
+          {/* The end of the guide has one action: the tool that does the thing
+              the article describes. Not a panel, not a pitch — the reader has
+              just been told how a number is calculated, and the tool calculates
+              it. Further reading and the citations follow it, folded. */}
           <aside className="lart-next" aria-label="Put this into practice">
             <p className="lart-next-lede">{TOOL_LEDE[article.slug]}</p>
             <Link className="lart-next-go" to={article.toolTo}>
@@ -153,19 +176,75 @@ function Article({ article }) {
             </Link>
           </aside>
 
-          {next && next.slug !== article.slug && BODIES[next.slug] && (
-            <nav className="lart-onward" aria-label="Read next">
-              <span className="lart-onward-label">Read next</span>
-              <Link to={`/learn/${next.slug}`}>
-                <span className="lart-onward-title">{next.title}</span>
-                <span className="lart-onward-dek">{next.dek}</span>
-              </Link>
-            </nav>
+          <nav className="lart-onward" aria-labelledby="lart-onward-h">
+            <h2 className="lart-onward-label" id="lart-onward-h">Keep reading</h2>
+            <ul>
+              {next && next.slug !== article.slug && BODIES[next.slug] && (
+                <li>
+                  <Link className="lart-onward-row" to={`/learn/${next.slug}`}>
+                    <span className="lart-onward-text">
+                      <span className="lart-onward-kicker">
+                        {nextInSameTopic ? `Next in ${article.topic}` : 'Read next'}
+                        <span className="sr-only">: </span>
+                      </span>
+                      <span className="lart-onward-title">{next.title}</span>
+                      <span className="lart-onward-dek">{next.dek}</span>
+                    </span>
+                    <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
+                  </Link>
+                </li>
+              )}
+              <li>
+                <Link className="lart-onward-row" to="/learn">
+                  <span className="lart-onward-text">
+                    <span className="lart-onward-title">All {LEARN_ARTICLES.length} guides</span>
+                  </span>
+                  <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
+                </Link>
+              </li>
+            </ul>
+          </nav>
+
+          {sources.length > 0 && (
+            <details className="lart-sources">
+              <summary>
+                <span>Sources ({sources.length})</span>
+                <Chevron />
+              </summary>
+              <ul>
+                {sources.map((s) => (
+                  <li key={s.href}>
+                    <a href={s.href} target="_blank" rel="noreferrer noopener">{s.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
-        </article>
+        </div>
       </div>
     </div>
   )
+}
+
+// The disclosure arrow. currentColor, so it follows the summary's text colour.
+function Chevron() {
+  return (
+    <svg className="lart-chev" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M3.5 6l4.5 4.5L12.5 6" />
+    </svg>
+  )
+}
+
+/**
+ * Lets a section heading take script focus (tabindex -1: focusable, not in the
+ * tab order). Set here after mount, so the article bodies stay plain prose.
+ */
+function useFocusableHeadings(sections) {
+  useEffect(() => {
+    sections.forEach((s) => {
+      document.getElementById(s.id)?.querySelector('h2')?.setAttribute('tabindex', '-1')
+    })
+  }, [sections])
 }
 
 function formatDate(iso) {

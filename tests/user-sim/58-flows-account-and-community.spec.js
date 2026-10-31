@@ -103,7 +103,7 @@ test.describe('flow 9 — deleting your account', () => {
     await expect(list, 'the confirmation must itemise the damage').toBeVisible()
     await expect(list, 'the work the account holds').toContainText(/saved projects/i)
     await expect(list, 'and what it published').toContainText(/community/i)
-    await expect(list, 'and that there is no way back').toContainText(/cannot be undone/i)
+    await expect(page.locator('.danger-zone'), 'and that there is no way back').toContainText(/can.t be undone/i)
 
     // Destructive actions are confirmed, never one-click.
     await expect(page.getByRole('button', { name: /Permanently delete/i }),
@@ -117,7 +117,7 @@ test.describe('flow 9 — deleting your account', () => {
 
     await expect(page.locator('.danger-confirm-list'),
       'a subscriber must be told the money stops, before they confirm')
-      .toContainText(/subscription is cancelled/i)
+      .toContainText(/Pro is cancelled straight away/i)
   })
 
   test('and a free account is not told about a subscription it does not have', async ({ page }) => {
@@ -130,6 +130,6 @@ test.describe('flow 9 — deleting your account', () => {
     const list = page.locator('.danger-confirm-list')
     await expect(list, 'the panel must still be on screen').toBeVisible()
     await expect(list, 'a free account has no billing to warn about')
-      .not.toContainText(/subscription is cancelled/i)
+      .not.toContainText(/Pro is cancelled straight away/i)
   })
 })

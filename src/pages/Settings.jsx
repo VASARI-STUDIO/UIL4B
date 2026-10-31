@@ -7,13 +7,17 @@ import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
+import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
+import { getSyncState } from '../utils/syncStatus'
+import { loadFirestore } from '../utils/firebaseAccess'
+import { AI_TERMS_PATH } from '../config/aiImageConsent'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
-// Settings → Subscription says exactly what /plans says: the same lines, the
+// Settings → Plan and billing says exactly what /plans says: the same lines, the
 // same cadences, the same per-month amounts and trial terms, from the one
 // module /plans reads. See src/config/planFacts.js for why.
 import {
@@ -74,13 +78,25 @@ function portalErrorText(e) {
   return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
 }
 
-function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength }) {
+// How long a profile save waits for the server before it is treated as held
+// back (see saveProfile in Settings), and what the person is then told.
+const PROFILE_WRITE_WAIT_MS = 8000
+const SIGN_OUT_FLUSH_WAIT_MS = 10000
+const PROFILE_QUEUED_TEXT ='Saved on this device. It reaches your account once you’re back online.'
+
+// Bio is a paragraph, so it gets a textarea where Enter adds a line and the
+// modifier-Enter saves. The shortcut named in its count line follows the OS.
+const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? 'Cmd' : 'Ctrl'
+
+function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength, inputMode, multiline = false }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [hi, setHi] = useState(-1)
   const errId = useId()
+  const inputId = useId()
+  const countId = useId()
 
   // Suggestions only exist while the user is typing: the list opens on input,
   // never on focus, and an exact match (i.e. a just-picked option) yields none.
@@ -139,6 +155,11 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
   // the list open closes the list rather than the edit. Only a key the list
   // did not consume reaches the save/cancel branch.
   const onFieldKey = (e) => {
+    if (multiline) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSave() }
+      else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+      return
+    }
     if (options) {
       const listOpen = suggestOpen && matches.length > 0
       onSuggestKey(e)
@@ -154,20 +175,56 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
       <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">{label}</div>
-          <div className="settings-row-value">{value || <span className="settings-row-empty">—</span>}</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
         </div>
-        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit</button>
+        {/* The hidden suffix gives each Edit button its own name. */}
+        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
+      </div>
+    )
+  }
+
+  if (multiline) {
+    return (
+      <div className="settings-row settings-row--open">
+        <label htmlFor={inputId} className="settings-row-label">{label}</label>
+        <textarea
+          id={inputId}
+          className="settings-bio-input"
+          rows={4}
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={onFieldKey}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          enterKeyHint="enter"
+          autoFocus
+          readOnly={saving}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={[countId, error ? errId : ''].filter(Boolean).join(' ')}
+        />
+        <div id={countId} className="settings-count">
+          <span>{val.length.toLocaleString('en-AU')} / {Number(maxLength).toLocaleString('en-AU')}</span>
+          <span>{MOD_KEY}+Enter to save</span>
+        </div>
+        <div className="settings-edit-actions">
+          <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
+          <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+        </div>
+        {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       </div>
     )
   }
 
   return (
     <div className="settings-row settings-row--open">
-      <div className="settings-row-label">{label}</div>
+      <label htmlFor={inputId} className="settings-row-label">{label}</label>
       <div className="settings-edit-line">
         <div className="settings-suggest-wrap">
           <input
+            id={inputId}
             type={type}
+            inputMode={inputMode}
+            enterKeyHint="done"
             value={val}
             onChange={e => { setVal(e.target.value); setSuggestOpen(true); setHi(-1) }}
             onKeyDown={onFieldKey}
@@ -216,12 +273,29 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
 // surfaced read-only so people know they exist.
 function FlairPicker({ value, displayName, email, onSave }) {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const errId = useId()
   const current = getFlair(value)
   const roles = FLAIRS.filter((f) => f.group === 'role')
   const community = FLAIRS.filter((f) => f.group === 'community')
   const earned = FLAIRS.filter((f) => f.group === 'earned')
 
-  const choose = (id) => onSave(id === value ? '' : id)
+  // onSave is awaited: a refused write keeps the picker open and says why,
+  // instead of the chip looking chosen. One write at a time.
+  const save = async (id) => {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await onSave(id)
+    } catch (e) {
+      setError(e.message || 'Your flair could not be saved. Nothing was changed. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const choose = (id) => save(id === value ? '' : id)
 
   if (!open) {
     return (
@@ -235,7 +309,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
           </div>
         </div>
         <button className="btn btn-s" onClick={() => setOpen(true)}>
-          {current ? 'Change' : 'Add'}
+          {current ? 'Change' : 'Add'}<span className="sr-only"> flair</span>
         </button>
       </div>
     )
@@ -259,6 +333,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
             type="button"
             className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
             aria-pressed={f.id === value}
+            disabled={busy}
             onClick={() => choose(f.id)}
           >
             {f.label}
@@ -274,6 +349,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
             type="button"
             className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
             aria-pressed={f.id === value}
+            disabled={busy}
             onClick={() => choose(f.id)}
           >
             {f.label}
@@ -292,11 +368,12 @@ function FlairPicker({ value, displayName, email, onSave }) {
       </div>
 
       <div className="settings-edit-actions">
-        <button className="btn btn-accent btn-s" onClick={() => setOpen(false)}>Done</button>
+        <button className="btn btn-accent btn-s" onClick={() => { setOpen(false); setError('') }} disabled={busy}>Done</button>
         {value && (
-          <button className="btn btn-s" onClick={() => onSave('')}>Clear flair</button>
+          <button className="btn btn-s" onClick={() => save('')} disabled={busy}>Clear flair</button>
         )}
       </div>
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -364,16 +441,9 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
     try { await onReset(); setResetState('sent') } catch { setResetState('failed') }
   }
 
-  if (googleOnly) {
-    return (
-      <div className="settings-row">
-        <div className="settings-row-main">
-          <div className="settings-row-label">Password</div>
-          <div className="settings-row-value">Signed in with Google</div>
-        </div>
-      </div>
-    )
-  }
+  // A Google-only account has no password to change; the sign-in method row
+  // already says how it signs in.
+  if (googleOnly) return null
 
   if (!open) {
     return (
@@ -382,7 +452,7 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
           <div className="settings-row-label">Password</div>
           <div className="settings-row-value">••••••••</div>
         </div>
-        <button className="btn btn-s" onClick={() => setOpen(true)}>Change</button>
+        <button className="btn btn-s" onClick={() => setOpen(true)}>Change<span className="sr-only"> password</span></button>
       </div>
     )
   }
@@ -526,8 +596,8 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
       <div className="settings-row">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
-          <div className="settings-row-value">{value || '—'}</div>
-          <div className="settings-row-meta">Signed in with Google</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
+          <div className="settings-row-meta">Managed by your Google account</div>
         </div>
       </div>
     )
@@ -538,7 +608,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
       <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
-          <div className="settings-row-value">{value || '—'}</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
           {verification?.owed && (
             <EmailVerificationNote address={value} onSend={verification.onSend} onRefresh={verification.onRefresh} />
           )}
@@ -548,7 +618,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
             </div>
           )}
         </div>
-        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit<span className="sr-only"> email address</span></button>
       </div>
     )
   }
@@ -583,6 +653,8 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
 // "Firebase: Error (auth/requires-recent-login)." Only auth/wrong-password was
 // ever mapped, so every other failure — including the one Google accounts hit
 // on every single attempt — surfaced as that.
+const OFFLINE_DELETE = 'You appear to be offline. Nothing was deleted. Try again when you’re connected.'
+const UNCONFIRMED_DELETE = 'We lost the connection, so we can’t confirm whether your account was deleted. Sign in again to check. If you can’t, contact support@uil4b.com.'
 const DELETE_ERRORS = {
   'auth/wrong-password': 'That password is incorrect.',
   'auth/invalid-credential': 'That password is incorrect.',
@@ -593,20 +665,31 @@ const DELETE_ERRORS = {
   'auth/cancelled-popup-request': 'The Google window closed before you confirmed. Try again.',
   'auth/popup-blocked': 'Your browser blocked the Google window. Allow pop-ups for this site and try again.',
   'auth/user-mismatch': 'That is a different Google account. Confirm with the one you are signed in as.',
+  'auth/network-request-failed': OFFLINE_DELETE,
 }
 
 function deleteErrorText(e) {
   const mapped = DELETE_ERRORS[e?.code]
   if (mapped) return mapped
+  // The request to our own server has no Firebase code: a dropped connection
+  // is a bare TypeError ("Failed to fetch"). That can happen after the server
+  // has already deleted the account, online or offline, so nothing can be said
+  // about whether it was deleted. Only auth/network-request-failed, raised
+  // before the request is sent, is safe to answer with "Nothing was deleted".
+  if (e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(e?.message || '')) {
+    return UNCONFIRMED_DELETE
+  }
   // The server's own messages are already written for a user to read, and carry
   // a correlation id support can trace.
   if (e?.message) return e.message
   return 'We could not delete your account. Please try again.'
 }
 
-function DeleteAccount({ onDelete, googleOnly, isPro }) {
+function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
+  // The acknowledgement every account type must tick before the button arms.
+  const [ack, setAck] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const panelRef = useRef(null)
@@ -638,17 +721,19 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
 
   // A password account cannot delete with an empty password — Firebase refuses
   // the re-authentication — so the button waits for one. The label directly
-  // above the field says what it is waiting for.
+  // above the field says what it is waiting for. It also waits for the
+  // acknowledgement, which is the same for a Google-only account.
   const needsPassword = !googleOnly && !password
+  const notReady = !ack || needsPassword
 
-  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword('') }
+  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword(''); setAck(false) }
 
   // Enter in the password field submits (the button is disabled until there is
   // a password, which blocks the implicit submit too); Escape closes the panel
   // from anywhere inside it, unless the delete is already running.
   const handleDelete = async (e) => {
     e?.preventDefault()
-    if (busy || needsPassword) return
+    if (busy || notReady) return
     setBusy(true)
     setError('')
     try {
@@ -663,7 +748,9 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
 
   if (!open) {
     return (
-      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)}>
+      // Waits for the plan to be known: the list below names Pro's cancellation
+      // only for a Pro account.
+      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
         Delete account
       </button>
     )
@@ -679,18 +766,30 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
       onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); closePanel() } }}
     >
       <ul className="danger-confirm-list">
-        {isPro && <li>Your subscription is cancelled immediately — you will not be billed again.</li>}
+        {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
         <li>Your profile, saved projects, icons and synced designs are deleted.</li>
         <li>Prompts you submitted to the community, and any media with them, are removed.</li>
-        <li>This cannot be undone, and the same email can sign up again as a new account.</li>
+        <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
       </ul>
+
+      {/* A way out to the export, before anything is deleted. It only changes
+          section; nothing is deleted by it. */}
+      <p className="danger-confirm-note">
+        Want a copy first?{' '}
+        <button type="button" className="danger-confirm-link" onClick={onExportFirst} disabled={busy}>Download your data</button>
+      </p>
+
+      <div className="danger-confirm-ack">
+        <input id="del-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={busy} />
+        <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
+      </div>
 
       {googleOnly ? (
         // A Google-only account HAS no password. The old dialog asked for one
         // unconditionally, which was unanswerable — and then deletion threw
         // requires-recent-login anyway.
         <p className="danger-confirm-note">
-          You&rsquo;ll be asked to confirm with Google before anything is deleted.
+          Google will ask you to confirm it&rsquo;s you before anything is deleted.
         </p>
       ) : (
         <>
@@ -709,7 +808,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
       )}
 
       <div className="danger-confirm-actions">
-        <button type="submit" className="btn danger-confirm-go" disabled={busy || needsPassword}>
+        <button type="submit" className="btn danger-confirm-go" disabled={busy || notReady}>
           {busy ? 'Deleting…' : 'Permanently delete'}
         </button>
         <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
@@ -753,7 +852,10 @@ function rememberSection(id) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
-  const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading } = useSubscription()
+  const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
+  // True until both the account and its plan have answered. Neither plan is
+  // shown before then: isPro is false for everyone while the plan is on its way.
+  const planPending = authLoading || (!!user && (subLoading || !planKnown))
   const { t, lang, setLang, languages } = useI18n()
   // 'support' — the SECTION ID, not the label. This said 'subscription', which
   // matched no section: harmless while every panel rendered at once and `active`
@@ -763,9 +865,10 @@ export default function Settings({ toast }) {
   // `state={{ section: 'support' }}`.
   const [chosen, setActive] = useState(() => rememberedSection() || 'account')
   // 'account' is the one section that only exists signed in. Signed out — and
-  // for the instant before auth resolves — it falls back to the first section
-  // rather than to a blank page, which is what an id matching no panel gives.
-  const active = chosen === 'account' && !user ? 'support' : chosen
+  // for the instant before auth resolves — it falls back to Appearance (which
+  // works without an account) rather than to a blank page, which is what an id
+  // matching no panel gives.
+  const active = chosen === 'account' && !user ? 'accessibility' : chosen
   const location = useLocation()
   // MOBILE FIRST, and a tab row never wraps. On a
   // phone the sections are a list you open one at a time, with a way back —
@@ -837,6 +940,10 @@ export default function Settings({ toast }) {
     if (!held || held === document.body) clearTriggerRef.current?.focus()
   }, [confirmClear])
   const [exporting, setExporting] = useState(false)
+  // Set when the file was built without some of the account's documents; shown
+  // beside the Export row as well as in the toast.
+  const [exportGap, setExportGap] = useState('')
+  const online = useOnline()
   // Counted from storage, not from the length of a hand-written list. The old
   // page reported "15 items" whatever was actually there — including for a
   // browser holding 16 keys, 9 of which the export then omitted.
@@ -877,13 +984,35 @@ export default function Settings({ toast }) {
 
   // Sign out AFTER anything pending has reached the account: once signed out,
   // the rules refuse the write, and this browser's copy is released.
+  // flushAccountSync never rejects: a failed send is reported through
+  // syncStatus, and offline the write is held without settling. So the flush is
+  // given a limited wait, and then the sync store is read for a failure. When
+  // changes have not reached the account, signing out is the person's call:
+  // their copy stays on this device (the cache is released only once nothing is
+  // pending) and goes up the next time the same account signs in here; a
+  // different account signing in first discards it.
   const [signingOut, setSigningOut] = useState(false)
-  const signOut = async () => {
+  const [signOutIssue, setSignOutIssue] = useState('')
+  const signOut = async ({ anyway = false } = {}) => {
+    if (signingOut) return
     setSigningOut(true)
-    await flushAccountSync()
-    try { await logout() } catch {
+    setSignOutIssue('')
+    try {
+      if (!anyway) {
+        let timer
+        const held = new Promise((resolve) => { timer = setTimeout(resolve, SIGN_OUT_FLUSH_WAIT_MS, 'held') })
+        const flushed = await Promise.race([flushAccountSync().then(() => 'done'), held])
+        clearTimeout(timer)
+        if (flushed === 'held' || getSyncState().errors.length) {
+          setSigningOut(false)
+          setSignOutIssue('unsynced')
+          return
+        }
+      }
+      await logout()
+    } catch {
       setSigningOut(false)
-      toast?.('Sign-out did not complete. Please try again.')
+      setSignOutIssue('failed')
     }
   }
 
@@ -894,45 +1023,102 @@ export default function Settings({ toast }) {
   const tabRefs = useRef([])
   const providerPhoto = user?.providerData?.[0]?.photoURL || ''
   const hasCustomPhoto = !!userProfile?.photoURL && userProfile.photoURL !== providerPhoto
+  const [photoBusy, setPhotoBusy] = useState(false)
+
+  // THE ONE PLACE A PROFILE FIELD IS SAVED FROM THIS PAGE.
+  // useAuth().updateProfile is synchronous: it applies the edit locally and
+  // starts the Firestore write in the background, so awaiting it says nothing
+  // about whether the write worked (a refusal only raises the sync banner
+  // later). To know the outcome before announcing anything, the write is made
+  // here first, with the same merge-set the context uses, and the local copy
+  // is updated only once it was accepted. A refusal throws, so the field stays
+  // open and the old value stays on screen.
+  //
+  // Offline, the Firestore SDK holds a write back without settling it. Waiting
+  // on that would leave the field on "Saving…", so offline (or after the wait
+  // below) the edit is kept on this device and the answer says that it has not
+  // reached the account yet. It resolves 'queued' then, 'saved' otherwise.
+  //
+  // The write can wait several seconds, and the account can change in that
+  // time (a switch, a sign-out). The uid is read again from a ref that tracks
+  // the latest auth state, and the edit is dropped if it is no longer the
+  // account the edit was made for.
+  const uidRef = useRef(user?.uid)
+  uidRef.current = user?.uid
+  const saveProfile = async (fields, what) => {
+    const refused = () => new Error(`Your ${what} could not be saved. Nothing was changed. Please try again.`)
+    const uid = user?.uid
+    if (!uid) throw refused()
+    let outcome = 'queued'
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+      let timer
+      try {
+        const fs = await loadFirestore()
+        const write = fs.setDoc(fs.doc(fs.db, 'users', uid), fields, { merge: true })
+        const wait = new Promise((resolve) => { timer = setTimeout(resolve, PROFILE_WRITE_WAIT_MS, 'queued') })
+        outcome = await Promise.race([write.then(() => 'saved'), wait])
+      } catch {
+        throw refused()
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+    if (uidRef.current !== uid) throw refused()
+    updateProfile(fields)
+    return outcome
+  }
+  const saidSaved = (outcome, text) => toast(outcome === 'queued' ? PROFILE_QUEUED_TEXT : text)
+
   const onAvatarFile = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = '' // let the same file be re-picked later
     if (!file) return
+    let dataUrl
     try {
-      const dataUrl = await processAvatarImage(file)
-      updateProfile({ photoURL: dataUrl })
-      toast('Profile photo updated')
+      dataUrl = await processAvatarImage(file)
     } catch (err) {
       toast(err?.message || 'Could not use that image')
+      return
+    }
+    setPhotoBusy(true)
+    try {
+      saidSaved(await saveProfile({ photoURL: dataUrl }, 'photo'), 'Profile photo updated')
+    } catch {
+      toast('Your photo could not be saved. Nothing was changed.')
+    } finally {
+      setPhotoBusy(false)
     }
   }
-  // The profile write is awaited before anything is announced, so the toast
-  // never claims a save that failed; a failure keeps the field open with the
-  // reason. A blank name is not refused: the
-  // account's name then shows as the part of the email before the "@" (see
-  // AuthContext's userProfile), and the toast says so.
+  // A blank name is not refused: the account's name then shows as the part of
+  // the email before the "@" (see AuthContext's userProfile), and the toast
+  // says so.
   const saveDisplayName = async (raw) => {
     const name = String(raw ?? '').trim()
-    try {
-      await updateProfile({ displayName: name })
-    } catch {
-      throw new Error('Your display name could not be saved. Nothing was changed. Please try again.')
-    }
-    toast(name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
+    const outcome = await saveProfile({ displayName: name }, 'display name')
+    saidSaved(outcome, name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
   }
   // Only http(s) addresses are kept (src/utils/websiteUrl.js); a refusal is the
   // EditField's inline message, and nothing is written.
   const saveWebsite = async (raw) => {
     const checked = checkWebsite(raw)
     if (!checked.ok) throw new Error(checked.error)
-    await updateProfile({ website: checked.value })
-    toast(checked.value ? 'Website updated' : 'Website cleared')
+    saidSaved(await saveProfile({ website: checked.value }, 'website'), checked.value ? 'Website updated' : 'Website cleared')
   }
+  const saveLocation = async (v) => saidSaved(await saveProfile({ location: v }, 'location'), 'Location updated')
+  const saveCompany = async (v) => saidSaved(await saveProfile({ company: v }, 'company or studio'), 'Company updated')
+  const saveBio = async (v) => saidSaved(await saveProfile({ bio: v }, 'bio'), 'Bio updated')
+  const saveFlair = async (id) => saidSaved(await saveProfile({ flair: id }, 'flair'), id ? 'Flair updated' : 'Flair cleared')
   // "Remove" restores the sign-in provider's photo (Google etc.), or the
   // initial-letter avatar for email accounts.
-  const removeAvatar = () => {
-    updateProfile({ photoURL: providerPhoto })
-    toast(providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
+  const removeAvatar = async () => {
+    setPhotoBusy(true)
+    try {
+      saidSaved(await saveProfile({ photoURL: providerPhoto }, 'photo'), providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
+    } catch {
+      toast('Your photo could not be saved. Nothing was changed.')
+    } finally {
+      setPhotoBusy(false)
+    }
   }
 
   // Open on a section when navigated from the profile quick-menu. It no longer
@@ -1032,6 +1218,7 @@ export default function Settings({ toast }) {
   // where their projects and prompts actually live.
   const exportData = async () => {
     setExporting(true)
+    setExportGap('')
     try {
       let firestore = null
       let account = null
@@ -1081,7 +1268,20 @@ export default function Settings({ toast }) {
       a.download = `uil4b-export-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(a.href)
-      toast(t('settings.dataExported') || 'Data exported')
+      // A document that could not be read is recorded in the file as { error },
+      // so the file is not the whole account. Say which parts are missing
+      // rather than announcing a complete export.
+      const missing = [['projects', 'projects'], ['library', 'library'], ['sync', 'settings'], ['profile', 'profile']]
+        .filter(([key]) => firestore?.[key]?.error)
+        .map(([, name]) => name)
+      if (missing.length) {
+        const list = missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}` : missing[0]
+        const gap = `Exported, but your ${list} could not be read, so ${missing.length > 1 ? 'they’re' : 'it’s'} not in the file. Try again.`
+        setExportGap(gap)
+        toast(gap)
+      } else {
+        toast(t('settings.dataExported') || 'Data exported')
+      }
     } catch {
       toast('Could not build your export. Please try again.')
     } finally {
@@ -1109,12 +1309,14 @@ export default function Settings({ toast }) {
     toast(t('settings.dataCleared') || 'Local data cleared')
   }
 
+  // The ids are stable (links and the remembered section use them); the labels
+  // are what the person reads. The order follows how often each is used.
   const sections = [
-    { id: 'support', label: 'Subscription' },
-    { id: 'accessibility', label: t('settings.accessibility') || 'Accessibility' },
-    { id: 'language', label: t('settings.language') || 'Language' },
     ...(user ? [{ id: 'account', label: t('settings.account') || 'Account' }] : []),
-    { id: 'data', label: t('settings.dataManagement') || 'Data' },
+    { id: 'support', label: 'Plan and billing' },
+    { id: 'accessibility', label: t('settings.appearance') || 'Appearance' },
+    { id: 'language', label: t('settings.language') || 'Language' },
+    { id: 'data', label: t('settings.dataManagement') || 'Your data' },
     { id: 'privacy', label: t('settings.privacyLegal') || 'Privacy' },
   ]
 
@@ -1157,6 +1359,33 @@ export default function Settings({ toast }) {
     focusOwed.current = ''
   }, [phoneView, isPhone, chosen, active, sectionInState])
 
+  // How this account signs in, as one read-only fact.
+  const signInMethod = !user ? ''
+    : isGoogleOnlyAccount() ? 'Google'
+      : (user.providerData || []).some((p) => p?.providerId === 'google.com') ? 'Google and email'
+        : 'Email and password'
+
+  // Pro, as labelled facts: one fact a line. Admin and one-off access have no
+  // subscription to describe, so they keep a single note instead.
+  const noBillingNote = isAdmin && !subscription && !lifetimeEntitlement ? 'Admin account — Pro included, no billing'
+    : lifetimeEntitlement?.active && !subscription ? 'One-off Pro access — no subscription or renewal'
+      : ''
+  const longDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+  const trialing = subscription?.status === 'trialing' && Number.isFinite(subscription?.trialEndsAt)
+  const cancelling = !!subscription?.cancelAtPeriodEnd
+  const endsOn = cancelling && subscription?.currentPeriodEnd ? longDate(subscription.currentPeriodEnd) : ''
+  // The cadence comes from the plan-facts module. A `month` subscription whose
+  // count is not stored could be monthly OR quarterly, so the row is left out
+  // and nothing is guessed.
+  const cadenceLabel = CADENCE_LABEL[subscriptionCadence(subscription)]
+  const proFacts = [
+    ['Status', cancelling ? (endsOn ? `Ends on ${endsOn}` : 'Ends at the end of this billing period')
+      : trialing ? `Free trial until ${longDate(subscription.trialEndsAt)}`
+        : 'Active'],
+    cadenceLabel && ['Billing cycle', cadenceLabel.replace(/^Billed /, '').replace(/^./, (c) => c.toUpperCase())],
+    !cancelling && !trialing && subscription?.currentPeriodEnd && ['Next payment', longDate(subscription.currentPeriodEnd)],
+  ].filter(Boolean)
+
   // The two plan blocks, held apart so a narrow screen can put Pro first.
   const tierFree = (
     <div className="sub-tier sub-tier-free">
@@ -1190,7 +1419,9 @@ export default function Settings({ toast }) {
       </ul>
       {/* One slot, one button. Only a live price links to checkout. */}
       {priceStatus === 'live' && !subLoading ? (
-        <Link className="btn btn-accent sub-tier-btn" to={`/checkout?plan=${offer.checkoutPlan}`}>Upgrade to Pro</Link>
+        // Every upgrade starts at /plans, which reads ?billing= for the period
+        // picked here and carries on to checkout from there.
+        <Link className="btn btn-accent sub-tier-btn" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro</Link>
       ) : priceStatus === 'cadence-missing' ? (
         <button type="button" className="btn btn-accent sub-tier-btn" onClick={() => setBilling(otherOffer.id)}>{priceCopy.button}</button>
       ) : (
@@ -1263,44 +1494,45 @@ export default function Settings({ toast }) {
 
         <div className="settings-content" hidden={isPhone && phoneView === 'list'}>
 
-          {/* Subscription */}
+          {/* Plan and billing */}
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Subscription</h2>
-              <p>{isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
+              <h2 tabIndex={-1}>Plan and billing</h2>
+              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UIL4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
-            {isPro ? (
+            {planPending ? (
+              // Neither plan is shown until the account and its subscription
+              // have both answered: before that, isPro is false for everyone,
+              // so a Pro subscriber would see Free marked as their plan. One row
+              // at the Pro Plan row's height, so nothing jumps when it resolves.
+              <div className="settings-card sub-active sub-checking" aria-busy="true">
+                <div className="settings-card-body">
+                  <div className="settings-row settings-row--fact">
+                    <div className="settings-row-label">Plan</div>
+                    <div className="settings-row-value" role="status">Checking your plan…</div>
+                  </div>
+                </div>
+              </div>
+            ) : isPro ? (
               <div className="settings-card sub-active">
                 <div className="settings-card-body">
-                  <div className="settings-row">
-                    <div className="settings-row-main">
-                      <div className="settings-row-label">Plan</div>
+                  <div className="settings-row settings-row--fact">
+                    <div className="settings-row-label">Plan</div>
+                    <div className="settings-fact-body">
                       <div className="settings-row-value sub-active-title">UIL4B Pro</div>
-                      <div className="settings-row-meta sub-active-meta">
-                        {isAdmin && !subscription && !lifetimeEntitlement ? 'Admin account — Pro included, no billing'
-                          : lifetimeEntitlement?.active && !subscription ? 'One-off Pro access — no subscription or renewal'
-                            : (
-                          <>
-                            {/* The cadence comes from the plan-facts module. A
-                                `month` subscription whose count is not stored
-                                could be monthly OR quarterly, so it says when it
-                                renews and not how often — "Billed monthly" on a
-                                quarterly plan was the wrong fact this fixes. */}
-                            {[
-                              subscription?.status === 'trialing' && Number.isFinite(subscription?.trialEndsAt)
-                                ? `Free trial until ${new Date(subscription.trialEndsAt).toLocaleDateString()}` : null,
-                              CADENCE_LABEL[subscriptionCadence(subscription)] || null,
-                              subscription?.currentPeriodEnd
-                                ? `${subscription.cancelAtPeriodEnd ? 'Access until' : 'Renews'} ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                                : null,
-                              subscription?.cancelAtPeriodEnd ? 'Cancels at period end' : null,
-                            ].filter(Boolean).join(' · ')}
-                          </>
-                        )}
-                      </div>
+                      {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
                     </div>
                   </div>
+                  {!noBillingNote && proFacts.map(([label, value]) => (
+                    <div className="settings-row settings-row--fact" key={label}>
+                      <div className="settings-row-label">{label}</div>
+                      <div className="settings-row-value">{value}</div>
+                    </div>
+                  ))}
+                  {!noBillingNote && endsOn && (
+                    <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
+                  )}
                   {/* Admins without a real Stripe subscription have no billing
                       portal to open — no buttons rather than a 500. */}
                   {!!subscription && (
@@ -1335,7 +1567,7 @@ export default function Settings({ toast }) {
               // free trial" button — under a small "Sign in to upgrade" note.
               // Plans owns pricing; this owns your account.
               <div className="sub-signin-note">
-                <p>Settings are for your account — <NavLink to="/login">sign in</NavLink> to manage a subscription.</p>
+                <p><NavLink to="/login">Sign in</NavLink> to see your plan and billing.</p>
                 <p>Comparing plans first? <NavLink to="/plans">See Free and Pro</NavLink>.</p>
               </div>
             ) : (
@@ -1377,8 +1609,8 @@ export default function Settings({ toast }) {
           {/* Accessibility */}
           <section id="set-accessibility" className="settings-section" role="tabpanel" aria-labelledby="settab-accessibility" hidden={active !== 'accessibility'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Accessibility</h2>
-              <p>Choose a theme and reduce motion for a calmer, distraction-free interface. Both are also in the menu at the top of every page.</p>
+              <h2 tabIndex={-1}>Appearance</h2>
+              <p>Theme and motion. Both are also in the menu at the top of every page.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
@@ -1435,7 +1667,7 @@ export default function Settings({ toast }) {
                       onClick={() => { setLang(l.code); toast(`Language: ${l.native}`) }}
                     >
                       <span className="lang-flag">
-                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt={l.region} width="28" height="21" />
+                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt="" width="28" height="21" onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }} />
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
@@ -1461,9 +1693,17 @@ export default function Settings({ toast }) {
             <section id="set-account" className="settings-section" role="tabpanel" aria-labelledby="settab-account" hidden={active !== 'account'}>
               <div className="settings-section-h">
                 <h2 tabIndex={-1}>Account</h2>
-                <p>Manage your profile, email, and password.</p>
+                <p>Your profile, how you sign in, and deleting your account.</p>
               </div>
-              <div className="settings-card">
+              {/* Three cards, one job each. The first is what other people see. */}
+              <div className="settings-cards">
+              <div className="settings-card" role="group" aria-labelledby="acct-h-profile">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-profile">Public profile</h3>
+                    <p>Shown with your name in Discover and the community.</p>
+                  </div>
+                </div>
                 <div className="settings-profile">
                   <button
                     type="button"
@@ -1471,6 +1711,9 @@ export default function Settings({ toast }) {
                     onClick={() => avatarInputRef.current?.click()}
                     aria-label="Change profile photo"
                     title="Change profile photo"
+                    aria-busy={photoBusy ? 'true' : undefined}
+                    disabled={photoBusy}
+                    data-busy={photoBusy ? 'true' : undefined}
                   >
                     {userProfile?.photoURL ? (
                       <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
@@ -1489,10 +1732,9 @@ export default function Settings({ toast }) {
                     <div className="settings-profile-name">{userProfile?.displayName || 'Welcome'}</div>
                     <div className="settings-profile-email">{user.email}</div>
                     {hasCustomPhoto && (
-                      <button type="button" className="settings-avatar-remove" onClick={removeAvatar}>Remove photo</button>
+                      <button type="button" className="settings-avatar-remove" onClick={removeAvatar} disabled={photoBusy}>Remove photo</button>
                     )}
                   </div>
-                  <button className="btn btn-s" onClick={signOut} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                 </div>
                 <div className="settings-card-body">
                   {profileSyncError && (
@@ -1505,6 +1747,32 @@ export default function Settings({ toast }) {
                     </div>
                   )}
                   <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" maxLength={200} />
+                  {/* Every profile field is AWAITED (saveProfile): a refused
+                      write keeps the field open with the reason, and no toast
+                      says "updated" for a save that did not happen. */}
+                  <EditField label="Location" value={userProfile?.location} onSave={saveLocation} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
+                  <EditField label="Company or studio" value={userProfile?.company} onSave={saveCompany} placeholder="e.g. Paper Lane Studio" maxLength={200} />
+                  <EditField label="Website" value={userProfile?.website} type="url" inputMode="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
+                  <EditField label="Bio" value={userProfile?.bio} onSave={saveBio} placeholder="A short bio about yourself" maxLength={5000} multiline />
+                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={saveFlair} />
+                </div>
+              </div>
+
+              <div className="settings-card" role="group" aria-labelledby="acct-h-signin">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-signin">Sign-in and security</h3>
+                    <p>How you sign in to UIL4B.</p>
+                  </div>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-row">
+                    <div className="settings-row-main">
+                      <div className="settings-row-label">Signed in with</div>
+                      <div className="settings-row-value">{signInMethod}</div>
+                      {isGoogleOnlyAccount() && <div className="settings-row-meta">{user.email}</div>}
+                    </div>
+                  </div>
                   {/* AWAITED, so a failure stays in the field, in words, and the
                       toast means the confirmation link really went out. */}
                   <EmailEditField
@@ -1513,30 +1781,62 @@ export default function Settings({ toast }) {
                     onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
                     verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
                   />
-                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
-                  <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" maxLength={200} />
-                  <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
-                  <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" maxLength={5000} />
-                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={(id) => { updateProfile({ flair: id }); toast(id ? 'Flair updated' : 'Flair cleared') }} />
                   <PasswordChange
                     onSave={(current, next) => updatePassword(current, next)}
                     googleOnly={isGoogleOnlyAccount()}
                     onReset={() => resetPassword(user.email)}
                   />
+                  <div className="settings-row">
+                    <div className="settings-row-main">
+                      <div className="settings-row-label">Sign out</div>
+                      <div className="settings-row-meta">Signs out of UIL4B in this browser.</div>
+                    </div>
+                    <button type="button" className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
+                  </div>
+                  {signOutIssue && (
+                    <div className="settings-sync-alert" role="alert">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                      </svg>
+                      <span>
+                        {signOutIssue === 'unsynced'
+                          ? 'Some recent changes haven’t reached your account yet. If you sign out now, they stay on this device and are sent the next time you sign in here with this account. Signing in with a different account first discards them.'
+                          : 'Signing out didn’t finish, so you’re still signed in. Check your connection and try again.'}
+                      </span>
+                      <span className="settings-sync-alert-actions">
+                        <button type="button" onClick={() => signOut()} disabled={signingOut}>Try again</button>
+                        {signOutIssue === 'unsynced' && (
+                          <button type="button" onClick={() => signOut({ anyway: true })} disabled={signingOut}>Sign out anyway</button>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
+              <div className="settings-card" role="group" aria-labelledby="acct-h-delete">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-delete">Delete account</h3>
+                    <p>Permanently remove your account and everything in it.</p>
+                  </div>
+                </div>
+                <div className="settings-card-body">
                   <div className="danger-zone">
-                    <div className="danger-zone-h">Danger zone</div>
                     <p>
-                      Delete your account, everything in it, and{isPro ? ' your subscription' : ' any billing you have with us'}.
-                      This cannot be undone.
+                      Deletes your profile, projects and everything synced to your account{isPro ? ', and cancels Pro' : ''}.
+                      {' '}This can&rsquo;t be undone.
                     </p>
                     <DeleteAccount
                       onDelete={(pw) => deleteAccount(pw)}
+                      onExportFirst={() => pickSection('data')}
+                      planPending={planPending}
                       googleOnly={isGoogleOnlyAccount()}
                       isPro={isPro}
                     />
                   </div>
                 </div>
+              </div>
               </div>
             </section>
           )}
@@ -1551,7 +1851,7 @@ export default function Settings({ toast }) {
               <p>
                 {user
                   ? 'Some of it lives in this browser, and some on our server so it follows you between devices. Either way it is yours.'
-                  : 'Signed out, everything UIL4B stores lives in this browser. You own it.'}
+                  : 'Signed out, everything UIL4B keeps is in this browser, and only here.'}
               </p>
             </div>
             <div className="settings-card">
@@ -1563,7 +1863,7 @@ export default function Settings({ toast }) {
                     {user ? ', plus your account’s copy on the server' : ''}
                   </p>
                 </div>
-                <NavLink to="/privacy" className="btn btn-s">Full disclosure</NavLink>
+                <NavLink to="/privacy" className="btn btn-s">Read the privacy policy</NavLink>
               </div>
               <div className="settings-card-body">
                 <p className="settings-data-note">
@@ -1573,9 +1873,11 @@ export default function Settings({ toast }) {
                   <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
+                      {user && !online && 'You’re offline, so this file has this browser’s copy only. '}
                       A JSON copy of everything — every key in this browser
                       {user ? ', plus your account’s copy from the server' : ''}
                     </div>
+                    {exportGap && <div className="settings-field-err settings-export-gap" role="status">{exportGap}</div>}
                   </div>
                   <button className="btn btn-accent btn-s" onClick={exportData} disabled={exporting}>
                     {exporting ? 'Preparing…' : 'Export JSON'}
@@ -1585,9 +1887,15 @@ export default function Settings({ toast }) {
                   <div className="settings-row-main">
                     <div className="settings-row-label">Clear local data</div>
                     <div className="settings-row-meta">
-                      Removes everything stored in this browser except your sign-in.
-                      {user ? ' Your account and synced data on the server are untouched.' : ''}
+                      {user
+                        ? 'Clears this browser’s copy. Your account keeps everything, and it comes back next time this page loads.'
+                        : 'Deletes your saved projects, palettes and preferences from this browser. This browser holds the only copy, so export first if you want to keep them.'}
                     </div>
+                    {confirmClear && (
+                      <div className="settings-row-meta settings-clear-warn" role="status">
+                        {user ? 'Your account copy is not affected.' : 'This deletes them for good.'}
+                      </div>
+                    )}
                   </div>
                   {confirmClear ? (
                     <div
@@ -1608,26 +1916,26 @@ export default function Settings({ toast }) {
           {/* Privacy */}
           <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Privacy &amp; legal</h2>
-              <p>How we handle (and don't handle) your information.</p>
+              <h2 tabIndex={-1}>Privacy</h2>
+              <p>What we keep, where it lives, and who else sees it.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
                 <ul className="settings-facts">
                   {[
-                    // "No analytics trackers" was deleted: Vercel
-                    // Web Analytics runs on every page and /privacy discloses it.
-                    'No third-party cookies, no ad networks.',
-                    'Authentication is handled securely by Firebase Auth (Google).',
-                    'Your data is stored locally and optionally synced via Firestore when signed in.',
-                    'You can export or delete your data at any time, with no requests.',
+                    // Vercel Web Analytics runs on every page and /privacy
+                    // discloses it, so there is no "no analytics" line here.
+                    // Where each AI request goes follows api/ai.js: images
+                    // (alt text, photo scan) go to Gemini; text-only requests go
+                    // to OpenRouter, restricted to hosts that do not keep or
+                    // train on them, and fall back to Gemini.
+                    'No ad networks and no third-party cookies.',
+                    'Sign-in is handled by Firebase Authentication (Google).',
+                    'Signed in, your settings and projects sync to your account so they follow you to other devices. Signed out, they stay in this browser only.',
+                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
+                    'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
-                    <li key={i}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      {line}
-                    </li>
+                    <li key={i}>{line}</li>
                   ))}
                 </ul>
                 <div className="settings-legal-links">

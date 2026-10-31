@@ -426,9 +426,14 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
 
     // ── The vacuity, as five facts from one instant. Every condition the old
     // contract required is TRUE here, and the gallery is empty. ──
+    // The loader shows from the first render, but /api/fonts is only asked for after the static
+    // catalogue (a 404 here) has answered, so wait for the request instead of reading it at once.
+    await expect.poll(() => served, {
+      message: 'the catalogue request must actually have been held, or this proves nothing',
+      timeout: 10000,
+    }).toBeGreaterThan(0)
+    await expect(page.locator('.typ-loading > .fg-loader'), 'and the tool is still waiting on it').toBeVisible()
     const held = await renderState(page)
-    expect(served, 'the catalogue request must actually have been held, or this proves nothing')
-      .toBeGreaterThan(0)
     expect(held.mounted, 'THE OLD CONTRACT: React has mounted').toBe(true)
     expect(held.booting, 'THE OLD CONTRACT: the static boot shell is gone').toBe(false)
     expect(held.loading, 'THE OLD CONTRACT: no Suspense fallback is on screen').toBe(false)
@@ -530,9 +535,10 @@ async function expectRecoveryScreen(page) {
   // once for what looks like a stale deploy; the crash lands on the second try.
   const card = page.locator('.error-boundary')
   await expect(card).toBeVisible({ timeout: 20000 })
-  await expect(card.getByRole('heading', { name: 'Something went wrong' })).toBeVisible()
-  await expect(card.getByRole('button', { name: 'Reload' })).toBeVisible()
-  await expect(card.getByRole('button', { name: 'Report this' })).toBeVisible()
+  await expect(card.getByRole('heading', { level: 1, name: 'This page stopped working' })).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
+  await expect(card.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/')
+  await expect(card.getByRole('button', { name: 'Report this problem' })).toBeVisible()
   return card
 }
 
@@ -541,13 +547,13 @@ for (const [route, chunk, where] of [
   ['/learn', '**/assets/SurfaceIndex-*.js', 'a surface index, which returns before the app shell'],
   ['/settings', '**/assets/Settings-*.js', 'a page inside the app shell'],
 ]) {
-  test(`a crash on ${route} (${where}) shows Reload and Report this, and the report is prefilled`, async ({ page }) => {
+  test(`a crash on ${route} (${where}) shows Try again, Go to the home page and Report this problem, and the report is prefilled`, async ({ page }) => {
     test.setTimeout(60000)
     await crashChunk(page, chunk)
     await goRaw(page, route)
     const card = await expectRecoveryScreen(page)
 
-    await card.getByRole('button', { name: 'Report this' }).click()
+    await card.getByRole('button', { name: 'Report this problem' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on ${route}: .*${PROBE}`))

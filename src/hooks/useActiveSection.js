@@ -3,33 +3,23 @@ import { useEffect, useState } from 'react'
 /**
  * Which section the reader is in, for a contents rail.
  *
- * The observer window is pinned near the top of the viewport rather than its
- * middle: the question the rail answers is "what am I reading now", and the
- * moment a heading crosses under the nav the reader is in that section even
- * though most of the previous one is still on screen. Intersecting sections are
- * sorted by position so the topmost wins, which keeps the marker stable when
- * two short sections are visible at once.
+ * A section is current once its heading has reached the line a contents jump
+ * lands it on (the section's own scroll-margin-top, plus a few px of slack), so
+ * the answer is the last section at or above that line, and the first section
+ * until any has. It is computed from geometry on every scroll frame rather than
+ * kept from observer entries: entries only report the sections that changed,
+ * which loses the marker when the reader jumps (End, then Home) and nothing is
+ * left to report, and an observer cannot see the gap between two sections.
  *
  * `sections` is a list of `{ id }` objects. Options:
- *   enabled           false creates no observer and reports no section.
- *   fromScrollMargin  take the top edge of the window from the first section's
- *                     computed `scroll-margin-top` (the clearance a jump leaves
- *                     under a fixed nav) instead of a fixed 88px, so the section
- *                     an anchor lands on is the one marked. The extra 2px keeps
- *                     the section above it, whose bottom edge touches that line,
- *                     outside the window.
- *   pinLastAtBottom   a short last section can never reach the top of the
- *                     window, so at the very bottom of the page the last one is
- *                     reported. Scrolling back up re-derives the section from
- *                     where the headings sit.
+ *   enabled           false listens to nothing and reports no section.
+ *   pinLastAtBottom   a short last section can never reach the line, so at the
+ *                     very bottom of the page the last one is reported.
  */
-export default function useActiveSection(
-  sections,
-  { enabled = true, fromScrollMargin = false, pinLastAtBottom = false } = {},
-) {
-  const [active, setActive] = useState('')
+export default function useActiveSection(sections, { enabled = true, pinLastAtBottom = false } = {}) {
+  const [active, setActive] = useState(enabled ? sections[0]?.id ?? '' : '')
   // Keyed on the ids so a caller passing a fresh array each render does not
-  // tear the observer down every time.
+  // re-subscribe every time.
   const idKey = sections.map((s) => s.id).join('|')
 
   useEffect(() => {
@@ -38,42 +28,36 @@ export default function useActiveSection(
       return undefined
     }
     const nodes = sections.map((s) => document.getElementById(s.id)).filter(Boolean)
-    if (!nodes.length || typeof IntersectionObserver === 'undefined') return undefined
-    const measured = fromScrollMargin ? parseFloat(getComputedStyle(nodes[0]).scrollMarginTop) : 0
-    const top = measured > 0 ? Math.round(measured) + 2 : 88
-    let pinned = false
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (pinned) return
-        const seen = entries.filter((e) => e.isIntersecting)
-        if (!seen.length) return
-        seen.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        setActive(seen[0].target.id)
-      },
-      { rootMargin: `-${top}px 0px -60% 0px`, threshold: 0 },
-    )
-    nodes.forEach((n) => observer.observe(n))
-
-    const onScroll = () => {
+    if (!nodes.length) return undefined
+    let frame = 0
+    const pick = () => {
+      frame = 0
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
-      if (atBottom) {
-        pinned = true
+      if (pinLastAtBottom && atBottom) {
         setActive(nodes[nodes.length - 1].id)
-      } else if (pinned) {
-        pinned = false
-        let current = nodes[0].id
-        for (const n of nodes) if (n.getBoundingClientRect().top <= top) current = n.id
-        setActive(current)
+        return
       }
+      let current = nodes[0]
+      for (const node of nodes) {
+        const line = (parseFloat(getComputedStyle(node).scrollMarginTop) || 0) + 8
+        if (node.getBoundingClientRect().top > line) break
+        current = node
+      }
+      setActive(current.id)
     }
-    if (pinLastAtBottom) window.addEventListener('scroll', onScroll, { passive: true })
-
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(pick)
+    }
+    pick()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
     return () => {
-      observer.disconnect()
-      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      if (frame) cancelAnimationFrame(frame)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- idKey stands in for sections
-  }, [idKey, enabled, fromScrollMargin, pinLastAtBottom])
+  }, [idKey, enabled, pinLastAtBottom])
 
   return active
 }

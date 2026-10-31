@@ -43,17 +43,22 @@ test.describe('signed-out likes and saves ask to sign in', () => {
     })
   }
 
-  test('Palette Builder gallery: a press inside the sign-in dialog keeps the gallery open', async ({ page }) => {
-    watch(page, 'a visitor liking a palette from the builder gallery')
+  // The Explore panel has no like heart any more (design criterion 6), so the sign-in prompt is
+  // no longer opened from inside it. What is left of this guarantee: the docked panel (1024 and
+  // up) stays open while the visitor signs in, and a press inside the sign-in dialog does not
+  // close it either.
+  test('Palette Builder Explore panel: it stays docked through the sign-in dialog', async ({ page }) => {
+    watch(page, 'a visitor signing in with the builder panel open')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/palette')
     await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
-    const gallery = page.getByRole('dialog', { name: 'Explore palettes and brands', exact: true })
+    const gallery = page.getByRole('complementary', { name: 'Explore palettes and brands', exact: true })
     await expect(gallery).toBeVisible()
-    await gallery.locator('.pgal-like').first().click()
+    await page.getByRole('button', { name: 'Log in', exact: true }).click()
     const login = loginDialog(page)
     await expect(login).toBeVisible()
+    await expect(gallery, 'the panel closed when the sign-in dialog opened').toBeVisible()
     await login.locator('#ui-login-title').click()
-    await expect(gallery, 'the gallery closed under the sign-in dialog').toBeVisible()
+    await expect(gallery, 'the panel closed under the sign-in dialog').toBeVisible()
   })
 })
