@@ -247,6 +247,21 @@ test('390px: the footer links sit in two columns, and there is no curtain on a c
     const box = await footer.locator('.sp-footer-legal').getByRole('link', { name, exact: true }).boundingBox()
     expect(box.height, `${name} is under a 44px target`).toBeGreaterThanOrEqual(44)
   }
+  // The rows of the two stacks share one pitch: the left stack's second group head
+  // sits level with a row of the right stack, so nothing zig-zags between them.
+  const rows = await page.locator('.sp-footer .sp-footer-col').evaluateAll((all) => {
+    const cols = all.filter((c) => c.getClientRects().length > 0)
+    const leftEdge = Math.min(...cols.map((c) => c.getBoundingClientRect().left))
+    const heads = cols.filter((c) => c.getBoundingClientRect().left <= leftEdge + 1)
+    const right = cols.filter((c) => c.getBoundingClientRect().left > leftEdge + 1)
+    const rightTops = right.flatMap((c) => [...c.querySelectorAll('a')].map((a) => a.getBoundingClientRect().top))
+    return heads.slice(1).map((c) => {
+      const top = c.getBoundingClientRect().top
+      return { top, nearest: Math.min(...rightTops.map((t) => Math.abs(t - top))) }
+    })
+  })
+  expect(rows.length, 'the left stack lost its second group').toBeGreaterThan(0)
+  for (const r of rows) expect(r.nearest, 'a left group head sits between the right stack\'s rows').toBeLessThanOrEqual(1)
   await page.waitForTimeout(500)
   await expect(footer, 'a coarse pointer got the curtain').not.toHaveAttribute('data-curtain', /.*/)
   await ctx.close()
