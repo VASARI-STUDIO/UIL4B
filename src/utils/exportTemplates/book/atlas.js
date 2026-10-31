@@ -4,7 +4,7 @@
 // headings are the user's own face. There are no section openings: the plates are
 // the sections.
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale, fmtRatio } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale, fmtRatio, systemSentence, glyphStrip } from '../shared.js'
 import { mixHex, hexToOklch } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Martian Mono', weights: '100 800', file: 'martian-mono-latin.woff2' })
@@ -157,7 +157,8 @@ function typography(ctx) {
   const fam = (role, name, weight, spacing) => `<div class="fm">
       <p class="lbl">${esc(role)} &middot; ${weight}${spacing ? ` &middot; ${spacing}em` : ''}</p>
       <p class="fm-name" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight};letter-spacing:${spacing || 0}em">${esc(name)}</p>
-      <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ., : ; ! ? ( ) @ # % $</p>
+      <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">${esc(systemSentence(d, role === 'Headings' ? 'heading' : 'body'))}</p>
+      ${glyphStrip(`font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}`)}
     </div>`
   // One share of true size for every specimen: 100% when the ladder fits, else the largest that does.
   const { k, label } = specimenScale(ladder, SCALE_FIT)
