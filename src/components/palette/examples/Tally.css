@@ -39,7 +39,7 @@
 .ty-nav .is-current{font-weight:600;color:var(--pv-text)}
 /* The side padding and the matching negative margin leave the words where they were and give the hover fill room. */
 .ty-navlink{padding:var(--s-1) var(--s-2);margin:0 calc(var(--s-2) * -1);border-radius:8px}
-.ty-avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--pv-raised);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--pv-text)}
+.ty-avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--pv-text)}
 
 .ty-body{flex:1;padding:var(--s-6) var(--s-7) var(--s-9)}
 .ty-grid{display:grid;grid-template-columns:360px minmax(0,1fr);column-gap:var(--s-8);align-items:start}
@@ -118,7 +118,7 @@
 .ty-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:var(--s-3);width:100%;min-height:60px;padding:0 var(--s-2)}
 /* The row drawn as if the pointer were on it: the same fill a real hover gets. */
 .ty-tx.is-hover>.ty-row{background:var(--ty-row-hover)}
-.ty-merchant{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--pv-raised);color:var(--pv-text)}
+.ty-merchant{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--pv-text)}
 .ty-who{display:flex;flex-direction:column;min-width:0}
 .ty-who b{font-weight:500}
 .ty-note{font-size:13px;line-height:1.5;color:var(--pv-muted)}
@@ -178,12 +178,24 @@
 .ty-panel{min-width:0}
 
 /* ── Soft interactivity: only a live scene has buttons, so every rule here names one ──
- * Hover and press are colour changes only (no movement). Rows take the subtle,
- * the primary button its own deeper fills, and a focused control the same ring as the Limits fields. */
+ * Hover and press are colour changes only (no movement). Rows take the palette's raised ground: the
+ * muted and tone text was already walked to 4.5:1 on it for every palette, light and dark, so no row
+ * text can fall below that on a hovered, pressed or drawn-on row. (A fill mixed from a brand colour has
+ * no such guarantee.) Press keeps the fill and adds a 3px edge in the strong border, a shape cue rather
+ * than a darker fill the text was never measured on. The primary button has its own deeper fills,
+ * and a focused control gets the same ring as the Limits fields. */
 .ty{
-  --ty-row-hover:color-mix(in srgb,var(--pv-subtle) 55%,var(--pv-canvas));
-  --ty-row-press:color-mix(in srgb,var(--pv-subtle) 85%,var(--pv-canvas));
+  --ty-row-hover:var(--pv-raised);
+  --ty-row-press:var(--pv-raised);
+  --ty-row-mark:inset 3px 0 0 var(--pv-border-strong);
 }
+/* The raised tiles (merchant mark, avatar) would melt into a raised row, so on one they take the surface. */
+.ty-avatar,.ty-merchant{background:var(--ty-tile,var(--pv-raised))}
+.ty .ty-tx.is-hover>.ty-row,
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink):active{--ty-tile:var(--pv-surface)}
+@media (hover:hover){.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink):hover{--ty-tile:var(--pv-surface)}}
+/* An open action already sits on the raised ground; its hover steps to the surface instead. */
+@media (hover:hover){.ty .ty-act.is-open button.ty-act-btn:hover{background:var(--pv-surface)}}
 :where(.ty button){appearance:none;margin:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left}
 .ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink,button.ty-tab,button.ty-btn,button.ty-toggle){cursor:pointer}
 .ty button[aria-disabled="true"]{cursor:not-allowed}
@@ -206,13 +218,13 @@
   /* A live scene's drawn-on hover row gives way as soon as the pointer is anywhere in the scene. */
   .ty.is-live:hover .ty-tx.is-hover>.ty-row:not(:hover){background:none}
 }
-.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn):active{background:var(--ty-row-press)}
-.ty button.ty-navlink:active{background:var(--ty-row-press);color:var(--pv-text)}
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn):active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark)}
+.ty button.ty-navlink:active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark);color:var(--pv-text)}
 .ty button.ty-tab:active{background:var(--ty-row-hover);color:var(--pv-text)}
 .ty button.ty-btn:not(.ty-btn--primary):not([aria-disabled="true"]):active{background:var(--ty-row-hover);border-color:var(--pv-muted)}
 .ty button.ty-btn--primary:active{background:var(--ty-primary-press)}
 .ty button.ty-toggle.is-on:active{background:var(--ty-primary-press)}
-.ty .ty-tx.is-hover>.ty-row:active{background:var(--ty-row-press)}
+.ty .ty-tx.is-hover>.ty-row:active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark)}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .pvs .ty :is(button,input){transition:none}
 }
