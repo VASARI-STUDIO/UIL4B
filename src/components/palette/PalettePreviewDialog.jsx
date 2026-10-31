@@ -525,13 +525,13 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
 
 // ── One scene, gated ────────────────────────────────────────────────────────
 
-function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state }) {
+function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state, onState }) {
   const locked = gate !== 'open'
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
       <div className="pvd-scene-in" inert={locked}>
         <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
-          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} state={state} />
+          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} state={state} onState={onState} />
         </Suspense>
       </div>
       {locked && (
@@ -870,7 +870,7 @@ export default function PalettePreviewDialog({
                   </section>
                 </>
               ) : (
-                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} state={stateId} />
+                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} state={stateId} onState={pickState} />
               )}
             </div>
 

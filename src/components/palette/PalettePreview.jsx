@@ -2,9 +2,10 @@
 // export. Each scene is an example (src/components/palette/examples/): its own
 // product built around one drawn artefact, loaded as its own chunk.
 //
-// This component only wraps the example and marks its roles. The example is
-// pure: it takes nothing but what it draws, holds no state and reads no context.
-// The colours arrive as --pv-* custom properties on the scene root
+// This component only wraps the example and marks its roles. An example reads
+// nothing but what it is given. Most are pictures; one that is softly
+// interactive (Tally) keeps its own local state and is handed `onState`, so the
+// dialog's State menu can follow what the user does in it. The colours arrive as --pv-* custom properties on the scene root
 // (palettePreviewRoles.js `pvVars`), the layout is a container query on that
 // root, and nothing is scaled: text is its true pixel size at every width.
 //
@@ -16,6 +17,7 @@ import { useEffect, useRef } from 'react'
 import { pvVars } from '../../utils/palettePreviewRoles'
 import { EXAMPLES } from './examples/registry'
 import { sceneById } from '../../data/palettePreviewScenes'
+import { statesOf } from '../../data/previewStates'
 import '../../styles/pages/palette-preview.css'
 
 /**
@@ -25,14 +27,18 @@ import '../../styles/pages/palette-preview.css'
  * @param {string} props.sceneId one of PREVIEW_SCENES
  * @param {string|null} props.highlight a role to outline, or null
  * @param {string} [props.state] the State menu's pick, for an example that has states
+ * @param {(id: string) => void} [props.onState] moves the State menu; given only to a
+ *   scene the user may click through (never a Contrast Checker pair or a compare pane)
  * @param {(roles: string[], adjusted: string[]) => void} props.onRoles the roles
  *   this scene paints, and those it painted as text in an adjusted colour
  */
-export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles, state }) {
+export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles, state, onState }) {
   const scene = sceneById(sceneId)
   const Body = EXAMPLES[scene.id]
   const rootRef = useRef(null)
   const failKey = roles.fails.map((f) => f.role).join(',')
+  // A scene with live controls is a group of them; a still one is one picture.
+  const live = typeof onState === 'function' && !roles.pair && statesOf(scene.id).length > 0
 
   // Mark every role-bearing element: which are in the highlighted role, and
   // which carry a role that fails its floor. Containers (an element holding
@@ -77,11 +83,25 @@ export default function PreviewScene({ roles, labels, sceneId, highlight = null,
       if (onRoles) onRoles([...used], [...adjusted])
     }
     mark()
-    if (typeof ResizeObserver === 'undefined' || !failKey) return undefined
-    const ro = new ResizeObserver(mark)
-    ro.observe(root)
-    return () => ro.disconnect()
-  }, [highlight, scene.id, state, failKey, onRoles, roles])
+    const stop = []
+    if (typeof ResizeObserver !== 'undefined' && failKey) {
+      const ro = new ResizeObserver(mark)
+      ro.observe(root)
+      stop.push(() => ro.disconnect())
+    }
+    // A live scene changes its own elements (a tab, a panel, the form), so the marks are redone
+    // after each change, once per frame. The marks are attributes, which this observer does not watch.
+    if (live && typeof MutationObserver !== 'undefined') {
+      let frame = 0
+      const mo = new MutationObserver(() => {
+        cancelAnimationFrame(frame)
+        frame = requestAnimationFrame(mark)
+      })
+      mo.observe(root, { childList: true, subtree: true })
+      stop.push(() => { mo.disconnect(); cancelAnimationFrame(frame) })
+    }
+    return stop.length ? () => stop.forEach((fn) => fn()) : undefined
+  }, [highlight, scene.id, state, failKey, onRoles, roles, live])
 
   return (
     <div
@@ -91,10 +111,10 @@ export default function PreviewScene({ roles, labels, sceneId, highlight = null,
       data-scene={scene.id}
       data-mode={roles.mode}
       data-preview-scene={scene.name}
-      role="img"
+      role={live ? 'group' : 'img'}
       aria-label={`${scene.name} preview using your palette, ${roles.mode} theme`}
     >
-      <Body roles={roles} labels={labels} state={state} />
+      <Body roles={roles} labels={labels} state={state} onState={live ? onState : undefined} />
     </div>
   )
 }

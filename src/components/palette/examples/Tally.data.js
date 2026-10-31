@@ -6,7 +6,7 @@
 //
 // The budget figure, the bar, the category list and the shares are all derived
 // from CATS, so the page can never print a total that disagrees with its own bar.
-import { contrastRatio } from '../../../utils/colors.js'
+import { contrastRatio, mixHex } from '../../../utils/colors.js'
 import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
 export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral']
@@ -14,8 +14,8 @@ export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'succe
 export const TEXT_RECIPE = [
   { el: 'figure', ink: 'text', large: true },
   { el: 'balance, limits heading', ink: 'text', large: true },
-  { el: 'merchants, amounts, category names, nav, tabs, field labels, input values, toast', ink: 'text', large: false },
-  { el: 'labels, dates, shares, transaction notes, pace label, limits help lines', ink: 'muted', large: false },
+  { el: 'merchants, amounts, category names, nav, tabs, field labels, input values, toast, card details', ink: 'text', large: false },
+  { el: 'labels, dates, shares, transaction notes, pace label, limits help lines, card detail labels and help', ink: 'muted', large: false },
   { el: 'card text', ink: 'inkOnField:primary', large: false },
   { el: 'category glyphs', ink: 'inkOnField:subtle', large: false },
   { el: 'refund, pending, declined, frozen line, overseas help line', ink: 'success-ink|warning-ink|error-ink|info-ink', large: false },
@@ -109,10 +109,39 @@ export const DUE = [
 ]
 export const amountText = (n) => `${n < 0 ? '−' : '+'}${money(Math.abs(n))}`
 
-export const CARD = { last4: '4471' }
+// The Upcoming tab: scheduled payments, grouped by when they fall. The first
+// three are the Due soon rows, so the two lists can never disagree on a date.
+const [ENERGY, INTERNET, COVER] = DUE
+export const UPCOMING = [
+  {
+    day: 'This week',
+    rows: [
+      ENERGY,
+      { who: 'Pulse Fitness', mark: 'tally', note: 'Membership · Thu 15 Oct', amount: -18.5 },
+    ],
+  },
+  {
+    day: 'Later this month',
+    rows: [
+      INTERNET,
+      COVER,
+      { who: 'Northside Water', mark: 'bowl', note: 'Water · Tue 27 Oct', amount: -96.4 },
+    ],
+  },
+]
+
+export const CARD = { last4: '4471', masked: '•••• •••• •••• 4471', expiry: '09/28' }
+export const DETAILS_PIN_HELP = 'Shown only on your phone.'
 export const ACTIONS = ['Freeze', 'Details', 'Limits']
 export const TABS = ['Spending', 'Upcoming']
 export const NAV = ['Accounts', 'Cards', 'Payments', 'Insights']
+// What the small heading above the budget figure says for each nav item; Cards is the resting one.
+export const NAV_HEADING = {
+  Accounts: 'Accounts · October so far',
+  Cards: 'October so far',
+  Payments: 'Payments · October so far',
+  Insights: 'Insights · October so far',
+}
 
 export const FROZEN_LINE = 'Card frozen. Payments will decline.'
 
@@ -133,6 +162,29 @@ export const LIMITS = {
   overseas: { label: 'Overseas fees', help: 'Available once your card has been active for 30 days.' },
 }
 
+/** The dollars in what was typed into a limit field ("$1,600" gives 1600; nothing gives NaN). */
+export const parseDollars = (text) => {
+  const digits = String(text).replace(/[^0-9.]/g, '')
+  return digits === '' ? NaN : Number(digits)
+}
+
+/** Whether a typed Eating out limit is under what has already been spent there (so the error stays true as the user types). */
+export const eatingUnderSpend = (text) => !(parseDollars(text) >= EATING_OUT.amount)
+
+// The primary button's hover and pressed fills. Each one moves the primary toward
+// deeper (or, when that would cost the label its contrast, toward the colour that
+// sets the label furthest apart), so the label stays readable as it is pressed.
+function primaryFills(r) {
+  const floor = Math.min(4.5, contrastRatio(r.onPrimary, r.primary))
+  const away = contrastRatio(r.onPrimary, r.canvas) >= contrastRatio(r.onPrimary, r.text) ? r.canvas : r.text
+  const reads = (c) => contrastRatio(r.onPrimary, c) >= floor
+  const apart = (c, from) => contrastRatio(c, from) >= 1.1
+  // Toward the deep by a little for hover and a lot for pressed; toward `away` when the deep would cost the label its contrast.
+  const [h, p] = [0.3, 0.6].map((t) => mixHex(r.primary, r.deep, t))
+  if (reads(h) && reads(p) && apart(h, r.primary) && apart(p, h)) return { hover: h, press: p }
+  return { hover: mixHex(r.primary, away, 0.2), press: mixHex(r.primary, away, 0.38) }
+}
+
 /**
  * The colours this scene works out per palette and mode: the ink on the card,
  * the edge a pastel or near-black card needs against the page, the ink and edge
@@ -145,7 +197,10 @@ export function tallyVars(r) {
   const keep = Boolean(r.pair)
   const grounds = { text: r.text, canvas: r.canvas }
   const cardInk = inkOnField(r.primary, { on: r.onPrimary, ...grounds }, { keep }).hex
+  const fills = primaryFills(r)
   const vars = {
+    '--ty-primary-hover': fills.hover,
+    '--ty-primary-press': fills.press,
     '--ty-card-ink': cardInk,
     '--ty-card-edge': fieldEdge(r.primary, r.canvas, r.borderStrong),
     '--ty-glyph-ink': inkOnField(r.subtle, { on: r.onSubtle, ...grounds }, { keep }).hex,
