@@ -20,7 +20,7 @@
 //   3  in pickSize, drop `onState('soldout')`
 //   4  in the ghost button's onClick, drop `setNotified`
 //   5  in `add`, drop `onState('added')`; or `setCount`
-//   6  drop the `useSceneEscape(...)` line (Escape closes the whole dialog)
+//   6  drop the `useEscapeLayer(...)` line (Escape closes the whole dialog)
 //   7  in the effect after `sheetOpen`, drop the `refocus.current` branch
 //   8  in OrraWorkroom, make `toggle` return the same object (`(o) => o`)
 //   9  in Header, make aria-current `'page'` for every link

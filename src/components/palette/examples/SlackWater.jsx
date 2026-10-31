@@ -9,7 +9,7 @@
 // the story, the slider moves the ferry, Save flips. Nothing submits, fetches or
 // is kept after the preview closes. Without `onState` the same markup is a still picture.
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useSceneEscape } from '../escapeLayer.js'
+import { useEscapeLayer } from '../escapeLayer.js'
 import PreviewImage from '../PreviewImage.jsx'
 import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
 import { BODY, CROSSING, HERO, MAP, MAST, PANELS, SUBSCRIBE, clockAt, emailProblem, slackVars, whereAt } from './SlackWater.data.js'
@@ -188,7 +188,7 @@ function Sheet({ view, onClose }) {
   const field = useRef(null)
   useEffect(() => { if (live) field.current?.focus() }, [live])
   // Escape closes just the sheet; the dialog's own Escape waits for the next press.
-  useSceneEscape(Boolean(live), onClose)
+  useEscapeLayer(Boolean(live), onClose)
   const shown = email || (view === 'error' ? SUBSCRIBE.sample : '')
   const err = (view === 'error' || tried) && emailProblem(shown)
   const submit = (e) => {
