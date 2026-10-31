@@ -73,7 +73,7 @@ const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 //     count, so the tease reads as "the next row", which is what it is.
 //   - More than three buries the call to action under a scroll of grey
 //     placeholders. The brand panel has 30 locked rows and the prompt library
-//     8; rendering them all is the "tease that annoys" failure — a wall, not an
+//     ten; rendering them all is the "tease that annoys" failure — a wall, not an
 //     invitation.
 // The quantity on the other side of the wall is communicated as a NUMBER in the
 // CTA, the way Mobbin says "Access all 511,089 screens" rather than rendering
