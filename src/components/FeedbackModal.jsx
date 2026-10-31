@@ -14,6 +14,7 @@ import { saveFeedback } from '../utils/analytics'
 import { FEEDBACK_ROUTING } from '../utils/feedbackRouting'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import {
   requestIdFor, recoverFeedbackDraft, guardSupportUnload, staleDelivery,
@@ -79,6 +80,9 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // P-002: the report carries where the user was, so acting on it does not
   // start with a round trip asking which page they meant.
   const location = useLocation()
+  // Right-click and the Menu key are not there on a touch-first device, so the
+  // tip that names them is left out (the markup differs, not just the style).
+  const coarsePointer = useMediaQuery('(pointer: coarse)')
   const { isPro } = useSubscription()
   const { theme } = useTheme()
   const { reducedMotion } = useAppearance()
@@ -511,7 +515,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
                     )
                   })}
                 </ul>
-                {!seed?.element && (
+                {!seed?.element && !coarsePointer && (
                   // Discoverability without a hover affordance: the tip appears
                   // in the one place where its value is obvious, and only when
                   // they did not already arrive by the gesture it describes.

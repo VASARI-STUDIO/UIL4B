@@ -341,9 +341,10 @@ export function initAnalytics() {
 // The sender's address is never written here. This copy stays in the browser
 // for whoever uses it next, and the server already holds the address; the
 // readers of this store (the admin queue and the data export) do not need it
-// from here. A copy written before that rule is cleaned the next time one is saved.
+// from here. Older entries lose any stored email on the next save.
 export function saveFeedback(entry) {
-  const feedback = load(FEEDBACK_KEY, [])
+  const stored = load(FEEDBACK_KEY, [])
+  const feedback = Array.isArray(stored) ? stored.filter(f => f && typeof f === 'object') : []
   feedback.forEach(f => { delete f.email })
   const { email: _email, ...kept } = entry || {}
   const now = new Date().toISOString()

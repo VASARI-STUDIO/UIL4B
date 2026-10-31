@@ -278,8 +278,11 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   if (validated.error) {
     return res.status(400).json({ error: validated.error })
   }
+  // Only a report's address is checked against the sign-in token; every other
+  // type carries whatever address the form sent, so the notification labels it.
+  const verifiedEmail = validated.entry.type === 'report' ? await verifiedReporterEmail(req, verifyToken) : null
   const entry = validated.entry.type === 'report'
-    ? stampReporter(validated.entry, await verifiedReporterEmail(req, verifyToken))
+    ? stampReporter(validated.entry, verifiedEmail)
     : validated.entry
   const requestId = parseRequestId(req.body?.requestId)
 
@@ -385,7 +388,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
                 </div>
                 <h2 style="font-size:18px;font-weight:700;margin:0 0 8px">${escHtml(entry.subject)}</h2>
                 <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap">${escHtml(entry.message)}</p>
-                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">From: <strong>${escHtml(entry.email)}</strong></p>` : ''}
+                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">${verifiedEmail ? 'From' : 'From (unverified)'}: <strong>${escHtml(entry.email)}</strong></p>` : ''}
               </div>
               <p style="font-size:11px;color:#aaa;text-align:center">UIL4B Support · ${new Date().toISOString().slice(0, 16)}</p>
             </div>

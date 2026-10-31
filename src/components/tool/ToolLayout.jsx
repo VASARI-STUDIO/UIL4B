@@ -27,7 +27,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
-import { REPORT_PROBLEM_EVENT } from '../../utils/errorReport'
+import { requestFeedbackDialog } from '../../utils/errorReport'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -251,8 +251,7 @@ export function ToolToolbar({
   // the route and tool name itself. Nothing answering means no dialog is mounted,
   // so the feedback page takes over.
   const openFeedback = () => {
-    const event = new CustomEvent(REPORT_PROBLEM_EVENT, { cancelable: true, detail: { typeId: 'feedback' } })
-    if (window.dispatchEvent(event)) navigate('/feedback')
+    if (requestFeedbackDialog()) navigate('/feedback')
   }
 
   const panelBody = (

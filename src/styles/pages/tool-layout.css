@@ -106,10 +106,26 @@
   white-space: nowrap;
   color: var(--tl-ink);
 }
-/* From 360px the tool's name never truncates: the row's actions move into the
+/* From 400px the tool's name never shrinks: the row's actions move into the
    overflow first (ToolToolbar measures the name at its full width). */
-@media (min-width: 360px) {
+@media (min-width: 400px) {
   :is(.tl, .tl-sheet-layer) .tl-title { flex-shrink: 0; }
+}
+/* Below 400px, when the actions are all in the overflow and back, name, More
+   and the primary still do not fit, the name takes a second line (two 15px
+   lines are the 36px button height, so the row does not grow) and only a third
+   line is cut with an ellipsis. ToolToolbar measures the name on one line
+   (.is-measuring), so the actions leave first. */
+@media (max-width: 399px) {
+  :is(.tl, .tl-sheet-layer) .tl-toolbar:not(.is-measuring) .tl-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
 }
 :is(.tl, .tl-sheet-layer) .tl-meta {
   font-family: var(--mono);
@@ -490,6 +506,12 @@
 }
 @media (max-width: 767px) {
   .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
+  /* The More button is always on the row (it holds "Send feedback"), so with
+     its label gone it is a square like the back arrow, not a padded pill. */
+  .tl .tl-toolbar .tl-more-btn { width: 36px; padding: 0; }
+}
+@media (max-width: 767px) and (pointer: coarse) {
+  .tl .tl-toolbar .tl-more-btn { width: 44px; }
 }
 /* Under 360px the title may shorten ("Contrast Che..."), and a back pill that
    names its destination ("Palette") is what crowds it. The arrow stays and the
