@@ -291,10 +291,10 @@ code{font-family:var(--pub-mono);font-variant-numeric:tabular-nums}
     const success = document.execCommand('copy'); field.remove(); if (previous) previous.focus({preventScroll:true});
     if (!success) throw new Error('Copy unavailable');
   }
-  function download(content, suffix, mime) {
+  function download(content, name, mime) {
     const blob = new Blob([content], {type:mime}); const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = data.brand.slug + suffix; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 15000);
-    tell('Download ready: ' + data.brand.slug + suffix);
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 15000);
+    tell('Download ready: ' + name);
   }
   function exportHTML() {
     const clone = document.documentElement.cloneNode(true); clone.classList.remove('js');
@@ -302,7 +302,7 @@ code{font-family:var(--pub-mono);font-variant-numeric:tabular-nums}
     clone.querySelectorAll('[aria-current]').forEach(el => el.removeAttribute('aria-current'));
     clone.querySelector('.nav-links a').setAttribute('aria-current', 'location');
     clone.querySelector('#motion-track').classList.remove('play');
-    download('<!doctype html>\n' + clone.outerHTML, '-export.html', 'text/html;charset=utf-8');
+    download('<!doctype html>\n' + clone.outerHTML, data.brand.files.html, 'text/html;charset=utf-8');
   }
   document.addEventListener('click', async event => {
     const swatch = event.target.closest('[data-copy]');
@@ -312,11 +312,11 @@ code{font-family:var(--pub-mono);font-variant-numeric:tabular-nums}
       switch (button.dataset.action) {
         case 'print': window.print(); break;
         case 'html': exportHTML(); break;
-        case 'css': download(data.css+(data.cssCredit?'\n'+data.cssCredit:''), '-tokens.css', 'text/css;charset=utf-8'); break;
-        case 'json': download(data.json, '-tokens.json', 'application/json;charset=utf-8'); break;
+        case 'css': download(data.css+(data.cssCredit?'\n'+data.cssCredit:''), data.brand.files.css, 'text/css;charset=utf-8'); break;
+        case 'json': download(data.json, data.brand.files.json, 'application/json;charset=utf-8'); break;
         case 'fonts': {
           const rules = [...document.styleSheets[0].cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE && !rule.style.fontFamily.includes('Publisher ')).map(rule => rule.cssText).join('\n');
-          download('/*\n'+data.licenses.replace(/\*\//g,'* /')+'\n*/\n'+rules, '-fonts.css', 'text/css;charset=utf-8'); break;
+          download('/*\n'+data.licenses.replace(/\*\//g,'* /')+'\n*/\n'+rules, data.brand.files.fonts, 'text/css;charset=utf-8'); break;
         }
         case 'motion': {
           const track = document.getElementById('motion-track'); track.classList.remove('play'); track.style.setProperty('--travel', Math.max(0,track.clientWidth-76)+'px');

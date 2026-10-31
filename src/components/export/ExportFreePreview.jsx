@@ -3,7 +3,7 @@ import useExportDesign from '../../hooks/useExportDesign'
 import { readExportTemplates, EXPORT_TEMPLATES } from '../../config/exportTemplates'
 import { templateThumb } from '../../utils/exportTemplateThumb'
 import { STYLE_GUIDE_SCALE, freePreviewKey, previewLines } from '../../utils/exportFreePreview'
-import { buildCodeFile } from '../../utils/codeFiles'
+import { buildCodeFile, codeFileName, isCodeFile } from '../../utils/codeFiles'
 import '../../styles/pages/export-preview.css'
 
 // A real render of a free export, drawn from the person's own design: the UI kit's
@@ -12,6 +12,7 @@ import '../../styles/pages/export-preview.css'
 //
 //   kind       'kit' | 'guide' | 'code'
 //   file       a Code file id (utils/codeFiles.js); only read when kind is 'code'
+//   project    the project's name as typed, for the file name over the code
 //   watermark  true while the account is free: the guide sheet carries the UIL4B
 //              mark and the JSON file a credit in its description, as the real file does
 //
@@ -23,22 +24,18 @@ import '../../styles/pages/export-preview.css'
 // box never shows a spinner. The guide generator and the token builders load on
 // demand, so nobody who never opens those rows pays for them.
 
-const CODE_LABEL = {
-  css: 'First lines of your stylesheet',
-  json: 'First lines of your token file',
-  tailwind: 'First lines of your Tailwind theme',
-  contrast: 'First lines of your contrast pairs',
-  'contrast-json': 'First lines of your contrast pairs',
-}
 // The files that open with a block comment the preview steps past: the stylesheet's
 // naming guide and the Tailwind file's usage note.
 const COMMENT_LED = new Set(['css', 'tailwind'])
 const FAILED_LINE = 'The preview didn’t draw. Your file isn’t affected.'
 
-export default function ExportFreePreview({ kind, file = 'css', watermark = true }) {
+export default function ExportFreePreview({ kind, file = 'css', watermark = true, project }) {
   const labelId = useId()
   const design = useExportDesign()
   const projectName = design?.name || 'Design System'
+  // The name the file will download under, which heads the code. The dialog passes the
+  // open project's name; with none, it is the design's own.
+  const savedAs = kind === 'code' && isCodeFile(file) ? codeFileName(file, project ?? design?.name) : ''
   const template = readExportTemplates(design).kit
   const key = useMemo(
     () => freePreviewKey({ kind, file, watermark, projectName, design, template }),
@@ -146,7 +143,12 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
   // The label is always present for code, so it never shifts the box.
   return (
     <div className="xfp" data-kind={kind}>
-      {kind === 'code' && <p className="xfp-label" id={labelId}>{CODE_LABEL[file] || CODE_LABEL.css}</p>}
+      {kind === 'code' && (
+        <p className="xfp-label" id={labelId}>
+          <span className="xfp-file">{savedAs}</span>
+          <span className="xfp-cap">First lines</span>
+        </p>
+      )}
       <div className="xfp-box" data-state={failed ? 'failed' : body ? 'ready' : 'loading'} aria-busy={!failed && !body}>
         {body}
       </div>

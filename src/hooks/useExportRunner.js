@@ -18,6 +18,7 @@ import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
+import { formatFileName } from '../utils/exportFileName'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
@@ -77,20 +78,19 @@ export const PRO_GATE = {
 // plan, and only a Pro account gets the HTML back. What is looked up here is just
 // how each one is named and reported.
 //
-// Keyed by format id, like PRO_GATE. `file` ends the downloaded name, `activation`
-// is the analytics name (the paid deliverables are not averaged into the free
-// style guide), `fallback` is what the notice says when the browser blocks the
-// print window and the file is saved instead, `noun` is how the errors name it.
+// Keyed by format id, like PRO_GATE. `activation` is the analytics name (the paid
+// deliverables are not averaged into the free style guide), `fallback` is what the
+// notice says when the browser blocks the print window and the file is saved
+// instead, `noun` is how the errors name it. The saved file's name is
+// utils/exportFileName.js's.
 export const PRO_DOCUMENT = {
   book: {
-    file: 'design-system-book.html',
     activation: 'design-system-book',
     fallback: 'The book downloaded instead.',
     noun: 'book',
     waiting: 'Preparing your design system book…',
   },
   guidelines: {
-    file: 'brand-guidelines.html',
     activation: 'brand-guidelines',
     fallback: 'The guidelines downloaded instead.',
     noun: 'guidelines',
@@ -257,8 +257,10 @@ export default function useExportRunner() {
 
   const runExport = async (format, projectId) => {
     // The name the dialog shows on the file: the open project's, else the design's own.
-    const projectName = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || 'Design System'
-    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+    // `fileProject` is that name as typed ('' for an unnamed project), which the file
+    // names are made from; `projectName` is what the documents print, with a stand-in.
+    const fileProject = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || ''
+    const projectName = fileProject || 'Design System'
     const fmt = EXPORT_FORMATS.find((f) => f.id === format)
     if (!fmt?.live) { stop(FAILED_LINE); return { status: 'failed' } }
 
@@ -350,6 +352,7 @@ export default function useExportRunner() {
         const { blob, filename, missing } = await buildUiKit(design, {
           tier: proNow ? 'pro' : 'free',
           projectName,
+          fileProject,
           template: chosenTemplates.kit,
           onStage: setStage,
         })
@@ -371,7 +374,7 @@ export default function useExportRunner() {
         setStage('pages')
         const { renderBookPng } = await import('../utils/bookRaster')
         const blob = await renderBookPng(design, { projectName, watermark: !proNow })
-        savedFile = download(blob, `${slug}-book-2k.zip`)
+        savedFile = download(blob, formatFileName(fileProject, 'book-png'))
       } else if (proDocument) {
         // The book and the brand guidelines, as a PDF or as HTML. The server checks the plan and builds
         // the document; a refusal means there is no file to hand over.
@@ -405,7 +408,7 @@ export default function useExportRunner() {
         if (answer.status !== 'ok') {
           throw new Error(`The ${doc.noun} couldn’t be made. Check your connection and try again.`)
         }
-        const file = `${slug}-${doc.file}`
+        const file = formatFileName(fileProject, format, { saved: true })
         if (htmlDocument) {
           savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
         } else {
@@ -424,14 +427,14 @@ export default function useExportRunner() {
         // utils/codeFiles.js, which loads each generator on demand.
         activation = 'design-tokens'
         const body = await buildCodeFile(format, design, { projectName, watermark: !proNow })
-        savedFile = download(new Blob([body], { type: CODE_FILES[format].mime }), codeFileName(format, slug))
+        savedFile = download(new Blob([body], { type: CODE_FILES[format].mime }), codeFileName(format, fileProject))
       } else if (format === 'png' || format === 'jpeg') {
         // Drawn on a canvas rather than rasterised from the HTML — see the note
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
         // raster path costs nothing to anyone exporting HTML.
         const { renderStyleGuideImage } = await import('../utils/styleGuideRaster')
         const blob = await renderStyleGuideImage(design, { projectName, watermark: !proNow, format })
-        savedFile = download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
+        savedFile = download(blob, formatFileName(fileProject, format))
       } else {
         const markdown = format === 'md'
         const body = markdown
@@ -439,7 +442,7 @@ export default function useExportRunner() {
           : buildStyleGuideHtml(design, { projectName, watermark: !proNow })
         savedFile = download(
           new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' }),
-          `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
+          formatFileName(fileProject, format),
         )
       }
       // ACTIVATION (export half). Fired only after the file actually

@@ -37,6 +37,7 @@ import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity, IDENTITY_NAME_MAX } from './kitIdentity.js'
+import { fileName } from './exportFileName.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
 import { MAX_SLOTS, fitTitle, clampTitle, plural } from './exportTemplates/shared.js'
@@ -133,8 +134,6 @@ const lum = (hex) => {
 // Python's `{:g}`: up to six significant digits, no trailing zeros.
 const g = (n) => String(Number(Number(n).toPrecision(6)))
 
-const slugify = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 52)
-
 /** A project name as the kit sets it: a string with its whitespace collapsed and its length capped. */
 const cleanName = (value) => (typeof value === 'string'
   ? value.replace(/\s+/g, ' ').trim().slice(0, IDENTITY_NAME_MAX)
@@ -153,8 +152,11 @@ const FALLBACKS = { serif: 'serif', monospace: 'monospace', handwriting: 'cursiv
  * Everything the template needs, as one record. `tier` must be verified by the
  * caller. A kit is named for `projectName`; a Pro kit's own name and description,
  * when the person wrote them, are read from `design.identity` and take its place.
+ * `fileProject` is the name the file names are made from when it is not the
+ * title: the export dialog titles an unnamed project "Design System" but files it
+ * as `untitled`. It defaults to `projectName`.
  */
-export function kitSelections(design, { tier = 'free', logo = null, projectName = '' } = {}) {
+export function kitSelections(design, { tier = 'free', logo = null, projectName = '', fileProject = projectName } = {}) {
   if (!KIT_TIERS.includes(tier)) throw new Error('tier must be free or pro')
   const free = tier === 'free'
   const book = readBook(design)
@@ -233,7 +235,16 @@ export function kitSelections(design, { tier = 'free', logo = null, projectName 
     tintToken: slot.pine.token || '--color-primary',
     name: title,
     title,
-    slug: slugify(title) && title !== UNNAMED ? `${slugify(title)}-ui-kit` : 'ui-kit',
+    // What the kit downloads as, and what its own buttons save: the same names the
+    // export dialog gives the Code files. The page is filed under its title; the
+    // token files under the project, so they match the dialog's even when a Pro
+    // identity has retitled the kit.
+    files: {
+      html: fileName((free ? '' : name) || cleanName(fileProject), 'ui-kit', 'html'),
+      css: fileName(cleanName(fileProject), 'tokens', 'css'),
+      json: fileName(cleanName(fileProject), 'tokens', 'json'),
+      fonts: fileName(cleanName(fileProject), 'fonts', 'css'),
+    },
   }
   if (free) return { ...record, edition: FREE_EDITION }
 
@@ -396,18 +407,19 @@ const ROLES = [
  *   publisherLicense  Geist's licence text
  *   logo           Pro only: readLogo(design)
  *   date           for the token file header; defaults to now
- *   projectName    the kit's title and file name, free or Pro; blank gives "UI kit"
+ *   projectName    the kit's title and file name, free or Pro; blank gives "UI kit" and `untitled-ui-kit.html`
+ *   fileProject    the name the file names are made from, when that is not `projectName` (see kitSelections)
  * A Pro kit's own name and description come from the design (see kitIdentity.js)
  * and take the title's place.
  * @returns { html, filename, selections, embedded, missing }
  */
 export function renderUiKit(design, {
   tier = 'free', template, fonts = {}, publisherFonts = [], publisherLicense = '',
-  logo = null, date = new Date(), projectName = '',
+  logo = null, date = new Date(), projectName = '', fileProject = projectName,
 } = {}) {
   if (typeof template !== 'string' || !template.includes('@@DATA@@')) throw new Error('The UI kit template is missing.')
   const safeDesign = withPalette(design)
-  const sel = kitSelections(safeDesign, { tier, logo, projectName })
+  const sel = kitSelections(safeDesign, { tier, logo, projectName, fileProject })
   const free = tier === 'free'
   const tokens = kitTemplateTokens(sel)
   const on = makeOn(sel.palette.find((p) => p.id === 'ink').hex)
@@ -560,7 +572,7 @@ export function renderUiKit(design, {
   const attributionMargin = free ? `@bottom-left { content:"Made with UIL4B / Free UI kit"; font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; } ` : ''
 
   const data = {
-    brand: { slug: sel.slug, tier },
+    brand: { files: sel.files, tier },
     // The free credit line the CSS download opens with. Carried as data so a
     // Pro document holds no credit text at all.
     cssCredit: free ? `/* Made with UIL4B · Free UI kit · ${SITE_ORIGIN}/ */\n` : '',
@@ -647,7 +659,7 @@ export function renderUiKit(design, {
 
   return {
     html,
-    filename: `${sel.slug}.html`,
+    filename: sel.files.html,
     selections: sel,
     embedded: notes.embedded,
     missing: notes.missing,
