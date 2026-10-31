@@ -52,7 +52,7 @@ const FOOTER_GROUPS = [
       // meet either. Revert by deleting this row and the /info row in Support.
       ['/community', 'Community'],
       ['/learn/principles', 'Design principles'],
-      ['/plans', 'Plans'],
+      ['/plans', 'Pricing'],
       ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
       ['/sitemap', 'Sitemap'],
     ],
