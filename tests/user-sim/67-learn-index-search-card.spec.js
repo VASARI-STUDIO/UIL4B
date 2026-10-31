@@ -33,6 +33,14 @@ const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]
 const topicsWithGuides = TOPICS.filter((t) => LEARN_ARTICLES.some((a) => a.topic === t))
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// Help and Design Principles live under /learn/ but are not guides, so they sit
+// in one extra group after the topics ("Using UIL4B") while the field is empty.
+// They are asserted on their own so a guide count never absorbs them, and a
+// guide that went missing is never hidden by two rows that happen to be there.
+const USING_ID = 'learn-topic-using-uil4b'
+const USING_HREFS = ['/learn/help', '/learn/principles']
+const guideCards = (page) => page.locator(`.lidx-sections section:not(#${USING_ID}) .lidx-card`)
+
 let bodies
 let phrase
 let target
@@ -98,7 +106,7 @@ test.describe('the Learn index', () => {
     // One labelled section per topic that has a guide, in the registry's order,
     // and nothing for a topic that has none.
     const sections = page.locator('.lidx-sections section[aria-labelledby]')
-    await expect(sections).toHaveCount(topicsWithGuides.length)
+    await expect(sections).toHaveCount(topicsWithGuides.length + 1) // the topics, then "Using UIL4B"
     for (let i = 0; i < topicsWithGuides.length; i += 1) {
       const topic = topicsWithGuides[i]
       const section = sections.nth(i)
@@ -122,18 +130,40 @@ test.describe('the Learn index', () => {
           `${a.slug} is not under the ${topic} heading`).toHaveCount(1)
       }
     }
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+    await expect(guideCards(page)).toHaveCount(LEARN_ARTICLES.length)
 
-    // The topic links at the top point at sections that exist.
+    // The group after the topics: Help and Design Principles, as two rows under
+    // an h3 that carries no count (they are not guides), and nothing else.
+    const using = sections.nth(topicsWithGuides.length)
+    await expect(using).toHaveAttribute('id', USING_ID)
+    const usingHeading = using.getByRole('heading', { level: 3 })
+    await expect(usingHeading).toHaveCount(1)
+    await expect(usingHeading).toHaveText('Using UIL4B')
+    await expect(usingHeading).toHaveAttribute('id', await using.getAttribute('aria-labelledby'))
+    const usingCards = using.locator('.lidx-card')
+    await expect(usingCards).toHaveCount(USING_HREFS.length)
+    for (let i = 0; i < USING_HREFS.length; i += 1) {
+      await expect(usingCards.nth(i), `Using UIL4B row ${i}`).toHaveAttribute('href', USING_HREFS[i])
+      await expect(usingCards.nth(i).locator('.lidx-time'), 'these rows are not read-timed').toHaveCount(0)
+    }
+
+    // The topic links at the top point at sections that exist: one per topic,
+    // then one for the Using group.
     const links = page.locator('.lidx-topics a')
-    await expect(links).toHaveCount(topicsWithGuides.length)
+    await expect(links).toHaveCount(topicsWithGuides.length + 1)
     for (let i = 0; i < topicsWithGuides.length; i += 1) {
       const href = await links.nth(i).getAttribute('href')
       expect(href).toBe(`#${topicId(topicsWithGuides[i])}`)
       await expect(page.locator(href)).toBeAttached()
     }
+    await expect(links.last()).toHaveText('Using UIL4B')
+    await expect(links.last()).toHaveAttribute('href', `#${USING_ID}`)
+    await expect(page.locator(`#${USING_ID}`)).toBeAttached()
     // And following one moves the reader to that section.
     await links.last().focus()
+    await page.keyboard.press('Enter')
+    await expect.poll(() => new URL(page.url()).hash).toBe(`#${USING_ID}`)
+    await links.nth(topicsWithGuides.length - 1).focus()
     await page.keyboard.press('Enter')
     await expect.poll(() => new URL(page.url()).hash).toBe(`#${topicId(topicsWithGuides.at(-1))}`)
   })
@@ -164,6 +194,9 @@ test.describe('the Learn index', () => {
     // The card is still under its topic's heading, so the grouping survives a
     // search rather than collapsing to a flat list.
     await expect(page.locator(`#${topicId(target.topic)} .lidx-card`)).toHaveCount(1)
+    // Search does not match Help or Principles, so their group is not shown while
+    // searching rather than sitting there as a result nobody asked for.
+    await expect(page.locator(`#${USING_ID}`)).toHaveCount(0)
     await expect(page.locator(`#${topicId(target.topic)} h3`)).toContainText(/1 of \d+/)
 
     // A title word ranks the titled guide first among several — first on the
@@ -181,7 +214,8 @@ test.describe('the Learn index', () => {
     // Escape empties the field and the whole index comes back.
     await input.press('Escape')
     await expect(input).toHaveValue('')
-    await expect(cards).toHaveCount(LEARN_ARTICLES.length)
+    await expect(guideCards(page)).toHaveCount(LEARN_ARTICLES.length)
+    await expect(page.locator(`#${USING_ID} .lidx-card`)).toHaveCount(USING_HREFS.length)
     await expect(status).toHaveText(`Showing all ${LEARN_ARTICLES.length} guides.`)
   })
 
@@ -200,18 +234,23 @@ test.describe('the Learn index', () => {
     for (const t of topicsWithGuides) await expect(empty).toContainText(t.toLowerCase())
     await expect(page.locator('.lidx-status[role="status"]')).toHaveText('No guide mentions “qzxvw”.')
 
-    // Tab: field → clear control → the empty state's way out. Enter on it
-    // restores the index and puts focus back in the field.
+    // The empty state points at Help for questions about the tools.
+    await expect(empty.getByRole('link', { name: 'Help and getting started' })).toHaveAttribute('href', '/learn/help')
+
+    // Tab: field → clear control → the Help link → the empty state's way out.
+    // Enter on it restores the index and puts focus back in the field.
     await input.focus()
     await page.keyboard.press('Tab')
     await expect(page.locator(':focus')).toHaveAccessibleName('Clear search')
+    await page.keyboard.press('Tab')
+    await expect(page.locator(':focus')).toHaveAttribute('href', '/learn/help')
     await page.keyboard.press('Tab')
     const out = page.locator(':focus')
     await expect(out).toHaveText(`Show all ${LEARN_ARTICLES.length} guides`)
     const box = await out.boundingBox()
     expect(box.height, 'the way out is below the 24px target floor').toBeGreaterThanOrEqual(24)
     await page.keyboard.press('Enter')
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+    await expect(guideCards(page)).toHaveCount(LEARN_ARTICLES.length)
     await expect(input).toBeFocused()
     await expect(empty).toHaveCount(0)
   })
@@ -282,10 +321,12 @@ test.describe('the Learn index', () => {
       // Clear, then the whole index has to be painted — these cards were
       // re-mounted after useReveal()'s one scan, so nothing will reveal them.
       await input.fill('')
-      await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+      await expect(guideCards(page)).toHaveCount(LEARN_ARTICLES.length)
+      await expect(page.locator(`#${USING_ID} .lidx-card`)).toHaveCount(USING_HREFS.length)
+      // Every row, the Using group's two included: they are re-mounted too.
       await expect.poll(() => opacities(page, '.lidx-card'), {
         message: `reduced=${reduced}: cards re-mounted after a search are stuck transparent`,
-      }).toEqual(Array(LEARN_ARTICLES.length).fill('1'))
+      }).toEqual(Array(LEARN_ARTICLES.length + USING_HREFS.length).fill('1'))
       // And a second search still finds it.
       await input.fill(phrase)
       await expect(page.locator('.lidx-card')).toHaveCount(1)

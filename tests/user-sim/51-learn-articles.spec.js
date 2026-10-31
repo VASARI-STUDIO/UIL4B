@@ -44,7 +44,12 @@ test.describe('Learn articles', () => {
       await expect(card).toContainText(article.title)
       await expect(card).toContainText(article.topic)
     }
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+    // The guides, counted apart from the "Using UIL4B" group after them (Help and
+    // Design Principles are pages that help, not guides; 207-learn-hub.spec.js
+    // owns that group).
+    await expect(page.locator('.lidx-sections section:not(#learn-topic-using-uil4b) .lidx-card'))
+      .toHaveCount(LEARN_ARTICLES.length)
+    await expect(page.locator('#learn-topic-using-uil4b .lidx-card')).toHaveCount(2)
 
     // The hero no longer says the section is coming soon — it now says how many
     // guides there are, which is a fact rather than a promise.
