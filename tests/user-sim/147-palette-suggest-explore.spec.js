@@ -254,10 +254,15 @@ test.describe('trying a variation and going back', () => {
     await signIn(page, { plan: 'pro' })
     const panel = await openPanel(page)
     // Move one adjust slider first, so "everything" includes the lens, not only the hexes.
-    await page.getByRole('slider', { name: 'Hue adjustment' }).focus()
+    // With the panel open, each key press stays on the slider: the panel's rows
+    // re-render as the board changes, and must not take focus back.
+    const hue = page.getByRole('slider', { name: 'Hue adjustment' })
+    await hue.focus()
     await page.keyboard.press('ArrowRight')
+    await expect(hue).toHaveValue('1')
+    await expect(hue, 'the slider kept focus after the board changed').toBeFocused()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('slider', { name: 'Hue adjustment' })).toHaveValue('2')
+    await expect(hue).toHaveValue('2')
     await expect.poll(() => joined(page)).not.toBe('#14224A,#249EAF,#F2C14E,#2563EB,#C0392B')
     const before = await boardState(page)
     const mineBefore = await chipHexes(mineRow(panel))
