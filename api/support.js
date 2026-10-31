@@ -112,6 +112,9 @@ export async function verifiedReporterEmail(req, verify = (token) => adminAuth()
     const decoded = await verify(header.slice(7))
     return decoded?.email_verified === true && typeof decoded.email === 'string' && decoded.email ? decoded.email : null
   } catch {
+    // Fail closed: the report is treated as signed out. The message is a fixed
+    // string so no token, header or claim reaches the logs.
+    console.warn('support: report token could not be verified')
     return null
   }
 }

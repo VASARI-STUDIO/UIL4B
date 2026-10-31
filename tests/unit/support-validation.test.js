@@ -202,3 +202,13 @@ test('verifiedReporterEmail: valid token gives the email; missing, malformed, fa
   assert.equal(await verifiedReporterEmail(req('Bearer abc'), async () => ({ email: 'a@b.co', email_verified: false })), null)
   assert.equal(await verifiedReporterEmail(req('Bearer abc'), async () => ({ email_verified: true })), null)
 })
+
+test('verifiedReporterEmail: a token that fails to verify logs one fixed line and nothing from the token', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const out = await verifiedReporterEmail(
+    { headers: { authorization: 'Bearer secret-token-value' } },
+    async () => { throw new Error('auth/argument-error secret-token-value') },
+  )
+  assert.equal(out, null)
+  assert.deepEqual(warn.mock.calls.map((c) => c.arguments), [['support: report token could not be verified']])
+})

@@ -2064,7 +2064,9 @@ export default function Admin({ toast }) {
   }
 
   const exportCSV = () => {
-    const cols = ['createdAt', 'type', 'status', 'subject', 'message', 'email', 'source', 'adminNotes']
+    // The same gate as the card's From line: a moderator's file carries no
+    // address column, so the export cannot hand over what the screen withholds.
+    const cols = ['createdAt', 'type', 'status', 'subject', 'message', ...(canSeeReporterEmail(role) ? ['email'] : []), 'source', 'adminNotes']
     const rows = [...feedback].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     // The sharpest of the three: /api/support accepts subject, message and
     // email UNAUTHENTICATED, and this file is opened by an admin — the attacker

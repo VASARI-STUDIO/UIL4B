@@ -33,6 +33,9 @@
 //        fails "a signed-out report ... marked unverified".
 //   src/utils/contentReport.js  make isUnverifiedReporter read the whole message
 //        fails "a forged ... line typed into the details".
+//   src/pages/Admin.jsx  make exportCSV's `cols` always include 'email'
+//        fails "a moderator export has no email column ...".
+import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { buildReportPayload, buildReportTarget } from '../../src/utils/contentReport.js'
@@ -216,4 +219,32 @@ test('a moderator, who cannot see addresses, is shown none and no note about one
   await expect(body).toContainText('address withheld from moderators')
   await expect(body).not.toContainText('typed.by.visitor@example.test')
   await expect(body).not.toContainText('unverified')
+})
+
+// The queue's Export CSV follows the card's gate: the address column is the
+// founder's, and a moderator's file has no such column and no address in it.
+async function exportedCsv(page) {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export CSV' }).click(),
+  ])
+  const text = readFileSync(await download.path(), 'utf8')
+  return text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text
+}
+
+test('a founder export carries the email column and the addresses', async ({ page }) => {
+  await openQueue(page, { theme: 'light', role: 'founder' })
+  const csv = await exportedCsv(page)
+  expect(csv.split('\n')[0]).toBe('createdAt,type,status,subject,message,email,source,adminNotes')
+  expect(csv).toContain('typed.by.visitor@example.test')
+  expect(csv).toContain('bug.reporter@example.test')
+})
+
+test('a moderator export has no email column and no address in the file', async ({ page }) => {
+  await openQueue(page, { theme: 'light', role: 'moderator' })
+  const csv = await exportedCsv(page)
+  expect(csv.split('\n')[0]).toBe('createdAt,type,status,subject,message,source,adminNotes')
+  // CONTROL: the rows are really there, so the missing addresses are the gate and not an empty file.
+  expect(csv).toContain('Content report: Aurora Card')
+  for (const row of FEEDBACK) expect(csv, `the moderator file leaks ${row.email}`).not.toContain(row.email)
 })
