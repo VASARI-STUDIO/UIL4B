@@ -52,6 +52,17 @@
 //   10 drop the RovingRows onKeyDown; drop the focus-return effect.
 //   11 delete the reduced-motion `animation: none` rule.
 //   12 give .plb-sx-head flex-wrap: wrap; let the toolbar buttons gain a second row.
+//   13 drop `.ui-modal-overlay` from the closest() list in PaletteBuilder's pointerdown handler
+//      ("Suggest at 900").
+//   14 in the (pointer: coarse) block of palette-builder.css, put back the old rule (the 44px
+//      min-width/height on .plb-sw-info/.plb-sw-compare and nothing else): the name drops into the strip
+//      ("at Peek the Your palette label row clears the colour strip"). Dropping `position: relative;
+//      z-index: 1` from .plb-sw-line there lets the strip take the bottom of Compare. NOT detectable, because
+//      nothing on screen changes: `margin-block: -12px` and `align-items: center` (the line is a fixed 20px).
+//   15 delete the MutationObserver lines in scrollCue ("the fade follows rows that arrive after ...").
+//   16 make `dockedHeld` false in PaletteBuilder's pointerdown handler (a docked panel at 1440 then
+//      closes on an outside press: the "trying a variation" and "one trial" tests go red).
+//   17 drop `, .plb-sx` from OPEN_OVERLAY_SELECTOR (53-brand-kit-walkthrough "Suggest suspends the card").
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, readSeed } from './palette-helpers.js'
@@ -853,6 +864,27 @@ test.describe('the toolbar and the list on a laptop', () => {
     await expect(body, 'and it comes back when scrolled up').toHaveAttribute('data-more', 'true')
   })
 
+  // Rows that arrive late (a fetched list) make the body taller to scroll without resizing the
+  // body, which is what the resize watcher sees; only the content watcher notices.
+  test('the fade follows rows that arrive after the list is open', async ({ page }) => {
+    watch(page, 'someone whose list finishes loading after the panel opened')
+    const panel = await openPanel(page)
+    const body = panel.locator('.plb-sx-body')
+    await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
+    await expect(body, 'positive control: at the end there is nothing more to scroll').toHaveAttribute('data-more', 'false')
+    const size = await body.evaluate((el) => el.clientHeight)
+    await body.evaluate((el) => {
+      const late = document.createElement('div')
+      late.id = 'late-rows'
+      late.style.height = '600px'
+      el.append(late)
+    })
+    expect(await body.evaluate((el) => el.clientHeight), 'the body itself did not change size').toBe(size)
+    await expect(body, 'late rows put the fade back').toHaveAttribute('data-more', 'true')
+    await body.evaluate(() => document.getElementById('late-rows').remove())
+    await expect(body, 'and taking them away clears it').toHaveAttribute('data-more', 'false')
+  })
+
   test('every colour system option has a description the screen reader gets', async ({ page }) => {
     watch(page, 'a screen-reader user choosing a colour system')
     await go(page, BOARD)
@@ -934,6 +966,36 @@ test.describe('Suggest at 768', () => {
     await settled(panel)
     await page.locator('.plb [data-tool-toolbar]').click({ position: { x: 4, y: 4 } })
     await expect(panel).toHaveCount(0)
+  })
+})
+
+test.describe('Suggest at 900', () => {
+  test.use({ viewport: { width: 900, height: 900 } })
+
+  // The Pro modal is a layer above the dock, not an outside press on it: its scrim and its
+  // dialog are both "inside". Pressing either must leave the dock (and its rows) where they were.
+  test('a press in the Pro modal, or on its scrim, does not close the dock behind it', async ({ page }) => {
+    watch(page, 'a free visitor on a tablet who pressed a locked variation')
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await settled(panel)
+    const dock = page.locator('.plb-sx')
+    await expect(dock, 'below 1024 the dock is one an outside press may close').toHaveCount(1)
+    await panel.locator('button.plb-sw-row.is-locked').first().click()
+    const pro = page.getByRole('dialog').filter({ hasText: 'Every variation, unlocked' })
+    await expect(pro).toBeVisible()
+    await expect(dock, 'opening the modal leaves the dock').toHaveCount(1)
+    // A press on the modal's own heading.
+    await pro.getByRole('heading').first().click()
+    await expect(pro, 'a press inside the modal keeps it open').toBeVisible()
+    await expect(dock, 'a press inside the modal does not close the dock').toHaveCount(1)
+    // A press on the scrim closes the modal only.
+    await page.mouse.click(4, 4)
+    await expect(pro).toHaveCount(0)
+    await expect(dock, 'a press on the scrim closes the modal, not the dock').toHaveCount(1)
+    await expect(rowsOf(panel).nth(2)).toBeVisible()
+    // Positive control: a real outside press (the toolbar) still closes the dock.
+    await page.locator('.plb [data-tool-toolbar]').click({ position: { x: 4, y: 4 } })
+    await expect(dock).toHaveCount(0)
   })
 })
 
@@ -1135,6 +1197,62 @@ test.describe('Suggest on a phone', () => {
     expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs title centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
     expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(c.height + 24)
     expect(c.x + c.width, 'the close button is on screen').toBeLessThanOrEqual(390 + 1)
+  })
+
+  // Is the element the one under a finger at the top, middle and bottom of its own box?
+  const edgesTakePress = (loc) => loc.evaluate((el) => {
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2
+    return [r.top + 1, r.top + r.height / 2, r.bottom - 1].map((y) => { const hit = document.elementFromPoint(x, y); return !!hit && (hit === el || el.contains(hit)) })
+  })
+
+  // The "?" and Compare are 44px targets inside a 20px label line. They are centred on it with a
+  // negative block margin, so the line stays 20px and the label does not drop into the colour strip.
+  test('at Peek the "Your palette" label row clears the colour strip, and "?" and Compare still work', async ({ page }) => {
+    watch(page, 'someone reading the Your palette label on a phone')
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await expect(panel).toHaveAttribute('data-snap', 'peek')
+    await settled(panel)
+    await rowsOf(panel).first().click() // Compare only shows once something is applied
+    const pin = mineRow(panel)
+    const info = pin.getByRole('button', { name: 'What the balance score measures' })
+    const compare = pin.getByRole('button', { name: /^Compare .* with your palette/ })
+    await expect(info).toBeVisible()
+    await expect(compare).toBeVisible()
+    const boxOf = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, w: r.width, h: r.height } })
+    const strip = await boxOf(pin.locator('.plb-sw-strip'))
+    for (const [what, loc] of [['the label line', pin.locator('.plb-sw-line')], ['the name', pin.locator('.plb-sw-name')], ['the "?" circle', info.locator('span')]]) {
+      const b = await boxOf(loc)
+      expect(b.bottom, `${what} ends at ${b.bottom}, below the top of the strip at ${strip.top}`).toBeLessThanOrEqual(strip.top)
+    }
+    expect((await boxOf(pin.locator('.plb-sw-line'))).h, 'the label line is still 20px tall').toBeLessThanOrEqual(21)
+    const circle = await boxOf(info.locator('span'))
+    expect(Math.round(circle.w), 'the "?" circle stays 20px').toBe(20)
+    // Both targets are 44px tall and wide; Compare's whole box takes the press, including the
+    // part that overlaps the strip (the "?" is in its own test below).
+    for (const [what, loc] of [['"?"', info], ['Compare', compare]]) {
+      const b = await boxOf(loc)
+      expect(Math.round(b.h), `${what} target is 44px tall`).toBeGreaterThanOrEqual(44)
+      expect(Math.round(b.w), `${what} target is 44px wide`).toBeGreaterThanOrEqual(44)
+    }
+    expect(await edgesTakePress(compare), 'Compare: top, middle and bottom edge of the target take the press, not the strip').toEqual([true, true, true])
+    // The "?" still opens its help, and Compare still presses.
+    await info.click()
+    await expect(info).toHaveAttribute('aria-expanded', 'true')
+    await expect(panel.locator('#plb-sw-help')).toBeVisible()
+    await info.click()
+    await expect(panel.locator('#plb-sw-help')).toBeHidden()
+    await compare.click()
+    await expect(page.getByText('Compare palettes', { exact: true })).toBeVisible()
+  })
+
+  // The "?" sits inside .plb-sw-detail, which clips (overflow: hidden, for the ellipsis). If that
+  // clip reaches the 44px button, its top and bottom 12px fall through to the head and the strip.
+  test('at Peek the "?" takes a press over its whole 44px box, not just the 20px circle', async ({ page }) => {
+    watch(page, 'someone tapping just below the ? on a phone')
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await settled(panel)
+    const info = mineRow(panel).getByRole('button', { name: 'What the balance score measures' })
+    expect(await edgesTakePress(info), '"?": top, middle and bottom edge of the target take the press').toEqual([true, true, true])
   })
 
   test('rows run the full width of the sheet, one under another: no sideways scroller', async ({ page }) => {
