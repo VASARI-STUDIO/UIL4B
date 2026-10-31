@@ -85,7 +85,7 @@ function bandedPng() {
 
 const STAGE = '.plb-imgstage'
 const MARKER = '.plb-imgpoint'
-const DIALOG = 'Pull colours from an image'
+const DIALOG = 'From image'
 
 async function openPickerWithImage(page) {
   await go(page, '/create/palette')
@@ -296,7 +296,7 @@ test.describe('image to palette picker', () => {
     // The nudge is announced — the loupe is aria-hidden (a canvas of pixels is
     // not something to read out), so without this a screen-reader user moving a
     // marker gets silence.
-    await expect(page.locator('.plb-imgcard p[aria-live]').filter({ hasText: /^Point \d+ is on/ })).toContainText(after.toUpperCase())
+    await expect(page.locator('.plb-imgcard p[aria-live]').filter({ hasText: /^Colour \d+ is on/ })).toContainText(after.toUpperCase())
   })
 
   // The picker moved out of the toolbar's dismiss layer (which closes anything

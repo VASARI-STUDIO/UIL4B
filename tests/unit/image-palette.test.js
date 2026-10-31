@@ -5,6 +5,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   MIN_DELTA,
+  appendPicks,
   averageHex,
   clusterImage,
   colourDistance,
@@ -14,6 +15,7 @@ import {
   nextCandidate,
   oklabToRgb,
   pickPalette,
+  placePicks,
   rankClusters,
   rgbToHex,
   rgbToOklab,
@@ -205,4 +207,73 @@ test('averageHex reads a neighbourhood, skips transparent pixels, and clips at t
   assert.equal(averageHex(holes.data, 5, 5, 2, 2, 2), '#0A141E')
   assert.equal(averageHex(holes.data, 5, 5, 0, 0, 1), null)
   assert.equal(averageHex(img.data, 9, 9, 0, 0, 2), '#900000')   // a 3x3 corner window
+})
+
+// ── Putting picks on a board ─────────────────────────────────────────────────
+
+const BOARD = ['#111111', '#222222', '#333333', '#444444']
+const PICKS = ['#AA0001', '#AA0002', '#AA0003']
+
+test('placePicks keeps each locked colour in its own slot and fills the rest in order', () => {
+  const plan = placePicks(BOARD, [1, 3], PICKS, 8)
+  assert.deepEqual(plan.colours, ['#AA0001', '#222222', '#AA0002', '#444444', '#AA0003'])
+  assert.deepEqual([...plan.locked].sort(), [1, 3])
+  assert.equal(plan.used, 3)
+  assert.equal(plan.trimmed, 0)
+})
+
+test('placePicks with no locks gives exactly the picks, with no old colours left over', () => {
+  const plan = placePicks(BOARD, [], PICKS, 8)
+  assert.deepEqual(plan.colours, PICKS)
+  assert.equal(plan.locked.size, 0)
+})
+
+test('placePicks trims the picks to what the cap leaves after the locks, and counts the cut', () => {
+  const picks = ['#B00001', '#B00002', '#B00003', '#B00004', '#B00005', '#B00006', '#B00007']
+  const plan = placePicks(BOARD, [0, 2], picks, 8)
+  assert.equal(plan.colours.length, 8)
+  assert.equal(plan.used, 6)
+  assert.equal(plan.trimmed, 1)
+  assert.equal(plan.colours[0], '#111111')
+  assert.equal(plan.colours[2], '#333333')
+  assert.deepEqual(plan.colours.filter((_, i) => i !== 0 && i !== 2), picks.slice(0, 6))
+  assert.ok(!plan.colours.includes('#B00007'))
+})
+
+test('placePicks moves a lock that is past the end of the new board to a free slot', () => {
+  const six = ['#010101', '#020202', '#030303', '#040404', '#050505', '#060606']
+  const one = placePicks(six, [5], ['#C00001', '#C00002'], 8)
+  assert.deepEqual(one.colours, ['#C00001', '#C00002', '#060606'])
+  assert.deepEqual([...one.locked], [2])
+  // Two such locks keep their order among themselves.
+  const two = placePicks(six, [4, 5], ['#C00001'], 8)
+  assert.deepEqual(two.colours, ['#C00001', '#050505', '#060606'])
+  assert.deepEqual([...two.locked].sort(), [1, 2])
+})
+
+test('placePicks ignores a repeated, negative or missing lock index', () => {
+  const plan = placePicks(BOARD, [1, 1, -1, 9], PICKS, 8)
+  assert.deepEqual(plan.colours, ['#AA0001', '#222222', '#AA0002', '#AA0003'])
+  assert.deepEqual([...plan.locked], [1])
+})
+
+test('appendPicks adds the first picks that fit and stops at the cap', () => {
+  const six = ['#010101', '#020202', '#030303', '#040404', '#050505', '#060606']
+  const picks = ['#D00001', '#D00002', '#D00003', '#D00004', '#D00005']
+  const add = appendPicks(six, picks, 8)
+  assert.deepEqual(add.colours, [...six, '#D00001', '#D00002'])
+  assert.equal(add.used, 2)
+  assert.equal(add.room, 2)
+})
+
+test('appendPicks on a full board leaves it unchanged', () => {
+  const full = ['#010101', '#020202', '#030303', '#040404', '#050505', '#060606', '#070707', '#080808']
+  const copy = [...full]
+  const add = appendPicks(full, PICKS, 8)
+  assert.deepEqual(add.colours, copy)
+  assert.equal(add.used, 0)
+  assert.equal(add.room, 0)
+  assert.deepEqual(full, copy)
+  // A board already past the cap (the cap fell) does not shrink or grow either.
+  assert.equal(appendPicks([...full, '#090909'], PICKS, 8).used, 0)
 })
