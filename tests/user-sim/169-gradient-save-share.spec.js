@@ -1279,3 +1279,343 @@ test.describe('the sign-up stash when the save is refused', () => {
     expect(await page.evaluate(() => sessionStorage.getItem('vs-pending-save'))).toBeNull()
   })
 })
+
+/* ── 9 · Submit to the community from the menu ───────────────────────────── */
+
+// What the review queue accepts, written out by hand from firestore.rules
+// (`submissionPayloadOk` and `submissionShapeOk`), not read from the app. A key
+// outside either list is refused by the real rules, so the fake store (which
+// accepts anything) must be held to the same list here.
+const RULES_PAYLOAD_KEYS = ['type', 'angle', 'stops', 'author', 'category', 'url', 'c1', 'c2', 'colors']
+const RULES_RECORD_KEYS = ['kind', 'name', 'authorUid', 'authorName', 'status', 'payload', 'createdAt', 'localId']
+const HANDOFF_RADIAL = `${ROUTE}?gs=1F4B8E-0_3FA9A0-100&gt=radial&ga=90`
+const FORM_ROW = 'Submit to the community…'
+const NAME_FIELD = 'Gradient name for the community'
+const submitDialog = (page) => page.getByRole('dialog', { name: 'Submit gradient to the community' })
+
+const queued = (page) => page.evaluate(
+  () => window.__UIL4B_TEST_STORE__.list('community-submissions').map((d) => d.data),
+)
+const legacyQueue = (page) => page.evaluate((k) => localStorage.getItem(k), LEGACY_KEY)
+
+async function openAt(browser, { width, height = 900, touch = false, theme = 'light' }) {
+  const ctx = await browser.newContext({
+    viewport: { width, height }, hasTouch: touch, isMobile: touch, colorScheme: theme,
+  })
+  await ctx.addInitScript((t) => {
+    try { localStorage.setItem('vs-t', t); localStorage.setItem('vs-community-handle', 'freya_free') } catch { /* private mode */ }
+  }, theme)
+  return { ctx, page: await ctx.newPage() }
+}
+
+// A returning visitor's prompt opens on the log-in form already; a new one needs the toggle.
+async function logInInThePrompt(page) {
+  await expect(page.locator('#ui-login-title')).toBeVisible()
+  const toggle = page.getByRole('button', { name: /Have an account?/ })
+  if (await toggle.count()) await toggle.click()
+  await page.locator('#ui-login-email').fill('someone@uil4b.test')
+  await page.locator('#ui-login-password').fill('a-long-password')
+  await page.locator('form.auth-form button[type="submit"]').click()
+  await expect(page.locator('#ui-login-title')).toHaveCount(0)
+}
+
+const sideScroll = (scope) => scope.evaluate((el) => ({
+  card: el.scrollWidth - el.clientWidth,
+  doc: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+}))
+
+test.describe('Submit to the community from the Save or share menu', () => {
+  // MUTATIONS (each restored after):
+  //   utils/gradientSubmissions.js buildGradientPayload: add `note: 'x'` to the payload object
+  //     -> "one pending record ... every key the rules allow"
+  //   GradientGenerator.jsx submitToCommunity catch: replace its body with `{}` (swallow the error)
+  //     -> both refusal tests (the form shows "done" although nothing was written)
+  //   GradientGenerator.jsx submitToCommunity: add `localStorage.setItem('vs-gradient-submissions', '[]')`
+  //     after publishToQueue -> the "nothing goes to the browser queue" assertions
+  for (const { label, width, touch } of [
+    { label: '1440 desktop', width: 1440, touch: false },
+    { label: '390 touch', width: 390, touch: true },
+  ]) {
+    for (const theme of ['light', 'dark']) {
+      test(`${label} ${theme}: row in the menu, form fits, one pending record`, async ({ browser }) => {
+        const height = touch ? 844 : 900
+        const { ctx, page } = await openAt(browser, { width, height, touch, theme })
+        try {
+          watch(page, `member submitting a gradient at ${width}px in ${theme}`)
+          await signIn(page, { plan: 'free' })
+          await go(page, HANDOFF)
+          await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+          expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(touch)
+
+          const trigger = saveButton(page)
+          await trigger.click()
+          const menu = menuOf(page)
+          await expect(menu).toBeVisible()
+          await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+          const row = menu.getByRole('button', { name: FORM_ROW })
+          await expect(row).toBeVisible()
+          // Popover on a desktop, sheet on the bottom edge on a phone; the row is inside the screen either way.
+          const box = await menu.boundingBox()
+          const rowBox = await row.boundingBox()
+          if (touch) {
+            expect(Math.round(box.y + box.height), 'a phone menu is a sheet on the bottom edge').toBe(height)
+            expect(rowBox.height, 'the row is a touch target').toBeGreaterThanOrEqual(44)
+          } else {
+            expect(box.width, 'a desktop menu is a popover').toBeLessThan(width - 24)
+          }
+          expect(rowBox.y + rowBox.height, 'the row is on screen').toBeLessThanOrEqual(height)
+          expect(rowBox.x + rowBox.width, 'the row is inside the screen').toBeLessThanOrEqual(width)
+
+          await row.click()
+          const dialog = submitDialog(page)
+          await expect(dialog).toBeVisible()
+          await expect(menu, 'the menu gives way to the form').toHaveCount(0)
+
+          // The form fits and its controls are real touch targets.
+          const over = await sideScroll(dialog.locator('.plb-modal-card'))
+          expect(over.card, 'the card scrolls sideways').toBeLessThanOrEqual(0)
+          expect(over.doc, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+          const field = dialog.getByLabel(NAME_FIELD)
+          const submit = dialog.getByRole('button', { name: 'Submit gradient' })
+          const close = dialog.getByRole('button', { name: 'Close', exact: true })
+          for (const [what, loc] of [['name field', field], ['Submit', submit], ['Close', close]]) {
+            const b = await loc.boundingBox()
+            expect(b.x, `${what} starts on screen`).toBeGreaterThanOrEqual(0)
+            expect(b.x + b.width, `${what} ends on screen`).toBeLessThanOrEqual(width)
+          }
+
+          await field.fill('Harbour fade')
+          await submit.click()
+          await expect(page.getByTestId('community-submit-done')).toBeVisible()
+          await expect(page.getByTestId('community-submit-error')).toHaveCount(0)
+
+          const docs = await queued(page)
+          expect(docs, 'exactly one document').toHaveLength(1)
+          const [rec] = docs
+          for (const k of Object.keys(rec)) expect(RULES_RECORD_KEYS, `record key "${k}" is not in the rules' list`).toContain(k)
+          for (const k of Object.keys(rec.payload)) expect(RULES_PAYLOAD_KEYS, `payload key "${k}" is not in the rules' allow-list`).toContain(k)
+          expect(rec).toMatchObject({
+            kind: 'gradient', name: 'Harbour fade', authorUid: 'test-uid-free', status: 'pending',
+          })
+          expect(rec.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+          expect(rec.payload).toEqual({
+            type: 'Linear',
+            angle: 135,
+            stops: [{ color: '#1F4B8E', position: 0 }, { color: '#3FA9A0', position: 100 }],
+            c1: '#1F4B8E',
+            c2: '#3FA9A0',
+            author: '@freya_free',
+          })
+          expect(await legacyQueue(page), 'nothing goes to the browser queue').toBeNull()
+
+        } finally {
+          await ctx.close()
+        }
+      })
+    }
+  }
+
+  test('a Radial and a Conic gradient are written as what the person made', async ({ page }) => {
+    watch(page, 'member submitting a radial then a conic gradient')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    const sent = {}
+    for (const [type, url] of [['Radial', HANDOFF_RADIAL], ['Conic', HANDOFF_CONIC]]) {
+      await go(page, url)
+      await saveButton(page).click()
+      await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+      const dialog = submitDialog(page)
+      await dialog.getByLabel(NAME_FIELD).fill(`${type} sample`)
+      await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+      await expect(page.getByTestId('community-submit-done')).toBeVisible()
+      const docs = await queued(page)
+      expect(docs, `one ${type} document`).toHaveLength(1)
+      sent[type] = docs[0]
+    }
+    expect(sent.Radial.payload).toMatchObject({
+      type: 'Radial', c1: '#1F4B8E', c2: '#3FA9A0',
+      stops: [{ color: '#1F4B8E', position: 0 }, { color: '#3FA9A0', position: 100 }],
+    })
+    expect(sent.Conic.payload).toMatchObject({
+      type: 'Conic', angle: 90, c1: '#1F4B8E', c2: '#3FA9A0',
+      stops: [{ color: '#1F4B8E', position: 0 }, { color: '#3FA9A0', position: 100 }],
+    })
+    expect(await legacyQueue(page)).toBeNull()
+  })
+
+  test('a person with no handle picks one first, and it is the author on the record', async ({ page }) => {
+    watch(page, 'member submitting a gradient with no handle yet')
+    await signIn(page, { plan: 'free' })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    const dialog = submitDialog(page)
+    await expect(dialog.getByLabel(NAME_FIELD), 'no name field before there is a handle').toHaveCount(0)
+    await dialog.getByLabel('Community handle').fill('harbour_hand')
+    await dialog.getByRole('button', { name: 'Set handle' }).click()
+    await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+    await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-done')).toBeVisible()
+    expect((await queued(page))[0].payload.author).toBe('@harbour_hand')
+  })
+
+  test('signed out: the sign-in prompt comes first, and after signing in the form opens and submits', async ({ page }) => {
+    watch(page, 'visitor signing in at the moment of submitting a gradient')
+    await signIn(page, { plan: 'free', lateSignIn: true })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await expect(submitDialog(page), 'no form while signed out').toHaveCount(0)
+    expect(await queued(page)).toHaveLength(0)
+    await logInInThePrompt(page)
+    const dialog = submitDialog(page)
+    await expect(dialog, 'signing in opens the form').toBeVisible()
+    await dialog.getByLabel(NAME_FIELD).fill('After sign-in')
+    await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-done')).toBeVisible()
+    expect(await queued(page)).toHaveLength(1)
+  })
+
+  test('signed out: closing the sign-in prompt opens no form and writes nothing', async ({ page }) => {
+    watch(page, 'visitor who backs out of signing in to submit')
+    await signIn(page, { plan: 'free', lateSignIn: true })
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('#ui-login-title')).toHaveCount(0)
+    await expect(submitDialog(page)).toHaveCount(0)
+    expect(await queued(page)).toHaveLength(0)
+  })
+
+  for (const [why, code, words] of [
+    ['the rules refuse it', 'permission-denied', /wouldn.t accept that from this account/],
+    ['the network is down', 'unavailable', /Couldn.t reach the review queue/],
+  ]) {
+    test(`${why}: an inline error, the form kept as it was, and no success`, async ({ page }) => {
+      watch(page, `member whose submission fails (${code})`)
+      await signIn(page, { plan: 'free', deny: [{ path: 'community-submissions', code }] })
+      await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+      await go(page, HANDOFF)
+      await saveButton(page).click()
+      await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+      const dialog = submitDialog(page)
+      await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+      const submit = dialog.getByRole('button', { name: 'Submit gradient' })
+      await submit.click()
+      await expect(page.getByTestId('community-submit-error')).toHaveText(words)
+      await expect(page.getByTestId('community-submit-done'), 'never a success').toHaveCount(0)
+      await expect(dialog.getByLabel(NAME_FIELD)).toHaveValue('Harbour fade')
+      await expect(submit, 'the button is free to try again').toBeEnabled()
+      await expect(page.locator('.toast.show'), 'no "submitted" toast either').toHaveCount(0)
+      expect(await queued(page)).toHaveLength(0)
+      expect(await legacyQueue(page), 'a failed write is not parked in the browser').toBeNull()
+    })
+  }
+
+  // Focus. The Submit button is replaced by the confirmation, so the focused element leaves the page.
+  for (const route of ['Done', 'Close', 'Escape']) {
+    test(`after submitting, ${route} closes the dialog and focus returns to Save or share`, async ({ page }) => {
+      watch(page, `member closing the submit dialog with ${route}`)
+      await signIn(page, { plan: 'free' })
+      await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+      await go(page, HANDOFF)
+      const trigger = saveButton(page)
+      await trigger.click()
+      await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+      const dialog = submitDialog(page)
+      await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+      await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+      await expect(page.getByTestId('community-submit-done')).toBeVisible()
+      if (route === 'Escape') await page.keyboard.press('Escape')
+      else if (route === 'Close') await dialog.getByRole('button', { name: 'Close', exact: true }).click()
+      else await dialog.getByRole('button', { name: 'Done' }).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(trigger, 'focus returns to the Save or share trigger').toBeFocused()
+    })
+  }
+
+  test('closing the form before submitting returns focus to Save or share', async ({ page }) => {
+    watch(page, 'member backing out of the submit dialog')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    const trigger = saveButton(page)
+    await trigger.click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    const dialog = submitDialog(page)
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    expect(await queued(page)).toHaveLength(0)
+  })
+
+  test('when the confirmation replaces the form, focus stays inside the dialog', async ({ page }) => {
+    watch(page, 'keyboard member submitting a gradient')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    const dialog = submitDialog(page)
+    await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('community-submit-done')).toBeVisible()
+    // The field and the Submit button it was on are gone; focus must not fall to <body>.
+    await expect.poll(() => dialog.evaluate((el) => el.contains(document.activeElement)), 'focus is inside the dialog').toBe(true)
+  })
+
+  // Touch targets: every control in the form, measured together so one failure names them all.
+  for (const width of [390, 320]) {
+    test(`${width}px touch: the form fits and every control is at least 44px`, async ({ browser }) => {
+      const { ctx, page } = await openAt(browser, { width, height: 844, touch: true })
+      try {
+        watch(page, `member on a ${width}px phone submitting a gradient`)
+        await signIn(page, { plan: 'free' })
+        await go(page, HANDOFF)
+        await saveButton(page).click()
+        await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+        const dialog = submitDialog(page)
+        await expect(dialog).toBeVisible()
+        await dialog.getByLabel(NAME_FIELD).fill('x'.repeat(80))
+        const over = await sideScroll(dialog.locator('.plb-modal-card'))
+        expect(over.card, 'the card scrolls sideways').toBeLessThanOrEqual(0)
+        expect(over.doc, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+        const small = []
+        for (const [what, loc] of [
+          ['name field', dialog.getByLabel(NAME_FIELD)],
+          ['dice', dialog.getByRole('button', { name: 'Generate a themed name' })],
+          ['Submit', dialog.getByRole('button', { name: 'Submit gradient' })],
+          ['Close', dialog.getByRole('button', { name: 'Close', exact: true })],
+        ]) {
+          if (!(await loc.count())) continue
+          const b = await loc.boundingBox()
+          expect(b.x + b.width, `${what} ends on screen`).toBeLessThanOrEqual(width)
+          if (b.width < 44 || b.height < 44) small.push(`${what} is ${Math.round(b.width)}x${Math.round(b.height)}`)
+        }
+        expect(small, `touch targets under 44px: ${small.join(', ')}`).toEqual([])
+      } finally {
+        await ctx.close()
+      }
+    })
+  }
+
+  // The record names who submitted. The auth `user` the page holds is { email, uid } only, so
+  // buildQueueRecord falls back to "Anonymous" for everyone; the reviewers' queue shows that name.
+  test('the record carries the account name, not "Anonymous"', async ({ page }) => {
+    watch(page, 'member whose submission a reviewer will read')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    await submitDialog(page).getByLabel(NAME_FIELD).fill('Harbour fade')
+    await submitDialog(page).getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-done')).toBeVisible()
+    expect((await queued(page))[0].authorName).toBe('Freya Free')
+  })
+})
