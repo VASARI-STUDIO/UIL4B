@@ -981,10 +981,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // menu shows the same list with the active row ticked; any real edit to the
   // palette clears both so the list regenerates off the new colours.
   const [varBase, setVarBase] = useState(null)
-  // { kind: 'variation', id, name, before, after, mine } while the board shows something applied
-  // from the Suggest panel; `suggestSnapRef` holds the board as it was before the first apply.
+  // The one thing on trial: { kind: 'variation' | 'explore', id, name, before, after, mine, compare }
+  // while the board shows something applied from the Suggest or the Explore panel.
+  // `compare` is what Your palette's Compare button lines up against the user's own.
   const [panelApplied, setPanelApplied] = useState(null)
-  const suggestSnapRef = useRef(null)
+  // ONE trial snapshot for both panels: the board as it was before the first apply
+  // from either of them (colours, lens, seed, colour system, and its score). It is taken
+  // on the first apply, cleared by pressing the applied row again or by any real
+  // edit to the board, and KEPT when the user switches between Suggest and Explore
+  // or between Explore's tabs, so going back always lands on the user's own palette.
+  const trialSnapRef = useRef(null)
   const skipVarInvalidate = useRef(false)
   // One info panel per board: a column's tints or its colour values. They share
   // one slot, so opening either closes the other and every existing
@@ -1247,7 +1253,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // card again reverts to the pre-import system; any edit clears the tick because
   // the palette is now an edited derivative, not the untouched import.
   const [importedGalleryId, setImportedGalleryId] = useState(null)
-  const preImportRef = useRef(null)   // snapshot of the system before the import
   const importedSigRef = useRef(null) // baseline signature of the imported board
   // Palette history: rolling localStorage log (see HISTORY_KEY above).
   const [histOpen, setHistOpen] = useState(false)
@@ -1349,7 +1354,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (skipVarInvalidate.current) { skipVarInvalidate.current = false; return }
     setVarBase(null)
     setPanelApplied(null)
-    suggestSnapRef.current = null
+    trialSnapRef.current = null
   }, [colors, adjust])
 
   // Freeze a snapshot the first time the variations tab is viewed (or after
@@ -1360,7 +1365,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the user's palette, not of the variation on the board.
   useEffect(() => {
     if (galleryOpen && galleryTab === 'variations' && !varBase) {
-      setVarBase(suggestSnapRef.current?.mine || applyAdjust(colors, adjust))
+      setVarBase(trialSnapRef.current?.mine || applyAdjust(colors, adjust))
     }
   }, [galleryOpen, galleryTab, varBase, colors, adjust])
 
@@ -2017,7 +2022,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       vision,
       showContrast,
       importedGalleryId,
-      preImport: preImportRef.current,
+      preImport: trialSnapRef.current,
       importedSig: importedSigRef.current,
       at: Date.now(),
     }
@@ -2070,7 +2075,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setVision('normal')
     setShowContrast(false)
     setImportedGalleryId(null)
-    preImportRef.current = null
+    trialSnapRef.current = null
     importedSigRef.current = null
     setTintsIdx(null)
     setPickerIdx(null)
@@ -2078,7 +2083,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setPreview(null)
     setVarBase(null)
     setPanelApplied(null)
-    suggestSnapRef.current = null
+    trialSnapRef.current = null
     closeAllMenus()
     setLiveMsg('Settings reset to the default system, with a new random palette')
     toast?.('Palette reset · Undo is available')
@@ -2146,7 +2151,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setVision(target.vision || 'normal')
       setShowContrast(Boolean(target.showContrast))
       setImportedGalleryId(target.importedGalleryId || null)
-      preImportRef.current = target.preImport || null
+      trialSnapRef.current = target.preImport || null
       importedSigRef.current = target.importedSig || null
       resetSnapshotRef.current = null
       if (editedAfterReset) {
@@ -2182,20 +2187,20 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const openVariationGate = () => openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
-  // The board as it was before the first apply from the Suggest panel. Moving
-  // from one card to another never replaces it, so Back always lands on the
-  // user's own palette. This only reads the stored one (or builds the candidate);
-  // `keepPanelSnap` stores it once an apply has gone through, so an apply that
-  // is refused never leaves a snapshot behind.
-  const panelSnap = () => suggestSnapRef.current
+  // The board as it was before the first apply from EITHER panel. Moving from
+  // one row to another (in Suggest, in Explore, or across them) never replaces it,
+  // so going back always lands on the user's own palette. This only reads the
+  // stored one (or builds the candidate); `keepPanelSnap` stores it once an apply
+  // has gone through, so an apply that is refused never leaves a snapshot behind.
+  const panelSnap = () => trialSnapRef.current
     || { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
-  const keepPanelSnap = (snap) => { suggestSnapRef.current = snap }
+  const keepPanelSnap = (snap) => { trialSnapRef.current = snap }
   // True when applying `hexes` would leave the board exactly as it is.
   const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const pickVariation = (v, gated) => {
     if (gated) { openVariationGate(); return }
     // The applied card is a toggle: pressing it again puts the user's palette back.
-    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) { backToMine(); return }
+    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) { revertTrial(); return }
     if (isNoopApply(v.colors)) return
     const snap = panelSnap()
     if (!applyPalette(v.colors, `Applied variation: ${v.label}`, { quiet: true })) return
@@ -2206,13 +2211,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // certain; after a refused apply it would sit armed and swallow the user's
     // next real edit.
     skipVarInvalidate.current = true
-    setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine })
-    setLiveMsg(`${v.label} applied. Select it again, or Back to my palette, to undo it.`)
+    // A variation takes over from an Explore row as the one thing on trial. The
+    // snapshot stays, so going back still lands on the user's own palette.
+    importedSigRef.current = null
+    setImportedGalleryId(null)
+    setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine, compare: v })
+    setLiveMsg(`${v.label} applied. Press it again to go back.`)
   }
-  // Put the board back as the first apply found it: colours, lens, seed and system.
-  // Called from the applied card (pressing it again) and from the Back button.
-  const backToMine = () => {
-    const snap = suggestSnapRef.current
+  // Put the board back as the first apply found it: colours, lens, seed and
+  // colour system. Pressing the applied row again, in either panel, comes here.
+  // Nothing disables, so focus stays on the row that was pressed.
+  const revertTrial = () => {
+    const snap = trialSnapRef.current
     if (!snap) return
     setColPanel(null)
     skipVarInvalidate.current = true
@@ -2220,16 +2230,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setAdjust({ ...snap.adjust })
     setSeed(snap.seed)
     setSeedInput(snap.seedInput)
-    setHarmony(snap.harmony)
-    suggestSnapRef.current = null
+    // A brand changes the colour system as well, so the snapshot carries it.
+    if (snap.harmony) setHarmony(snap.harmony)
+    trialSnapRef.current = null
+    importedSigRef.current = null
+    setImportedGalleryId(null)
     setPanelApplied(null)
-    setLiveMsg('Back to your palette')
-    // The Back button disables itself now it has nothing left to undo, which
-    // would drop focus to the page. Focus goes to the card that was applied
-    // (where it already is when the card itself was pressed), else to Close.
-    const target = (panelApplied && document.getElementById(`plb-sg-var-${panelApplied.id}`))
-      || galleryRef.current?.querySelector('.plb-pop-x')
-    target?.focus({ preventScroll: true })
+    setLiveMsg('Your palette is back.')
   }
   const compareVariation = (v) => {
     setGalleryOpen(false)
@@ -2255,47 +2262,34 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // restored along with the colours.
   const importGalleryPalette = (cols, name, id, system = null) => {
     setColPanel(null)
-    if (importedGalleryId === id && preImportRef.current) {
-      const snap = preImportRef.current
-      setColors(snap.colors)
-      setAdjust(snap.adjust)
-      setSeed(snap.seed)
-      setSeedInput(snap.seedInput)
-      // A brand changes the colour system as well, so the snapshot carries it.
-      if (snap.harmony) setHarmony(snap.harmony)
-      preImportRef.current = null
-      importedSigRef.current = null
-      setImportedGalleryId(null)
-      setLiveMsg('Reverted to your previous palette')
-      toast?.('Reverted to your previous palette')
-      return
-    }
-    // Snapshot only the user's own palette — the one in place before any gallery
-    // import. Switching gallery A → B must NOT overwrite it, so revert always
-    // lands on the user's work, not the previously-selected gallery item.
-    //
-    // After a variation was applied from Suggest, the board is not the user's
-    // own any more. The Suggest snapshot is, so "mine" is taken from it:
-    // unticking an Explore card then lands on the user's palette, not on
-    // Variation X. An Explore import is a real change to the board, so it ends
-    // the Suggest session (the snapshot, the tick and Back all clear below).
-    // Explore has its own undo, and that one returns to the original palette.
-    const mine = suggestSnapRef.current
-    const original = preImportRef.current || (mine
-      ? { colors: mine.colors, adjust: mine.adjust, seed: mine.seed, seedInput: mine.seedInput, harmony: mine.harmony }
-      : { colors, adjust, seed, seedInput, harmony })
+    if (importedGalleryId === id && trialSnapRef.current) { revertTrial(); return }
+    // The snapshot is only ever the user's own palette: the one in place before
+    // the first apply from either panel. Switching row A -> B, or Suggest ->
+    // Explore, must NOT replace it, so going back lands on the user's work and not
+    // on the previous trial. When a variation is on the board the stored snapshot
+    // is what's used, not the live board.
+    const snap = panelSnap()
     // A refused apply (fewer than two valid colours) changes nothing, and must
-    // not leave a snapshot, a changed system or a cleared Suggest session behind.
-    if (!applyPalette(cols, `Loaded ${name}`)) return
+    // not leave a snapshot or a changed system behind.
+    if (!applyPalette(cols, `Loaded ${name}`, { quiet: true })) return
     if (system) setHarmony(system)
-    preImportRef.current = original
+    keepPanelSnap(snap)
+    // The Suggest list stays frozen on the user's own palette (the snapshot's), so
+    // the next look at Suggest still offers variations of THEIR colours.
+    skipVarInvalidate.current = true
     importedSigRef.current = null // let the effect record the imported baseline
-    suggestSnapRef.current = null
-    setPanelApplied(null)
-    setVarBase(null)
     setImportedGalleryId(id)
-    // Keep the gallery popup open so selecting swatches reads as a live toggle —
-    // the user can compare picks (and untick to revert) without reopening it.
+    setPanelApplied({
+      kind: 'explore',
+      id,
+      name,
+      before: snap.before,
+      mine: snap.mine,
+      compare: { label: name, colors: cols.map(c => normaliseHex(c)).filter(Boolean), score: scorePalette(cols) },
+    })
+    setLiveMsg(`${name} loaded. Press it again to go back.`)
+    // Keep the panel open so picking rows reads as a live toggle: the user can
+    // compare picks, and press the applied one again to go back, without reopening it.
   }
   // Clear the imported tick once the board diverges from the imported baseline.
   // The first run after an import records the baseline (colours + adjust lens);
@@ -2307,7 +2301,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       importedSigRef.current = sig
     } else if (sig !== importedSigRef.current) {
       importedSigRef.current = null
-      preImportRef.current = null
+      trialSnapRef.current = null
+      setPanelApplied(null)
       setImportedGalleryId(null)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3287,7 +3282,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   shortens to "Back" (still inside its name) on phones, and only the
                   narrowest screens get the icon alone. */}
               {!exploring && (
-                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={() => backToMine()}>
+                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={() => revertTrial()}>
                   <span className="plb-sg-back-text">Back to my palette</span>
                   <span className="plb-sg-back-short" aria-hidden="true">Back</span>
                   <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
