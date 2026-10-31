@@ -102,6 +102,7 @@ export const KEY_PURPOSES = Object.freeze({
   // stemOf() would fall through to the undescribed path only if a browser still
   // held the value, and the export's `vs-mystery` case already covers that.
   'vs-info-intro': { purpose: 'Info page intro dismissal state', pii: 'no' },
+  'vs-palette-coach': { purpose: 'Whether you have dismissed the first-palette tips on the Palette Builder, synced to your account', pii: 'no' },
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },
   'vs-chunk-reload': { purpose: 'Guard against a reload loop after a deploy', pii: 'no' },
   'vs-gradient-shuffle-filters': { purpose: 'Gradient Shuffle settings for this tab session', pii: 'no' },
