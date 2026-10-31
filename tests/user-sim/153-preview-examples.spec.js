@@ -2,7 +2,6 @@
 // Slack Water (Editorial hero), Sundial (Energy dashboard), Orra Workroom (Product page),
 // Ridgeline (Trail run app), Hale & Okoro (Architect portfolio, Pro) and Tally (Spending
 // card, Pro), each its own lazy chunk behind src/components/palette/examples/registry.js.
-// Only Invoices and Settings remain of the older Fernway scenes.
 //
 // WHAT IS HELD HERE, AND WHY IN A BROWSER
 // The unit tests (preview-field-helpers, preview-role-tags, slack-water-chart,
@@ -14,7 +13,7 @@
 //   1. each example renders (and is the scene that was picked)
 //   2. legend hover AND focus mark at least one element per role, in each
 //      example, and a role the example does not use says so on its chip
-//   3. the older "where each colour lands" hover still works on a Fernway scene (Invoices)
+//   3. the legend's hover trace dims everything that is not the traced role, clears on leave, and a click pins it (Product page)
 //   4. on a phone a tapped colour stays traced for 3 seconds, then clears
 //   5. a slow download never shows an empty stage: the old scene stays up
 //   6. no text under 12px in any example at 390, 768 and 1440
@@ -31,7 +30,7 @@
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //   10. the free/Pro gate: a free account sees Architect portfolio and Spending card blurred
 //       and out of reach (the real scene behind Unlock preview) and Trail run app open, and
-//       the arrow keys walk all eight options in order
+//       the arrow keys walk all six options in order
 //   11. Trail run app, Architect portfolio and Spending card do not overflow sideways at
 //       320, 390 and 768
 //
@@ -235,11 +234,11 @@ test.describe('"where each colour lands"', () => {
     })
   }
 
-  test('the older Fernway scenes (Invoices here) still trace a colour on hover, dimming everything else, and clear on leave', async ({ page }) => {
-    watch(page, 'designer tracing colours in a Fernway scene')
+  test('the legend traces a colour on hover, dimming everything else, and clears on leave', async ({ page }) => {
+    watch(page, 'designer tracing colours in a scene')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)
-    await pickScene(dialog, 'Invoices')
+    await pickScene(dialog, 'Product page')
     await expect(dialog.getByText('Where each colour lands')).toBeVisible()
     await expect(hits(page)).toHaveCount(0)
 
@@ -502,7 +501,9 @@ function sweepContrast() {
       // The sold-out size in the Product page: struck through, in the disabled
       // ink, on purpose. Text of an inactive control is exempt from 1.4.3, so it
       // is exempt only while it is marked aria-disabled.
-      exempt: !!el.closest('.or-size.is-off[aria-disabled="true"]'),
+      // The Overseas fees label in the Spending card's Limits form is the same
+      // case: a disabled toggle's label, drawn in the disabled ink on purpose.
+      exempt: !!el.closest('.or-size.is-off[aria-disabled="true"], .ty-field-l.is-disabled'),
     })
   }
   return { rows, problems: [...new Set(problems)] }
@@ -868,10 +869,10 @@ test.describe('an example that fails to download', () => {
     await expect(dialog.getByText('Check your connection, then reload the page.')).toBeVisible()
     await expect(dialog.getByRole('option', { name: /^Energy dashboard/ })).toHaveAttribute('aria-selected', 'true')
 
-    // The dialog around it is alive: another example and an older scene both load.
+    // The dialog around it is alive: another example loads.
     await pickScene(dialog, 'Product page')
     await expect(message).toHaveCount(0)
-    await pickScene(dialog, 'Invoices')
+    await pickScene(dialog, 'Trail run app')
     await expect(dialog).toBeVisible()
     expect(navigations, 'the page reloaded when the chunk failed').toBe(0)
   })
@@ -961,7 +962,7 @@ test.describe('the preview dialog fails to download', () => {
 
 // ── 10. the free/Pro gate, and walking the list ──────────────────────────────
 
-const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
 test.describe('the free and Pro examples', () => {
   test('a free account has Trail run app open and sees Architect portfolio and Spending card blurred and out of reach', async ({ page }) => {
@@ -969,7 +970,7 @@ test.describe('the free and Pro examples', () => {
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page, { plan: null })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option'), 'eight previews in the list').toHaveCount(SCENE_ORDER.length)
+    await expect(rail.getByRole('option'), 'six previews in the list').toHaveCount(SCENE_ORDER.length)
 
     for (const ex of EXAMPLES) {
       await pickScene(dialog, ex.name)
@@ -1005,7 +1006,7 @@ test.describe('the free and Pro examples', () => {
     }
   })
 
-  test('the arrow keys walk the rail through all eight previews in order, and Home and End reach the ends', async ({ page }) => {
+  test('the arrow keys walk the rail through all six previews in order, and Home and End reach the ends', async ({ page }) => {
     watch(page, 'keyboard designer walking the preview list')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)

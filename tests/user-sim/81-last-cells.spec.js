@@ -28,7 +28,7 @@
 //                    64-computed-style-snapshot.spec.js passing on
 //                    /create/palette against a baseline that was not
 //                    regenerated for the move. What is here is the assertion
-//                    that the page still paints all eight scenes THROUGH the
+//                    that the page still paints all six scenes THROUGH the
 //                    module it now imports them from.
 //
 //   /login           dimensions 3 and 4, 7 → 8. Two non-copy causes, both
@@ -338,10 +338,10 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
       '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
       '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
-    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
     const rail = page.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option')).toHaveCount(8)
+    await expect(rail.getByRole('option')).toHaveCount(NAMES.length)
 
     const seen = new Set()
     for (const name of NAMES) {

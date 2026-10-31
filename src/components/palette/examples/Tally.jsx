@@ -136,12 +136,12 @@ function Limits() {
         </span>
         <span className="ty-toggle is-on" data-role="primary"><i /></span>
       </div>
-      <div className="ty-switch is-disabled">
+      <div className="ty-switch">
         <span className="ty-switch-t">
-          <span className="ty-field-l">{LIMITS.overseas.label}</span>
+          <span className="ty-field-l is-disabled">{LIMITS.overseas.label}</span>
           <small className="ty-help">{LIMITS.overseas.help}</small>
         </span>
-        <span className="ty-toggle"><i /></span>
+        <span className="ty-toggle is-disabled"><i /></span>
       </div>
       <div className="ty-limits-foot">
         <span className="ty-btn">Cancel</span>

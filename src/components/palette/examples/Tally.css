@@ -130,10 +130,10 @@
 .ty-toggle>i{position:absolute;top:1px;left:1px;width:20px;height:20px;border-radius:50%;background:var(--pv-muted)}
 .ty-toggle.is-on{background:var(--pv-primary);border-color:var(--pv-pborder)}
 .ty-toggle.is-on>i{left:auto;right:1px;background:var(--pv-on-primary)}
-/* Disabled: no fill, no contrast to meet, and a help line that says why. */
-.ty-switch.is-disabled .ty-field-l{color:var(--pv-disabled)}
-.ty-switch.is-disabled .ty-toggle{background:transparent;border-color:var(--pv-border)}
-.ty-switch.is-disabled .ty-toggle>i{background:var(--pv-disabled)}
+/* Disabled: the label and toggle are drawn in the disabled ink, and the help line beside them stays readable because it says why. */
+.ty-field-l.is-disabled{color:var(--pv-disabled)}
+.ty-toggle.is-disabled{background:transparent;border-color:var(--pv-border)}
+.ty-toggle.is-disabled>i{background:var(--pv-disabled)}
 .ty-limits-foot{display:flex;justify-content:flex-end;gap:var(--s-2)}
 .ty-btn{
   display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 var(--s-4);
