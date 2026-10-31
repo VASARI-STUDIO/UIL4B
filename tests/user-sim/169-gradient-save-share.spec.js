@@ -1332,6 +1332,17 @@ test.describe('Submit to the community from the Save or share menu', () => {
   //     -> both refusal tests (the form shows "done" although nothing was written)
   //   GradientGenerator.jsx submitToCommunity: add `localStorage.setItem('vs-gradient-submissions', '[]')`
   //     after publishToQueue -> the "nothing goes to the browser queue" assertions
+  //   communityQueue.js buildQueueRecord: restore `(user.displayName || 'Anonymous')` for authorName
+  //     -> "the record carries the @handle as authorName ..." and the handle-picker test
+  //   GradientGenerator.jsx submitToCommunity: remove the Promise.race (await `write` alone)
+  //     -> all four "a write that never settles" tests (no error ever shows)
+  //   GradientGenerator.jsx: `if (!submitAttemptRef.current)` -> always `submitAttemptRef.current = newSubmissionId()`
+  //     -> "a retry after the timeout writes to the same document id"
+  //   GradientGenerator.jsx timeout branch: delete the `write.then(succeeded, () => {})` line
+  //     -> "a write that lands late flips the form to done" and the toast test
+  //   CommunitySubmitDialog.jsx: delete the `titleRef.current?.focus(...)` line
+  //     -> "after submitting, focus is on the dialog title"
+  //   colour.css: delete the `.plb-submitcard` media block -> the 44px tests at 390 and 320
   for (const { label, width, touch } of [
     { label: '1440 desktop', width: 1440, touch: false },
     { label: '390 touch', width: 390, touch: true },
@@ -1457,6 +1468,7 @@ test.describe('Submit to the community from the Save or share menu', () => {
     await dialog.getByRole('button', { name: 'Submit gradient' }).click()
     await expect(page.getByTestId('community-submit-done')).toBeVisible()
     expect((await queued(page))[0].payload.author).toBe('@harbour_hand')
+    expect((await queued(page))[0].authorName, 'the record is credited to the handle just picked').toBe('@harbour_hand')
   })
 
   test('signed out: the sign-in prompt comes first, and after signing in the form opens and submits', async ({ page }) => {
@@ -1591,6 +1603,7 @@ test.describe('Submit to the community from the Save or share menu', () => {
           ['dice', dialog.getByRole('button', { name: 'Generate a themed name' })],
           ['Submit', dialog.getByRole('button', { name: 'Submit gradient' })],
           ['Close', dialog.getByRole('button', { name: 'Close', exact: true })],
+          ['change handle', dialog.getByRole('button', { name: 'change', exact: true })],
         ]) {
           if (!(await loc.count())) continue
           const b = await loc.boundingBox()
@@ -1598,24 +1611,180 @@ test.describe('Submit to the community from the Save or share menu', () => {
           if (b.width < 44 || b.height < 44) small.push(`${what} is ${Math.round(b.width)}x${Math.round(b.height)}`)
         }
         expect(small, `touch targets under 44px: ${small.join(', ')}`).toEqual([])
+        expect(
+          await dialog.getByLabel(NAME_FIELD).evaluate((el) => getComputedStyle(el).fontSize),
+          'a 16px name field, so a phone does not zoom in on focus',
+        ).toBe('16px')
+        // The confirmation that replaces the form has its own controls.
+        await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+        await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+        await expect(page.getByTestId('community-submit-done')).toBeVisible()
+        for (const [what, loc] of [
+          ['Done', dialog.getByRole('button', { name: 'Done' })],
+          ['Close', dialog.getByRole('button', { name: 'Close', exact: true })],
+        ]) {
+          const b = await loc.boundingBox()
+          expect(Math.min(b.width, b.height), `${what} on the confirmation is a touch target`).toBeGreaterThanOrEqual(44)
+        }
       } finally {
         await ctx.close()
       }
     })
   }
 
-  // The record names who submitted. The auth `user` the page holds is { email, uid } only, so
-  // buildQueueRecord falls back to "Anonymous" for everyone; the reviewers' queue shows that name.
-  test('the record carries the account name, not "Anonymous"', async ({ page }) => {
+  // The record names who submitted, and the reviewers' queue shows that name. The
+  // signed-in `user` the page holds is { email, uid } only, so the name has to be passed in:
+  // the public handle the dialog shows ("Posting as @freya_free"). Never "Anonymous", never
+  // the address (the collection is readable by every member once an item is approved).
+  test('the record carries the @handle as authorName, never "Anonymous" and never the email', async ({ page }) => {
     watch(page, 'member whose submission a reviewer will read')
+    const account = await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    await expect(submitDialog(page).locator('.plb-submit-as strong')).toHaveText('@freya_free')
+    await submitDialog(page).getByLabel(NAME_FIELD).fill('Harbour fade')
+    await submitDialog(page).getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-done')).toBeVisible()
+    const [rec] = await queued(page)
+    expect(rec.authorName).toBe('@freya_free')
+    expect(rec.authorName).not.toBe('Anonymous')
+    expect(JSON.stringify(rec).toLowerCase(), 'no copy of the address anywhere in the record').not.toContain(account.email.toLowerCase())
+  })
+
+  // Focus. The Submit button is replaced by the confirmation; focus goes to the title, which
+  // names the new state, and the sentence under it stays a polite status region.
+  test('after submitting, focus is on the dialog title and the confirmation is a status', async ({ page }) => {
+    watch(page, 'keyboard member submitting a gradient')
     await signIn(page, { plan: 'free' })
     await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
     await go(page, HANDOFF)
     await saveButton(page).click()
     await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
-    await submitDialog(page).getByLabel(NAME_FIELD).fill('Harbour fade')
-    await submitDialog(page).getByRole('button', { name: 'Submit gradient' }).click()
-    await expect(page.getByTestId('community-submit-done')).toBeVisible()
-    expect((await queued(page))[0].authorName).toBe('Freya Free')
+    const dialog = submitDialog(page)
+    await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+    await expect(dialog.locator('.plb-pop-title')).toHaveText('Submit to the community')
+    await page.keyboard.press('Enter')
+    const title = dialog.locator('.plb-pop-title')
+    await expect(title).toHaveText('Submitted for review')
+    await expect(title, 'focus moved to the title, not left on <body>').toBeFocused()
+    await expect(dialog.getByRole('status')).toHaveAttribute('data-testid', 'community-submit-done')
+    // And focus stays there: nothing in the page pulls it away after the write.
+    await expect(title).toBeFocused()
+  })
+
+  // Touch targets. The 44px floor is scoped to the dialog's own card (`.plb-submitcard`), so
+  // the shared close button and rows elsewhere keep their size, and it applies to a narrow
+  // screen or a coarse pointer only.
+  test('1440 desktop: the dialog controls keep their desktop size (26px close, 13px name field)', async ({ page }) => {
+    watch(page, 'desktop member opening the submit dialog')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, HANDOFF)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(false)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+    const dialog = submitDialog(page)
+    await expect(dialog).toBeVisible()
+    const close = await dialog.getByRole('button', { name: 'Close', exact: true }).boundingBox()
+    expect([Math.round(close.width), Math.round(close.height)], 'Close is the shared 26px button').toEqual([26, 26])
+    const field = dialog.getByLabel(NAME_FIELD)
+    expect(await field.evaluate((el) => getComputedStyle(el).fontSize), 'the name field is 13px on a desktop').toBe('13px')
+    const fieldBox = await field.boundingBox()
+    expect(fieldBox.height, 'the name field is not stretched to a touch target').toBeLessThan(40)
+    const submit = await dialog.getByRole('button', { name: 'Submit gradient' }).boundingBox()
+    expect(submit.height, 'Submit is not stretched to a touch target').toBeLessThan(40)
+  })
+
+  // Offline. Firestore queues a write it cannot send and neither resolves nor rejects it, so
+  // the form would say "Submitting…" for ever. The fake store models that with `holdWrites`:
+  // the write stays pending until the spec releases it. These run on the real 8 s timer (a
+  // fake clock would freeze the app's own animations and focus handling too), so each takes
+  // about nine seconds.
+  test.describe('a write that never settles (offline)', () => {
+    test.setTimeout(60_000)
+    const WAIT_MS = 8000
+
+    async function submitHeld(page) {
+      await signIn(page, { plan: 'free', holdWrites: ['community-submissions'] })
+      await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+      await go(page, HANDOFF)
+      await saveButton(page).click()
+      await menuOf(page).getByRole('button', { name: FORM_ROW }).click()
+      const dialog = submitDialog(page)
+      await dialog.getByLabel(NAME_FIELD).fill('Harbour fade')
+      // The button's own name changes while it waits ("Submitting…"), so it is found by either.
+      const submit = dialog.getByRole('button', { name: /^Submit(ting…| gradient)$/ })
+      const startedAt = Date.now()
+      await submit.click()
+      return { dialog, submit, startedAt }
+    }
+    const attempts = (page) => page.evaluate(() => [...window.__UIL4B_TEST_WRITES__].filter((p) => p.includes('community-submissions')))
+    const release = (page) => page.evaluate(() => window.__UIL4B_TEST_HOLD__.releaseWrites())
+
+    test('after about 8 s it says so, keeps the name and frees the button; nothing is shown as sent', async ({ page }) => {
+      watch(page, 'member submitting a gradient while offline')
+      const { dialog, submit, startedAt } = await submitHeld(page)
+      // Still waiting right after the press: busy, no error, no success.
+      await expect(submit).toHaveText('Submitting…')
+      await expect(page.getByTestId('community-submit-error')).toHaveCount(0)
+      const error = page.getByTestId('community-submit-error')
+      await expect(error).toBeVisible({ timeout: WAIT_MS + 6000 })
+      const elapsed = Date.now() - startedAt
+      expect(elapsed, 'the error does not come early').toBeGreaterThanOrEqual(WAIT_MS - 500)
+      expect(elapsed, 'the error comes at about 8 s').toBeLessThan(WAIT_MS + 4000)
+      await expect(error).toContainText(/taking too long.*offline/i)
+      await expect(error).toContainText('Your gradient is still here')
+      await expect(dialog.getByLabel(NAME_FIELD), 'the name is kept').toHaveValue('Harbour fade')
+      await expect(submit, 'the button is free to try again').toBeEnabled()
+      await expect(submit).toHaveText('Submit gradient')
+      await expect(page.getByTestId('community-submit-done'), 'never a success').toHaveCount(0)
+      await expect(page.locator('.toast.show')).toHaveCount(0)
+      expect(await queued(page), 'nothing has landed').toHaveLength(0)
+    })
+
+    test('a write that lands late flips the form to done and clears the error', async ({ page }) => {
+      watch(page, 'member whose offline submission reaches the queue late')
+      const { dialog } = await submitHeld(page)
+      await expect(page.getByTestId('community-submit-error')).toBeVisible({ timeout: WAIT_MS + 6000 })
+      await release(page)
+      await expect(page.getByTestId('community-submit-done')).toBeVisible()
+      await expect(page.getByTestId('community-submit-error'), 'the false failure is gone').toHaveCount(0)
+      await expect(dialog.locator('.plb-pop-title')).toHaveText('Submitted for review')
+      await expect(dialog.getByLabel(NAME_FIELD)).toHaveCount(0)
+      expect(await queued(page), 'one document').toHaveLength(1)
+    })
+
+    test('a late write after the dialog was closed is announced with a toast instead', async ({ page }) => {
+      watch(page, 'member who closed the form while offline, then reconnected')
+      const { dialog } = await submitHeld(page)
+      await expect(page.getByTestId('community-submit-error')).toBeVisible({ timeout: WAIT_MS + 6000 })
+      await dialog.getByRole('button', { name: 'Close', exact: true }).click()
+      await expect(dialog).toHaveCount(0)
+      await release(page)
+      await expect(page.locator('.toast.show')).toContainText('Gradient submitted for review')
+      expect(await queued(page)).toHaveLength(1)
+    })
+
+    test('a retry after the timeout writes to the same document id, so one document lands, not two', async ({ page }) => {
+      watch(page, 'member retrying an offline submission')
+      const { dialog, submit } = await submitHeld(page)
+      await expect(page.getByTestId('community-submit-error')).toBeVisible({ timeout: WAIT_MS + 6000 })
+      await submit.click()
+      await expect(submit).toHaveText('Submitting…')
+      await expect.poll(() => attempts(page).then((a) => a.length)).toBe(2)
+      const [first, second] = await attempts(page)
+      expect(first).toMatch(/^community-submissions\/.+/)
+      expect(second, 'the retry reuses the first attempt’s document id').toBe(first)
+      await release(page)
+      await expect(page.getByTestId('community-submit-done')).toBeVisible()
+      await expect(page.getByTestId('community-submit-error')).toHaveCount(0)
+      const docs = await queued(page)
+      expect(docs, 'one document, not two').toHaveLength(1)
+      expect(docs[0]).toMatchObject({ kind: 'gradient', name: 'Harbour fade', authorName: '@freya_free' })
+      await expect(dialog.locator('.plb-pop-title')).toHaveText('Submitted for review')
+    })
   })
 })

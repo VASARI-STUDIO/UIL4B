@@ -54,7 +54,7 @@ import {
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
-import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor, heldWatch } from './test-session.js'
+import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor, heldWatch, holdWrite } from './test-session.js'
 
 export * from 'firebase/firestore'
 
@@ -136,7 +136,10 @@ export function setDoc(reference, data, options) {
   if (!isFakeRef(reference)) return realSetDoc(reference, data, options)
   const denied = deniedFor(reference.path, 'set')
   if (denied) return Promise.reject(denied)
-  reference.store.set(reference.path, data, !!options?.merge)
+  const land = () => reference.store.set(reference.path, data, !!options?.merge)
+  const held = holdWrite(reference.path, land)
+  if (held) return held
+  land()
   return Promise.resolve()
 }
 

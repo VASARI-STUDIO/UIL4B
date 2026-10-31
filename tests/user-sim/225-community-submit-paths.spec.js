@@ -22,6 +22,9 @@
 //       swallows (`.catch(() => {})`) -> "palette: a refused write never says Submitted"
 //   promptSubmission.js buildCommunityPromptRecord: add `extra: 1` -> "prompt: ... only the keys the rules allow"
 //   Community.jsx handleSubmit: add `note: 'x'` to the payload -> "design: ... only the keys the rules allow"
+//   communityQueue.js buildQueueRecord: put the old lookup back, `(user.displayName || 'Anonymous')`
+//       -> every "credited to" assertion here and the authorName tests in spec 169
+//   Community.jsx: drop `authorName: queueAuthorName(),` from the design record -> the two design tests
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -46,6 +49,14 @@ async function openAt(browser, { width, height, touch }) {
     try { localStorage.setItem('vs-community-handle', 'freya_free') } catch { /* private mode */ }
   })
   return { ctx, page: await ctx.newPage() }
+}
+
+// The reviewers' queue shows authorName. It is the public @handle: never "Anonymous" (the
+// signed-in user carries only an email and a uid) and never the address.
+function expectCreditedTo(record, name, email) {
+  expect(record.authorName).toBe(name)
+  expect(record.authorName).not.toBe('Anonymous')
+  expect(JSON.stringify(record).toLowerCase(), 'no copy of the address in the record').not.toContain(email.toLowerCase())
 }
 
 function expectOnlyRulesKeys(record) {
@@ -74,11 +85,23 @@ test.describe('Palette Builder: Submit to the community…', () => {
       const { ctx, page } = await openAt(browser, screen)
       try {
         watch(page, `member submitting a palette at ${screen.width}px`)
-        await signIn(page, { plan: 'free' })
+        const account = await signIn(page, { plan: 'free' })
         await go(page, PALETTE)
         expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(screen.touch)
         await openPaletteForm(page)
         const dialog = paletteDialog(page)
+        if (screen.touch) {
+          const small = []
+          for (const [what, loc] of [
+            ['name field', dialog.getByLabel('Palette name for the community')],
+            ['Submit', dialog.getByRole('button', { name: 'Submit palette' })],
+            ['Close', dialog.getByRole('button', { name: 'Close', exact: true })],
+          ]) {
+            const b = await loc.boundingBox()
+            if (b.width < 44 || b.height < 44) small.push(`${what} is ${Math.round(b.width)}x${Math.round(b.height)}`)
+          }
+          expect(small, `touch targets under 44px: ${small.join(', ')}`).toEqual([])
+        }
         const box = await dialog.locator('.plb-modal-card').boundingBox()
         expect(box.x + box.width, 'the form fits the screen').toBeLessThanOrEqual(screen.width)
         await dialog.getByLabel('Palette name for the community').fill('Harbour set')
@@ -88,6 +111,7 @@ test.describe('Palette Builder: Submit to the community…', () => {
         const docs = await docsIn(page, 'community-submissions')
         expect(docs, 'exactly one document').toHaveLength(1)
         expectOnlyRulesKeys(docs[0])
+        expectCreditedTo(docs[0], '@freya_free', account.email)
         expect(docs[0]).toMatchObject({ kind: 'palette', name: 'Harbour set' })
         expect(docs[0].payload).toMatchObject({
           colors: ['#1F4B8E', '#2E7BB8', '#3FA9A0'], category: 'Branding', author: '@freya_free',
@@ -194,7 +218,7 @@ test.describe('/community: Submit design', () => {
       const { ctx, page } = await openAt(browser, screen)
       try {
         watch(page, `member submitting a design at ${screen.width}px`)
-        await signIn(page, { plan: 'free' })
+        const account = await signIn(page, { plan: 'free' })
         await go(page, '/community')
         await page.getByRole('button', { name: 'Submit design' }).first().click()
         const dialog = designDialog(page)
@@ -209,12 +233,29 @@ test.describe('/community: Submit design', () => {
         const docs = await docsIn(page, 'community-submissions')
         expect(docs, 'exactly one document').toHaveLength(1)
         expectOnlyRulesKeys(docs[0])
+        expectCreditedTo(docs[0], '@freya_free', account.email)
         expect(docs[0]).toMatchObject({ kind: 'design', name: 'Harbour landing' })
       } finally {
         await ctx.close()
       }
     })
   }
+
+  // No handle chosen on this device: the record is credited to the name on the profile
+  // (Community.jsx queueAuthorName), still not "Anonymous" and not the address.
+  test('design: with no handle on this device, the record is credited to the profile name', async ({ page }) => {
+    watch(page, 'member with a profile name and no community handle submitting a design')
+    const account = await signIn(page, { plan: 'free' })
+    await go(page, '/community')
+    expect(await page.evaluate(() => localStorage.getItem('vs-community-handle'))).toBeNull()
+    await page.getByRole('button', { name: 'Submit design' }).first().click()
+    await designDialog(page).getByLabel('Name', { exact: true }).fill('Harbour landing')
+    await designDialog(page).getByRole('button', { name: 'Submit design' }).click()
+    await expect(toastText(page)).toContainText('Design submitted for review')
+    const docs = await docsIn(page, 'community-submissions')
+    expect(docs).toHaveLength(1)
+    expectCreditedTo(docs[0], 'Freya Free', account.email)
+  })
 
   test('design: a refused write never says "submitted for review"', async ({ page }) => {
     watch(page, 'member whose design submission is refused')

@@ -387,6 +387,28 @@ function releaseHeldWatches() {
   queued.forEach((fire) => fire())
 }
 
+/* A WRITE THAT NEVER SETTLES, LIKE ONE MADE OFFLINE.
+ * `signIn(page, { holdWrites: ['community-submissions'] })` makes every setDoc
+ * whose path contains one of those strings stay pending - neither resolved nor
+ * rejected, which is what Firestore does with a write it cannot send - until the
+ * page calls `window.__UIL4B_TEST_HOLD__.releaseWrites()`. Released, each held
+ * write lands in the store and resolves, as a queued write does on reconnect.
+ * `writeLog` records the path of every setDoc attempt, in order. */
+const HELD_WRITES = (DECLARED?.holdWrites || []).filter(Boolean)
+const heldWrites = []
+let writesReleased = false
+export const writeLog = []
+export function holdWrite(path, land) {
+  writeLog.push(String(path))
+  if (writesReleased || !HELD_WRITES.some((p) => String(path).includes(p))) return null
+  return new Promise((resolve) => { heldWrites.push(() => { land(); resolve() }) })
+}
+function releaseHeldWrites() {
+  writesReleased = true
+  const queued = heldWrites.splice(0)
+  queued.forEach((land) => land())
+}
+
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
  * `signIn(page, { authFail: { updateEmail: 'auth/operation-not-allowed' } })`
  * makes that one call reject with that Firebase code, so a spec can render what
@@ -433,6 +455,6 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches, releaseWrites: releaseHeldWrites }; window.__UIL4B_TEST_WRITES__ = writeLog } catch { /* no window */ }
   try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }
