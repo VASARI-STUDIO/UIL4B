@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useModalDialog from '../../hooks/useModalDialog'
 import { handleProblem, readStoredHandle, writeStoredHandle } from '../../utils/communityHandle'
@@ -51,6 +51,16 @@ export default function CommunitySubmitDialog({
   }
   const submit = () => { if (!busy) onSubmit?.(publicHandle) }
 
+  // The focused Submit button unmounts when the form is replaced by the
+  // confirmation, which would drop focus on <body>. Move it to the title, which
+  // names the new state; the confirmation text below it is a status region.
+  const titleRef = useRef(null)
+  const wasDone = useRef(false)
+  useEffect(() => {
+    if (done && !wasDone.current) titleRef.current?.focus({ preventScroll: true })
+    wasDone.current = Boolean(done)
+  }, [done])
+
   return (
     <div
       className="plb-modal"
@@ -63,7 +73,7 @@ export default function CommunitySubmitDialog({
     >
       <div className="plb-modal-card plb-submitcard">
         <div className="plb-modal-head">
-          <span className="plb-pop-title">{done ? 'Submitted for review' : 'Submit to the community'}</span>
+          <span className="plb-pop-title" ref={titleRef} tabIndex={-1}>{done ? 'Submitted for review' : 'Submit to the community'}</span>
           <button type="button" className="plb-pop-x" aria-label="Close" onClick={onClose}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>

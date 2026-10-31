@@ -39,7 +39,7 @@ import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
 import useCommunitySubmitGate from '../hooks/useCommunitySubmitGate'
 import { buildGradientPayload } from '../utils/gradientSubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
-import { publishToQueue } from '../utils/communityQueueApi'
+import { publishToQueueOnce } from '../utils/communityQueueApi'
 import { isPostLimit } from '../utils/communityLimits'
 import { getOwnerHandle } from '../utils/constants'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
@@ -60,6 +60,12 @@ import '../styles/pages/gradient.css'
 // a jump to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
+
+// How long a community submission waits for the queue before it says so. Offline,
+// Firestore holds the write and never rejects.
+const SUBMIT_TIMEOUT_MS = 8000
+// A free-form document id for one submission (crypto.randomUUID where it exists).
+const newSubmissionId = () => (globalThis.crypto?.randomUUID?.() ?? `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`)
 
 // ── Random settings ──
 // What Random and Shuffle from palette may make. A group holds the values that
@@ -1542,6 +1548,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [submitBusy, setSubmitBusy] = useState(false)
   const [submitDone, setSubmitDone] = useState(false)
   const submitOpenRef = useRef(false)
+  // The document id for the submission in flight; kept until it is accepted.
+  const submitAttemptRef = useRef(null)
   useEffect(() => { submitOpenRef.current = submitOpen }, [submitOpen])
   // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
@@ -1562,17 +1570,45 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // sign-out mid-flow must not slip a submission through.
     if (!user?.uid) { setSubmitOpen(false); return }
     const payload = buildGradientPayload({ type, angle, stops, author })
-    const queued = payload && buildQueueRecord({ kind: 'gradient', name, user, payload })
+    const queued = payload && buildQueueRecord({ kind: 'gradient', name, user, authorName: author, payload })
     if (!queued) { setSubmitErr('This gradient can’t be submitted. Check that every stop has a colour.'); return }
     setSubmitErr('')
     setSubmitBusy(true)
-    try {
-      await publishToQueue(queued)
+    // Offline, Firestore queues the write and never rejects, so the wait is
+    // bounded. One document id per form, so a retry after a timeout cannot post
+    // a second copy if the first write lands late.
+    if (!submitAttemptRef.current) submitAttemptRef.current = newSubmissionId()
+    const id = submitAttemptRef.current
+    const write = publishToQueueOnce(queued, { id })
+    const succeeded = () => {
+      // An earlier write for this form already finished it.
+      if (submitAttemptRef.current !== id) return
+      submitAttemptRef.current = null
       if (!mountedRef.current) return
       // A fresh form reopens with the default name, not one already sent.
       setSubmitName('')
+      setSubmitErr('')
       if (submitOpenRef.current) setSubmitDone(true)
       else toast?.('Gradient submitted for review')
+    }
+    try {
+      let timer
+      const outcome = await Promise.race([
+        write.then(() => 'sent'),
+        new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), SUBMIT_TIMEOUT_MS) }),
+      ])
+      clearTimeout(timer)
+      if (outcome === 'timeout') {
+        // The form stays as it was. If the write lands later it replaces this
+        // message with the confirmation instead of leaving a false failure.
+        write.then(succeeded, () => {})
+        if (!mountedRef.current) return
+        const offline = 'This is taking too long, so you may be offline. Your gradient is still here. Check your connection and try again.'
+        if (submitOpenRef.current) setSubmitErr(offline)
+        else toast?.(offline, 'error')
+        return
+      }
+      succeeded()
     } catch (err) {
       if (!mountedRef.current) return
       const message = isPostLimit(err)
