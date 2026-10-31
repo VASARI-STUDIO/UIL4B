@@ -5166,10 +5166,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    (mobbin.com/screens/b2d37cca-3e44-405d-b85a-130756feb9df), where the section
    index sits against the content column: the eye travels a few centimetres
    between "where am I" and "what am I reading", not the width of a monitor.
-   Below that the contents become a plain list above the prose. NOT a collapsed
-   <details> — on the viewport where orientation is hardest to hold, hiding the
-   contents behind a tap is the wrong trade, and five short lines is a cheap
-   price for them.
+   Below that the contents sit in a closed "On this page" disclosure above the
+   prose, so the first section starts on the first screen; the row names the
+   section count, and choosing a link closes it and moves focus to that heading.
 
    ── Emphasis budget ──
    Four prose primitives (src/components/LearnParts.jsx) and no callout colours.
