@@ -7,9 +7,11 @@
 // colours or a saved project; with fewer than two palette colours the starters stand
 // in beside a "Make a palette" link. The row draws at most nine slots at a fine
 // pointer (six on touch): a longer list shows one slot fewer and a "+N more" link.
-// With exactly one palette colour the row holds the starter colours only, so the
-// single colour is not asserted as a chip. Each stop row names its colour
-// ("Primary 500", "Custom").
+// With exactly one palette colour the row is that colour's chip then eight starters (a
+// starter with the same hex is dropped). The palette chips and the shade chips are one
+// roving tab stop: Left, Right, Home and End cross both groups. With every colour
+// locked the status line reads "Every colour is locked"; any lock change clears a
+// stale pick sentence. Each stop row names its colour ("Primary 500", "Custom").
 //
 // Expected names, copy and orders are hand-checked, not read back from the code.
 //
@@ -20,9 +22,12 @@
 //   the row's aria-describedby dropped                -> "a stop row's accessible name ..."
 //   MAX_CHIPS 9 -> 10 (or 99)                          -> "the chip cap" tests
 //   pickColour: next = activeStop (no advance)         -> "three presses paint ...", "target follows position", "skips a locked stop"
-//   useRoving: every item tabIndex 0                   -> "one chip takes Tab"
+//   useRoving: every item tabIndex 0                   -> "one chip takes Tab", "the shades join the palette chips"
+//   chipsRef back on the palette group only             -> "the shades join the palette chips"
 //   allColoursLocked returns false                     -> "with every colour locked the chips refuse"
-//   aria-describedby='grd-avail-locked' dropped        -> "with every colour locked the chips refuse"
+//   aria-describedby='grd-paint-locked' dropped        -> "with every colour locked the chips refuse"
+//   paintKey drops the lock flags                       -> "a lock change clears a stale pick sentence"
+//   starterRow keeps the starter with the palette's hex -> "a starter with the palette colour's hex is dropped"
 //   a project's colours not offered in the Colour source menu -> "From a project"
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
@@ -117,16 +122,32 @@ test.describe('Palette row · the states', () => {
     await expect(paletteChoice).toHaveAccessibleDescription(NEEDS)
   })
 
-  test('with one colour: the starters stand in beside the way to make a palette', async ({ page }) => {
+  test('with one colour: its chip leads, then eight starters, beside the way to make a palette', async ({ page }) => {
     watch(page, 'someone with a one-colour palette')
     await seed(page, { colors: ['#0051FF'] })
     await open(page)
-    // The row holds the starter colours only: the single palette colour is not a chip here.
-    await expect(paletteChips(page)).toHaveCount(8)
-    await expect(chip(page, 'Starter blue')).toBeVisible()
+    // The palette's one colour, then the first eight starters: nine chips, so no "+N more".
+    await expect(paletteChips(page)).toHaveCount(9)
+    const labels = await names(paletteChips(page))
+    expect(labels[0]).toBe('Primary 500, #0051FF')
+    expect(labels.slice(1).map((l) => l.split(',')[0])).toEqual(STARTER_NAMES)
+    await expect(moreLink(page)).toHaveCount(0)
     await expect(row(page).getByRole('link', { name: 'Make a palette' })).toHaveAttribute('href', '/create/palette')
     const paletteChoice = page.getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name: 'Palette', exact: true })
     await expect(paletteChoice).toHaveAccessibleDescription(NEEDS)
+  })
+
+  test('with one colour: a starter with the palette colour\'s hex is dropped, and the next starter fills the row', async ({ page }) => {
+    watch(page, 'someone whose one colour is also a starter')
+    await seed(page, { colors: ['#2f6bff'] })
+    await open(page)
+    // Starter blue is #2F6BFF (the hex matches whatever the case), so that colour shows once, as the
+    // palette's "Primary 500", and Starter ink comes in as the eighth starter.
+    await expect(paletteChips(page)).toHaveCount(9)
+    expect(await names(paletteChips(page))).toEqual([
+      'Primary 500, #2F6BFF', 'Starter navy, #1B3FA8', 'Starter violet, #8B5CF0', 'Starter pink, #E894AC',
+      'Starter orange, #E0784E', 'Starter gold, #D9B93C', 'Starter teal, #3FAFA0', 'Starter green, #52A069', 'Starter ink, #0B0C0E',
+    ])
   })
 
   test('with two colours: two chips, no helper link, and Colours: Palette is live', async ({ page }) => {
@@ -568,19 +589,38 @@ test.describe('Palette row · paint in order', () => {
     const secondary = chip(page, 'Secondary 500')
     await expect(secondary).toHaveAttribute('aria-disabled', 'true')
     // The reason is the chip's description before any press: a screen reader on a chip is told why it is inert.
-    await expect(secondary).toHaveAttribute('aria-describedby', 'grd-avail-locked')
-    await expect(page.locator('#grd-avail-locked'), 'the description is outside the live region').toHaveText('Every colour is locked.')
-    expect(await page.evaluate(() => document.getElementById('grd-avail-locked').closest('[aria-live], [role="status"]')), 'and is not announced on its own').toBeNull()
+    await expect(secondary).toHaveAttribute('aria-describedby', 'grd-paint-locked')
+    await expect(page.locator('#grd-paint-locked'), 'the description is outside the live region').toHaveText('Every colour is locked.')
+    expect(await page.evaluate(() => document.getElementById('grd-paint-locked').closest('[aria-live], [role="status"]')), 'and is not announced on its own').toBeNull()
     await expect(secondary).toHaveAccessibleDescription('Every colour is locked.')
     // aria-disabled is not `disabled`: the chip still takes a press, and refuses it.
     await secondary.click({ force: true })
     for (const n of [1, 2, 3]) await expect(hexOf(page, n)).toHaveText(SEED_STOPS[n - 1])
     await expect(statusLine(page)).toHaveText(words('Every colour is locked.'))
-    // Unlock one and the chips work again, and the description goes with the reason.
+    // Unlock one and the chips work again, the description goes with the reason, and
+    // the refusal sentence goes too: the line says where a press lands, not "locked".
     await lockBtn(page, 2).click()
     await expect(secondary).not.toHaveAttribute('aria-disabled', /.*/)
     await expect(secondary).not.toHaveAttribute('aria-describedby', /.*/)
-    await expect(page.locator('#grd-avail-locked')).toHaveCount(0)
+    await expect(page.locator('#grd-paint-locked')).toHaveCount(0)
+    await expect(statusLine(page)).toHaveText(/^Paints stop \d+$/)
+  })
+
+  test('a lock change clears a stale pick sentence', async ({ page }) => {
+    watch(page, 'a designer who locks a stop after painting one')
+    await seed(page, { colors: THIRTEEN })
+    await open(page)
+    await chip(page, 'Primary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 1 set to Primary 500. Next: stop 2.'))
+    // Locking stop 3 changes no colour and no target, only the locks.
+    await lockBtn(page, 3).click()
+    await expect(statusLine(page), 'the sentence about the old locks is gone').toHaveText('Paints stop 2')
+    expect(await targetOf(page), 'and the target did not move').toEqual([2])
+    // The same on the way back: a press, then unlocking the stop.
+    await chip(page, 'Secondary 500').click()
+    await expect(statusLine(page)).toHaveText(words('Stop 2 set to Secondary 500. Next: stop 1.'))
+    await lockBtn(page, 3).click()
+    await expect(statusLine(page)).toHaveText('Paints stop 1')
   })
 
   test('a press with several stops selected paints them all and the selection stays', async ({ page }) => {
@@ -601,44 +641,69 @@ test.describe('Palette row · paint in order', () => {
 test.describe('Palette row · the chips are one tab stop', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
+  const focused = (page) => page.evaluate(() => document.activeElement?.getAttribute('aria-label') || null)
+
   test('one chip takes Tab, arrows move between them, and Tab back finds the last one used', async ({ page }) => {
     watch(page, 'a keyboard user crossing a long chip row')
-    await seed(page, { colors: THIRTEEN, tints: current(THIRTEEN) })
-    await open(page)
-    // The palette group is one tab stop: 8 chips, one at tabindex 0.
-    await expect(paletteChips(page)).toHaveCount(8)
-    await expect(paletteChips(page).and(page.locator('[tabindex="0"]'))).toHaveCount(1)
-    await expect(paletteChips(page).and(page.locator('[tabindex="-1"]'))).toHaveCount(7)
-
-    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') || null)
-    await paletteChips(page).first().focus()
-    await page.keyboard.press('ArrowRight')
-    await page.keyboard.press('ArrowRight')
-    await expect.poll(focused).toMatch(/^Accent 500, #/)
-    await page.keyboard.press('End')
-    await expect.poll(focused).toMatch(/^Colour 8 500, #/)
-    await page.keyboard.press('Home')
-    await expect.poll(focused).toMatch(/^Primary 500, #/)
-    await page.keyboard.press('ArrowRight')
-    await expect.poll(focused).toMatch(/^Secondary 500, #/)
-
-    // One Tab goes past the palette chips (to the +N link), not on to the next chip.
-    await page.keyboard.press('Tab')
-    expect(await page.evaluate(() => document.activeElement?.classList.contains('grd-chip') && !!document.activeElement.closest('.grd-chips:not(.grd-chips--shades)'))).toBe(false)
-    // And Shift+Tab comes back to the chip that was last used.
-    await page.keyboard.press('Shift+Tab')
-    await expect.poll(focused).toMatch(/^Secondary 500, #/)
-  })
-
-  // KNOWN GAP: the roving root is the palette group only (GradientGenerator.jsx, chipsRef),
-  // so each of the eleven shade chips is a tab stop of its own and the arrows stop at the
-  // palette group's edge. The test states the intended behaviour: one stop for both groups.
-  test.fixme('the shades join the palette chips in the same single tab stop', async ({ page }) => {
-    watch(page, 'a keyboard user crossing palette chips and shades')
+    // The 8 palette chips and the 11 shades are one row of buttons with one at tabindex 0.
     await seed(page, { colors: THIRTEEN, tints: current(THIRTEEN) })
     await open(page)
     await expect(chips(page)).toHaveCount(19)
-    await expect(row(page).locator('.grd-chip[tabindex="0"]')).toHaveCount(1)
+    await expect(chips(page).and(page.locator('[tabindex="0"]'))).toHaveCount(1)
+    await expect(chips(page).and(page.locator('[tabindex="-1"]'))).toHaveCount(18)
+    await expect(paletteChips(page).first(), 'with nothing used yet, the first chip is the stop').toHaveAttribute('tabindex', '0')
+
+    await chips(page).first().focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => focused(page)).toMatch(/^Accent 500, #/)
+    await page.keyboard.press('End')
+    await expect.poll(() => focused(page)).toBe('Primary 950, #071230')
+    await page.keyboard.press('Home')
+    await expect.poll(() => focused(page)).toMatch(/^Primary 500, #/)
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => focused(page)).toMatch(/^Secondary 500, #/)
+
+    // One Tab goes past the palette chips (to the +N link), not on to the next chip or a shade.
+    await page.keyboard.press('Tab')
+    await expect(moreLink(page)).toBeFocused()
+    // And Shift+Tab comes back to the chip that was last used.
+    await page.keyboard.press('Shift+Tab')
+    await expect.poll(() => focused(page)).toMatch(/^Secondary 500, #/)
+  })
+
+  test('the shades join the palette chips in the same single tab stop', async ({ page }) => {
+    watch(page, 'a keyboard user crossing palette chips and shades')
+    await seed(page, { colors: THIRTEEN, tints: current(THIRTEEN) })
+    await open(page)
+    // 8 palette chips and 11 shades: nineteen buttons, exactly one of them in the tab order.
+    await expect(chips(page)).toHaveCount(19)
+    await expect(chips(page).and(page.locator('[tabindex="0"]'))).toHaveCount(1)
+    await expect(chips(page).and(page.locator('[tabindex="-1"]'))).toHaveCount(18)
+
+    // The arrows run on from the last palette chip into the first shade, and back.
+    await paletteChips(page).last().focus()
+    await expect.poll(() => focused(page)).toMatch(/^Colour 8 500, #/)
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => focused(page)).toBe('Primary 50, #EEF3FF')
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(() => focused(page)).toMatch(/^Colour 8 500, #/)
+    // End is the last shade and Home is the first palette chip, whichever group has focus.
+    await page.keyboard.press('End')
+    await expect.poll(() => focused(page)).toBe('Primary 950, #071230')
+    await page.keyboard.press('Home')
+    await expect.poll(() => focused(page)).toBe('Primary 500, #2F6BFF')
+    await page.keyboard.press('End')
+    await expect.poll(() => focused(page)).toBe('Primary 950, #071230')
+
+    // The tab stop follows focus: only the shade last used is at tabindex 0.
+    await expect(chips(page).and(page.locator('[tabindex="0"]'))).toHaveCount(1)
+    await expect(shadesGroup(page).getByRole('button', { name: /^Primary 950, / })).toHaveAttribute('tabindex', '0')
+    // One Tab from a shade leaves the row, and Shift+Tab comes back to that shade.
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.grd-paint'))).toBe(false)
+    await page.keyboard.press('Shift+Tab')
+    await expect.poll(() => focused(page)).toBe('Primary 950, #071230')
   })
 })
 
