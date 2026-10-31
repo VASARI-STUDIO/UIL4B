@@ -39,7 +39,7 @@
 //   · it spent one of the three free save slots, so a new free account had two;
 //   · it made `/projects`'s "No projects yet · Create your first project" panel
 //     unreachable while signed in — dead code that two other things (Onboarding's
-//     "Not now — take me to my projects", and first-run-destination.test.js's
+//     "Not now, take me to my projects", and first-run-destination.test.js's
 //     "the projects empty state still teaches") described as the landing.
 //
 // His call: stop seeding it. New accounts start empty, see the real empty

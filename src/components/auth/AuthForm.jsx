@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
 import ReportProblemLink from '../ReportProblemLink'
-import { passwordProblem, cleanDisplayName, NAME_MAX, EMAIL_MAX } from '../../utils/signupInput'
+import { passwordProblem, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
 
 // The log-in / sign-up / reset / switch form, shared by the modal (and, later,
@@ -68,7 +68,6 @@ export default function AuthForm({
   const offline = online === false
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(null) // null | 'google' | 'submit'
   const [error, setError] = useState(null) // { key, tick }
@@ -117,7 +116,9 @@ export default function AuthForm({
       if (mode === 'reset') {
         await sendReset()
       } else if (mode === 'signup') {
-        const cred = await signup(email, password, cleanDisplayName(displayName))
+        // No name is asked for: the greeting and avatar fall back to the email,
+        // and the account can add a name later.
+        const cred = await signup(email, password, '')
         onSuccess(cred?.user)
         return
       } else {
@@ -244,12 +245,6 @@ export default function AuthForm({
               )}
 
               <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
-                {mode === 'signup' && (
-                  <div className="auth-field">
-                    <label htmlFor="ui-login-name">{t('auth.name')}</label>
-                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" maxLength={NAME_MAX} disabled={disabled} />
-                  </div>
-                )}
                 {emailField}
                 {mode !== 'reset' && (
                   <div className="auth-field">

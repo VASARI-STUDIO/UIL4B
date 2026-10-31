@@ -57,8 +57,8 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   // silently becomes signed in.
   //
   // Read through refs and pinned with an empty dep list so the identity never
-  // changes: useModalDialog re-runs its whole effect when onClose changes, which
-  // would re-lock scroll, re-capture the opener and restore focus mid-life.
+  // changes. useModalDialog no longer re-runs its effect when onClose changes, so
+  // this is no longer needed for focus; the refs are what read the live loading state.
   const requestDismiss = useCallback(() => {
     if (!loadingRef.current) dismissRef.current()
   }, [])

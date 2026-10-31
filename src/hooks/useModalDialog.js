@@ -24,11 +24,34 @@ import { markScrollContainers } from '../utils/scrollContainment.js'
 // it only where the dialog's whole purpose is one field — the shade editor
 // opens onto a hue input, and landing anywhere else would cost a keyboard user
 // a tab every time they opened it.
+
+// The dialogs open right now, oldest first. Every one of them listens for keys
+// on `document` in the capture phase, and stopPropagation does not stop a
+// second listener on the SAME node, so a dialog opened over another (the
+// sign-in popup over the upgrade modal, say) used to share each Escape with the
+// one beneath it and close both. Only the top entry answers Escape and Tab.
+const openDialogs = []
+
 export default function useModalDialog(onClose, { enabled = true, initialFocus = null } = {}) {
   const ref = useRef(null)
   // The restore this hook still owes from its last cleanup — see the end of
   // the effect. Held on a ref so an effect re-run can take it over.
   const pendingRestore = useRef(null)
+
+  // THE MAIN EFFECT DEPENDS ON `enabled` ALONE. It used to list onClose and
+  // initialFocus too, so a caller passing an inline arrow re-ran the whole
+  // effect on every parent render (a toast, a timer tick) and the re-run's
+  // `.focus()` pulled focus out of the field being typed in, then re-took the
+  // scroll lock and re-captured the opener. The values the effect only READS
+  // when something happens (Escape, the first focus) live on refs instead,
+  // synced after every render. This effect is declared first, so the refs are
+  // current before the main effect runs and before any key arrives.
+  const onCloseRef = useRef(onClose)
+  const initialFocusRef = useRef(initialFocus)
+  useEffect(() => {
+    onCloseRef.current = onClose
+    initialFocusRef.current = initialFocus
+  })
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -45,8 +68,8 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // the nearest thing that still exists.
     let openerChain
     if (pendingRestore.current) {
-      // The effect re-ran before the previous cleanup's frame fired — a caller
-      // handed us a fresh onClose, say. activeElement is still inside THIS
+      // The effect re-ran before the previous cleanup's frame fired — `enabled`
+      // flipped off and on again within a frame, say. activeElement is still inside THIS
       // dialog, so capturing it now would record the dialog as its own
       // opener. Take over the chain that cleanup was about to restore to, and
       // cancel its frame so it cannot fire under a dialog that is still open.
@@ -98,10 +121,16 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
       node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
     ).filter(el => el.offsetParent !== null || el === document.activeElement)
 
-    const target = initialFocus ? node?.querySelector(initialFocus) : null
+    // Read once per open: the landing spot is decided when the dialog opens.
+    const initial = initialFocusRef.current
+    const target = initial ? node?.querySelector(initial) : null
     ;(target || node)?.focus()
 
+    const entry = {}
+    openDialogs.push(entry)
+
     const onKey = (e) => {
+      if (openDialogs[openDialogs.length - 1] !== entry) return
       // stopPropagation so a dialog opened from inside another surface closes
       // only itself rather than collapsing the whole stack.
       if (e.key === 'Escape') {
@@ -111,7 +140,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
         // can never leave the dialog without Escape.
         const menuOpen = Array.from(node?.querySelectorAll('[aria-haspopup][aria-expanded="true"]') || []).some(el => el.offsetParent !== null)
         if (menuOpen) return
-        e.stopPropagation(); onClose(); return
+        e.stopPropagation(); onCloseRef.current(); return
       }
       if (e.key !== 'Tab') return
       const list = focusables()
@@ -126,6 +155,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     document.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('keydown', onKey, true)
+      openDialogs.splice(openDialogs.indexOf(entry), 1)
       unlockScroll()
       unmark()
       // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,
@@ -171,7 +201,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
       })
       pendingRestore.current = { frame, chain }
     }
-  }, [onClose, enabled, initialFocus])
+  }, [enabled])
 
   return ref
 }

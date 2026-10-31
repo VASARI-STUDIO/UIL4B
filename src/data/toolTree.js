@@ -405,7 +405,7 @@ export const LEARN_GROUPS = [
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
-  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
+  { id: 'help', label: 'Help and getting started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
 ]
 
 /**

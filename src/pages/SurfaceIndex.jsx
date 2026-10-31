@@ -204,7 +204,7 @@ const SURFACES = {
     // too would put a second link to the same page under a heading that says
     // nothing in the grid is written yet.
     groups: LEARN_ROADMAP,
-    hint: `${LEARN_ARTICLES.length} guides live · every figure cited or computed`,
+    hint: `${LEARN_ARTICLES.length} guides. Every figure is cited or measured on the page.`,
     gridTitle: 'Topics still being written.',
     gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
   },
@@ -252,7 +252,7 @@ export default function SurfaceIndex({ surface }) {
       {surface === 'learn' && (
         <section className="srf-sec" aria-labelledby="surface-guides-heading">
           <div className="srf-sec-head" data-reveal>
-            <h2 className="srf-h2" id="surface-guides-heading">Reference, not opinion.</h2>
+            <h2 className="srf-h2" id="surface-guides-heading">Why colour and type behave the way they do on screen.</h2>
           </div>
           {/* Grouped by the topic each guide declares, behind a search over
               their full text. See src/components/LearnGuideIndex.jsx. */}
