@@ -331,7 +331,7 @@
     display: none !important;
   }
   html, body, .app-shell { background: none !important; }
-  .app-page { max-width: none; padding: 0; }
+  .app-page { max-width: none; padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
   .lgl {
     --t0: var(--print-ink);
     --t1: var(--print-ink);
