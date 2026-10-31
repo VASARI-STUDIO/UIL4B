@@ -129,9 +129,14 @@ function scrollCue(el) {
   el.addEventListener('scroll', check, { passive: true })
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null
   ro?.observe(el)
+  // Rows that arrive after mount (a list fetched late) change the scroll height
+  // without resizing the body, so watch its content too.
+  const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(check) : null
+  mo?.observe(el, { childList: true, subtree: true })
   return () => {
     el.removeEventListener('scroll', check)
     ro?.disconnect()
+    mo?.disconnect()
   }
 }
 
@@ -1579,8 +1584,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const onDown = (e) => {
       // The image dialog is a modal of its own (it closes on its scrim), so a
       // drag inside it is not an outside press. Nor is a press in the sign-in
-      // dialog a gallery like opened: the gallery stays put behind it.
-      if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
+      // dialog a gallery like opened: the gallery stays put behind it. The Pro
+      // modal is the same, and the docked panel (wide screens) closes only by
+      // its Close button, Escape or its toolbar button, never by an outside press.
+      const dockedHeld = wideDock && galleryOpen && !saveOpen && !imgOpen && !histOpen
+      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, [aria-labelledby="ui-login-title"]')) closeAllMenus()
       if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
         // An open panel that held focus hands it back to its opener, unless the
         // press landed on something that takes focus itself. The press's own
@@ -1610,7 +1618,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx])
+  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx, wideDock, galleryOpen, saveOpen, imgOpen, histOpen])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.

@@ -1042,7 +1042,15 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sw-skel-strip { height: 32px; }
 
 @media (pointer: coarse) {
-  .plb .plb-sw-info, .plb .plb-sw-compare { min-width: 44px; height: 44px; }
+  /* 44px targets inside the 20px label line: centred, with negative block margin
+     so they do not push the label down into the strip, and lifted above the
+     strip so the whole target takes the press. The ? circle stays 20px. */
+  .plb .plb-sw-line { align-items: center; position: relative; z-index: 1; }
+  .plb .plb-sw-info, .plb .plb-sw-compare { min-width: 44px; height: 44px; margin-block: -12px; }
+  .plb .plb-sw-info { margin-left: 0; border: 0; background: none; }
+  .plb .plb-sw-info > span { display: grid; place-items: center; width: 20px; height: 20px; margin: auto; border: 1px solid var(--tl-line-2); border-radius: 999px; }
+  .plb .plb-sw-info[aria-expanded="true"] { background: none; }
+  .plb .plb-sw-info[aria-expanded="true"] > span { background: var(--tl-wash); color: var(--tl-ink); }
   .plb .plb-sx-search input { height: 44px; }
 }
 
