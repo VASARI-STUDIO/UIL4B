@@ -35,6 +35,63 @@ export const PREVIEW_ASSETS = {
       changes: 'Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
     },
   },
+  'overshirt-front': {
+    folder: 'overshirt',
+    file: 'overshirt-front',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'A relaxed linen overshirt with an open collar, two chest pockets with flaps and tan buttons, seen from the front',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-front-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACwAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAAUrS5E7d723n2AAD+8eDFmrD6jbGLh7bWBVL31mEfQKD0bhhuIAAAAA==',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the buttons and their holes left out of the mask.',
+    },
+  },
+  'overshirt-back': {
+    folder: 'overshirt',
+    file: 'overshirt-back',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'The same linen overshirt seen from the back, with the yoke seam, centre pleat and button cuffs',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-back-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAADQAwCdASoQABQAPu1qrU8ppiQiMAgBMB2JaQAAW/EomJ+CsgrJFQAA/vN+VpKUouWvrqBUziUZKCYEOnZr2MTAAAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep and the buttons left out of the mask.',
+    },
+  },
+  'overshirt-pocket': {
+    folder: 'overshirt',
+    file: 'overshirt-pocket',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'A close view of a chest pocket flap with its tan button and topstitching on grey linen',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-pocket-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JaQAAW+uMdL1QkPcY/AD+6nm6cUNynx4yksk1D9WqVD7i7N2/fGApIaAAAA==',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the buttons left out of the mask.',
+    },
+  },
 }
 
 export const EXTENSIONS = ['avif', 'webp']
