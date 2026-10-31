@@ -13,6 +13,12 @@ export const PREVIEW_STATES = {
     { id: 'subscribe', label: 'Subscribe sheet' },
     { id: 'error', label: 'Subscribe, email error' },
   ],
+  product: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'soldout', label: 'Sold out size' },
+    { id: 'added', label: 'Added to bag' },
+    { id: 'focus', label: 'Focused size' },
+  ],
   card: [
     { id: 'overview', label: 'Overview' },
     { id: 'frozen', label: 'Card frozen' },
