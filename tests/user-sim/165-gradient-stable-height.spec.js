@@ -52,6 +52,29 @@ const removeButtons = (panel) => panel.getByRole('button', { name: /^Remove stop
 /** Two animation frames: layout and any state-driven re-render have landed. */
 const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 
+/**
+ * Wait until the stop window has stopped scrolling: its scrollTop unchanged for ten
+ * frames running (about 160ms). The page scrolls the active row into view with a
+ * smooth scrollTo, and `reducedMotion: 'reduce'` in test.use does not turn that
+ * off here (matchMedia reads false in the page), so two frames after a pick, an
+ * add or a removal the window can still be mid-animation. Reading then is reading
+ * a frame of the animation; reading once it has stopped is the position a designer
+ * sees. Gives up after 3s and returns the last value, so a window that never
+ * stops fails on the assertion that follows, not here.
+ */
+const windowSettled = (page) => page.locator('.grd-stops').evaluate((el) => new Promise((resolve) => {
+  const t0 = performance.now()
+  let last = el.scrollTop
+  let still = 0
+  const tick = () => {
+    still = el.scrollTop === last ? still + 1 : 0
+    last = el.scrollTop
+    if (still >= 10 || performance.now() - t0 > 3000) resolve(last)
+    else requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}))
+
 /** The sizes that must not move, in CSS pixels. */
 const SHAPE_KEYS = ['page', 'panel', 'main', 'stage', 'window', 'code', 'gen', 'paint', 'role']
 async function shapeOf(page) {
@@ -729,7 +752,18 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         }
       })
       const select = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) }).click()
-      const remove = (page, n) => panelOf(page).getByRole('button', { name: `Remove stop ${n}`, exact: true }).click()
+      // Playwright scrolls a button into view before it clicks, and an instant scroll that lands in the
+      // same frame as the page's own smooth scroll to the active row cancels that smooth scroll, leaving
+      // the window a few pixels short (measured: stuck at 284 for good, 290 being the row fully in view).
+      // A person never gets that pre-click jump, so reveal the button and let the window settle first,
+      // and the click is the only thing that moves it.
+      const remove = async (page, n) => {
+        const x = panelOf(page).getByRole('button', { name: `Remove stop ${n}`, exact: true })
+        await windowSettled(page)
+        await x.scrollIntoViewIfNeeded()
+        await windowSettled(page)
+        await x.click()
+      }
       const windowScroll = (page) => page.locator('.grd-stops').evaluate((el) => el.scrollTop)
 
       test('the Stops header counts the visible rows once there are more than three, and follows the scroll', async ({ page }) => {
@@ -865,7 +899,7 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([MAX_STOPS - 1])
         expect((await selection(page)).hexes[MAX_STOPS - 2]).toBe(was.hexes[MAX_STOPS - 2])
-        await settle(page)
+        await windowSettled(page)
         // Still down the list, with the selected row inside the window.
         expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 7)
         const inView = await page.locator('.grd-stops').evaluate((win) => {
@@ -887,7 +921,7 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([8])
         expect((await selection(page)).hexes[7], 'old row 9 slid into row 8').toBe(was.hexes[8])
-        await settle(page)
+        await windowSettled(page)
         expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 5)
       })
 
