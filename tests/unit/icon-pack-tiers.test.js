@@ -298,15 +298,18 @@ test('the gate copy is complete, count-driven, and reuses the app\'s own action 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 7), /from 5 outline sets\. .*adds 7 more sets/, "the body must render the counts it is handed")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 7), /from 5 sets\. .*plus 7 more sets/, "the body must render the counts it is handed")
   assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 1), /1 more set/, "one set is singular")
   assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 2), /2 more sets/, "two sets are plural")
   assert.match(ICON_GATE_COPY.end.anon.body(65, 5, 7), /65/)
   assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
-  assert.doesNotMatch(ICON_GATE_COPY.end.anon.heading + ICON_GATE_COPY.end.free.heading, /\d/,
+  // The signed-out heading is computed from the live set count; the free one is fixed.
+  assert.equal(ICON_GATE_COPY.end.anon.heading(12), 'Log in to open all 12 sets.')
+  assert.equal(ICON_GATE_COPY.end.anon.heading(1), 'Log in to open all 1 set.')
+  assert.doesNotMatch(ICON_GATE_COPY.end.free.heading, /\d/,
     'a fixed heading must not quote a count it cannot keep true')
   for (const text of [
-    ICON_GATE_COPY.end.anon.heading, ICON_GATE_COPY.end.anon.body(60, 5, 7), ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.anon.heading(12), ICON_GATE_COPY.end.anon.body(60, 5, 7), ICON_GATE_COPY.end.anon.chip,
     ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
   ]) {
     assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')

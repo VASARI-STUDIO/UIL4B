@@ -267,9 +267,10 @@ export const ICON_GATE_COPY = {
   // results. Counts are passed in, never typed.
   end: {
     anon: {
-      heading: 'Log in to browse the full sets.',
-      // `shown` is the icons on screen, `sets` the outline sets they come from, `n` the sets an account adds.
-      body: (shown, sets, n) => `Signed out, you see ${shown.toLocaleString()} icons from ${sets} outline sets. A free account opens every icon in them and adds ${n.toLocaleString()} more ${n === 1 ? 'set' : 'sets'}. Copying needs no account.`,
+      // `sets` is every set a free account opens: the signed-out sample's sets plus the ones behind login.
+      heading: (sets) => `Log in to open all ${sets.toLocaleString()} ${sets === 1 ? 'set' : 'sets'}.`,
+      // `shown` is the icons on screen, `sets` the sets they come from, `n` the sets an account adds.
+      body: (shown, sets, n) => `You're seeing ${shown.toLocaleString()} ${shown === 1 ? 'icon' : 'icons'} from ${sets.toLocaleString()} ${sets === 1 ? 'set' : 'sets'}. A free account opens every icon in them, plus ${n.toLocaleString()} more ${n === 1 ? 'set' : 'sets'}. Copying needs no account.`,
       action: 'Log in',
       secondary: 'See the plans',
       // The hover chip on a blurred icon.

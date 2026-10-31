@@ -147,7 +147,7 @@ test.describe('/create/icons · the masthead pill says what the grid is showing'
     await expect(
       page.locator('.ig-end[data-gate="anon"] .ig-end-p'),
       'the gate never went back to naming the sets this visitor is browsing',
-    ).toContainText(`from ${sets} outline sets`, { timeout: 20000 })
+    ).toContainText(`from ${sets} sets`, { timeout: 20000 })
     // …and it is stating a POPULATED grid, not an empty one: the count is what
     // says the browse actually re-ran rather than the line merely re-rendering.
     await expect(page.locator('.ig .ic').first()).toBeVisible()

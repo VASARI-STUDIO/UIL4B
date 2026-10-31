@@ -100,7 +100,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
 
   // The "N sets" text is gone with the result line; the toolbar count says the listing landed, and the
   // one-answer-per-pack behaviour is asserted on the requests below.
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 20000 })
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 20000 })
 
   expect(await page.locator('.ic').count(), 'the grid is populated from the fixture').toBeGreaterThan(20)
 
@@ -178,8 +178,8 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await expect(notice).toContainText('showing built-in icons')
   expect(await page.locator('.ic').count(), 'the built-in set is on screen, not an empty grid').toBeGreaterThan(20)
   // The fallback's count is in the toolbar now (the "Built-in icons" label has no text of its own: the notice above says it).
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/)
-  const held = Number((await page.locator('.lbry-count').textContent()).replace(/[^\d]/g, ''))
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/)
+  const held = Number((await page.locator('#ig-result-count').textContent()).replace(/[^\d]/g, ''))
   expect(held, 'the count is the built-in set, at least the cells drawn').toBeGreaterThanOrEqual(await page.locator('.ig .ic').count())
   await expect(page.getByText(/· Offline/)).toHaveCount(0)
 
@@ -196,7 +196,7 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await page.unrouteAll()
   await page.keyboard.press('Enter')
   await expect(notice).toHaveCount(0, { timeout: 20000 })
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 20000 })
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 20000 })
   // The summary line is up once the packs are named; the glyphs are a second round
   // of requests a beat later, so wait for cells to paint before counting them.
   await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 }).toBeGreaterThan(20)
@@ -246,13 +246,15 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
 
   // Wait for the fallback to have settled, so what follows is measured against
   // the built-in set rather than a grid still loading.
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 15000 })
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/, { timeout: 15000 })
 
   const select = page.getByRole('button', { name: 'Icon pack' })
   await select.click()
   const packs = await page.getByRole('listbox').getByRole('option').evaluateAll(rows => rows.map(row => row.dataset.value))
   await page.keyboard.press('Escape')
-  const selectable = packs.filter((p) => p && p !== 'custom' && p !== 'logodev' && p !== 'all')
+  // My icons is a toggle beside the menu now, so the menu must not offer it as a pack.
+  expect(packs, 'My icons is no longer a pack-menu entry').not.toContain('custom')
+  const selectable = packs.filter((p) => p && p !== 'logodev' && p !== 'all')
 
   // POSITIVE CONTROL. Everything below is per-pack, so an empty or broken pack
   // control satisfies it while measuring nothing.
@@ -465,7 +467,7 @@ test('signed in free: the account packs open, the brand, flag and emoji packs ar
   // draws the first of them from the API; the later packs' glyphs are asked for as
   // the visitor scrolls, so the packs that are LISTED are the presence to measure.
   const open = [...OUTLINED, ...NEEDS_ACCOUNT]
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons$/)
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/)
   const fetched = packsIn(urls)
   for (const pack of open) {
     expect([...listed], `${pack} has a free official browser, so an account lists it`).toContain(pack)
@@ -548,7 +550,8 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
     'only the recent the visitor may still have is drawn').toBe(1)
 
   // The visitor's own icons, at the narrowest tier there is.
-  await chooseMenuOption(page, page.locator('.lbry-select'), 'custom')
+  await page.locator('button.ig-mine').click()
+  await expect(page.locator('button.ig-mine')).toHaveAttribute('aria-pressed', 'true')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
   await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
@@ -621,16 +624,14 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered').toBe(5)
+  expect(anon.chips.length, 'the group tray rendered').toBe(4)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
       .toBe(/ · (Pro|Log in)$/.test(c.name))
   }
-  for (const open of ['My Icons']) {
-    expect(anon.chips.find((c) => c.name.startsWith(open)).badge, `${open} is open signed out`).toBe(false)
-  }
-  expect(locked(anon).map((c) => c.name), 'signed out, every group but My Icons is locked and asks for Pro').toEqual(
+  expect(anon.chips.map((c) => c.name).filter((n) => /^My icons/i.test(n)), 'My icons is a toggle, not a group chip').toEqual([])
+  expect(locked(anon).map((c) => c.name), 'signed out, every group is locked and asks for Pro').toEqual(
     ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
   )
   expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
@@ -653,7 +654,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     const page = await ctx.newPage()
     watch(page, 'visitor reloading cached icon collections')
     await go(page, '/create/icons')
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 outline sets', { timeout: 20000 })
+    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     // The default listing names its packs from the committed heads, so there is nothing to ask /collection.
     expect(iconifyRequests(ctx).collection).toBe(0)
@@ -661,7 +662,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     expect(new Set(packs).size).toBe(5)
 
     await page.reload()
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 outline sets', { timeout: 20000 })
+    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
     expect(iconifyRequests(ctx).collection).toBe(0)
