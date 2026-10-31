@@ -152,7 +152,7 @@ test.describe('the Help centre', () => {
 // the same kind of line: the Free card's note.
 test.describe('the Plans page reassurance lines', () => {
   test('the Free card note is the design\'s sentence without the retired payment reassurances', async ({ page }) => {
-    // The design reads "Free because the tools cost us nothing to run. No trial
+    // The page once read "Free because the tools cost us nothing to run. No trial
     // clock, no card." Both trailing clauses are the retired "no card" class
     // the product no longer makes; the sentence before them
     // stays, and the slot keeps the design's two-line height.
@@ -161,7 +161,7 @@ test.describe('the Plans page reassurance lines', () => {
     await expectRendered(page, '/plans')
 
     const note = page.locator('.pr-head--free .pr-note')
-    await expect(note).toHaveText('Free because the tools cost us nothing to run.')
+    await expect(note).toHaveText('Free because most tools run in your browser.')
     const text = (await page.locator('.pricing main').innerText()).toLowerCase()
     for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {
       expect(text, `/plans says "${phrase}" again`).not.toContain(phrase)
