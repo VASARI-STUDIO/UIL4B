@@ -9,13 +9,14 @@ const PERSONA = 'a designer opening the icon library on a slow connection'
 async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: /^Filters\b/ })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const inPanel = await filters.isVisible()
+  // The pack menu sits on the toolbar when it fits; otherwise it is in the Filters panel.
+  const inPanel = !(await page.locator('.ig-toolbar').getByRole('button', { name: 'Icon pack' }).isVisible()) && await filters.isVisible()
   const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
   if (inPanel) {
     await filters.click()
     await expect(panel).toBeVisible()
   }
-  await chooseMenuOption(page, (inPanel ? panel : page).getByRole('button', { name: 'Icon pack' }), pack)
+  await chooseMenuOption(page, (inPanel ? panel : page.locator('.ig-toolbar')).getByRole('button', { name: 'Icon pack' }), pack)
   if (await sheet.isVisible()) {
     await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
