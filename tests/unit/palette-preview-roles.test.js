@@ -144,7 +144,11 @@ test('3 . the five brand roles are exactly the hex values the CSS export writes'
 })
 
 test('4 . every --pv-* the stylesheet reads is set by pvVars', () => {
-  const css = stripJs(ALL_CSS)
+  // The palette example scenes keep their stylesheets beside their components,
+  // so the scan reads those as well as the app stylesheets.
+  const sceneCss = ['src/components/palette/examples'].flatMap((dir) =>
+    fs.readdirSync(path.join(process.cwd(), dir)).filter((f) => f.endsWith('.css')).map((f) => fs.readFileSync(path.join(process.cwd(), dir, f), 'utf8')))
+  const css = stripJs([ALL_CSS, ...sceneCss].join('\n'))
   const used = new Set([...css.matchAll(/var\((--pv-[a-z0-9-]+)/g)].map((x) => x[1]))
   const set = new Set(Object.keys(pvVars(derivePaletteRoles(['#3b5bdb', '#f08c00', '#0ca678', '#e8f0fe', '#1c2541'], {}))))
   // A bar's height or a progress fill's width is set on that one element, not

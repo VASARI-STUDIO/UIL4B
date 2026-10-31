@@ -35,7 +35,7 @@ import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // The preview dialog: the scene list and the role legend. Its own chunk, loaded
 // when Preview is first pointed at or opened (previewLoader.js).
-import { DEFAULT_SCENE, openingScene } from '../data/palettePreviewScenes'
+import { DEFAULT_SCENE, PREVIEW_SCENES, openingScene } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import HarmonyWheel from '../components/palette/HarmonyWheel'
@@ -3662,7 +3662,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}
-            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'See your palette on all eight previews, in light and dark.' })}
+            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: `See your palette on all ${PREVIEW_SCENES.length} previews, in light and dark.` })}
             onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
           />
         </Suspense>
