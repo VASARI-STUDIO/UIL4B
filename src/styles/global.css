@@ -3839,7 +3839,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    squares. That is a spacing system, not more chrome, so it costs the row no
    width at the very widths where width is short. The clusters here are:
    explore (what you go looking for) · generate · step back · commit. */
-.plb-imgactions .btn{flex:1}
 
 /* Board interactions: insert-grow animation, drag-reorder states, gap inserts */
 @keyframes plb-in{from{flex-grow:.02;opacity:.2}to{flex-grow:1;opacity:1}}
