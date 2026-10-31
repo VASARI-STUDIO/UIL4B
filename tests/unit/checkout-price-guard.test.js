@@ -16,6 +16,7 @@ const NOW = 1_800_000_000_000
 const price = (id, overrides = {}) => ({
   id,
   active: true,
+  product: { id: 'prod_1', active: true },
   recurring: { interval: 'month', interval_count: 1 },
   ...overrides,
 })
