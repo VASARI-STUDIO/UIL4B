@@ -10,6 +10,7 @@ import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { lockScroll } from '../utils/scrollLock'
 import useExportGate from '../hooks/useExportGate'
+import useModalDialog from '../hooks/useModalDialog'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
@@ -1573,10 +1574,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }
   }, [])
 
+  // The save picker is a dialog of its own, stacked on this one. The shared hook
+  // gives it the focus move, the Tab trap, and an Escape that closes only the
+  // picker and hands focus back to the Save button that opened it.
+  const closeSavePicker = () => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }
+  const pickerRef = useModalDialog(closeSavePicker, { enabled: savePickerOpen })
+  // Read by the panel's key handler below. A ref, because that effect must not
+  // re-run (and re-focus the panel) every time the picker opens or closes.
+  const savePickerOpenRef = useRef(false)
+  useEffect(() => { savePickerOpenRef.current = savePickerOpen }, [savePickerOpen])
+
   // Move focus into the panel, trap Tab, close on Escape (mirror ExportPanel).
   useEffect(() => {
     panelRef.current?.focus()
     const onKey = (e) => {
+      // While the picker is open it owns Escape and Tab. This does not rely on
+      // which listener runs first.
+      if (savePickerOpenRef.current) return
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
       // Only what can take focus right now: a hidden Similar tile (visibility
@@ -2581,6 +2595,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               role="dialog"
               aria-modal="true"
               aria-labelledby="icust-pick-title"
+              tabIndex={-1}
+              ref={pickerRef}
               onMouseDown={(e) => e.stopPropagation()}
             >
               <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
@@ -2647,7 +2663,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </button>
               )}
               {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
-              <button type="button" className="icust-gate-dismiss" onClick={() => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }}>Cancel</button>
+              <button type="button" className="icust-gate-dismiss" onClick={closeSavePicker}>Cancel</button>
             </div>
           </div>
         )}

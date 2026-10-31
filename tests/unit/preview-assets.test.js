@@ -22,7 +22,7 @@ const SOURCES = new Set(['Photo', 'Render', 'Generated', 'Map'])
 const NEEDS_URL = new Set(['Photo', 'Map'])
 
 const KB = 1024
-const BUDGET = { desktop: 300 * KB, phone: 140 * KB, mask: 40 * KB }
+const BUDGET = { desktop: 300 * KB, phone: 140 * KB, mask: 40 * KB, layer: 50 * KB, vector: 110 * KB }
 
 const entries = Object.entries(PREVIEW_ASSETS)
 
@@ -86,9 +86,28 @@ test('every image has real alt text, its size, and a placeholder that is a small
   for (const [id, a] of entries) {
     assert.ok(a.alt && a.alt.trim().length >= 12, `${id}: alt text is missing or too short`)
     assert.ok(a.width > 0 && a.height > 0, `${id}: width and height are needed so the image reserves its space`)
+    // A vector asset has no sized files to wait for, so it has no placeholder and no widths.
+    if (a.vector) continue
     assert.match(a.placeholder, /^data:image\/(webp|jpeg|png|avif);base64,/, `${id}: the placeholder is not a data URI`)
     assert.ok(a.placeholder.length < 1200, `${id}: the placeholder is ${a.placeholder.length} characters; it should be a 16px blur`)
     assert.deepEqual([...a.widths], [...a.widths].sort((x, y) => x - y), `${id}: widths are not ascending`)
+  }
+})
+
+test('a vector asset is single-colour layers in one viewBox, with no script and no colour of its own', () => {
+  const vectors = entries.filter(([, a]) => a.vector)
+  assert.ok(vectors.length > 0, 'expected at least one vector asset (the Ridgeline map)')
+  for (const [id, a] of vectors) {
+    assert.ok(Array.isArray(a.vector.layers) && a.vector.layers.length > 0, `${id}: vector.layers is empty`)
+    assert.ok(!a.widths && !a.mask && !a.placeholder, `${id}: a vector asset has no sized files, mask or placeholder`)
+    for (const layer of a.vector.layers) {
+      const text = fs.readFileSync(path.join(DIR, `${a.folder}/${layer}.svg`), 'utf8')
+      assert.match(text, new RegExp(`^<svg [^>]*viewBox="0 0 ${a.width} ${a.height}"`), `${id}/${layer}: the viewBox is not 0 0 ${a.width} ${a.height}`)
+      assert.doesNotMatch(text, /<script|<style|<image|href=|onload/i, `${id}/${layer}: a layer is shapes only`)
+      // The palette supplies the colour through mask-image, which reads only alpha: black or none.
+      const colours = [...text.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map((m) => m[1])
+      for (const c of colours) assert.ok(c === '#000' || c === 'none', `${id}/${layer}: ${c} is a colour the palette cannot repaint`)
+    }
   }
 })
 
@@ -99,8 +118,15 @@ test('a recolourable image has a mask, and a fixed one has none', () => {
   }
 })
 
-test('the files fit the weight budgets: 300 KB at 1440, 140 KB at 390, masks 40 KB', () => {
+test('the files fit the weight budgets: 300 KB at 1440, 140 KB at 390, masks 40 KB, a vector layer 50 KB and a map 110 KB', () => {
   for (const [id, a] of entries) {
+    if (a.vector) {
+      const sizes = a.vector.layers.map((l) => size(`${a.folder}/${l}.svg`))
+      sizes.forEach((n, i) => assert.ok(n <= BUDGET.layer, `${id}/${a.vector.layers[i]}: ${n} bytes, over 50 KB`))
+      const total = sizes.reduce((x, y) => x + y, 0)
+      assert.ok(total <= BUDGET.vector, `${id}: its layers are ${total} bytes together, over 110 KB`)
+      continue
+    }
     for (const ext of EXTENSIONS) {
       const widest = size(`${a.folder}/${a.file}-${a.widths[a.widths.length - 1]}.${ext}`)
       const narrowest = size(`${a.folder}/${a.file}-${a.widths[0]}.${ext}`)
@@ -117,6 +143,7 @@ const pngSize = (buf) => [buf.readUInt32BE(16), buf.readUInt32BE(20)]
 
 test('the files are the size the entry says, so the image reserves its space and nothing shifts', () => {
   for (const [id, a] of entries) {
+    if (a.vector) continue
     const widest = a.widths[a.widths.length - 1]
     for (const w of a.widths) {
       const dims = webpSize(fs.readFileSync(path.join(DIR, `${a.folder}/${a.file}-${w}.webp`)))

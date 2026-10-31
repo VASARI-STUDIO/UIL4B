@@ -10,9 +10,31 @@
 // the example tints it at render time (src/components/palette/Recolour.jsx), so
 // one file serves every palette. A fixed image has no mask and is never tinted.
 //
+// A vector asset (a map) is a set of monochrome SVG layers that share one viewBox,
+// <file>.svg per layer name in `vector.layers`. The example paints each layer with a
+// palette colour through CSS mask-image, so the layers flip with the mode and the
+// palette like any other part of the scene. It has no sized files, mask or placeholder.
+//
 // Plain data, no React.
 
 export const PREVIEW_ASSETS = {
+  'coot-tha-osm': {
+    folder: 'ridgeline',
+    // Painted back to front: bush and parks, water, streets, then paths.
+    vector: { layers: ['park', 'water', 'roads', 'paths'] },
+    // The viewBox every layer shares.
+    width: 1200,
+    height: 970,
+    alt: 'A map of Mt Coot-tha in Brisbane: bushland and parks, creeks, streets and walking tracks',
+    recolourable: false,
+    credit: {
+      source: 'Map',
+      author: 'OpenStreetMap contributors',
+      licence: 'Open Database Licence (ODbL) 1.0',
+      url: 'https://www.openstreetmap.org/copyright',
+      changes: 'Streets, tracks, bushland, parks and water for the Mt Coot-tha area, simplified and redrawn as four single-colour layers. The route drawn over it was found on the same tracks, with ground heights from NASA SRTM (public domain), read through OpenTopoData.',
+    },
+  },
   'card-front': {
     folder: 'card',
     // The base name of the sized files: <file>-<width>.avif and .webp.
@@ -35,6 +57,97 @@ export const PREVIEW_ASSETS = {
       changes: 'Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
     },
   },
+  'ferry-morning': {
+    folder: 'ferry',
+    file: 'ferry-morning',
+    widths: [640, 1080],
+    width: 1672,
+    height: 941,
+    alt: 'A cream and green harbour ferry pulling away from a sandstone wharf on calm water in the early morning',
+    recolourable: false,
+    placeholder: 'data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAADQAQCdASoQAAkAA4BaJZQAAxZfLMk4AAD+9kiF/6ItpYzyUFWCjScnSLfCLxd/2qDIO3xnAAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Two small shapes on the upper deck and in the wheelhouse glass painted out, saturation lowered by a tenth, highlights held under 97 percent, and resized to 640 and 1080 pixels wide.',
+    },
+  },
+  'ferry-morning-portrait': {
+    folder: 'ferry',
+    file: 'ferry-morning-portrait',
+    widths: [480, 752],
+    width: 752,
+    height: 940,
+    alt: 'A cream and green harbour ferry pulling away from a sandstone wharf on calm water in the early morning, cropped upright',
+    recolourable: false,
+    placeholder: 'data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAADQAwCdASoQABQAPu1kqk4ppaQiMAgBMB2JZwDE2CHfrXCHIn1QDwwA/uqK5kkFXupXhgQCHqgemjaCiIKJb4yrDND/tslGPwPfrkCHkQ4Ded87gAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'The upright 4 by 5 crop of the same picture, with the same retouching and grade, resized to 480 and 752 pixels wide.',
+    },
+  },
+  'overshirt-front': {
+    folder: 'overshirt',
+    file: 'overshirt-front',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'A relaxed linen overshirt with an open collar, two chest pockets with flaps and tan buttons, seen from the front',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-front-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACwAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAAUrS5E7d723n2AAD+8eDFmrD6jbGLh7bWBVL31mEfQKD0bhhuIAAAAA==',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem, the buttons and their holes left out of the mask.',
+    },
+  },
+  'overshirt-back': {
+    folder: 'overshirt',
+    file: 'overshirt-back',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'The same linen overshirt seen from the back, with the yoke seam, centre pleat and button cuffs',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-back-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAADQAwCdASoQABQAPu1qrU8ppiQiMAgBMB2JaQAAW/EomJ+CsgrJFQAA/vN+VpKUouWvrqBUziUZKCYEOnZr2MTAAAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem and the buttons left out of the mask.',
+    },
+  },
+  'overshirt-pocket': {
+    folder: 'overshirt',
+    file: 'overshirt-pocket',
+    widths: [640, 1080],
+    width: 1080,
+    height: 1350,
+    alt: 'A close view of a chest pocket flap with its tan button and topstitching on grey linen',
+    // The fabric is the part the palette colours; the buttons are left out of the mask and stay natural tan.
+    recolourable: true,
+    mask: 'overshirt-pocket-mask.png',
+    placeholder: 'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JaQAAW+uMdL1QkPcY/AD+6nm6cUNynx4yksk1D9WqVD7i7N2/fGApIaAAAA==',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the buttons left out of the mask.',
+    },
+  },
 }
 
 export const EXTENSIONS = ['avif', 'webp']
@@ -48,8 +161,12 @@ export const maskUrl = (asset) => `/previews/${asset.folder}/${asset.mask}`
 /** A srcset string for one format: "<url> 640w, <url> 1080w". */
 export const srcSet = (asset, ext) => asset.widths.map((w) => `${assetUrl(asset, w, ext)} ${w}w`).join(', ')
 
+/** The public URL of one layer of a vector asset. */
+export const layerUrl = (asset, layer) => `/previews/${asset.folder}/${layer}.svg`
+
 /** The path, relative to public/previews/, of every file an asset owns. */
 export function assetFiles(asset) {
+  if (asset.vector) return asset.vector.layers.map((l) => `${asset.folder}/${l}.svg`)
   const files = []
   for (const w of asset.widths) for (const ext of EXTENSIONS) files.push(`${asset.folder}/${asset.file}-${w}.${ext}`)
   if (asset.mask) files.push(`${asset.folder}/${asset.mask}`)

@@ -8,6 +8,22 @@
 // Plain data, so the dialog can build the menu without loading the example.
 
 export const PREVIEW_STATES = {
+  editorial: [
+    { id: 'article', label: 'Article' },
+    { id: 'subscribe', label: 'Subscribe sheet' },
+    { id: 'error', label: 'Subscribe, email error' },
+  ],
+  product: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'soldout', label: 'Sold out size' },
+    { id: 'added', label: 'Added to bag' },
+    { id: 'focus', label: 'Focused size' },
+  ],
+  trail: [
+    { id: 'activity', label: 'Activity' },
+    { id: 'live', label: 'Live tracking' },
+    { id: 'pr', label: 'Segment PR' },
+  ],
   card: [
     { id: 'overview', label: 'Overview' },
     { id: 'frozen', label: 'Card frozen' },

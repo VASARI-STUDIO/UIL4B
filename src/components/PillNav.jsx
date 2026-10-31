@@ -481,7 +481,10 @@ function AppHeader() {
     if (sheet && sheetSection === 'account') document.getElementById('pnav-sheet-account')?.scrollIntoView({ block: 'start' })
   }, [sheet, sheetSection])
 
-  // The sheet locks the page's scroll and keeps Tab inside itself.
+  // The sheet locks the page's scroll and keeps Tab inside itself. Its Close is
+  // the header's menu button, which sits above the sheet and outside it, so the
+  // ring is that button followed by the sheet's controls: Shift+Tab from the
+  // first control reaches Close, and Tab from Close re-enters the sheet.
   useEffect(() => {
     if (!sheet) return
     const unlockScroll = lockScroll()
@@ -492,21 +495,23 @@ function AppHeader() {
     focusable()[0]?.focus()
     const trap = (event) => {
       if (event.key !== 'Tab') return
+      const closeBtn = mobileBtnRef.current
       const items = focusable()
-      if (!items.length) return
-      const first = items[0]
-      const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
+      const ring = closeBtn && closeBtn.getClientRects().length > 0 ? [closeBtn, ...items] : items
+      const at = ring.indexOf(document.activeElement)
+      // Focus in another layer (a dialog opened from the sheet) is not ours.
+      if (at < 0) return
+      const last = ring.length - 1
+      let next = null
+      if (event.shiftKey) next = at === 0 ? last : (ring[0] === closeBtn && at === 1 ? 0 : null)
+      else next = at === last ? 0 : (ring[0] === closeBtn && at === 0 ? 1 : null)
+      if (next === null || ring.length < 2) return
+      event.preventDefault()
+      ring[next].focus()
     }
-    panel?.addEventListener('keydown', trap)
+    document.addEventListener('keydown', trap)
     return () => {
-      panel?.removeEventListener('keydown', trap)
+      document.removeEventListener('keydown', trap)
       unlockScroll()
       unmark()
     }
@@ -816,6 +821,7 @@ function AppHeader() {
                     className="pop pnav-pop pnav-pop--account"
                     ref={accountPopRef}
                     id="pnav-account-pop"
+                    role="group"
                     aria-label="Account and settings"
                     tabIndex={-1}
                   >
@@ -870,7 +876,8 @@ function AppHeader() {
                     className="pop pnav-pop"
                     ref={accountPopRef}
                     id="pnav-account-pop"
-                    aria-label="Menu"
+                    role="group"
+                    aria-label="Settings and sign in"
                     tabIndex={-1}
                   >
                     <p className="pnav-pop-head">Appearance</p>

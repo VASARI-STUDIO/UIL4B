@@ -80,6 +80,14 @@ function walk(dir) {
 // so both routes count. A local trap is recognised by it intercepting Tab.
 const TRAPS_FOCUS = /useModalDialog|key !== 'Tab'|key === 'Tab'/
 
+// A sheet inside a dialog that already traps focus (the Orra bag sheet in a
+// preview scene) cannot use the hook again: a second hook would lock the scroll
+// twice, steal focus from the dialog and add a second Escape handler. It keeps
+// focus in by making the page behind it `inert`, which removes that page from
+// Tab order and from the pointer. The test is a JSX `inert={...}` attribute with
+// a real expression, read from comment-stripped source.
+const INERT_BEHIND = /\binert=\{(?!\s*(?:false|undefined|null)\s*\})[^}]+\}/
+
 // `[aria-modal="true"]` also appears inside querySelector strings — PaletteBuilder
 // uses one to suppress its spacebar shortcut while any dialog is open. That is a
 // READ, not a declaration, and must not be counted as one.
@@ -292,21 +300,31 @@ const loadHook = (dom) => {
     `${HOOK_PATH} has gained a static import this harness does not stub:\n  `
     + (out.match(/^\s*import\s.*$/m) || [''])[0].trim())
 
-  // A React small enough to drive one hook: a stable ref, and an effect that
-  // runs immediately and hands back its cleanup.
-  let cleanup = null
-  const refs = []
-  let refCursor = 0
+  // A React small enough to drive the hook: stable refs, and effects that run
+  // immediately, hand back a cleanup, and are skipped on a later render whose
+  // dependency list is unchanged (compared with Object.is, as React does). An
+  // effect with NO dependency list runs on every render. Several components
+  // can be mounted at once, each with its own refs and effects, sharing the one
+  // loaded copy of the hook — and with it the hook's module-level state.
+  let inst = null
+  const newInstance = () => ({ refs: [], refCursor: 0, effects: [], effectCursor: 0 })
   const sandbox = {
     console,
     document: dom.document,
     assert,
     useRef: (init) => {
-      const i = refCursor++
-      if (refs.length <= i) refs[i] = { current: init }
-      return refs[i]
+      const i = inst.refCursor++
+      if (inst.refs.length <= i) inst.refs[i] = { current: init }
+      return inst.refs[i]
     },
-    useEffect: (fn) => { cleanup = fn() },
+    useEffect: (fn, deps) => {
+      const slot = inst.effects[inst.effectCursor++] ||= { deps: null, cleanup: null }
+      if (deps && slot.deps && deps.length === slot.deps.length
+        && deps.every((d, k) => Object.is(d, slot.deps[k]))) return
+      slot.cleanup?.()
+      slot.cleanup = fn() || null
+      slot.deps = deps || null
+    },
     getLenis: () => (dom.lenisPresent ? dom.lenis : null),
     markScrollContainers: () => { dom.marked += 1; return () => { dom.unmarked += 1 } },
     requestAnimationFrame: (fn) => { const id = ++dom.frameSeq; dom.frames.push({ id, fn }); return id },
@@ -324,19 +342,31 @@ const loadHook = (dom) => {
    *  doing that consumes index 0 and hands the hook a second, empty ref, which
    *  is a null `node` and a hook that silently does almost nothing. */
   return (onClose, options, node) => {
-    refCursor = 0
-    refs.length = 0
-    refs[0] = { current: node }
-    useModalDialog(onClose, options)
-    const close = () => { const c = cleanup; cleanup = null; return c?.() }
-    /** The effect re-running on the SAME component: React runs the old
-     *  cleanup, then the effect body again, with the refs it already holds. */
+    const me = newInstance()
+    me.refs[0] = { current: node }
     // The hook is called outside React on purpose — this whole harness is
     // that — and the rule keys on the function's NAME, which is why the
     // anonymous mount above never tripped it.
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const rerun = () => { close(); refCursor = 0; useModalDialog(onClose, options) }
-    return { ref: refs[0], close, rerun }
+    const render = (c, o) => {
+      inst = me
+      me.refCursor = 0
+      me.effectCursor = 0
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useModalDialog(c, o)
+    }
+    render(onClose, options)
+    /** Unmount: every effect's cleanup runs, and the slots are emptied. */
+    const close = () => {
+      for (const slot of me.effects) { const c = slot.cleanup; slot.cleanup = null; slot.deps = null; c?.() }
+    }
+    /** A later render of the SAME component with new arguments, the way a
+     *  parent re-rendering hands the hook a fresh inline `onClose`. Effects
+     *  whose dependencies are unchanged do not run again. */
+    const rerender = (c, o = options) => render(c, o)
+    /** The main effect forced to re-run on the SAME component: React runs the
+     *  old cleanup, then the effect body again, with the refs it already holds. */
+    const rerun = () => { close(); render(onClose, options) }
+    return { ref: me.refs[0], close, rerun, rerender }
   }
 }
 
@@ -367,7 +397,7 @@ function scene({ initialFocus = null, enabled = true, lenis = true } = {}) {
   const mount = loadHook(dom)
   const handle = mount(() => closes.push(1), { enabled, initialFocus }, dialog)
 
-  return { dom, menu, opener, dialog, first, middle, last, closes, ...handle }
+  return { dom, menu, opener, dialog, first, middle, last, closes, mount, ...handle }
 }
 
 // ── The file-wide sweeps, which stay source scans ───────────────────────────
@@ -378,6 +408,7 @@ test('every dialog that claims aria-modal actually traps focus', () => {
     const src = fs.readFileSync(file, 'utf8')
     if (!DECLARES_MODAL.test(src)) continue
     if (TRAPS_FOCUS.test(src)) continue
+    if (INERT_BEHIND.test(stripJs(src))) continue
     offenders.push(path.relative(process.cwd(), file))
   }
   assert.deepEqual(offenders, [],
@@ -540,8 +571,8 @@ test('the restore waits a frame, so the key that closed the dialog cannot land o
 })
 
 test('a dialog whose effect re-runs before the frame keeps its original opener', () => {
-  // A caller that passes a fresh onClose each render re-runs the effect: old
-  // cleanup, then the body again. activeElement at that moment is the dialog
+  // The main effect re-running (`enabled` flipping off and on inside a frame):
+  // old cleanup, then the body again. activeElement at that moment is the dialog
   // itself, so a naive capture would make the dialog its own opener and the
   // queued restore would fire underneath a dialog that is still open.
   const s = scene()
@@ -552,6 +583,78 @@ test('a dialog whose effect re-runs before the frame keeps its original opener',
   s.dom.frame()
   assert.equal(s.dom.document.activeElement, s.opener,
     'the re-run lost the real opener — the dialog recorded itself as the thing to return to')
+})
+
+// THE DEFECT: the main effect used to depend on [onClose, enabled, initialFocus],
+// so a parent re-render that handed over an inline arrow re-ran it, and the
+// re-run's .focus() pulled focus out of the field being typed in.
+test('a parent re-render with a fresh onClose does not re-run the effect or take focus back', () => {
+  const s = scene({ initialFocus: '.hue' })
+  s.last.focus()            // the user moves on and is typing in a later control
+  assert.equal(s.dom.document.activeElement, s.last)
+  const focusCalls = s.dialog.focusCount + s.middle.focusCount
+
+  const second = []
+  s.rerender(() => second.push(1), { initialFocus: '.hue' })
+  s.rerender(() => second.push(1), { initialFocus: '.other' })
+
+  assert.equal(s.dom.document.activeElement, s.last,
+    'a re-render moved focus away from the control being used')
+  assert.equal(s.dialog.focusCount + s.middle.focusCount, focusCalls,
+    'the initial focus ran again on a re-render')
+  assert.equal(s.dom.listeners.filter(l => l.type === 'keydown').length, 1,
+    'the key listener was torn down and re-added')
+  assert.equal(s.dom.marked, 1, 'the scroll containers were re-marked on a re-render')
+  assert.equal(s.dom.lenis.stopped, 1, 'the scroll lock was re-taken on a re-render')
+  assert.equal(s.dom.frames.length, 0, 'a re-render queued a focus restore')
+})
+
+test('Escape calls the onClose from the latest render, not the one the dialog opened with', () => {
+  const s = scene()
+  const latest = []
+  s.rerender(() => latest.push(1))
+  s.dom.press('Escape')
+  assert.equal(latest.length, 1, 'Escape ran a stale onClose')
+  assert.equal(s.closes.length, 0, 'the onClose from the first render was called')
+})
+
+// Two dialogs listen on `document` in the capture phase, and stopPropagation
+// does not stop the second of them. Without a stack, one Escape closed both.
+test('with a dialog open over another, Escape closes only the top one', () => {
+  const s = scene()
+  const upper = s.dom.el('div', { focusable: false })
+  upper.tabIndex = -1
+  upper._focusable = true
+  s.dom.document.body.appendChild(upper)
+  const upperCloses = []
+  const upperHandle = s.mount(() => upperCloses.push(1), {}, upper)
+  assert.equal(s.dom.document.activeElement, upper)
+
+  const event = s.dom.press('Escape')
+  assert.equal(upperCloses.length, 1, 'the top dialog did not close')
+  assert.equal(s.closes.length, 0, 'the dialog underneath closed on the same Escape')
+  assert.ok(event.propagationStopped)
+
+  upperHandle.close()
+  s.dom.press('Escape')
+  assert.equal(s.closes.length, 1, 'once the top dialog is gone, Escape reaches the one beneath')
+})
+
+test('with a dialog open over another, Tab is trapped by the top one only', () => {
+  const s = scene()
+  const upper = s.dom.el('div', { focusable: false })
+  upper.tabIndex = -1
+  upper._focusable = true
+  const only = s.dom.el('button')
+  s.dom.document.body.appendChild(upper)
+  upper.appendChild(only)
+  s.mount(() => {}, {}, upper)
+  only.focus()
+  // The lower dialog's last control holds no focus, but a stale listener would
+  // still run its own wrap logic. Put focus on it to prove it is ignored.
+  s.last.focus()
+  const event = s.dom.press('Tab')
+  assert.ok(!event.defaultPrevented, 'the dialog underneath wrapped Tab while another was on top')
 })
 
 test('the deferred restore yields to focus that moved somewhere live in the meantime', () => {
@@ -656,4 +759,18 @@ test('the upgrade dialog offers an explicit way to decline', () => {
     'no labelled button closes the upgrade dialog. The corner ✕ is not a way to decline — '
     + 'declining has to be exactly as easy as accepting, which means a real button with a '
     + 'real label sitting next to the one that says yes.')
+})
+
+// The icon customizer's own Escape handler is a plain document listener, so it
+// cannot tell that the "Save to a project" picker is open on top of it. The
+// picker must be a real modal (the hook) and the customizer must stand down.
+test('the icon customizer\'s Escape handler stands down while the save picker is open', () => {
+  const src = stripJs(fs.readFileSync(path.join(SRC, 'pages/IconLibrary.jsx'), 'utf8'))
+  assert.match(src, /useModalDialog\(closeSavePicker,\s*\{\s*enabled:\s*savePickerOpen\s*\}\)/,
+    'the save picker no longer uses the shared modal hook')
+  assert.match(src, /ref=\{pickerRef\}/, 'the picker dialog does not carry the hook\'s ref')
+  const guard = src.indexOf('if (savePickerOpenRef.current) return')
+  const escape = src.indexOf("if (e.key === 'Escape') { onClose(); return }")
+  assert.ok(guard > -1 && escape > -1 && guard < escape,
+    'the customizer closes on Escape before checking whether the picker is open')
 })

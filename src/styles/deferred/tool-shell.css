@@ -179,15 +179,19 @@
    bar's height (plus the tool's own bottom toolbar, where it has one) keeps the
    end of the tool clear of it.
 
-   One height per width, on every step and in every state:
-     · under 768px   two 44px rows (steps, then Close / Help / Next), 112px
-     · 768 to 1023px one row, 56px
-     · 1024px up     one row, 56px
+   One height per width, on every step and in every state. Below 1056px a 20px
+   band at the top of the bar carries "Step N of 4" (--bkit-head); from 1056px
+   the same text sits inline at the start of the row and the band is 0:
+     · under 768px   band, then two 44px rows (steps, then Close / Help / Next), 132px
+     · 768 to 1023px band, then one row, 76px
+     · 1024 to 1055  band, then one row, 76px
+     · 1056px up     one row, 56px
    --bkit-h holds the safe-area inset on the tiers that sit on the screen edge,
    so the bar and its spacer agree. */
-:root{--bkit-h:calc(112px + env(safe-area-inset-bottom))}
-@media(min-width:768px){:root{--bkit-h:calc(56px + env(safe-area-inset-bottom))}}
-@media(min-width:1024px){:root{--bkit-h:56px}}
+:root{--bkit-head:20px;--bkit-h:calc(112px + var(--bkit-head) + env(safe-area-inset-bottom))}
+@media(min-width:768px){:root{--bkit-h:calc(56px + var(--bkit-head) + env(safe-area-inset-bottom))}}
+@media(min-width:1024px){:root{--bkit-h:calc(56px + var(--bkit-head))}}
+@media(min-width:1056px){:root{--bkit-head:0px}}
 
 .bkit-rail{
   --bkit-hair:color-mix(in srgb,var(--t0) 9%,transparent);
@@ -198,18 +202,21 @@
   position:fixed;inset-inline:0;bottom:var(--bkit-toolbar-h,0px);z-index:60;isolation:isolate;
   container:bkit / inline-size;
   box-sizing:border-box;height:var(--bkit-h);margin:0;
-  /* 1px rule + 7px + 44px + 8px + 44px + 8px = 112px */
+  /* 1px rule + 7px + band + 44px + 8px + 44px + 8px = 112px + band */
   display:grid;grid-template-rows:44px 44px;row-gap:var(--s-2);
-  padding:7px max(var(--s-4),env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom)) max(var(--s-4),env(safe-area-inset-left,0px));
+  padding:calc(7px + var(--bkit-head)) max(var(--s-4),env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom)) max(var(--s-4),env(safe-area-inset-left,0px));
   background:var(--bg-0);border:0;border-top:1px solid var(--bkit-hair);
   font-family:var(--font);
 }
 .bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
 
-/* The lead (title and count) is read out but not drawn until there is room. */
-.bkit-rail-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-.bkit-rail-eyebrow{font-size:var(--fs-caption);font-weight:540;line-height:1.2;color:var(--t0);white-space:nowrap}
-.bkit-rail-count{margin-inline-start:var(--s-2);font-size:var(--fs-caption);font-weight:400;line-height:1.2;color:var(--t2);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* The lead. Below 1056px it is the band at the top of the bar, with only the
+   count drawn; the title is read out but not shown. From 1056px it sits in the
+   row, title first. The count reserves the width of its longest reading, so
+   moving between steps never changes the bar's width. */
+.bkit-rail-head{position:absolute;top:6px;inset-inline-start:max(var(--s-4),env(safe-area-inset-left,0px));display:flex;align-items:center;height:20px;white-space:nowrap}
+.bkit-rail-eyebrow{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;font-size:var(--fs-caption);font-weight:540;line-height:1.2;color:var(--t0)}
+.bkit-rail-count{display:block;min-width:10ch;font-size:var(--fs-caption);font-weight:400;line-height:1.2;color:var(--t2);white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* ─── Steps ─── */
 .bkit-steps{grid-row:1;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--s-2);min-width:0}
@@ -293,15 +300,16 @@
 @media(min-width:768px){
   .bkit-rail{
     display:flex;align-items:center;gap:var(--s-5);
-    /* 1px rule + 9px + 36px + 10px = 56px */
-    padding:9px max(var(--page-inline),env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom)) max(var(--page-inline),env(safe-area-inset-left,0px));
+    /* 1px rule + 9px + band + 36px + 10px = 56px + band */
+    padding:calc(9px + var(--bkit-head)) max(var(--page-inline),env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom)) max(var(--page-inline),env(safe-area-inset-left,0px));
   }
+  .bkit-rail-head{inset-inline-start:max(var(--page-inline),env(safe-area-inset-left,0px))}
   .bkit-steps{display:flex;flex:0 1 auto;gap:var(--s-1)}
   .bkit-steps li{display:flex}
   .bkit-step{align-items:center;gap:var(--s-2);height:40px;padding:0 10px;border-radius:var(--btn-radius)}
   .bkit-step-body{gap:var(--s-2)}
   /* The current step's marker is a 2px line on the bar's top edge, over the rule. */
-  .bkit-step.is-current::before{content:"";position:absolute;top:-8px;inset-inline:10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
+  .bkit-step.is-current::before{content:"";position:absolute;top:calc(-8px - var(--bkit-head));inset-inline:10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
   .bkit-rail-actions{display:flex;align-items:center;gap:var(--s-2);margin-inline-start:auto;flex:none}
   .bkit-rail-help,.bkit-rail-close{flex:none;width:40px;height:40px}
   .bkit-rail-help-icon{width:16px;height:16px}
@@ -325,12 +333,17 @@
   .bkit-rail .bkit-rail-help:hover,.bkit-rail .bkit-rail-next.is-outline:hover{border-color:var(--bkit-line)}
 }
 
-/* ─── What the bar shows as it gets wider ───
-   Each query is the width of the bar's content box, in this order: the lead,
-   the help text, then what each built step produced. */
-@container bkit (min-width:984px){
-  .bkit-rail-head{position:static;display:flex;align-items:baseline;flex:none;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+/* From 1056px the bar has room for the lead in its row: the band is gone
+   (--bkit-head is 0) and the title shows beside the count. */
+@media(min-width:1056px){
+  .bkit-rail-head{position:static;align-items:baseline;flex:none;height:auto}
+  .bkit-rail-eyebrow{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+  .bkit-rail-count{margin-inline-start:var(--s-2)}
 }
+
+/* ─── What the bar shows as it gets wider ───
+   Each query is the width of the bar's content box, in this order: the help
+   text, then what each built step produced. */
 @container bkit (min-width:1040px){
   .bkit-rail-help{width:auto;gap:var(--s-2);padding:0 14px}
   .bkit-rail-help-text{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
@@ -368,7 +381,6 @@
 .bkit-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-3);margin-bottom:var(--s-3)}
 .bkit-card-headtext{min-width:0}
 .bkit-card-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:normal;color:var(--t0)}
-.bkit-card-count{margin:2px 0 0;font-size:var(--fs-caption);font-weight:400;line-height:1.4;color:var(--t2);font-variant-numeric:tabular-nums}
 .bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease,cubic-bezier(.23,1,.32,1))}
 .bkit-card-close:active{transform:scale(.97)}
 .bkit-card-close:focus-visible{outline:2px solid var(--link);outline-offset:2px}
@@ -392,6 +404,8 @@
 .bkit-card-artefact .bkit-step-swatch{width:14px;height:14px}
 .bkit-card-artefact .bkit-step-value{display:block;white-space:normal}
 .bkit-card-go{width:100%;height:44px;margin-top:var(--s-4);padding:0 var(--s-4);justify-content:center;font-size:15px;font-weight:560}
+/* Straight after the one sentence the body's own margin is the gap. */
+.bkit-card-body + .bkit-card-go{margin-top:0}
 .bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* The closing step: a name field in the same panel. */
@@ -438,10 +452,6 @@
 /* iOS zooms into a field under 16px. */
 @media(pointer:coarse){
   .bkit-name-input{font-size:16px}
-}
-/* The bar shows its lead at 984px of its own width, which a 1056px window gives even with a classic scrollbar; from there the lead carries the count. */
-@media(min-width:1056px){
-  .bkit-card-count{display:none}
 }
 
 /* While the walkthrough runs the phone tab bar steps aside and the bar takes

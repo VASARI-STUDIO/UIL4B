@@ -9,7 +9,6 @@ export default function AuthGate({ children, featureLabel }) {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
 
   if (user) return children
 
@@ -32,7 +31,7 @@ export default function AuthGate({ children, featureLabel }) {
     setError(null)
     try {
       if (mode === 'signup') {
-        await signup(email, password, name)
+        await signup(email, password, '')
       } else {
         await login(email, password)
       }
@@ -81,9 +80,6 @@ export default function AuthGate({ children, featureLabel }) {
       <form onSubmit={handleSubmit} className="auth-gate-form">
         <h3 className="auth-gate-title">{mode === 'signup' ? 'Create account' : 'Sign in'}</h3>
         {error && <div className="auth-gate-error">{error}</div>}
-        {mode === 'signup' && (
-          <input type="text" placeholder="Display name" value={name} onChange={e => setName(e.target.value)} />
-        )}
         <input type="email" placeholder="Email" required value={email} onChange={e => setEmail(e.target.value)} />
         <input type="password" placeholder="Password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
         <button type="submit" className="btn btn-accent" disabled={busy} style={{ width: '100%' }}>
