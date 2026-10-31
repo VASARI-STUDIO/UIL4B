@@ -1266,3 +1266,18 @@ html[data-reduced-motion="true"] .adm-status-dot {
 .adm-lock input {
   border-radius: var(--radius);
 }
+
+/* Community email settings (Settings tab). */
+.cns-form{display:grid;gap:16px;max-width:460px}
+.cns-toggle{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--t0);cursor:pointer}
+.cns-toggle input{width:16px;height:16px;accent-color:var(--accent)}
+.cns-field{display:grid;gap:6px;font-size:13px;color:var(--t1)}
+.cns-row{display:flex;align-items:center;gap:8px}
+.cns-num{width:5.5em;font-variant-numeric:tabular-nums}
+.cns-hint{margin:0;font-size:12px;color:var(--t2)}
+.cns-count{margin:0;font-size:12.5px;color:var(--t2)}
+.cns-warn{margin:0;padding:10px 12px;border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 8%,transparent);font-size:12.5px;color:var(--t1)}
+.cns-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cns-result{font-size:12.5px;font-weight:600}
+.cns-result.is-ok{color:var(--ok-strong)}
+.cns-result.is-err{color:var(--err-strong)}
