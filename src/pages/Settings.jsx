@@ -7,8 +7,12 @@ import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
+import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
+import { getSyncState } from '../utils/syncStatus'
+import { loadFirestore } from '../utils/firebaseAccess'
+import { AI_TERMS_PATH } from '../config/aiImageConsent'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -73,6 +77,12 @@ function portalErrorText(e) {
   const detail = e?.message ? ` (${e.message})` : ''
   return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
 }
+
+// How long a profile save waits for the server before it is treated as held
+// back (see saveProfile in Settings), and what the person is then told.
+const PROFILE_WRITE_WAIT_MS = 8000
+const SIGN_OUT_FLUSH_WAIT_MS = 10000
+const PROFILE_QUEUED_TEXT ='Saved on this device. It reaches your account once you’re back online.'
 
 function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength }) {
   const [editing, setEditing] = useState(false)
@@ -216,12 +226,29 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
 // surfaced read-only so people know they exist.
 function FlairPicker({ value, displayName, email, onSave }) {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const errId = useId()
   const current = getFlair(value)
   const roles = FLAIRS.filter((f) => f.group === 'role')
   const community = FLAIRS.filter((f) => f.group === 'community')
   const earned = FLAIRS.filter((f) => f.group === 'earned')
 
-  const choose = (id) => onSave(id === value ? '' : id)
+  // onSave is awaited: a refused write keeps the picker open and says why,
+  // instead of the chip looking chosen. One write at a time.
+  const save = async (id) => {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await onSave(id)
+    } catch (e) {
+      setError(e.message || 'Your flair could not be saved. Nothing was changed. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const choose = (id) => save(id === value ? '' : id)
 
   if (!open) {
     return (
@@ -259,6 +286,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
             type="button"
             className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
             aria-pressed={f.id === value}
+            disabled={busy}
             onClick={() => choose(f.id)}
           >
             {f.label}
@@ -274,6 +302,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
             type="button"
             className={`flair flair--${f.tone} flairpick-chip${f.id === value ? ' is-on' : ''}`}
             aria-pressed={f.id === value}
+            disabled={busy}
             onClick={() => choose(f.id)}
           >
             {f.label}
@@ -292,11 +321,12 @@ function FlairPicker({ value, displayName, email, onSave }) {
       </div>
 
       <div className="settings-edit-actions">
-        <button className="btn btn-accent btn-s" onClick={() => setOpen(false)}>Done</button>
+        <button className="btn btn-accent btn-s" onClick={() => { setOpen(false); setError('') }} disabled={busy}>Done</button>
         {value && (
-          <button className="btn btn-s" onClick={() => onSave('')}>Clear flair</button>
+          <button className="btn btn-s" onClick={() => save('')} disabled={busy}>Clear flair</button>
         )}
       </div>
+      {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -583,6 +613,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
 // "Firebase: Error (auth/requires-recent-login)." Only auth/wrong-password was
 // ever mapped, so every other failure — including the one Google accounts hit
 // on every single attempt — surfaced as that.
+const OFFLINE_DELETE = 'You appear to be offline. Nothing was deleted. Try again when you’re connected.'
 const DELETE_ERRORS = {
   'auth/wrong-password': 'That password is incorrect.',
   'auth/invalid-credential': 'That password is incorrect.',
@@ -593,20 +624,31 @@ const DELETE_ERRORS = {
   'auth/cancelled-popup-request': 'The Google window closed before you confirmed. Try again.',
   'auth/popup-blocked': 'Your browser blocked the Google window. Allow pop-ups for this site and try again.',
   'auth/user-mismatch': 'That is a different Google account. Confirm with the one you are signed in as.',
+  'auth/network-request-failed': OFFLINE_DELETE,
 }
 
 function deleteErrorText(e) {
   const mapped = DELETE_ERRORS[e?.code]
   if (mapped) return mapped
+  // The request to our own server has no Firebase code: offline it is a bare
+  // TypeError ("Failed to fetch"). Offline, the request never left, so nothing
+  // was deleted. Online, the answer was lost and we cannot say.
+  if (e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(e?.message || '')) {
+    return (typeof navigator !== 'undefined' && navigator.onLine === false)
+      ? OFFLINE_DELETE
+      : 'We could not reach our server, so we cannot confirm whether your account was deleted. Check your connection and try again.'
+  }
   // The server's own messages are already written for a user to read, and carry
   // a correlation id support can trace.
   if (e?.message) return e.message
   return 'We could not delete your account. Please try again.'
 }
 
-function DeleteAccount({ onDelete, googleOnly, isPro }) {
+function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
+  // The acknowledgement every account type must tick before the button arms.
+  const [ack, setAck] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const panelRef = useRef(null)
@@ -638,17 +680,19 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
 
   // A password account cannot delete with an empty password — Firebase refuses
   // the re-authentication — so the button waits for one. The label directly
-  // above the field says what it is waiting for.
+  // above the field says what it is waiting for. It also waits for the
+  // acknowledgement, which is the same for a Google-only account.
   const needsPassword = !googleOnly && !password
+  const notReady = !ack || needsPassword
 
-  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword('') }
+  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword(''); setAck(false) }
 
   // Enter in the password field submits (the button is disabled until there is
   // a password, which blocks the implicit submit too); Escape closes the panel
   // from anywhere inside it, unless the delete is already running.
   const handleDelete = async (e) => {
     e?.preventDefault()
-    if (busy || needsPassword) return
+    if (busy || notReady) return
     setBusy(true)
     setError('')
     try {
@@ -663,7 +707,9 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
 
   if (!open) {
     return (
-      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)}>
+      // Waits for the plan to be known: the list below names Pro's cancellation
+      // only for a Pro account.
+      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
         Delete account
       </button>
     )
@@ -685,12 +731,24 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
         <li>This cannot be undone, and the same email can sign up again as a new account.</li>
       </ul>
 
+      {/* A way out to the export, before anything is deleted. It only changes
+          section; nothing is deleted by it. */}
+      <p className="danger-confirm-note">
+        Want a copy first?{' '}
+        <button type="button" className="danger-confirm-link" onClick={onExportFirst} disabled={busy}>Download your data</button>
+      </p>
+
+      <div className="danger-confirm-ack">
+        <input id="del-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={busy} />
+        <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
+      </div>
+
       {googleOnly ? (
         // A Google-only account HAS no password. The old dialog asked for one
         // unconditionally, which was unanswerable — and then deletion threw
         // requires-recent-login anyway.
         <p className="danger-confirm-note">
-          You&rsquo;ll be asked to confirm with Google before anything is deleted.
+          Google will ask you to confirm it&rsquo;s you before anything is deleted.
         </p>
       ) : (
         <>
@@ -709,7 +767,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
       )}
 
       <div className="danger-confirm-actions">
-        <button type="submit" className="btn danger-confirm-go" disabled={busy || needsPassword}>
+        <button type="submit" className="btn danger-confirm-go" disabled={busy || notReady}>
           {busy ? 'Deleting…' : 'Permanently delete'}
         </button>
         <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
@@ -753,7 +811,10 @@ function rememberSection(id) {
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
-  const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading } = useSubscription()
+  const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
+  // True until both the account and its plan have answered. Neither plan is
+  // shown before then: isPro is false for everyone while the plan is on its way.
+  const planPending = authLoading || (!!user && (subLoading || !planKnown))
   const { t, lang, setLang, languages } = useI18n()
   // 'support' — the SECTION ID, not the label. This said 'subscription', which
   // matched no section: harmless while every panel rendered at once and `active`
@@ -837,6 +898,10 @@ export default function Settings({ toast }) {
     if (!held || held === document.body) clearTriggerRef.current?.focus()
   }, [confirmClear])
   const [exporting, setExporting] = useState(false)
+  // Set when the file was built without some of the account's documents; shown
+  // beside the Export row as well as in the toast.
+  const [exportGap, setExportGap] = useState('')
+  const online = useOnline()
   // Counted from storage, not from the length of a hand-written list. The old
   // page reported "15 items" whatever was actually there — including for a
   // browser holding 16 keys, 9 of which the export then omitted.
@@ -877,13 +942,35 @@ export default function Settings({ toast }) {
 
   // Sign out AFTER anything pending has reached the account: once signed out,
   // the rules refuse the write, and this browser's copy is released.
+  // flushAccountSync never rejects: a failed send is reported through
+  // syncStatus, and offline the write is held without settling. So the flush is
+  // given a limited wait, and then the sync store is read for a failure. When
+  // changes have not reached the account, signing out is the person's call:
+  // their copy stays on this device (the cache is released only once nothing is
+  // pending) and goes up the next time the same account signs in here; a
+  // different account signing in first discards it.
   const [signingOut, setSigningOut] = useState(false)
-  const signOut = async () => {
+  const [signOutIssue, setSignOutIssue] = useState('')
+  const signOut = async ({ anyway = false } = {}) => {
+    if (signingOut) return
     setSigningOut(true)
-    await flushAccountSync()
-    try { await logout() } catch {
+    setSignOutIssue('')
+    try {
+      if (!anyway) {
+        let timer
+        const held = new Promise((resolve) => { timer = setTimeout(resolve, SIGN_OUT_FLUSH_WAIT_MS, 'held') })
+        const flushed = await Promise.race([flushAccountSync().then(() => 'done'), held])
+        clearTimeout(timer)
+        if (flushed === 'held' || getSyncState().errors.length) {
+          setSigningOut(false)
+          setSignOutIssue('unsynced')
+          return
+        }
+      }
+      await logout()
+    } catch {
       setSigningOut(false)
-      toast?.('Sign-out did not complete. Please try again.')
+      setSignOutIssue('failed')
     }
   }
 
@@ -894,45 +981,93 @@ export default function Settings({ toast }) {
   const tabRefs = useRef([])
   const providerPhoto = user?.providerData?.[0]?.photoURL || ''
   const hasCustomPhoto = !!userProfile?.photoURL && userProfile.photoURL !== providerPhoto
+  const [photoBusy, setPhotoBusy] = useState(false)
+
+  // THE ONE PLACE A PROFILE FIELD IS SAVED FROM THIS PAGE.
+  // useAuth().updateProfile is synchronous: it applies the edit locally and
+  // starts the Firestore write in the background, so awaiting it says nothing
+  // about whether the write worked (a refusal only raises the sync banner
+  // later). To know the outcome before announcing anything, the write is made
+  // here first, with the same merge-set the context uses, and the local copy
+  // is updated only once it was accepted. A refusal throws, so the field stays
+  // open and the old value stays on screen.
+  //
+  // Offline, the Firestore SDK holds a write back without settling it. Waiting
+  // on that would leave the field on "Saving…", so offline (or after the wait
+  // below) the edit is kept on this device and the answer says that it has not
+  // reached the account yet. It resolves 'queued' then, 'saved' otherwise.
+  const saveProfile = async (fields, what) => {
+    const refused = () => new Error(`Your ${what} could not be saved. Nothing was changed. Please try again.`)
+    if (!user?.uid) throw refused()
+    let outcome = 'queued'
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+      let timer
+      try {
+        const fs = await loadFirestore()
+        const write = fs.setDoc(fs.doc(fs.db, 'users', user.uid), fields, { merge: true })
+        const wait = new Promise((resolve) => { timer = setTimeout(resolve, PROFILE_WRITE_WAIT_MS, 'queued') })
+        outcome = await Promise.race([write.then(() => 'saved'), wait])
+      } catch {
+        throw refused()
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+    updateProfile(fields)
+    return outcome
+  }
+  const saidSaved = (outcome, text) => toast(outcome === 'queued' ? PROFILE_QUEUED_TEXT : text)
+
   const onAvatarFile = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = '' // let the same file be re-picked later
     if (!file) return
+    let dataUrl
     try {
-      const dataUrl = await processAvatarImage(file)
-      updateProfile({ photoURL: dataUrl })
-      toast('Profile photo updated')
+      dataUrl = await processAvatarImage(file)
     } catch (err) {
       toast(err?.message || 'Could not use that image')
+      return
+    }
+    setPhotoBusy(true)
+    try {
+      saidSaved(await saveProfile({ photoURL: dataUrl }, 'photo'), 'Profile photo updated')
+    } catch {
+      toast('Your photo could not be saved. Nothing was changed.')
+    } finally {
+      setPhotoBusy(false)
     }
   }
-  // The profile write is awaited before anything is announced, so the toast
-  // never claims a save that failed; a failure keeps the field open with the
-  // reason. A blank name is not refused: the
-  // account's name then shows as the part of the email before the "@" (see
-  // AuthContext's userProfile), and the toast says so.
+  // A blank name is not refused: the account's name then shows as the part of
+  // the email before the "@" (see AuthContext's userProfile), and the toast
+  // says so.
   const saveDisplayName = async (raw) => {
     const name = String(raw ?? '').trim()
-    try {
-      await updateProfile({ displayName: name })
-    } catch {
-      throw new Error('Your display name could not be saved. Nothing was changed. Please try again.')
-    }
-    toast(name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
+    const outcome = await saveProfile({ displayName: name }, 'display name')
+    saidSaved(outcome, name ? 'Display name updated' : 'Display name cleared. The start of your email shows instead.')
   }
   // Only http(s) addresses are kept (src/utils/websiteUrl.js); a refusal is the
   // EditField's inline message, and nothing is written.
   const saveWebsite = async (raw) => {
     const checked = checkWebsite(raw)
     if (!checked.ok) throw new Error(checked.error)
-    await updateProfile({ website: checked.value })
-    toast(checked.value ? 'Website updated' : 'Website cleared')
+    saidSaved(await saveProfile({ website: checked.value }, 'website'), checked.value ? 'Website updated' : 'Website cleared')
   }
+  const saveLocation = async (v) => saidSaved(await saveProfile({ location: v }, 'location'), 'Location updated')
+  const saveCompany = async (v) => saidSaved(await saveProfile({ company: v }, 'company or studio'), 'Company updated')
+  const saveBio = async (v) => saidSaved(await saveProfile({ bio: v }, 'bio'), 'Bio updated')
+  const saveFlair = async (id) => saidSaved(await saveProfile({ flair: id }, 'flair'), id ? 'Flair updated' : 'Flair cleared')
   // "Remove" restores the sign-in provider's photo (Google etc.), or the
   // initial-letter avatar for email accounts.
-  const removeAvatar = () => {
-    updateProfile({ photoURL: providerPhoto })
-    toast(providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
+  const removeAvatar = async () => {
+    setPhotoBusy(true)
+    try {
+      saidSaved(await saveProfile({ photoURL: providerPhoto }, 'photo'), providerPhoto ? 'Photo reset to your account image' : 'Profile photo removed')
+    } catch {
+      toast('Your photo could not be saved. Nothing was changed.')
+    } finally {
+      setPhotoBusy(false)
+    }
   }
 
   // Open on a section when navigated from the profile quick-menu. It no longer
@@ -1032,6 +1167,7 @@ export default function Settings({ toast }) {
   // where their projects and prompts actually live.
   const exportData = async () => {
     setExporting(true)
+    setExportGap('')
     try {
       let firestore = null
       let account = null
@@ -1081,7 +1217,20 @@ export default function Settings({ toast }) {
       a.download = `uil4b-export-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(a.href)
-      toast(t('settings.dataExported') || 'Data exported')
+      // A document that could not be read is recorded in the file as { error },
+      // so the file is not the whole account. Say which parts are missing
+      // rather than announcing a complete export.
+      const missing = [['projects', 'projects'], ['library', 'library'], ['sync', 'settings'], ['profile', 'profile']]
+        .filter(([key]) => firestore?.[key]?.error)
+        .map(([, name]) => name)
+      if (missing.length) {
+        const list = missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}` : missing[0]
+        const gap = `Exported, but your ${list} could not be read, so ${missing.length > 1 ? 'they’re' : 'it’s'} not in the file. Try again.`
+        setExportGap(gap)
+        toast(gap)
+      } else {
+        toast(t('settings.dataExported') || 'Data exported')
+      }
     } catch {
       toast('Could not build your export. Please try again.')
     } finally {
@@ -1190,7 +1339,9 @@ export default function Settings({ toast }) {
       </ul>
       {/* One slot, one button. Only a live price links to checkout. */}
       {priceStatus === 'live' && !subLoading ? (
-        <Link className="btn btn-accent sub-tier-btn" to={`/checkout?plan=${offer.checkoutPlan}`}>Upgrade to Pro</Link>
+        // Every upgrade starts at /plans, which reads ?billing= for the period
+        // picked here and carries on to checkout from there.
+        <Link className="btn btn-accent sub-tier-btn" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro</Link>
       ) : priceStatus === 'cadence-missing' ? (
         <button type="button" className="btn btn-accent sub-tier-btn" onClick={() => setBilling(otherOffer.id)}>{priceCopy.button}</button>
       ) : (
@@ -1267,10 +1418,25 @@ export default function Settings({ toast }) {
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Subscription</h2>
-              <p>{isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
+              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
-            {isPro ? (
+            {planPending ? (
+              // Neither plan is shown until the account and its subscription
+              // have both answered: before that, isPro is false for everyone,
+              // so a Pro subscriber would see Free marked as their plan. One row
+              // at the Pro Plan row's height, so nothing jumps when it resolves.
+              <div className="settings-card sub-active sub-checking" aria-busy="true">
+                <div className="settings-card-body">
+                  <div className="settings-row">
+                    <div className="settings-row-main">
+                      <div className="settings-row-label">Plan</div>
+                      <div className="settings-row-value" role="status">Checking your plan…</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : isPro ? (
               <div className="settings-card sub-active">
                 <div className="settings-card-body">
                   <div className="settings-row">
@@ -1435,7 +1601,7 @@ export default function Settings({ toast }) {
                       onClick={() => { setLang(l.code); toast(`Language: ${l.native}`) }}
                     >
                       <span className="lang-flag">
-                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt={l.region} width="28" height="21" />
+                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt="" width="28" height="21" onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }} />
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
@@ -1471,6 +1637,9 @@ export default function Settings({ toast }) {
                     onClick={() => avatarInputRef.current?.click()}
                     aria-label="Change profile photo"
                     title="Change profile photo"
+                    aria-busy={photoBusy ? 'true' : undefined}
+                    disabled={photoBusy}
+                    data-busy={photoBusy ? 'true' : undefined}
                   >
                     {userProfile?.photoURL ? (
                       <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" />
@@ -1489,12 +1658,30 @@ export default function Settings({ toast }) {
                     <div className="settings-profile-name">{userProfile?.displayName || 'Welcome'}</div>
                     <div className="settings-profile-email">{user.email}</div>
                     {hasCustomPhoto && (
-                      <button type="button" className="settings-avatar-remove" onClick={removeAvatar}>Remove photo</button>
+                      <button type="button" className="settings-avatar-remove" onClick={removeAvatar} disabled={photoBusy}>Remove photo</button>
                     )}
                   </div>
-                  <button className="btn btn-s" onClick={signOut} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
+                  <button className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                 </div>
                 <div className="settings-card-body">
+                  {signOutIssue && (
+                    <div className="settings-sync-alert" role="alert">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                      </svg>
+                      <span>
+                        {signOutIssue === 'unsynced'
+                          ? 'Some recent changes haven’t reached your account yet. If you sign out now, they stay on this device and are sent the next time you sign in here with this account. Signing in with a different account first discards them.'
+                          : 'Signing out didn’t finish, so you’re still signed in. Check your connection and try again.'}
+                      </span>
+                      <span className="settings-sync-alert-actions">
+                        <button type="button" onClick={() => signOut()} disabled={signingOut}>Try again</button>
+                        {signOutIssue === 'unsynced' && (
+                          <button type="button" onClick={() => signOut({ anyway: true })} disabled={signingOut}>Sign out anyway</button>
+                        )}
+                      </span>
+                    </div>
+                  )}
                   {profileSyncError && (
                     <div className="settings-sync-alert" role="alert">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1513,11 +1700,14 @@ export default function Settings({ toast }) {
                     onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
                     verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
                   />
-                  <EditField label="Location" value={userProfile?.location} onSave={(v) => { updateProfile({ location: v }); toast('Location updated') }} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
-                  <EditField label="Company / studio" value={userProfile?.company} onSave={(v) => { updateProfile({ company: v }); toast('Company updated') }} placeholder="e.g. Acme Design" maxLength={200} />
+                  {/* Every profile field below is AWAITED (saveProfile): a refused
+                      write keeps the field open with the reason, and no toast
+                      says "updated" for a save that did not happen. */}
+                  <EditField label="Location" value={userProfile?.location} onSave={saveLocation} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
+                  <EditField label="Company / studio" value={userProfile?.company} onSave={saveCompany} placeholder="e.g. Acme Design" maxLength={200} />
                   <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
-                  <EditField label="Bio" value={userProfile?.bio} onSave={(v) => { updateProfile({ bio: v }); toast('Bio updated') }} placeholder="A short bio about yourself" maxLength={5000} />
-                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={(id) => { updateProfile({ flair: id }); toast(id ? 'Flair updated' : 'Flair cleared') }} />
+                  <EditField label="Bio" value={userProfile?.bio} onSave={saveBio} placeholder="A short bio about yourself" maxLength={5000} />
+                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={saveFlair} />
                   <PasswordChange
                     onSave={(current, next) => updatePassword(current, next)}
                     googleOnly={isGoogleOnlyAccount()}
@@ -1527,11 +1717,13 @@ export default function Settings({ toast }) {
                   <div className="danger-zone">
                     <div className="danger-zone-h">Danger zone</div>
                     <p>
-                      Delete your account, everything in it, and{isPro ? ' your subscription' : ' any billing you have with us'}.
-                      This cannot be undone.
+                      Deletes your profile, projects and everything synced to your account{isPro ? ', and cancels Pro' : ''}.
+                      {' '}This can&rsquo;t be undone.
                     </p>
                     <DeleteAccount
                       onDelete={(pw) => deleteAccount(pw)}
+                      onExportFirst={() => pickSection('data')}
+                      planPending={planPending}
                       googleOnly={isGoogleOnlyAccount()}
                       isPro={isPro}
                     />
@@ -1551,7 +1743,7 @@ export default function Settings({ toast }) {
               <p>
                 {user
                   ? 'Some of it lives in this browser, and some on our server so it follows you between devices. Either way it is yours.'
-                  : 'Signed out, everything UIL4B stores lives in this browser. You own it.'}
+                  : 'Signed out, everything UIL4B keeps is in this browser, and only here.'}
               </p>
             </div>
             <div className="settings-card">
@@ -1573,9 +1765,11 @@ export default function Settings({ toast }) {
                   <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
+                      {user && !online && 'You’re offline, so this file has this browser’s copy only. '}
                       A JSON copy of everything — every key in this browser
                       {user ? ', plus your account’s copy from the server' : ''}
                     </div>
+                    {exportGap && <div className="settings-field-err settings-export-gap" role="status">{exportGap}</div>}
                   </div>
                   <button className="btn btn-accent btn-s" onClick={exportData} disabled={exporting}>
                     {exporting ? 'Preparing…' : 'Export JSON'}
@@ -1585,9 +1779,15 @@ export default function Settings({ toast }) {
                   <div className="settings-row-main">
                     <div className="settings-row-label">Clear local data</div>
                     <div className="settings-row-meta">
-                      Removes everything stored in this browser except your sign-in.
-                      {user ? ' Your account and synced data on the server are untouched.' : ''}
+                      {user
+                        ? 'Clears this browser’s copy. Your account keeps everything, and it comes back next time this page loads.'
+                        : 'Deletes your saved projects, palettes and preferences from this browser. This browser holds the only copy, so export first if you want to keep them.'}
                     </div>
+                    {confirmClear && (
+                      <div className="settings-row-meta settings-clear-warn" role="status">
+                        {user ? 'Your account copy is not affected.' : 'This deletes them for good.'}
+                      </div>
+                    )}
                   </div>
                   {confirmClear ? (
                     <div
@@ -1609,18 +1809,23 @@ export default function Settings({ toast }) {
           <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Privacy &amp; legal</h2>
-              <p>How we handle (and don't handle) your information.</p>
+              <p>What we keep, where it lives, and who else sees it.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
                 <ul className="settings-facts">
                   {[
-                    // "No analytics trackers" was deleted: Vercel
-                    // Web Analytics runs on every page and /privacy discloses it.
-                    'No third-party cookies, no ad networks.',
-                    'Authentication is handled securely by Firebase Auth (Google).',
-                    'Your data is stored locally and optionally synced via Firestore when signed in.',
-                    'You can export or delete your data at any time, with no requests.',
+                    // Vercel Web Analytics runs on every page and /privacy
+                    // discloses it, so there is no "no analytics" line here.
+                    // Where each AI request goes follows api/ai.js: images
+                    // (alt text, photo scan) go to Gemini; text-only requests go
+                    // to OpenRouter, restricted to hosts that do not keep or
+                    // train on them, and fall back to Gemini.
+                    'No ad networks and no third-party cookies.',
+                    'Sign-in is handled by Firebase Authentication (Google).',
+                    'Signed in, your settings and projects sync to your account so they follow you to other devices. Signed out, they stay in this browser only.',
+                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
+                    'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
                     <li key={i}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
