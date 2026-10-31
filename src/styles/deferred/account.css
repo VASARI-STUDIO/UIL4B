@@ -110,7 +110,7 @@
    of them. The colour is OPAQUE now: the old .92 alpha composited toward the
    ground and cost about 0.1-0.2:1 for nothing. Fallbacks match the rule's own
    --c1/--c2 accent fallback above. See tests/unit/community-monogram-ink. */
-.ch-thumb-mono{font-family:var(--font);font-size:30px;font-weight:560;color:var(--mono-ink,#FFFFFF);letter-spacing:normal;text-shadow:0 1px 8px var(--mono-glow,rgba(0,0,0,.25))}
+.ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--mono-ink,#FFFFFF);letter-spacing:.04em;text-shadow:0 1px 8px var(--mono-glow,rgba(0,0,0,.25))}
 /* Visible at rest; the hover reveal is an enhancement for devices that have a
    hover, exactly as .grg-like does it. It used to hide for everyone and come
    back on .ch-card:hover or its own :focus-visible — one of which never fires on

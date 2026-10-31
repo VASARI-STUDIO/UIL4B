@@ -60,7 +60,7 @@ test.describe('first-time visitor', () => {
   test('can find out what it costs', async ({ page }) => {
     const fb = watch(page, PERSONA)
     await go(page, '/')
-    const pricingLink = page.getByRole('link', { name: 'Plans', exact: true }).first()
+    const pricingLink = page.getByRole('link', { name: 'Pricing', exact: true }).first()
     if (await pricingLink.count()) {
       await pricingLink.click()
       await expect(page).toHaveURL(/\/plans/)

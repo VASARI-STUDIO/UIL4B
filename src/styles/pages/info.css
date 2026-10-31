@@ -12,7 +12,7 @@
  *   1. A TAXONOMY EYEBROW over the h1. Deleted in the page file.
  *   2. FOURTEEN EMOJI, one per section heading and one per index entry, five
  *      of which were the same phone glyph standing for five different things.
- *      Deleted. The rhythm is a CSS counter now.
+ *      Deleted, and not replaced: the sections are a reference, not a sequence.
  *   3. A WRAPPED ROW OF PILLS as the table of contents, at the top of a
  *      document eleven sections long, so a reader anywhere below the fold had
  *      no index at all. It is a sticky rail beside the document now, which is
@@ -34,7 +34,7 @@
  * APPEARANCE at a higher specificity (`.ic-wrap` + the class) and leaves the
  * collapse itself alone, because that collapse is load-bearing:
  * tests/user-sim/24-mobile-overhaul.spec.js asserts that a collapsed panel
- * still contains focusable descendants, that `inert` keeps them out of the tab
+ * still contains focusable descendants, that `hidden` keeps them out of the tab
  * order, and that opening one gives `.ic-acc-body-inner` a height above zero.
  * `display:none` would satisfy the tab-order half and break the other two.
  *
@@ -52,9 +52,8 @@
  */
 
 .ic-wrap {
-  /* The index column is narrower here than on the legal pages: these titles
-     are two or three words where a clause title is eight. */
-  --ic-indent: 46px;
+  /* The panel text lines up with the title, which starts at the row's padding. */
+  --ic-indent: 12px;
 }
 
 /* ── The head ── */
@@ -128,10 +127,9 @@
 .ic-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(48px, 6vw, 80px); max-width: 78ch; }
 
 /* ── The sections ──
- * Hairline rows. `counter-reset` here and `counter-increment` on the row, so
- * the numerals are drawn from the list rather than typed beside it. */
-.ic-sections { display: flex; flex-direction: column; counter-reset: ic; min-width: 0; }
-.ic-acc { border-top: 1px solid var(--cpg-line); counter-increment: ic; min-width: 0; }
+ * Hairline rows. */
+.ic-sections { display: flex; flex-direction: column; min-width: 0; }
+.ic-acc { border-top: 1px solid var(--cpg-line); min-width: 0; }
 .ic-acc:first-child { border-top: 0; }
 .ic-acc-h { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
 
@@ -149,21 +147,13 @@
 }
 .ic-wrap .ic-acc-head:hover { background: var(--cpg-wash); }
 
-.ic-acc-no {
-  flex: 0 0 auto;
-  min-width: 20px;
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  letter-spacing: normal;
-  /* --cpg-faint, NOT --cpg-quiet. This numeral sits on `--cpg-wash` the moment
-     the row is hovered, and --t3 on that composited ground measures 4.23:1 in
-     light. --t2 is 5.18:1 on the same ground and 5.62:1 off it. */
-  color: var(--cpg-faint);
-  font-variant-numeric: tabular-nums;
-}
-.ic-acc-no::before { content: counter(ic, decimal-leading-zero); }
-.ic-acc.is-open .ic-acc-no { color: var(--accent-text); }
+/* A panel moving between hidden and shown opens at once: this is a page to
+ * look things up in, and a find-in-page match should land on text that is
+ * already there. */
+.ic-wrap .ic-acc-body { transition: none; }
+/* Browsers without `until-found` get plain `hidden`, which the grid display
+ * above would otherwise override. */
+.ic-wrap .ic-acc-body[hidden=""] { display: none; }
 
 .ic-acc-title { flex: 1; min-width: 0; margin: 0; font-size: 16.5px; font-weight: 540; line-height: 1.35; color: var(--cpg-ink); }
 .ic-acc-chevron {

@@ -44,7 +44,7 @@ test('the client redirect keeps the incoming query beside from=support', () => {
   assert.equal(mergeRedirectQuery('/discover', ''), '/discover')
 })
 
-test('the feedback form opens on Help Request for support arrivals, and on Feature Request otherwise', () => {
+test('the feedback form opens on Help request for support arrivals, and on Feature Request otherwise', () => {
   const form = read('src/pages/Feedback.jsx')
   // `ref` is read like `reason`, for the preselect and for the payment marker.
   assert.match(form, /const reason = params\.get\('reason'\) \|\| params\.get\('ref'\) \|\| ''/)

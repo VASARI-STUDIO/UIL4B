@@ -70,6 +70,18 @@ export const PRO_GATE = {
       'Your logo on white, on black and on every brand colour, with a clear-space rule',
     ],
   },
+  'app-bundle': {
+    gate: 'app-ready-bundle-export',
+    eyebrow: 'UIL4B Pro',
+    title: 'Export the app-ready bundle',
+    subtitle: 'One zip of your system, ready for the apps you design and build in, with a folder for each app and a README that says where to start. The style guide and the code tokens stay free.',
+    features: [
+      'Figma variables for your colours, with light and dark modes',
+      'Swatch files for Adobe, Affinity and Procreate',
+      'CSS and JSON tokens for code',
+      'A step-by-step import guide for each app',
+    ],
+  },
 }
 
 // THE PAID DOCUMENTS ARE BUILT ON THE SERVER, NOT HERE. Their generators are not
@@ -290,8 +302,10 @@ export default function useExportRunner() {
     // Only the PDF opens a print window; the HTML is saved as a file.
     const paidFile = Boolean(fmt.pro)
     const bookPng = format === 'book-png'
+    // The app-ready zip is also drawn here, from the saved design.
+    const appBundle = format === 'app-bundle'
     const htmlDocument = format === 'book-html' || format === 'guidelines-html'
-    const proDocument = paidFile && !bookPng
+    const proDocument = paidFile && !bookPng && !appBundle
     // The document the server is asked for: the HTML variants are the same document.
     const documentKey = htmlDocument ? fmt.variantOf : format
 
@@ -306,7 +320,7 @@ export default function useExportRunner() {
     // (sign-in only for saving, exporting and account actions). See
     // src/hooks/useExportGate.js for the map that puts the line here.
     const tokenFile = isCodeFile(format)
-    const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : 'export this style guide'
+    const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : appBundle ? 'export this app-ready bundle' : 'export this style guide'
     const signedOut = !user
     if (!(await requireExportAccount(reason))) { closePrintWin(); return { status: 'cancelled' } }
 
@@ -422,6 +436,13 @@ export default function useExportRunner() {
             setNotice({ lead: doc.fallback, detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           }
         }
+      } else if (appBundle) {
+        // One zip with a folder per app (utils/appBundle.js). Loaded on demand with
+        // its writers and the zip library. The plan check above has already passed.
+        activation = 'app-ready-bundle'
+        const { buildAppBundle, bundleDate } = await import('../utils/appBundle')
+        const blob = await buildAppBundle(design, { date: bundleDate(new Date()), name: fileProject })
+        savedFile = download(blob, formatFileName(fileProject, 'app-bundle'))
       } else if (tokenFile) {
         // The token, Tailwind and contrast files all read one token list
         // (utils/designTokens.js), so they carry the same names and values. Built by

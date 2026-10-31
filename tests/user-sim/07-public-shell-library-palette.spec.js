@@ -123,7 +123,7 @@ test.describe('public UI quality release', () => {
     for (const route of ['/', '/learn', '/privacy', '/learn/help', '/create/icons']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
-      await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Pricing', exact: true }).last()).toBeVisible()
     }
     for (const route of ['/discover', '/create/palette', '/create/aspect-ratio']) {
       await go(page, route)
