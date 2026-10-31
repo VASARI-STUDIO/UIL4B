@@ -22,13 +22,20 @@
 //
 // ── How it reaches the browser ─────────────────────────────────────────────
 //
-// vite.config.js serves this map as the virtual module
-// `virtual:learn-search-text`. SurfaceLanding.jsx imports it DYNAMICALLY on the
-// first focus of the search field, which is the same arrangement the Emoji
-// Library uses for its ~31 KB index: never on the first paint, normally
-// resolved before the first keystroke. There is no committed artefact to
-// drift; the module is derived from the guides on every build and every dev
-// start.
+// The map is served as a JSON FILE, fetched on the first focus of the search
+// field in LearnGuideIndex.jsx; the virtual module `virtual:learn-search-text-url`
+// only exports that file's address. In a build the file is a content-hashed
+// asset (assets/learn-search-text-<hash>.json); in dev a middleware answers the
+// same path with the text as the guides read now.
+//
+// WHY A FILE AND NOT A JS CHUNK. A dynamic `import()` that fails fires Vite's
+// `vite:preloadError`, which main.jsx answers with a guarded hard reload meant
+// for a stale deploy. On /learn that reload wiped what the reader had typed and
+// the titles-only notice never got a chance to show. A failed fetch() is an
+// ordinary rejected promise the component handles itself, the same reasoning as
+// src/data/emojiIndexLoader.js. Nothing is committed: the file is derived from
+// the guides on every build and every dev start.
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,7 +45,11 @@ import { proseOf } from './learn-wordcount.mjs'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dir = path.join(root, 'src', 'data', 'learn')
 
-export const VIRTUAL_ID = 'virtual:learn-search-text'
+export const VIRTUAL_ID = 'virtual:learn-search-text-url'
+
+const FILE_PREFIX = 'learn-search-text-'
+// Matches the path of the asset in a build and of the dev middleware alike.
+const FILE_PATH = /(?:^|\/)assets\/learn-search-text-[0-9a-f]+\.json$/
 
 /** The absolute path of every guide module, for a watcher. */
 export const articleFiles = () => LEARN_ARTICLES.map((a) => path.join(dir, a.file))
@@ -74,22 +85,48 @@ export async function learnSearchText() {
 }
 
 /**
- * The Vite plugin. `import('virtual:learn-search-text')` resolves to a module
- * whose default export is the map above.
+ * The Vite plugin. `virtual:learn-search-text-url` resolves to a module whose
+ * default export is the address of the JSON file holding the map above.
  */
 export function learnSearchTextPlugin() {
   const resolved = `\0${VIRTUAL_ID}`
+  let base = '/'
+  let building = false
   return {
     name: 'uil4b-learn-search-text',
+    configResolved(config) {
+      base = config.base.endsWith('/') ? config.base : `${config.base}/`
+      building = config.command === 'build'
+    },
+    // Dev: serve the file at the path the module exports, derived afresh on
+    // every request so an edit to a guide shows without a restart.
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url || '').split('?')[0]
+        if (!FILE_PATH.test(pathname)) return next()
+        try {
+          const json = JSON.stringify(await learnSearchText())
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(json)
+        } catch (err) {
+          next(err)
+        }
+      })
+    },
     resolveId(id) {
       return id === VIRTUAL_ID ? resolved : null
     },
     async load(id) {
       if (id !== resolved) return null
       // In dev, an edit to a guide re-derives the module rather than serving
-      // the text of the guide as it was when the server started.
+      // the address of the text as it was when the server started.
       for (const file of articleFiles()) this.addWatchFile(file)
-      return `export default ${JSON.stringify(await learnSearchText())}\n`
+      const json = JSON.stringify(await learnSearchText())
+      const hash = createHash('sha256').update(json).digest('hex').slice(0, 10)
+      const fileName = `assets/${FILE_PREFIX}${hash}.json`
+      if (building) this.emitFile({ type: 'asset', fileName, source: json })
+      return `export default ${JSON.stringify(base + fileName)}\n`
     },
   }
 }
