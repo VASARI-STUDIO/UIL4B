@@ -579,3 +579,191 @@ test('white and near-black ink contrast is the worst case over the whole ramp', 
   assert.ok(inkContrasts(dark).white >= 4.5 && inkContrasts(dark).dark < 4.5)
   assert.ok(inkContrasts(light).dark >= 4.5 && inkContrasts(light).white < 4.5)
 })
+
+// ── Mood filters in the engine (spec gradient-overhaul §8) ──────────────────
+// Mutations that make these fail:
+//   the hue re-check (moodFits / pullIntoArc) removed        -> "Hue: warm and cool"
+//   moodHarmony no longer forces Monochrome for mono         -> "Hue: mono"
+//   a Tone's ranges ignored in firstColour / secondColour    -> "Tone: ..."
+//   USE_RULES counts, angles or soft ends not applied        -> "Use: ..."
+//   firstColour does not return the base                     -> "Base colour ..."
+//   the ink rule dropped from scoreGradient                  -> "a button whose ramp ..."
+import { HUE_MIN_CHROMA, parseMoodFilters, moodFor, moodWords, poolMatching } from '../../src/utils/gradientRandom.js'
+import { inkPasses, scoreGradient as scoreG, chooseAmongTop } from '../../src/utils/gradientScore.js'
+
+const MOOD_SEEDS = 400
+const moodRolls = (filters) => Array.from({ length: MOOD_SEEDS }, (_, i) => rollGradient(mulberry32(9000 + i), { ...filters, deck: [] }))
+const lchOf2 = (g) => g.stops.map((s) => hexToOklchRaw(s.color))
+// A conic gradient's last stop repeats its first, so its second end is the one before the seam.
+const endsLch = (g) => { const l = lchOf2(g); return [l[0], l[l.length - (g.type === 'Conic' ? 2 : 1)]] }
+const flat = (g) => g.type !== 'Conic'
+const within = (v, [lo, hi], slack) => v >= lo - slack && v <= hi + slack
+
+test('filters off or null draw exactly the gradients they always did', () => {
+  for (let s = 1; s <= 200; s++) {
+    const plain = rollGradient(mulberry32(s), {})
+    const nulls = rollGradient(mulberry32(s), { hue: null, tone: null, use: null, base: null })
+    const junk = rollGradient(mulberry32(s), { hue: 'sideways', tone: 7, use: {}, base: 'red' })
+    assert.deepEqual(nulls, plain, `seed ${s}`)
+    assert.deepEqual(junk, plain, `seed ${s}`)
+  }
+})
+
+test('Hue: warm and cool keep every stop of every roll inside the arc, on the output hexes', () => {
+  for (const word of ['warm', 'cool']) {
+    const { arc } = HUE_RULES[word]
+    for (const g of moodRolls({ hue: word })) {
+      assert.notEqual(g.harmony, 'Complementary', `${word} is never complementary`)
+      for (const [, C, H] of lchOf2(g)) assert.ok(C < HUE_MIN_CHROMA || hueInArc(arc, H), `${word} stop at hue ${H} in ${g.stops.map((s) => s.color)}`)
+    }
+  }
+})
+
+test('Hue: warm is warm by eye too (reds, oranges and yellows, no greens or blues)', () => {
+  for (const g of moodRolls({ hue: 'warm' })) {
+    for (const [, C, H] of lchOf2(g)) {
+      if (C < 0.03) continue
+      assert.ok(H >= 345 || H <= 95, `warm hue ${H}`)
+      assert.ok(!(H > 120 && H < 330), `not warm: hue ${H}`)
+    }
+  }
+})
+
+test('Hue: mono is always a monochrome harmony', () => {
+  assert.ok(moodRolls({ hue: 'mono' }).every((g) => g.harmony === 'Monochrome'))
+})
+
+test('Tone: light, pastel, vivid and dark hold their ranges on the output hexes', () => {
+  for (const g of moodRolls({ tone: 'light' }).filter(flat)) for (const [L, C] of endsLch(g)) assert.ok(within(L, [0.82, 0.93], 0.015) && C <= 0.135, `light ${L} ${C}`)
+  for (const g of moodRolls({ tone: 'pastel' }).filter(flat)) {
+    const e = endsLch(g)
+    for (const [L, C] of e) assert.ok(within(L, [0.84, 0.92], 0.015) && C <= 0.105, `pastel ${L} ${C}`)
+    assert.ok(Math.abs(e[0][0] - e[1][0]) <= 0.135, 'pastel step')
+  }
+  const vivid = moodRolls({ tone: 'vivid' }).filter(flat)
+  for (const g of vivid) for (const [L, C] of endsLch(g)) assert.ok(within(L, [0.55, 0.75], 0.015) && C <= 0.185, `vivid ${L} ${C}`)
+  // Gamut can pull a rare vivid colour under its chroma floor; nearly every roll keeps it.
+  const kept = vivid.filter((g) => endsLch(g).every(([, C]) => C >= 0.115)).length / vivid.length
+  assert.ok(kept >= 0.98, `vivid chroma kept ${kept}`)
+  for (const g of moodRolls({ tone: 'dark' }).filter(flat)) {
+    const ls = endsLch(g).map((c) => c[0])
+    assert.ok(Math.min(...ls) <= 0.295, `dark anchor ${ls}`)
+    assert.ok(Math.max(...ls) <= 0.515, `dark other end ${ls}`)
+  }
+})
+
+test('Hue and Tone together: warm and light, cool and dark', () => {
+  for (const g of moodRolls({ hue: 'warm', tone: 'light' }).filter(flat)) {
+    for (const [L, C, H] of lchOf2(g)) { assert.ok(L >= 0.8 && L <= 0.95, `L ${L}`); assert.ok(C < HUE_MIN_CHROMA || hueInArc(HUE_RULES.warm.arc, H)) }
+  }
+  for (const g of moodRolls({ hue: 'cool', tone: 'dark' }).filter(flat)) {
+    assert.ok(Math.min(...endsLch(g).map((c) => c[0])) <= 0.295)
+    for (const [, C, H] of lchOf2(g)) assert.ok(C < HUE_MIN_CHROMA || hueInArc(HUE_RULES.cool.arc, H))
+  }
+})
+
+test('Use: background, hero, button and card shape the roll', () => {
+  const step = (g) => { const e = endsLch(g); return Math.abs(e[0][0] - e[1][0]) }
+  for (const g of moodRolls({ use: 'background' })) {
+    assert.equal(g.stops.length, 2)
+    assert.ok(g.type === 'Linear' || g.type === 'Radial')
+    if (g.type === 'Linear') assert.ok([160, 180, 200].includes(g.angle), `angle ${g.angle}`)
+    assert.ok(step(g) <= 0.195, `step ${step(g)}`)
+    assert.ok(endsLch(g).every(([, C]) => C <= 0.115))
+  }
+  for (const g of moodRolls({ use: 'hero' })) {
+    assert.ok(g.type === 'Linear' || g.type === 'Radial')
+    assert.ok(g.stops.length === 2 || g.stops.length === 3)
+    const ls = endsLch(g).map((c) => c[0])
+    assert.ok(step(g) >= 0.235 && step(g) <= 0.435, `step ${step(g)}`)
+    assert.ok(Math.min(...ls) <= 0.295 || Math.max(...ls) >= 0.875, `anchor ${ls}`)
+  }
+  for (const g of moodRolls({ use: 'button' })) {
+    assert.equal(g.type, 'Linear')
+    assert.equal(g.stops.length, 2)
+    assert.ok([90, 135].includes(g.angle), `angle ${g.angle}`)
+    assert.ok(step(g) >= 0.045 && step(g) <= 0.155, `step ${step(g)}`)
+    assert.ok(inkPasses(g), `ink ${g.stops.map((s) => s.color)}`)
+  }
+  for (const g of moodRolls({ use: 'card' })) {
+    assert.equal(g.type, 'Linear')
+    assert.equal(g.stops.length, 2)
+    assert.deepEqual(g.stops.map((s) => s.position), [8, 92])
+    assert.ok([135, 160].includes(g.angle), `angle ${g.angle}`)
+    assert.ok(step(g) <= 0.215, `step ${step(g)}`)
+  }
+})
+
+test('Use: a Type or Stops the person set wins over the Use rule', () => {
+  const radial = Array.from({ length: 100 }, (_, i) => rollGradient(mulberry32(i), { use: 'button', types: ['Radial'], counts: [3] }))
+  assert.ok(radial.every((g) => g.type === 'Radial' && g.stops.length === 3))
+})
+
+test('Use with the type deck skips a card the rule excludes, and keeps it for later', () => {
+  const deck = []
+  const rand = mulberry32(4)
+  for (let i = 0; i < 20; i++) assert.equal(rollGradient(rand, { use: 'button', deck }).type, 'Linear')
+  assert.ok(deck.includes('Conic'), 'the Conic card is still in the deck')
+})
+
+test('Base colour is stop 1, whatever the mud rule or Hue say, and Hue is ignored', () => {
+  for (const base of ['#E5483B', '#1B3A6B', '#F2E6C9', '#3A7D44', '#5B5A2A']) {
+    for (const g of moodRolls({ base, hue: 'cool' }).slice(0, 150)) assert.equal(g.stops[0].color, base)
+  }
+  // The partner follows the Tone, with the base left where it was.
+  for (const g of moodRolls({ base: '#E5483B', tone: 'pastel' }).filter(flat)) {
+    assert.equal(g.stops[0].color, '#E5483B')
+    const [L, C] = endsLch(g)[1]
+    assert.ok(L >= 0.825 && L <= 0.935 && C <= 0.105, `pastel partner ${L} ${C}`)
+  }
+  for (const g of moodRolls({ base: '#F2E6C9', tone: 'dark' }).filter(flat)) assert.ok(endsLch(g)[1][0] <= 0.295)
+})
+
+test('a button whose ramp fails 4.5:1 for both inks scores zero, and only for a button', () => {
+  const grey = { type: 'Linear', space: 'srgb', stops: [{ color: '#7B7B7B', position: 0 }, { color: '#7E7E7E', position: 100 }] }
+  const navy = { type: 'Linear', space: 'srgb', stops: [{ color: '#1B3A6B', position: 0 }, { color: '#2B4A8B', position: 100 }] }
+  assert.equal(inkPasses(grey), false)
+  assert.equal(inkPasses(navy), true)
+  assert.equal(scoreG(grey, { use: 'button' }).total, 0)
+  assert.ok(scoreG(grey, {}).total > 0)
+  assert.ok(scoreG(navy, { use: 'button' }).total > 0)
+})
+
+test('a zero-score candidate ships only when every candidate is zero', () => {
+  const a = { g: 'a', score: 0 }
+  const b = { g: 'b', score: 0.4 }
+  for (const r of [0, 0.5, 0.99]) assert.equal(chooseAmongTop([a, b, a], () => r), 'b')
+  assert.equal(chooseAmongTop([a, a], () => 0), 'a')
+})
+
+test('mood filters parse, drop unknown values, and the Pro ones go for a free account', () => {
+  assert.deepEqual(parseMoodFilters({ hue: 'warm', tone: 'pastel', use: 'hero', base: '#e5483b' }), { hue: 'warm', tone: 'pastel', use: 'hero', base: '#E5483B' })
+  assert.deepEqual(parseMoodFilters({ hue: 'sideways', tone: 'constructor', use: 3, base: '#12' }), { hue: null, tone: null, use: null, base: null })
+  assert.deepEqual(parseMoodFilters(null), { hue: null, tone: null, use: null, base: null })
+  const all = { hue: 'cool', tone: 'dark', use: 'card', base: '#336699' }
+  assert.deepEqual(moodFor(all, false), { hue: 'cool', tone: 'dark', use: null, base: null })
+  assert.deepEqual(moodFor(all, true), all)
+})
+
+test('mood words read out as a list for the live region', () => {
+  assert.deepEqual(moodWords({}), [])
+  assert.deepEqual(moodWords({ hue: 'warm', tone: 'light' }), ['warm', 'light'])
+  assert.deepEqual(moodWords({ hue: 'cool', use: 'hero', base: '#336699' }), ['cool', 'for a hero', 'from #336699'])
+})
+
+test('a palette pool narrows to the colours that match, or falls back to all of it with a line', () => {
+  const pool = ['#E5483B', '#F28C28', '#F5C542', '#1B3A6B', '#2E8B8B']
+  const warm = poolMatching(pool, 'warm', null)
+  assert.deepEqual(warm.pool, ['#E5483B', '#F28C28', '#F5C542'])
+  assert.equal(warm.fellBack, false)
+  assert.deepEqual(poolMatching(pool, 'mono', null).pool, pool)
+  assert.deepEqual(poolMatching(pool, null, null), { pool, fellBack: false, note: null })
+  const none = poolMatching(['#E5483B', '#F28C28'], 'cool', null)
+  assert.deepEqual(none.pool, ['#E5483B', '#F28C28'])
+  assert.equal(none.note, 'None of your palette colours are cool, so Random used all of them.')
+  const one = poolMatching(['#E5483B', '#F28C28', '#1B3A6B'], 'cool', null)
+  assert.equal(one.fellBack, true)
+  assert.match(one.note, /^Only one of your palette colours is cool/)
+  const light = poolMatching(['#FDE8E4', '#FCEFD0', '#1B3A6B'], 'warm', 'light')
+  assert.deepEqual(light.pool, ['#FDE8E4', '#FCEFD0'])
+})

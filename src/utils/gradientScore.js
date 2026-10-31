@@ -228,8 +228,10 @@ export function scoreGradient(g, ctx = {}) {
  * with a roll in [0, 1). Ties keep roll order, so a seeded run is repeatable.
  */
 export function chooseAmongTop(scored, rand = Math.random) {
-  const top = scored
-    .map((c, i) => ({ c, i }))
+  const ranked = scored.map((c, i) => ({ c, i }))
+  // A zero is a failed hard rule (a button's ink): it ships only when nothing else can.
+  const live = ranked.filter((x) => x.c.score > 0)
+  const top = (live.length ? live : ranked)
     .sort((x, y) => y.c.score - x.c.score || x.i - y.i)
     .slice(0, TOP_PICKS)
   return top[Math.min(top.length - 1, Math.floor(Math.min(Math.max(rand(), 0), 0.999999) * top.length))].c.g

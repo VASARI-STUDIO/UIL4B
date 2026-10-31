@@ -615,7 +615,9 @@ function moodFits(colours, plan) {
     const dL = Math.abs(ends[0][0] - ends[1][0])
     if (u.dL && (dL < u.dL[0] - 0.015 || dL > u.dL[1] + 0.015)) return false
     if (u.maxC && judged.some((e) => e[1] > u.maxC + 0.015)) return false
-    if (u.C && judged.some((e) => e[1] < u.C[0] - 0.015 || e[1] > u.C[1] + 0.015)) return false
+    // The chroma floor cannot be met at the depth of a Dark tone, so only the ceiling applies there.
+    const dark = t && t.anchor === 'dark'
+    if (u.C && judged.some((e) => (!dark && e[1] < u.C[0] - 0.015) || e[1] > u.C[1] + 0.015)) return false
   }
   return true
 }
@@ -755,7 +757,8 @@ export function rollCandidate(rand = Math.random, filters = {}, shape = null) {
   const plan = moodPlan(filters)
   const harmony = moodHarmony(pickHarmony(rand()), plan)
   const picked = pickTone(rand())
-  const tone = plan && plan.tone ? plan.tone.kind : picked
+  // A Use rule with a chroma floor (a button) never draws Deep: sRGB cannot hold that chroma that dark.
+  const tone = plan && plan.tone ? plan.tone.kind : plan && plan.use && plan.use.C && picked === 'Deep' ? 'Clear' : picked
 
   let type
   let n
