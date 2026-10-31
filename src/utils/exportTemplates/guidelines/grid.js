@@ -6,7 +6,7 @@
 // Grotesk) carries the masthead, headings and captions; the user's own faces carry the
 // front-page name and the specimens. The template composes the whole deck (`slides`).
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale, systemSentence, glyphStrip } from '../shared.js'
 import { mixHex } from '../roles.js'
 import { guidelineNotes, unitMm } from './notes.js'
 
@@ -118,7 +118,8 @@ function faceBlock(ctx, face) {
     <p class="face-role">${esc(face.role)}</p>
     <p class="face-aa" style="${style}">Aa</p>
     <p class="face-name">${esc(family)}, weight ${esc(weight)}</p>
-    <p class="face-set" style="font-family:${fam(family)};font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p>
+    <p class="face-set" style="font-family:${fam(family)};font-weight:${weight}">${esc(systemSentence(d, face.key))}</p>
+    ${glyphStrip(`font-family:${fam(family)};font-weight:${weight}`)}
   </div>`
 }
 

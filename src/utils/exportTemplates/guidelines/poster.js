@@ -5,7 +5,7 @@
 // least two thirds of the slide. The template composes the whole deck (`slides`);
 // the generator hands it the facts and the logo geometry.
 
-import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale } from '../shared.js'
+import { esc, safeHex, inkName, fitTitle, clampTitle, chromeFor, specimenScale, systemSentence, glyphStrip } from '../shared.js'
 import { mixHex, softInk } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Big Shoulders Display', weights: '100 900', file: 'big-shoulders-display-latin.woff2' })
@@ -154,7 +154,8 @@ function typeSlide(ctx, f, n, dark) {
   return slide(n, 'Typography', {
     bg, fg, cls: 'sl-type',
     body: `<div class="pn-fam" style="font-family:${fam(f.family)};font-weight:${f.weight}">${titleBlock(f.family, fit, opts, 'pn-famname')}
-      <p class="pn-set">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz 0123456789</p></div>
+      <p class="pn-set">${esc(systemSentence(ctx.d, f.key))}</p>
+      ${glyphStrip()}</div>
     <p class="pn-cap" style="color:${safeHex(soft, 'CanvasText')}">${esc(f.role)}, weight ${esc(f.weight)}</p>`,
   })
 }
@@ -199,8 +200,8 @@ function slides(ctx) {
   }
   const d = ctx.d
   const one = d.heading === d.body
-  out.push(typeSlide(ctx, { family: d.heading, weight: d.headingWeight, role: one ? 'The typeface' : 'Headline face' }, next(), false))
-  if (!one) out.push(typeSlide(ctx, { family: d.body, weight: d.bodyWeight, role: 'Body face' }, next(), true))
+  out.push(typeSlide(ctx, { key: 'heading', family: d.heading, weight: d.headingWeight, role: one ? 'The typeface' : 'Headline face' }, next(), false))
+  if (!one) out.push(typeSlide(ctx, { key: 'body', family: d.body, weight: d.bodyWeight, role: 'Body face' }, next(), true))
   out.push(scaleSlide(ctx, next()))
   out.push(closingSlide(ctx, next()))
   return out

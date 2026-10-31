@@ -7,7 +7,7 @@
 // The template (src/templates/kit/showcase.html) owns the structure, the copy and
 // the styling; this file only turns data into the pieces it places.
 
-import { fitTitle, clampTitle, specimenScale, safeHex, sentenceCase, localIso } from './exportTemplates/shared.js'
+import { fitTitle, clampTitle, specimenScale, safeHex, sentenceCase, localIso, systemSentence, glyphStrip } from './exportTemplates/shared.js'
 import { isNeutral } from './exportTemplates/roles.js'
 
 // The family name on the cover, in its own face: two lines at most, measured at a
@@ -22,8 +22,7 @@ const SAMPLE_FIT = Object.freeze({ maxLines: 3, steps: [128, 96, 72, 56], measur
 const SCALE_FIT = Object.freeze({ roomMm: 170, widthMm: 100, padMm: 6, textMm: 14 })
 // The most of a name a waterfall row sets: a longer one is cut at a whole word.
 const STEP_CHARS = 24
-// The heading band's character set, and the monospace stack the token listing sets.
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789'
+// The monospace stack the token listing sets.
 const MONO_STACK = "ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
 
 // Stripe heights in units: the primary, a brand colour, a neutral. If the page
@@ -105,7 +104,7 @@ export function showcaseParts(sel, h) {
     ? `Set in ${ownMono.name}, your ${ownMono === body ? 'body' : 'heading'} face, with tabular figures.`
     : 'Set in your system’s monospace face, with tabular figures.'
 
-  // ── Heading band: the project's name, then the face's alphabet and figures at the H2 step ──
+  // ── Heading band: the project's name, then a sentence about the system at the H2 step, then the character set as a strip ──
   const nameFit = fitTitle(title, SAMPLE_FIT)
   const headSample = nameFit.clamp ? clampTitle(title, nameFit.size, SAMPLE_FIT) : title
   const alphaSize = sel.typeScale.find((t) => t.name === 'Heading 2')?.size || 32
@@ -219,7 +218,8 @@ export function showcaseParts(sel, h) {
     FACTS: esc(facts),
     HEAD_SAMPLE: esc(headSample),
     HEAD_SIZE: String(nameFit.size),
-    HEAD_ALPHABET: ALPHABET,
+    HEAD_SENTENCE: esc(systemSentence(sel.system, 'heading')),
+    HEAD_STRIP: glyphStrip('font-family:var(--font-display);font-weight:var(--weight-display)'),
     ALPHA_SIZE: String(alphaSize),
     TOKEN_MONO: monoFace ? `${monoFace},${MONO_STACK}` : MONO_STACK,
     TOKEN_NOTE: esc(tokenNote),
