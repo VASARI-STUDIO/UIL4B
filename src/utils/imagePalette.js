@@ -368,3 +368,52 @@ export function averageHex(data, width, height, cx, cy, radius = 2) {
   }
   return n ? rgbToHex(r / n, g / n, b / n) : null
 }
+
+// ── Moods ────────────────────────────────────────────────────────────────────
+
+// The moods the dialog offers. `balanced` is the engine's default (no `mood`),
+// so a caller maps it to undefined with `moodArg`.
+export const MOOD_OPTIONS = [
+  { id: 'balanced', label: 'Balanced', note: 'The photo’s main colours and its strongest accent.' },
+  { id: 'colourful', label: 'Colourful', note: 'The most saturated colours in the photo.' },
+  { id: 'bright', label: 'Bright', note: 'Light, clear colours.' },
+  { id: 'muted', label: 'Muted', note: 'Soft, greyed colours.' },
+  { id: 'deep', label: 'Deep', note: 'Rich, darker colours.' },
+  { id: 'dark', label: 'Dark', note: 'The shadows and darkest tones.' },
+]
+export const moodArg = (id) => (MOODS.includes(id) ? id : undefined)
+
+// ── Putting picks on a board ─────────────────────────────────────────────────
+
+// Replace: the board becomes the picks, with each locked colour held where it
+// is. `board` is the current hexes, `lockedIdx` the locked column indexes and
+// `cap` the most columns the board may hold. Locks count against the cap, so
+// the picks are trimmed to what is left. A lock whose slot no longer exists
+// (the board got shorter) moves to the last free slot, keeping its order among
+// the locks. Returns the new board, the new locked indexes, how many picks
+// were used and how many were left out.
+export function placePicks(board, lockedIdx, picks, cap) {
+  const locks = [...new Set(lockedIdx)].filter((i) => i >= 0 && i < board.length).sort((a, b) => a - b)
+  const used = picks.slice(0, Math.max(0, cap - locks.length))
+  const length = used.length + locks.length
+  const out = new Array(length).fill(null)
+  const locked = new Set()
+  const homeless = []
+  for (const i of locks) {
+    if (i < length) { out[i] = board[i]; locked.add(i) } else homeless.push(i)
+  }
+  for (let s = length - 1; s >= 0 && homeless.length; s--) {
+    if (out[s] === null) { out[s] = board[homeless.pop()]; locked.add(s) }
+  }
+  let next = 0
+  for (let s = 0; s < length; s++) if (out[s] === null) out[s] = used[next++]
+  return { colours: out, locked, used: used.length, trimmed: picks.length - used.length }
+}
+
+// Add: the picks go after the board's own columns, as many as `cap` has room
+// for. The board and its locks are untouched.
+export function appendPicks(board, picks, cap) {
+  const room = Math.max(0, cap - board.length)
+  const used = picks.slice(0, room)
+  return { colours: [...board, ...used], used: used.length, room }
+}
