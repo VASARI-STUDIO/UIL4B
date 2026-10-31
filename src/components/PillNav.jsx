@@ -39,6 +39,7 @@ import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 import { BrandLockup, BrandSymbol } from './BrandLogo'
 import { initialsOf } from '../utils/initials.js'
+import { readSessionHint } from '../utils/sessionHint'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -299,6 +300,11 @@ export default function PillNav({ variant }) {
 
 function AppHeader() {
   const { user, userProfile, loading: authLoading } = useAuth()
+  // Auth answers after the first paint. The empty avatar slot is held only for a
+  // browser whose last session was signed in; with no hint the signed-out controls
+  // show at once, so a visitor never sees a slot open and close.
+  const [sessionLikely] = useState(readSessionHint)
+  const accountPending = authLoading && sessionLikely
   const { openLogin } = useLoginPrompt()
   const { isPro, planKnown } = useSubscription()
   const { reducedMotion } = useAppearance()
@@ -681,7 +687,7 @@ function AppHeader() {
   // Neither the signed-out controls nor Upgrade are right until the account is
   // known: a signed-in person would first see "Log in", a Pro subscriber
   // "Upgrade". Until then the account slot is an empty box the size of the avatar.
-  const showUpgrade = !authLoading && planKnown && !isPro && path !== '/plans'
+  const showUpgrade = !accountPending && planKnown && !isPro && path !== '/plans'
 
   return (
     <>
@@ -746,7 +752,7 @@ function AppHeader() {
             ))}
           </div>
 
-          <div className="pnav-actions" aria-busy={authLoading || undefined}>
+          <div className="pnav-actions" aria-busy={accountPending || undefined}>
             {!isSalesPage && (
               <span
                 className="pnav-act-wrap"
@@ -789,7 +795,7 @@ function AppHeader() {
             {/* The theme switch is the control directly left of the account
                 one: before "Log in" signed out, before the avatar signed in
                 (below, after Upgrade). */}
-            {!user && !authLoading && (
+            {!user && !accountPending && (
               <>
                 <ThemeCycle />
                 <button type="button" className="pnav-login" aria-haspopup="dialog" onClick={startLogin}>
@@ -805,9 +811,9 @@ function AppHeader() {
               </Link>
             )}
 
-            {(user || authLoading) && <ThemeCycle />}
+            {(user || accountPending) && <ThemeCycle />}
 
-            {authLoading ? (
+            {accountPending ? (
               <div className="pnav-pop-wrap">
                 <span className="pnav-avatar-slot" aria-hidden="true" />
               </div>
@@ -1018,7 +1024,7 @@ function AppHeader() {
           })}
 
           <div className="pnav-sheet-group">
-            {!user && !authLoading && (
+            {!user && !accountPending && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
                 <TagIcon /><span>Pricing &amp; plans</span>
               </Link>
@@ -1043,7 +1049,7 @@ function AppHeader() {
               save or export. */}
           {/* While the account loads this group is absent: neither the signed-in
               nor the signed-out version is right yet. */}
-          {!authLoading && (
+          {!accountPending && (
             <div className="pnav-sheet-group">
               {user ? (
                 <div id="pnav-sheet-account">
@@ -1085,7 +1091,7 @@ function AppHeader() {
 
       <PhoneTabBar
         signedIn={!!user}
-        loading={authLoading}
+        loading={accountPending}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}
