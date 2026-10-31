@@ -721,3 +721,16 @@
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::before,
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::after { animation: none; transition: none; }
 :where(html[data-reduced-motion="true"]) .pricing .pr-cta:active { transform: none; }
+
+/* Below 360 the billing switch leaves room for the currency code only; the
+   words stay for screen readers so the row never wraps when prices land. */
+@media (max-width: 359px) {
+  .pricing .pr-offer-top .pr-cur-pre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

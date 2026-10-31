@@ -507,7 +507,7 @@ export default function Pricing() {
                   <td role="cell" className="pr-c pr-c--label pr-head pr-head--billing">
                     <span className="pr-k" id="pricing-billing-k">Billing</span>
                     {billingSwitch({ 'aria-labelledby': 'pricing-billing-k' }, true)}
-                    <span className="pr-cur">{price.loaded ? `Prices in ${price.currencyLabel}.` : ''}</span>
+                    <span className="pr-cur">{price.loaded && <><span className="pr-cur-pre">Prices in </span>{price.currencyLabel}.</>}</span>
                   </td>
 
                   <td role="cell" className="pr-c pr-c--free pr-head pr-head--free">
@@ -634,7 +634,7 @@ export default function Pricing() {
             <section className="pr-offer pr-shell" aria-label="Plans">
               <div className="pr-offer-top">
                 {billingSwitch({ 'aria-label': 'Billing' }, false)}
-                <span className="pr-cur">{price.loaded ? `Prices in ${price.currencyLabel}.` : ''}</span>
+                <span className="pr-cur">{price.loaded && <><span className="pr-cur-pre">Prices in </span>{price.currencyLabel}.</>}</span>
               </div>
 
               {/* The same hooks as the ledger's Pro head, so a test reads either layout alike. */}
