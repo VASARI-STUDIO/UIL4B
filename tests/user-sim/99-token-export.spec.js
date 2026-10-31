@@ -30,7 +30,7 @@ async function boardWithPalette(page) {
 async function exportFormat(page, name, label) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
   const panel = exportPanel(page)
-  await expect(panel).toBeVisible()
+  await expect(panel).toBeVisible({ timeout: 15000 }) // the dialog is a lazy chunk; the signed-out specs give it the same
   await chooseFormat(panel, label.toLowerCase())
   const cta = primaryButton(panel)
   await expect(cta).toHaveText(`Export ${label}`)
@@ -38,6 +38,11 @@ async function exportFormat(page, name, label) {
   const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
   // The popup stays open and names the file it made; closing it is a separate step.
   await expect(dockStatus(panel)).toContainText(`Downloaded ${download.suggestedFilename()}`)
+  // The notice paints a beat before the dialog's effects run. Until they do it still
+  // counts the export as running and drops an Escape (it did on ~half the presses at
+  // 4x CPU slowdown). When they have, the dialog hands focus back to its button, so
+  // wait for that: it is the dialog saying the export is over.
+  await expect(cta).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(panel).toHaveCount(0)
   return { filename: download.suggestedFilename(), body: await readDownload(download) }

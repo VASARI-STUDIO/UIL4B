@@ -29,7 +29,8 @@ import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
 import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
-import { AccountSwitcher, SignOutRows } from './nav/AccountSwitcher'
+import { AccountSwitcher, OfflineNote, SignOutRows } from './nav/AccountSwitcher'
+import useOfflineGate from './nav/useOfflineGate'
 import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
@@ -38,6 +39,7 @@ import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 import { BrandLockup, BrandSymbol } from './BrandLogo'
 import { initialsOf } from '../utils/initials.js'
+import { readSessionHint } from '../utils/sessionHint'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
 // Discover pane's counts too — they render only inside the open Discover menu,
@@ -297,9 +299,14 @@ export default function PillNav({ variant }) {
 }
 
 function AppHeader() {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
+  // Auth answers after the first paint. The empty avatar slot is held only for a
+  // browser whose last session was signed in; with no hint the signed-out controls
+  // show at once, so a visitor never sees a slot open and close.
+  const [sessionLikely] = useState(readSessionHint)
+  const accountPending = authLoading && sessionLikely
   const { openLogin } = useLoginPrompt()
-  const { isPro } = useSubscription()
+  const { isPro, planKnown } = useSubscription()
   const { reducedMotion } = useAppearance()
   const { design, projects, loadProject } = useProject()
   const exportDesign = useExportDesign()
@@ -367,6 +374,10 @@ function AppHeader() {
   const openedBy = useRef(null)
   // Escape returns focus to the trigger that owns the layer it closed.
   const triggerRefs = useRef({})
+  // The signed-out menu and the phone sheet each point their sign-in rows at
+  // their own offline note.
+  const menuOffline = useOfflineGate()
+  const sheetOffline = useOfflineGate()
   const closeAccountMenu = useCallback(() => setMenu(null), [])
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
@@ -481,7 +492,10 @@ function AppHeader() {
     if (sheet && sheetSection === 'account') document.getElementById('pnav-sheet-account')?.scrollIntoView({ block: 'start' })
   }, [sheet, sheetSection])
 
-  // The sheet locks the page's scroll and keeps Tab inside itself.
+  // The sheet locks the page's scroll and keeps Tab inside itself. Its Close is
+  // the header's menu button, which sits above the sheet and outside it, so the
+  // ring is that button followed by the sheet's controls: Shift+Tab from the
+  // first control reaches Close, and Tab from Close re-enters the sheet.
   useEffect(() => {
     if (!sheet) return
     const unlockScroll = lockScroll()
@@ -492,21 +506,23 @@ function AppHeader() {
     focusable()[0]?.focus()
     const trap = (event) => {
       if (event.key !== 'Tab') return
+      const closeBtn = mobileBtnRef.current
       const items = focusable()
-      if (!items.length) return
-      const first = items[0]
-      const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
+      const ring = closeBtn && closeBtn.getClientRects().length > 0 ? [closeBtn, ...items] : items
+      const at = ring.indexOf(document.activeElement)
+      // Focus in another layer (a dialog opened from the sheet) is not ours.
+      if (at < 0) return
+      const last = ring.length - 1
+      let next = null
+      if (event.shiftKey) next = at === 0 ? last : (ring[0] === closeBtn && at === 1 ? 0 : null)
+      else next = at === last ? 0 : (ring[0] === closeBtn && at === 0 ? 1 : null)
+      if (next === null || ring.length < 2) return
+      event.preventDefault()
+      ring[next].focus()
     }
-    panel?.addEventListener('keydown', trap)
+    document.addEventListener('keydown', trap)
     return () => {
-      panel?.removeEventListener('keydown', trap)
+      document.removeEventListener('keydown', trap)
       unlockScroll()
       unmark()
     }
@@ -668,7 +684,10 @@ function AppHeader() {
   }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
-  const showUpgrade = !isPro && path !== '/plans'
+  // Neither the signed-out controls nor Upgrade are right until the account is
+  // known: a signed-in person would first see "Log in", a Pro subscriber
+  // "Upgrade". Until then the account slot is an empty box the size of the avatar.
+  const showUpgrade = !accountPending && planKnown && !isPro && path !== '/plans'
 
   return (
     <>
@@ -733,7 +752,7 @@ function AppHeader() {
             ))}
           </div>
 
-          <div className="pnav-actions">
+          <div className="pnav-actions" aria-busy={accountPending || undefined}>
             {!isSalesPage && (
               <span
                 className="pnav-act-wrap"
@@ -776,7 +795,7 @@ function AppHeader() {
             {/* The theme switch is the control directly left of the account
                 one: before "Log in" signed out, before the avatar signed in
                 (below, after Upgrade). */}
-            {!user && (
+            {!user && !accountPending && (
               <>
                 <ThemeCycle />
                 <button type="button" className="pnav-login" aria-haspopup="dialog" onClick={startLogin}>
@@ -792,9 +811,13 @@ function AppHeader() {
               </Link>
             )}
 
-            {user && <ThemeCycle />}
+            {(user || accountPending) && <ThemeCycle />}
 
-            {user ? (
+            {accountPending ? (
+              <div className="pnav-pop-wrap">
+                <span className="pnav-avatar-slot" aria-hidden="true" />
+              </div>
+            ) : user ? (
               <div className="pnav-pop-wrap">
                 <button
                   type="button"
@@ -816,6 +839,7 @@ function AppHeader() {
                     className="pop pnav-pop pnav-pop--account"
                     ref={accountPopRef}
                     id="pnav-account-pop"
+                    role="group"
                     aria-label="Account and settings"
                     tabIndex={-1}
                   >
@@ -828,10 +852,13 @@ function AppHeader() {
                       <GearIcon />
                       <span>Account &amp; settings</span>
                     </Link>
-                    <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? planState : undefined} replace={isPro && onSettings} onClick={closeAll}>
-                      <TagIcon />
-                      <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
-                    </Link>
+                    {/* Which plan row is right is not known until the plan is. */}
+                    {planKnown && (
+                      <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? planState : undefined} replace={isPro && onSettings} onClick={closeAll}>
+                        <TagIcon />
+                        <span>{isPro ? 'Manage plan' : 'Upgrade to Pro'}</span>
+                      </Link>
+                    )}
                     <Link className="pnav-pop-item" to="/learn/help" onClick={closeAll}>
                       <HelpIcon />
                       <span>Help centre</span>
@@ -846,7 +873,7 @@ function AppHeader() {
                       </Link>
                     )}
                     <div className="pnav-pop-sep" />
-                    <SignOutRows onDone={closeAll} />
+                    <SignOutRows onDone={closeAccountMenuAndRestoreFocus} />
                   </div>
                 )}
               </div>
@@ -870,9 +897,11 @@ function AppHeader() {
                     className="pop pnav-pop"
                     ref={accountPopRef}
                     id="pnav-account-pop"
-                    aria-label="Menu"
+                    role="group"
+                    aria-label="Settings and sign in"
                     tabIndex={-1}
                   >
+                    {!menuOffline.online && <OfflineNote id={menuOffline.noteId} />}
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg />
                     <div className="pnav-pop-sep" />
@@ -889,11 +918,11 @@ function AppHeader() {
                       <TagIcon />
                       <span>Pricing &amp; plans</span>
                     </Link>
-                    <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={startLogin}>
+                    <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startLogin() }} {...menuOffline.gate}>
                       <LoginArrowIcon />
                       <span>Log in</span>
                     </button>
-                    <button type="button" className="pnav-pop-item pnav-pop-signup" aria-haspopup="dialog" onClick={startSignup}>
+                    <button type="button" className="pnav-pop-item pnav-pop-signup" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startSignup() }} {...menuOffline.gate}>
                       <UserPlusIcon />
                       <span>Create a free account</span>
                     </button>
@@ -995,7 +1024,7 @@ function AppHeader() {
           })}
 
           <div className="pnav-sheet-group">
-            {!user && (
+            {!user && !accountPending && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
                 <TagIcon /><span>Pricing &amp; plans</span>
               </Link>
@@ -1018,39 +1047,51 @@ function AppHeader() {
               here it is one plain row. Signed out, "Start for free" opens the
               workspace, not a sign-up form: an account is asked for only on
               save or export. */}
-          <div className="pnav-sheet-group">
-            {user ? (
-              <div id="pnav-sheet-account">
-                <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
-                <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
-                  <GearIcon /><span>Account &amp; settings</span>
-                </Link>
-                {showUpgrade && (
-                  <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
-                    <TagIcon /><span>Upgrade</span>
+          {/* While the account loads this group is absent: neither the signed-in
+              nor the signed-out version is right yet. */}
+          {!accountPending && (
+            <div className="pnav-sheet-group">
+              {user ? (
+                <div id="pnav-sheet-account">
+                  <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
+                  <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
+                    <GearIcon /><span>Account &amp; settings</span>
                   </Link>
-                )}
-                <SignOutRows onDone={closeAll} />
-              </div>
-            ) : (
-              <div className="pnav-sheet-cta">
-                <Link className="pnav-upgrade pnav-upgrade--block" to="/projects" onClick={closeAll}>
-                  Start for free
-                </Link>
-                <button type="button" className="pnav-sheet-login" aria-haspopup="dialog" onClick={startLogin}>
-                  Log in
-                </button>
-                <button type="button" className="pnav-sheet-row pnav-sheet-signup" aria-haspopup="dialog" onClick={startSignup}>
-                  <UserPlusIcon /><span>Create a free account</span>
-                </button>
-              </div>
-            )}
-          </div>
+                  {isPro ? (
+                    planKnown && (
+                      <Link className="pnav-sheet-row" to="/settings" state={planState} replace={onSettings} onClick={closeAll}>
+                        <TagIcon /><span>Manage plan</span>
+                      </Link>
+                    )
+                  ) : showUpgrade && (
+                    <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
+                      <TagIcon /><span>Upgrade to Pro</span>
+                    </Link>
+                  )}
+                  <SignOutRows onDone={closeSheetAndRestoreFocus} />
+                </div>
+              ) : (
+                <div className="pnav-sheet-cta">
+                  {!sheetOffline.online && <OfflineNote id={sheetOffline.noteId} />}
+                  <Link className="pnav-upgrade pnav-upgrade--block" to="/projects" onClick={closeAll}>
+                    Start for free
+                  </Link>
+                  <button type="button" className="pnav-sheet-login" aria-haspopup="dialog" onClick={() => { if (sheetOffline.online) startLogin() }} {...sheetOffline.gate}>
+                    Log in
+                  </button>
+                  <button type="button" className="pnav-sheet-row pnav-sheet-signup" aria-haspopup="dialog" onClick={() => { if (sheetOffline.online) startSignup() }} {...sheetOffline.gate}>
+                    <UserPlusIcon /><span>Create a free account</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       <PhoneTabBar
         signedIn={!!user}
+        loading={accountPending}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}

@@ -327,6 +327,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    backdrop-filter makes it the containing block for this fixed backdrop.) */
 .icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 .icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.icust-gate[tabindex="-1"]:focus-visible{outline:none}
 .icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
 .icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
 .icust-gate-dismiss{align-self:center;margin-top:2px;padding:6px 12px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}

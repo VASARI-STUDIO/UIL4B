@@ -53,7 +53,9 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Detailed', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Detailed', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
-    const generate = page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })
+    // Below 768 a tool's primary action lives in the bottom dock, not the toolbar.
+    const generateHome = width < 768 ? '[data-tl-dock]' : '[data-tool-toolbar]'
+    const generate = page.locator(generateHome).getByRole('button', { name: /^Generate/ })
     await expect(generate).toBeEnabled()
     await generate.click()
     await expect(page.locator('.ui-login'), 'Generate did not ask for an account').toBeVisible()
