@@ -64,7 +64,7 @@ const ADOBE_NOTE = 'The `.aco` file has no groups, so the light and dark interfa
 const affinitySteps = (slug) => [
   'Open the Swatches panel and choose Import Palette from its menu.',
   `Pick \`${slug}-colours.ase\` from the Affinity folder.`,
-  'The palette appears in the panel with the groups intact.',
+  'The palette appears in the Swatches panel. Check the swatch names afterwards.',
 ]
 const PROCREATE_STEPS = [
   'Copy the `.ase` file to your iPad (the Files app, AirDrop or iCloud Drive).',
@@ -125,7 +125,7 @@ function readme(design, { slug, date, name, rootName, groups }) {
 
   const folders = [
     ['00 Start here', 'Everyone', 'This README.'],
-    ['01 Figma', 'Figma', 'Variables for colour, type and spacing, with light and dark modes.'],
+    ['01 Figma', 'Figma', 'Variables for colour and type, with light and dark modes.'],
     ['02 Adobe', 'Photoshop, Illustrator, InDesign', 'Colour swatches (.ase and .aco).'],
     ['03 Other design apps', 'Affinity, Procreate', 'Colour swatches (.ase), one folder per app.'],
     ['04 Code', 'Websites and apps', 'CSS custom properties and design tokens in JSON, with light and dark values.'],

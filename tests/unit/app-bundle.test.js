@@ -45,7 +45,8 @@ test('the paths are exactly the expected list', () => {
 
 test('paths use forward slashes and file names are lowercase kebab-case', () => {
   const FILE = /^[a-z0-9]+(?:[-.][a-z0-9]+)*$/
-  const FOLDER = /^(\d\d [A-Z][a-z]+( [a-z]+)*|Affinity|Procreate)$/
+  // Numbered folders and app names are for people; folders inside 04 Code are for tools.
+  const FOLDER = /^(\d\d [A-Z][a-z]+( [a-z]+)*|Affinity|Procreate|[a-z]+)$/
   const HUMAN_FILES = new Set(['How to import.md', 'README.md'])
   for (const { path } of entries) {
     assert.ok(!path.includes('\\'), `backslash in ${path}`)
