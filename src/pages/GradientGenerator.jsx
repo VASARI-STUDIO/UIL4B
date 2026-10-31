@@ -52,7 +52,7 @@ import '../styles/pages/gradient.css'
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
-// ── Shuffle settings ──
+// ── Random settings ──
 // What Random and Shuffle from palette may make. A group holds the values that
 // are allowed; 'Any' means the weights decide. The choice is kept for the
 // session only.
@@ -310,7 +310,7 @@ const supportsOklchGradients = (() => {
   try { return typeof CSS !== 'undefined' && CSS.supports('background-image', 'linear-gradient(90deg in oklch, red, blue)') } catch { return false }
 })()
 
-// Ten starter colours, offered in Available colours while there is no palette to
+// Ten starter colours, offered in the palette row while there is no palette to
 // draw from. Each has a name so its chip reads as more than a hex.
 const STARTER_COLOURS = [
   { hex: '#2F6BFF', name: 'Starter blue' }, { hex: '#1B3FA8', name: 'Starter navy' },
@@ -320,9 +320,8 @@ const STARTER_COLOURS = [
   { hex: '#0B0C0E', name: 'Starter ink' }, { hex: '#F7F7F4', name: 'Starter paper' },
 ]
 
-// The most items Available colours draws in the palette row (two rows at a fine
-// pointer). A palette past it shows one fewer colour and a "+N more" link in the
-// last place, so the row never takes more room than thirteen colours do.
+// The most items the palette row draws, which fit one row. A palette past it shows
+// one fewer colour and a "+N more" link in the last place.
 const MAX_CHIPS = 9
 const MAX_CHIPS_COARSE = 6
 
@@ -394,7 +393,7 @@ function ColourChip({ hex, label, on, unavailable = false, onPick }) {
       style={{ background: hex }}
       aria-pressed={on}
       aria-disabled={unavailable || undefined}
-      aria-describedby={unavailable ? 'grd-avail-locked' : undefined}
+      aria-describedby={unavailable ? 'grd-paint-locked' : undefined}
       aria-label={name}
       title={name}
       onClick={() => onPick(hex, label)}
@@ -405,10 +404,10 @@ function ColourChip({ hex, label, on, unavailable = false, onPick }) {
 }
 
 
-// What the status line's last sentence was about: the target stop(s) and every
-// stop's colour. Once either changes the sentence is stale and the line goes back
-// to saying what the next press will do.
-const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}`
+// What the status line's last sentence was about: the target stop(s), every stop's
+// colour and which colours are locked. Once any changes the sentence is stale and
+// the line goes back to saying what the next press will do.
+const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}|${list.map((st) => (st.lockColour ? 1 : 0)).join('')}`
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
@@ -718,13 +717,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // elsewhere) announces twice; an unchanged string would not.
   const [pickNote, setPickNote] = useState('')
   const pickNoteTimer = useRef(0)
-  // The Available colours status line: the last press's sentence and the key that
-  // says which stops and colours it describes. `n` flips an invisible character on
+  // The palette row's status line: the last press's sentence and the key that
+  // says which stops, colours and locks it describes. `n` flips an invisible character on
   // an identical sentence so a screen reader says it again.
   const [paintNote, setPaintNote] = useState(null)
   const paintCount = useRef(0)
-  // Every colour chip in Available colours (the palette, the starters, a project's
-  // colours, the shades) is one tab stop; arrows move between them.
+  // Every colour chip in the palette row (the palette, the starters, a project's
+  // colours, and the shades below them) is one tab stop; arrows move between them.
   const chipsRef = useRef(null)
   const chipRoving = useRoving(chipsRef, '.grd-chip', undefined, true)
   useEffect(() => () => clearTimeout(pickNoteTimer.current), [])
@@ -788,7 +787,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // must never inherit the gallery gradient's Pro edit lock.
   const [fromLibrary, setFromLibrary] = useState(() => !carriedPalette && design?.gradient?.source === 'gallery')
 
-  // Shuffle settings say what Random may make. Locks say what it must keep: the
+  // The Random section says what Random may make. Locks say what it must keep: the
   // geometry locks (type, angle, interpolation) are session state here, and the
   // per-stop colour and position locks sit on the stop objects
   // (`.lockColour`, `.lockPosition`). A lock wins over a filter (spec §4.3).
@@ -1119,7 +1118,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     if (allColoursLocked(stops)) toast?.(EVERY_COLOUR_LOCKED)
   }, [applyRoll, rollOptions, stops, toast])
 
-  // ── Available colours ──
+  // ── Palette row colours ──
   // The palette's colours (de-duplicated without regard to case, in palette
   // order), each with the role it holds, and the active colour's shades when the
   // project's ramp is current. The palette cannot change while this page is
@@ -1132,7 +1131,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Valid hex colours in the live Palette Builder palette — feeds the
   // "From palette" button (needs 2+ to build a gradient).
   const paletteHexes = useMemo(() => chips.map((c) => c.hex), [chips])
-  // The Shuffle pool lives in Shuffle settings (filters.pool). The colours on offer
+  // The Random pool lives in the Random section (filters.pool). The colours on offer
   // there are the palette's, or the ten starter colours while there is no palette.
   // The pool counts from two colours up: one tick is just a mark.
   const poolColours = useMemo(() => (chips.length ? chips : STARTER_COLOURS.map((c) => ({ hex: c.hex, label: c.name }))), [chips])
@@ -1222,8 +1221,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return list
   }, [design?.palette?.colors, projects])
 
-  // "From a project" in the sparse Available colours states: saved projects only
-  // (the current palette is what is missing there). The choice lasts the session.
+  // Saved projects offered in the palette row's source menu (the current palette is
+  // listed separately).
   const projectSources = useMemo(() => importSources.filter((s) => s.key.startsWith('proj-')), [importSources])
   // The palette row's source: 'palette', 'starter' or a project key. The choice lasts the session.
   const [paintSrc, setPaintSrc] = useState('palette')
@@ -1617,9 +1616,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const sparse = chips.length < 2
   const srcKey = paintSrc === 'palette' && sparse ? 'starter' : paintSrc
   const fromProject = projectSources.find((s) => s.key === srcKey) || null
+  // With one palette colour the row is that colour, then the starters that fill the rest of a row.
+  const starters = STARTER_COLOURS.map((c) => ({ hex: c.hex, label: c.name }))
+  const starterRow = chips.length === 1
+    ? [...chips, ...starters.filter((c) => c.hex.toUpperCase() !== chips[0].hex.toUpperCase()).slice(0, MAX_CHIPS - 1)]
+    : starters
   const rowColours = fromProject
     ? fromProject.colors.map((hex, i) => ({ hex: hex.toUpperCase(), label: `${fromProject.name} colour ${i + 1}` }))
-    : srcKey === 'starter' ? STARTER_COLOURS.map((c) => ({ hex: c.hex, label: c.name })) : chips
+    : srcKey === 'starter' ? starterRow : chips
   const chipCap = coarse ? MAX_CHIPS_COARSE : MAX_CHIPS
   const shownRow = rowColours.length > chipCap ? rowColours.slice(0, chipCap - 1) : rowColours
   const hiddenRow = rowColours.length - shownRow.length
@@ -1980,8 +1984,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </span>
             )}
           >
-            {/* The page's one spoken region for stop edits and selections. Available
-                colours has only its own visible status line, so no press is said twice. */}
+            {/* The page's one spoken region for stop edits and selections. The palette
+                row has only its own visible status line, so no press is said twice. */}
             <div className="sr-only" role="status">{pickNote}</div>
             <div
               ref={stopListRef}
@@ -2071,7 +2075,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             {/* THE PALETTE ROW. Every colour on offer, one press from the highlighted
                 stop; the line above says which stop a press paints, and after a press
                 what it did. The shades are an extra and sit at the foot. */}
-            <div className="grd-paint">
+            <div className="grd-paint" ref={chipsRef} {...chipRoving}>
               <div className="grd-paint-head">
                 <p id="grd-paint-status" className="grd-paint-label" role="status" aria-live="polite" aria-atomic="true">
                   {noteNow ? noteNow.text + (noteNow.n % 2 ? '​' : '') : paintLine}
@@ -2085,8 +2089,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   onChange={setPaintSrc}
                 />
               </div>
-              {allLocked && <span id="grd-avail-locked" className="sr-only">Every colour is locked.</span>}
-              <div className="grd-chips" role="group" aria-label="Palette colours" ref={chipsRef} {...chipRoving}>
+              {allLocked && <span id="grd-paint-locked" className="sr-only">Every colour is locked.</span>}
+              <div className="grd-chips" role="group" aria-label="Palette colours">
                 {shownRow.map((c) => (
                   <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />
                 ))}
@@ -2098,7 +2102,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </div>
               {shades && (
                 <div className="grd-shades">
-                  <span className="grd-avail-sub" id="grd-shades-label">{shades.role} shades</span>
+                  <span className="grd-paint-sub" id="grd-shades-label">{shades.role} shades</span>
                   <div className="grd-chips grd-chips--shades" role="group" aria-labelledby="grd-shades-label">
                     {shades.items.map((c) => (
                       <ColourChip key={c.hex} hex={c.hex} label={c.label} on={usedHexes.has(c.hex.toUpperCase())} unavailable={allLocked} onPick={pickColour} />

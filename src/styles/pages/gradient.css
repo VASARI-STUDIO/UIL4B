@@ -66,7 +66,7 @@
    blank block under the code box before the presets. The preview grows into that
    height instead (capped, so a twelve-stop panel does not make a tower). The cap sits
    above the panel's height with the starter stops (976px: stage 750 + rail + code box
-   + gaps), so the Available colours block's held rows never strand the code box.
+   + gaps), so the palette row's held rows never strand the code box.
    Stacked at 900px and under, the column is its own height and nothing changes. */
 @media (min-width: 901px) {
   .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
@@ -424,7 +424,7 @@
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-paint-link:hover { color: var(--tl-ink); }
 }
-.grd .grd-avail-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-paint-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-shades { display: grid; gap: 6px; }
 .grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .grd .grd-chips--shades { gap: 3px; }
@@ -984,7 +984,7 @@
 .grd .tl-btn.grd-back[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 .grd .tl-btn.grd-back[aria-disabled="true"]:active { transform: none; }
 
-/* The filter rows kept from the old Shuffle settings (Type, Stops) and the
+/* The filter rows in the Random section (Type, Stops) and the
    checklist behind "Pick…". */
 .grd-gen .grd-shuf-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 4px; }
 .grd-gen .grd-shuf-k { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
