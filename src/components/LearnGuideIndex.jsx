@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import searchTextUrl from 'virtual:learn-search-text-url'
 import LibrarySearch from './library/LibrarySearch'
 import { LEARN_ARTICLES, TOPICS, readingMinutes } from '../data/learnIndex'
 import { LEARN_GROUPS } from '../data/toolTree'
@@ -22,10 +23,13 @@ import { PLACES, searchGuides, termsOf } from '../utils/learnSearch'
 //
 // Titles, deks and section headings are in the registry and are searched at
 // once. The prose is 51 KB of plain text across seven guides, extracted from
-// the JSX at build time (scripts/learn-search-text.mjs) and served as the
-// virtual module below. It is imported on the first FOCUS of the field, the
-// way the Emoji Library requests its index: nothing on the first paint of
-// /learn, and normally resolved before the first keystroke. A body-only match
+// the JSX at build time (scripts/learn-search-text.mjs) and served as a hashed
+// JSON file. It is fetched on the first FOCUS of the field, the way the Emoji
+// Library requests its index: nothing on the first paint of /learn, and
+// normally resolved before the first keystroke. It is a fetch() and not an
+// import() so that a failure is an ordinary rejection this component answers
+// with the titles-only notice, rather than a vite:preloadError that reloads
+// the page and wipes the query. A body-only match
 // shows the sentence fragment it was found in, because the card otherwise
 // gives the reader no way to see why it matched.
 //
@@ -52,7 +56,17 @@ const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]
 let bodiesPromise = null
 const loadBodies = () => {
   if (!bodiesPromise) {
-    bodiesPromise = import('virtual:learn-search-text').then((m) => m.default)
+    bodiesPromise = fetch(searchTextUrl)
+      .then((res) => {
+        // A 404 resolves rather than rejecting; treat it as a failed load.
+        if (!res.ok) throw new Error(`learn search text: HTTP ${res.status}`)
+        return res.json()
+      })
+      .catch((err) => {
+        // Forget the failure so a later attempt is a genuine new request.
+        bodiesPromise = null
+        throw err
+      })
   }
   return bodiesPromise
 }

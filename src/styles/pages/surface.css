@@ -226,6 +226,10 @@
   .srf .surface-grid { grid-template-columns: minmax(0, 1fr); }
   .srf .lidx-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title go" "dek dek" "time time" "hit hit"; }
   .srf .lidx-time { margin-top: 2px; }
+  /* A row with no read time (the Using UIL4B rows) has nothing for the time or
+     hit rows, and each empty row would still add its 4px gap under the dek.
+     Dropping them leaves the card's own 16px padding above and below. */
+  .srf .lidx-card:not(:has(.lidx-time)) { grid-template-areas: "title go" "dek dek"; }
 }
 @media (pointer: coarse) {
   .srf .lidx-topics a { min-height: 44px; }
