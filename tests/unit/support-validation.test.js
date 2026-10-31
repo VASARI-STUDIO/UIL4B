@@ -145,7 +145,7 @@ test('the handler validates through the pure function and boots through the shar
   const src = fs.readFileSync(path.join(process.cwd(), 'api/support.js'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '')
-  assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source \}\)/,
+  assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source, category, severity \}\)/,
     'the handler no longer validates through validateSupportBody')
   assert.match(src, /import \{[^}]*\badminDb\b[^}]*\} from '\.\/_lib\/firebase-admin\.js'/,
     'support.js must use the shared Firebase Admin bootstrap')
