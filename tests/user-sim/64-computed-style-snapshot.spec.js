@@ -114,6 +114,12 @@ const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) =
 // Elements a redesigned route gained. They join the measure only while
 // regenerating; once they are in the fixture they are compared like any other.
 const ADDED_SELECTORS = {
+  // The guide shell's contents (rail from 1080, disclosure below), the content
+  // column and the end-of-guide rows. Each is painted at only one of the two
+  // widths, so the other width simply carries fewer rows.
+  '/learn/brand-colour': ['.lart-main', '.lart-toc-h', '.lart-toc-nav', '.lart-toc-m', '.lart-toc-m-name', '.lart-toc-m-count',
+    '.lart-chev', '.lart-prose', '.lart-onward-row', '.lart-onward-text', '.lart-onward-kicker', '.lart-onward-title',
+    '.lart-onward-go', '.lart-sources'],
   '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
     '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the
