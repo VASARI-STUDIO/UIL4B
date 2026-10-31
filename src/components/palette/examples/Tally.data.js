@@ -100,6 +100,13 @@ export const TXNS = [
     ],
   },
 ]
+
+// Bills coming out in the next fortnight, shown under the balance in the wide layout.
+export const DUE = [
+  { who: 'Southbank Energy', mark: 'ring', note: 'Electricity · Wed 14 Oct', amount: -142.6 },
+  { who: 'Fibrehome Internet', mark: 'chevron', note: 'Internet · Mon 19 Oct', amount: -89 },
+  { who: 'Greenway Insurance', mark: 'shelf', note: 'Contents cover · Fri 23 Oct', amount: -64.3 },
+]
 export const amountText = (n) => `${n < 0 ? '−' : '+'}${money(Math.abs(n))}`
 
 export const CARD = { last4: '4471' }

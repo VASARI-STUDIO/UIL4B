@@ -25,13 +25,12 @@
   font-family:'PV Schibsted','Switzer Fallback',system-ui,sans-serif;
   font-size:15px;
   line-height:1.5;
-  /* Lining figures at rest; the lists below switch their columns to tabular. */
-  font-variant-numeric:lining-nums;
+  /* Proportional lining figures throughout: this face sets its tabular comma and full stop wide ("$1 ,600"), so the right-aligned amount columns line up on their two-decimal endings instead. */
+  font-variant-numeric:lining-nums proportional-nums;
 }
 .ty :where(h3,p,ul,b,small){margin:0;padding:0;font:inherit}
 .ty :where(ul){list-style:none}
 .ty :where(*,*::before,*::after){box-sizing:border-box}
-.ty-amt,.ty-money,.ty-share,.ty-left-amt{font-variant-numeric:lining-nums tabular-nums}
 
 /* ── Header: wordmark, nav and the account's avatar ── */
 .ty-head{display:flex;align-items:center;gap:var(--s-7);flex:none;height:64px;padding:0 var(--s-7);border-bottom:1px solid var(--pv-border)}
@@ -48,8 +47,9 @@
 .ty-label{font-size:13px;color:var(--pv-muted)}
 
 /* ── The card: the render, the type on it and a 3px edge line beneath ── */
-.ty-cardwrap{width:360px;max-width:100%}
-.ty-cardface{width:100%;border-radius:10px}
+/* The render's own corner radius is 31 of its 1428px, so 2.17% of the card's width; the wrapper is a size container so the clip, the edge ring and the edge line below all follow the card's width. */
+.ty-cardwrap{container-type:inline-size;width:360px;max-width:100%}
+.ty-cardface{width:100%;border-radius:2.17cqw}
 /* The edge sits over the render so a pale card still has a visible outline. */
 .ty-cardface::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--ty-card-edge);pointer-events:none}
 .ty-cardface.is-frozen{filter:saturate(.4)}
@@ -60,7 +60,7 @@
 .ty-network{position:absolute;right:6.7%;bottom:7%;display:flex}
 .ty-network i{display:block;width:28px;height:28px;border-radius:50%;background:color-mix(in srgb,var(--ty-card-ink) 60%,transparent)}
 .ty-network i+i{margin-left:-11px}
-.ty-edge{display:block;height:3px;margin:0 10px;border-radius:0 0 3px 3px;background:var(--pv-deep)}
+.ty-edge{display:block;height:3px;margin:0 2.17cqw;border-radius:0 0 3px 3px;background:var(--pv-deep)}
 
 /* ── Actions: three text buttons divided by hairlines ── */
 .ty-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid var(--pv-border)}
@@ -73,6 +73,8 @@
 .ty-balance{margin-top:var(--s-1);font-size:28px;font-weight:500;line-height:1.15;letter-spacing:-.02em}
 .ty-frozen{display:flex;align-items:flex-start;gap:var(--s-2);margin-bottom:var(--s-5);font-size:13px;font-weight:500;line-height:1.5;color:var(--pv-warning-ink)}
 .ty-frozen .ty-ico{margin-top:2px}
+/* Due soon sits under the balance in the wide layout, in the transaction rows' own shape. The mid and narrow layouts leave it out: the Upcoming tab covers it there. */
+.ty-due{margin-top:var(--s-3)}
 
 /* ── Tabs ── */
 .ty-tabs{display:flex;gap:var(--s-5);border-bottom:1px solid var(--pv-border)}
@@ -82,7 +84,7 @@
 
 /* ── The budget: the figure, then one 8px bar with the pace tick ── */
 .ty-budget{padding-top:var(--s-5)}
-.ty-fig{margin-top:var(--s-1);font-size:44px;font-weight:500;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:lining-nums proportional-nums}
+.ty-fig{margin-top:var(--s-1);font-size:44px;font-weight:500;line-height:1.1;letter-spacing:-.03em}
 .ty-of{margin-top:var(--s-1);font-size:15px;color:var(--pv-muted)}
 .ty-bar{position:relative;height:8px;margin-top:var(--s-5);border-radius:4px;background:var(--pv-raised)}
 .ty-spent{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--pv-primary);box-shadow:inset 0 0 0 1px var(--pv-pborder)}
@@ -119,7 +121,7 @@
 .ty-tx[data-tone="info"] :is(.ty-note,.ty-money){color:var(--pv-info-ink)}
 
 /* ── Limits: the Limits action open in the right column, with the form states a card app needs ── */
-.ty-limits{display:flex;flex-direction:column;gap:var(--s-5);max-width:520px;min-width:0}
+.ty-limits{display:flex;flex-direction:column;gap:var(--s-4);max-width:520px;min-width:0}
 .ty-limits-h{font-size:28px;font-weight:500;line-height:1.15;letter-spacing:-.02em}
 .ty-limits-lead{margin-top:var(--s-1);font-size:15px;color:var(--pv-muted)}
 .ty-field{display:flex;flex-direction:column;gap:var(--s-2)}
@@ -127,14 +129,14 @@
 .ty-input{
   display:flex;align-items:center;height:44px;padding:0 var(--s-4);
   background:var(--pv-surface);border:1px solid var(--pv-border-strong);border-radius:8px;
-  font-size:15px;color:var(--pv-text);font-variant-numeric:lining-nums tabular-nums;
+  font-size:15px;color:var(--pv-text);
 }
 /* Focus: a 2px ring set off the field by 2px of the page's own colour. */
 .ty-input.is-focus{border-color:var(--ty-ring);box-shadow:0 0 0 2px var(--pv-canvas),0 0 0 4px var(--ty-ring)}
 .ty-input.is-error{border-color:var(--pv-error)}
 .ty-err{display:flex;align-items:flex-start;gap:var(--s-2);font-size:13px;line-height:1.5;color:var(--pv-error-ink)}
 .ty-err .ty-ico{margin-top:2px}
-.ty-switch{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);padding-top:var(--s-5);border-top:1px solid var(--pv-border)}
+.ty-switch{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
 .ty-switch-t{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
 .ty-help{font-size:13px;line-height:1.5;color:var(--pv-muted)}
 .ty-help--info{color:var(--pv-info-ink)}
@@ -146,7 +148,7 @@
 .ty-field-l.is-disabled{color:var(--pv-disabled)}
 .ty-toggle.is-disabled{background:transparent;border-color:var(--pv-border)}
 .ty-toggle.is-disabled>i{background:var(--pv-disabled)}
-.ty-limits-foot{display:flex;justify-content:flex-end;gap:var(--s-2);padding-top:var(--s-5);border-top:1px solid var(--pv-border)}
+.ty-limits-foot{display:flex;justify-content:flex-end;gap:var(--s-2);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
 .ty-btn{
   display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--s-5);
   background:var(--pv-surface);border:1px solid var(--pv-border-strong);border-radius:8px;
@@ -154,7 +156,8 @@
 }
 .ty-btn--primary{background:var(--pv-primary);border-color:var(--pv-pborder);color:var(--pv-on-primary)}
 
-/* The toast rides in a zero-height dock stuck to the bottom of the stage, so it is in view at any scroll. It floats, so it is the one place a shadow is used. */
+/* The toast rides in a zero-height dock stuck to the bottom of the stage, centred on it, so it is in view at any scroll. The Limits state keeps a band under the form (the toast's height plus a margin above and below) so the form's buttons are never under it. It floats, so it is the one place a shadow is used. */
+.ty[data-state="limits"] .ty-body{padding-bottom:calc(44px + var(--s-5) * 2)}
 .ty-dock{position:sticky;bottom:0;z-index:2;flex:none;height:0;pointer-events:none}
 .ty-toast{
   position:absolute;left:50%;bottom:var(--s-5);transform:translateX(-50%);
@@ -173,6 +176,7 @@
   .ty-left{flex-direction:row;align-items:flex-end;gap:var(--s-6)}
   .ty-cardwrap{flex:none;width:320px}
   .ty-side{flex:1}
+  .ty-due{display:none}
   .ty-limits{max-width:none}
 }
 
@@ -182,7 +186,7 @@
   .ty-nav{display:none}
   .ty-avatar{margin-left:auto}
   .ty-body{padding:var(--s-5) var(--s-4) var(--s-8)}
-  .ty-grid{row-gap:var(--s-5)}
+  .ty-grid{row-gap:var(--s-6)}
   .ty-left{flex-direction:column;align-items:stretch;gap:var(--s-5)}
   .ty-cardwrap{width:100%;max-width:none}
   .ty-fig{font-size:36px}

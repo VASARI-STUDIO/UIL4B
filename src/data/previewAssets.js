@@ -22,17 +22,17 @@ export const PREVIEW_ASSETS = {
     width: 1428,
     height: 827,
     alt: 'A brushed-metal payment card with a chip and a contactless symbol',
-    // The card's face is the part the palette colours; the chip and the symbol stay as they are.
+    // The card's face is the part the palette colours, grooves of the symbol included, so they stay a dark engraving in any colour; the chip is left out of the mask and stays gold. The corners are transparent.
     recolourable: true,
     mask: 'card-front-mask.png',
     // 16px wide, blurred, as a data URI: the first frame while the file loads.
-    placeholder: 'data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAACQAQCdASoQAAkAA4BaJaQAAudLMfAA/vf5jyc3+oYaurAA',
+    placeholder: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4WAoAAAAQAAAADwAACAAAQUxQSBgAAAABUNS2EcMfctsbzw0gIiZAWWROxzvJKAJWUDggKAAAANABAJ0BKhAACQADgFolpAACnbfvKIeAAP72Sp4DBpOTp+RNMeo8gAA=',
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
       licence: 'Generated image, made for UIL4B; no person depicted',
       url: '',
-      changes: 'Cropped to the card, brightened so the face reads as a neutral light grey, resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
+      changes: 'Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
     },
   },
 }

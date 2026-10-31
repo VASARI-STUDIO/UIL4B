@@ -12,7 +12,7 @@ import { useMemo } from 'react'
 import Recolour from '../Recolour.jsx'
 import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
 import {
-  ACCOUNT, ACTIONS, CARD, CATS, FIGURES, FROZEN_LINE, LIMITS, NAV, TABS, TXNS, amountText, tallyVars,
+  ACCOUNT, ACTIONS, CARD, CATS, DUE, FIGURES, FROZEN_LINE, LIMITS, NAV, TABS, TXNS, amountText, tallyVars,
 } from './Tally.data.js'
 import './Tally.css'
 
@@ -98,6 +98,27 @@ function Account({ frozen }) {
       <p className="ty-label" data-role="neutral">{ACCOUNT.name}</p>
       <p className="ty-balance" data-role="neutral">{ACCOUNT.balance}</p>
     </div>
+  )
+}
+
+// The bills due soon: plain neutral rows under the balance, so the wide layout's left column is not empty.
+function Due() {
+  return (
+    <section className="ty-day ty-due" data-role="neutral">
+      <h3 className="ty-dayname">Due soon</h3>
+      <ul>
+        {DUE.map((t) => (
+          <li key={t.who} className="ty-tx">
+            <span className="ty-merchant"><Icon size={18} className="ty-merchant-ico">{MARKS[t.mark]}</Icon></span>
+            <span className="ty-who">
+              <b>{t.who}</b>
+              <small className="ty-note">{t.note}</small>
+            </span>
+            <span className="ty-money">{amountText(t.amount)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -261,6 +282,7 @@ export default function Tally({ roles, state }) {
             <div className="ty-side">
               <Actions frozen={frozen} open={open} />
               <Account frozen={frozen} />
+              <Due />
             </div>
           </div>
           <div className="ty-right">

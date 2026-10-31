@@ -14,7 +14,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 - Author: Generated with OpenAI image generation via Codex CLI
 - Licence: Generated image, made for UIL4B; no person depicted
 - URL: none
-- Changes: Cropped to the card, brightened so the face reads as a neutral light grey, resized to 640 and 1080 pixels wide, and a mask of the face made from it.
+- Changes: Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.
 - Files:
   - `card/card-front-640.avif`
   - `card/card-front-640.webp`
