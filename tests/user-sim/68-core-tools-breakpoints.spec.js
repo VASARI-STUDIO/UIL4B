@@ -538,7 +538,7 @@ for (const theme of ['light', 'dark']) {
     const failures = []
     for (const [route, sel, tab] of [
       ['/create/type-scale', '.tsc-copy-primary', 'Code'],
-      ['/create/tint', '.tt .tl-primary .tl-btn', null],
+      ['/create/tint', '.tt .tl-primary .tl-btn, .tt [data-tl-dock] .tl-btn', null],
       ['/create/font-pair', '.fpr-copy-primary', null],
     ]) {
       const { ctx, page } = await at(browser, 1440, theme)
