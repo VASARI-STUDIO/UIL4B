@@ -5,7 +5,9 @@
 //   2. while the plan is unknown the page says so, and Delete waits;
 //   3. a profile save the server refuses keeps the field open and says so;
 //   4. deleting needs the "I understand" box on every account type;
-//   5. a network failure while deleting says nothing was deleted;
+//   5. a failure before the delete request leaves says nothing was deleted; a
+//      cut connection on the request itself says we cannot confirm either way;
+//      an account switch while a profile save waits leaves the new account alone;
 //   6. Clear local data says which copy it touches;
 //   7. an export that could not read a part names it;
 //   8. Privacy names the AI providers and links to the AI terms;
@@ -139,7 +141,7 @@ for (const vp of VIEWPORTS) {
       await expect(go1, 'password alone is not enough').toBeDisabled()
     })
 
-    test('a network failure while confirming the delete says nothing was deleted', async ({ page }) => {
+    test('a network failure before the delete request leaves says nothing was deleted', async ({ page }) => {
       watch(page, 'a person deleting their account while the connection drops')
       await signIn(page, { plan: 'free', authFail: { reauthenticateWithCredential: 'auth/network-request-failed' } })
       await go(page, '/settings')
@@ -152,6 +154,78 @@ for (const vp of VIEWPORTS) {
       await expect(section.getByRole('alert')).toContainText('Nothing was deleted')
       // Still signed in, with the account's own details on the page.
       await expect(section).toContainText('free.user@uil4b.test')
+    })
+
+    test('a dropped connection on the delete request does not say nothing was deleted', async ({ page }) => {
+      watch(page, 'a person deleting their account while the request to our server is cut')
+      await signIn(page, { plan: 'free' })
+      // The server may have deleted the account before the answer was lost, so
+      // the page must not promise either way.
+      let reached = 0
+      await page.route('**/api/delete-account', (route) => { reached++; return route.abort('connectionreset') })
+      await go(page, '/settings')
+      await openSection(page, 'account')
+      const section = page.locator('#set-account')
+      await section.getByRole('button', { name: 'Delete account' }).click()
+      await section.getByLabel(/I understand/).check()
+      await section.getByLabel('Confirm your password').fill('hunter22')
+      await section.getByRole('button', { name: 'Permanently delete' }).click()
+      const alert = section.getByRole('alert')
+      await expect(alert).toContainText('can’t confirm whether your account was deleted')
+      await expect(alert).toContainText('Sign in again to check')
+      await expect(alert).toContainText('support@uil4b.com')
+      await expect(alert).not.toContainText('Nothing was deleted')
+      expect(reached, 'the delete request was attempted').toBe(1)
+    })
+
+    test('an account switch while a profile save waits leaves the new account\'s profile and cache untouched', async ({ page }) => {
+      watch(page, 'a person saving their location while another account takes over the tab')
+      const other = {
+        uid: 'test-uid-other', email: 'other.user@uil4b.test', displayName: 'Otto Other',
+      }
+      await signIn(page, {
+        plan: 'free',
+        // The write reaches the store at once and is answered 3 s late: long
+        // enough to switch account first, short of the 8 s the page waits.
+        slowWrites: [{ path: 'users/test-uid-free', ms: 3000 }],
+        docs: {
+          [`users/${other.uid}`]: {
+            displayName: other.displayName, email: other.email, photoURL: '',
+            location: 'Sydney, Australia', website: '', bio: '', company: '', flair: '',
+            onboarding: { completedAt: Date.now() - 7 * 86_400_000 },
+          },
+        },
+      })
+      await go(page, '/settings')
+      await openSection(page, 'account')
+      const section = page.locator('#set-account')
+      const row = section.locator('.settings-row', { has: page.locator('.settings-row-label', { hasText: /^Location$/ }) })
+      await row.getByRole('button', { name: 'Edit' }).click()
+      await row.locator('input, textarea').first().fill('Perth, Australia')
+      await row.getByRole('button', { name: 'Save' }).click()
+
+      // Another account takes over before the save has been answered.
+      await page.evaluate((o) => window.__UIL4B_TEST_AUTH__.switchTo(o), other)
+      await expect(section).toContainText(other.email)
+
+      // Wait for the held save to be answered, then look at what it did.
+      await page.waitForFunction(() => window.__UIL4B_TEST_LATE_WRITES__ >= 1, null, { timeout: 8000 })
+      // The save refuses to apply itself to an account it was not made for.
+      await expect(row.getByRole('alert')).toContainText('Your location could not be saved')
+      await row.getByRole('button', { name: 'Cancel' }).click()
+      await expect(row, 'the new account\'s page shows its own location').toContainText('Sydney, Australia')
+      await expect(section, 'the old account\'s edit is not shown as the new account\'s').not.toContainText('Perth, Australia')
+      const seen = await page.evaluate((uid) => {
+        const cache = JSON.parse(localStorage.getItem('vs-profile-cache') || '{}')
+        const store = window.__UIL4B_TEST_STORE__
+        return {
+          cachedLocation: cache[uid]?.location ?? null,
+          storedLocation: store.get(`users/${uid}`)?.location ?? null,
+        }
+      }, other.uid)
+      expect(seen.storedLocation, 'the new account\'s stored profile').toBe('Sydney, Australia')
+      expect(seen.cachedLocation === null || seen.cachedLocation === 'Sydney, Australia', `cached profile of the new account: ${seen.cachedLocation}`).toBe(true)
+      await expect(page.getByText('Location updated')).toHaveCount(0)
     })
 
     test('signed out, Clear local data says this browser holds the only copy, then that it is for good', async ({ page }) => {

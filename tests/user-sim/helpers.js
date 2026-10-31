@@ -360,6 +360,9 @@ function seedProject(i, design) {
  *              silent until window.__UIL4B_TEST_HOLD__.release() is called,
  *              for as long as a spec needs to look at the plan-still-loading
  *              state.
+ *   slowWrites [{ path, ms }] — every setDoc whose path contains `path` lands in
+ *              the store at once but answers `ms` late, so a spec can change the
+ *              account (window.__UIL4B_TEST_AUTH__.switchTo) while a save waits.
  *   provider   the sign-in provider id on the account: 'password' (default) or
  *              'google.com'. A 'google.com' account has no password, which is
  *              what makes Settings treat it as Google-only.
@@ -392,6 +395,7 @@ export async function signIn(page, opts = {}) {
     claims = {},
     deny = [],
     slowReads = [],
+    slowWrites = [],
     authFail = null,
     provider = 'password',
     projectTombstones = null,
@@ -435,6 +439,7 @@ export async function signIn(page, opts = {}) {
     claims,
     deny,
     slowReads,
+    slowWrites,
     authFail,
     docs: {
       [`users/${uid}`]: {
