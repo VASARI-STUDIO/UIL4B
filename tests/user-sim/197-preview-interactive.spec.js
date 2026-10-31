@@ -2,7 +2,7 @@
 // interactive mockup. 153 holds how every example renders and 50 holds its ink;
 // this holds what a person DOES with the Spending card, and the dialog around it.
 //
-//   1. the State menu shows one state at a time, and the keyboard reaches every state (Escape: a known product bug, see test.fail)
+//   1. the State menu shows one state at a time, and the keyboard reaches every state (Escape closes just the menu)
 //   2. the dialog opens in the site's theme; Light / Dark repaints the scene
 //   3. the card render is tinted with the palette's primary
 //   4. a failing role has no outline at rest and gets one under the pointer
@@ -132,15 +132,11 @@ test.describe('the State menu', () => {
 
   })
 
-  // PRODUCT BUG, found writing this spec (reported, not fixed here: outside the test lane). With the State
-  // menu open, Escape closes the WHOLE preview dialog. useModalDialog.js:111-113 skips its own close when
-  // a [aria-haspopup][aria-expanded="true"] trigger is on screen, expecting the menu's own listener to take
-  // the key; PalettePreviewDialog.jsx useEscapeLayer (line 70) only fills layerRef, which nothing reads on
-  // that path, and PaletteBuilder.jsx:1586-1590 (window keydown) then runs setPreview(null). The same holds
-  // for the scene menu and the legend's "+N more". test.fail keeps this running: it goes red the day the
-  // product is fixed, which is the cue to delete the test.fail line.
+  // Was a product bug: with the State menu open, Escape closed the WHOLE preview dialog, because
+  // useModalDialog stands aside for an expanded menu trigger and nothing consumed the key before the
+  // Palette Builder's window handler ran. Fixed: PalettePreviewDialog's useEscapeLayer now takes the key
+  // (the same for the scene menu and the legend's "+N more"), and the window handler respects it.
   test('Escape closes the State menu and not the dialog, and focus returns to the State button', async ({ page }) => {
-    test.fail(true, 'product bug: Escape with the State menu open closes the whole preview dialog (useModalDialog.js:111, PaletteBuilder.jsx:1590)')
     const dialog = await openCard(page)
     const btn = trigger(dialog)
     await btn.click()
@@ -149,6 +145,8 @@ test.describe('the State menu', () => {
     await expect(dialog, 'Escape closed the menu and not the dialog').toBeVisible()
     await expect(dialog.getByRole('menu', { name: 'State' })).toHaveCount(0)
     await expect(btn, 'focus returns to the State button').toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(dialog, 'a second Escape closes the dialog').toHaveCount(0)
   })
 
   test('Enter on a state picks it and closes the menu', async ({ page }) => {

@@ -12,8 +12,8 @@
 //
 // The dialog owns its modal contract (useModalDialog). That hook closes on
 // Escape in the capture phase, before any handler in the tree, so an open
-// popover or sheet registers itself as an Escape layer and requestClose closes
-// that first.
+// popover or sheet registers itself as an Escape layer (useEscapeLayer) that
+// consumes the key and closes just itself.
 //
 // An example (src/components/palette/examples/) is its own chunk. Picking one
 // is a transition, so the picture on screen stays until the next has loaded,
@@ -67,11 +67,27 @@ const IcoX = () => (
 )
 
 // Registers `close` as the layer Escape closes first while `open`.
+// useModalDialog stands aside while a menu trigger is expanded, so the layer takes
+// the key itself, as usePopover does: a capture listener that closes the layer,
+// returns focus to its trigger (inside `close`) and consumes the key. Consumed
+// means stopPropagation and preventDefault, so the dialog's own close and the
+// Palette Builder's window handler both leave the dialog open; a second Escape
+// finds no layer and closes it.
 function useEscapeLayer(layerRef, open, close) {
   useEffect(() => {
     if (!open) return undefined
     layerRef.current = close
-    return () => { if (layerRef.current === close) layerRef.current = null }
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      e.stopPropagation()
+      close()
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('keydown', onKey, true)
+      if (layerRef.current === close) layerRef.current = null
+    }
   }, [layerRef, open, close])
 }
 

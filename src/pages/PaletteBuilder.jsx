@@ -1587,7 +1587,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       }
     }
     const onEsc = (e) => {
-      if (e.key !== 'Escape') return
+      // An Escape a layer inside the preview dialog already took (its State menu, say) is not ours.
+      if (e.key !== 'Escape' || e.defaultPrevented) return
       if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
       const cp = colPanelRef.current
       if (cp && !ctxMenu) panelReturnRef.current = { i: cp.i, opener: panelOpenerRef.current }
