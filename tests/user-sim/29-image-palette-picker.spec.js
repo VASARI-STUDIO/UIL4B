@@ -275,6 +275,11 @@ test.describe('image to palette picker', () => {
   // and then had no gesture at all. The loupe has to reach them too.
   test('a keyboard user can nudge a marker and gets the same loupe', async ({ page }) => {
     await openPickerWithImage(page)
+    // After a load the dialog parks focus on marker 1 without arming the loupe, so no loupe yet.
+    await expect(page.locator(MARKER).first()).toBeFocused()
+    await expect(page.locator('.plb-loupe')).toHaveCount(0)
+    // The keyboard user arrives on the marker (Tab away and back): that focus event arms it.
+    await page.locator(MARKER).first().evaluate(el => el.blur())
     await page.locator(MARKER).first().focus()
     // Focus alone arms it — that is the only cue the arrow keys now do something.
     await expect(page.locator('.plb-loupe')).toHaveCount(1)
