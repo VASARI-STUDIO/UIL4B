@@ -64,6 +64,14 @@ export function onAuthStateChanged(auth, next, error, complete) {
 
 export function signOut(auth) {
   if (!isFakeAuth(auth)) return realSignOut(auth)
+  // `authFail: { signOut: code }` makes the call reject; a spec clears
+  // window.__UIL4B_TEST_SESSION__.authFail to let a retry succeed.
+  const refused = authFailFor('signOut')
+  if (refused) return Promise.reject(refused)
+  // `__UIL4B_TEST_AUTH__.delays.signOut = ms` holds the call, so a spec can read
+  // the page while a sign-out is in flight.
+  const wait = fakeAuth.delays.signOut || 0
+  if (wait) return new Promise((resolve) => setTimeout(resolve, wait)).then(() => auth.signOut())
   return auth.signOut()
 }
 

@@ -196,12 +196,13 @@ function createFakeAuth(d) {
       listeners.add(cb)
       // `signIn(page, { authDelay: ms })` holds the first answer back, so a spec
       // can look at the page while AuthContext is still (loading: true).
-      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser) }, Number(d.authDelay) || 0)
+      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser); auth.answered = true }, Number(d.authDelay) || 0)
       return () => listeners.delete(cb)
     },
     notify() {
       for (const cb of [...listeners]) cb(auth.currentUser)
     },
+    answered: false,
     async signOut() {
       auth.currentUser = null
       auth.notify()
@@ -434,5 +435,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
   try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches } } catch { /* no window */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, get answered() { return fakeAuth.answered }, get signedIn() { return !!fakeAuth.currentUser }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }
