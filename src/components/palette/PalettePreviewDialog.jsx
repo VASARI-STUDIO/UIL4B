@@ -10,10 +10,9 @@
 // All three are one listbox contract: arrows, Home and End move and select,
 // and only the selected option is a tab stop.
 //
-// The dialog owns its modal contract (useModalDialog). That hook closes on
-// Escape in the capture phase, before any handler in the tree, so an open
-// popover or sheet registers itself as an Escape layer (useEscapeLayer) that
-// consumes the key and closes just itself.
+// The dialog owns its modal contract (useModalDialog), which closes on Escape.
+// An open popover or sheet registers itself as an Escape layer (useEscapeLayer),
+// and Escape closes the layer opened last, so the dialog stays until none is open.
 //
 // An example (src/components/palette/examples/) is its own chunk. Picking one
 // is a transition, so the picture on screen stays until the next has loaded,
@@ -24,6 +23,7 @@
 // idle, so the next click is usually instant.
 import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import PreviewScene from './PalettePreview'
+import { useEscapeLayer } from './escapeLayer'
 import { preloadExample } from './examples/registry'
 import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
@@ -65,31 +65,6 @@ const IcoX = () => (
     <path d="M18 6 6 18" /><path d="m6 6 12 12" />
   </svg>
 )
-
-// Registers `close` as the layer Escape closes first while `open`.
-// useModalDialog stands aside while a menu trigger is expanded, so the layer takes
-// the key itself, as usePopover does: a capture listener that closes the layer,
-// returns focus to its trigger (inside `close`) and consumes the key. Consumed
-// means stopPropagation and preventDefault, so the dialog's own close and the
-// Palette Builder's window handler both leave the dialog open; a second Escape
-// finds no layer and closes it.
-function useEscapeLayer(layerRef, open, close) {
-  useEffect(() => {
-    if (!open) return undefined
-    layerRef.current = close
-    const onKey = (e) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return
-      e.preventDefault()
-      e.stopPropagation()
-      close()
-    }
-    document.addEventListener('keydown', onKey, true)
-    return () => {
-      document.removeEventListener('keydown', onKey, true)
-      if (layerRef.current === close) layerRef.current = null
-    }
-  }, [layerRef, open, close])
-}
 
 // ── The scene list ──────────────────────────────────────────────────────────
 
@@ -162,7 +137,7 @@ function SceneListbox({ grouped, orientation, sceneId, pendingId, onPick, onChoo
 }
 
 // 768 to 1023: the list behind one button.
-function SceneMenu({ scene, sceneId, pendingId, onPick, isLocked, layerRef }) {
+function SceneMenu({ scene, sceneId, pendingId, onPick, isLocked }) {
   const [open, setOpen] = useState(false)
   const trigRef = useRef(null)
   const popRef = useRef(null)
@@ -172,7 +147,7 @@ function SceneMenu({ scene, sceneId, pendingId, onPick, isLocked, layerRef }) {
     setOpen(false)
     trigRef.current?.focus()
   }, [])
-  useEscapeLayer(layerRef, open, close)
+  useEscapeLayer(open, close)
 
   useEffect(() => {
     if (!open) return undefined
@@ -290,7 +265,7 @@ function StateList({ states, value, onPick, listRef }) {
 }
 
 // 768 and up: "State: Overview" in the header, the list in a popover under it.
-function StateMenu({ states, value, onPick, layerRef }) {
+function StateMenu({ states, value, onPick }) {
   const [open, setOpen] = useState(false)
   const trigRef = useRef(null)
   const popRef = useRef(null)
@@ -302,7 +277,7 @@ function StateMenu({ states, value, onPick, layerRef }) {
     setOpen(false)
     trigRef.current?.focus()
   }, [])
-  useEscapeLayer(layerRef, open, close)
+  useEscapeLayer(open, close)
 
   useEffect(() => {
     if (!open) return undefined
@@ -345,7 +320,7 @@ function StateMenu({ states, value, onPick, layerRef }) {
 const MORE_W = 96
 const ROW_GAP = 8
 
-function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet, layerRef }) {
+function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet }) {
   const failFor = (role) => roles.fails.find((f) => f.role === role)
   const unset = new Set(roles.unset)
   const adjId = useId()
@@ -450,7 +425,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
     setMoreOpen(false)
     moreRef.current?.focus()
   }, [])
-  useEscapeLayer(layerRef, moreOpen, closeMore)
+  useEscapeLayer(moreOpen, closeMore)
   useEffect(() => {
     if (!moreOpen) return undefined
     const onDown = (e) => {
@@ -598,12 +573,7 @@ export default function PalettePreviewDialog({
   // The full-screen phone sheet: the system Back button closes it.
   useBackClosesDialog(layout === 'strip', onClose)
 
-  const layerRef = useRef(null)
-  const requestClose = useCallback(() => {
-    if (layerRef.current) layerRef.current()
-    else onClose()
-  }, [onClose])
-  const dialogRef = useModalDialog(requestClose)
+  const dialogRef = useModalDialog(onClose)
 
   const { mode, compare } = preview
   const scene = sceneById(preview.scene)
@@ -622,7 +592,7 @@ export default function PalettePreviewDialog({
     setMoreOpen(false)
     moreBtnRef.current?.focus()
   }, [])
-  useEscapeLayer(layerRef, moreOpen, closeMoreSheet)
+  useEscapeLayer(moreOpen, closeMoreSheet)
   useEffect(() => {
     if (moreOpen) moreListRef.current?.querySelector('[aria-checked="true"]')?.focus()
   }, [moreOpen])
@@ -694,7 +664,7 @@ export default function PalettePreviewDialog({
     setSheet(false)
     coloursRef.current?.focus()
   }, [])
-  useEscapeLayer(layerRef, sheet, closeSheet)
+  useEscapeLayer(sheet, closeSheet)
   useEffect(() => {
     if (sheet) sheetRef.current?.querySelector('button')?.focus()
   }, [sheet])
@@ -782,7 +752,6 @@ export default function PalettePreviewDialog({
       onHover={setHover}
       onPin={pin}
       sheet={layout === 'strip'}
-      layerRef={layerRef}
     />
   )
 
@@ -801,7 +770,7 @@ export default function PalettePreviewDialog({
         <div className="plb-modal-head pvd-head">
           <span className="plb-pop-title">{compare ? 'Compare palettes' : 'Preview'}</span>
           {!compare && states.length > 1 && layout !== 'strip' && (
-            <StateMenu states={states} value={stateId} onPick={pickState} layerRef={layerRef} />
+            <StateMenu states={states} value={stateId} onPick={pickState} />
           )}
           {!compare && states.length > 1 && layout === 'strip' && (
             <button
@@ -849,7 +818,7 @@ export default function PalettePreviewDialog({
           <div className="pvd-main">
             {layout === 'menu' && (
               <div className="pvd-pickbar">
-                <SceneMenu scene={sceneById(shownId)} sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} layerRef={layerRef} />
+                <SceneMenu scene={sceneById(shownId)} sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} />
                 <span className="pvd-note">{NOTE}</span>
               </div>
             )}
