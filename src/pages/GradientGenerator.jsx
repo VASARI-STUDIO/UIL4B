@@ -107,7 +107,7 @@ const livePool = (pool, colours) => {
 // True when any setting narrows what Random and Shuffle may make from the default.
 // Picked colours count from two up, the same rule Shuffle from palette uses. A lock
 // is not a setting here: it sits beside the control it keeps.
-const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.source !== 'any' || (f.source === 'picked' && livePool(f.pool, colours).length >= 2) || moodWords(f).length > 0
+const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || f.source === 'palette' || (f.source === 'picked' && livePool(f.pool, colours).length >= 2) || moodWords(f).length > 0
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
