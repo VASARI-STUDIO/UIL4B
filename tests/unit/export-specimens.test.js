@@ -82,10 +82,13 @@ test('the layouts keep their specimens: Monograph, Atlas, Presentation, Poster a
 test('the UI kit specimen sets its wordmark in a pair at 4.5:1 or above', () => {
   const pale = { palette: { base: '#F2E8A0', colors: ['#F2E8A0', '#E8C1D9', '#D9E8A0', '#F4F1EA', '#2A2A2E'] } }
   for (const design of [SAMPLES.northbeam.design, pale]) {
-    const sel = kitSelections(design, { tier: 'free', projectName: 'Lumen' })
+    const sel = kitSelections(design, { tier: 'pro', projectName: 'Lumen' })
     const slot = Object.fromEntries(sel.palette.map((p) => [p.id, p]))
-    const html = renderUiKit(design, { tier: 'free', template: readKitTemplate(), date: FIXED_DATE }).html
-    const nav = /\.website-nav \.wordmark\{color:([^}]+)\}/.exec(html)[1]
+    const html = renderUiKit(design, { tier: 'pro', template: readKitTemplate(), date: FIXED_DATE }).html
+    const navRule = /\.website-nav \.([\w-]+)\{color:([^}]+)\}/.exec(html)
+    const nav = navRule[2]
+    // The colour only applies if the Pro nav title carries the class the rule targets.
+    assert.ok(html.includes(`<div class="website-nav"><span class="${navRule[1]}">`), 'the nav rule matches the Pro nav title')
     const art = /\.website-art \.wordmark\{color:([^}]+)\}/.exec(html)[1]
     const navInk = nav === 'var(--color-pine)' ? slot.pine.hex : slot.ink.hex
     const artInk = art === 'var(--color-pine)' ? slot.pine.hex : sel.palette.find((p) => p.id === 'citron').hex
