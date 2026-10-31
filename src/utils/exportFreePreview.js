@@ -24,6 +24,7 @@ export function previewLines(text, { count = PREVIEW_LINES, skipLeadingComment =
 }
 
 const HOW_TO_FILE = 'How to import.md'
+const TREE_LINE_MAX = 30
 
 /**
  * The app-ready zip as plain lines, one per app folder: the folder, then what is in
@@ -46,7 +47,12 @@ export function bundleTreeLines(paths) {
   }
   const lines = []
   for (const [folder, { subs, files }] of folders) {
-    lines.push(`${folder}/ ${[...subs, ...describeFiles(files)].join(', ')}`)
+    // A line too long for a phone in a wider fallback monospace puts its contents
+    // on an indented line of their own.
+    const inside = [...subs, ...describeFiles(files)].join(', ')
+    const line = `${folder}/ ${inside}`
+    if (line.length > TREE_LINE_MAX) lines.push(`${folder}/`, `  ${inside}`)
+    else lines.push(line)
   }
   if (guides) lines.push('', `${HOW_TO_FILE} in each app folder`)
   return lines
