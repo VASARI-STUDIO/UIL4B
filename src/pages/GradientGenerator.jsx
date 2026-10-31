@@ -20,6 +20,7 @@ import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection
 import { pushLook, popLook, canGoBack } from '../utils/gradientHistory'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
+import { pickInk, INK_DARK, INK_LIGHT } from '../utils/gradientInk'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
 import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions } from '../utils/gradientLocks'
@@ -630,6 +631,52 @@ function GenSection({ filters, setFilters, isPro, onPro, moreOpen, onMore, coars
 }
 
 
+const PREVIEW_KEY = 'vs-gradient-preview'
+const PREVIEW_CONTEXTS = [
+  { id: 'fill', label: 'Fill', as: '' },
+  { id: 'hero', label: 'Hero', as: ', shown as a hero' },
+  { id: 'card', label: 'Card', as: ', shown as a card' },
+  { id: 'button', label: 'Button', as: ', shown as a button' },
+]
+
+// The sample UI drawn over the canvas. The ink comes from the gradient's own stops
+// (pickInk), so the text reads whatever colours Random makes; the badge says by how much.
+function PreviewSample({ id, paint, ink }) {
+  if (id === 'fill') return null
+  const flip = ink.css === INK_DARK.css ? INK_LIGHT.css : INK_DARK.css
+  const ratio = `${ink.ratio.toFixed(1)}:1`
+  if (id === 'hero') {
+    return (
+      <div className="grd-ctx-view grd-ctx-hero">
+        <div className="grd-ctx-sample" aria-hidden="true" style={{ color: ink.css }}>
+          <p className="grd-ctx-h">Launch week starts Monday</p>
+          <p className="grd-ctx-p">Everything your team needs, in one place.</p>
+          <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Get started</span>
+        </div>
+        <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{`Text ${ratio}${ink.low ? ' · low' : ''}`}</span>
+      </div>
+    )
+  }
+  if (id === 'card') {
+    return (
+      <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
+        <div className="grd-ctx-card">
+          <div className="grd-ctx-card-head" style={{ background: paint }} />
+          <p className="grd-ctx-card-t">Quarterly report</p>
+          <p className="grd-ctx-card-p">Revenue is up on last quarter. Open the report to see what changed.</p>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true">
+      {[32, 40, 48].map((h) => (
+        <span key={h} className="grd-ctx-btn" title={`Text ${ratio}${ink.low ? ' · low' : ''}`} style={{ background: paint, color: ink.css, height: h }}>Get started</span>
+      ))}
+    </div>
+  )
+}
+
 // `onExport` is this tool's ONE declared export hook — the copy of the payload
 // that IS the artefact. It defaults to `onCopy` so the component still copies
 // correctly if it is ever mounted outside CreateTool; the activation naming
@@ -817,6 +864,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
   const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
+  // Where the gradient is previewed (Fill, Hero, Card, Button), kept for the session.
+  const [previewAs, setPreviewAs] = useState(() => {
+    try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
+  })
+  const choosePreview = (id) => {
+    setPreviewAs(id)
+    try { sessionStorage.setItem(PREVIEW_KEY, id) } catch { /* private mode */ }
+  }
+  const inkOver = useMemo(() => pickInk(stops), [stops])
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
@@ -1831,7 +1887,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           )}
           {/* The stage is the canvas's fixed slot. */}
           <div className="grd-stage">
-            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
+            <PreviewSample id={previewAs} paint={paintCss} ink={inkOver} />
+            <div className="grd-ctx" role="group" aria-label="Preview as">
+              {PREVIEW_CONTEXTS.map((c) => (
+                <button key={c.id} type="button" className={`grd-ctx-opt${previewAs === c.id ? ' is-on' : ''}`} aria-pressed={previewAs === c.id} onClick={() => choosePreview(c.id)}>{c.label}</button>
+              ))}
+            </div>
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and

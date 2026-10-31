@@ -313,8 +313,8 @@ for (const screen of SCREENS) {
 
       await palette.click({ force: true })
       await l.mark('pressed again')
-      // The canvas slot is only the canvas now: nothing lies over it.
-      await expect(page.locator('.grd-stage > :not(.grd-canvas)')).toHaveCount(0)
+      // The canvas slot is the canvas and the preview switch: Fill draws nothing over it.
+      await expect(page.locator('.grd-stage > :not(.grd-canvas):not(.grd-ctx)')).toHaveCount(0)
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
