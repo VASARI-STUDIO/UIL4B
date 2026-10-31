@@ -149,8 +149,8 @@ const download = (blob, filename) => {
 // what the server returned: the file that is downloaded keeps its no-script
 // guarantee. Returns false when the browser blocked the window, and the file
 // was saved instead.
-const showDocument = (html, filename, win) => {
-  const url = URL.createObjectURL(new Blob([withPrintBootstrap(html)], { type: 'text/html;charset=utf-8' }))
+const showDocument = (html, filename, win, title) => {
+  const url = URL.createObjectURL(new Blob([withPrintBootstrap(html, { title })], { type: 'text/html;charset=utf-8' }))
   const shown = showInPrintWindow(win, url)
   if (!shown) {
     // Popup blocked. Fall back to the file rather than failing: the user
@@ -412,7 +412,8 @@ export default function useExportRunner() {
         if (htmlDocument) {
           savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
         } else {
-          opened = showDocument(answer.html, file, printWin)
+          // The print window is titled with the PDF's name, so "Save as PDF" offers the name the manifest shows.
+          opened = showDocument(answer.html, file, printWin, formatFileName(fileProject, format).replace(/\.pdf$/, ''))
           printWin = null
           if (!opened) {
             // The document WAS produced, so this is a notice and not an error: the

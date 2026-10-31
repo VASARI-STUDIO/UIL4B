@@ -73,6 +73,22 @@
 /* 16px keeps iOS from zooming the page when the field takes focus. */
 .xd[data-layout="strip"] .xd-rename input{font-size:16px}
 
+/* The manifest: one row per file, its name as it will download, then what is in it. Hairlines only. On the phone sheet a button folds the rows to one line. */
+.xd-man{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.xd-man-t{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;min-height:44px;padding:0 var(--s-3);font:inherit;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer}
+.xd-man-t svg{flex:none;color:var(--t1)}
+.xd-man-rows{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:var(--radius-xs)}
+.xd-man-rows[hidden]{display:none}
+.xd-man-row{position:relative;display:flex;flex-direction:column;gap:var(--s-1);min-width:0;padding:var(--s-3)}
+.xd-man-row + .xd-man-row{border-top:1px solid var(--border)}
+.xd-man-row[aria-current="true"]{background:var(--bg-2)}
+.xd-man-row[aria-current="true"]::before{content:"";position:absolute;left:0;top:var(--s-2);bottom:var(--s-2);width:2px;background:var(--accent-fill)}
+.xd-man-n{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;line-height:1.4;color:var(--t0);overflow-wrap:anywhere}
+.xd-man-d{font-size:var(--fs-caption);line-height:1.5;color:var(--t1);max-width:68ch}
+.xd-man-t:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.xd-man-t:active{background:var(--bg-2)}
+@media (hover:hover){.xd-man-t:hover{background:var(--hvr)}}
+
 /* Reused pieces, fitted to the column. Their own captions are replaced by the step labels. */
 .xd .exp-switch-label,.xd .exp-tpl-label{display:none}
 .xd .exp-switch{padding:var(--s-1);margin:calc(-1 * var(--s-1))}

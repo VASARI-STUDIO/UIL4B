@@ -8,6 +8,8 @@ import { PLAN_LADDER } from '../../config/planLadder'
 import { defaultTemplate, liveTemplates, readExportTemplates } from '../../config/exportTemplates'
 import { templateThumb } from '../../utils/exportTemplateThumb'
 import { readLogo } from '../../utils/brandLogo'
+import { readIdentity } from '../../utils/kitIdentity'
+import { formatFileName } from '../../utils/exportFileName'
 import { trialLabel } from '../../utils/kitGalleryPick'
 import ExportFormatSwitch from '../ExportFormatSwitch'
 import ExportTemplatePicker from '../ExportTemplatePicker'
@@ -51,6 +53,9 @@ const CREDIT_LINE = {
   'contrast-json': 'This file carries no credit line.',
 }
 const copyOf = (id) => FILE_COPY[id] || { label: String(id).toUpperCase(), blurb: '', action: 'Export' }
+
+// What the dock tells someone whose PDF has opened in a print window.
+const PRINT_LINE = 'In the print dialog choose Save as PDF, Margins None, and turn Headers and footers off.'
 
 // What the button and the dock say while a file is being made.
 const BUSY_LABEL = { fonts: 'Embedding fonts…', building: 'Building the kit…', document: 'Preparing your document…', pages: 'Drawing the pages…' }
@@ -113,7 +118,7 @@ function NameLine({ lead, name, project, onRenameState }) {
 // ExportProPreview, blurred in the pixels for a free account (and while the plan
 // is read, never sharp on a guess); the free ones by the free preview. Both sit
 // in a box whose height is reserved before any picture lands.
-function Preview({ cat, file, name, isPro, checking, design, chosen }) {
+function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen }) {
   const kind = cat.preview
   if (kind === 'book' || kind === 'guidelines') {
     // The book as page images has its own single layout, so it shows the default one.
@@ -132,12 +137,41 @@ function Preview({ cat, file, name, isPro, checking, design, chosen }) {
   }
   return (
     <div className="xd-prev">
-      <ExportFreePreview kind={kind} file={file} watermark={!isPro} />
+      <ExportFreePreview kind={kind} file={file} watermark={!isPro} project={fileProject} />
     </div>
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, onLayout, name, project, strip, coming, onRenameState }) {
+// The files a category makes, one row each: the name as it will download, then what
+// is in it. The row for the chosen file is marked. On the phone sheet a category with
+// several files folds to one line ("4 files") that opens in place.
+function Manifest({ rows, file, folded }) {
+  const rowsId = useId()
+  const [open, setOpen] = useState(false)
+  const shown = !folded || open
+  return (
+    <div className="xd-man">
+      {folded && (
+        <button type="button" className="xd-man-t" aria-expanded={open} aria-controls={rowsId} onClick={() => setOpen((o) => !o)}>
+          <span>{rows.length} files</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+      <ul className="xd-man-rows" id={rowsId} hidden={!shown}>
+        {rows.map((r) => (
+          <li key={r.id} className="xd-man-row" aria-current={r.id === file ? 'true' : undefined}>
+            <span className="xd-man-n">{r.saved}</span>
+            <span className="xd-man-d">{r.blurb}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+export default function ExportSteps({ cat, file, onFile, onLayout, name, fileProject = '', project, strip, coming, onRenameState }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
   const { design: working, updateDesign } = useProject()
@@ -145,7 +179,9 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, project
   const checking = planKnown === false
   const chosen = readExportTemplates(working)
   const files = cat.files.map((id) => ({ id, ...copyOf(id) }))
-  const picked = copyOf(file)
+  // A Pro kit is filed under its identity name when it has one (uiKitExport.js).
+  const identityName = isPro ? readIdentity(design).name : ''
+  const rows = files.map((f) => ({ ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }))
   const showLayout = Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
   const lead = NAME_LEAD[cat.preview]
   const hasLogo = Boolean(readLogo(working))
@@ -176,7 +212,7 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, project
 
   return (
     <>
-      <Preview cat={cat} file={file} name={name} isPro={isPro} checking={checking} design={design} chosen={chosen} />
+      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} />
 
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
@@ -188,7 +224,7 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, project
             onChange={onFile}
           />
         )}
-        <p className="xd-note">{picked.blurb}</p>
+        <Manifest rows={rows} file={file} folded={strip && rows.length > 1} />
       </section>
 
       {showLayout && (
@@ -244,7 +280,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
   else if (notice) line = <><strong>{notice.lead}</strong> {notice.detail}</>
   else if (done) {
     line = doneInfo?.opened
-      ? <><strong>Opened</strong> in a new tab. Choose Save as PDF in the print dialog.</>
+      ? <><strong>Opened</strong> in a new tab. {PRINT_LINE}</>
       : <><strong>Downloaded</strong>{savedFile ? ` ${savedFile}.` : '.'}</>
   } else if (checking) line = 'Checking your plan…'
   else if (locked && upgrade === 'checkout') {
