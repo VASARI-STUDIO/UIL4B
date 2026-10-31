@@ -449,6 +449,54 @@ for (const [label, use, slots] of [
   })
 }
 
+// ── A classic scrollbar takes room from the side card ──
+// The panel keeps `scrollbar-gutter: stable`, so on a system with 15px scrollbars (older
+// Windows, Linux, "always show scrollbars") the chips have 287px, not 297px. Headless
+// Chromium hides its scrollbars, so the test styles one the same width: a styled
+// ::-webkit-scrollbar takes layout space even here. Nine 28px chips with 4px gaps are
+// 284px and fit; eleven 24px shade chips with 3px gaps are 294px, which is not.
+test.describe('Palette row · with a classic 15px scrollbar in the side card', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  /** Open the page with nine colours and a ramp, then give the side card a 15px scrollbar and wait for the room to shrink. */
+  async function openWithClassicScrollbar(page) {
+    await seed(page, { colors: THIRTEEN.slice(0, 9), tints: current(THIRTEEN) })
+    await open(page)
+    await expect(shadesGroup(page).getByRole('button')).toHaveCount(11)
+    await page.addStyleTag({ content: '.tl-panel::-webkit-scrollbar { width: 15px; }' })
+    // The scroller made its (hidden) scrollbar before the rule existed; switching its overflow off and on makes it again.
+    await page.evaluate(() => {
+      const panel = document.querySelector('.tl-panel')
+      panel.style.overflowY = 'hidden'
+      void panel.offsetWidth
+      panel.style.overflowY = ''
+    })
+    await expect.poll(() => page.evaluate(() => document.querySelector('.grd-paint .grd-chips').clientWidth),
+      'the room the chips have, once the scrollbar is drawn').toBe(287)
+  }
+
+  test('the card has 287px for its chips, as a 15px scrollbar leaves it (the control for the rest)', async ({ page }) => {
+    watch(page, 'someone whose system draws 15px scrollbars')
+    await openWithClassicScrollbar(page)
+  })
+
+  test('a full nine-colour row is still one line', async ({ page }) => {
+    watch(page, 'someone with nine colours and 15px scrollbars')
+    await openWithClassicScrollbar(page)
+    const tops = await paletteChips(page).evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)))
+    expect(tops).toHaveLength(9)
+    expect(Math.max(...tops) - Math.min(...tops), `chip tops ${tops.join(',')}`).toBe(0)
+  })
+
+  test('the eleven shade chips are still one line', async ({ page }) => {
+    watch(page, 'someone with a ramp and 15px scrollbars')
+    await openWithClassicScrollbar(page)
+    const tops = await shadesGroup(page).getByRole('button').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)))
+    expect(tops).toHaveLength(11)
+    expect(Math.max(...tops) - Math.min(...tops), `shade chip tops ${tops.join(',')}`).toBe(0)
+  })
+})
+
 test.describe('Palette row · announcing a pick', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 

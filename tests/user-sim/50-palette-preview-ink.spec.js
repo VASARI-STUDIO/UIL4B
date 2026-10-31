@@ -46,8 +46,12 @@ const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
 // A scene with a State menu is swept once per state: the disabled Overseas fees label
-// is only on the Limits form.
-const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'] }
+// is only on the Limits form, and the Product page's bag sheet only in Added to bag.
+const STATES = {
+  'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
+  'Editorial hero': ['Article', 'Subscribe sheet', 'Subscribe, email error'],
+  'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
+}
 
 // The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
 // user's own hex when it clears the floor on every ground it sits on (and walks it a
@@ -55,8 +59,8 @@ const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Decline
 // two print in exactly the brand fill. They are named by scene and class so the rule
 // above still catches any other text node that does the same; the contrast floor is
 // still measured on them like every other node. Source: 'now label' in
-// Sundial.data.js TEXT_RECIPE and 'page-active' in SlackWater.data.js TEXT_RECIPE.
-const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'], 'Editorial hero': ['sw-page'] }
+// Sundial.data.js TEXT_RECIPE. Slack Water sets no brand colour as text.
+const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'] }
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -129,7 +133,7 @@ const SWEEP = `((inkVars, fillVars) => {
     const role = inkRole ? inkRole.slice(5) : fillRole ? 'fill:' + fillRole.slice(5) : 'other'
     const size = parseFloat(cs.fontSize)
     out.push({
-      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'), off: !!el.closest('.is-off'), onRender: !!el.closest('.rc'),
+      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'), onRender: !!el.closest('.rc'),
       ink: hex, ground: hexOf(g), ratio: ratio(ink, g),
       floor: (size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)) ? 3 : 4.5,
     })
@@ -228,13 +232,9 @@ test.describe('Palette Builder preview ink', () => {
             // the disabled state on purpose. Anything else in the disabled
             // colour, or the same colour on a control that is not disabled, is
             // still held to the floor.
-            // The second is the sold-out size in the Product page (Orra Workroom): a
-            // struck-through size chip in the disabled ink, shown on purpose beside
-            // the sizes that can be picked. It is named by scene, class and ink role, and
-            // it must be marked aria-disabled, so any other node in the Product page is
-            // still held to the floor, and so is a sold-out look that is not announced.
-            const inactive = (name === 'Spending card' && s.inactive && s.role === 'disabled')
-              || (name === 'Product page' && s.inactive && s.off && s.role === 'disabled')
+            // Nothing in the Product page is exempt: its sold-out size (XXL) can still be picked, so it
+            // is struck through in the muted ink and held to the same floor as every other word.
+            const inactive = name === 'Spending card' && s.inactive && s.role === 'disabled'
             if (inactive) disabledSeen++
             else if (s.ratio < s.floor) failures.push('  ' + where)
             // The type floor for every scene.
@@ -258,7 +258,7 @@ test.describe('Palette Builder preview ink', () => {
     // The pair the contrast backlog named: a muted note ON the surface step.
     expect(onSurface, 'no ink was measured on --pv-surface, which is the ground this spec exists for').toBeGreaterThan(20)
 
-    expect(disabledSeen, 'the disabled Overseas fees label (Spending card) and the sold-out size (Product page) were not both found, in both themes').toBe(4)
+    expect(disabledSeen, 'the disabled Overseas fees label (Spending card) was not found, in both themes').toBe(2)
 
     // The card's wordmark and number were set aside by the walk and rated from pixels instead,
     // in every state and both themes (two texts, four states, two themes).
