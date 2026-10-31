@@ -347,10 +347,27 @@ for (const theme of ['light', 'dark']) {
         ))
         expect(overflow, `${route} at ${size.w}px pushes the page sideways`).toBeLessThanOrEqual(1)
 
-        // The ramp is eleven columns of type. Below the desktop band it is a
-        // scroller inside its own box — which means the BOX must not overflow
-        // even though its content does.
+        // The ramp is eleven columns of type. Below the desktop band the stops wrap
+        // onto more rows: the BOX must not overflow, and every stop's hex label
+        // must sit whole inside the ramp's box, not be cut at its edge.
         if (route === '/learn/help') {
+          const labels = await page.locator('.hlp-run-stop-hex').evaluateAll((els) => {
+            const ramp = els[0].closest('.hlp-run-ramp').getBoundingClientRect()
+            return {
+              scrolls: els[0].closest('.hlp-run-ramp').scrollWidth > els[0].closest('.hlp-run-ramp').clientWidth + 1,
+              cut: els.filter((el) => {
+                if (getComputedStyle(el).display === 'none') return false
+                const r = el.getBoundingClientRect()
+                // The text's own width, not its box's: a box can be wider than its glyphs.
+                const range = document.createRange()
+                range.selectNodeContents(el)
+                const t = range.getBoundingClientRect()
+                return t.right > ramp.right + 0.5 || t.left < ramp.left - 0.5 || el.scrollWidth > el.clientWidth + 1 || r.width === 0
+              }).map((el) => el.textContent),
+            }
+          })
+          expect(labels.cut, `${route} at ${size.w}px cuts hex labels at the ramp's edge`).toEqual([])
+          expect(labels.scrolls, `${route} at ${size.w}px scrolls its ramp sideways`).toBe(false)
           const wide = await page.locator('.hlp-run').evaluate((el) => ({
             box: el.getBoundingClientRect().width,
             parent: el.parentElement.getBoundingClientRect().width,

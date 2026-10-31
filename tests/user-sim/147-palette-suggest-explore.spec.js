@@ -96,15 +96,27 @@ async function chipHexes(row) {
 }
 
 // Every row of a panel as its name and its colours, so one list can be compared with another.
+// The list can re-render while it fills, so it is read in one pass inside the page (no row can
+// detach between reads) and only returned once two reads in a row give the same list.
 async function rowList(panel) {
   await expect(rowsOf(panel).nth(3), 'the list has rows').toBeVisible()
-  const out = []
-  const rows = rowsOf(panel)
-  for (let i = 0; i < await rows.count(); i++) {
-    const row = rows.nth(i)
-    out.push(`${await row.locator('.plb-sw-name').textContent()}: ${(await chipHexes(row)).join(' ')}`)
+  const readOnce = async () => {
+    const raw = await rowsOf(panel).evaluateAll((rows) => rows.map((row) => ({
+      name: row.querySelector('.plb-sw-name')?.textContent ?? '',
+      chips: [...row.querySelectorAll('.plb-sw-chips:not(.plb-sw-chips--mine) .plb-sw-chip')].map((el) => getComputedStyle(el).backgroundColor),
+    })))
+    return raw.map((r) => `${r.name}: ${r.chips.map(toHex).join(' ')}`)
   }
-  return out
+  let previous = null
+  let stable = []
+  await expect.poll(async () => {
+    const now = await readOnce()
+    const settled = previous !== null && now.length >= 4 && now.join('\n') === previous.join('\n')
+    previous = now
+    if (settled) stable = now
+    return settled
+  }, { message: 'the row list has stopped changing' }).toBe(true)
+  return stable
 }
 
 // Everything "going back" must restore: colours, seed, colour system and the adjust sliders.
@@ -721,7 +733,7 @@ test.describe('the panel says Pro in one place', () => {
       })
       expect(stray, 'Pro appears outside the meta column and the end block').toEqual([])
       // Positive control: Pro IS on the panel (in the meta column or the end block), so the check reads something.
-      expect(await panel.locator('.plb-sw-meta, .plb-sw-problock').filter({ hasText: 'Pro' }).count()).toBeGreaterThan(0)
+      await expect(panel.locator('.plb-sw-meta, .plb-sw-problock').filter({ hasText: 'Pro' }), 'Pro is on the panel').not.toHaveCount(0)
     })
   }
 
