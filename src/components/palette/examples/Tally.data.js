@@ -18,6 +18,10 @@ export const TEXT_RECIPE = [
   { el: 'card text', ink: 'inkOnField:primary', large: false },
   { el: 'frozen action', ink: 'inkOnField:warning-tint', large: false },
   { el: 'refund, pending, declined, interest', ink: 'success-ink|warning-ink|error-ink|info-ink', large: false },
+  { el: 'limits heading, field labels, input values, toast', ink: 'text', large: false },
+  { el: 'limits help lines', ink: 'muted', large: false },
+  { el: 'limit error message', ink: 'error-ink', large: false },
+  { el: 'Save limits button', ink: 'on-primary', large: false },
 ]
 
 export const BUDGET = 1600
@@ -59,13 +63,13 @@ export const FIGURES = {
 }
 
 // `tone` marks the transactions that carry a state: each has a word and a
-// shape as well as a colour.
+// shape as well as a colour. `hover` draws one row as if the pointer were on it.
 export const TXNS = [
   {
     day: 'Today',
     rows: [
       { who: 'Corner Grocer, Newtown', ini: 'CG', amount: -64.2 },
-      { who: 'Train top-up', ini: 'TT', amount: -40 },
+      { who: 'Train top-up', ini: 'TT', amount: -40, hover: true },
       { who: 'Trade Depot', ini: 'TD', amount: -112.85, tone: 'warning', mark: '■', note: 'Pending' },
     ],
   },
@@ -83,13 +87,31 @@ export const amountText = (n) => `${n < 0 ? '−' : '+'}${money(Math.abs(n))}`
 export const CARD = { last4: '4471', name: 'Everyday' }
 export const ACTIONS = ['Freeze', 'Details', 'Limits']
 
+// The Limits action, shown open: a focused field, a field in error, a toggle on
+// and one disabled, and a toast. The error quotes the category it is about, so
+// it can never disagree with the budget bar.
+const EATING_OUT = CATS.find((c) => c.name === 'Eating out')
+export const LIMITS = {
+  toast: 'Budget saved',
+  budget: { label: 'Monthly budget', value: money(BUDGET).replace('.00', '') },
+  eating: {
+    label: 'Eating out limit',
+    limit: 200,
+    value: money(200).replace('.00', ''),
+    error: `That's under what you've already spent this month (${money(EATING_OUT.amount)}).`,
+  },
+  roundUps: { label: 'Round-ups to savings', help: 'Rounds each purchase up to the next dollar.' },
+  overseas: { label: 'Overseas fees', help: 'Available once your card has been active for 30 days.' },
+}
+
 /**
  * The colours this scene works out per palette and mode: the ink on the card,
  * the edge a pastel or near-black card needs against the page, the outline for
  * a chip or stripe too close to the card's own colour, the gap between two
- * neighbouring categories (3px when they are within 1.5:1, else 2px), and the
- * ink on the frozen action. For a two-colour pair nothing is corrected, and the
- * rows that carry a state are left out.
+ * neighbouring categories (3px when they are within 1.5:1, else 2px), the ink
+ * on the frozen action and the focus ring of the Limits form. For a two-colour
+ * pair nothing is corrected, and the rows that carry a state and the Limits
+ * form are left out.
  * @param {object} r derivePaletteRoles() output
  */
 export function tallyVars(r) {
@@ -104,6 +126,8 @@ export function tallyVars(r) {
     '--ty-chip-edge': onCard(r.subtle),
     '--ty-stripe-edge': onCard(r.deep),
     '--ty-frozen-ink': inkOnField(r.warning.tint, { on: r.warning.ink, ...grounds }).hex,
+    // The focus ring is the primary, or its border tone when the primary is under 3:1 on the panel.
+    '--ty-ring': contrastRatio(r.primary, r.surface) < 3 && r.primaryBorder !== 'transparent' ? r.primaryBorder : r.primary,
   }
   CATS.forEach((c, i) => {
     vars[`--ty-edge-${i + 1}`] = fieldEdge(r[c.role], r.canvas, r.borderStrong)

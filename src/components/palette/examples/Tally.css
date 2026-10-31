@@ -29,11 +29,13 @@
 .ty :where(ul){list-style:none}
 .ty :where(*,*::before,*::after){box-sizing:border-box}
 /* Tabular figures on the mono face only. */
-.ty-num,.ty-fig,.ty-amt,.ty-money,.ty-share{font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.ty-num,.ty-fig,.ty-amt,.ty-money,.ty-share,.ty-input{font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 
-.ty-grid{display:grid;grid-template-columns:5fr 7fr;column-gap:var(--s-7);align-items:start}
-.ty-left{display:flex;flex-direction:column;gap:var(--s-4);min-width:0}
-.ty-right{display:flex;flex-direction:column;gap:var(--s-6);min-width:0}
+/* Wide: the card and its actions over the Limits form in the left column, the budget and transactions beside them. */
+.ty-grid{display:grid;grid-template-columns:5fr 7fr;grid-template-rows:auto 1fr;column-gap:var(--s-7);row-gap:var(--s-4);align-items:start}
+.ty-left{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:var(--s-4);min-width:0}
+.ty-right{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;gap:var(--s-6);min-width:0}
+.ty-limits{grid-column:1;grid-row:2}
 
 /* ── The card ── */
 .ty-card{
@@ -84,7 +86,9 @@
 /* ── Transactions ── */
 .ty-txns{display:flex;flex-direction:column;gap:var(--s-4)}
 .ty-dayname{font-size:13px;font-weight:400;color:var(--pv-muted)}
-.ty-tx{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:var(--s-3);min-height:52px;border-bottom:1px solid var(--pv-border)}
+/* The side padding and the matching negative margin leave the text where it was and give the hover row room to show its fill. */
+.ty-tx{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:var(--s-3);min-height:52px;margin-inline:calc(var(--s-2) * -1);padding-inline:var(--s-2);border-bottom:1px solid var(--pv-border)}
+.ty-tx.is-hover{background:color-mix(in srgb,var(--pv-raised) 60%,transparent)}
 .ty-ini{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--pv-raised);font-size:12px;font-weight:600;color:var(--pv-muted)}
 .ty-who{display:flex;flex-direction:column;min-width:0}
 .ty-who b{font-weight:600}
@@ -95,10 +99,54 @@
 .ty-tx[data-tone="error"] :is(.ty-note,.ty-money){color:var(--pv-error-ink)}
 .ty-tx[data-tone="info"] :is(.ty-note,.ty-money){color:var(--pv-info-ink)}
 
+/* ── Limits: the Limits action shown open, with the form states a card app needs ── */
+.ty-limits{display:flex;flex-direction:column;gap:var(--s-4);min-width:0;padding:var(--s-4);background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:12px}
+.ty-ico{flex:none;display:block}
+.ty-limits-h{font-size:20px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+/* The toast floats above the form, so it is the one place a shadow is used. */
+.ty-toast{
+  display:inline-flex;align-items:center;gap:var(--s-2);align-self:flex-start;min-height:40px;padding:var(--s-2) var(--s-4);
+  background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:8px;
+  box-shadow:0 4px 12px -2px color-mix(in srgb,var(--pv-text) 8%,transparent);
+  font-size:13px;color:var(--pv-text);
+}
+.ty-toast .ty-ico{color:var(--pv-success-ink)}
+.ty-field{display:flex;flex-direction:column;gap:var(--s-1)}
+.ty-field-l{font-size:13px;font-weight:600;color:var(--pv-text)}
+.ty-input{
+  display:flex;align-items:center;height:36px;padding:0 var(--s-3);
+  background:var(--pv-raised);border:1px solid var(--pv-border-strong);border-radius:8px;
+  font-size:13px;color:var(--pv-text);
+}
+/* Focus: a 2px ring set off the field by 2px of the panel's own colour. */
+.ty-input.is-focus{border-color:var(--ty-ring);box-shadow:0 0 0 2px var(--pv-surface),0 0 0 4px var(--ty-ring)}
+.ty-input.is-error{border-color:var(--pv-error)}
+.ty-err{display:flex;align-items:flex-start;gap:var(--s-2);font-size:13px;line-height:1.5;color:var(--pv-error-ink)}
+.ty-err .ty-ico{margin-top:2px}
+.ty-switch{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4)}
+.ty-switch-t{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.ty-help{font-size:13px;color:var(--pv-muted)}
+.ty-toggle{position:relative;flex:none;width:40px;height:24px;border-radius:999px;background:var(--pv-raised);border:1px solid var(--pv-border-strong)}
+.ty-toggle>i{position:absolute;top:1px;left:1px;width:20px;height:20px;border-radius:50%;background:var(--pv-muted)}
+.ty-toggle.is-on{background:var(--pv-primary);border-color:var(--pv-pborder)}
+.ty-toggle.is-on>i{left:auto;right:1px;background:var(--pv-on-primary)}
+/* Disabled: the label and toggle are drawn in the disabled ink, and the help line beside them stays readable because it says why. */
+.ty-field-l.is-disabled{color:var(--pv-disabled)}
+.ty-toggle.is-disabled{background:transparent;border-color:var(--pv-border)}
+.ty-toggle.is-disabled>i{background:var(--pv-disabled)}
+.ty-limits-foot{display:flex;justify-content:flex-end;gap:var(--s-2)}
+.ty-btn{
+  display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 var(--s-4);
+  background:var(--pv-surface);border:1px solid var(--pv-border-strong);border-radius:8px;
+  font-size:13px;font-weight:600;color:var(--pv-text);white-space:nowrap;
+}
+.ty-btn--primary{background:var(--pv-primary);border-color:var(--pv-pborder);color:var(--pv-on-primary)}
+
 /* ── Mid: the card with its actions beside it, the budget and transactions below ── */
 @container pvs (max-width:943px){
   .ty{padding:var(--s-6) var(--s-5)}
-  .ty-grid{grid-template-columns:1fr;row-gap:var(--s-6)}
+  .ty-grid{grid-template-columns:1fr;grid-template-rows:none;row-gap:var(--s-6)}
+  .ty-left,.ty-right,.ty-limits{grid-column:1;grid-row:auto}
   .ty-left{flex-direction:row;align-items:flex-end;gap:var(--s-5)}
   .ty-card{flex:none;width:300px}
   .ty-actions{flex-direction:column;flex:1;width:auto;max-width:240px}

@@ -189,13 +189,6 @@ const NOT_A_PLAN_PRICE = [
       + 'and a notebook, not tiers of UIL4B.',
   },
   {
-    file: 'src/data/palettePreviewScenes.js',
-    context: /FW-01\d\d/,
-    why: 'Sample invoice rows for Fernway, the invented invoicing product the '
-      + 'Invoices and Settings previews are drawn from. They are client invoice '
-      + 'amounts, not something UIL4B charges.',
-  },
-  {
     file: 'src/data/communityPrompts.js',
     // Excused only while the surrounding text says nothing about our own plans:
     // a prompt that quoted a UIL4B tier would still be checked against the ladder.
