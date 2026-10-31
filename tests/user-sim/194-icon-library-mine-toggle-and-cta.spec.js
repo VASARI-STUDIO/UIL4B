@@ -202,7 +202,12 @@ test.describe('the page has one call to action before the footer, centred on the
       const filters = page.getByRole('button', { name: /^Filters\b/ })
       const sheet = page.getByRole('dialog', { name: 'Filters' })
       // The pack menu is on the row until the toolbar folds it into the Filters sheet (a phone).
-      const inPanel = !(await page.getByRole('button', { name: 'Icon pack' }).isVisible()) && await filters.isVisible()
+      // Wait for the toolbar to settle (the pack menu on the row, or Filters once it folds) before choosing a path.
+      const packOnRow = page.getByRole('button', { name: 'Icon pack' })
+      const where = async () => (await packOnRow.isVisible()) ? 'row' : (await filters.isVisible()) ? 'panel' : 'none'
+      let last = 'none'
+      await expect.poll(async () => { const prev = last; last = await where(); await page.waitForTimeout(150); return last !== 'none' && last === prev && last === await where() }, { message: 'the toolbar has settled' }).toBe(true)
+      const inPanel = last === 'panel'
       const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
       if (inPanel) {
         await filters.click()
