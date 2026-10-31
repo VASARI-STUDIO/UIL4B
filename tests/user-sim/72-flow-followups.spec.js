@@ -20,7 +20,7 @@
 //      saves up to 3 projects — go Pro for unlimited." for 1.8 seconds.
 //   4  Toasts. Duplicate at the cap: `toast-error` shown for 1,862ms, zero
 //      buttons, pointer-events:none.
-//   5  /settings opened on "Subscription".
+//   5  /settings opened on "Plan and billing".
 //   6  The gate's "Not now? Closing this changes nothing" line:
 //      display:none at 390 on both the gate and the signup variant. The gate
 //      ended at y=785 of 844; the signup dialog at 822 with "Already have an
@@ -343,7 +343,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('5 — settings opens on Account, and remembers the section you chose', () => {
   for (const size of [PHONE, DESK]) {
-    test(`${size[0]}px: Account first; Subscription is remembered across a reload`, async ({ browser }) => {
+    test(`${size[0]}px: Account first; Plan and billing is remembered across a reload`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a free account opening its settings (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 1 })
@@ -363,11 +363,11 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
         await expect(page.locator('#set-support'), 'a reload keeps the open section').toBeVisible()
         await page.goBack()
         await expect(page.locator('.settings-nav')).toBeVisible()
-        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
         // A fresh visit opens on the list, with the remembered row current.
         await go(page, '/settings?fresh=1')
         await expect(page.locator('.settings-nav')).toBeVisible()
-        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
         await context.close()
         return
       }
@@ -376,10 +376,10 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
       await expect(page.locator('#set-account')).toBeVisible()
       await expect(page.locator('#set-support')).toBeHidden()
 
-      await page.getByRole('tab', { name: 'Subscription' }).click()
+      await page.getByRole('tab', { name: 'Plan and billing' }).click()
       await expect(page.locator('#set-support')).toBeVisible()
       await go(page, '/settings')
-      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Subscription/)
+      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Plan and billing/)
       await context.close()
     })
   }

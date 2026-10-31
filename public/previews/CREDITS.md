@@ -88,3 +88,18 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
   - `overshirt/overshirt-pocket-1080.avif`
   - `overshirt/overshirt-pocket-1080.webp`
   - `overshirt/overshirt-pocket-mask.png`
+
+## ridgeline
+
+`coot-tha-osm` · Source: Map
+
+- Author: OpenStreetMap contributors
+- Licence: Open Database Licence (ODbL) 1.0
+- URL: https://www.openstreetmap.org/copyright
+- Changes: Streets, tracks, bushland, parks and water for the Mt Coot-tha area, simplified and redrawn as four single-colour layers. The route drawn over it was found on the same tracks, with ground heights from NASA SRTM (public domain), read through OpenTopoData.
+- On screen: the preview's footer line reads "Map © OpenStreetMap contributors" and links to the copyright page, as the licence asks, followed by "Elevation: NASA SRTM (public domain), via OpenTopoData".
+- Files:
+  - `ridgeline/park.svg`
+  - `ridgeline/water.svg`
+  - `ridgeline/roads.svg`
+  - `ridgeline/paths.svg`

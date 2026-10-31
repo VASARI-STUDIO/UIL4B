@@ -36,6 +36,7 @@ const TOOLS = [
     route: '/create/palette',
     title: 'Palette Generator',
     primary: /^Save or share/,
+    phoneDock: true,
     overflow: 'Extra tools',
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
@@ -52,17 +53,17 @@ const TOOLS = [
   },
   // Back is an icon-only square on the row (named "Back to the previous gradient") and a
   // text row named "Back" in the overflow.
-  { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, 'Reset'], primary: /^Save or share/, title: 'Gradient' },
-  { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker' },
-  { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint' },
+  { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, 'Reset'], primary: /^Save or share/, title: 'Gradient', phoneDock: true },
+  { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker', phoneDock: true },
+  { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint', phoneDock: true },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.
-  { route: '/create/semantic-color', actions: [], primary: /^Copy /, title: 'Semantic Colour' },
+  { route: '/create/semantic-color', actions: [], primary: /^Copy /, title: 'Semantic Colour', phoneDock: true },
   // Studio tools. The converter's and the Brand Starter's run actions live
   // with their inputs (the action bar, the brief), so their toolbars have no
   // primary; /seo's three tools are tabs under the toolbar, so its row is the
   // back button and the name.
   { route: '/create/file-converter', title: 'File Converter', actions: ['Open the 3D Model Converter'] },
-  { route: '/create/alt-text', title: 'Alt Text Generator', actions: ['Add images'], primary: /^Generate/ },
+  { route: '/create/alt-text', title: 'Alt Text Generator', actions: ['Add images'], primary: /^Generate/, phoneDock: true },
   { route: '/create/auto-builder', title: 'Brand Starter', actions: [] },
   { route: '/create/3d-converter', title: '3D Model Converter', actions: ['For Blender', 'Open a file'] },
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
@@ -116,7 +117,7 @@ const TOOLS = [
     overflow: (width) => (width >= 1024 ? 'More filters' : 'More'),
     title: 'Font Gallery',
   },
-  { route: '/create/aspect-ratio', actions: ['Swap width and height'], primary: /^Copy size/, title: 'Aspect & Resolution' },
+  { route: '/create/aspect-ratio', actions: ['Swap width and height'], primary: /^Copy size/, title: 'Aspect & Resolution', phoneDock: true },
 ]
 
 async function readRow(page) {
@@ -153,8 +154,10 @@ for (const tool of TOOLS) {
         const scope = tool.secondRow ? page.locator(`[data-tool-toolbar], ${tool.secondRow}`) : bar
 
         const row = await readRow(page)
-        // POSITIVE CONTROL: the row really has its parts on it.
-        expect(row.children, 'the toolbar rendered its controls').toBeGreaterThanOrEqual(tool.minChildren || 3)
+        // POSITIVE CONTROL: the row really has its parts on it. A phone's row has one
+        // part fewer where the primary is in the dock (back and the name remain).
+        const primaryInDock = Boolean(tool.phoneDock) && width < 768
+        expect(row.children, 'the toolbar rendered its controls').toBeGreaterThanOrEqual(tool.minChildren || (primaryInDock ? 2 : 3))
         expect(row.spread, `${width}px: toolbar children sit on ${row.centres.length} lines`).toBeLessThanOrEqual(2)
         expect(row.right, `${width}px: the toolbar runs ${row.right - row.vw}px past the screen`).toBeLessThanOrEqual(row.vw)
         expect(row.height, `${width}px: the toolbar is ${row.height}px tall — a second row`).toBeLessThan(72)
@@ -166,14 +169,17 @@ for (const tool of TOOLS) {
         }
 
         // The primary, where the tool has one, is always on the row from the
-        // width the tool names, or in the docked bar where the tool says so
-        // (Type Scale on a phone).
+        // width the tool names, or in a docked bar where the tool says so: the
+        // layout's own dock under 768 (`phoneDock`, a bar fixed to the foot of the
+        // screen), or Type Scale's on a phone.
         if (tool.primary && width >= (tool.primaryFrom || 0)) {
-          const docked = width < (tool.primaryDockedBelow || 0)
+          const layoutDock = Boolean(tool.phoneDock) && width < 768
+          const docked = layoutDock || width < (tool.primaryDockedBelow || 0)
           await expect(docked
-            ? page.locator('.tsc-dock').getByRole('button', { name: tool.primary })
+            ? page.locator(layoutDock ? '[data-tl-dock]' : '.tsc-dock').getByRole('button', { name: tool.primary })
             : bar.getByRole('button', { name: tool.primary })).toBeVisible()
           if (docked) await expect(bar.getByRole('button', { name: tool.primary }), `${width}px: the primary is in the dock, not also on the row`).toHaveCount(0)
+          if (!layoutDock) await expect(page.locator('[data-tl-dock]'), `${width}px: a dock for a primary that is on the row`).toHaveCount(0)
         }
 
         // Every action: on the row, or in the overflow.
@@ -271,22 +277,25 @@ for (const tool of TOOLS) {
 }
 
 test('/create/gradient · an action run from the phone overflow still does its job', async ({ page }) => {
-  watch(page, 'a designer randomising a gradient from the bottom sheet')
-  // 360: the narrowest phone, where Random is always in the overflow. At 390 the
-  // tightened row can keep it inline.
+  watch(page, 'a designer resetting a gradient from the bottom sheet')
+  // With the primary in the dock the phone row keeps Random inline, so the
+  // action that lives in the sheet is Reset: shuffle first, so a reset has
+  // something to undo.
   await page.setViewportSize({ width: 360, height: 844 })
   await go(page, '/create/gradient')
   const code = page.locator('.grd-code-text code')
-  const before = await code.textContent()
+  const initial = await code.textContent()
+  await page.getByRole('button', { name: 'Random', exact: true }).click()
+  await expect.poll(async () => code.textContent()).not.toBe(initial)
   await page.getByRole('button', { name: 'More', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'More' })
   await expect(sheet).toBeVisible()
   // A bottom sheet on a phone: it meets the bottom of the screen.
   const box = await sheet.boundingBox()
   expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(843)
-  await sheet.getByRole('button', { name: 'Random', exact: true }).click()
+  await sheet.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect(sheet).toBeHidden()
-  await expect.poll(async () => code.textContent()).not.toBe(before)
+  await expect.poll(async () => code.textContent()).toBe(initial)
 })
 
 test('/create/palette · Reset run from the phone Extra tools sheet still resets', async ({ page }) => {
