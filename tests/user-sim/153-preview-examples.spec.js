@@ -23,8 +23,8 @@
 //      label and each other (a box test; the contrast walk cannot see a line
 //      drawn under a label's plate)
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
-//   7d. Orra's five colourways sit in one row at 360, 390, 768, 1024 and 1440; names hidden under 960, fitting at 1440
-//   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
+//   7d. Orra's four colourway buttons sit in one row, each 44px or more wide, at 360, 390, 768, 1024 and 1440; the selected name is in the Colour label
+//   7e. Orra's stage stays off the buy column and the shirt on show inside the stage at 1440, 768, 390
 //   7f. the legend: one row, the chips that do not fit under "+N more", the adjusted-as-text caption is one line and its chips point at it
 //   7g. the Slack Water headline runs to at most three lines at 1440 and 768
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
@@ -53,7 +53,7 @@
 // Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
 // in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
 // `.or-sw-t` back to ellipsis; `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
-// the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
+// the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 40px width (7d), `.or-stage` given `margin-bottom:-80px` (7e); put previewLoader back to Promise.all, or
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -62,7 +62,10 @@ import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-h
 // name: the option in the dialog's list. text: a string only that example prints.
 // roles: the roles each example tags, by hand, from its ROLES in <File>.data.js.
 // The states a preview can be shown in, by the label in the dialog's State menu. A preview with no entry has one frame.
-const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'] }
+const STATES = {
+  'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
+  'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
+}
 const ALL_ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral']
 const EXAMPLES = [
   {
@@ -74,8 +77,9 @@ const EXAMPLES = [
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
   },
   {
+    // The Overview tags five roles; success is only on the bag sheet (Added to bag), so its chip is off at rest.
     name: 'Product page', id: 'product', text: 'The Field Overshirt',
-    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
+    roles: ['primary', 'secondary', 'accent', 'deep', 'neutral'],
   },
   {
     name: 'Trail run app', id: 'trail', text: 'Saturday run', pro: false,
@@ -434,6 +438,7 @@ function sweepContrast() {
   const problems = []
   const rows = []
   const onRender = new Set()
+  let inertSkipped = 0
   // elementsFromPoint skips anything with pointer-events:none, such as the Spending card's toast dock,
   // which is printed all the same. Hit-testing is switched on for the walk and put back after it.
   const hitTest = document.createElement('style')
@@ -453,6 +458,9 @@ function sweepContrast() {
     // Text that is visually hidden on purpose (a 1px clip box, kept for a screen reader, as the
     // Orra colourway names are under 960px) paints nothing, so it has no ground to read.
     { const hb = el.getBoundingClientRect(); if (hb.width <= 1 && hb.height <= 1 && cs.clipPath !== 'none') continue }
+    // The page behind Orra's bag sheet is inert (a modal is open): the browser hit-tests nothing in it, so the
+    // walk cannot read its ground. It is the same page the Overview rates, so the Added to bag state rates the sheet.
+    if (el.closest('.or [inert]')) { inertSkipped++; continue }
     el.scrollIntoView({ block: 'center', inline: 'center' })
 
     const range = document.createRange()
@@ -529,16 +537,15 @@ function sweepContrast() {
     rows.push({
       label, size, large, floor: large ? 3 : 4.5, ratio: Math.round(worst.ratio * 100) / 100,
       ink: hex(worst.ink), ground: hex(worst.ground),
-      // The sold-out size in the Product page: struck through, in the disabled
-      // ink, on purpose. Text of an inactive control is exempt from 1.4.3, so it
-      // is exempt only while it is marked aria-disabled.
-      // The Overseas fees label in the Spending card's Limits form is the same
-      // case: a disabled toggle's label, drawn in the disabled ink on purpose.
-      exempt: !!el.closest('.or-size.is-off[aria-disabled="true"], .ty-field-l.is-disabled'),
+      // The Overseas fees label in the Spending card's Limits form: a disabled toggle's label, drawn in
+      // the disabled ink on purpose (text of an inactive control is exempt from 1.4.3).
+      // The Product page has no exemption: its sold-out size is selectable and struck through in the
+      // muted ink, so it is held to the floor like every other node.
+      exempt: !!el.closest('.ty-field-l.is-disabled'),
     })
   }
   hitTest.remove()
-  return { rows, problems: [...new Set(problems)], onRender: [...onRender] }
+  return { rows, problems: [...new Set(problems)], onRender: [...onRender], inertSkipped }
 }
 
 test.describe('contrast on the real ground', () => {
@@ -570,8 +577,13 @@ test.describe('contrast on the real ground', () => {
               const at = state ? `${ex.name}/${state}/${theme}` : `${ex.name}/${theme}`
               await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
               await settle(page)
-              const { rows, problems, onRender } = await page.evaluate(sweepContrast)
-              expect(rows.length, `${at}: text nodes measured`).toBeGreaterThan(state && state !== 'Overview' ? 15 : 20)
+              const { rows, problems, onRender, inertSkipped } = await page.evaluate(sweepContrast)
+              // With Orra's bag sheet open the page behind it is inert and set aside (about 36 text nodes), so
+              // the sheet alone is rated (6 nodes); everywhere else nothing is set aside.
+              const sheet = state === 'Added to bag'
+              expect(rows.length, `${at}: text nodes measured`).toBeGreaterThan(sheet ? 4 : state && state !== 'Overview' ? 15 : 20)
+              if (sheet) expect(inertSkipped, `${at}: the page behind the sheet is inert`).toBeGreaterThan(20)
+              else expect(inertSkipped, `${at}: text set aside as inert`).toBe(0)
               measured += rows.length
               for (const p of problems) unmeasured.push(`${at} ${p}`)
               for (const r of rows) {
@@ -590,8 +602,9 @@ test.describe('contrast on the real ground', () => {
         }
         expect(measured, 'text nodes measured in all').toBeGreaterThan(150)
         expect(unmeasured, 'text this walk could not measure or that something covers').toEqual([])
-        // The sold-out size is in the Product page, in both themes, so the carve-out was used.
-        expect(exempt, 'the sold-out size chips were not found (both themes)').toBeGreaterThanOrEqual(2)
+        // The disabled Overseas fees label is in the Spending card's Limits form, in both themes, so the carve-out was used.
+        // Nothing else is exempt: the Product page's sold-out size is held to the floor.
+        expect(exempt, 'the disabled Overseas fees label was not found (both themes)').toBe(2)
         // The card's printed text was rated from pixels in both themes, in more than one state.
         expect(cardChecked, 'the card render text was never rated from pixels').toBeGreaterThanOrEqual(4)
         expect(misses, `text below its floor on its real ground (${measured} measured):\n${misses.join('\n')}`).toEqual([])
@@ -650,8 +663,9 @@ test.describe('the Energy dashboard chart labels', () => {
 // data. So no SVG part may carry an outline while a colour is traced.
 
 test.describe('the legend highlight on a drawing', () => {
-  // Tally is built from boxes, with no drawn part that carries a role, so there is no SVG to check there.
-  for (const ex of EXAMPLES.filter((e) => e.id !== 'card')) {
+  // Tally and Orra are built from boxes and pictures, with no drawn part that carries a role (Orra's only
+  // SVGs are icons with no data-role), so there is no SVG to check there.
+  for (const ex of EXAMPLES.filter((e) => e.id !== 'card' && e.id !== 'product')) {
     test(`${ex.name}: tracing a colour puts no outline on any drawn part`, async ({ page }) => {
       watch(page, `designer tracing colours on the drawings in ${ex.name}`)
       await seed(page, PALETTES.mid)
@@ -674,35 +688,35 @@ test.describe('the legend highlight on a drawing', () => {
   }
 })
 
-// ── 7d. Orra's five colourways: one row at every width ───────────────────────
-// The row is a five-column grid. Under a 960px container the names are hidden from
-// the eye (a 1px clip box, still read by a screen reader) and the selected name is
-// printed beside "Colourway"; from 960 the names show under the swatches.
+// ── 7d. Orra's four colourways: one row at every width ───────────────────────
+// The colourways are a radiogroup of four buttons (three made from the palette, then the
+// fixed Natural), each a cropped picture of the shirt with its name under it. They share
+// one row and are wide enough to press at every width, and the selected name is printed
+// in the "Colour" label above them.
 
 const swatchRow = (page) => page.evaluate(() => {
   const row = [...document.querySelectorAll('.or-sw')].map((el) => {
     const r = el.getBoundingClientRect()
     const t = el.querySelector('.or-sw-t')
-    const i = el.querySelector(':scope > i').getBoundingClientRect()
-    const tb = t.getBoundingClientRect()
+    const crop = el.querySelector('.or-crop').getBoundingClientRect()
     const range = document.createRange()
     range.selectNodeContents(t)
     const rects = [...range.getClientRects()].filter((q) => q.width > 0)
     return {
-      name: t.textContent.trim(), top: Math.round(r.top), width: r.width, circle: [i.width, i.height],
-      box: [tb.width, tb.height], textWidth: Math.max(0, ...rects.map((q) => q.width)),
-      lines: new Set(rects.map((q) => Math.round(q.top))).size,
+      tag: el.tagName, name: t.textContent.trim(), top: Math.round(r.top), width: r.width, height: r.height,
+      crop: [crop.width, crop.height], textWidth: Math.max(0, ...rects.map((q) => q.width)),
+      lines: new Set(rects.map((q) => Math.round(q.top))).size, overflow: el.scrollWidth - el.clientWidth,
     }
   })
   const sel = document.querySelector('.or-opt-l b')
   return { row, selected: sel && sel.textContent.trim(), first: row[0] && row[0].name }
 })
 
-test.describe('the Orra colourways on a phone', () => {
-  for (const width of [360, 390]) {
-    test(`five swatches share one row at ${width}px, 40px circles, names hidden from the eye and the selected one printed`, async ({ page }) => {
+test.describe('the Orra colourways', () => {
+  for (const width of [360, 390, 768, 1024, 1440]) {
+    test(`four swatch buttons share one row at ${width}px, each wide enough to press, with the selected name in the Colour label`, async ({ page }) => {
       watch(page, `designer reading the Orra colourways at ${width}px`)
-      await page.setViewportSize({ width, height: 844 })
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       for (const theme of ['Light', 'Dark']) {
@@ -710,95 +724,65 @@ test.describe('the Orra colourways on a phone', () => {
         await pickScene(dialog, 'Product page')
         await settle(page)
         const { row, selected, first } = await swatchRow(page)
-        expect(row.length, `${theme}: five colourways`).toBe(5)
+        expect(row.length, `${theme}: four colourways`).toBe(4)
+        expect(row.map((s) => s.tag), `${theme}: every colourway is a button`).toEqual(['BUTTON', 'BUTTON', 'BUTTON', 'BUTTON'])
+        expect(row[3].name, `${theme}: the last colourway is the fixed Natural`).toBe('Natural')
+        expect(new Set(row.map((s) => s.name)).size, `${theme}: two colourways share a name`).toBe(4)
         expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
         for (const s of row) {
           expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
-          expect(s.circle, `${theme}: the "${s.name}" circle is not 40px`).toEqual([40, 40])
-          expect(s.box[0], `${theme}: "${s.name}" is still visible (wider than its 1px clip box)`).toBeLessThanOrEqual(1)
-          expect(s.box[1], `${theme}: "${s.name}" is still visible (taller than its 1px clip box)`).toBeLessThanOrEqual(1)
+          expect(s.height, `${theme}: the "${s.name}" swatch is too short to press`).toBeGreaterThanOrEqual(44)
+          expect(s.crop[0], `${theme}: the "${s.name}" picture has no width`).toBeGreaterThanOrEqual(44)
+          expect(s.overflow, `${theme}: the "${s.name}" name runs past its swatch`).toBeLessThanOrEqual(0)
+          expect(s.lines, `${theme}: "${s.name}" runs to ${s.lines} lines`).toBeLessThanOrEqual(2)
+          // Half a pixel of slack for the text measure; at 768 the longest word (Jacaranda) fills its swatch with nothing to spare.
+          expect(s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) is wider than its ${s.width.toFixed(1)}px swatch`).toBeLessThanOrEqual(s.width + 0.5)
         }
-        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
+        expect(selected, `${theme}: the selected colourway's name is printed in the Colour label`).toBe(first)
       }
     })
   }
-})
-
-test.describe('the Orra colourways on a tablet', () => {
-  for (const width of [768, 1024]) {
-    test(`five swatches share one row at ${width}px`, async ({ page }) => {
-      watch(page, `designer reading the Orra colourways at ${width}px`)
-      await page.setViewportSize({ width, height: 900 })
-      await seed(page, PALETTES.mid)
-      const dialog = await openDialog(page)
-      for (const theme of ['Light', 'Dark']) {
-        await setTheme(dialog, theme)
-        await pickScene(dialog, 'Product page')
-        await settle(page)
-        const { row, selected, first } = await swatchRow(page)
-        expect(row.length, `${theme}: five colourways`).toBe(5)
-        expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
-        for (const s of row) expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
-        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
-      }
-    })
-  }
-})
-
-test.describe('the Orra colourway names where they show', () => {
-  test('at 1440px each name is on one line with room to spare inside its swatch, in both themes', async ({ page }) => {
-    watch(page, 'designer reading the Orra colourway names at 1440px')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await seed(page, PALETTES.mid)
-    const dialog = await openDialog(page)
-    for (const theme of ['Light', 'Dark']) {
-      await setTheme(dialog, theme)
-      await pickScene(dialog, 'Product page')
-      await settle(page)
-      const { row } = await swatchRow(page)
-      expect(row.length, `${theme}: five colourways`).toBe(5)
-      expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
-      for (const s of row) {
-        expect(s.box[0], `${theme}: "${s.name}" is hidden at 1440`).toBeGreaterThan(8)
-        expect(s.lines, `${theme}: "${s.name}" wraps onto ${s.lines} lines`).toBe(1)
-        // The width of the text itself (a Range), not its box: a box that is as wide as its
-        // column hides a word that is exactly as wide, or wider, and breaks it.
-        expect(s.width - s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) leaves under 8px in a ${s.width.toFixed(1)}px swatch`).toBeGreaterThanOrEqual(8)
-      }
-    }
-  })
 })
 
 // ── 7e. Orra's shirt stays inside its stage ──────────────────────────────────
 // The contrast walk measures text on what is painted over it, so a shirt drawn over
 // the price and description at 768 could still pass. Compare the boxes instead:
-// the front view's drawing must sit inside the stage's box, and the buy column
-// must not start above the stage's bottom edge when the two are stacked.
+// the stage must not overlap the buy column, and the picture on show (the strip holds
+// three, side by side) sits inside the stage.
 
 test.describe('the Orra product stage', () => {
   for (const width of [1440, 768, 390]) {
-    test(`the shirt stays inside its stage and off the buy column at ${width}px`, async ({ page }) => {
+    test(`the stage stays off the buy column and its shirt inside it at ${width}px`, async ({ page }) => {
       watch(page, `designer reading the Orra product page at ${width}px`)
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, 'Product page')
       await settle(page)
+      // The first picture is the eager one; the back and pocket load when the strip nears them.
+      await page.waitForFunction(() => [...document.querySelectorAll('.or-slide:first-child .rc-base')].every((i) => i.complete && i.naturalWidth > 0))
       const b = await page.evaluate(() => {
-        const r = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, r: x.right, t: x.top, b: x.bottom } }
+        const r = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, r: x.right, t: x.top, b: x.bottom, w: x.width, h: x.height } }
         const stage = document.querySelector('.or-stage')
-        const shirt = document.querySelector('.or-figure .or-garment')
         const buy = document.querySelector('.or-buy')
-        return stage && shirt && buy ? { stage: r(stage), shirt: r(shirt), buy: r(buy) } : null
+        const overlap = (a, c) => Math.max(0, Math.min(a.r, c.r) - Math.max(a.l, c.l)) * Math.max(0, Math.min(a.b, c.b) - Math.max(a.t, c.t))
+        const st = stage && r(stage)
+        // The shirt on show is the one with the most of itself over the stage.
+        const shirts = [...document.querySelectorAll('.or-stage .or-shirt')].map(r)
+        const visible = st ? shirts.map((s) => ({ ...s, over: overlap(s, st) })).sort((a, c) => c.over - a.over)[0] : null
+        return stage && buy && visible ? { stage: st, buy: r(buy), shirt: visible, shirts: shirts.length } : null
       })
-      expect(b, 'the stage, its shirt and the buy column were found').toBeTruthy()
+      expect(b, 'the stage, a shirt in it and the buy column were found').toBeTruthy()
+      expect(b.shirts, 'the strip holds the front, back and pocket pictures').toBe(3)
+      expect(b.shirt.w, 'the shirt on show has a width').toBeGreaterThan(100)
+      expect(b.shirt.h, 'the shirt on show has a height').toBeGreaterThan(100)
       const slack = 1
       expect(b.shirt.l, 'shirt past the stage\'s left edge').toBeGreaterThanOrEqual(b.stage.l - slack)
       expect(b.shirt.r, 'shirt past the stage\'s right edge').toBeLessThanOrEqual(b.stage.r + slack)
       expect(b.shirt.t, 'shirt above the stage').toBeGreaterThanOrEqual(b.stage.t - slack)
       expect(b.shirt.b, 'shirt below the stage').toBeLessThanOrEqual(b.stage.b + slack)
-      const side = b.shirt.l < b.buy.r && b.shirt.r > b.buy.l && b.shirt.t < b.buy.b && b.shirt.b > b.buy.t
-      expect(side, 'the shirt overlaps the buy column').toBe(false)
+      const touch = b.stage.l < b.buy.r - slack && b.stage.r > b.buy.l + slack && b.stage.t < b.buy.b - slack && b.stage.b > b.buy.t + slack
+      expect(touch, 'the stage overlaps the buy column').toBe(false)
     })
   }
 })

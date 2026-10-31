@@ -364,7 +364,9 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
 
       expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
       // Tally has live controls, so it is a group of them; every other scene is one picture.
-      expect(s.role, `${name}: the scene is not exposed as ${name === 'Spending card' ? 'a group of controls' : 'one image'}`).toBe(name === 'Spending card' ? 'group' : 'img')
+      // The softly interactive scenes (the Spending card and the Product page) are groups of controls; the rest are one picture.
+      const live = name === 'Spending card' || name === 'Product page'
+      expect(s.role, `${name}: the scene is not exposed as ${live ? 'a group of controls' : 'one image'}`).toBe(live ? 'group' : 'img')
       expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
       // pvVars moved with the components. If it had not, every one of these
       // would resolve to nothing and the scenes would paint unstyled.
