@@ -11,7 +11,7 @@
 //   6. no sideways overflow at 320, 390 and 768 in any state and either theme
 //   7. every button is 44px or more each way on a phone
 //   8. the OpenStreetMap credit is a real link, in the activity and the live view
-//   9. a map label's plate never sits on the start marker (a known fault, see the test)
+//   9. a map label's plate never sits on the start marker or a km tick
 //
 // Nothing is mocked: the dialog is opened the way a person opens it. Trail run app is a free
 // example, so there is no sign-in. The expected values are worked by hand from
@@ -275,9 +275,11 @@ test.describe('the chart scrub', () => {
     await page.keyboard.press('Home')
     await expect(sc.locator('.rl-read-km')).toHaveText('0.00 km')
     await page.keyboard.press('End')
-    // The route is 9621 m and the slider steps by 25, so the last stop is 9600 m.
-    await expect(sc.locator('.rl-read-km'), 'the far end of the route').toHaveText('9.60 km')
-    await expect(scrub(sc)).toHaveValue('9600')
+    // The route is 9621 m and the slider steps by 25: its last stop is the true end, not 9600 m.
+    await expect(sc.locator('.rl-read-km'), 'the far end of the route').toHaveText('9.62 km')
+    await expect(scrub(sc)).toHaveAttribute('aria-valuetext', /^9\.62 km,/)
+    await page.keyboard.press('ArrowLeft')
+    await expect(sc.locator('.rl-read-km'), 'one step back from the end').toHaveText('9.60 km')
   })
 })
 
@@ -454,11 +456,7 @@ test.describe('on a phone', () => {
     expect(found.filter((b) => b.name === 'Splits' && b.h < 44).map(fmt), 'the Splits switch is 44px tall').toEqual([])
   })
 
-  // KNOWN FAULT (Ridgeline.css `.rl-sw`, line 93): the switch has no padding, so "Splits" is 36 to 37px wide
-  // against 44px tall. `test.fail` keeps this green while that holds and goes red once the width is
-  // fixed: delete the `.fail` line then.
   test('the Splits switch is 44px wide', async ({ page }) => {
-    test.fail(true, 'the Splits switch is 37px wide')
     const found = await sizes(page)
     expect(found.filter((b) => b.name === 'Splits' && b.w < 44).map(fmt)).toEqual([])
   })
@@ -495,15 +493,11 @@ test.describe('the map credit', () => {
 })
 
 // ── 9. map labels ────────────────────────────────────────────────────────────
-// KNOWN FAULT (outside this spec's lane: Ridgeline.jsx RouteMap, the `left` clamp in `place`): at 390 the
-// "Start and finish" plate is pushed back along the map to keep it inside the box, and so lands on the
-// start marker it names (the marker is 274 to 292px, the plate starts at 274px); in the live view the
-// plate also clips the marker at 1440 and 768. `test.fail` keeps this green while that holds and goes
-// red the moment it is fixed: delete the `.fail` line then.
+// A plate is placed on the first side of its place that stays inside the map box and clears the markers
+// and the plates already placed (Ridgeline.jsx `placePlates`), so none may sit on the start marker.
 test.describe('the map labels', () => {
-  test.fail(true, 'the Start and finish plate covers the start marker at 390, and in the live view')
   for (const width of [390, 768, 1440]) {
-    test(`no plate sits on the start marker at ${width}px, in any state`, async ({ page }) => {
+    test(`no plate sits on the start marker or a km tick at ${width}px, in any state`, async ({ page }) => {
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
       const dialog = await openRidgeline(page)
       for (const [label, id] of STATE_LABELS) {
@@ -511,13 +505,13 @@ test.describe('the map labels', () => {
         await expect(scene(dialog).locator('.rl-pl').first()).toBeVisible()
         const hit = await page.evaluate(() => {
           const r = (e) => e.getBoundingClientRect()
-          const m = r(document.querySelector('.rl-start'))
+          const marks = [document.querySelector('.rl-start'), ...document.querySelectorAll('.rl-tick')].map(r)
           return [...document.querySelectorAll('.rl-pl')].filter((e) => getComputedStyle(e).display !== 'none').filter((e) => {
             const p = r(e)
-            return p.left < m.right - 1 && m.left + 1 < p.right && p.top < m.bottom - 1 && m.top + 1 < p.bottom
+            return marks.some((m) => p.left < m.right - 1 && m.left + 1 < p.right && p.top < m.bottom - 1 && m.top + 1 < p.bottom)
           }).map((e) => e.textContent)
         })
-        expect(hit, `${width}/${label}: a plate is on the start marker`).toEqual([])
+        expect(hit, `${width}/${label}: a plate is on the start marker or a km tick`).toEqual([])
       }
     })
   }

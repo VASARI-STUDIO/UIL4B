@@ -21,6 +21,11 @@ import './Ridgeline.css'
 
 const ASSET = PREVIEW_ASSETS['coot-tha-osm']
 
+// The scrub steps by SCRUB_STEP metres. The route is not a whole number of steps, so the slider runs
+// to the next step past the end and its last stop reads as the true end of the route.
+const SCRUB_STEP = 25
+const SCRUB_MAX = Math.ceil(LENGTH / SCRUB_STEP) * SCRUB_STEP
+
 // true while the scene is live; a control is a real button then and a plain span when it is a still picture.
 const Live = createContext(false)
 
@@ -34,13 +39,70 @@ function Ctl({ className, children, ...rest }) {
 const svg = { viewBox: '0 0 16 16', width: 16, height: 16, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' }
 const Heart = ({ on }) => <svg {...svg} fill={on ? 'currentColor' : 'none'}><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z" /></svg>
 
-// Where a label's top-left sits, given the place's point (px, py) in the box and the label's size.
-const LABEL_AT = {
+// Where a label's top-left sits for each side of its place's point (px, py), given the label's size.
+const SIDE_AT = {
   right: (px, py, lw, lh) => [px + 12, py - lh / 2],
+  left: (px, py, lw, lh) => [px - 12 - lw, py - lh / 2],
+  above: (px, py, lw, lh) => [px - lw / 2, py - lh - 12],
+  below: (px, py, lw) => [px - lw / 2, py + 12],
   centre: (px, py, lw, lh) => [px - lw / 2, py - lh / 2],
 }
+// The sides tried after a label's own, in order.
+const FALLBACK = ['right', 'left', 'above', 'below']
 const LABEL_EDGE = 4
+// Gap kept between plates, and the screen radius kept clear around the start marker and around a km tick.
+const PLATE_GAP = 2
+const CLEAR = { start: 13, tick: 7 }
+// Plates are placed in this order, so the one that names the start gets first pick.
+const PRIORITY = { start: 0, peak: 1, place: 2 }
 const ANCHORS = [...LABELS, { text: 'Start and finish', x: START[0], y: START[1], side: 'right', kind: 'start' }]
+const PLACE_ORDER = ANCHORS.map((a, i) => i).sort((a, b) => (PRIORITY[ANCHORS[a].kind] ?? 3) - (PRIORITY[ANCHORS[b].kind] ?? 3))
+
+/** Whether a plate {left, top, w, h} touches the circle of radius r at (cx, cy). */
+const hitsCircle = (p, cx, cy, r) => {
+  const nx = Math.min(Math.max(cx, p.left), p.left + p.w)
+  const ny = Math.min(Math.max(cy, p.top), p.top + p.h)
+  return (cx - nx) ** 2 + (cy - ny) ** 2 < r * r
+}
+const hitsPlate = (p, q) => p.left < q.left + q.w + PLATE_GAP && q.left < p.left + p.w + PLATE_GAP && p.top < q.top + q.h + PLATE_GAP && q.top < p.top + p.h + PLATE_GAP
+
+/**
+ * Where each plate goes: the first side (its own, then right, left, above, below) that stays inside
+ * the box and clears every marker and every plate already placed; if none does, the side that
+ * covers least. `sizes` holds each plate's [width, height], or null for one that is not shown.
+ */
+function placePlates(sizes, bw, bh, scale, ox, oy) {
+  const at = (x, y) => [ox + x * scale, oy + y * scale]
+  const markers = [{ c: at(START[0], START[1]), r: CLEAR.start }, ...KM_MARKS.map(([x, y]) => ({ c: at(x, y), r: CLEAR.tick }))]
+  const spots = []
+  const placed = []
+  for (const i of PLACE_ORDER) {
+    const a = ANCHORS[i]
+    const size = sizes[i]
+    const [px, py] = at(a.x, a.y)
+    if (!size) { spots[i] = { left: Math.round(px), top: Math.round(py) }; continue }
+    const [lw, lh] = size
+    let best = null
+    for (const side of [a.side, ...FALLBACK.filter((s) => s !== a.side)]) {
+      const [x, y] = SIDE_AT[side](px, py, lw, lh)
+      // Each side is judged where it would really sit: pushed back inside the box.
+      const p = {
+        left: Math.round(Math.min(Math.max(x, LABEL_EDGE), Math.max(LABEL_EDGE, bw - lw - LABEL_EDGE))),
+        top: Math.round(Math.min(Math.max(y, LABEL_EDGE), Math.max(LABEL_EDGE, bh - lh - LABEL_EDGE))),
+        w: lw,
+        h: lh,
+      }
+      const hits = markers.filter((m) => hitsCircle(p, m.c[0], m.c[1], m.r)).length + placed.filter((q) => hitsPlate(p, q)).length
+      // A side that had to be pushed scores a little worse than one that fits where it is.
+      const score = hits + (Math.abs(p.left - x) > 1 || Math.abs(p.top - y) > 1 ? 0.25 : 0)
+      if (!best || score < best.score) best = { p, score }
+      if (score === 0) break
+    }
+    placed.push(best.p)
+    spots[i] = { left: best.p.left, top: best.p.top }
+  }
+  return spots
+}
 
 /**
  * The map: four mask layers painted from the palette, the route over them in the same
@@ -67,16 +129,12 @@ function RouteMap({ pick, dotAt, hereAt, steep }) {
       const scale = Math.max(bw / VIEW.w, bh / VIEW.h)
       const ox = (bw - VIEW.w * scale) / 2
       const oy = (bh - VIEW.h * scale) / 2
-      const spots = ANCHORS.map((a, i) => {
+      // A plate the narrow layout hides is skipped, so it neither takes a place nor blocks one.
+      const sizes = ANCHORS.map((_, i) => {
         const el = labelRefs.current[i]
-        const lw = el ? el.offsetWidth : 0
-        const lh = el ? el.offsetHeight : 20
-        const [x, y] = LABEL_AT[a.side](ox + a.x * scale, oy + a.y * scale, lw, lh)
-        return {
-          left: Math.round(Math.min(Math.max(x, LABEL_EDGE), Math.max(LABEL_EDGE, bw - lw - LABEL_EDGE))),
-          top: Math.round(Math.min(Math.max(y, LABEL_EDGE), Math.max(LABEL_EDGE, bh - lh - LABEL_EDGE))),
-        }
+        return el && el.offsetParent ? [el.offsetWidth, el.offsetHeight] : null
       })
+      const spots = placePlates(sizes, bw, bh, scale, ox, oy)
       setFit((prev) => (prev.k === scale && prev.spots && prev.spots.every((s, i) => s.left === spots[i].left && s.top === spots[i].top) ? prev : { k: scale, spots }))
     }
     place()
@@ -204,6 +262,7 @@ function Elevation({ at, setAt }) {
         <svg viewBox={`0 0 ${CHART.w} ${CHART.h}`} preserveAspectRatio="none" aria-hidden="true">
           <path className="rl-area" data-role="subtle" d={CHART.area} />
           <path className="rl-line" data-role="secondary" d={CHART.line} />
+          <path className="rl-line-case" d={CHART.steep} />
           <path className="rl-line-steep" data-role="accent" d={CHART.steep} />
         </svg>
         <i className="rl-cursor" style={{ left: cur.left }} />
@@ -213,9 +272,9 @@ function Elevation({ at, setAt }) {
         <span className="rl-tag rl-tag--steep" style={{ ...CHART.steepTag, '--tx': 'calc(-100% - 12px)', '--ty': '-50%' }}>{STEEPEST.label}</span>
         {live && (
           <input
-            className="rl-range" type="range" min="0" max={LENGTH} step="25" value={at}
+            className="rl-range" type="range" min="0" max={SCRUB_MAX} step={SCRUB_STEP} value={Math.min(Math.round(at / SCRUB_STEP) * SCRUB_STEP, SCRUB_MAX)}
             aria-label="Scrub along the route" aria-valuetext={`${read.km} km, ${read.height}, ${read.grade}`}
-            onChange={(e) => setAt(Number(e.target.value))}
+            onChange={(e) => setAt(Math.min(Number(e.target.value), LENGTH))}
           />
         )}
       </div>

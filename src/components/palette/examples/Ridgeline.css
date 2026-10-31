@@ -6,7 +6,7 @@
  * Type: 12 / 13 / 15 / 20 / 28px, all Outfit (loaded here only; figures use tabular-nums). */
 @font-face{font-family:'PV Outfit';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/outfit-latin.woff2') format('woff2')}
 
-.rl{isolation:isolate;position:relative;display:flex;flex-direction:column;min-height:100%;background:var(--pv-canvas);color:var(--pv-text);font-family:'PV Outfit','Switzer Fallback',system-ui,sans-serif;font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+.rl{isolation:isolate;position:relative;display:flex;flex-direction:column;min-height:var(--stage-room,100cqh);background:var(--pv-canvas);color:var(--pv-text);font-family:'PV Outfit','Switzer Fallback',system-ui,sans-serif;font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
 .rl :where(h2,p,ul,dl,dd,dt,figure,figcaption){margin:0;padding:0;font:inherit}
 .rl :where(ul){list-style:none}
 .rl :where(*,*::before,*::after){box-sizing:border-box}
@@ -70,27 +70,29 @@
 .rl-chart{position:relative;height:160px}
 .rl-chart svg{display:block;width:100%;height:100%}
 .rl-area{fill:var(--pv-subtle)}
-.rl-line,.rl-line-steep{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.rl-line,.rl-line-steep,.rl-line-case{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .rl-line{stroke:var(--pv-secondary);stroke-width:1.5}
-.rl-line-steep{stroke:var(--pv-accent);stroke-width:4}
+.rl-line-case{stroke:var(--pv-canvas);stroke-width:11}
+.rl-line-steep{stroke:var(--pv-accent);stroke-width:6}
 .rl-cursor{position:absolute;top:0;bottom:0;width:1px;background:var(--pv-text);opacity:.5}
 .rl-pin{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--pv-text);border:2px solid var(--pv-canvas);transform:translate(-50%,-50%)}
 .rl-tag{position:absolute;padding:1px 6px;font-size:12px;line-height:18px;white-space:nowrap;color:var(--pv-muted);background:var(--pv-canvas);border:1px solid var(--pv-border);border-radius:4px;transform:translate(var(--tx),var(--ty))}
 .rl-tag--steep{color:var(--pv-text)}
-.rl-range{position:absolute;inset:0;width:100%;height:100%;margin:0;background:none;appearance:none;opacity:0;cursor:ew-resize;touch-action:none}
-.rl-range:focus-visible{opacity:1;background:none;outline:2px solid var(--pv-text);outline-offset:2px}
-.rl-range::-webkit-slider-runnable-track{height:100%;background:transparent}
-.rl-range::-webkit-slider-thumb{appearance:none;width:2px;height:160px;background:transparent}
-.rl-range::-moz-range-track{height:100%;background:transparent}
-.rl-range::-moz-range-thumb{width:2px;height:160px;border:0;border-radius:0;background:transparent}
+.rl-range{position:absolute;inset:0;width:100%;height:100%;margin:0;background:none;appearance:none;accent-color:var(--pv-text);color:var(--pv-text);opacity:0;cursor:ew-resize;touch-action:none}
+.rl-range:focus-visible{opacity:1;background:none}
+.rl-range::-webkit-slider-runnable-track{height:100%;background:transparent;border:0}
+.rl-range::-webkit-slider-thumb{appearance:none;width:2px;height:160px;border:0;border-radius:0;background:transparent;box-shadow:none;outline:0}
+.rl-range::-moz-range-track{height:100%;background:transparent;border:0}
+.rl-range::-moz-range-thumb{width:2px;height:160px;border:0;border-radius:0;background:transparent;box-shadow:none;outline:0}
 .rl-axis{position:relative;height:20px;margin-top:var(--s-1);font-size:12px;color:var(--pv-muted)}
-.rl-axis span{position:absolute;top:0;transform:translateX(-50%)}
+.rl-axis span{position:absolute;top:0;white-space:nowrap;transform:translateX(-50%)}
 .rl-axis span[data-edge="start"]{transform:none}
 .rl-axis span[data-edge="end"]{transform:translateX(-100%)}
 
 /* ── Splits / Segments ── */
-.rl-switch{display:flex;gap:var(--s-5);border-bottom:1px solid var(--pv-border)}
-.rl-sw{position:relative;display:inline-flex;align-items:center;min-height:44px;font-size:15px;color:var(--pv-muted)}
+.rl-switch{display:flex;gap:var(--s-3);border-bottom:1px solid var(--pv-border)}
+.rl-sw{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 var(--s-2);font-size:15px;white-space:nowrap;color:var(--pv-muted)}
+.rl-sw:first-child{margin-left:calc(var(--s-2) * -1)}
 .rl-sw.is-on{color:var(--pv-text);font-weight:600}
 .rl-sw-ul{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--pv-secondary)}
 .rl-rowhead,.rl-row{display:grid;grid-template-columns:36px 64px minmax(0,1fr) 56px;align-items:center;gap:var(--s-2);width:100%}
@@ -114,7 +116,7 @@
 .rl-pr{padding:0 var(--s-2);font-size:12px;font-weight:700;line-height:20px;color:var(--rl-accent-ink);background:var(--pv-accent);border:1px solid var(--rl-accent-edge);border-radius:4px}
 
 /* ── Live tracking: a phone-width column in the middle ── */
-.rl-phone{display:flex;flex-direction:column;gap:var(--s-4);width:100%;max-width:420px;min-height:100%;margin:0 auto;padding:var(--s-4);border-inline:1px solid var(--pv-border)}
+.rl-phone{display:flex;flex-direction:column;gap:var(--s-4);flex:1;width:100%;max-width:420px;margin:0 auto;padding:var(--s-4);border-inline:1px solid var(--pv-border)}
 .rl-status{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--pv-muted)}
 .rl-gps{font-weight:600;color:var(--pv-text)}
 .rl-phone .rl-map{aspect-ratio:1200 / 970}
@@ -124,7 +126,8 @@
 
 /* ── Soft interactivity: only a live scene has buttons, so every rule names one ── */
 .rl :is(button.rl-btn,button.rl-kudos,button.rl-sw,button.rl-row){cursor:pointer;transition:background-color 120ms ease-out,color 120ms ease-out,border-color 120ms ease-out}
-.rl :is(button,input):focus-visible{outline:2px solid var(--pv-text);outline-offset:2px}
+/* .rl is doubled because the app's own focus-ring rules match at the same specificity as a single .rl; the ring stays the scene's ink. */
+.rl.rl :is(button,input,a):focus-visible{outline:2px solid var(--pv-text);outline-offset:2px}
 @media (hover:hover){
   .rl button.rl-btn--primary:hover{background:var(--rl-primary-hover)}
   .rl button.rl-btn--secondary:hover{background:var(--rl-secondary-hover)}
