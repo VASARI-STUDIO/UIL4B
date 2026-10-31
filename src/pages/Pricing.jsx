@@ -10,14 +10,13 @@ import { usePriceRetry, usePrices, useProPrice } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { APPROVED_CURRENCY, formatMoney } from '../config/planLadder'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
-import { LIBRARY_TOTALS } from '../data/libraryTotals'
-import { freeFormats, proOnlyFormats } from '../config/exportFormats'
+import { freeFormats } from '../config/exportFormats'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // The offers, cadences and billed lines live in one module that every surface
 // describing Free and Pro reads: Settings, Checkout and the upgrade modal too.
 import {
-  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, FREE_EXCLUSION, FREE_EXPORT_NAMES, PRO_EXPORT_NAMES, PRO_POINTS,
-  canCheckout, perMonth, priceState, priceStateCopy, resolveOffers,
+  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, FREE_EXCLUSION, FREE_EXPORT_NAMES, PRO_EXPORT_NAMES, PRO_POINTS, PRO_VALUE,
+  UNCREDITED_EXPORT_NAMES, canCheckout, perMonth, priceState, priceStateCopy, resolveOffers,
 } from '../config/planFacts'
 // The page's own sheet, every selector under `.pricing`. Imported here so it
 // rides this lazy route's chunk. The Spectrum ground, the colour band and the
@@ -45,7 +44,7 @@ import '../styles/pages/pricing.css'
 // cannot drift from the product without a test going red.
 //   AI_LIMITS / FREE_SAVE_LIMITS → src/config/plans.js (api/_lib/plans.js mirror)
 //   COLOUR_SYSTEMS               → what the palette engine gates on
-//   LIBRARY_TOTALS               → the generated library sizes (src/data/libraryTotals.js)
+//   PRO_VALUE                     → src/config/planFacts.js, which quotes the library, icon and export gates
 //   export formats               → src/config/exportFormats.js, which renders the buttons
 //   offers, trials, savings      → src/config/planFacts.js over the one ladder
 //   prices                       → /api/get-prices via usePrices(); nothing typed
@@ -53,12 +52,8 @@ import '../styles/pages/pricing.css'
 
 const AI = AI_LIMITS
 const SYSTEMS_TOTAL = COLOUR_SYSTEMS.length
-const SYSTEMS_FREE = COLOUR_SYSTEMS.filter((s) => s.free)
-const BRANDS_TOTAL = LIBRARY_TOTALS.brandPalettes
-const BRANDS_FREE = LIBRARY_TOTALS.freeBrandPalettes
 
 const FREE_EXPORTS = freeFormats()
-const PRO_EXPORTS = proOnlyFormats()
 
 // The page headline, on both billing states. One constant, so Monthly and
 // Yearly cannot end up with different wording.
@@ -78,10 +73,10 @@ function TakeawayCup() {
   )
 }
 
-// The ceilings side by side. "Six times" would be true of the daily limit and
-// false of the monthly one (300 against 40), so the sub-line quotes both ends
-// of the daily limit instead of a multiple.
-const HERO_SUB = `Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(SYSTEMS_TOTAL)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`
+// The sub-line leads with what Pro opens, then the ceilings. "Six times" would
+// be true of the daily limit and false of the monthly one (300 against 40), so
+// it quotes both ends of the daily limit instead of a multiple.
+const HERO_SUB = `Pro opens all ${numberWord(SYSTEMS_TOTAL)} colour systems and every icon pack and library, lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, and takes the UIL4B line off your exports.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
 const OFFER_BY_ID = Object.fromEntries(BILLING_OPTIONS.map((o) => [o.id, o]))
@@ -97,31 +92,45 @@ const BAR_CLEAR_PX = 64
 const BAR_END_PX = 80
 
 // The comparison. Only rows where the plans differ; whatever matches is the
-// single "Same on both plans" row below.
-const COMPARE = [
-  { group: 'AI', rows: [
-    { label: 'AI generations', free: `${AI.free.daily} a day, ${AI.free.monthly} a month`, pro: `${AI.pro.daily} a day, ${AI.pro.monthly} a month` },
-  ] },
-  { group: 'Colour', rows: [
-    { label: 'Colour systems', free: `${SYSTEMS_FREE.length} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
-    { label: 'Brand palettes', free: `${BRANDS_FREE} of ${BRANDS_TOTAL}`, pro: `All ${BRANDS_TOTAL}` },
-  ] },
-  { group: 'Your work', rows: [
-    { label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
-    { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
-  ] },
-  { group: 'Exports', rows: [
-    ...PRO_EXPORTS.map((f) => ({ label: f.name, free: null, pro: 'Included' })),
-    { label: '“Made with UIL4B” line on exports', free: 'Small line in the footer', pro: 'Removed' },
-  ] },
-]
+// single "Same on both plans" row below. The groups and rows are planFacts'
+// PRO_VALUE, which quotes each limit from the module that enforces it.
+const COMPARE = PRO_VALUE
 
 const SAME_ON_BOTH = `All ${numberWord(TOOL_COUNT)} tools. Style guide exports in ${FREE_EXPORT_NAMES}, as often as you like. The same AI model. Files stay in your browser.`
 
+// The offer with a free trial and the one without, from the ladder.
+const TRIAL_OFFER = BILLING_OPTIONS.find((o) => o.trialDays)
+const PLAIN_OFFER = BILLING_OPTIONS.find((o) => !o.trialDays)
+
+// The questions, in the order a buyer asks them. Both layouts read this array.
 const FAQS = [
   {
+    q: 'When am I charged?',
+    a: `${TRIAL_OFFER.label} starts with a ${TRIAL_OFFER.trialDays}-day free trial, so nothing is charged today; the first payment is taken when the trial ends. ${PLAIN_OFFER.label} has no trial, so the first payment is taken today. Pro then renews each month or year until you cancel.`,
+  },
+  {
+    q: 'How do I cancel?',
+    a: 'Open Settings, then Subscription, and choose Cancel plan. Stripe’s billing page opens to confirm it. Pro stays on until the end of the period you’ve paid for, and Settings shows the date it ends.',
+  },
+  {
+    q: 'Can I get a refund?',
+    a: 'Cancelling stops the next payment. It doesn’t refund the period you’re in, and you keep Pro until that period ends. Cancel during the free trial and you’re never charged. If you think a charge is wrong, ask support.',
+  },
+  {
+    q: 'Where are my receipts?',
+    a: 'In Settings, then Subscription, choose Manage billing. It opens your Stripe billing page with your payment history. If you can’t find what you need there, ask support.',
+  },
+  {
+    q: 'Do prices include tax?',
+    a: 'Checkout shows the exact amount before you pay, and that’s what you’re charged. For a tax invoice, ask support.',
+  },
+  {
+    q: 'What happens to my work if Pro ends?',
+    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects, ${FREE_SAVE_LIMITS.customIcons} custom icons, ${AI.free.daily} AI generations a day, and the UIL4B line on new exports.`,
+  },
+  {
     q: 'What counts as one generation?',
-    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser and cost us nothing.',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser.',
   },
   {
     q: 'Is the Pro model different?',
@@ -133,7 +142,7 @@ const FAQS = [
   },
   {
     q: 'Which export formats can I actually get?',
-    a: `${FREE_EXPORTS.length} on Free, ${FREE_EXPORT_NAMES}, each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${PRO_EXPORT_NAMES}.`,
+    a: `${FREE_EXPORTS.length} on Free: ${FREE_EXPORT_NAMES}. All but ${UNCREDITED_EXPORT_NAMES} carry a small “Made with UIL4B” line. Pro removes that line and adds ${PRO_EXPORT_NAMES}.`,
   },
 ]
 
@@ -519,7 +528,7 @@ export default function Pricing() {
                       <span className="pr-amt">{freeAmount}</span>
                       <span className="pr-per">forever</span>
                     </p>
-                    <p className="pr-note">Free because the tools cost us nothing to run.</p>
+                    <p className="pr-note">Free because most tools run in your browser.</p>
                     {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
                     <Link className="pr-cta pr-cta--free" to="/projects">Open the toolkit</Link>
                     <span className="pr-under">No account needed</span>

@@ -9,7 +9,7 @@
 // position, type, angle or interpolation reaches it already applied and comes
 // out unchanged. Pure functions of colours in, numbers out.
 
-import { hexToOklchRaw, mixOklch } from '../components/tool/oklch.js'
+import { hexToOklchRaw, mixOklch, oklchToHex } from '../components/tool/oklch.js'
 import { hexToRgb, luminance, mixHex } from './colors.js'
 import { deltaE2000, hexToLabD50 } from './nearestMatch.js'
 
@@ -188,12 +188,16 @@ export function standardStaysClean(stops) {
   return s[1] >= 0.85 * o[1] && Math.abs(s[0] - o[0]) <= 0.04
 }
 
-/** A context for scoreGradient: the session's recent results, as Lab, converted once per roll. */
-export const scoreContext = (recent) => ({ recentLabs: labEnds(recent) })
+/**
+ * A context for scoreGradient: the session's recent results, as Lab, converted once per
+ * roll, and the Use rule the roll is for ('button' turns on the ink rule).
+ */
+export const scoreContext = (recent, use = null) => ({ recentLabs: labEnds(recent), use })
 
 /**
  * Score one gradient ({ type, space, stops: [{ color, position }] }).
- * Returns { total, terms } with each term in [0, 1].
+ * Returns { total, terms } with each term in [0, 1]. A button whose ramp fails
+ * BUTTON_INK_MIN for both inks scores zero, whatever its other terms.
  */
 export function scoreGradient(g, ctx = {}) {
   const space = g.space === 'srgb' ? 'srgb' : 'oklch'
@@ -215,6 +219,7 @@ export function scoreGradient(g, ctx = {}) {
   }
   let total = 0
   for (const k of Object.keys(SCORE_WEIGHTS)) total += SCORE_WEIGHTS[k] * terms[k]
+  if (ctx.use === 'button' && !inkPasses(g)) total = 0
   return { total, terms }
 }
 
@@ -223,11 +228,36 @@ export function scoreGradient(g, ctx = {}) {
  * with a roll in [0, 1). Ties keep roll order, so a seeded run is repeatable.
  */
 export function chooseAmongTop(scored, rand = Math.random) {
-  const top = scored
-    .map((c, i) => ({ c, i }))
+  const ranked = scored.map((c, i) => ({ c, i }))
+  // A zero is a failed hard rule (a button's ink): it ships only when nothing else can.
+  const live = ranked.filter((x) => x.c.score > 0)
+  const top = (live.length ? live : ranked)
     .sort((x, y) => y.c.score - x.c.score || x.i - y.i)
     .slice(0, TOP_PICKS)
   return top[Math.min(top.length - 1, Math.floor(Math.min(Math.max(rand(), 0), 0.999999) * top.length))].c.g
+}
+
+/** A button's text must reach this contrast against every point of its gradient. */
+export const BUTTON_INK_MIN = 4.5
+
+/**
+ * The contrast of white ink and of near-black ink (oklch 0.2) against the whole ramp,
+ * each as its worst case over the RAMP_SAMPLES points. A button passes when the
+ * better of the two reaches BUTTON_INK_MIN. `g` is { type, space, stops }.
+ */
+export function inkContrasts(g) {
+  const space = g.space === 'srgb' ? 'srgb' : 'oklch'
+  const ramp = rampOf(g.stops)
+  const lums = Array.from({ length: RAMP_SAMPLES }, (_, i) => lumOf(colourAt(ramp, (i * 100) / (RAMP_SAMPLES - 1), space)))
+  const worst = (ink) => Math.min(...lums.map((l) => ratio(l, ink)))
+  return { white: worst(lumOf('#FFFFFF')), dark: worst(INK_BUTTON_DARK_LUM) }
+}
+const INK_BUTTON_DARK_LUM = lumOf(oklchToHex(0.2, 0, 0))
+
+/** Whether one of the two inks reaches BUTTON_INK_MIN across the whole ramp. */
+export function inkPasses(g) {
+  const { white, dark } = inkContrasts(g)
+  return Math.max(white, dark) >= BUTTON_INK_MIN
 }
 
 /** A gradient's two ends as hexes, for the session's memory. */
