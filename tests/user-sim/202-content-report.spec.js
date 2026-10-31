@@ -294,9 +294,11 @@ test.describe('the content-report form', () => {
     await expect(formDialog(page), 'signed in').not.toContainText(/decision|decide/i)
   })
 
-  test('the message tells the queue whether the reporter was signed in', async ({ page }) => {
+  test('the browser leaves the Reporter line to the server and sends the member\'s ID token', async ({ page }) => {
     watch(page, 'a visitor, then a member, reporting')
     const posts = await interceptSupport(page)
+    const auth = []
+    page.on('request', (req) => { if (req.url().includes('/api/support')) auth.push(req.headers().authorization || '') })
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
     await button.click()
@@ -305,8 +307,8 @@ test.describe('the content-report form', () => {
     await formDialog(page).getByRole('checkbox').check()
     await sendButton(page).click()
     await expect.poll(() => posts.length).toBe(1)
-    expect(posts[0].message).toMatch(/^Reporter: signed out$/m)
-    expect(posts[0].message).not.toMatch(/^Reporter: signed in$/m)
+    expect(posts[0].message).not.toMatch(/^Reporter:/m)
+    expect(auth[0], 'a visitor sends no token').toBe('')
 
     await signIn(page)
     await gotoCommunity(page)
@@ -315,8 +317,7 @@ test.describe('the content-report form', () => {
     await formDialog(page).getByRole('checkbox').check()
     await sendButton(page).click()
     await expect.poll(() => posts.length).toBe(2)
-    expect(posts[1].message).toMatch(/^Reporter: signed in$/m)
-    expect(posts[1].message).not.toMatch(/^Reporter: signed out$/m)
+    expect(posts[1].message).not.toMatch(/^Reporter:/m)
   })
 
   test('Escape closes the form and focus returns to the Report button', async ({ page }) => {

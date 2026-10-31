@@ -1,4 +1,4 @@
-import { adminDb } from './_lib/firebase-admin.js'
+import { adminDb, adminAuth } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
@@ -86,6 +86,55 @@ export function validateSupportBody(body, now = new Date()) {
   }
 }
 
+// ── Who sent a content report ────────────────────────────────────────────────
+// The route needs no session, so a report's `Reporter:` header line is written
+// here and nowhere else. Any such line in the submitted message is removed, then
+// one line is added from the request's own Firebase ID token: "signed in" (and
+// the stored address becomes the token's verified one) or "signed out". The
+// admin queue reads this line to decide whether to label the address as typed
+// by the reporter (src/utils/contentReport.js, isUnverifiedReporter).
+
+// The characters a multiline regex treats as a line break, so a line is
+// removed here exactly when isUnverifiedReporter would have matched it.
+const LINE_BREAK = /\r\n|[\n\r\u2028\u2029]/
+const REPORTER_LINE = /^\s*Reporter:/i
+
+/**
+ * The verified address from the request's `Authorization: Bearer <ID token>`
+ * header, or null for anything else: no header, a token that fails
+ * verification, or an account whose email Firebase has not verified. Never
+ * throws; `verify` is injectable for tests.
+ */
+export async function verifiedReporterEmail(req, verify = (token) => adminAuth().verifyIdToken(token)) {
+  const header = req?.headers?.authorization
+  if (typeof header !== 'string' || !header.startsWith('Bearer ')) return null
+  try {
+    const decoded = await verify(header.slice(7))
+    return decoded?.email_verified === true && typeof decoded.email === 'string' && decoded.email ? decoded.email : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The entry for a `report`, with its Reporter line set from `verifiedEmail`
+ * (null means signed out). Other types are returned untouched. Only the header
+ * block is rewritten; the reporter's own text after "Details:" is left alone.
+ */
+export function stampReporter(entry, verifiedEmail) {
+  if (entry.type !== 'report') return entry
+  const at = entry.message.indexOf('\nDetails:')
+  const header = at === -1 ? entry.message : entry.message.slice(0, at)
+  const rest = at === -1 ? '' : entry.message.slice(at)
+  const lines = header.split(LINE_BREAK).filter((line) => !REPORTER_LINE.test(line))
+  lines.splice(Math.min(1, lines.length), 0, `Reporter: ${verifiedEmail ? 'signed in' : 'signed out'}`)
+  return {
+    ...entry,
+    message: (lines.join('\n') + rest).slice(0, MESSAGE_MAX),
+    email: verifiedEmail ? verifiedEmail.trim().slice(0, EMAIL_MAX) : entry.email,
+  }
+}
+
 // ── Abuse limits ─────────────────────────────────────────────────────────────
 // This endpoint takes no authentication — deliberately, because the people most
 // likely to need it are the ones who cannot sign in — and it fans one anonymous
@@ -150,9 +199,9 @@ export default function handler(req, res) {
   return handleSupport(req, res)
 }
 
-// The handler body, with the database lookup and the after-response scheduler
-// injectable for tests.
-export async function handleSupport(req, res, { getDb = adminDb, defer = waitUntil } = {}) {
+// The handler body, with the database lookup, the after-response scheduler and
+// the ID-token check injectable for tests.
+export async function handleSupport(req, res, { getDb = adminDb, defer = waitUntil, verifyToken } = {}) {
   // `Access-Control-Allow-Origin: *` invited every page on the internet to POST
   // here from a visitor's browser. The allowlist is the same one the Stripe
   // flows use. Note what this does and does not buy: CORS is a browser
@@ -165,7 +214,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     res.setHeader('Vary', 'Origin')
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -199,7 +248,9 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   if (validated.error) {
     return res.status(400).json({ error: validated.error })
   }
-  const { entry } = validated
+  const entry = validated.entry.type === 'report'
+    ? stampReporter(validated.entry, await verifiedReporterEmail(req, verifyToken))
+    : validated.entry
   const requestId = parseRequestId(req.body?.requestId)
 
   // Whether the record landed in the database. It decides how the response is

@@ -119,10 +119,11 @@ const REPORTER_LINE = 'Reporter: '
 
 /**
  * Whether the address on a stored report should be shown as unverified: every
- * report, unless its message says it was sent signed in. The server takes the
- * address as typed (the route has no session), so the signed-in line only
- * narrows the label; anything without it, including a hand-made request, reads
- * as unverified.
+ * report, unless its message says it was sent signed in. That line is written
+ * by /api/support (never the browser), and only after it has verified the
+ * request's Firebase ID token; the stored address is then the token's own.
+ * Without a verified token the line says "signed out" and the address is the
+ * one the reporter typed. A report stored with no line reads as unverified.
  */
 export function isUnverifiedReporter(item) {
   if (!item || item.type !== 'report') return false
@@ -133,13 +134,13 @@ export function isUnverifiedReporter(item) {
 
 /**
  * The message body: the same lines every time, so a reviewer scanning the
- * queue reads the reason and the item first and the free text last.
+ * queue reads the reason and the item first and the free text last. It has no
+ * `Reporter:` line; the server adds that one (see isUnverifiedReporter).
  */
-export function buildReportMessage({ target, reasonId, details, signedIn = false }) {
+export function buildReportMessage({ target, reasonId, details }) {
   const reason = reasonById(reasonId)
   const lines = [
     'CONTENT REPORT',
-    `${REPORTER_LINE}${signedIn ? 'signed in' : 'signed out'}`,
     `Reason: ${reason ? `${reason.label} (${reason.id})` : 'not given'}`,
     `Item: ${target.name}`,
     `Kind: ${target.kind}`,
@@ -163,7 +164,7 @@ export function buildReportPayload({ target, reasonId, details, email, accountEm
   return {
     type: 'report',
     subject: reportSubject(target),
-    message: buildReportMessage({ target, reasonId, details, signedIn: !!accountEmail }),
+    message: buildReportMessage({ target, reasonId, details }),
     email: (accountEmail || (typeof email === 'string' ? email.trim() : '')).slice(0, CONTACT_EMAIL_MAX),
     source: 'inline',
   }

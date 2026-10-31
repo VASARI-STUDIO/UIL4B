@@ -4,6 +4,7 @@ import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX } from '../utils/contactEmail'
+import { loadAuthSdk } from '../utils/firebaseAccess'
 import { postSupportWithRetry, requestIdFor } from '../utils/supportRequest'
 import {
   REPORT_CONTENT_EVENT, REPORT_DETAILS_MAX, REPORT_REASONS,
@@ -17,6 +18,17 @@ import {
 // ContentReportDialog is the host. It waits for a Report control to ask, and
 // mounts a fresh ReportForm for each ask, so a second report never starts from
 // the first one's words.
+// The signed-in user's Firebase ID token, which the server checks to decide
+// whether the report came from an account. Null when signed out or when the
+// token cannot be read; the report is then sent as signed out.
+async function currentIdToken() {
+  try {
+    return (await loadAuthSdk()).auth.currentUser?.getIdToken() || null
+  } catch {
+    return null
+  }
+}
+
 export default function ContentReportDialog() {
   const [target, setTarget] = useState(null)
   useEffect(() => {
@@ -89,7 +101,8 @@ function ReportForm({ target, onClose }) {
     sendingRef.current = true
     setStatus('sending')
     setFailure('')
-    const result = await postSupportWithRetry({ ...payload, requestId })
+    const idToken = accountEmail ? await currentIdToken() : null
+    const result = await postSupportWithRetry({ ...payload, requestId }, { idToken })
     sendingRef.current = false
     if (!aliveRef.current) return
     if (result.ok) {

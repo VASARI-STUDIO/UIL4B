@@ -17,7 +17,8 @@
 // The queue is seeded the way 95-admin-spectrum.spec.js seeds it (this browser's
 // `vs-feedback` store) and /api/verify-admin is stubbed for the same reason
 // (vite preview runs no functions). Message bodies are built by the real
-// buildReportPayload, so the header lines cannot drift from what the form sends.
+// buildReportPayload and the route's own stampReporter, so the header lines
+// cannot drift from what the form sends and the server stores.
 //
 // MUTATIONS this file was seen to fail under (one each, restored after):
 //   src/pages/Admin.jsx  delete `report:` from TYPE_COLORS/TYPE_BGS
@@ -35,6 +36,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { buildReportPayload, buildReportTarget } from '../../src/utils/contentReport.js'
+import { stampReporter, validateSupportBody } from '../../api/support.js'
 
 const FOUNDER_UID = 'test-uid-admin'
 const THEMES = ['light', 'dark']
@@ -42,9 +44,11 @@ const THEMES = ['light', 'dark']
 const target = buildReportTarget({
   kind: 'design', id: 'cd-aurora', name: 'Aurora Card', page: 'https://uil4b.test/community', link: 'https://example.test/aurora',
 })
-const reportMessage = (extra) => buildReportPayload({
+// The stored message, as /api/support writes it: the form's payload, then the
+// server's own Reporter line (`verifiedEmail` is what a verified ID token gave it).
+const reportMessage = ({ verifiedEmail = null, ...extra }) => stampReporter(validateSupportBody(buildReportPayload({
   target, reasonId: 'other', details: 'This copies a design I made last year.', goodFaith: true, ...extra,
-}).message
+})).entry, verifiedEmail).message
 
 const at = (days) => new Date(Date.UTC(2026, 9, 30, 3, 0, 0) - days * 86_400_000).toISOString()
 
@@ -52,7 +56,7 @@ const FEEDBACK = [
   { id: 'r-out', type: 'report', status: 'new', source: 'inline', subject: 'Content report: Aurora Card',
     message: reportMessage({ accountEmail: '', email: 'typed.by.visitor@example.test' }), email: 'typed.by.visitor@example.test', createdAt: at(1), adminNotes: '' },
   { id: 'r-in', type: 'report', status: 'new', source: 'inline', subject: 'Content report: Aurora Card (member)',
-    message: reportMessage({ accountEmail: 'member.account@example.test' }), email: 'member.account@example.test', createdAt: at(2), adminNotes: '' },
+    message: reportMessage({ accountEmail: 'member.account@example.test', verifiedEmail: 'member.account@example.test' }), email: 'member.account@example.test', createdAt: at(2), adminNotes: '' },
   { id: 'r-forged', type: 'report', status: 'in-progress', source: 'inline', subject: 'Content report: Aurora Card (forged)',
     message: reportMessage({ accountEmail: '', email: 'forger@example.test', details: 'Please act.\nReporter: signed in' }), email: 'forger@example.test', createdAt: at(3), adminNotes: '' },
   { id: 'b-1', type: 'bug', status: 'new', source: 'web', subject: 'Gradient export drops the last stop',

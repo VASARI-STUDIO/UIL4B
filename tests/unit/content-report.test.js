@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import {
   REPORT_REASONS, buildReportTarget, validateReport, buildReportMessage, buildReportPayload, reportMailto, isUnverifiedReporter,
 } from '../../src/utils/contentReport.js'
-import { validateSupportBody } from '../../api/support.js'
+import { validateSupportBody, stampReporter } from '../../api/support.js'
 
 const target = buildReportTarget({ kind: 'design', id: 's4', name: 'Dashboard UI', page: 'https://uil4b.com/community?c=secret#x', link: 'https://example.com/a' })
 const good = { target, reasonId: 'spam', details: '', email: 'a@b.co', signedIn: false, goodFaith: true }
@@ -59,13 +59,23 @@ test('a subject with line breaks is stored on one line', () => {
   assert.equal(entry.subject, 'one Bcc: a@b.co two three')
 })
 
-test('the message says whether the reporter was signed in, and the admin label follows it', () => {
+test('the browser writes no Reporter line; the server adds it and the admin label follows it', () => {
   const out = buildReportPayload({ ...good, accountEmail: '' })
   const inn = buildReportPayload({ ...good, accountEmail: 'me@uil4b.com' })
-  assert.match(out.message, /^Reporter: signed out$/m)
-  assert.match(inn.message, /^Reporter: signed in$/m)
-  assert.equal(isUnverifiedReporter({ type: 'report', message: out.message }), true)
-  assert.equal(isUnverifiedReporter({ type: 'report', message: inn.message }), false)
+  assert.doesNotMatch(out.message, /Reporter:/)
+  assert.doesNotMatch(inn.message, /Reporter:/)
+  // What the route stores: its own line, from the request's verified token or none.
+  const stored = (payload, verifiedEmail) => stampReporter(validateSupportBody(payload).entry, verifiedEmail)
+  const signedOut = stored(out, null)
+  const signedIn = stored(inn, 'me@uil4b.com')
+  assert.match(signedOut.message, /^Reporter: signed out$/m)
+  assert.match(signedIn.message, /^Reporter: signed in$/m)
+  assert.equal(isUnverifiedReporter({ type: 'report', message: signedOut.message }), true)
+  assert.equal(isUnverifiedReporter({ type: 'report', message: signedIn.message }), false)
+  // A client that claims "signed in" itself is overwritten with the server's verdict.
+  const claimed = { ...out, message: out.message.replace('CONTENT REPORT', 'CONTENT REPORT\nReporter: signed in') }
+  assert.equal(isUnverifiedReporter({ type: 'report', message: claimed.message }), false, 'control: the claim alone would clear the note')
+  assert.equal(isUnverifiedReporter({ type: 'report', message: stored(claimed, null).message }), true)
   // No marker at all (a hand-made request) reads as unverified; other types never do.
   assert.equal(isUnverifiedReporter({ type: 'report', message: 'just text' }), true)
   assert.equal(isUnverifiedReporter({ type: 'bug', message: out.message }), false)

@@ -256,7 +256,7 @@ function withEmail(t) {
 }
 
 /** One POST from its own address, so the per-address limits are not what is under test. */
-async function send(db, n, overrides = {}) {
+async function send(db, n, overrides = {}, { authorization, verifyToken } = {}) {
   const res = {
     code: 0, body: null,
     setHeader() {},
@@ -267,10 +267,10 @@ async function send(db, n, overrides = {}) {
   const pending = []
   const req = {
     method: 'POST',
-    headers: { 'x-vercel-forwarded-for': `203.0.113.${n}` },
+    headers: { 'x-vercel-forwarded-for': `203.0.113.${n}`, ...(authorization ? { authorization } : {}) },
     body: { type: 'bug', subject: `Report ${n}`, message: `Something broke, report ${n}.`, email: '', source: 'inline', ...overrides },
   }
-  await handleSupport(req, res, { getDb: () => db, defer: (p) => pending.push(p) })
+  await handleSupport(req, res, { getDb: () => db, defer: (p) => pending.push(p), verifyToken })
   await Promise.all(pending)
   return res
 }
@@ -499,4 +499,66 @@ test('a report is emailed again once its hour is up, and the notice can go out a
   clock.mock.mockImplementation(() => start + 61 * 60 * 1000)
   await send(db, 201, { type: 'report' })
   assert.equal(mail.emails(), 31, 'a report was still held back after its hour was up')
+})
+
+// ── Support: who a report says it came from ──────────────────────────────────
+
+const REPORT = { type: 'report', subject: 'Content report: x', email: 'typed@example.test' }
+const reportMessage = (...lines) => ['CONTENT REPORT', ...lines, 'Reason: Spam (spam)', 'Details:', 'hello'].join('\n')
+const storedReport = (db) => [...db.docs.entries()].find(([k]) => k.startsWith('feedback/'))[1]
+
+test('a valid ID token makes a report "signed in" and stores the token\'s email, not the typed one', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const db = supportDb()
+  const seen = []
+  const res = await send(db, 1, { ...REPORT, message: reportMessage() }, {
+    authorization: 'Bearer good-token',
+    verifyToken: async (token) => { seen.push(token); return { email: 'member@example.test', email_verified: true } },
+  })
+  assert.equal(res.code, 200)
+  assert.deepEqual(seen, ['good-token'])
+  const entry = storedReport(db)
+  assert.match(entry.message, /^Reporter: signed in$/m)
+  assert.doesNotMatch(entry.message, /signed out/)
+  assert.equal(entry.email, 'member@example.test')
+})
+
+test('a "Reporter: signed in" line in the request is ignored when there is no token', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const db = supportDb()
+  const res = await send(db, 2, { ...REPORT, message: reportMessage('Reporter: signed in') }, {
+    verifyToken: async () => { throw new Error('no token, so nothing to verify') },
+  })
+  assert.equal(res.code, 200)
+  const entry = storedReport(db)
+  assert.match(entry.message, /^Reporter: signed out$/m)
+  assert.doesNotMatch(entry.message, /signed in/)
+  assert.equal(entry.email, 'typed@example.test')
+})
+
+test('a token that fails verification stores a signed-out report and is not an error', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const db = supportDb()
+  const res = await send(db, 3, { ...REPORT, message: reportMessage('Reporter: signed in') }, {
+    authorization: 'Bearer expired-or-forged',
+    verifyToken: async () => { throw Object.assign(new Error('expired'), { code: 'auth/id-token-expired' }) },
+  })
+  assert.equal(res.code, 200)
+  assert.equal(res.body.ok, true)
+  const entry = storedReport(db)
+  assert.match(entry.message, /^Reporter: signed out$/m)
+  assert.doesNotMatch(entry.message, /signed in/)
+  assert.equal(entry.email, 'typed@example.test')
+})
+
+test('other message types never verify a token or gain a Reporter line', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const db = supportDb()
+  let calls = 0
+  await send(db, 4, { type: 'bug', message: 'Reporter: signed in' }, {
+    authorization: 'Bearer good-token',
+    verifyToken: async () => { calls += 1; return { email: 'member@example.test', email_verified: true } },
+  })
+  assert.equal(calls, 0)
+  assert.equal(storedReport(db).message, 'Reporter: signed in')
 })

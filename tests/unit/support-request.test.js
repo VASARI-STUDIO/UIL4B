@@ -4,7 +4,7 @@
 // cleared attempt starts fresh.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { newRequestId, requestIdFor, postSupport, SEND_TIMEOUT_MS } from '../../src/utils/supportRequest.js'
+import { newRequestId, requestIdFor, postSupport, postSupportWithRetry, SEND_TIMEOUT_MS } from '../../src/utils/supportRequest.js'
 import { parseRequestId } from '../../api/support.js'
 
 const PAYLOAD = { type: 'bug', subject: 'Export', message: 'It did nothing.', email: '', source: 'feedback-form' }
@@ -61,4 +61,19 @@ test('postSupport reports a rejection, a network error and a stall as false, and
     globalThis.fetch = realFetch
     globalThis.setTimeout = realSetTimeout
   }
+})
+
+test('postSupportWithRetry sends the ID token as a Bearer header only when it is given', async () => {
+  const realFetch = globalThis.fetch
+  const seen = []
+  try {
+    globalThis.fetch = async (_url, init) => { seen.push(init.headers); return { ok: true } }
+    await postSupportWithRetry({ a: 1 })
+    await postSupportWithRetry({ a: 1 }, { idToken: 'tok-123' })
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  assert.equal(seen[0].Authorization, undefined)
+  assert.equal(seen[1].Authorization, 'Bearer tok-123')
+  assert.equal(seen[1]['Content-Type'], 'application/json')
 })
