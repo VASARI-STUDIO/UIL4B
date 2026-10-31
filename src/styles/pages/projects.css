@@ -591,6 +591,12 @@ h2.uh-continue-name { white-space: normal; }
 
 /* Actions: one ink pill, the rest outlined */
 .uh.uh-spt .uh-continue-actions { gap: 12px; }
+/* The first-palette card: the tool's own ramp as a strip (56px tall, never under 48), a caption,
+   the headline, one sentence and the one filled button. No card inside the card. */
+.uh.uh-spt .uh-first-ramp { position: relative; display: flex; height: 56px; border-radius: var(--radius-xl); overflow: hidden; }
+.uh.uh-spt .uh-first-ramp::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sp-ink) 12%, transparent); pointer-events: none; }
+.uh.uh-spt .uh-first-ramp span { flex: 1 1 0; min-width: 0; }
+.uh.uh-spt .uh-first-cap { margin: -4px 0 0; font-size: 13px; line-height: 1.3; color: var(--sp-dim); }
 .uh.uh-spt .uh-cta { border: 0; background: var(--sp-ink); color: var(--sp-page); font: 540 15px var(--font); min-height: 44px; white-space: normal; text-align: left; }
 .uh.uh-spt .uh-cta:not(.sp-pill) { padding: 0 20px; }
 .uh.uh-spt .uh-cta:hover { background: var(--sp-ink-hover); color: var(--sp-page); }
