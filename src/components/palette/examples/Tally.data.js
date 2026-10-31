@@ -1,11 +1,11 @@
-// E6, "Tally": a spending card, the Product example in the Pro set. The card is
-// the primary; the five spending categories are the five brand slots, side by
-// side in one budget bar, which makes this the set's test of neighbouring
-// colours. Plain data, no React, so tests read the roles, the text recipe and
-// the figures without a DOM.
+// "Tally": a spending card, the Product example in the Pro set. The scene is a
+// card app spent the way a bank spends a brand: the card is the one coloured
+// object, the budget bar's spent part is the primary, the active tab is the
+// secondary, the pace tick is the accent, and the rest is neutral. Plain data,
+// no React, so tests read the roles, the text recipe and the figures without a DOM.
 //
-// The budget figure, the bar and the legend are all derived from CATS, so the
-// page can never print a total that disagrees with its own bar.
+// The budget figure, the bar, the category list and the shares are all derived
+// from CATS, so the page can never print a total that disagrees with its own bar.
 import { contrastRatio } from '../../../utils/colors.js'
 import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
@@ -13,27 +13,27 @@ export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'succe
 
 export const TEXT_RECIPE = [
   { el: 'figure', ink: 'text', large: true },
-  { el: 'merchants, amounts', ink: 'text', large: false },
-  { el: 'labels, legend shares, dates, transaction notes', ink: 'muted', large: false },
+  { el: 'balance, limits heading', ink: 'text', large: true },
+  { el: 'merchants, amounts, category names, nav, tabs, field labels, input values, toast', ink: 'text', large: false },
+  { el: 'labels, dates, shares, transaction notes, pace label, limits help lines', ink: 'muted', large: false },
   { el: 'card text', ink: 'inkOnField:primary', large: false },
-  { el: 'frozen action', ink: 'inkOnField:warning-tint', large: false },
-  { el: 'refund, pending, declined, interest', ink: 'success-ink|warning-ink|error-ink|info-ink', large: false },
-  { el: 'limits heading, field labels, input values, toast', ink: 'text', large: false },
-  { el: 'limits help lines', ink: 'muted', large: false },
+  { el: 'category glyphs', ink: 'inkOnField:subtle', large: false },
+  { el: 'refund, pending, declined, frozen line, overseas help line', ink: 'success-ink|warning-ink|error-ink|info-ink', large: false },
   { el: 'limit error message', ink: 'error-ink', large: false },
   { el: 'Save limits button', ink: 'on-primary', large: false },
 ]
 
 export const BUDGET = 1600
+export const DAYS_IN_MONTH = 31
 export const DAYS_LEFT = 19
 
-// Spending so far this month, in dollars, one entry per brand slot.
+// Spending so far this month, in dollars.
 export const CATS = [
-  { name: 'Groceries', role: 'primary', amount: 412.3 },
-  { name: 'Transport', role: 'secondary', amount: 186 },
-  { name: 'Eating out', role: 'accent', amount: 244.9 },
-  { name: 'Bills', role: 'deep', amount: 389.4 },
-  { name: 'Other', role: 'subtle', amount: 52 },
+  { name: 'Groceries', glyph: 'cart', amount: 412.3 },
+  { name: 'Bills', glyph: 'bolt', amount: 389.4 },
+  { name: 'Eating out', glyph: 'fork', amount: 244.9 },
+  { name: 'Transport', glyph: 'train', amount: 186 },
+  { name: 'Other', glyph: 'dots', amount: 52 },
 ]
 
 const cents = (n) => Math.round(n * 100)
@@ -57,39 +57,61 @@ const SHARES = shares(CATS)
 
 export const FIGURES = {
   spent: money(spent),
-  line: `of ${money(BUDGET).replace('.00', '')} budget · ${DAYS_LEFT} days left`,
-  left: BUDGET - spent,
+  line: `of ${money(BUDGET).replace('.00', '')} · ${DAYS_LEFT} days left`,
+  left: money(BUDGET - spent),
+  // The share of the budget spent, and where an even pace would be today.
+  spentShare: Math.min(100, (spent / BUDGET) * 100),
+  paceShare: ((DAYS_IN_MONTH - DAYS_LEFT) / DAYS_IN_MONTH) * 100,
   cats: CATS.map((c, i) => ({ ...c, text: money(c.amount), share: SHARES[i] })),
 }
 
-// `tone` marks the transactions that carry a state: each has a word and a
-// shape as well as a colour. `hover` draws one row as if the pointer were on it.
+export const ACCOUNT = { name: 'Everyday account', balance: money(3412.08) }
+
+// Each day's rows, newest first. `mark` names the merchant's drawn mark.
+//   tone    the state a row always carries (the refund), with `shape` as its icon;
+//   states  what a row shows in a State-menu state, by state id: a tone, a shape
+//           and a note (a state carries a word and a shape as well as a colour);
+//   only    the one state a row exists in (a declined payment is not in the resting list);
+//   hover   draws the row as if the pointer were on it.
 export const TXNS = [
   {
     day: 'Today',
     rows: [
-      { who: 'Corner Grocer, Newtown', ini: 'CG', amount: -64.2 },
-      { who: 'Train top-up', ini: 'TT', amount: -40, hover: true },
-      { who: 'Trade Depot', ini: 'TD', amount: -112.85, tone: 'warning', mark: '■', note: 'Pending' },
+      {
+        who: 'Trade Depot Alexandria', mark: 'shelf', note: 'Hardware · Pending', amount: -112.85,
+        states: {
+          frozen: { tone: 'warning', shape: '■', note: 'Pending · will decline' },
+          declined: { tone: 'warning', shape: '■', note: 'Pending · will decline' },
+        },
+      },
+      { who: 'Marrickville Fresh Market', mark: 'leaf', note: 'Groceries · 2:14 pm', amount: -64.2 },
+      {
+        who: 'Ride share', mark: 'chevron', note: 'Transport · 11:36 am', amount: -18.4, only: 'declined',
+        states: { declined: { tone: 'error', shape: '●', note: 'Declined, card frozen' } },
+      },
+      { who: 'Opal top-up', mark: 'ring', note: 'Transport · 8:02 am', amount: -40, hover: true },
     ],
   },
   {
     day: 'Yesterday',
     rows: [
-      { who: 'Homeware Co.', ini: 'HC', amount: 29, tone: 'success', mark: '▲', note: 'Refund' },
-      { who: 'Ride share', ini: 'RS', amount: -18.4, tone: 'error', mark: '●', note: 'Declined · card frozen' },
-      { who: 'Interest earned', ini: '%', amount: 1.12, tone: 'info', mark: '◆', note: '' },
+      { who: 'Homeware Co. refund', mark: 'bowl', note: 'Refund · 3:20 pm', amount: 29, tone: 'success', shape: '▲' },
+      { who: 'Interest earned', mark: 'tally', note: 'Everyday account · 12:01 am', amount: 1.12 },
     ],
   },
 ]
 export const amountText = (n) => `${n < 0 ? '−' : '+'}${money(Math.abs(n))}`
 
-export const CARD = { last4: '4471', name: 'Everyday' }
+export const CARD = { last4: '4471' }
 export const ACTIONS = ['Freeze', 'Details', 'Limits']
+export const TABS = ['Spending', 'Upcoming']
+export const NAV = ['Accounts', 'Cards', 'Payments', 'Insights']
+
+export const FROZEN_LINE = 'Card frozen. Payments will decline.'
 
 // The Limits action, shown open: a focused field, a field in error, a toggle on
 // and one disabled, and a toast. The error quotes the category it is about, so
-// it can never disagree with the budget bar.
+// it can never disagree with the budget list.
 const EATING_OUT = CATS.find((c) => c.name === 'Eating out')
 export const LIMITS = {
   toast: 'Budget saved',
@@ -106,32 +128,23 @@ export const LIMITS = {
 
 /**
  * The colours this scene works out per palette and mode: the ink on the card,
- * the edge a pastel or near-black card needs against the page, the outline for
- * a chip or stripe too close to the card's own colour, the gap between two
- * neighbouring categories (3px when they are within 1.5:1, else 2px), the ink
- * on the frozen action and the focus ring of the Limits form. For a two-colour
- * pair nothing is corrected, and the rows that carry a state and the Limits
- * form are left out.
+ * the edge a pastel or near-black card needs against the page, the ink and edge
+ * of a category glyph on the subtle, and the focus ring of the Limits form.
+ * For a two-colour pair nothing is corrected, and the rows that carry a state
+ * and the Limits form are left out.
  * @param {object} r derivePaletteRoles() output
  */
 export function tallyVars(r) {
   const keep = Boolean(r.pair)
   const grounds = { text: r.text, canvas: r.canvas }
   const cardInk = inkOnField(r.primary, { on: r.onPrimary, ...grounds }, { keep }).hex
-  // A feature on the card that is nearly its colour gets a hairline in the card's ink.
-  const onCard = (fill) => (contrastRatio(fill, r.primary) < 1.5 ? cardInk : 'transparent')
   const vars = {
     '--ty-card-ink': cardInk,
     '--ty-card-edge': fieldEdge(r.primary, r.canvas, r.borderStrong),
-    '--ty-chip-edge': onCard(r.subtle),
-    '--ty-stripe-edge': onCard(r.deep),
-    '--ty-frozen-ink': inkOnField(r.warning.tint, { on: r.warning.ink, ...grounds }).hex,
-    // The focus ring is the primary, or its border tone when the primary is under 3:1 on the panel.
-    '--ty-ring': contrastRatio(r.primary, r.surface) < 3 && r.primaryBorder !== 'transparent' ? r.primaryBorder : r.primary,
+    '--ty-glyph-ink': inkOnField(r.subtle, { on: r.onSubtle, ...grounds }, { keep }).hex,
+    '--ty-glyph-edge': fieldEdge(r.subtle, r.canvas, r.borderStrong),
+    // The focus ring is the primary, or its border tone when the primary is under 3:1 on the page.
+    '--ty-ring': contrastRatio(r.primary, r.canvas) < 3 && r.primaryBorder !== 'transparent' ? r.primaryBorder : r.primary,
   }
-  CATS.forEach((c, i) => {
-    vars[`--ty-edge-${i + 1}`] = fieldEdge(r[c.role], r.canvas, r.borderStrong)
-    if (i > 0) vars[`--ty-gap-${i + 1}`] = contrastRatio(r[CATS[i - 1].role], r[c.role]) < 1.5 ? '3px' : '2px'
-  })
   return { vars, pair: keep }
 }

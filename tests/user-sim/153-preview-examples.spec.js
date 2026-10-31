@@ -84,8 +84,8 @@ const EXAMPLES = [
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral'],
   },
   {
-    name: 'Spending card', id: 'card', text: 'Corner Grocer, Newtown', pro: true,
-    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
+    name: 'Spending card', id: 'card', text: 'Marrickville Fresh Market', pro: true,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
   },
 ]
 
