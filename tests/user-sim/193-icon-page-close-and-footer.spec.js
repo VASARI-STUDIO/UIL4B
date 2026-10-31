@@ -1,37 +1,31 @@
-// THE ICON PAGES END LIKE THE SALES PAGES: A CLOSE, THE SPECTRUM STRIP AND THE FOOTER.
+// THE ICON PAGES END AT THE FOOTER: NO SALES CLOSE AND NO SPECTRUM STRIP.
 //
-// /create/icons, /create/icons/groups and /create/emoji end with `.ig-close` (a SpectrumClose headed
-// "Now pick the colours and type.", then the spectrum strip) and then SpectrumFooter, outside <main>.
-// The icon sets' licence credits live in the footer's `.sp-footer-notice` row, not in a strip under the
-// grid. Past three automatic pages the grid's scroll sentinel becomes a "Show N more icons" button, so
-// the close and the footer can be reached by scrolling.
+// /create/icons, /create/icons/groups and /create/emoji end at SpectrumFooter, outside <main>. The icon sets'
+// licence credits live in the footer's `.sp-footer-notice` row, not in a strip under the grid. The only call
+// to action a viewer meets before the footer is the Icon panel's own end block (spec 184 and spec 194). Past
+// three automatic pages the grid's scroll sentinel becomes a "Show N more icons" button, so the footer can be
+// reached by scrolling.
 //
 // What a person relies on, and what this file pins (expected values written out, not read from src):
-//   - exactly one contentinfo and one main on each route, and no `.ig-credit` strip;
-//   - the close's second button follows the viewer (See the plans / See what Pro includes / Open your
-//     workspace) and the close never says "Log in" (the one Log in is the signed-out band above the grid);
+//   - exactly one contentinfo and one main on each route, no `.ig-credit` strip, no `.ig-close` block, no
+//     spectrum strip and none of the old close's words, on all three tabs;
 //   - the licence row names every set on screen with its licence and a link out, then "Every licence in
 //     full" to /credits; the Emoji tab and the Groups index have no licence row; a group names its own sets;
 //   - after three automatic pages the grid waits for a press, and the footer is reachable by scrolling;
-//   - the close's buttons stack at 390 (48px tall) and sit side by side from 768; the strip runs edge to
-//     edge; nothing scrolls sideways at 320, 390, 768 or 1440;
-//   - Tab runs close primary, close secondary, then the footer; reduced motion leaves the strip still.
+//   - nothing scrolls sideways at 320, 390, 768 or 1440;
+//   - Tab runs from the end block's last action into the footer.
 //
-// HOW TO SEE EACH FAIL (src/ unless named; checked by restoring origin/main's version of the file):
-//   CreateTool.jsx renders <AppFooter compact /> on the icon routes -> "one contentinfo" and "licence row"
-//   IconEmojiLibrary.jsx drops the .ig-close block                  -> "the close" tests
-//   data/iconPageClose.js gives the anon viewer "Log in"            -> "never says Log in"
-//   IconLibrary.jsx goes back to the bare sentinel (no .ig-more)    -> "Show 120 more icons"
-//   icon-emoji-library.css drops the 760px stacking rule            -> "stacked at 390"
-//   IconCredits.jsx drops the links, or IconGroups stops reporting  -> "licence row" and "group"
+// HOW TO SEE EACH FAIL (src/ unless named):
+//   CreateTool.jsx renders <AppFooter compact /> on the icon routes     -> "one contentinfo" and "licence row"
+//   IconEmojiLibrary.jsx renders a .ig-close block or a SpectrumRamp     -> "no close, no strip" and "nothing scrolls sideways"
+//   IconLibrary.jsx goes back to the bare sentinel (no .ig-more)         -> "Show 120 more icons"
+//   IconCredits.jsx drops the links, or IconGroups stops reporting        -> "licence row" and "group"
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, isLiveIconify } from './iconify-stub.js'
 
 const SIGNED_OUT = 'a designer who has not signed up yet, reaching the end of the icon pages'
-const SIGNED_IN = 'a designer on the free plan, reaching the end of the icon pages'
-const HEADLINE = 'Now pick the colours and type.'
-const EM_DASH = /—/
+const OLD_CLOSE_HEADLINE = 'Now pick the colours and type.'
 
 // The five sets a signed-out viewer sees on the Icon tab, with the page each links to.
 const ANON_SETS = [
@@ -42,7 +36,6 @@ const ANON_SETS = [
   { name: 'Phosphor', href: 'https://github.com/phosphor-icons/core' },
 ]
 
-const close = (page) => page.locator('.ig-close')
 const footer = (page) => page.getByRole('contentinfo')
 const noticeOf = (page) => footer(page).locator('.sp-footer-notice')
 
@@ -52,7 +45,16 @@ async function open(page, route, { plan } = {}) {
   await go(page, route)
   if (route === '/create/emoji') await expect(page.locator('.emoji-cell').first()).toBeVisible({ timeout: 20_000 })
   else if (route === '/create/icons') await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-  await expect(close(page)).toHaveCount(1)
+  await expect(footer(page)).toHaveCount(1)
+}
+
+/** The page has no sales close: no block, no strip, and none of the old words. */
+async function expectNoClose(page, what) {
+  await expect(page.locator('.ig-close'), `${what}: the close block is gone`).toHaveCount(0)
+  await expect(page.locator('.sp-ramp'), `${what}: the spectrum strip is gone`).toHaveCount(0)
+  await expect(page.getByRole('region', { name: OLD_CLOSE_HEADLINE }), `${what}: the close region is gone`).toHaveCount(0)
+  expect(await page.locator('body').innerText(), `${what}: the close's headline is gone`).not.toContain(OLD_CLOSE_HEADLINE)
+  await expect(page.getByRole('link', { name: 'Open the Palette Builder' }), `${what}: the close's primary link is gone`).toHaveCount(0)
 }
 
 /** Boxes of the named selectors, as {l,r,t,b,w,h}. */
@@ -71,35 +73,26 @@ for (const [width, ctx] of [
   test.describe(`at ${width}`, () => {
     test.use(ctx)
 
-    test('/create/icons signed out: one footer, no old strip, the close and its two buttons', async ({ page }) => {
+    test('/create/icons signed out: one footer, no old strip, no close', async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, '/create/icons')
       await expect(page.getByRole('contentinfo'), 'one contentinfo landmark').toHaveCount(1)
       await expect(page.getByRole('main'), 'one main landmark').toHaveCount(1)
       await expect(page.locator('footer'), 'one footer element').toHaveCount(1)
       await expect(page.locator('.ig-credit'), 'the strip under the grid is gone').toHaveCount(0)
-      await expect(page.locator('.ig-close h2#ig-close-h')).toHaveCount(1)
-      await expect(close(page).getByRole('heading', { level: 2, name: HEADLINE, exact: true })).toBeVisible()
-      await expect(page.getByRole('region', { name: HEADLINE }), 'the close is a region named by its headline').toHaveCount(1)
-      await expect(page.getByRole('main').locator('.ig-close'), 'the close is page content, inside main').toHaveCount(1)
-      await expect(footer(page).locator('.ig-close'), 'the close is not inside the footer').toHaveCount(0)
-
-      const primary = close(page).getByRole('link', { name: 'Open the Palette Builder' })
-      await expect(primary).toHaveAttribute('href', '/create/palette')
-      const secondary = close(page).getByRole('link', { name: 'See the plans' })
-      await expect(secondary).toHaveAttribute('href', '/plans')
-      await expect(close(page).getByRole('link'), 'two buttons and no more').toHaveCount(2)
+      await expectNoClose(page, '/create/icons')
+      // The one thing between the grid and the footer is the gate, which is the page's single call to action.
+      await expect(page.getByRole('main').locator('.ig-end'), 'the gate is page content, inside main').toHaveCount(1)
+      await expect(footer(page).locator('.ig-end'), 'the gate is not inside the footer').toHaveCount(0)
       await expect(footer(page).getByRole('link', { name: 'Open the toolkit' })).toBeVisible()
-      expect(await close(page).innerText(), 'no em dash in the close').not.toMatch(EM_DASH)
     })
 
-    test('/create/icons signed out: the close never says Log in, the band above the grid still does', async ({ page }) => {
+    test('/create/icons signed out: the gate is the only Log in before the footer', async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, '/create/icons')
-      await expect(close(page)).not.toContainText(/log in/i)
-      await expect(close(page).getByRole('link', { name: /log in/i }), 'no Log in link in the close').toHaveCount(0)
-      await expect(close(page).getByRole('button', { name: /log in/i }), 'no Log in button in the close').toHaveCount(0)
-      await expect(page.locator('.ig-end'), 'the signed-out band keeps the one Log in').toContainText('Log in to browse the full sets.')
+      await expect(page.getByRole('main').getByRole('button', { name: 'Log in', exact: true }), 'one Log in button in main, and it is the gate’s').toHaveCount(1)
+      await expect(page.locator('.ig-end .ig-end-pill')).toHaveText('Log in')
+      await expect(page.locator('.ig-end'), 'the gate says the new heading').toContainText('Log in to open all 12 sets.')
     })
 
     test('/create/icons signed out: the licence row names each set with its licence and a link', async ({ page }) => {
@@ -125,14 +118,12 @@ for (const [width, ctx] of [
       expect(b.legal.t, 'the baseline is under the row').toBeGreaterThanOrEqual(b.notice.b - 1)
     })
 
-    test('/create/emoji: the close and footer are there, with no licence row and a Credits link', async ({ page }) => {
+    test('/create/emoji: the footer is there with no close, no licence row and a Credits link', async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, '/create/emoji')
       await expect(page.getByRole('contentinfo')).toHaveCount(1)
       await expect(page.getByRole('main')).toHaveCount(1)
-      await expect(close(page).getByRole('heading', { level: 2, name: HEADLINE, exact: true })).toBeVisible()
-      await expect(close(page).getByRole('link', { name: 'Open the Palette Builder' })).toBeVisible()
-      await expect(close(page).getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
+      await expectNoClose(page, '/create/emoji')
       await expect(page.locator('.sp-footer-notice'), 'emoji ships no third-party artwork to credit').toHaveCount(0)
       await expect(page.locator('.ig-credit')).toHaveCount(0)
       await expect(footer(page).getByRole('link', { name: 'Credits', exact: true })).toHaveAttribute('href', '/credits')
@@ -141,13 +132,14 @@ for (const [width, ctx] of [
     test('/create/icons/groups: the index has no licence row, an open group names its own sets', async ({ page }) => {
       watch(page, SIGNED_OUT)
       await go(page, '/create/icons/groups')
-      await expect(close(page)).toHaveCount(1)
       await expect(page.getByRole('contentinfo')).toHaveCount(1)
       await expect(page.locator('.igp-page')).toBeVisible()
+      await expectNoClose(page, '/create/icons/groups')
       await expect(page.locator('.sp-footer-notice'), 'the index shows no glyphs to credit').toHaveCount(0)
 
       await go(page, '/create/icons/groups?group=wayfinding')
       await expect(page.locator('.igp-grid .ic').first()).toBeVisible({ timeout: 20_000 })
+      await expectNoClose(page, '/create/icons/groups?group=wayfinding')
       const notice = noticeOf(page)
       await expect(notice.locator('.sp-footer-notice-h')).toHaveText('Icon sets in this group')
       const text = (await notice.locator('.sp-footer-notice-list').textContent()).replace(/\s+/g, ' ').trim()
@@ -159,151 +151,77 @@ for (const [width, ctx] of [
     test('/create/icons/groups: a Pro group is locked for a signed-out viewer and credits nothing', async ({ page }) => {
       watch(page, SIGNED_OUT)
       await go(page, '/create/icons/groups?group=commerce')
-      await expect(close(page)).toHaveCount(1)
       await expect(page.locator('.igp-page')).toBeVisible()
+      await expectNoClose(page, '/create/icons/groups?group=commerce')
       await expect(page.locator('.sp-footer-notice'), 'no glyphs are drawn, so no sets are credited').toHaveCount(0)
       await expect(footer(page).getByRole('link', { name: 'Credits', exact: true })).toBeVisible()
     })
 
     for (const route of ['/create/icons', '/create/emoji', '/create/icons/groups', '/create/icons/groups?group=wayfinding']) {
-      test(`${route}: nothing scrolls sideways and the strip runs edge to edge`, async ({ page }) => {
+      test(`${route}: nothing scrolls sideways at the foot of the page`, async ({ page }) => {
         watch(page, SIGNED_OUT)
         await go(page, route)
-        await expect(close(page)).toHaveCount(1)
-        await expect(page.locator('.sp-ramp')).toHaveCount(1)
+        await expect(footer(page)).toHaveCount(1)
         await page.locator('.sp-footer').scrollIntoViewIfNeeded()
         await page.evaluate(() => window.scrollBy(300, 0))
         const m = await page.evaluate(() => {
           const el = document.documentElement
           const view = el.clientWidth
-          const ramp = document.querySelector('.ig-close .sp-ramp').getBoundingClientRect()
-          // Everything in the close and the footer except the strip (which is full bleed on purpose and
-          // clipped at the window's edge) stays inside the window.
-          const wide = [...document.querySelectorAll('.ig-close :not(.sp-ramp):not(.sp-ramp *), footer, footer *')]
+          // Everything in the gate (when there is one) and the footer stays inside the window.
+          const wide = [...document.querySelectorAll('.ig-end, .ig-end *, footer, footer *')]
             .filter((n) => n.getClientRects().length)
             .map((n) => ({ n, r: n.getBoundingClientRect() }))
             .filter(({ r }) => r.right > view + 1 || r.left < -1)
             .map(({ n, r }) => `${n.tagName.toLowerCase()}.${String(n.className).split(' ')[0]} ${Math.round(r.left)}..${Math.round(r.right)}`)
-          return { view, scrollWidth: el.scrollWidth, scrollX: window.scrollX, rampL: ramp.left, rampR: ramp.right, rampH: ramp.height, wide }
+          return { view, scrollWidth: el.scrollWidth, scrollX: window.scrollX, wide }
         })
         expect(m.scrollWidth, 'the page is no wider than the window').toBeLessThanOrEqual(m.view)
         expect(m.scrollX, 'the page cannot be dragged sideways').toBe(0)
-        expect(m.wide, 'close or footer content outside the window').toEqual([])
-        expect(m.rampL, 'the strip starts at the left edge').toBeLessThanOrEqual(1)
-        expect(m.rampR, 'the strip reaches the right edge').toBeGreaterThanOrEqual(m.view - 1)
-        expect(m.rampH, 'the strip has height').toBeGreaterThan(60)
+        expect(m.wide, 'gate or footer content outside the window').toEqual([])
       })
     }
-
-    test(width <= 760 ? 'the close stacks its buttons full width, each at least 48px tall' : 'the close puts its buttons side by side, centred', async ({ page }) => {
-      watch(page, SIGNED_OUT)
-      await open(page, '/create/icons')
-      const b = await boxes(page, { main: '.ig-close .sp-close', a: '.ig-close .sp-pill', g: '.ig-close .sp-ghost', h: '.ig-close h2' })
-      expect(b.h.w, 'the headline is on screen').toBeGreaterThan(100)
-      if (width <= 760) {
-        expect(b.g.t, 'stacked: the second button is under the first').toBeGreaterThanOrEqual(b.a.b - 1)
-        expect(b.a.h, 'primary is at least 48px tall').toBeGreaterThanOrEqual(48)
-        expect(b.g.h, 'secondary is at least 48px tall').toBeGreaterThanOrEqual(48)
-        expect(Math.abs(b.a.w - b.g.w), 'both are the one width').toBeLessThanOrEqual(1)
-        expect(b.a.w, 'and fill the column').toBeGreaterThan(width * 0.7)
-      } else {
-        expect(Math.abs(b.a.t - b.g.t), 'one row').toBeLessThanOrEqual(4)
-        expect(b.g.l, 'primary first').toBeGreaterThanOrEqual(b.a.r - 1)
-        const mid = (b.a.l + b.g.r) / 2
-        expect(Math.abs(mid - width / 2), 'the pair is centred').toBeLessThanOrEqual(24)
-      }
-    })
   })
 }
 
 test.describe('at 320', () => {
   test.use({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true })
   for (const route of ['/create/icons', '/create/emoji', '/create/icons/groups']) {
-    test(`${route}: no sideways scroll, and the headline wraps to three lines at most`, async ({ page }) => {
+    test(`${route}: no sideways scroll, and the gate heading wraps to three lines at most`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await go(page, route)
-      await expect(close(page)).toHaveCount(1)
+      await expect(footer(page)).toHaveCount(1)
+      if (route === '/create/icons') await expect(page.locator('.ig-end-h')).toBeVisible({ timeout: 20_000 })
       await page.locator('.sp-footer').scrollIntoViewIfNeeded()
       const m = await page.evaluate(() => {
         const el = document.documentElement
-        const h = document.querySelector('.ig-close h2')
-        const line = parseFloat(getComputedStyle(h).lineHeight)
-        return { scrollWidth: el.scrollWidth, view: el.clientWidth, lines: Math.round(h.getBoundingClientRect().height / line) }
+        const h = document.querySelector('.ig-end-h')
+        const line = h ? parseFloat(getComputedStyle(h).lineHeight) : 0
+        return { scrollWidth: el.scrollWidth, view: el.clientWidth, lines: h ? Math.round(h.getBoundingClientRect().height / line) : 0 }
       })
       expect(m.scrollWidth).toBeLessThanOrEqual(m.view)
-      expect(m.lines, 'headline lines at 320').toBeLessThanOrEqual(3)
-      await expect(close(page).getByRole('link', { name: 'Open the Palette Builder' })).toBeVisible()
+      if (route === '/create/icons') expect(m.lines, 'gate heading lines at 320').toBeGreaterThan(0)
+      expect(m.lines, 'gate heading lines at 320').toBeLessThanOrEqual(3)
     })
   }
 })
 
-test.describe('the second button follows the viewer', () => {
+test.describe('keyboard', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('free: See what Pro includes, and no Log in in the close or the footer', async ({ page }) => {
-    watch(page, SIGNED_IN)
-    await open(page, '/create/icons', { plan: 'free' })
-    const secondary = close(page).getByRole('link', { name: 'See what Pro includes' })
-    await expect(secondary).toBeVisible()
-    await expect(secondary).toHaveAttribute('href', '/plans')
-    await expect(close(page).getByRole('link', { name: 'See the plans' })).toHaveCount(0)
-    await expect(close(page).getByRole('link', { name: 'Open the Palette Builder' })).toBeVisible()
-    await expect(close(page)).not.toContainText(/log in/i)
-    await expect(footer(page)).not.toContainText(/log in/i)
-    await expect(page.getByRole('contentinfo')).toHaveCount(1)
-  })
-
-  test('Pro: Open your workspace to /projects, and no plans link in the close', async ({ page }) => {
-    watch(page, 'a Pro designer reaching the end of the icon pages')
-    await open(page, '/create/icons', { plan: 'pro' })
-    const secondary = close(page).getByRole('link', { name: 'Open your workspace' })
-    await expect(secondary).toBeVisible()
-    await expect(secondary).toHaveAttribute('href', '/projects')
-    await expect(close(page).getByRole('link', { name: /See the plans|See what Pro includes/ })).toHaveCount(0)
-    await expect(close(page)).not.toContainText(/log in/i)
-    await expect(footer(page)).not.toContainText(/log in/i)
-  })
-
-  test('the Emoji tab follows the viewer too', async ({ page }) => {
-    watch(page, SIGNED_IN)
-    await open(page, '/create/emoji', { plan: 'free' })
-    await expect(close(page).getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
-    await expect(page.locator('.sp-footer-notice')).toHaveCount(0)
-  })
-})
-
-test.describe('keyboard and motion', () => {
-  test.use({ viewport: { width: 1440, height: 900 } })
-
-  test('Tab runs the close primary, the close secondary, then the footer', async ({ page }) => {
+  test('Tab runs the gate’s Log in, then See the plans, then on into the footer', async ({ page }) => {
     watch(page, SIGNED_OUT)
     await open(page, '/create/icons')
-    await close(page).getByRole('link', { name: 'Open the Palette Builder' }).focus()
+    await page.locator('.ig-end .ig-end-pill').focus()
     await page.keyboard.press('Tab')
     await expect(page.locator(':focus')).toHaveText('See the plans')
-    await page.keyboard.press('Tab')
-    await expect(page.locator(':focus')).toContainText('Open the toolkit')
-    await expect(footer(page).locator(':focus')).toHaveCount(1)
-  })
-
-  test('reduced motion leaves the strip still while the page scrolls past it', async ({ page }) => {
-    watch(page, SIGNED_OUT)
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await open(page, '/create/icons')
-    await page.locator('.ig-close .sp-ramp').scrollIntoViewIfNeeded()
-    await page.evaluate(() => window.scrollBy(0, 600))
-    const spin = await page.evaluate(() => getComputedStyle(document.querySelector('.ig-close .sp-ramp')).getPropertyValue('--sp-spin').trim())
-    expect(['', '0', '0deg'], `--sp-spin was ${spin}`).toContain(spin)
-  })
-
-  test('with motion allowed the same scroll does turn the strip (the check above can fail)', async ({ page }) => {
-    watch(page, SIGNED_OUT)
-    await page.emulateMedia({ reducedMotion: 'no-preference' })
-    await open(page, '/create/icons')
-    await page.locator('.ig-close .sp-ramp').scrollIntoViewIfNeeded()
-    await page.evaluate(() => window.scrollBy(0, 100))
-    await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.ig-close .sp-ramp')).getPropertyValue('--sp-spin').trim()),
-      { message: 'the strip never turned with the scroll' }).toMatch(/^[1-9][0-9.]*deg$/)
+    // Anything focusable between the gate and the footer is page content that is not a call to action, so
+    // the footer must come within a few more presses.
+    let inFooter = false
+    for (let i = 0; i < 6 && !inFooter; i += 1) {
+      await page.keyboard.press('Tab')
+      inFooter = (await footer(page).locator(':focus').count()) === 1
+    }
+    expect(inFooter, 'Tab never reached the footer from the gate').toBe(true)
   })
 })
 
@@ -379,7 +297,7 @@ test.describe('Show N more icons', () => {
     // The foot of the page is reachable, and the grid does not run on while we are there.
     await footer(page).scrollIntoViewIfNeeded()
     await expect(footer(page)).toBeInViewport()
-    await expect(close(page)).toHaveCount(1)
+    await expectNoClose(page, 'the foot of a Pro viewer’s list')
     await page.evaluate(() => new Promise((done) => {
       let n = 0
       const tick = () => (++n < 30 ? requestAnimationFrame(tick) : done())

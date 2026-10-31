@@ -1,8 +1,9 @@
-// THE ICON LIBRARY'S RESULT LINE IS GONE, THE GATE AND FOOTER ARE NEW, AND THE TOOLBAR BAND STICKS.
+// THE ICON LIBRARY'S RESULT LINE IS GONE, THE GATE IS A CENTRED BLOCK, AND THE TOOLBAR BAND STICKS.
 //
 // Acceptance criteria 22 to 25 of the icon library design (slices S7, S8 and S9), on /create/icons:
-//   22. no .ig-status text sits between the grid and the gate in any state; the signed-in count is in
-//       .lbry-count; the gate and the footer hold no uppercase mono and no label set in mono;
+//   22. no .ig-status text sits between the grid and the gate in any state; the signed-in count is
+//       announced in the screen-reader-only #ig-result-count and drawn nowhere; the gate and the footer
+//       hold no uppercase mono and no label set in mono;
 //   23. scrolled 400px at 1440, nothing paints between the nav's bottom edge and the toolbar band
 //       (elementFromPoint at nav bottom + 2 is the band);
 //   24. walking the grid with the band stuck, every focused cell is fully visible;
@@ -15,13 +16,16 @@
 // HOW TO SEE EACH FAIL (src/ unless named):
 //   <p className="ig-status">Showing X of Y</p> comes back before the gate   -> "no result line"
 //   ICON_GATE_COPY.end.anon.heading gets an em dash                           -> "the gate heading" and "no em dash"
+//   ICON_GATE_COPY.end.anon.heading goes back to "Log in to browse the full sets."  -> "the gate heading"
 //   TEASE_ROWS goes back to 2 (utils/iconEndBand.js)                           -> "one blurred row"
-//   .ig-end-band loses its border-top / margin-top:20px (deferred/library.css) -> "the band sits 20px under the row"
+//   .ig-end-band gets its border-top back, or loses margin:-24px auto 0 / text-align:center
+//                                                                              (deferred/library.css) -> "the gate block"
+//   .ig-end-tease loses its mask-image (deferred/library.css)                  -> "fades into the block"
+//   <LibraryToolbar> gets count={...} back, or #ig-result-count is dropped     -> "the count is announced"
 //   .sp-footer-notice-list goes back to font-family: var(--mono)               -> "no label is set in mono"
 //   .iel-page .ig-band top becomes calc(var(--nav-clear) + 8px)                -> "nothing paints between the nav and the band"
 //   .iel-page .ig .ic loses scroll-margin-top                                  -> "a focused cell is never under the band"
 //   the IntersectionObserver never sets data-stuck (IconLibrary.jsx)           -> "the band is marked stuck"
-//   count={...} dropped from <LibraryToolbar> (IconLibrary.jsx)                -> "the count is in the toolbar"
 import { test, expect } from './base.js'
 import { go, signIn, watch, wheelToRest, restingScrollY } from './helpers.js'
 import { gridColumns } from './icon-grid-rows.js'
@@ -74,7 +78,7 @@ const boxes = (page, selectors) => page.evaluate((sels) => {
 
 // ── S7: the result line is gone ──────────────────────────────────────────────
 
-test.describe('no result line, and the count is in the toolbar', () => {
+test.describe('no result line, and the count is announced rather than drawn', () => {
   for (const width of WIDTHS) {
     test(`${width}: signed out, nothing but the grid, one blurred row and the gate`, async ({ page }) => {
       watch(page, SIGNED_OUT)
@@ -82,68 +86,70 @@ test.describe('no result line, and the count is in the toolbar', () => {
       await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
       await expect(page.locator('.ig-status'), 'no result line of any kind once the grid has loaded').toHaveCount(0)
       expect(await page.locator('body').innerText(), 'the old "Showing X of Y" text is gone').not.toMatch(/Showing [\d,]+ of [\d,]+/)
-      await expect(page.locator('.lbry-count'), 'signed out has no count: the gate says it').toHaveCount(0)
+      await expect(page.locator('.lbry-count'), 'the toolbar draws no count at any tier').toHaveCount(0)
+      await expect(page.locator('#ig-result-count'), 'signed out announces no count: the gate says it').toHaveText('')
     })
 
-    test(`${width}: signed in, the count is in the toolbar and there is no result line`, async ({ page }) => {
+    test(`${width}: signed in, the count is announced from the toolbar band and drawn nowhere`, async ({ page }) => {
       watch(page, SIGNED_IN)
       const cells = await open(page, width, { plan: 'free' })
-      const count = page.locator('.ig-band .ig-toolbar .lbry-count')
-      await expect(count, 'the count is in the toolbar band').toHaveText(/^[\d,]+ icons$/, { timeout: 20_000 })
+      const count = page.locator('.ig-band #ig-result-count')
+      await expect(count, 'the count is announced from the toolbar band').toHaveText(/^[\d,]+ icons$/, { timeout: 20_000 })
+      await expect(count).toHaveAttribute('role', 'status')
       const held = Number((await count.textContent()).replace(/[^\d]/g, ''))
       expect(held, 'the count is the number of icons held, which is at least the cells drawn').toBeGreaterThanOrEqual(cells)
       expect(held, 'a free account opens more than the signed-out sample').toBeGreaterThan(65)
       await expect(page.locator('.ig-status').filter({ hasText: /Showing|\bof\b|\bicons\b/ })).toHaveCount(0)
-      const style = await count.evaluate((el) => {
-        const cs = getComputedStyle(el)
-        return { family: cs.fontFamily, numeric: cs.fontVariantNumeric, mono: getComputedStyle(document.documentElement).getPropertyValue('--mono') }
-      })
-      expect(style.family, 'the count is plain UI sans, not mono').not.toMatch(/mono|courier|consolas|menlo/i)
-      expect(style.numeric, 'digits are tabular so the count does not jitter').toContain('tabular-nums')
+      // Announced, not drawn: the node is clipped to a 1px box, and no element in the toolbar paints a count.
+      const box = await count.evaluate((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height } })
+      expect(box.w, 'the count paints a visible box').toBeLessThanOrEqual(1)
+      expect(box.h, 'the count paints a visible box').toBeLessThanOrEqual(1)
+      await expect(page.locator('.lbry-count'), 'the toolbar draws no count').toHaveCount(0)
+      const drawn = await page.locator('.ig-toolbar').evaluate((tb) => [...tb.querySelectorAll('*')]
+        .filter((el) => el.getClientRects().length && el.children.length === 0 && /^[\d,]+ icons?$/.test(el.textContent.trim()))
+        .map((el) => el.textContent.trim()))
+      expect(drawn, 'a visible "N icons" is drawn in the toolbar').toEqual([])
     })
   }
 
-  test('the count follows the results when a search narrows them', async ({ page }) => {
+  test('the announced count follows the results when a search narrows them', async ({ page }) => {
     watch(page, SIGNED_IN)
     await open(page, 1440, { plan: 'free' })
-    const count = page.locator('.lbry-count')
+    const count = page.locator('#ig-result-count')
     await expect(count).toHaveText(/^[\d,]+ icons$/, { timeout: 20_000 })
     const all = Number((await count.textContent()).replace(/[^\d]/g, ''))
     await page.getByRole('searchbox', { name: /search icons/i }).or(page.getByPlaceholder(/search icons/i)).first().fill('arrow')
     await expect.poll(async () => Number(((await count.textContent()) || '').replace(/[^\d]/g, '')), {
-      timeout: 20_000, message: 'a search for "arrow" must change the count in the toolbar',
+      timeout: 20_000, message: 'a search for "arrow" must change the announced count',
     }).not.toBe(all)
     await expect(count).toHaveText(/^[\d,]+ icons?$/)
     await expect(page.locator('.ig-status').filter({ hasText: /matches|Showing/ })).toHaveCount(0)
   })
 
-  // The count shares the row with the search, Filters and Add icon. It must not shove the Add icon button
-  // into the Filters panel where the row had room for it, nor overlap anything. Under 480px the count gives
-  // way, so the search keeps room for its placeholder.
+  // The row holds the search, Filters (or the pack menu) and the pinned My icons toggle, with the count
+  // announced rather than drawn. Nothing overlaps, nothing scrolls sideways, and the search keeps room
+  // for its placeholder on a phone. Add icon is not on the row at all.
   for (const width of [768, 390]) {
-    test(`${width}: the count, Filters and Add icon share the row without overlap`, async ({ page }) => {
+    test(`${width}: search, filters and the My icons toggle share the row without overlap`, async ({ page }) => {
       watch(page, SIGNED_IN)
       await open(page, width, { plan: 'free' })
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-      if (width >= 480) await expect(page.locator('.lbry-count')).toBeVisible({ timeout: 20_000 })
-      else {
-        await expect(page.locator('.lbry-count'), 'under 480px the count gives way').toBeHidden()
-        const search = await page.locator('.ig-toolbar .lbry-search').evaluate((el) => el.getBoundingClientRect().width)
-        expect(search, 'the search keeps room for its placeholder').toBeGreaterThanOrEqual(180)
-      }
-      await expect(page.locator('.ig-toolbar .lbry-toolbar-row .ig-addbtn'), 'Add icon stays on the toolbar row').toBeVisible()
+      const search = await page.locator('.ig-toolbar .lbry-search').evaluate((el) => el.getBoundingClientRect().width)
+      expect(search, 'the search keeps room for its placeholder').toBeGreaterThanOrEqual(180)
+      await expect(page.locator('.ig-toolbar .lbry-toolbar-row button.ig-mine'), 'My icons stays on the toolbar row').toBeVisible()
+      await expect(page.locator('.ig-toolbar .ig-addbtn'), 'Add icon is not on the toolbar').toHaveCount(0)
       const rects = await page.evaluate(() => {
         const row = document.querySelector('.ig-toolbar .lbry-toolbar-row')
         const r = (el) => { const b = el.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom } }
         return {
           row: r(row),
-          parts: Object.fromEntries(['.lbry-search', '.lbry-count', '.lbry-filterpanel', '.ig-addbtn'].map((s) => { const el = row.querySelector(s); return [s, el && el.getClientRects().length ? r(el) : null] })),
+          parts: Object.fromEntries(['.lbry-search', '.lbry-filterpanel', '.lbry-toolbar-action', 'button.ig-mine'].map((s) => { const el = row.querySelector(s); return [s, el && el.getClientRects().length ? r(el) : null] })),
           overflow: row.scrollWidth - row.clientWidth,
         }
       })
       expect(rects.overflow, 'the row does not scroll sideways').toBeLessThanOrEqual(0)
       const present = Object.entries(rects.parts).filter(([, b]) => b)
-      expect(present.length, 'search, Add icon and (from 480px) the count are on the row').toBeGreaterThanOrEqual(width >= 480 ? 3 : 2)
+      expect(present.length, 'the search, the filters or pack menu, and My icons are on the row').toBeGreaterThanOrEqual(3)
       for (const [name, b] of present) {
         expect(b.l, `${name} starts inside the row`).toBeGreaterThanOrEqual(rects.row.l - 1)
         expect(b.r, `${name} ends inside the row`).toBeLessThanOrEqual(rects.row.r + 1)
@@ -168,19 +174,20 @@ test.describe('the gate names what is on screen', () => {
       watch(page, SIGNED_OUT)
       const cells = await open(page, width)
       const gate = page.locator('.ig-end[data-gate="anon"]')
-      await expect(gate.getByRole('heading', { level: 2 })).toHaveText('Log in to browse the full sets.')
+      // 12 = the five sets a signed-out viewer sees plus the seven a free account adds.
+      await expect(gate.getByRole('heading', { level: 2 })).toHaveText('Log in to open all 12 sets.')
       const body = (await gate.locator('.ig-end-p').textContent()).trim()
-      const m = body.match(/^Signed out, you see ([\d,]+) icons from 5 outline sets\. A free account opens every icon in them and adds (\d+) more sets\. Copying needs no account\.$/)
+      const m = body.match(/^You're seeing ([\d,]+) icons from 5 sets\. A free account opens every icon in them, plus 7 more sets\. Copying needs no account\.$/)
       expect(m, `the gate body is not the expected sentence: "${body}"`).not.toBeNull()
       expect(Number(m[1].replace(/,/g, '')), 'the gate quotes the number of icons actually drawn').toBe(cells)
-      // The five set names are the five sets the grid draws from, so "outline sets" points at something real.
+      // The five set names are the five sets the grid draws from, so "5 sets" points at something real.
       const named = (await gate.locator('.ig-end-sets').textContent()).split(',').map((s) => s.trim())
       expect(named).toEqual(['Lucide', 'Tabler', 'Iconoir', 'Heroicons', 'Phosphor'])
       const drawn = [...new Set(await page.locator('.ig .ic .ic-pack').allTextContents())].sort()
       expect([...named].sort(), 'the sets named under the gate are the sets in the grid').toEqual(drawn)
     })
 
-    test(`${width}: one blurred row, then the band 20px under it set off by a hairline`, async ({ page }) => {
+    test(`${width}: one blurred row that fades into a centred block, with no hairline`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, width)
       const cols = await gridColumns(page)
@@ -188,42 +195,48 @@ test.describe('the gate names what is on screen', () => {
       expect(tease.length, 'the blurred row has exactly one cell per grid column').toBe(cols)
       expect(new Set(tease).size, 'and they sit on one row').toBe(1)
       const b = await boxes(page, { tease: '.ig-end-tease', band: '.ig-end-band' })
-      expect(Math.abs(b.band.t - b.tease.b - 20), `the band sits 20px under the blurred row (it is ${b.band.t - b.tease.b})`).toBeLessThanOrEqual(1)
-      expect(await page.locator('.ig-end-band').evaluate((el) => getComputedStyle(el).borderTopWidth), 'a hairline sets the band off').toBe('1px')
+      expect(Math.abs(b.band.t - b.tease.b + 24), `the block rises 24px into the blurred row (it is ${b.band.t - b.tease.b} from its bottom edge)`).toBeLessThanOrEqual(1)
+      const mask = await page.locator('.ig-end-tease').evaluate((el) => { const cs = getComputedStyle(el); return cs.maskImage || cs.webkitMaskImage || '' })
+      expect(mask, 'the blurred row fades into the block with a transparency mask').toContain('linear-gradient')
+      expect(await page.locator('.ig-end-band').evaluate((el) => getComputedStyle(el).borderTopWidth), 'no hairline sets the block off').toBe('0px')
       await expect(page.locator('.ig-end-pill-icon'), 'the arrow badge is gone').toHaveCount(0)
       await expect(page.locator('.ig-end-pill svg'), 'one action, no ornament').toHaveCount(0)
     })
   }
 
-  test('1440: left-aligned with the grid, buttons on the right, centred on the copy', async ({ page }) => {
-    watch(page, SIGNED_OUT)
-    await open(page, 1440)
-    const b = await boxes(page, { grid: '.ig', h: '.ig-end-h', copy: '.ig-end-copy', cta: '.ig-end-cta' })
-    expect(Math.abs(b.h.l - b.grid.l), 'the heading starts where the grid starts').toBeLessThanOrEqual(1)
-    expect(Math.abs(b.cta.r - b.grid.r), 'the buttons end where the grid ends').toBeLessThanOrEqual(1)
-    const copyMid = (b.copy.t + b.copy.b) / 2
-    const ctaMid = (b.cta.t + b.cta.b) / 2
-    expect(Math.abs(copyMid - ctaMid), 'the buttons are vertically centred on the copy').toBeLessThanOrEqual(3)
-  })
+  // The gate is one block centred on the page: the heading, the line, the sets, then the actions, all on the
+  // grid's centre line (to 2px) and the text centre-aligned. The old band was left-aligned with its buttons
+  // on the right.
+  for (const width of WIDTHS) {
+    test(`${width}: the gate is centred on the grid`, async ({ page }) => {
+      watch(page, SIGNED_OUT)
+      await open(page, width)
+      const b = await boxes(page, { grid: '.ig', h: '.ig-end-h', p: '.ig-end-p', sets: '.ig-end-sets', pill: '.ig-end-pill', link: '.ig-end-link', cta: '.ig-end-cta' })
+      const mid = (box) => (box.l + box.r) / 2
+      const centre = mid(b.grid)
+      for (const name of ['h', 'p', 'sets', 'cta']) {
+        expect(Math.abs(mid(b[name]) - centre), `${name} sits on the grid's centre line`).toBeLessThanOrEqual(2)
+      }
+      for (const sel of ['.ig-end-h', '.ig-end-p', '.ig-end-sets']) {
+        expect(await page.locator(sel).evaluate((el) => getComputedStyle(el).textAlign), `${sel} is centre-aligned`).toBe('center')
+      }
+      if (width >= 768) {
+        expect(Math.abs(b.pill.t - b.link.t), 'Log in and See the plans share a row').toBeLessThanOrEqual(4)
+        expect(Math.abs((b.pill.l + b.link.r) / 2 - centre), 'the pair is centred as a whole').toBeLessThanOrEqual(2)
+      }
+    })
+  }
 
-  test('768: still two columns, left-aligned', async ({ page }) => {
-    watch(page, SIGNED_OUT)
-    await open(page, 768)
-    const b = await boxes(page, { grid: '.ig', h: '.ig-end-h', copy: '.ig-end-copy', cta: '.ig-end-cta' })
-    expect(Math.abs(b.h.l - b.grid.l)).toBeLessThanOrEqual(1)
-    expect(b.cta.l, 'the buttons sit beside the copy, not under it').toBeGreaterThanOrEqual(b.copy.r - 1)
-  })
-
-  test('390: stacked, the buttons full width under the copy', async ({ page }) => {
+  test('390: stacked, Log in full width with See the plans under it', async ({ page }) => {
     watch(page, SIGNED_OUT)
     await open(page, 390)
-    const b = await boxes(page, { grid: '.ig', copy: '.ig-end-copy', pill: '.ig-end-pill', ghost: '.ig-end-ghost' })
+    const b = await boxes(page, { grid: '.ig', copy: '.ig-end-copy', pill: '.ig-end-pill', link: '.ig-end-link' })
     expect(b.pill.t, 'Log in sits under the copy').toBeGreaterThanOrEqual(b.copy.b - 1)
-    expect(b.ghost.t, 'See the plans sits under Log in').toBeGreaterThanOrEqual(b.pill.b - 1)
-    for (const [name, box] of [['Log in', b.pill], ['See the plans', b.ghost]]) {
-      expect(Math.abs((box.r - box.l) - (b.grid.r - b.grid.l)), `${name} spans the grid`).toBeLessThanOrEqual(2)
-      expect(box.b - box.t, `${name} is a 48px target`).toBeGreaterThanOrEqual(47.5)
-    }
+    expect(b.link.t, 'See the plans sits under Log in').toBeGreaterThanOrEqual(b.pill.b - 1)
+    expect(Math.abs((b.pill.r - b.pill.l) - (b.grid.r - b.grid.l)), 'Log in spans the grid').toBeLessThanOrEqual(2)
+    expect(b.pill.b - b.pill.t, 'Log in is a 48px target').toBeGreaterThanOrEqual(47.5)
+    expect(b.link.b - b.link.t, 'See the plans is a 48px target').toBeGreaterThanOrEqual(47.5)
+    await expect(page.locator('.ig-end-ghost'), 'See the plans is a text link, not a ghost button').toHaveCount(0)
   })
 
   test('the two actions: Log in opens the login popup, See the plans goes to /plans', async ({ page }) => {
