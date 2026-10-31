@@ -25,12 +25,12 @@ function Ctl({ className, children, ...rest }) {
 }
 
 // Where a label's top-left sits, given the place's point (px, py) in the box and the label's size.
-// 'right' hangs below and after the point, clear of the coastline the Manly wharf sits on.
+// 'right' sits after the point, its text centred on the point's height.
 const LABEL_AT = {
   below: (px, py, lw) => [px - lw / 2, py + 10],
   above: (px, py, lw, lh) => [px - lw / 2, py - lh - 8],
   land: (px, py, lw, lh) => [px - lw / 2, py - lh / 2],
-  right: (px, py) => [px + 12, py + 4],
+  right: (px, py, lw, lh) => [px + 12, py - lh / 2],
 }
 const LABEL_EDGE = 4
 

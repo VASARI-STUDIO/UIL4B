@@ -8,7 +8,7 @@
 import { contrastRatio, mixHex } from '../../../utils/colors.js'
 import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
-export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral']
+export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'error', 'neutral']
 
 // What each text sets its colour from, for the contrast sweep.
 export const TEXT_RECIPE = [
