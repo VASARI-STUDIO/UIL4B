@@ -57,29 +57,20 @@ test('the kit template is part of the key only for the kit', () => {
 
 // ── The app-ready bundle's folder tree ──────────────────────────────────────
 
-test('the bundle preview lists each app folder with its files, from the real entries', () => {
+test('the bundle preview gives each app folder one line, from the real entries', () => {
   const entries = appBundleEntries(design, { date: '2026-10-31', name: 'Harbour' })
   const lines = bundleTreeLines(entries.map((e) => e.path))
   assert.deepEqual(lines, [
-    '00 Start here/',
-    '  README.md',
-    '01 Figma/',
-    '  1-primitives.tokens.json',
-    '  2-semantic.light.tokens.json',
-    '  2-semantic.dark.tokens.json',
-    '02 Adobe/',
-    '  harbour-colours.ase',
-    '  harbour-colours.aco',
-    '03 Other design apps/',
-    '  Affinity/harbour-colours.ase',
-    '  Procreate/harbour-colours.ase',
-    '04 Code/',
-    '  css/harbour.tokens.css',
-    '  tokens/harbour.tokens.json',
+    '00 Start here/ README.md',
+    '01 Figma/ 3 .tokens.json',
+    '02 Adobe/ .ase, .aco',
+    '03 Other design apps/ Affinity, Procreate',
+    '04 Code/ css, tokens',
     '',
     'How to import.md in each app folder',
   ])
-  assert.ok(lines.length <= PREVIEW_LINES, 'the tree fits the lines the preview box is sized for')
+  // The smallest preview box (phones) shows about ten lines before its fade.
+  assert.ok(lines.length <= 8, 'the tree is short enough to read whole on a phone')
 })
 
 test('the bundle preview handles an empty or odd list without throwing', () => {

@@ -26,11 +26,12 @@ export function previewLines(text, { count = PREVIEW_LINES, skipLeadingComment =
 const HOW_TO_FILE = 'How to import.md'
 
 /**
- * The app-ready zip as plain lines: each app folder, then its files indented under
- * it. `paths` are the entry paths from utils/appBundle.js (`/`-separated, the root
+ * The app-ready zip as plain lines, one per app folder: the folder, then what is in
+ * it (its sub-folders by name, a single file by name, more files by type).
+ * `paths` are the entry paths from utils/appBundle.js (`/`-separated, the root
  * folder first). The root is left out (the label over the box names the zip), and
- * the "How to import.md" that every app folder carries is one closing line rather
- * than one per folder, so the whole tree fits the box.
+ * the "How to import.md" that every app folder carries is one closing line, so the
+ * tree stays short enough to read whole in the smallest preview box.
  */
 export function bundleTreeLines(paths) {
   const folders = new Map()
@@ -38,17 +39,29 @@ export function bundleTreeLines(paths) {
   for (const p of paths ?? []) {
     const [, folder, ...rest] = String(p).split('/')
     if (!folder || !rest.length) continue
-    const file = rest.join('/')
     if (rest[rest.length - 1] === HOW_TO_FILE) { guides += 1; continue }
-    if (!folders.has(folder)) folders.set(folder, [])
-    folders.get(folder).push(file)
+    if (!folders.has(folder)) folders.set(folder, { subs: [], files: [] })
+    const entry = folders.get(folder)
+    if (rest.length > 1) { if (!entry.subs.includes(rest[0])) entry.subs.push(rest[0]) } else entry.files.push(rest[0])
   }
   const lines = []
-  for (const [folder, files] of folders) {
-    lines.push(`${folder}/`, ...files.map((f) => `  ${f}`))
+  for (const [folder, { subs, files }] of folders) {
+    lines.push(`${folder}/ ${[...subs, ...describeFiles(files)].join(', ')}`)
   }
   if (guides) lines.push('', `${HOW_TO_FILE} in each app folder`)
   return lines
+}
+
+// One file reads as its name; several read as their types, with a count where a
+// type repeats ("3 .tokens.json", ".ase, .aco").
+function describeFiles(files) {
+  if (files.length === 1) return files
+  const counts = new Map()
+  for (const f of files) {
+    const type = f.match(/(\.tokens)?\.[a-z0-9]+$/i)?.[0] || f
+    counts.set(type, (counts.get(type) || 0) + 1)
+  }
+  return [...counts].map(([type, n]) => (n > 1 ? `${n} ${type}` : type))
 }
 
 // The logo is never drawn into these files and is the one large field, so it stays

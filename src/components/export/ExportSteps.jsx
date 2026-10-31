@@ -289,8 +289,10 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
       const then = price ? `, then ${price} a year until you cancel.` : proPrice.loaded ? ', then billed yearly until you cancel.' : '.'
       line = <><strong>{trialDays} {trialDays === 1 ? 'day' : 'days'} free</strong>{then} Cancel before {trialEnd} and you pay nothing.{proPrice.loaded && !price ? ' Checkout shows the price before you pay.' : ''}</>
     } else line = 'Checkout shows the price before you pay.'
-  } else if (locked) line = <><strong>Pro</strong> unlocks this file with no watermark.</>
-  else if (isPro) line = <><strong>Included in Pro.</strong> No watermark.</>
+  } else if (locked) {
+    // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
+    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</> : <><strong>Pro</strong> unlocks this file with no watermark.</>
+  } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>
 

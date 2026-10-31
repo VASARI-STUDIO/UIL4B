@@ -159,6 +159,7 @@ for (const size of SIZES) {
       await expect(primaryButton(panel)).toHaveText('Export app-ready bundle')
       await expect(primaryButton(panel)).toBeEnabled()
       await expect(dockStatus(panel)).toContainText('Included in Pro')
+      await expect(dockStatus(panel), 'the bundle has no marked free version to compare with').not.toContainText('watermark')
 
       const before = await pageToday(page)
       const file = await takeZip(page, () => primaryButton(panel).click())
@@ -175,21 +176,11 @@ for (const size of SIZES) {
 
 test.describe('a free signed-in account', () => {
   const EXPECTED_TREE = [
-    '00 Start here/',
-    '  README.md',
-    '01 Figma/',
-    '  1-primitives.tokens.json',
-    '  2-semantic.light.tokens.json',
-    '  2-semantic.dark.tokens.json',
-    '02 Adobe/',
-    `  ${SLUG}-colours.ase`,
-    `  ${SLUG}-colours.aco`,
-    '03 Other design apps/',
-    `  Affinity/${SLUG}-colours.ase`,
-    `  Procreate/${SLUG}-colours.ase`,
-    '04 Code/',
-    `  css/${SLUG}.tokens.css`,
-    `  tokens/${SLUG}.tokens.json`,
+    '00 Start here/ README.md',
+    '01 Figma/ 3 .tokens.json',
+    '02 Adobe/ .ase, .aco',
+    '03 Other design apps/ Affinity, Procreate',
+    '04 Code/ css, tokens',
     '',
     'How to import.md in each app folder',
   ].join('\n')
@@ -214,7 +205,7 @@ test.describe('a free signed-in account', () => {
         })
         const panel = await openAppReady(page)
         await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
-        await expect(dockStatus(panel)).toContainText('Pro unlocks this file')
+        await expect(dockStatus(panel)).toContainText('Pro unlocks the app-ready bundle.')
 
         await primaryButton(panel).click()
         await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -265,13 +256,9 @@ test.describe('a free signed-in account', () => {
         expect(fit.boxRight, 'the box ends inside the dialog').toBeGreaterThanOrEqual(0)
       })
 
-      // KNOWN FAULT, marked test.fail(): the tree is 17 lines but the box (--xfp-h in
-      // export-preview.css) is 300px at 1440 and 220px at 390, so the last lines are
-      // faded out or cut off, including the closing "How to import.md" line. When the
-      // box fits the tree this test passes, test.fail() turns that into a red run, and
-      // the marker should come off.
+      // The tree is one line per app folder so it reads whole in the smallest box
+      // (--xfp-h in export-preview.css), the closing "How to import.md" line included.
       test('the whole tree is visible, down to the last line', async ({ page }) => {
-        test.fail(true, 'the preview box is shorter than the 17-line tree')
         watch(page, `a free account reading the whole App-ready tree at ${size.label}`)
         await signIn(page, { plan: 'free' })
         await go(page, WORKED_BOARD)
@@ -284,6 +271,23 @@ test.describe('a free signed-in account', () => {
     })
   }
 })
+
+// With four types the phone strip is tight: each label must read in full, not as "Brand bo…".
+for (const width of [320, 390]) {
+  test.describe(`the type strip at ${width} touch`, () => {
+    test.use({ viewport: { width, height: 800 }, hasTouch: true, isMobile: true })
+    test('every type label shows in full', async ({ page }) => {
+      watch(page, `a phone visitor reading the export types at ${width}px`)
+      await go(page, WORKED_BOARD)
+      const panel = await openAppReady(page)
+      const cut = await panel.locator('.xd-types .xd-type-n').evaluateAll((names) =>
+        names.filter((n) => n.scrollWidth > n.clientWidth).map((n) => n.textContent))
+      expect(cut, 'type labels cut off').toEqual([])
+      const strip = await panel.locator('.xd-types').evaluate((s) => s.scrollWidth - s.clientWidth)
+      expect(strip, 'the strip scrolls sideways').toBeLessThanOrEqual(0)
+    })
+  })
+}
 
 test.describe('signed out', () => {
   test('App-ready is the same as free: the Pro gate, then /plans, no account dialog, no file', async ({ page }) => {
