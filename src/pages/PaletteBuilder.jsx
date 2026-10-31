@@ -60,6 +60,8 @@ import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, r
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
+import useBackClosesDialog from '../hooks/useBackClosesDialog'
 import useExportGate from '../hooks/useExportGate'
 // The measured collapse for the action rail — the rule, the measurements that
 // found the band nobody had reported, and why one band is exempt.
@@ -70,7 +72,8 @@ import { columnPair, handoffUrl, readingPair } from '../utils/contrastHandoff'
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 // Image → palette: the clustering, ranking and sampling live in a pure module.
-import { averageHex, clusterImage, colourShares, nextCandidate, pickPalette, rankClusters } from '../utils/imagePalette'
+import { appendPicks, averageHex, clusterImage, colourShares, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters } from '../utils/imagePalette'
+import FromImageDialog from '../components/palette/FromImageDialog'
 
 // The preview dialog, as its own chunk. The Preview button warms it on hover and
 // focus, so a click usually finds it already loaded.
@@ -373,7 +376,9 @@ const IMG_ANALYSIS_MAX = 384
 const IMG_SAMPLE_RADIUS = 2
 // Candidates ranked at load; "+" walks down this list.
 const IMG_CANDIDATES = 12
-const IMG_FORMATS = 'PNG, JPG, WebP or GIF'
+const IMG_FORMATS = 'JPG, PNG, WebP or GIF'
+// Most markers the dialog holds, whatever the board's own ceiling is.
+const IMG_POINT_MAX = 8
 const IMG_HEIC = /\.(heic|heif)$/i
 
 // Decode with createImageBitmap, which decodes off the main thread and needs no
@@ -467,6 +472,14 @@ function sampleSourcePixel(canvas, nx, ny) {
   } catch { return null }
 }
 
+// Resolves once the browser has painted twice, so what was just set on screen
+// (a photo, a "Finding colours…" line) is seen before a long job blocks the
+// thread. The timer is for a hidden tab, which never paints.
+const nextPaint = () => new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve))
+  setTimeout(resolve, 250)
+})
+
 // WCAG level for a raw ratio (AAA ≥7, AA ≥4.5, AA18 large-text ≥3, else LOW).
 function wcagLevel(ratio) {
   return ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA18' : 'LOW'
@@ -534,9 +547,6 @@ const IcoCopy = () => (
   <Ico><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></Ico>
 )
 const IcoX = () => <Ico><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Ico>
-const IcoImage = () => (
-  <Ico size={13}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></Ico>
-)
 const IcoShuffle = () => (
   <Ico size={13}><path d="M16 3h5v5" /><path d="M4 20 21 3" /><path d="M21 16v5h-5" /><path d="m15 15 6 6" /><path d="m4 4 5 5" /></Ico>
 )
@@ -951,26 +961,42 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const saveOpenRef = useRef(false)
   const [pendingSave, setPendingSave] = useState(null) // a save waiting for the account to reach ProjectContext (see doSave)
 
-  // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
-  // it stays nested in the menu with draggable picker points sampling its
-  // pixels live, plus a +/− count and a reset/auto re-extract.
+  // From image: a free, no-login dialog (components/palette/FromImageDialog is
+  // its view). The photo, its markers and every action live here because they
+  // read and write the board.
   const [imgOpen, setImgOpen] = useState(false)
   const [imgSrc, setImgSrc] = useState('')      // object URL for the preview
-  const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex }] normalised
+  const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex, from }] normalised; `from` is the ranked candidate it came from, null once moved or tapped in
   const [imgError, setImgError] = useState('')
-  const [imgDragOver, setImgDragOver] = useState(false)
   // The uploaded image's own width/height ratio. The stage is sized to it so a
   // point's normalised (x, y) in the SOURCE lands on the same spot of the
   // DISPLAYED image — see the CSS note on .plb-imgstage.
   const [imgAspect, setImgAspect] = useState(16 / 10)
-  const [imgNote, setImgNote] = useState('')   // a non-error remark, e.g. the image has fewer distinct colours than asked for
+  const [imgMood, setImgMood] = useState('balanced')
+  const [imgClusters, setImgClusters] = useState([]) // the photo's clusters; a mood re-ranks these without clustering again
+  const [imgWant, setImgWant] = useState(5)          // how many colours a fresh pick offers; follows the markers once they are edited
+  const [imgFew, setImgFew] = useState(0)            // when a pick found fewer colours than wanted, how many it found
+  const [imgLoading, setImgLoading] = useState(false)
+  const [imgMax, setImgMax] = useState(false)        // the last tap was refused for the marker cap
+  const [imgSample, setImgSample] = useState(null)   // the sample photo on screen, for its credit line
+  const [imgStatus, setImgStatus] = useState('')     // announced politely by the dialog
+  const [imgEpoch, setImgEpoch] = useState(0)        // bumps on each extraction so the markers mount afresh and play their fade-in
+  const [imgIntro, setImgIntro] = useState(false)    // true for the moment after an extraction
   const imgDataRef = useRef(null)               // small ImageData — extraction and share measure only
   const imgSourceRef = useRef(null)             // full-resolution canvas — every sample and the loupe
-  const imgRankedRef = useRef([])               // ranked candidate colours; "+" and Reset/auto draw from these
+  const imgRankedRef = useRef([])               // ranked candidate colours; "+" and Reset points draw from these
   const loadImageFileRef = useRef(null)         // latest loadImageFile, for the paste and drop listeners
   const imgDragIdx = useRef(null)               // point index being dragged
   const imgStageRef = useRef(null)              // the preview stage element
   const imgLoupeRef = useRef(null)              // the loupe <canvas>
+  const imgLoadSeq = useRef(0)                  // the newest load; an older one that finishes late stands down
+  const imgFocusFirst = useRef(false)           // after an extraction, move focus to marker 1
+  const imgSilentFocus = useRef(false)          // that focus must not arm the loupe or announce
+  const imgMoodRef = useRef('balanced')         // mood and count as the latest render saw them, for a load that outlives its render
+  const imgWantRef = useRef(5)
+  imgMoodRef.current = imgMood
+  imgWantRef.current = imgWant
+  const imgPhone = useMediaQuery('(max-width:599.98px)')
   // Which marker the loupe is following. Set by a drag, a click, a focus or an
   // arrow-key nudge, so the mouse and the keyboard drive one thing rather than
   // two. Null means no marker is being worked on and the loupe stays away.
@@ -1506,8 +1532,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // re-run on every render of a very large component.
   const closePreview = useCallback(() => setPreview(null), [])
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
-  const closeImageDialog = useCallback(() => setImgOpen(false), [])
-  const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen })
+  const closeImageDialog = useCallback(() => { setImgOpen(false); setImgError('') }, [])
+  // A fresh dialog lands on "Choose a photo", or on marker 1 once there is a photo.
+  const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen, initialFocus: '.plb-imgchoose, .plb-imgpoint' })
+  // Full screen on a phone, so the system Back button closes it instead of leaving the page.
+  useBackClosesDialog(imgOpen && imgPhone, closeImageDialog)
   const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
   // Spacebar = randomise only from the idle Palette canvas. Buttons, links and
@@ -1801,50 +1830,90 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const picks = pickPalette(ranked, n)
     return picks.map(c => ({ x: c.x, y: c.y, hex: sampleSourcePixel(src, c.x, c.y) || c.hex, from: c.rank }))
   }
-  const fewerNote = (got, wanted) => (got < wanted ? `This image only has ${got} distinct colours.` : '')
+  const colourWord = (n) => `${n} colour${n === 1 ? '' : 's'}`
 
-  // Load a file into the picker. A file that cannot be used leaves the image
-  // already open exactly as it was and says why; only a usable one replaces it.
-  const loadImageFile = async (file) => {
+  // Show the markers for `ranked` at `want` colours. `fresh` marks a new
+  // extraction: the markers mount afresh and play their fade-in once; a mood or
+  // count change swaps them in place.
+  const placeMarkers = (ranked, want, { fresh = false } = {}) => {
+    const points = markersFromRanked(ranked, want, imgSourceRef.current)
+    setImgPoints(points)
+    setImgActive(null)
+    setImgFew(points.length < want ? points.length : 0)
+    setImgMax(false)
+    setImgIntro(fresh)
+    if (fresh) setImgEpoch(n => n + 1)
+    return points
+  }
+
+  // Load a photo into the dialog. The first photo shows at once and its colours
+  // follow; a second keeps the first on screen until its own colours are ready.
+  // A file that cannot be used leaves what is on screen exactly as it was and
+  // says why. A newer load (or Remove photo) makes an older one stand down.
+  const loadImageFile = async (file, sample = null) => {
     if (!file) return
     setImgError('')
     const heic = IMG_HEIC.test(file.name || '') || /^image\/hei[cf]/i.test(file.type)
-    if (!file.type.startsWith('image/') && !heic) { setImgError(`That file isn’t an image. Use ${IMG_FORMATS}.`); return }
+    if (!file.type.startsWith('image/') && !heic) { setImgError(`That file isn’t an image. Choose a ${IMG_FORMATS}.`); return }
     if (file.size > IMG_MAX_MB * 1024 * 1024) {
-      setImgError(`That image is over ${IMG_MAX_MB} MB. Pick a smaller one.`); return
+      setImgError(`That photo is ${Math.ceil(file.size / 1048576)} MB. Choose one under ${IMG_MAX_MB} MB.`); return
     }
+    const seq = ++imgLoadSeq.current
+    const stale = () => seq !== imgLoadSeq.current
+    setImgLoading(true)
+    setImgStatus('Finding colours…')
     let loaded = null
     try {
       loaded = await loadImageData(file)
     } catch {
-      setImgError(heic
-        ? 'HEIC photos aren’t supported in most browsers. Export it as a JPG or PNG and try again.'
-        : `Couldn’t read that image. Use ${IMG_FORMATS}.`)
+      if (!stale()) {
+        setImgLoading(false); setImgStatus('')
+        setImgError(heic
+          ? 'This browser can’t open HEIC photos. Save it as JPG or PNG and try again.'
+          : 'We couldn’t read that photo. It may be damaged. Try another.')
+      }
       return
     }
     const { data, source, url, aspect } = loaded
+    if (stale()) { URL.revokeObjectURL(url); return }
+    const ratio = Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10
+    const first = !imgSourceRef.current
+    if (first) {
+      // The photo goes up before its colours are worked out.
+      imgDataRef.current = data
+      imgSourceRef.current = source
+      imgRankedRef.current = []
+      setImgClusters([]); setImgPoints([]); setImgActive(null)
+      setImgAspect(ratio)
+      setImgSrc(url)
+    }
+    await nextPaint()
+    if (stale()) { if (!first) URL.revokeObjectURL(url); return }
     const found = clusterImage(data, { count: PRO_MAX })
-    if (found.status === 'transparent' || found.status === 'empty') {
-      URL.revokeObjectURL(url)
-      setImgError('That image is fully transparent, so there are no colours to pull from it.')
+    const refusal = found.status === 'transparent' || found.status === 'empty'
+      ? 'This image has no visible colours. Try another.'
+      : found.status === 'flat' ? 'This photo has only 1 distinct colour. Try another.' : ''
+    if (refusal) {
+      if (first) {
+        imgDataRef.current = null; imgSourceRef.current = null
+        setImgSrc(''); setImgAspect(16 / 10)
+      } else {
+        URL.revokeObjectURL(url)
+      }
+      setImgLoading(false); setImgStatus(''); setImgError(refusal)
       return
     }
-    if (found.status === 'flat') {
-      URL.revokeObjectURL(url)
-      setImgError('That image is a single colour, so there is no palette to pull from it.')
-      return
-    }
-    const ranked = rankClusters(found.clusters, { limit: IMG_CANDIDATES })
-    const want = Math.min(Math.max(colors.length, 2), PRO_MAX)
+    const ranked = rankClusters(found.clusters, { mood: moodArg(imgMoodRef.current), limit: IMG_CANDIDATES })
     imgDataRef.current = data
     imgSourceRef.current = source
     imgRankedRef.current = ranked
-    setImgAspect(Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10)
-    setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return url })
-    setImgActive(null)
-    const points = markersFromRanked(ranked, want, source)
-    setImgPoints(points)
-    setImgNote(fewerNote(points.length, want))
+    setImgClusters(found.clusters)
+    if (!first) { setImgAspect(ratio); setImgSrc(url) }
+    setImgSample(sample)
+    const points = placeMarkers(ranked, imgWantRef.current, { fresh: true })
+    setImgLoading(false)
+    setImgStatus(`${colourWord(points.length)} found`)
+    imgFocusFirst.current = true
   }
   // The window-level paste and drop handlers below outlive a render; they call
   // the latest loader through this.
@@ -1856,54 +1925,93 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     loadImageFile(file)
   }
 
-  const onImageDrop = (e) => {
-    e.preventDefault(); setImgDragOver(false)
-    loadImageFile(e.dataTransfer.files?.[0])
+  // A sample tile: fetched, wrapped as a File and loaded like a chosen photo.
+  const loadSample = async (sample) => {
+    setImgError('')
+    setImgLoading(true)
+    setImgStatus('Finding colours…')
+    try {
+      const res = await fetch(sample.src)
+      const blob = res.ok ? await res.blob() : null
+      if (!blob || !blob.type.startsWith('image/')) throw new Error('sample')
+      await loadImageFile(new File([blob], sample.file, { type: blob.type }), sample)
+    } catch {
+      setImgLoading(false); setImgStatus('')
+      setImgError('Couldn’t load this photo. Try again')
+    }
   }
 
-  // Re-run automatic extraction over the current image (reset / auto).
+  // Back to the photo's own picks for the current mood and count.
   const autoExtractImage = () => {
-    const src = imgSourceRef.current
-    if (!src) return
-    const want = Math.min(Math.max(imgPoints.length || colors.length, 2), PRO_MAX)
-    const points = markersFromRanked(imgRankedRef.current, want, src)
-    setImgActive(null)
-    setImgPoints(points)
-    setImgNote(fewerNote(points.length, want))
+    if (!imgSourceRef.current) return
+    placeMarkers(imgRankedRef.current, imgWant)
+    setImgStatus('Points reset')
   }
 
+  // Remove photo: back to the empty dialog, with focus on the way back in.
   const clearImage = () => {
-    setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return '' })
+    imgLoadSeq.current += 1
     imgDataRef.current = null
     imgSourceRef.current = null
     imgRankedRef.current = []
-    setImgPoints([]); setImgError(''); setImgNote(''); setImgAspect(16 / 10); setImgActive(null)
+    setImgSrc(''); setImgPoints([]); setImgClusters([]); setImgActive(null)
+    setImgError(''); setImgAspect(16 / 10); setImgSample(null)
+    setImgFew(0); setImgMax(false); setImgIntro(false); setImgLoading(false); setImgStatus('Photo removed')
+    requestAnimationFrame(() => imageDialogRef.current?.querySelector('.plb-imgchoose')?.focus())
   }
 
-  // "+" adds the best-ranked colour the markers do not already cover, at that
-  // colour's own place in the picture, so a new marker never lands on top of one.
+  // Take marker `i` off. The count follows what is left, so a later mood change
+  // or Reset points keeps it.
+  const removeImagePoint = (i) => {
+    const left = imgPoints.length - 1
+    setImgPoints(prev => prev.filter((_, k) => k !== i))
+    setImgActive(a => (a == null || a === i ? null : a > i ? a - 1 : a))
+    setImgWant(Math.max(2, left)); setImgFew(0); setImgMax(false); setImgIntro(false)
+    setImgStatus(`Removed colour ${i + 1}. ${colourWord(left)} left`)
+  }
+
+  // The best-ranked colour the markers do not already cover, to be offered by "+".
+  const imgNext = imgSrc && imgPoints.length < IMG_POINT_MAX
+    ? nextCandidate(imgRankedRef.current.filter(c => !imgPoints.some(p => p.from === c.rank)), imgPoints.map(p => p.hex))
+    : null
+
+  // "+" adds that colour at its own place in the picture, so a new marker never
+  // lands on top of one.
   const addImagePoint = () => {
     const src = imgSourceRef.current
-    if (!src || imgPoints.length >= PRO_MAX) return
-    const taken = new Set(imgPoints.map(p => p.from))
-    const open = imgRankedRef.current.filter(c => !taken.has(c.rank))
-    const next = nextCandidate(open, imgPoints.map(p => p.hex))
-    if (!next) { setImgNote('There are no more distinct colours in this image.'); return }
-    setImgNote('')
-    setImgActive(imgPoints.length)
-    setImgPoints(prev => [...prev, { x: next.x, y: next.y, hex: sampleSourcePixel(src, next.x, next.y) || next.hex, from: next.rank }])
+    if (!src || !imgNext) return
+    const at = imgPoints.length
+    setImgPoints(prev => [...prev, { x: imgNext.x, y: imgNext.y, hex: sampleSourcePixel(src, imgNext.x, imgNext.y) || imgNext.hex, from: imgNext.rank }])
+    setImgActive(at)
+    setImgWant(at + 1); setImgFew(0); setImgMax(false); setImgIntro(false)
   }
   // "−" drops the marker whose colour covers the least of the image. The share
   // is measured from where the marker is now, so a marker that has been moved
   // is judged by its new colour, and a tie goes to the later marker.
-  const removeImagePoint = () => {
+  const dropWeakestImagePoint = () => {
     if (imgPoints.length <= 2) return
     const shares = imgDataRef.current ? colourShares(imgDataRef.current, imgPoints.map(p => p.hex)) : []
     let least = imgPoints.length - 1
     shares.forEach((s, i) => { if (s < shares[least]) least = i })
-    setImgPoints(prev => prev.filter((_, i) => i !== least))
-    setImgActive(null)
-    setImgNote('')
+    removeImagePoint(least)
+  }
+
+  // The Colours stepper. With a photo it adds or drops a marker; before one it
+  // sets how many the first extraction finds.
+  const stepImageCount = (d) => {
+    if (!imgSrc) { setImgWant(w => Math.min(IMG_POINT_MAX, Math.max(2, w + d))); return }
+    if (d > 0) addImagePoint()
+    else dropWeakestImagePoint()
+  }
+
+  // A new mood re-ranks the clusters already found; nothing is read again.
+  const changeImageMood = (id) => {
+    setImgMood(id)
+    if (!imgSourceRef.current || !imgClusters.length) return
+    const ranked = rankClusters(imgClusters, { mood: moodArg(id), limit: IMG_CANDIDATES })
+    imgRankedRef.current = ranked
+    const points = placeMarkers(ranked, imgWant)
+    setImgStatus(`${MOOD_OPTIONS.find(m => m.id === id)?.label || id}: ${colourWord(points.length)}`)
   }
 
   // Put marker `idx` at a normalised position and re-sample it at source
@@ -1946,21 +2054,90 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     nudgeImagePoint(i, move[0], move[1])
   }
 
-  // While the dialog is open: Ctrl/Cmd+V with an image on the clipboard loads
-  // it, and a file dropped anywhere is kept out of the browser's own handling
-  // (which would navigate to it and throw the palette away). A drop inside the
-  // dialog but off the drop zone loads the image, as the zone itself would.
+  // A tap on the photo adds a marker there and starts dragging it, so a press
+  // and slide places and then fine-tunes in one gesture. A press on an existing
+  // marker is that marker's own (onImagePointDown).
+  const onImageStageDown = (e) => {
+    if (e.button > 0 || e.target.closest?.('.plb-imgpoint')) return
+    const src = imgSourceRef.current
+    const stage = imgStageRef.current
+    if (!src || !stage || imgLoading) return
+    e.preventDefault()
+    if (imgPoints.length >= IMG_POINT_MAX) { setImgMax(true); return }
+    const r = stage.getBoundingClientRect()
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+    const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))
+    const hex = sampleSourcePixel(src, x, y)
+    if (!hex) { setImgStatus('That spot is transparent. Try another.'); return }
+    const at = imgPoints.length
+    imgDragIdx.current = at
+    setImgPoints(prev => [...prev, { x, y, hex, from: null }])
+    setImgActive(at)
+    setImgWant(at + 1); setImgFew(0); setImgMax(false); setImgIntro(false)
+  }
+
+  const onImagePointDown = (e, i) => {
+    e.preventDefault()
+    imgDragIdx.current = i
+    setImgActive(i)
+  }
+
+  // Focus, not click, arms the loupe for a keyboard user. Not when the focus is
+  // the dialog's own move onto marker 1 after a load.
+  const onImagePointFocus = (i) => { if (!imgSilentFocus.current) setImgActive(i) }
+
+  // After an extraction, focus goes to marker 1 without arming the loupe.
   useEffect(() => {
-    if (!imgOpen) return undefined
+    if (!imgFocusFirst.current || !imgPoints.length) return
+    imgFocusFirst.current = false
+    const first = imgStageRef.current?.querySelector('.plb-imgpoint')
+    if (!first) return
+    imgSilentFocus.current = true
+    first.focus({ preventScroll: true })
+    imgSilentFocus.current = false
+  }, [imgPoints])
+
+  // The fade-in belongs to the extraction only; it is switched off once played
+  // so a marker added later does not replay it.
+  useEffect(() => {
+    if (!imgIntro) return undefined
+    const t = setTimeout(() => setImgIntro(false), 700)
+    return () => clearTimeout(t)
+  }, [imgIntro, imgEpoch])
+
+  // Ctrl/Cmd+V. With the dialog open an image on the clipboard loads and
+  // anything else says so. With it closed, an image pasted outside a field opens
+  // the dialog on that image.
+  useEffect(() => {
     const imageFrom = (list) => Array.from(list || []).find(f => f.type.startsWith('image/'))
     const onPaste = (e) => {
       const data = e.clipboardData
       const file = imageFrom(data?.files)
         || imageFrom(Array.from(data?.items || []).filter(it => it.kind === 'file').map(it => it.getAsFile()).filter(Boolean))
+      if (imgOpen) {
+        e.preventDefault()
+        if (file) loadImageFileRef.current?.(file)
+        else setImgError('Nothing to paste. Copy an image first.')
+        return
+      }
       if (!file) return
+      const t = e.target
+      if (t instanceof Element && t.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return
+      if (document.querySelector('[aria-modal="true"]')) return
       e.preventDefault()
+      closeAllMenus()
+      setImgOpen(true)
       loadImageFileRef.current?.(file)
     }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [imgOpen, closeAllMenus])
+
+  // While the dialog is open a file dropped anywhere is kept out of the
+  // browser's own handling (which would navigate to it and throw the palette
+  // away). A drop inside the dialog loads the image.
+  useEffect(() => {
+    if (!imgOpen) return undefined
     const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files')
     const onDragOver = (e) => { if (hasFiles(e)) e.preventDefault() }
     const onDrop = (e) => {
@@ -1969,11 +2146,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       e.preventDefault()
       if (!handled && imageDialogRef.current?.contains(e.target)) loadImageFileRef.current?.(e.dataTransfer.files?.[0])
     }
-    window.addEventListener('paste', onPaste)
     window.addEventListener('dragover', onDragOver)
     window.addEventListener('drop', onDrop)
     return () => {
-      window.removeEventListener('paste', onPaste)
       window.removeEventListener('dragover', onDragOver)
       window.removeEventListener('drop', onDrop)
     }
@@ -1985,7 +2160,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const onUp = () => { imgDragIdx.current = null }
     window.addEventListener('pointermove', onMove, { passive: false })
     window.addEventListener('pointerup', onUp)
-    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
   }, [imgSrc, moveImagePoint])
 
   // ── The loupe ────────────────────────────────────────────────────────────
@@ -2040,22 +2220,35 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Release the preview object URL when the picker unmounts.
   useEffect(() => () => { if (imgSrc) URL.revokeObjectURL(imgSrc) }, [imgSrc])
 
-  // Apply the picked colours to the board — free, no login (saving is gated
-  // elsewhere). Locked slots survive; the board grows to fit up to PRO_MAX.
-  const applyImagePalette = () => {
-    const picks = imgPoints.map(p => p.hex)
-    if (picks.length < 2) {
-      setImgError('A palette needs at least 2 colours. Add another marker with +.')
-      return
+  // Putting the picks on the board — free, no login (saving is gated
+  // elsewhere). The dialog is told what each button will do before it is
+  // pressed: Replace keeps locked colours in their slots and trims the picks to
+  // what the ceiling leaves; Add appends as many as there is room for.
+  const imgPicks = imgPoints.map(p => p.hex)
+  const imgCeiling = isPro ? HARD_MAX : PRO_MAX
+  const imgPlan = placePicks(colors, [...locked], imgPicks, imgCeiling)
+  const imgAddRoom = Math.max(0, imgCeiling - colors.length)
+
+  const applyImagePalette = (mode) => {
+    if (imgPicks.length < 2) return
+    let done = false
+    if (mode === 'add') {
+      const add = appendPicks(colors, imgPicks, imgCeiling)
+      if (!add.used) return
+      done = applyPalette(
+        add.colours,
+        `Added ${colourWord(add.used)} from your photo · Undo is available`,
+        { replace: true, locks: locked, append: true },
+      )
+    } else {
+      done = applyPalette(
+        imgPlan.colours,
+        `Palette replaced with ${colourWord(imgPlan.used)} from your photo · Undo is available`,
+        { replace: true, locks: imgPlan.locked },
+      )
     }
-    const hadLocks = locked.size > 0
-    const done = applyPalette(
-      picks,
-      `Palette pulled from the image${hadLocks ? ' · locks cleared' : ''} · Undo is available`,
-      { replace: true },
-    )
     if (!done) {
-      setImgError('Those colours could not be applied. Move a marker onto a colour and try again.')
+      setImgError('Couldn’t apply these colours. Move a point onto a colour and try again.')
       return
     }
     setImgError('')
@@ -2071,9 +2264,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the Suggest panel the applied card's tick already shows it, and on a phone
   // the toast would sit over the sheet's cards.
   // `replace` makes the board exactly `hexes`, in order: no old colours kept
-  // past the end, locks cleared (they pointed at slots of the old board). The
+  // past the end, locks cleared unless `locks` says which slots stay locked. The
   // board it replaces goes into the history first, so one Undo brings it back.
-  const applyPalette = (hexes, msg, { quiet = false, replace = false } = {}) => {
+  // `locks` (replace only) is the set of locked slots the new board starts with,
+  // in place of none. `append` marks a replace that only adds columns to the
+  // end of the board, so the adjust lens and the seed are left alone.
+  const applyPalette = (hexes, msg, { quiet = false, replace = false, locks = null, append = false } = {}) => {
     setColPanel(null)
     const next = hexes.map(c => normaliseHex(c)).filter(Boolean).slice(0, HARD_MAX)
     if (next.length < 2) return false
@@ -2086,15 +2282,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         return next2
       })
       setColors(next)
-      setLocked(new Set())
+      setLocked(locks || new Set())
     } else {
       setColors(prev => {
         const out = next.length >= prev.length ? next : [...next, ...prev.slice(next.length)]
         return out.map((c, i) => (locked.has(i) && prev[i] ? prev[i] : c))
       })
     }
-    setAdjust(ZERO_ADJUST)
-    if (replace || !locked.has(0)) { setSeed(next[0]); setSeedInput(next[0]) }
+    if (!append) {
+      setAdjust(ZERO_ADJUST)
+      if (replace || !locked.has(0)) { setSeed(next[0]); setSeedInput(next[0]) }
+    }
     if (msg) { setLiveMsg(msg); if (!quiet) toast?.(msg) }
     return true
   }
@@ -3632,125 +3830,55 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         />
       )}
 
-      {/* ── Image picker modal ──
-          Was an anchored 300px toolbar dropdown. Two things were wrong with it,
-          and the founder only saw the second: the stage was too small to place a
-          picker point deliberately, and — the real fault — it was a FIXED 16/10
-          box showing the image `object-fit: cover`, while every picker point is
-          stored as a normalised coordinate in the SOURCE. Any image that was not
-          16/10 was cropped, so the markers sat over pixels they had not sampled
-          and dragging one read the colour under a different pixel than the one
-          under the cursor. Centred, enlarged, and the stage now takes the
-          image's own ratio so the two coordinate spaces are the same space. */}
+      {/* ── From image ──
+          The view is components/palette/FromImageDialog; the photo, markers and
+          every action stay here because they read and write the board. Every
+          marker is a normalised coordinate in the SOURCE and the stage takes the
+          photo's own ratio, so the two coordinate spaces are the same space. */}
       {imgOpen && (
-        <div
-          className="plb-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Pull colours from an image"
-          tabIndex={-1}
-          ref={imageDialogRef}
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setImgOpen(false) }}
-        >
-          <div className="plb-modal-card plb-imgcard">
-            <div className="plb-modal-head">
-              <span className="plb-pop-title">From image</span>
-              <button type="button" className="plb-pop-x" onClick={() => setImgOpen(false)} aria-label="Close">
-                <IcoX />
-              </button>
-            </div>
-            {/* The refusal sits above both states: replacing an open image with
-                a bad file keeps the old one, and the reason has to show then too. */}
-            {imgError && <div className="plb-imgerr" role="alert">{imgError}</div>}
-            {/* Announces the colour count when + / − / Reset change it. */}
-            <p className="sr-only" aria-live="polite">
-              {imgSrc ? `${imgPoints.length} colours${imgNote ? `. ${imgNote}` : ''}` : ''}
-            </p>
-            {!imgSrc ? (
-              <>
-                <div
-                  className={imgDragOver ? 'plb-imgdrop plb-imgdrop--over' : 'plb-imgdrop'}
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setImgDragOver(true) }}
-                  onDragLeave={() => setImgDragOver(false)}
-                  onDrop={onImageDrop}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click() } }}
-                >
-                  <IcoImage />
-                  <div className="plb-imgdrop-t">Drag an image here</div>
-                  <div className="plb-imgdrop-s">or click to browse, or paste one · {IMG_FORMATS}, up to {IMG_MAX_MB} MB. HEIC isn’t supported in most browsers.</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="plb-imgstage" ref={imgStageRef} style={{ '--plb-img-ar': imgAspect }} data-img-aspect={imgAspect}>
-                  <img src={imgSrc} alt="Uploaded reference" className="plb-imgstage-img" draggable={false} />
-                  {imgPoints.map((p, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={imgActive === i ? 'plb-imgpoint plb-imgpoint--on' : 'plb-imgpoint'}
-                      style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
-                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i; setImgActive(i) }}
-                      // Focus, not click, arms the loupe for a keyboard user:
-                      // arriving on the marker is the moment they need to see
-                      // where it is, and it is the only cue they get that the
-                      // arrow keys now do something.
-                      onFocus={() => setImgActive(i)}
-                      onKeyDown={(e) => onImagePointKey(e, i)}
-                      aria-label={`Picker point ${i + 1}: ${p.hex}. Use the arrow keys to move it, or hold Shift for bigger steps.`}
-                      title={p.hex}
-                      data-hex={p.hex}
-                    />
-                  ))}
-                  {/* Parked in a corner rather than under the pointer (Alan),
-                      and on the side AWAY from the marker, so the magnifier
-                      never covers the region it is magnifying. */}
-                  {imgActive != null && imgPoints[imgActive] && (
-                    <div
-                      className="plb-loupe"
-                      data-side={imgPoints[imgActive].x > 0.5 ? 'left' : 'right'}
-                      aria-hidden="true"
-                    >
-                      <canvas ref={imgLoupeRef} className="plb-loupe-cv" width={208} height={208} />
-                      <span className="plb-loupe-hex">{imgPoints[imgActive].hex}</span>
-                    </div>
-                  )}
-                </div>
-                {/* One live region for both input methods — a keyboard nudge is
-                    silent otherwise, and the loupe it arms is aria-hidden
-                    because a canvas of pixels is not something to read out. */}
-                <p className="sr-only" aria-live="polite">
-                  {imgActive != null && imgPoints[imgActive]
-                    ? `Point ${imgActive + 1} is on ${imgPoints[imgActive].hex}`
-                    : ''}
-                </p>
-                <p className="plb-imghint">Drag a marker, or focus one and use the arrow keys, to sample a different spot.{imgNote ? ` ${imgNote}` : ''}</p>
-                <div className="plb-imgstrip">
-                  {imgPoints.map((p, i) => (
-                    <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />
-                  ))}
-                </div>
-                <div className="plb-imgcount">
-                  <span className="plb-imgcount-l">Colours</span>
-                  <div className="plb-imgcount-ctl">
-                    <button type="button" className="plb-imgcount-btn" onClick={removeImagePoint} disabled={imgPoints.length <= 2} aria-label="Fewer colours">−</button>
-                    <span className="plb-imgcount-n">{imgPoints.length}</span>
-                    <button type="button" className="plb-imgcount-btn" onClick={addImagePoint} disabled={imgPoints.length >= PRO_MAX} aria-label="More colours">+</button>
-                  </div>
-                </div>
-                <div className="plb-imgactions">
-                  <button type="button" className="btn btn-s btn-ghost" onClick={autoExtractImage}>Reset / auto</button>
-                  <button type="button" className="btn btn-s btn-ghost" onClick={() => fileRef.current?.click()}>Replace</button>
-                  <button type="button" className="btn btn-s" onClick={applyImagePalette}>Apply</button>
-                </div>
-                <button type="button" className="plb-imgclear" onClick={clearImage}>Remove image</button>
-              </>
-            )}
-          </div>
-        </div>
+        <FromImageDialog
+          dialogRef={imageDialogRef}
+          onClose={closeImageDialog}
+          phone={imgPhone}
+          error={imgError}
+          loading={imgLoading}
+          status={imgMax ? `${IMG_POINT_MAX} is the most. Remove one to add another.` : imgStatus}
+          src={imgSrc}
+          aspect={imgAspect}
+          sample={imgSample}
+          points={imgPoints}
+          active={imgActive}
+          epoch={imgEpoch}
+          intro={imgIntro}
+          stageRef={imgStageRef}
+          loupeRef={imgLoupeRef}
+          onStagePointerDown={onImageStageDown}
+          onPointPointerDown={onImagePointDown}
+          onPointFocus={onImagePointFocus}
+          onPointKeyDown={onImagePointKey}
+          onSelect={setImgActive}
+          onRemovePoint={removeImagePoint}
+          mood={imgMood}
+          onMood={changeImageMood}
+          clusters={imgClusters}
+          count={imgPoints.length || imgWant}
+          onStep={stepImageCount}
+          canDec={imgSrc ? !imgLoading && imgPoints.length > 2 : imgWant > 2}
+          canInc={imgSrc ? !imgLoading && Boolean(imgNext) : imgWant < IMG_POINT_MAX}
+          maxPoints={IMG_POINT_MAX}
+          fewColours={imgFew}
+          lockedCount={imgPlan.locked.size}
+          usedCount={imgPlan.used}
+          trimmed={imgPlan.trimmed}
+          ceiling={imgCeiling}
+          addRoom={imgAddRoom}
+          onChoose={() => fileRef.current?.click()}
+          onSample={loadSample}
+          onReset={autoExtractImage}
+          onRemovePhoto={clearImage}
+          onAdd={() => applyImagePalette('add')}
+          onReplace={() => applyImagePalette('replace')}
+        />
       )}
 
       {/* ── Preview dialog ── */}
