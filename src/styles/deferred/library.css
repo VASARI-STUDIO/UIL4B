@@ -1521,10 +1521,10 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
   height:clamp(200px,34vw,260px);border:0;border-radius:0;
   filter:blur(16px) saturate(1.1);transform:scale(1.15);
 }
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:#B7C4E6}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:#E6C7B7}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:#BFE0CF}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:#D9A8D5}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 30%,var(--card))}
 [data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
