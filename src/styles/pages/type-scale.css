@@ -64,6 +64,9 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
    44px row under the switch on a phone. */
 .tsc-page .tsc-view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .tsc-page .tsc-view-bar .tsc-width-select { flex: 0 1 220px; width: auto; min-width: 176px; }
+@media (pointer: coarse) {
+  .tsc-page .tsc-view-bar .tsc-width-select { min-height: 44px; }
+}
 @media (max-width: 767px) {
   .tsc-page .tsc-view-bar { flex-direction: column; align-items: stretch; gap: 8px; }
   .tsc-page .tsc-view-bar .tsc-width-select { flex: 0 0 auto; width: 100%; min-height: 44px; }

@@ -317,7 +317,7 @@ for (const w of WIDTHS) {
     await expect(footer.getByRole('navigation', { name: 'Legal' })).toHaveCount(w.inColumn ? 0 : 1)
     const groups = await footer.locator('.sp-footer-col').evaluateAll((cols) => cols.filter((c) => c.getClientRects().length > 0).length)
     expect(groups, `${w.width}px should draw ${w.groups} link groups`).toBe(w.groups)
-    if (w.inColumn) await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('LEGAL')
+    if (w.inColumn) await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('Legal')
     await ctx.close()
   })
 }
