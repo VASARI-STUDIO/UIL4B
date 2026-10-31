@@ -270,14 +270,14 @@ test.describe('the masthead count — signed in, Pro', () => {
   })
 })
 
-test.describe('the same gate in the Palette Builder brands panel', () => {
+test.describe('the same gate in the Palette Builder Explore Brands tab', () => {
   // The second surface. Its rows paint their swatches through a ref rather than
   // an inline style attribute, so a leak here would be invisible to a markup
   // check and has to be caught in the computed paint.
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Suggest variations and brands', 'Suggest')
+    await clickPaletteAction(page, 'Explore palettes and brands')
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
     await expect(page.locator('.plb-galpopup-body .plb-sg-card--brand').first()).toBeVisible()
   })

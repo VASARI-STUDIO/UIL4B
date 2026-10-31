@@ -34,7 +34,7 @@ test.describe('palette toolbar pills and anchored gallery', () => {
     })
   }
 
-  for (const [name, dialog] of [['Explore palettes', 'Explore palettes'], ['Suggest variations and brands', 'Suggest']]) {
+  for (const [name, dialog] of [['Explore palettes and brands', 'Explore palettes and brands'], ['Suggest variations', 'Suggest']]) {
     test(`1440px: ${name} opens its dialog under its button, right edges aligned`, async ({ page }) => {
       watch(page, 'someone opening the palette gallery')
       await page.setViewportSize({ width: 1440, height: 900 })
@@ -66,7 +66,7 @@ test.describe('palette toolbar pills and anchored gallery', () => {
     watch(page, 'someone exploring palettes on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, ROUTE)
-    const suggest = page.getByRole('button', { name: 'Suggest variations and brands' })
+    const suggest = page.getByRole('button', { name: 'Suggest variations' })
     if (await suggest.isVisible()) await suggest.click()
     else {
       await page.getByRole('button', { name: /^Extra tools/ }).click()

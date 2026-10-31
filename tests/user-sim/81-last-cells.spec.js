@@ -28,7 +28,7 @@
 //                    64-computed-style-snapshot.spec.js passing on
 //                    /create/palette against a baseline that was not
 //                    regenerated for the move. What is here is the assertion
-//                    that the page still paints all eight scenes THROUGH the
+//                    that the page still paints all six scenes THROUGH the
 //                    module it now imports them from.
 //
 //   /login           dimensions 3 and 4, 7 → 8. Two non-copy causes, both
@@ -327,10 +327,10 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // src/data/palettePreviewScenes.js. This goes red on the count of options.
   // Deleting the import of the preview component instead takes the whole route
   // down, which this also catches, on the dialog never opening.
-  test('all eight scenes render, each with the full --pv-* role set', async ({ page }) => {
+  test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     await expect(page.locator('.pvs')).toHaveCount(1)
 
     const VARS = ['--pv-canvas', '--pv-surface', '--pv-raised', '--pv-border', '--pv-border-strong',
@@ -338,10 +338,10 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
       '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
       '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
-    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
     const rail = page.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option')).toHaveCount(8)
+    await expect(rail.getByRole('option')).toHaveCount(NAMES.length)
 
     const seen = new Set()
     for (const name of NAMES) {
@@ -370,7 +370,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
       seen.add(s.name)
     }
-    expect(seen.size, 'eight distinct scenes did not render').toBe(8)
+    expect(seen.size, 'six distinct scenes did not render').toBe(NAMES.length)
   })
 })
 

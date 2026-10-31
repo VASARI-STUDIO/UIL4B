@@ -1,51 +1,64 @@
 // PALETTE BUILDER: SUGGEST AND EXPLORE ARE TWO DIALOGS, AND THE COLOUR SYSTEM
 // OPTIONS EXPLAIN THEMSELVES.
 //
-// The old "Colour gallery" popup is split in two:
-//   · Suggest (button "Suggest variations and brands"): a dialog named "Suggest"
-//     with a Variations tab and a Brands tab.
-//   · Explore (button "Explore palettes"): a dialog named "Explore palettes" with
-//     community palettes only, and no tabs.
+// Suggest and Explore are two dialogs:
+//   · Suggest (button "Suggest variations"): a dialog named "Suggest" that holds
+//     variations only. It has no tabs and no brand cards.
+//   · Explore (button "Explore palettes and brands"): a dialog of that name with a
+//     "Palettes | Brands" tablist (ids plb-ex-tab-*, panels plb-ex-panel-*).
+//     Brands apply through Explore with a `brand:` tick id.
 //
 // What this pins:
-//   1. Suggest opens on Variations; the arrow keys move to Brands and back.
+//   1. Suggest has no tablist and no brand cards; its first card is not pressed.
 //   2. Applying a variation keeps the panel open and marks the card pressed;
 //      "Back to my palette" puts the original hexes back.
-//   3. Explore has no tabs.
+//   3. Explore has a Palettes tab and a Brands tab, one tabpanel, and no Suggest cards.
 //   4. Every colour system option carries a description, linked by
 //      aria-describedby to text that is not empty.
-//   5. At 390 on a touch screen the Suggest sheet's head is one row: the close
-//      button sits on the same row as the tabs.
+//   5. At 390 on a touch screen both sheet heads are one row: Explore's tabs and
+//      Close are level, and so are Suggest's title and Close.
 //   6. An Explore import after an apply ends the Suggest session: Back is off,
 //      nothing is ticked, and unticking the Explore card returns to the user's
-//      own palette (and own colour system), not to the variation or brand.
-//   7. A real colour edit after an apply turns Back off and rebuilds the
+//      own palette (and own colour system), not to the variation.
+//   7. A brand from Explore's Brands tab ticks, and pressing it again restores the
+//      user's hexes and colour system. A brand, then a community palette, then
+//      unticking that one still lands on the user's board. A brand after a
+//      variation ends the Suggest session too.
+//   8. A real colour edit after an apply turns Back off and rebuilds the
 //      variations from the edited board; Undo does the same and restores the
 //      pre-apply hexes.
-//   8. Focus goes to the selected tab after Back; the "?" is a toggle with a
-//      visible explanation; Tab order is tabs, Back, Close; aria-controls is on
-//      the selected tab only.
-//   9. Toolbar: Undo and Redo share the row at 768 with no keycap; the divider is
-//      on the row at 1440.
-//  10. At 390 on touch the first card sits 16px in and the next one peeks. At 1440
-//      the body carries data-more until it is scrolled to the end.
+//   9. Pressing the applied variation card again restores the palette from before,
+//      announces "Back to your palette" and keeps focus on the card. "Back to my
+//      palette" moves focus to the card too; the "?" is a toggle with a visible
+//      explanation; Tab goes Back, then Close.
+//  10. Explore's tabs: Palettes is selected and focused on open, aria-controls is
+//      on the selected tab only, and the arrow keys, Home and End move between them.
+//  11. Toolbar: Undo and Redo share the row at 768 with no keycap; the divider and
+//      the keycap are on the row at 1440.
+//  12. At 390 on touch the first Suggest card sits 16px in and the next one peeks.
+//      At 1440 the Suggest body carries data-more until it is scrolled to the end.
 //
 // MUTATIONS (what to break to see each go red):
-//   1. In PaletteBuilder.jsx openGallery('variations'), open on 'brands'; or drop onSuggestTabKey.
+//   1. Render a tablist in the Suggest dialog; or let brand cards into the Suggest list.
 //   2. Close the panel in pickVariation; or drop aria-pressed from the .plb-sg-main button;
 //      or make backToMine skip setColors.
-//   3. Render the tablist for the exploring panel too.
+//   3. Drop the tablist from the Explore dialog; or render the Suggest cards in it.
 //   4. Drop aria-describedby from the option row in MenuSelect.jsx, or render the desc empty.
 //   5. Let the head wrap (flex-wrap: wrap on .plb-galpopup--suggest .plb-galpopup-head).
 //   6. In importGalleryPalette take `original` from the live board instead of the
-//      Suggest snapshot; or drop `harmony: mine.harmony` from it (brand case).
-//   7. Remove setPanelApplied(null) from the [colors, adjust] invalidation effect
+//      Suggest snapshot; or drop `suggestSnapRef.current = null` from it.
+//   7. In importGalleryPalette drop `harmony` from the `original` snapshot or the
+//      `if (snap.harmony) setHarmony(...)` line (the brand case).
+//   8. Remove setPanelApplied(null) from the [colors, adjust] invalidation effect
 //      (Back stays on, Undo test too); or remove setVarBase(null) (stale list).
-//   8. Remove the focus() call at the end of backToMine; hidden={!open} to
-//      hidden={false} on #plb-sg-score-help; aria-controls on every tab.
-//   9. Delete the `.tl-kbd { display: none }` rule below 1024; give the divider
+//   9. Delete the `backToMine(); return` line in pickVariation (the applied card no
+//      longer toggles); remove setLiveMsg('Back to your palette'); remove the
+//      focus() call at the end of backToMine; hidden={!open} to hidden={false} on
+//      #plb-sg-score-help.
+//  10. Drop onExploreTabKey; put aria-controls on every tab; change either tabpanel id.
+//  11. Delete the `.tl-kbd { display: none }` rule below 1024; give the divider
 //      priority 0.
-//  10. Set the phone card width to 100%; drop ref={scrollCue} from a body.
+//  12. Set the phone card width to 100%; drop ref={scrollCue} from a body.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
 
@@ -66,8 +79,8 @@ async function cardList(dialog) {
 
 const suggestDialog = (page) => page.getByRole('dialog', { name: 'Suggest', exact: true })
 
-const suggestButton = (page) => page.getByRole('button', { name: 'Suggest variations and brands', exact: true })
-const exploreDialog = (page) => page.getByRole('dialog', { name: 'Explore palettes', exact: true })
+const suggestButton = (page) => page.getByRole('button', { name: 'Suggest variations', exact: true })
+const exploreDialog = (page) => page.getByRole('dialog', { name: 'Explore palettes and brands', exact: true })
 const systemSelect = (page) => page.getByRole('button', { name: /^Colour system/ })
 
 async function openSuggest(page, url = BOARD) {
@@ -96,7 +109,7 @@ const freeVariation = (dialog) => dialog.locator('.plb-sg-card:not(.plb-sg-card-
 // Open Explore and press the first stripe of the first card (or of the ticked
 // one), which imports it or, when ticked, puts the board back.
 async function pressExploreCard(page, { ticked = false } = {}) {
-  await page.getByRole('button', { name: 'Explore palettes', exact: true }).click()
+  await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
   const dialog = exploreDialog(page)
   await expect(dialog).toBeVisible()
   const card = ticked ? dialog.locator('.pgal-card:has(.pgal-tick)') : dialog.locator('.pgal-card').first()
@@ -120,35 +133,14 @@ async function swapSecondAndThird(page) {
 test.describe('Suggest and Explore, on a laptop', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('Suggest opens on Variations, and the arrow keys move to Brands and back', async ({ page }) => {
+  test('Suggest holds variations only: no tabs, no brand cards', async ({ page }) => {
     watch(page, 'a designer opening Suggest')
     const dialog = await openSuggest(page)
-    const tabs = dialog.getByRole('tablist', { name: 'Suggest sections' })
-    const variations = tabs.getByRole('tab', { name: 'Variations' })
-    const brands = tabs.getByRole('tab', { name: 'Brands' })
-
-    await expect(tabs.getByRole('tab')).toHaveCount(2)
-    await expect(variations).toHaveAttribute('aria-selected', 'true')
-    await expect(brands).toHaveAttribute('aria-selected', 'false')
-    // The open tab's panel is the variations; the brand cards are not on the page.
-    await expect(dialog.getByRole('tabpanel')).toHaveCount(1)
-    await expect(dialog.getByRole('tabpanel')).toHaveAttribute('id', 'plb-sg-panel-variations')
-    await expect(dialog.locator('.plb-sg-card--brand')).toHaveCount(0)
     await expect(dialog.locator('.plb-sg-card').first()).toBeVisible()
-
-    // Focus is on the selected tab on open; ArrowRight moves selection and focus.
-    await expect(variations).toBeFocused()
-    await page.keyboard.press('ArrowRight')
-    await expect(brands).toHaveAttribute('aria-selected', 'true')
-    await expect(brands).toBeFocused()
-    await expect(variations).toHaveAttribute('aria-selected', 'false')
-    await expect(dialog.getByRole('tabpanel')).toHaveAttribute('id', 'plb-sg-panel-brands')
-    await expect(dialog.locator('.plb-sg-card--brand').first()).toBeVisible()
-
-    await page.keyboard.press('ArrowLeft')
-    await expect(variations).toHaveAttribute('aria-selected', 'true')
-    await expect(variations).toBeFocused()
+    await expect(dialog.getByRole('tablist')).toHaveCount(0)
+    await expect(dialog.getByRole('tab')).toHaveCount(0)
     await expect(dialog.locator('.plb-sg-card--brand')).toHaveCount(0)
+    await expect(dialog.locator('.plb-sg-main[aria-pressed]').first()).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('applying a variation keeps the panel open, marks the card pressed, and Back to my palette restores the hexes', async ({ page }) => {
@@ -167,7 +159,6 @@ test.describe('Suggest and Explore, on a laptop', () => {
 
     await expect(card, 'the card is marked as applied').toHaveAttribute('aria-pressed', 'true')
     await expect(dialog, 'the panel stays open after applying').toBeVisible()
-    await expect(dialog.getByRole('tab', { name: 'Variations' })).toHaveAttribute('aria-selected', 'true')
     await expect.poll(async () => (await hexes(page)).join(), { message: 'the board took the variation' }).not.toBe(original.join())
     await expect(back).toBeEnabled()
     // Exactly one card is pressed.
@@ -180,17 +171,16 @@ test.describe('Suggest and Explore, on a laptop', () => {
     await expect(back).toBeDisabled()
   })
 
-  test('Explore has community palettes and no tabs', async ({ page }) => {
+  test('Explore has community palettes on a Palettes tab, and a Brands tab', async ({ page }) => {
     watch(page, 'a designer opening Explore')
     await go(page, BOARD)
-    await page.getByRole('button', { name: 'Explore palettes', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: 'Explore palettes', exact: true })
+    await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Explore palettes and brands', exact: true })
     await expect(dialog).toBeVisible()
     // Positive control: the palettes are there, so "no tabs" is about a real panel.
     await expect(dialog.locator('.pgal-card').first()).toBeVisible()
-    await expect(dialog.getByRole('tablist')).toHaveCount(0)
-    await expect(dialog.getByRole('tab')).toHaveCount(0)
-    await expect(dialog.getByRole('tabpanel')).toHaveCount(0)
+    await expect(dialog.getByRole('tab')).toHaveText(['Palettes', 'Brands'])
+    await expect(dialog.getByRole('tabpanel')).toHaveCount(1)
     await expect(dialog.locator('.plb-sg-card')).toHaveCount(0)
     // The two are separate dialogs: Suggest is not open behind it.
     await expect(suggestDialog(page)).toHaveCount(0)
@@ -258,6 +248,9 @@ test.describe('The Suggest session, on a laptop', () => {
 
   test('an Explore import after a brand: unticking returns to the user\'s own hexes and colour system', async ({ page }) => {
     watch(page, 'a designer on a free system trying a brand, then a community palette, then backing out of it')
+    // Monochromatic makes the Colour system select 219px wide, which fills the row at
+    // 1440: opening Explore then moves the select into Extra tools. 1680 leaves room.
+    await page.setViewportSize({ width: 1680, height: 900 })
     await go(page, BOARD)
     await expect(page.locator('.plb-col')).toHaveCount(5)
     // Start on a free system that is not the one a brand collapses to for a free
@@ -266,10 +259,10 @@ test.describe('The Suggest session, on a laptop', () => {
     await expect(systemSelect(page)).toContainText(/Monochromatic/i)
     await expect(page.locator('.plb-col')).toHaveCount(5)
     const original = await hexes(page)
-    await suggestButton(page).click()
-    const dialog = suggestDialog(page)
+    // The brand is applied from Explore's Brands tab.
+    await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+    const dialog = exploreDialog(page)
     await expect(dialog).toBeVisible()
-
     await dialog.getByRole('tab', { name: 'Brands' }).click()
     const brand = dialog.locator('.plb-sg-card--brand:not(.plb-sg-card--locked) .plb-sg-main[aria-pressed]').first()
     await brand.click()
@@ -278,16 +271,41 @@ test.describe('The Suggest session, on a laptop', () => {
     const withBrand = await hexes(page)
     expect(withBrand.join()).not.toBe(original.join())
 
-    await pressExploreCard(page)
-    await expect.poll(async () => (await hexes(page)).join()).not.toBe(withBrand.join())
-    const again = await reopenSuggest(page, 'Brands')
-    await expect(again.getByRole('button', { name: 'Back to my palette' }), 'the import ended the Suggest session').toBeDisabled()
-    await expect(again.locator('.plb-sg-main[aria-pressed="true"]'), 'no brand is ticked').toHaveCount(0)
+    // Pressing the ticked brand again is Explore's own undo: the user's hexes and system are back.
+    await brand.click()
+    await expect(brand).toHaveAttribute('aria-pressed', 'false')
+    await expect.poll(async () => (await hexes(page)).join(), { message: 'untick restored the user\'s hexes' }).toBe(original.join())
+    await expect(systemSelect(page), 'and the user\'s colour system').toContainText(/Monochromatic/i)
 
-    await page.keyboard.press('Escape')
-    await pressExploreCard(page, { ticked: true })
+    // A brand, then a community palette, then unticking that one: still the user's own board.
+    await brand.click()
+    await expect(brand).toHaveAttribute('aria-pressed', 'true')
+    await dialog.getByRole('tab', { name: 'Palettes' }).click()
+    await dialog.locator('.pgal-card').first().locator('.pgal-stripe').first().click()
+    await expect.poll(async () => (await hexes(page)).join()).not.toBe(withBrand.join())
+    await dialog.locator('.pgal-card:has(.pgal-tick)').locator('.pgal-stripe').first().click()
     await expect.poll(async () => (await hexes(page)).join(), { message: 'unticking restored the user\'s hexes' }).toBe(original.join())
     await expect(systemSelect(page), 'and the user\'s colour system').toContainText(/Monochromatic/i)
+    await dialog.getByRole('tab', { name: 'Brands' }).click()
+    await expect(dialog.locator('.plb-sg-main[aria-pressed="true"]'), 'no brand is ticked').toHaveCount(0)
+  })
+
+  test('a brand from Explore after a variation ends the Suggest session', async ({ page }) => {
+    watch(page, 'a designer trying a variation, then a brand')
+    const dialog = await openSuggest(page)
+    await freeVariation(dialog).click()
+    await expect(dialog.getByRole('button', { name: 'Back to my palette' })).toBeEnabled()
+    await page.keyboard.press('Escape')
+    await expect(suggestDialog(page)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+    const explore = exploreDialog(page)
+    await explore.getByRole('tab', { name: 'Brands' }).click()
+    await explore.locator('.plb-sg-card--brand:not(.plb-sg-card--locked) .plb-sg-main[aria-pressed]').first().click()
+
+    const again = await reopenSuggest(page)
+    await expect(again.getByRole('button', { name: 'Back to my palette' }), 'the brand ended the Suggest session').toBeDisabled()
+    await expect(again.locator('.plb-sg-main[aria-pressed="true"]'), 'no variation is ticked').toHaveCount(0)
   })
 
   test('a real colour edit after an apply turns Back off', async ({ page }) => {
@@ -353,23 +371,44 @@ test.describe('The Suggest session, on a laptop', () => {
     await expect(again.locator('.plb-sg-main[aria-pressed="true"]')).toHaveCount(0)
   })
 
-  test('focus is on the selected tab after Back to my palette, on each tab', async ({ page }) => {
+  test('focus is on the card that was applied after Back to my palette', async ({ page }) => {
     watch(page, 'a keyboard user pressing Back to my palette')
     const dialog = await openSuggest(page)
     const back = dialog.getByRole('button', { name: 'Back to my palette' })
 
-    await freeVariation(dialog).click()
+    const card = freeVariation(dialog)
+    await card.click()
     await back.focus()
     await page.keyboard.press('Enter')
     await expect(back).toBeDisabled()
-    await expect(dialog.getByRole('tab', { name: 'Variations' }), 'focus did not fall to the page when Back turned itself off').toBeFocused()
+    await expect(card, 'focus did not fall to the page when Back turned itself off').toBeFocused()
+  })
 
-    await dialog.getByRole('tab', { name: 'Brands' }).click()
-    await dialog.locator('.plb-sg-card--brand:not(.plb-sg-card--locked) .plb-sg-main[aria-pressed]').first().click()
-    await expect(back).toBeEnabled()
-    await back.click()
-    await expect(back).toBeDisabled()
-    await expect(dialog.getByRole('tab', { name: 'Brands' })).toBeFocused()
+  test('pressing the applied card again puts the palette back, keeps focus on it and says so', async ({ page }) => {
+    watch(page, 'a designer toggling a variation off again')
+    const dialog = await openSuggest(page)
+    const original = await hexes(page)
+    const card = freeVariation(dialog)
+    await card.click()
+    await expect(card).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(async () => (await hexes(page)).join(), { message: 'the variation is on the board' }).not.toBe(original.join())
+
+    await card.click()
+    await expect.poll(async () => (await hexes(page)).join(), { message: 'the original hexes are back' }).toBe(original.join())
+    await expect(card).toHaveAttribute('aria-pressed', 'false')
+    await expect(card, 'focus stays on the card').toBeFocused()
+    await expect(dialog.getByRole('button', { name: 'Back to my palette' })).toBeDisabled()
+    await expect(page.locator('p.sr-only[aria-live="polite"]')).toHaveText('Back to your palette')
+    await expect(dialog, 'the panel stays open').toBeVisible()
+
+    // Another card after that still applies, and Back lands on the original, not on the first card.
+    await card.click()
+    const second = dialog.locator('.plb-sg-card:not(.plb-sg-card--locked) .plb-sg-main[aria-pressed]').nth(1)
+    await second.click()
+    await expect(second).toHaveAttribute('aria-pressed', 'true')
+    await expect(card).toHaveAttribute('aria-pressed', 'false')
+    await second.click()
+    await expect.poll(async () => (await hexes(page)).join(), { message: 'toggling the second card off returns to the original, not the first card' }).toBe(original.join())
   })
 
   test('the "?" toggles a visible explanation of the balance score', async ({ page }) => {
@@ -391,30 +430,59 @@ test.describe('The Suggest session, on a laptop', () => {
     await expect(help).toBeHidden()
   })
 
-  test('Tab goes tabs, then Back, then Close; aria-controls is on the selected tab only', async ({ page }) => {
+  test('Suggest has no tabs; Tab goes Back, then Close', async ({ page }) => {
     watch(page, 'a keyboard user moving through the Suggest head')
     const dialog = await openSuggest(page)
+    await expect(dialog.getByRole('tablist')).toHaveCount(0)
     // Back has to be enabled to be a tab stop at all.
     await freeVariation(dialog).click()
     const back = dialog.getByRole('button', { name: 'Back to my palette' })
     await expect(back).toBeEnabled()
 
-    const variations = dialog.getByRole('tab', { name: 'Variations' })
-    const brands = dialog.getByRole('tab', { name: 'Brands' })
-    await expect(variations).toHaveAttribute('aria-controls', 'plb-sg-panel-variations')
+    await back.focus()
+    await page.keyboard.press('Tab')
+    await expect(dialog.getByRole('button', { name: 'Close', exact: true }), 'Tab from Back lands on Close').toBeFocused()
+  })
+
+  test('Explore tabs: Palettes is selected on open, aria-controls is on the selected tab only, and the arrow keys move between them', async ({ page }) => {
+    watch(page, 'a keyboard user moving through the Explore head')
+    await go(page, BOARD)
+    await page.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+    const dialog = exploreDialog(page)
+    await expect(dialog).toBeVisible()
+    const tabs = dialog.getByRole('tablist', { name: 'Explore sections' })
+    const palettes = tabs.getByRole('tab', { name: 'Palettes' })
+    const brands = tabs.getByRole('tab', { name: 'Brands' })
+    await expect(tabs.getByRole('tab')).toHaveCount(2)
+    await expect(palettes).toHaveAttribute('aria-selected', 'true')
+    await expect(palettes, 'focus is on the selected tab on open').toBeFocused()
+    await expect(palettes).toHaveAttribute('aria-controls', 'plb-ex-panel-community')
     await expect(brands, 'a tab that is not selected controls a panel that is not there').not.toHaveAttribute('aria-controls', /.+/)
+    await expect(dialog.getByRole('tabpanel')).toHaveAttribute('id', 'plb-ex-panel-community')
+    await expect(dialog.locator('.pgal-card').first()).toBeVisible()
+    await expect(dialog.locator('.plb-sg-card--brand')).toHaveCount(0)
 
-    await variations.focus()
+    // Only the selected tab is a tab stop: Tab goes on to Close.
     await page.keyboard.press('Tab')
-    await expect(back, 'Tab from the tabs lands on Back').toBeFocused()
-    await page.keyboard.press('Tab')
-    await expect(dialog.getByRole('button', { name: 'Close', exact: true }), 'then Close').toBeFocused()
+    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
+    await palettes.focus()
 
-    // The attribute follows the selection.
-    await variations.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(brands).toHaveAttribute('aria-controls', 'plb-sg-panel-brands')
-    await expect(variations).not.toHaveAttribute('aria-controls', /.+/)
+    await expect(brands).toHaveAttribute('aria-selected', 'true')
+    await expect(brands).toBeFocused()
+    await expect(brands).toHaveAttribute('aria-controls', 'plb-ex-panel-brands')
+    await expect(palettes).not.toHaveAttribute('aria-controls', /.+/)
+    await expect(dialog.getByRole('tabpanel')).toHaveAttribute('id', 'plb-ex-panel-brands')
+    await expect(dialog.locator('.plb-sg-card--brand').first()).toBeVisible()
+    await expect(dialog.locator('.pgal-card')).toHaveCount(0)
+
+    await page.keyboard.press('ArrowLeft')
+    await expect(palettes).toHaveAttribute('aria-selected', 'true')
+    await expect(palettes).toBeFocused()
+    await page.keyboard.press('End')
+    await expect(brands).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(palettes).toBeFocused()
   })
 
   test('the divider is on the toolbar row, and so is the keycap that the narrower widths drop', async ({ page }) => {
@@ -431,8 +499,10 @@ test.describe('The Suggest session, on a laptop', () => {
     watch(page, 'someone scrolling the Suggest list')
     const dialog = await openSuggest(page)
     const body = dialog.locator('.plb-galpopup-body')
+    // The list fills in a moment after the dialog opens, so wait for its cards before measuring.
+    await expect(dialog.locator('.plb-sg-card').nth(3), 'the list has cards').toBeVisible()
     const room = () => body.evaluate((el) => el.scrollHeight - el.clientHeight)
-    expect(await room(), 'positive control: the list is taller than its box').toBeGreaterThan(40)
+    await expect.poll(room, { message: 'positive control: the list is taller than its box' }).toBeGreaterThan(40)
     await expect(body).toHaveAttribute('data-more', 'true')
 
     await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
@@ -460,11 +530,33 @@ test.describe('The toolbar row at 768', () => {
 test.describe('Suggest on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })
 
-  test('the Suggest sheet head is one row: the close button is level with the tabs', async ({ page }) => {
+  test('the Explore sheet head is one row: the tabs and the close button are level', async ({ page }) => {
+    watch(page, 'someone opening Explore on a phone')
+    await go(page, BOARD)
+    await page.getByRole('button', { name: 'Extra tools' }).click()
+    await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+    const dialog = exploreDialog(page)
+    await expect(dialog).toBeVisible()
+    const tabs = dialog.getByRole('tablist', { name: 'Explore sections' })
+    const close = dialog.getByRole('button', { name: 'Close', exact: true })
+    await expect(tabs).toBeVisible()
+    const top = (loc) => loc.evaluate((el) => el.getBoundingClientRect().top)
+    await expect.poll(async () => { const a = await top(close); await page.waitForTimeout(120); return a === await top(close) }, { message: 'the sheet has settled' }).toBe(true)
+    const [t, c, h] = [await tabs.boundingBox(), await close.boundingBox(), await dialog.locator('.plb-galpopup-head').boundingBox()]
+    // Centre lines, not tops: the row centres the tabs and Close.
+    const mid = (b) => b.y + b.height / 2
+    expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs tabs centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
+    // One row: the head is no taller than its tallest control plus its padding (20px).
+    expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(Math.max(c.height, t.height) + 24)
+    // A thumb can hit Close: it keeps the 44px touch target the Suggest sheet has.
+    expect(Math.round(c.height), 'the Explore Close button is a 44px touch target').toBeGreaterThanOrEqual(44)
+    expect(Math.round(c.width), 'the Explore Close button is a 44px touch target').toBeGreaterThanOrEqual(44)
+  })
+  test('the Suggest sheet head is one row: the close button is level with the title', async ({ page }) => {
     watch(page, 'someone opening Suggest on a phone')
     const dialog = await openSuggest(page)
     const head = dialog.locator('.plb-galpopup-head')
-    const tabs = dialog.getByRole('tablist', { name: 'Suggest sections' })
+    const tabs = dialog.locator('.plb-menu-title')
     const close = dialog.getByRole('button', { name: 'Close', exact: true })
     await expect(tabs).toBeVisible()
     await expect(close).toBeVisible()
@@ -474,7 +566,8 @@ test.describe('Suggest on a phone', () => {
     await expect.poll(async () => { const a = await top(close); await page.waitForTimeout(120); return a === await top(close) }, { message: 'the sheet has settled' }).toBe(true)
 
     const [t, c, h] = [await tabs.boundingBox(), await close.boundingBox(), await head.boundingBox()]
-    expect(Math.abs(c.y - t.y), `close top ${c.y} vs tabs top ${t.y}: the head is two rows`).toBeLessThanOrEqual(4)
+    const mid = (b) => b.y + b.height / 2
+    expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs title centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
     // One row: the head is no taller than the close button plus its padding.
     expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(c.height + 24)
     // And nothing runs past the screen.
