@@ -1,132 +1,282 @@
-/* Tally (Tally.jsx): a spending card painted with the user's palette.
+/* Tally (Tally.jsx): a spending card app, painted the way a bank spends a brand.
  *
- * Colour comes only from --pv-* (set by the dialog) and the --ty-* inks, edges
- * and gaps the scene works out per palette. Layout is a container query on .pvs,
- * the scene root, so the queries can change .ty's own padding: wide (944px and
- * up) is the card beside the budget, mid (632 to 943) puts the card and its
- * actions on top, narrow (under 632) is one column at the stage's width.
- * Type: 12 / 13 / 15 / 20px, plus one figure size in clamp(). Schibsted Grotesk
- * and Martian Mono are loaded here only, so they are fetched only when this
- * example opens. */
+ * Colour comes only from --pv-* (set by the dialog) and the --ty-* inks and
+ * edges the scene works out per palette. The card is a recolourable render; the
+ * rest is neutral, with the primary on the spent part of the budget bar, the
+ * secondary on the active tab, the accent on the pace tick, the subtle behind
+ * the category glyphs and the deep on the card's edge line.
+ *
+ * Layout is a container query on .pvs, the scene root: wide (960px and up) is
+ * the card beside the budget, mid (600 to 959) puts the card and its actions on
+ * top, narrow (under 600) is one column at the stage's width.
+ * Type: 12 / 13 / 15 / 20 / 28 / 44px. Schibsted Grotesk carries every word and
+ * figure; Martian Mono is set on the card number only, a literal code. Both are
+ * fetched only when this example opens. */
 
 @font-face{font-family:'PV Schibsted';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/schibsted-grotesk-latin.woff2') format('woff2')}
 @font-face{font-family:'PV Martian Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/martian-mono-latin.woff2') format('woff2')}
 
 .ty{
-  container:tally / inline-size;
   isolation:isolate;
-  min-height:100%;
-  padding:var(--s-7) var(--s-6);
+  display:flex;flex-direction:column;
+  min-height:var(--stage-room,100cqh);
   background:var(--pv-canvas);
   color:var(--pv-text);
   font-family:'PV Schibsted','Switzer Fallback',system-ui,sans-serif;
   font-size:15px;
   line-height:1.5;
-  /* The scene root turns tabular figures on for its children; Schibsted Grotesk's tabular feature spaces out commas, so only the mono face below takes it. */
-  font-variant-numeric:normal;
+  /* Proportional lining figures throughout: this face sets its tabular comma and full stop wide ("$1 ,600"), so the right-aligned amount columns line up on their two-decimal endings instead. */
+  font-variant-numeric:lining-nums proportional-nums;
 }
 .ty :where(h3,p,ul,b,small){margin:0;padding:0;font:inherit}
 .ty :where(ul){list-style:none}
 .ty :where(*,*::before,*::after){box-sizing:border-box}
-/* Tabular figures on the mono face only. */
-.ty-num,.ty-fig,.ty-amt,.ty-money,.ty-share{font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 
-.ty-grid{display:grid;grid-template-columns:5fr 7fr;column-gap:var(--s-7);align-items:start}
-.ty-left{display:flex;flex-direction:column;gap:var(--s-4);min-width:0}
-.ty-right{display:flex;flex-direction:column;gap:var(--s-6);min-width:0}
+/* ── Header: wordmark, nav and the account's avatar ── */
+.ty-head{display:flex;align-items:center;gap:var(--s-7);flex:none;height:64px;padding:0 var(--s-7);border-bottom:1px solid var(--pv-border)}
+.ty-wordmark{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.ty-nav{display:flex;flex:1;gap:var(--s-5);font-size:15px;color:var(--pv-muted)}
+.ty-nav .is-current{font-weight:600;color:var(--pv-text)}
+/* The side padding and the matching negative margin leave the words where they were and give the hover fill room. */
+.ty-navlink{padding:var(--s-1) var(--s-2);margin:0 calc(var(--s-2) * -1);border-radius:8px}
+.ty-avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--pv-text)}
 
-/* ── The card ── */
-.ty-card{
-  position:relative;display:flex;flex-direction:column;justify-content:space-between;
-  width:min(340px,100%);aspect-ratio:85.6 / 54;padding:var(--s-4) var(--s-5);overflow:hidden;
-  background:var(--pv-primary);color:var(--ty-card-ink);border:1px solid var(--ty-card-edge);border-radius:16px;
-}
-.ty-card-top,.ty-card-foot{display:flex;align-items:center;justify-content:space-between}
-.ty-mark{font-size:20px;font-weight:700;line-height:1.25;letter-spacing:-.02em}
-.ty-nfc{display:block}
-.ty-chip{position:absolute;left:var(--s-5);top:36%;width:38px;height:28px;border-radius:6px;background:var(--pv-subtle);border:1px solid var(--ty-chip-edge)}
-/* A band across the lower third, clear of the type above and below it. */
-.ty-stripe{position:absolute;left:0;right:0;bottom:30%;height:9%;background:var(--pv-deep);border-block:1px solid var(--ty-stripe-edge)}
-.ty-num{font-size:15px;letter-spacing:.02em}
-.ty-kind{font-size:12px}
-
-.ty-actions{display:flex;gap:var(--s-2);width:min(340px,100%)}
-.ty-act{
-  flex:1;display:flex;align-items:center;justify-content:center;gap:var(--s-2);min-width:0;height:44px;
-  padding:0 var(--s-2);border:1px solid var(--pv-border);border-radius:12px;background:var(--pv-surface);
-  font-size:13px;font-weight:600;color:var(--pv-text);
-}
-.ty-act svg{flex:none}
-.ty-act.is-frozen{background:var(--pv-warning-tint);border-color:var(--pv-warning);color:var(--ty-frozen-ink)}
-
-/* ── The budget ── */
+.ty-body{flex:1;padding:var(--s-6) var(--s-7) var(--s-9)}
+.ty-grid{display:grid;grid-template-columns:360px minmax(0,1fr);column-gap:var(--s-8);align-items:start}
+.ty-left{display:flex;flex-direction:column;gap:var(--s-5);min-width:0}
+.ty-side{display:flex;flex-direction:column;gap:var(--s-5);min-width:0}
+.ty-right{display:flex;flex-direction:column;min-width:0}
 .ty-label{font-size:13px;color:var(--pv-muted)}
-.ty-fig{margin-top:var(--s-1);font-size:clamp(36px,4.4cqi,44px);font-weight:400;line-height:1.1;letter-spacing:-.03em}
+
+/* ── The card: the render, the type on it and a 3px edge line beneath ── */
+/* The render's own corner radius is 31 of its 1428px, so 2.17% of the card's width; the wrapper is a size container so the clip, the edge ring and the edge line below all follow the card's width. */
+.ty-cardwrap{container-type:inline-size;width:360px;max-width:100%}
+.ty-cardface{width:100%;border-radius:2.17cqw}
+/* The edge sits over the render so a pale card still has a visible outline. */
+.ty-cardface::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--ty-card-edge);pointer-events:none}
+.ty-cardface.is-frozen{filter:saturate(.4)}
+.ty-card-mark{position:absolute;left:6.7%;top:9%;font-size:20px;font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--ty-card-ink)}
+/* The card number is a literal code, so it takes the mono face; nothing else on the page does. */
+.ty-card-num{position:absolute;left:6.7%;bottom:9%;font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-size:13px;line-height:1;letter-spacing:.08em;color:var(--ty-card-ink)}
+/* The network mark: two overlapping circles, generic by design. */
+.ty-network{position:absolute;right:6.7%;bottom:7%;display:flex}
+.ty-network i{display:block;width:28px;height:28px;border-radius:50%;background:color-mix(in srgb,var(--ty-card-ink) 60%,transparent)}
+.ty-network i+i{margin-left:-11px}
+.ty-edge{display:block;height:3px;margin:0 2.17cqw;border-radius:0 0 3px 3px;background:var(--pv-deep)}
+
+/* ── Actions: three text buttons divided by hairlines ── */
+.ty-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid var(--pv-border)}
+.ty-act{display:flex;min-width:0;height:48px;font-size:15px;font-weight:500;color:var(--pv-text)}
+.ty-act-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:var(--s-2);min-width:0}
+.ty-act+.ty-act{border-left:1px solid var(--pv-border)}
+.ty-act.is-open{background:var(--pv-raised);font-weight:600}
+.ty-act-ico{flex:none;display:block}
+
+.ty-account{display:flex;flex-direction:column}
+.ty-balance{margin-top:var(--s-1);font-size:28px;font-weight:500;line-height:1.15;letter-spacing:-.02em}
+.ty-frozen{display:flex;align-items:flex-start;gap:var(--s-2);margin-bottom:var(--s-5);font-size:13px;font-weight:500;line-height:1.5;color:var(--pv-warning-ink)}
+.ty-frozen .ty-ico{margin-top:2px}
+/* Due soon sits under the balance in the wide layout, in the transaction rows' own shape. The mid and narrow layouts leave it out: the Upcoming tab covers it there. */
+.ty-due{margin-top:var(--s-3)}
+
+/* ── Tabs ── */
+.ty-tabs{display:flex;gap:var(--s-5);border-bottom:1px solid var(--pv-border)}
+.ty-tab{position:relative;display:flex;align-items:center;height:44px;padding:0 var(--s-2);margin:0 calc(var(--s-2) * -1);font-size:15px;font-weight:500;color:var(--pv-muted)}
+.ty-tab.is-current{color:var(--pv-text)}
+.ty-tab-line{position:absolute;left:var(--s-2);right:var(--s-2);bottom:-1px;height:2px;border-radius:2px 2px 0 0;background:var(--pv-secondary)}
+
+/* ── The budget: the figure, then one 8px bar with the pace tick ── */
+.ty-budget{padding-top:var(--s-5)}
+.ty-fig{margin-top:var(--s-1);font-size:44px;font-weight:500;line-height:1.1;letter-spacing:-.03em}
 .ty-of{margin-top:var(--s-1);font-size:15px;color:var(--pv-muted)}
-.ty-bar{display:flex;height:16px;margin:var(--s-4) 0 var(--s-3)}
-.ty-seg{display:block;flex:0 1 0;min-width:2px;border:1px solid transparent;border-radius:4px}
-.ty-seg--1{background:var(--pv-primary);border-color:var(--ty-edge-1)}
-.ty-seg--2{background:var(--pv-secondary);border-color:var(--ty-edge-2);margin-left:var(--ty-gap-2)}
-.ty-seg--3{background:var(--pv-accent);border-color:var(--ty-edge-3);margin-left:var(--ty-gap-3)}
-.ty-seg--4{background:var(--pv-deep);border-color:var(--ty-edge-4);margin-left:var(--ty-gap-4)}
-.ty-seg--5{background:var(--pv-subtle);border-color:var(--ty-edge-5);margin-left:var(--ty-gap-5)}
-.ty-seg--rest{background:var(--pv-raised);margin-left:2px}
-.ty-legend li{display:grid;grid-template-columns:12px minmax(0,1fr) auto 44px;align-items:center;column-gap:var(--s-3);height:32px;font-size:15px;border-bottom:1px solid var(--pv-border)}
-.ty-key{display:block;width:12px;height:12px;border:1px solid transparent;border-radius:3px}
-.ty-key--1{background:var(--pv-primary);border-color:var(--ty-edge-1)}
-.ty-key--2{background:var(--pv-secondary);border-color:var(--ty-edge-2)}
-.ty-key--3{background:var(--pv-accent);border-color:var(--ty-edge-3)}
-.ty-key--4{background:var(--pv-deep);border-color:var(--ty-edge-4)}
-.ty-key--5{background:var(--pv-subtle);border-color:var(--ty-edge-5)}
-.ty-amt{font-size:13px}
-.ty-share{font-size:12px;text-align:right;color:var(--pv-muted)}
+.ty-bar{position:relative;height:8px;margin-top:var(--s-5);border-radius:4px;background:var(--pv-raised)}
+.ty-spent{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--pv-primary);box-shadow:inset 0 0 0 1px var(--pv-pborder)}
+/* The tick runs past the bar and is set off from it by a gap of the page's own colour. */
+.ty-pace{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--pv-accent);box-shadow:0 0 0 2px var(--pv-canvas)}
+.ty-bar-foot{position:relative;display:flex;justify-content:flex-end;height:20px;margin-top:var(--s-3);font-size:13px;line-height:20px;color:var(--pv-muted)}
+.ty-pace-label{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.ty-left-amt{color:var(--pv-text);font-weight:500}
+
+/* ── Categories: a glyph in a 32px circle, the name, the amount and its share ── */
+.ty-cats{margin-top:var(--s-6);border-top:1px solid var(--pv-border)}
+.ty-cats li{margin-inline:calc(var(--s-2) * -1);border-bottom:1px solid var(--pv-border)}
+.ty-catrow{display:grid;grid-template-columns:32px minmax(0,1fr) auto 40px;align-items:center;column-gap:var(--s-3);width:100%;min-height:56px;padding:0 var(--s-2)}
+.ty-glyph{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--ty-glyph-edge);border-radius:50%;background:var(--pv-subtle);color:var(--ty-glyph-ink)}
+.ty-glyph-ico,.ty-merchant-ico,.ty-act-ico,.ty-ico{flex:none;display:block}
+.ty-cat{font-weight:500}
+.ty-amt{font-size:15px}
+.ty-share{font-size:13px;text-align:right;color:var(--pv-muted)}
 
 /* ── Transactions ── */
-.ty-txns{display:flex;flex-direction:column;gap:var(--s-4)}
-.ty-dayname{font-size:13px;font-weight:400;color:var(--pv-muted)}
-.ty-tx{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:var(--s-3);min-height:52px;border-bottom:1px solid var(--pv-border)}
-.ty-ini{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--pv-raised);font-size:12px;font-weight:600;color:var(--pv-muted)}
+.ty-txns{display:flex;flex-direction:column;gap:var(--s-6);margin-top:var(--s-7)}
+/* The Upcoming tab's list starts straight under the tabs, where the Spending tab has the budget figure. */
+.ty-upcoming{margin-top:var(--s-5)}
+.ty-dayname{padding-bottom:var(--s-2);font-size:13px;font-weight:500;color:var(--pv-muted)}
+.ty-day ul{border-top:1px solid var(--pv-border)}
+/* The side padding and the matching negative margin leave the text where it was and give the hover row room to show its fill. */
+.ty-tx{margin-inline:calc(var(--s-2) * -1);border-bottom:1px solid var(--pv-border)}
+.ty-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;column-gap:var(--s-3);width:100%;min-height:60px;padding:0 var(--s-2)}
+/* The row drawn as if the pointer were on it: the same fill a real hover gets. */
+.ty-tx.is-hover>.ty-row{background:var(--ty-row-hover)}
+.ty-merchant{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--pv-text)}
 .ty-who{display:flex;flex-direction:column;min-width:0}
-.ty-who b{font-weight:600}
-.ty-note{font-size:12px;line-height:1.5;color:var(--pv-muted)}
-.ty-money{font-size:13px;text-align:right}
+.ty-who b{font-weight:500}
+.ty-note{font-size:13px;line-height:1.5;color:var(--pv-muted)}
+.ty-money{font-size:15px;text-align:right}
 .ty-tx[data-tone="success"] :is(.ty-note,.ty-money){color:var(--pv-success-ink)}
 .ty-tx[data-tone="warning"] :is(.ty-note,.ty-money){color:var(--pv-warning-ink)}
 .ty-tx[data-tone="error"] :is(.ty-note,.ty-money){color:var(--pv-error-ink)}
 .ty-tx[data-tone="info"] :is(.ty-note,.ty-money){color:var(--pv-info-ink)}
 
-/* ── Mid: the card with its actions beside it, the budget and transactions below ── */
-@container pvs (max-width:943px){
-  .ty{padding:var(--s-6) var(--s-5)}
-  .ty-grid{grid-template-columns:1fr;row-gap:var(--s-6)}
-  .ty-left{flex-direction:row;align-items:flex-end;gap:var(--s-5)}
-  .ty-card{flex:none;width:300px}
-  .ty-actions{flex-direction:column;flex:1;width:auto;max-width:240px}
-  .ty-act{flex:none}
+/* ── Limits: the Limits action open in the right column, with the form states a card app needs ── */
+.ty-limits{display:flex;flex-direction:column;gap:var(--s-4);max-width:520px;min-width:0}
+.ty-limits-h{font-size:28px;font-weight:500;line-height:1.15;letter-spacing:-.02em}
+.ty-limits-lead{margin-top:var(--s-1);font-size:15px;color:var(--pv-muted)}
+.ty-field{display:flex;flex-direction:column;gap:var(--s-2)}
+.ty-field-l{font-size:15px;font-weight:500;color:var(--pv-text)}
+.ty-input{
+  display:block;width:100%;height:44px;margin:0;padding:0 var(--s-4);
+  background:var(--pv-surface);border:1px solid var(--pv-border-strong);border-radius:8px;
+  font:inherit;font-size:15px;color:var(--pv-text);
+}
+/* Focus: a 2px ring set off the field by 2px of the page's own colour. The transparent outline is what shows in forced colours, where the shadow is dropped. */
+.ty-input.is-focus,.ty-input:focus{border-color:var(--ty-ring);box-shadow:0 0 0 2px var(--pv-canvas),0 0 0 4px var(--ty-ring);outline:2px solid transparent}
+.ty-input.is-error{border-color:var(--pv-error)}
+.ty-err{display:flex;align-items:flex-start;gap:var(--s-2);font-size:13px;line-height:1.5;color:var(--pv-error-ink)}
+.ty-err .ty-ico{margin-top:2px}
+.ty-switch{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
+.ty-switch-t{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.ty-help{font-size:13px;line-height:1.5;color:var(--pv-muted)}
+.ty-help--info{color:var(--pv-info-ink)}
+.ty-toggle{position:relative;flex:none;width:40px;height:24px;border-radius:999px;background:var(--pv-raised);border:1px solid var(--pv-border-strong)}
+.ty-toggle>i{position:absolute;top:1px;left:1px;width:20px;height:20px;border-radius:50%;background:var(--pv-muted)}
+.ty-toggle.is-on{background:var(--pv-primary);border-color:var(--pv-pborder)}
+.ty-toggle.is-on>i{left:auto;right:1px;background:var(--pv-on-primary)}
+/* Disabled: the label and toggle are drawn in the disabled ink, and the help line beside them stays readable because it says why. */
+.ty-field-l.is-disabled{color:var(--pv-disabled)}
+.ty-toggle.is-disabled{background:transparent;border-color:var(--pv-border)}
+.ty-toggle.is-disabled>i{background:var(--pv-disabled)}
+.ty-limits-foot{display:flex;justify-content:flex-end;gap:var(--s-2);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
+.ty-btn{
+  display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--s-5);
+  background:var(--pv-surface);border:1px solid var(--pv-border-strong);border-radius:8px;
+  font-size:15px;font-weight:500;color:var(--pv-text);white-space:nowrap;
+}
+.ty-btn--primary{background:var(--pv-primary);border-color:var(--pv-pborder);color:var(--pv-on-primary)}
+/* Show PIN: a button that cannot be used yet. It stays focusable so its reason (the help line) is read out. */
+.ty-btn.is-disabled{background:transparent;border-color:var(--pv-border);color:var(--pv-disabled)}
+
+/* ── The Details panel: a small inline card under the actions ── */
+.ty-details{display:flex;flex-direction:column;gap:var(--s-4);padding:var(--s-4);background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:8px}
+.ty-dl{display:flex;flex-direction:column;gap:var(--s-3)}
+.ty-dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-4)}
+.ty-dl dt{font-size:13px;color:var(--pv-muted)}
+.ty-dl dd{margin:0;font-size:15px;color:var(--pv-text)}
+/* The masked number is a literal code, like the one on the card. */
+.ty-dl dd.ty-mono{font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-size:13px;letter-spacing:.04em}
+.ty-pin{display:flex;align-items:center;gap:var(--s-3);padding-top:var(--s-4);border-top:1px solid var(--pv-border)}
+.ty-panel{min-width:0}
+
+/* ── Soft interactivity: only a live scene has buttons, so every rule here names one ──
+ * Hover and press are colour changes only (no movement). Rows take the palette's raised ground: the
+ * muted and tone text was already walked to 4.5:1 on it for every palette, light and dark, so no row
+ * text can fall below that on a hovered, pressed or drawn-on row. (A fill mixed from a brand colour has
+ * no such guarantee.) Press keeps the fill and adds a 3px edge in the strong border, a shape cue rather
+ * than a darker fill the text was never measured on. The primary button has its own deeper fills,
+ * and a focused control gets the same ring as the Limits fields. */
+.ty{
+  --ty-row-hover:var(--pv-raised);
+  --ty-row-press:var(--pv-raised);
+  --ty-row-mark:inset 3px 0 0 var(--pv-border-strong);
+}
+/* The raised tiles (merchant mark, avatar) would melt into a raised row, so on one they take the surface. */
+.ty-avatar,.ty-merchant{background:var(--ty-tile,var(--pv-raised))}
+.ty .ty-tx.is-hover>.ty-row,
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink):active{--ty-tile:var(--pv-surface)}
+@media (hover:hover){.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink):hover{--ty-tile:var(--pv-surface)}}
+/* An open action already sits on the raised ground; its hover steps to the surface instead. */
+@media (hover:hover){.ty .ty-act.is-open button.ty-act-btn:hover{background:var(--pv-surface)}}
+:where(.ty button){appearance:none;margin:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left}
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn,button.ty-navlink,button.ty-tab,button.ty-btn,button.ty-toggle){cursor:pointer}
+.ty button[aria-disabled="true"]{cursor:not-allowed}
+
+/* Focus: the ring, set off from the control by 2px of the page's colour. Rows sit flush with their dividers, so theirs is drawn inside. */
+.ty :is(button,[role="switch"]):focus-visible{outline:2px solid var(--ty-ring);outline-offset:2px}
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn):focus-visible{outline-offset:-2px}
+
+.pvs .ty :is(button,input){transition:background-color 120ms ease-out,border-color 120ms ease-out,color 120ms ease-out,box-shadow 120ms ease-out,outline-color 150ms ease-out,opacity 150ms ease-out}
+
+@media (hover:hover){
+  .ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn):hover{background:var(--ty-row-hover)}
+  .ty button.ty-navlink:hover{background:var(--ty-row-hover);color:var(--pv-text)}
+  .ty button.ty-tab:not(.is-current):hover{color:var(--pv-text);box-shadow:inset 0 -2px 0 var(--pv-border-strong)}
+  .ty button.ty-btn:not(.ty-btn--primary):not([aria-disabled="true"]):hover{background:var(--pv-raised);border-color:var(--pv-muted)}
+  .ty button.ty-btn--primary:hover{background:var(--ty-primary-hover)}
+  .ty button.ty-toggle:not(.is-on):not([aria-disabled="true"]):hover{border-color:var(--pv-muted)}
+  .ty button.ty-toggle.is-on:hover{background:var(--ty-primary-hover)}
+  .ty-input:not(:focus):not(.is-focus):hover{border-color:var(--pv-muted)}
+  /* A live scene's drawn-on hover row gives way as soon as the pointer is anywhere in the scene. */
+  .ty.is-live:hover .ty-tx.is-hover>.ty-row:not(:hover){background:none}
+}
+.ty :is(button.ty-row,button.ty-catrow,button.ty-act-btn):active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark)}
+.ty button.ty-navlink:active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark);color:var(--pv-text)}
+.ty button.ty-tab:active{background:var(--ty-row-hover);color:var(--pv-text)}
+.ty button.ty-btn:not(.ty-btn--primary):not([aria-disabled="true"]):active{background:var(--ty-row-hover);border-color:var(--pv-muted)}
+.ty button.ty-btn--primary:active{background:var(--ty-primary-press)}
+.ty button.ty-toggle.is-on:active{background:var(--ty-primary-press)}
+.ty .ty-tx.is-hover>.ty-row:active{background:var(--ty-row-press);box-shadow:var(--ty-row-mark)}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .pvs .ty :is(button,input){transition:none}
+}
+html[data-reduced-motion="true"] .pvs .ty :is(button,input){transition:none}
+
+/* The toast rides in a zero-height dock stuck to the bottom of the stage, centred on it, so it is in view at any scroll. The Limits state keeps a band under the form (the toast's height plus a margin above and below) so the form's buttons are never under it. It floats, so it is the one place a shadow is used. */
+.ty[data-state="limits"] .ty-body{padding-bottom:calc(44px + var(--s-5) * 2)}
+.ty-dock{position:sticky;bottom:0;z-index:2;flex:none;height:0;pointer-events:none}
+.ty-toast{
+  position:absolute;left:50%;bottom:var(--s-5);transform:translateX(-50%);
+  display:inline-flex;align-items:center;gap:var(--s-2);min-height:44px;padding:var(--s-2) var(--s-4);
+  background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:8px;
+  box-shadow:0 1px 2px color-mix(in srgb,var(--pv-text) 8%,transparent),0 8px 20px -6px color-mix(in srgb,var(--pv-text) 16%,transparent);
+  font-size:13px;font-weight:500;color:var(--pv-text);white-space:nowrap;
+}
+.ty-toast .ty-ico{color:var(--pv-success-ink)}
+/* A toast raised by Save has no page-load sequence to wait for. */
+.ty-dock.is-live .ty-toast{animation-delay:0ms}
+
+/* ── Mid: the card with its actions beside it, the budget below ── */
+@container pvs (max-width:959px){
+  .ty-head{padding:0 var(--s-6);gap:var(--s-6)}
+  .ty-body{padding:var(--s-5) var(--s-6) var(--s-8)}
+  .ty-grid{grid-template-columns:minmax(0,1fr);row-gap:var(--s-6)}
+  .ty-left{flex-direction:row;align-items:flex-end;gap:var(--s-6)}
+  .ty-cardwrap{flex:none;width:320px}
+  .ty-side{flex:1}
+  .ty-due{display:none}
+  .ty-limits{max-width:none}
 }
 
 /* ── Narrow: one column at the stage's width ── */
-@container pvs (max-width:631px){
-  .ty{padding:var(--s-4)}
-  .ty-grid{row-gap:var(--s-5)}
-  .ty-left{flex-direction:column;align-items:stretch;gap:var(--s-3)}
-  .ty-card{width:100%}
-  .ty-actions{flex-direction:row;flex:none;width:100%;max-width:none}
-  .ty-act{flex:1 1 0}
-  .ty-right{gap:var(--s-5)}
-}
-/* Three buttons in 254px: a tighter icon-to-label gap keeps "Details" on one line. */
-@container pvs (max-width:359px){
-  .ty-act{gap:var(--s-1);padding:0 var(--s-1)}
+@container pvs (max-width:599px){
+  .ty-head{height:56px;padding:0 var(--s-4)}
+  .ty-nav{display:none}
+  .ty-avatar{margin-left:auto}
+  .ty-body{padding:var(--s-5) var(--s-4) var(--s-8)}
+  .ty-grid{row-gap:var(--s-6)}
+  .ty-left{flex-direction:column;align-items:stretch;gap:var(--s-5)}
+  .ty-cardwrap{width:100%;max-width:none}
+  .ty-fig{font-size:36px}
+  .ty-act-btn{gap:var(--s-1)}
 }
 
-/* ── Signature moment: the card rises into place, then the budget bar grows across ── */
-.ty-card{animation:ty-rise 300ms cubic-bezier(.23,1,.32,1) both}
-.ty-bar{animation:ty-grow 500ms cubic-bezier(.23,1,.32,1) 300ms both}
-@keyframes ty-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-/* Ends on a clip box wider than the bar, so no clip survives to cut a segment's outline. */
-@keyframes ty-grow{from{clip-path:inset(-8px 100% -8px 0)}to{clip-path:inset(-8px)}}
+/* ── Signature moment: the card rises into place, then the spent part of the bar grows across ── */
+.ty-cardwrap{animation:ty-rise 300ms cubic-bezier(.23,1,.32,1) backwards}
+.ty-spent{transform-origin:left;animation:ty-grow 500ms cubic-bezier(.23,1,.32,1) 300ms backwards}
+.ty-toast{animation:ty-toast-in 250ms cubic-bezier(.23,1,.32,1) 400ms backwards}
+@keyframes ty-rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes ty-grow{from{transform:scaleX(0)}}
+@keyframes ty-toast-in{from{opacity:0}}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ty-card,.ty-bar){animation:none}
+  html:not([data-reduced-motion="false"]) :is(.ty-cardwrap,.ty-spent,.ty-toast){animation:none}
 }
-html[data-reduced-motion="true"] :is(.ty-card,.ty-bar){animation:none}
+html[data-reduced-motion="true"] :is(.ty-cardwrap,.ty-spent,.ty-toast){animation:none}

@@ -118,7 +118,7 @@ test.describe('a locked library row hands nothing over — signed out', () => {
     // line is the honesty check: a page showing three may not claim the size
     // of the whole library, in the masthead or anywhere in it.
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
-    await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_TIER_LIMITS.anonymous} palettes`)
+    await expect(page.locator('.drh-head p')).toHaveText(`${LIBRARY_PALETTES.length} palettes · ${GALLERY_TIER_LIMITS.anonymous} shown`)
     await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
     await expect(page.locator('.dgh-hero')).not.toContainText(/\d+\s+palettes/i)
   })
@@ -197,7 +197,7 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
 
   test('the free rung shows ten palettes and says so', async ({ page }) => {
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
-    await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_TIER_LIMITS.free} palettes`)
+    await expect(page.locator('.drh-head p')).toHaveText(`${LIBRARY_PALETTES.length} palettes · ${GALLERY_TIER_LIMITS.free} shown`)
     // The masthead is held to the same honesty: ten shown, so no library total.
     await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
     await expect(page.locator('.dgh-hero')).not.toContainText(/\d+\s+palettes/i)
@@ -270,14 +270,14 @@ test.describe('the masthead count — signed in, Pro', () => {
   })
 })
 
-test.describe('the same gate in the Palette Builder brands panel', () => {
+test.describe('the same gate in the Palette Builder Explore Brands tab', () => {
   // The second surface. Its rows paint their swatches through a ref rather than
   // an inline style attribute, so a leak here would be invisible to a markup
   // check and has to be caught in the computed paint.
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Suggest variations and brands', 'Suggest')
+    await clickPaletteAction(page, 'Explore palettes and brands')
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
     await expect(page.locator('.plb-galpopup-body .plb-sg-card--brand').first()).toBeVisible()
   })

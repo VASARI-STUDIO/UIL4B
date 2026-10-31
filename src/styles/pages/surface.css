@@ -81,6 +81,15 @@
   font-variant-numeric: tabular-nums;
   animation: none;
 }
+/* Learn's hint is a sentence, not a value: the UI sans in sentence case. Scoped
+   to Learn so the Discover hint keeps its mono caps. */
+.srf.srf--learn .srf-hint {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
 
 /* ── Sections ─────────────────────────────────────────────────────────────────
    The design file's section head: a heading over a hairline, not a centred
@@ -142,16 +151,15 @@
 .srf .lidx-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; max-width: none; margin: 0 0 4px; }
 .srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; box-shadow: none; }
 .srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
-.srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+.srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }
 .srf .lidx-topics a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--t1); text-decoration: none; border-bottom: 1px solid transparent; }
 .srf .lidx-topics a:hover { color: var(--t0); border-bottom-color: var(--t0); }
-.srf .lidx-topic-n { font-family: var(--mono); font-size: 11.5px; font-weight: 500; letter-spacing: .06em; color: var(--t2); font-variant-numeric: tabular-nums; }
+.srf .lidx-topic-n { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t2); font-variant-numeric: tabular-nums; }
 .srf .lidx-status { min-height: 1.5em; max-width: none; margin: 8px 0 0; text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 
 .srf .lidx-sections { display: flex; flex-direction: column; gap: clamp(28px, 3.6vw, 44px); margin-top: 20px; }
 .srf .lidx-topic-sec { scroll-margin-top: calc(var(--nav-clear) + 16px); }
 .srf .lidx-topic-h { display: flex; align-items: baseline; gap: 12px; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--srf-hair); font-family: var(--font); font-size: 16.5px; font-weight: 560; letter-spacing: -.01em; line-height: 1.3; color: var(--t0); }
-.srf .lidx-topic-h .lidx-topic-n { text-transform: uppercase; }
 
 /* A guide is a ROW: what it is and what it says on the left, how long and the
    way in on the right. Rows are separated by a hairline and nothing else. */
@@ -183,7 +191,7 @@
    wrapper steps aside so the time can take its own column. */
 .srf .lidx-top { display: contents; }
 .srf .lidx-topic { display: none; }
-.srf .lidx-time { grid-area: time; font-family: var(--mono); font-size: 11.5px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.srf .lidx-time { grid-area: time; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .srf .lidx-title { grid-area: title; font-size: 17px; font-weight: 560; letter-spacing: -.015em; line-height: 1.35; color: var(--t0); }
 .srf .lidx-dek { grid-area: dek; max-width: 72ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
 .srf .lidx-hit { grid-area: hit; margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--srf-hair-2); font-size: 13px; line-height: 1.5; color: var(--t1); overflow-wrap: anywhere; }
@@ -195,6 +203,8 @@
 .srf .lidx-empty { max-width: 56ch; margin: 24px 0 0; text-align: left; }
 .srf .lidx-empty-h { margin: 0; font-size: 18px; font-weight: 560; line-height: 1.35; color: var(--t0); overflow-wrap: anywhere; }
 .srf .lidx-empty-p { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.srf .lidx-empty-p a { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 2px; }
+.srf .lidx-empty-p a:hover { color: var(--t0); }
 .srf .lidx-reset { display: inline-flex; align-items: center; min-height: 40px; margin-top: 16px; padding: 0 16px; border: 1px solid var(--srf-hair-2); border-radius: var(--btn-radius); background: transparent; font-family: var(--font); font-size: 13.5px; font-weight: 500; color: var(--t0); cursor: pointer; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
 .srf .lidx-reset:hover { background: var(--srf-wash); border-color: var(--bh); }
 
@@ -216,6 +226,10 @@
   .srf .surface-grid { grid-template-columns: minmax(0, 1fr); }
   .srf .lidx-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title go" "dek dek" "time time" "hit hit"; }
   .srf .lidx-time { margin-top: 2px; }
+  /* A row with no read time (the Using UIL4B rows) has nothing for the time or
+     hit rows, and each empty row would still add its 4px gap under the dek.
+     Dropping them leaves the card's own 16px padding above and below. */
+  .srf .lidx-card:not(:has(.lidx-time)) { grid-template-areas: "title go" "dek dek"; }
 }
 @media (pointer: coarse) {
   .srf .lidx-topics a { min-height: 44px; }

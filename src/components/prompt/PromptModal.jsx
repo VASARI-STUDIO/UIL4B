@@ -7,6 +7,8 @@ import { framePreviewHtml, isPreviewEscape } from '../../utils/previewFrame'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack } from '../../hooks/useCloseOnBack'
 import PromptSaveButton from './PromptSaveButton'
+import ReportButton from '../ReportButton'
+import { buildReportTarget } from '../../utils/contentReport'
 
 // Full prompt detail modal — works for both community and personal prompts.
 //
@@ -199,7 +201,15 @@ export default function PromptModal({ prompt, onClose, onCopy, onToggleSave, onR
 
         <div className="pl-modal-footer">
           {isCommunity ? (
-            <PromptSaveButton className="lib-btn" saved={isSaved} onToggle={() => onToggleSave(prompt)} />
+            <>
+              <ReportButton
+                variant="text"
+                className="lib-btn"
+                target={buildReportTarget({ kind: 'prompt', id: prompt.id, name })}
+                beforeOpen={onClose}
+              />
+              <PromptSaveButton className="lib-btn" saved={isSaved} onToggle={() => onToggleSave(prompt)} />
+            </>
           ) : (
             <button type="button" className="lib-btn pl-modal-delete" onClick={(e) => { e.stopPropagation(); onRemove(e, prompt.id) }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

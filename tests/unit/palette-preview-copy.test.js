@@ -1,11 +1,10 @@
 // The words the Palette Builder preview scenes print.
 //
-// The scenes belong to one invented product, Fernway. A preview that names
-// this site, a real person, a real place's Country, or a stock-text company
-// would be a claim the site never made, so the copy is held to a short list
-// of things it must not contain. Comments are stripped first: the files
-// explain the rule in prose, and a check that matches its own documentation
-// proves nothing.
+// Each scene is its own invented product. A preview that names this site, a
+// real person, a real place's Country, or a stock-text company would be a claim
+// the site never made, so the copy is held to a short list of things it must
+// not contain. Comments are stripped first: the files explain the rule in
+// prose, and a check that matches its own documentation proves nothing.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -18,8 +17,7 @@ const exampleFiles = fs.readdirSync(path.join(process.cwd(), EXAMPLES_DIR))
   .filter((f) => /\.jsx$|\.data\.js$/.test(f))
   .map((f) => `${EXAMPLES_DIR}/${f}`)
 
-// [file, shortest stripped length it may read back as]. An example is smaller
-// than the Fernway scenes, so its floor is lower; it is still a guard against a
+// [file, shortest stripped length it may read back as]. It is a guard against a
 // file that was emptied or moved, which would pass the banned-word check on nothing.
 const FILES = [
   ['src/data/palettePreviewScenes.js', 1000],
@@ -68,13 +66,19 @@ test('the banned-word check can see a hit: each pattern matches a sample line', 
   }
 })
 
-test('the scene content still carries the Fernway sample data it is meant to protect', () => {
-  // If the data file were emptied or moved, the two checks above would pass on
-  // nothing. Read it back and require the sample data, the product name (printed
-  // by the Settings scene, not by the data file) and the eight scenes.
-  const data = read('src/data/palettePreviewScenes.js')
-  assert.match(data, /const FERNWAY = \{/)
-  assert.match(data, /Harbour Physio/)
-  assert.match(read('src/components/palette/PalettePreview.jsx'), /Fernway Studio/)
-  assert.equal((data.match(/\bfree: (?:true|false)\b/g) || []).length, 8, 'expected eight scene entries')
+test('the retired Fernway scenes are gone from the scene list and the viewer', () => {
+  // The Invoices and Settings scenes were folded into Tally and Hale & Okoro.
+  // Nothing may bring the invented invoicing product back by the side door.
+  for (const file of ['src/data/palettePreviewScenes.js', 'src/components/palette/PalettePreview.jsx', 'src/styles/pages/palette-preview.css']) {
+    assert.doesNotMatch(read(file), /fernway|FW-0\d\d\d|Harbour Physio/i, `${file} still names Fernway`)
+  }
+})
+
+test('the Limits form states live in Tally, which the old Settings scene used to carry', () => {
+  // If Tally lost its form, the focus, error, disabled and toast states would
+  // have no preview. Read it back and require each one.
+  const tally = read('src/components/palette/examples/Tally.jsx')
+  for (const state of ['is-focus', 'is-error', 'is-on', 'is-disabled', 'ty-toast', 'is-hover']) {
+    assert.ok(tally.includes(state) || read('src/components/palette/examples/Tally.data.js').includes(state), `Tally no longer draws ${state}`)
+  }
 })

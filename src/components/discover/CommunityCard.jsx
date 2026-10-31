@@ -4,6 +4,8 @@
 // new CSS. The thumbnail is a generated gradient (no external fetch); the credit
 // link is a real nofollow new-tab anchor.
 import { safeHttpUrl } from '../../utils/urlSafety'
+import ReportButton from '../ReportButton'
+import { buildReportTarget } from '../../utils/contentReport'
 import { contrastRatio, inkOnGradient } from '../../utils/colors'
 
 // The monogram is 30px/700, which is LARGE TEXT under WCAG 1.4.3, so its floor
@@ -113,6 +115,10 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
         <HeartIcon filled={saved} />
         <span className="ch-heart-count">{count}</span>
       </button>
+      <ReportButton
+        className="ch-report"
+        target={buildReportTarget({ kind: 'design', id: item.id, name: item.name, link: href })}
+      />
       <div className="ch-card-body">
         <div className="ch-card-name">{item.name}</div>
         <div className="ch-card-meta">

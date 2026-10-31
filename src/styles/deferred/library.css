@@ -1521,10 +1521,10 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
   height:clamp(200px,34vw,260px);border:0;border-radius:0;
   filter:blur(16px) saturate(1.1);transform:scale(1.15);
 }
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:#B7C4E6}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:#E6C7B7}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:#BFE0CF}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:#D9A8D5}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 30%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 30%,var(--card))}
 [data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
@@ -1618,14 +1618,13 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 
 
 /* ── The end of the icon grid ────────────────────────────────────────────────
-   The closing band under the results: a display sentence, one dim line, one
-   ink pill with the arrow bubble and, signed out, a ghost pill. It mirrors the
-   homepage's closing band using the app's own tokens (ink is --t0, the page is
-   --bg-0, the dim line is --t1); the homepage's scoped tokens do not exist
-   here. No card, no box.
+   The closing block under the results, centred: a display sentence, one dim
+   line, one ink pill and, where a second way on is true, a text link. It uses
+   the app's own tokens (ink is --t0, the page is --bg-0, the dim line is
+   --t1). No card, no box, no hairline.
 
-   Signed out, two rows of blurred built-in icons continue the grid above it.
-   The rows are decoration: the band's words and buttons are always on screen,
+   Signed out, a row of blurred built-in icons continues the grid above it.
+   The row is decoration: the block's words and buttons are always on screen,
    and the "Log in to see more" chip is an echo for a fine pointer only.
    A mask fades the row into the block below it. */
 .ig-end{margin-top:0}
@@ -1673,9 +1672,11 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
   .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
 }
 
-/* The band: one left-aligned row set off by a hairline, 20px under the blurred
-   row. Copy on the left, the two actions on the right; stacked below 768px. */
-.ig-end-band{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:34rem;margin:-24px auto 0;padding:0;text-align:center;position:relative}
+/* The block: centred, one column. With a blurred row above it the heading is
+   pulled 24px up into the row's faded foot; without one (the free plan's block)
+   it sits 48px below the grid, so it never overlaps a result. */
+.ig-end-band{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:34rem;margin:48px auto 0;padding:0;text-align:center;position:relative}
+.ig-end-tease+.ig-end-band{margin-top:-24px}
 .ig-end{margin-bottom:64px}
 @media(max-width:767px){.ig-end{margin-bottom:48px}}
 /* The grid dissolves into the block: the mask is transparency, not a painted colour. */

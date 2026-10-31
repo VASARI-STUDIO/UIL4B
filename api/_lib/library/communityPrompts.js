@@ -8,16 +8,16 @@
 // `free` is the FREE TIER, and it is an IDENTITY rather than a position.
 //
 // It used to be a position: PromptLibrary rendered the filtered list and locked
-// everything at index >= FREE_PROMPT_LIMIT. So "free" meant the first twelve of
-// whatever you were currently looking at, and both the search box and the sort
-// control changed what that was — search a term only a locked prompt contains
-// and it arrives at index 0, unlocked. All twenty were reachable that way.
+// everything past a fixed index. So "free" meant the first rows of whatever you
+// were currently looking at, and both the search box and the sort control changed
+// what that was. Search a term only a locked prompt contains and it arrives at
+// index 0, unlocked. All twenty were reachable that way.
 //
-// The twelve flagged here are exactly the twelve a signed-out visitor saw for
-// free in the DEFAULT view (sort 'popular' = saves descending) before the fix,
-// so freezing them changes nothing about WHICH prompts are free. It only makes
-// the answer stop depending on the query. Pricing was not touched; a gate that
-// counted positions was replaced by one that counts identities.
+// The ten flagged here are exactly the free account's allowance
+// (GALLERY_TIER_LIMITS.free in src/utils/lockedPreview.js), and a test fails if
+// the count of flagged prompts and that allowance ever differ. Pricing was not
+// touched; a gate that counted positions was replaced by one that counts
+// identities.
 //
 // A new prompt added without `free: true` is LOCKED. That is deliberate and
 // fail-closed: forgetting the flag costs a sale, forgetting its opposite gives
@@ -544,7 +544,7 @@ The rule that decides whether this set is any good: author every specimen at its
   },
   {
     id: 'c-19',
-    free: true,
+    free: false,
     title: 'Scroll-triggered section transitions',
     text: `Build a scroll-driven long read, "How a frame gets made", for Aldermoor Cycles, a one-person steel frame builder on Kelham Island, Sheffield. The page is scrollytelling: a drawing of the bike sticks beside the text and builds itself chapter by chapter as the reader scrolls, and each chapter's text arrives with a different transition, labelled with its name in a small mono chip so the page doubles as documentation for the set.
 
@@ -576,7 +576,7 @@ Phones: the drawing sticks to the top of the screen above the chapters, which sc
   },
   {
     id: 'c-20',
-    free: true,
+    free: false,
     title: 'CSS-only image hover gallery',
     text: `Build the work index for Offcut Press, a two-drum risograph studio in Footscray: "Selected prints, 2024–26", six prints in an asymmetric 12-column gallery, where each print answers the pointer and the Tab key with a different hover effect. No JavaScript at all, and no image files: every print is inline SVG in flat riso inks.
 

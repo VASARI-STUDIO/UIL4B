@@ -3765,8 +3765,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) revealPage()
+    // The LAST entry is the sentinel's state now. A browser queues one entry per frame and hands them over
+    // together, oldest first, when the main thread was busy; acting on the first would take a stale "not on
+    // screen" for the answer and leave the sentinel in view with nothing to move it on.
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[entries.length - 1]?.isIntersecting) revealPage()
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
@@ -4655,9 +4658,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
             THE PACK SELECT STAYS A SELECT. Twenty-six packs in six optgroups is
             not a pill tray, and forcing it into one to look consistent would
-            trade a working control for a matching one. It sits in the toolbar's
-            filter row beside the group tray and takes the shared field metrics,
-            which is what "consistent" has to mean for a control this size. */}
+            trade a working control for a matching one. It sits at the right end
+            of the toolbar row, apart from the filters, and takes the shared
+            field metrics, which is what "consistent" has to mean for a control
+            this size. */}
         <div className="ig-band-sentinel" ref={bandSentinelRef} aria-hidden="true" />
         <div className="ig-band" ref={bandRef}>
         <LibraryToolbar

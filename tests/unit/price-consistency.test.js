@@ -159,7 +159,8 @@ const WINDOW = 400
 
 // ── What is genuinely not a plan price ──────────────────────────────────────
 //
-// Every entry names a FILE and a CONTEXT. Never an amount on its own: three of
+// Every entry names a FILE and a CONTEXT (the one pattern entry names a family of
+// scene data files). Never an amount on its own: three of
 // the fake amounts below ($18, $84 in one summary, $8 in another) sit in the
 // same numeric neighbourhood as the ladder, and $18 IS the quarterly tier. An
 // amount-keyed allowlist would blind the guard to the tier it was written for.
@@ -189,13 +190,6 @@ const NOT_A_PLAN_PRICE = [
       + 'and a notebook, not tiers of UIL4B.',
   },
   {
-    file: 'src/data/palettePreviewScenes.js',
-    context: /FW-01\d\d/,
-    why: 'Sample invoice rows for Fernway, the invented invoicing product the '
-      + 'Invoices and Settings previews are drawn from. They are client invoice '
-      + 'amounts, not something UIL4B charges.',
-  },
-  {
     file: 'src/data/communityPrompts.js',
     // Excused only while the surrounding text says nothing about our own plans:
     // a prompt that quoted a UIL4B tier would still be checked against the ladder.
@@ -204,6 +198,17 @@ const NOT_A_PLAN_PRICE = [
       + 'call-out fee, a restaurant\'s set menu, a builder\'s contract sums) and '
       + 'quote those businesses\' prices so the prompt yields a believable page. '
       + 'They are in the prompt text a user copies, not tiers of UIL4B.',
+  },
+  {
+    // The one entry keyed on a file PATTERN rather than a path, because the folder
+    // is a family: every preview scene keeps its invented shop's copy in a
+    // `<Scene>.data.js` beside it. The pattern is narrow on purpose: scene data
+    // files only, not the scenes' .jsx or any other file under palette/.
+    file: /^src\/components\/palette\/examples\/[A-Za-z]+\.data\.js$/,
+    context: /[\s\S]/,
+    why: 'Preview scenes draw invented shops and products (the Orra Workroom shop: "or 4 '
+      + 'payments of $60", "free over $150", "express is $14"). Those are set '
+      + 'dressing inside a picture of a palette, not tiers of UIL4B.',
   },
   {
     file: 'src/pages/PaletteBuilder.jsx',
@@ -298,7 +303,10 @@ function scan() {
 }
 
 function excusedBy(hit) {
-  return NOT_A_PLAN_PRICE.find((entry) => entry.file === hit.file && entry.context.test(hit.window))
+  return NOT_A_PLAN_PRICE.find((entry) => (
+    (entry.file instanceof RegExp ? entry.file.test(hit.file) : entry.file === hit.file)
+    && entry.context.test(hit.window)
+  ))
 }
 
 const report = (hit) => {

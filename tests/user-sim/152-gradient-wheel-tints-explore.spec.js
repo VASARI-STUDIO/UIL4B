@@ -453,9 +453,9 @@ test.describe('the Explore the library panel', () => {
 })
 
 test.describe('the generator layout', () => {
-  // The ten quick colours became Available colours' chips. The most it ever shows
-  // is the palette's thirteen and the ramp's eleven shades; every one must stay
-  // inside the panel and the page must not scroll sideways.
+  // The palette row shows nine slots at most on a fine pointer (six on a finger), and
+  // the "+N more" link takes the last slot. The ramp's eleven shades sit under it.
+  // Every one must stay inside the Stops section and the page must not scroll sideways.
   // MUTATION: in gradient.css make .grd-chips nowrap (or .grd-chips--shades a
   // wider chip) and the chips run past the panel's edge.
   const THIRTEEN = [
@@ -467,7 +467,7 @@ test.describe('the generator layout', () => {
     '#2556D1', '#1B41A3', '#142F78', '#0D1E4F', '#071230',
   ]
   for (const width of [390, 768, 1440]) {
-    test(`at ${width}px thirteen palette chips and eleven shades stay inside the panel and the page does not scroll sideways`, async ({ page }) => {
+    test(`at ${width}px thirteen palette colours show eight chips and "+5 more", the eleven shades stay inside the panel, and the page does not scroll sideways`, async ({ page }) => {
       watch(page, 'a designer with a full palette')
       await page.addInitScript(([colors, scale]) => {
         localStorage.setItem('vs-current-design', JSON.stringify({
@@ -477,34 +477,41 @@ test.describe('the generator layout', () => {
       }, [THIRTEEN, RAMP])
       await page.setViewportSize({ width, height: 900 })
       await go(page, ROUTE)
-      const chips = page.locator('.grd-avail .grd-chip')
-      await expect(chips, 'thirteen palette chips and eleven shades').toHaveCount(24)
+      const paint = page.locator('.grd-paint')
+      await expect(paint.locator('.grd-chips:not(.grd-chips--shades) .grd-chip'), 'nine slots: eight palette chips and the +N link').toHaveCount(8)
+      await expect(paint.locator('.grd-chips--shades .grd-chip'), 'eleven shades').toHaveCount(11)
+      // On a fine pointer the count is visible, with its word: "+5 more", not a bare "+5".
+      const more = paint.getByRole('link', { name: /^\+5 .*colours in Palette Builder$/ })
+      await expect(more).toBeVisible()
+      await expect(more).toHaveAttribute('href', '/create/palette')
+      await expect(more).toContainText('+5 more')
       const geo = await page.evaluate(() => {
-        const panel = document.querySelector('.grd-avail').getBoundingClientRect()
-        const all = [...document.querySelectorAll('.grd-avail .grd-chip')].map((el) => {
-          const r = el.getBoundingClientRect()
-          return { left: r.left, right: r.right, top: Math.round(r.top), shades: !!el.closest('.grd-chips--shades') }
-        })
+        const panel = document.querySelector('.grd-paint').getBoundingClientRect()
+        const mark = (el, kind) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: Math.round(r.top), kind } }
+        const all = [
+          ...[...document.querySelectorAll('.grd-paint .grd-chips:not(.grd-chips--shades) .grd-chip')].map((el) => mark(el, 'palette')),
+          ...[...document.querySelectorAll('.grd-paint .grd-chips-more')].map((el) => mark(el, 'palette')),
+          ...[...document.querySelectorAll('.grd-paint .grd-chips--shades .grd-chip')].map((el) => mark(el, 'shade')),
+        ]
         const rowsOf = (list) => {
           const rows = new Map()
           for (const c of list) rows.set(c.top, (rows.get(c.top) || 0) + 1)
           return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n)
         }
         return {
-          panelLeft: panel.left, panelRight: panel.right,
           outside: all.filter((c) => c.left < panel.left - 0.5 || c.right > panel.right + 0.5).length,
-          paletteRows: rowsOf(all.filter((c) => !c.shades)),
-          shadeRows: rowsOf(all.filter((c) => c.shades)),
+          paletteRows: rowsOf(all.filter((c) => c.kind === 'palette')),
+          shadeRows: rowsOf(all.filter((c) => c.kind === 'shade')),
           overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         }
       })
-      expect(geo.outside, `${width}px: chips outside the section`).toBe(0)
+      expect(geo.outside, `${width}px: chips outside the palette row`).toBe(0)
       expect(geo.overflow, `${width}px: no sideways scroll`).toBeLessThanOrEqual(0)
-      // Hand-checked from the spec (§3.2): a 336px panel holds 300px of chips, so
-      // 28px chips with a 6px gap fit 9 to a row and thirteen fall 9 + 4; the 24px
-      // shade chips with a 3px gap fit all eleven on one row (294 of 300).
+      // Hand-checked from the design (7.2): 304px of chips, 28px chips with a 6px gap fit
+      // nine to a row (9 x 28 + 8 x 6 = 300), so eight chips and the link make one row;
+      // the 24px shade chips with a 3px gap fit all eleven on one row (294 of 304).
       if (width === 1440) {
-        expect(geo.paletteRows, 'palette chips per row').toEqual([9, 4])
+        expect(geo.paletteRows, 'palette slots per row').toEqual([9])
         expect(geo.shadeRows, 'shade chips per row').toEqual([11])
       }
     })
@@ -658,10 +665,11 @@ test.describe('the library when the signed-out cap empties a mood', () => {
       })
       await go(page, `${LIBRARY}?mood=dark`)
       // POSITIVE CONTROL: the page is inside the loading window. The session has
-      // not answered, so the library still reads signed out and holds the plain
-      // empty state, and no card has appeared yet.
-      await expect(emptyOf(page), `${plan}: the empty state shows while auth is pending`).toBeVisible()
-      await expect(emptyOf(page)).toContainText('No gradients match those filters.')
+      // not answered, but this is a returning session (the hint), so the library
+      // shows the neutral loading block rather than reading as signed out: no
+      // "No gradients match" and no offer, and no card has appeared yet.
+      await expect(page.locator('.lockt-status'), `${plan}: the neutral loading block shows while auth is pending`).toContainText('Loading the gradient library')
+      await expect(emptyOf(page), `${plan}: no empty state while the plan is unknown`).toHaveCount(0)
       await expect(page.locator('.grg-card')).toHaveCount(0)
       // Then the account answers and the dark gradients arrive.
       await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
@@ -901,3 +909,42 @@ test.describe('a saved gradient keeps its angle', () => {
     await expect.poll(() => cssAngle(page)).toBe(0)
   })
 })
+
+// At 360px and under the word "Tints" goes so the hex field keeps its width, and the
+// Pro cue stays visible: a free account sees "Pro" on the button, not only in its
+// aria-label. MUTATION: hide `.grd-pro-tag` again in the `max-width: 360px` block of
+// gradient.css and the free tests go red; show `.grd-tints-label` and the label test does.
+for (const [width, touch] of [[360, true], [320, true], [360, false], [320, false]]) {
+  test.describe(`Tints at ${width}px${touch ? ' on a finger' : ''}`, () => {
+    test.use({ viewport: { width, height: 844 }, hasTouch: touch, isMobile: touch })
+
+    test('a free account sees the word Pro on the button, and not the word Tints', async ({ page }) => {
+      watch(page, `a free designer at ${width}px`)
+      await signIn(page, { plan: 'free' })
+      await go(page, ROUTE)
+      const button = page.getByRole('button', { name: 'Tints of stop 1 (Pro)', exact: true })
+      await expect(button).toBeVisible()
+      // innerText leaves out what is display:none, so this is the text a person can read.
+      await expect.poll(() => button.evaluate((el) => el.innerText.trim())).toBe('Pro')
+      await expect(button.locator('.grd-tints-label')).toBeHidden()
+      // It fits: inside the screen, clear of the hex field, and 44px on a finger.
+      const [b, hex] = await Promise.all([button.boundingBox(), page.getByRole('textbox', { name: 'Stop 1 hex' }).boundingBox()])
+      expect(b.x + b.width, 'the button runs past the screen').toBeLessThanOrEqual(width)
+      expect(hex.x + hex.width, 'the hex field runs under the button').toBeLessThanOrEqual(b.x + 0.5)
+      if (touch) {
+        expect(b.height, 'button height').toBeGreaterThanOrEqual(44)
+        expect(b.width, 'button width').toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'the page scrolls sideways').toBeLessThanOrEqual(width)
+    })
+
+    test('a Pro account has no Pro tag to read', async ({ page }) => {
+      watch(page, `a Pro designer at ${width}px`)
+      await signIn(page, { plan: 'pro' })
+      await go(page, ROUTE)
+      const button = page.getByRole('button', { name: 'Tints of stop 1', exact: true })
+      await expect(button).toBeVisible()
+      await expect.poll(() => button.evaluate((el) => el.innerText.trim())).toBe('')
+    })
+  })
+}

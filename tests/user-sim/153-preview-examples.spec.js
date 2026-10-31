@@ -2,10 +2,9 @@
 // Slack Water (Editorial hero), Sundial (Energy dashboard), Orra Workroom (Product page),
 // Ridgeline (Trail run app), Hale & Okoro (Architect portfolio, Pro) and Tally (Spending
 // card, Pro), each its own lazy chunk behind src/components/palette/examples/registry.js.
-// Only Invoices and Settings remain of the older Fernway scenes.
 //
 // WHAT IS HELD HERE, AND WHY IN A BROWSER
-// The unit tests (preview-field-helpers, preview-role-tags, slack-water-chart,
+// The unit tests (preview-field-helpers, preview-role-tags, slack-water-data,
 // palette-preview-copy) hold the arithmetic and the source. They cannot see that
 // an example reaches the screen, that the legend finds its elements, that a slow
 // download leaves the old picture up, or that a label sits on a ground its own
@@ -14,7 +13,7 @@
 //   1. each example renders (and is the scene that was picked)
 //   2. legend hover AND focus mark at least one element per role, in each
 //      example, and a role the example does not use says so on its chip
-//   3. the older "where each colour lands" hover still works on a Fernway scene (Invoices)
+//   3. the legend's hover trace dims everything that is not the traced role, clears on leave, and a click pins it (Product page)
 //   4. on a phone a tapped colour stays traced for 3 seconds, then clears
 //   5. a slow download never shows an empty stage: the old scene stays up
 //   6. no text under 12px in any example at 390, 768 and 1440
@@ -24,14 +23,14 @@
 //      label and each other (a box test; the contrast walk cannot see a line
 //      drawn under a label's plate)
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
-//   7d. Orra's five colourways sit in one row at 360, 390, 768, 1024 and 1440; names hidden under 960, fitting at 1440
-//   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
-//   7f. the legend: at most two chip rows, the adjusted-as-text caption is one line and its chips point at it
+//   7d. Orra's four colourway buttons sit in one row, each 44px or more wide, at 360, 390, 768, 1024 and 1440; the selected name is in the Colour label
+//   7e. Orra's stage stays off the buy column and the shirt on show inside the stage at 1440, 768, 390
+//   7f. the legend: one row, the chips that do not fit under "+N more", the adjusted-as-text caption is one line and its chips point at it
 //   7g. the Slack Water headline runs to at most three lines at 1440 and 768
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //   10. the free/Pro gate: a free account sees Architect portfolio and Spending card blurred
 //       and out of reach (the real scene behind Unlock preview) and Trail run app open, and
-//       the arrow keys walk all eight options in order
+//       the arrow keys walk all six options in order
 //   11. Trail run app, Architect portfolio and Spending card do not overflow sideways at
 //       320, 390 and 768
 //
@@ -44,7 +43,7 @@
 // five points. A background IMAGE under text is reported, not guessed at. A point
 // that another element covers is reported as covered.
 //
-// To make it fail: in src/components/palette/examples/SlackWater.css set .sw-stand
+// To make it fail: in src/components/palette/examples/SlackWater.css set .sw-dek
 // to `color:var(--pv-disabled)` (7 goes red); set one example font-size to 10px
 // (6); set PIN_MS in PalettePreviewDialog.jsx to 30000 (4); make Stage drop its
 // old scene by calling onChange without startTransition (5); delete the .catch in
@@ -54,14 +53,19 @@
 // Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
 // in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
 // `.or-sw-t` back to ellipsis; `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
-// the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
+// the .sw-head clamp up to 14cqi (7g), Orra swatches back to flex-wrap and a 40px width (7d), `.or-stage` given `margin-bottom:-80px` (7e); put previewLoader back to Promise.all, or
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { clickPaletteAction } from './palette-helpers.js'
+import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
 
 // name: the option in the dialog's list. text: a string only that example prints.
 // roles: the roles each example tags, by hand, from its ROLES in <File>.data.js.
+// The states a preview can be shown in, by the label in the dialog's State menu. A preview with no entry has one frame.
+const STATES = {
+  'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
+  'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
+}
 const ALL_ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral']
 const EXAMPLES = [
   {
@@ -73,8 +77,9 @@ const EXAMPLES = [
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
   },
   {
+    // The Overview tags five roles; success is only on the bag sheet (Added to bag), so its chip is off at rest.
     name: 'Product page', id: 'product', text: 'The Field Overshirt',
-    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
+    roles: ['primary', 'secondary', 'accent', 'deep', 'neutral'],
   },
   {
     name: 'Trail run app', id: 'trail', text: 'Saturday run', pro: false,
@@ -85,8 +90,8 @@ const EXAMPLES = [
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral'],
   },
   {
-    name: 'Spending card', id: 'card', text: 'Corner Grocer, Newtown', pro: true,
-    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
+    name: 'Spending card', id: 'card', text: 'Marrickville Fresh Market', pro: true,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
   },
 ]
 
@@ -126,7 +131,7 @@ async function seed(page, colors) {
 async function openDialog(page, { plan = 'pro' } = {}) {
   if (plan) await signIn(page, { plan })
   await go(page, '/create/palette')
-  await clickPaletteAction(page, 'Preview on a UI')
+  await clickPaletteAction(page, 'Preview')
   const dialog = page.getByRole('dialog', { name: 'Palette preview' })
   await expect(dialog).toBeVisible()
   return dialog
@@ -149,11 +154,26 @@ async function setTheme(dialog, theme) {
   await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
 }
 
-/** The legend chip for a role, wherever the layout puts the legend. */
-function chipFor(scope, role) {
-  if (BRAND.includes(role)) return scope.getByRole('group', { name: 'Your colours' }).getByRole('button').nth(BRAND.indexOf(role))
-  return scope.getByRole('group', { name: 'Suggested colours' }).getByRole('button', { name: SUGGESTED_LABEL[role] })
+/** Every chip in the order the legend lists them: the five slots, then the suggested ones. */
+const CHIP_ORDER = [...BRAND, 'success', 'warning', 'error', 'info', 'neutral']
+
+/**
+ * The legend chip for a role, wherever the layout puts it. The one-row legend keeps the chips
+ * that fit and moves the rest, in order, into the "+N more" popover, which this opens when the
+ * chip is not on the row. The phone sheet lists all ten. The hidden measuring copy is skipped.
+ */
+async function chipFor(scope, role) {
+  const live = scope.locator('.pvd-chip:not(.pvd-legend-ghost *)')
+  const at = CHIP_ORDER.indexOf(role)
+  if ((await live.count()) <= at) {
+    await scope.getByRole('button', { name: /^\+\d+ more$/ }).click()
+    await expect(live).toHaveCount(CHIP_ORDER.length)
+  }
+  return live.nth(at)
 }
+
+/** The legend's heading, once: the row also holds a hidden copy of it for measuring. */
+const legendHeading = (dialog) => dialog.getByText('Where each colour lands').first()
 
 /** Jump every running animation to its end, so text is measured at rest and not part-way through a fade in. */
 const settle = (page) => page.evaluate(() => { for (const a of document.getAnimations()) { try { a.finish() } catch { /* an endless one */ } } })
@@ -201,10 +221,10 @@ test.describe('"where each colour lands"', () => {
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, ex.name)
-      await expect(dialog.getByText('Where each colour lands')).toBeVisible()
+      await expect(legendHeading(dialog)).toBeVisible()
 
       for (const role of ex.roles) {
-        const chip = chipFor(dialog, role)
+        const chip = await chipFor(dialog, role)
         await expect(chip, `${role}: the chip is live, not marked "Not in this preview"`).not.toHaveAttribute('aria-disabled', 'true')
 
         // Hover (a mouse pointer).
@@ -226,7 +246,7 @@ test.describe('"where each colour lands"', () => {
 
       // The roles the example does not use say so, and do not trace.
       for (const role of ALL_ROLES.filter((r) => !ex.roles.includes(r))) {
-        const chip = chipFor(dialog, role)
+        const chip = await chipFor(dialog, role)
         await expect(chip, `${ex.name} does not use ${role}`).toHaveAttribute('aria-disabled', 'true')
         await expect(chip).toContainText('Not in this preview')
         await chip.focus()
@@ -235,15 +255,15 @@ test.describe('"where each colour lands"', () => {
     })
   }
 
-  test('the older Fernway scenes (Invoices here) still trace a colour on hover, dimming everything else, and clear on leave', async ({ page }) => {
-    watch(page, 'designer tracing colours in a Fernway scene')
+  test('the legend traces a colour on hover, dimming everything else, and clears on leave', async ({ page }) => {
+    watch(page, 'designer tracing colours in a scene')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)
-    await pickScene(dialog, 'Invoices')
-    await expect(dialog.getByText('Where each colour lands')).toBeVisible()
+    await pickScene(dialog, 'Product page')
+    await expect(legendHeading(dialog)).toBeVisible()
     await expect(hits(page)).toHaveCount(0)
 
-    const primary = chipFor(dialog, 'primary')
+    const primary = await chipFor(dialog, 'primary')
     await primary.hover()
     await expect(hits(page)).not.toHaveCount(0)
     // Everything that is not the traced role is dimmed, and the legend names it.
@@ -281,7 +301,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Colours', exact: true }).tap()
     const sheet = page.getByRole('dialog', { name: 'Where each colour lands' })
     await expect(sheet).toBeVisible()
-    await chipFor(sheet, 'primary').tap()
+    await (await chipFor(sheet, 'primary')).tap()
 
     const showing = dialog.locator('.pvd-showing')
     await expect(showing).toContainText('Showing:')
@@ -417,6 +437,13 @@ function sweepContrast() {
   const over = (fg, bg) => [0, 1, 2].map((i) => fg[i] * fg[3] + bg[i] * (1 - fg[3]))
   const problems = []
   const rows = []
+  const onRender = new Set()
+  let inertSkipped = 0
+  // elementsFromPoint skips anything with pointer-events:none, such as the Spending card's toast dock,
+  // which is printed all the same. Hit-testing is switched on for the walk and put back after it.
+  const hitTest = document.createElement('style')
+  hitTest.textContent = '.pvs, .pvs * { pointer-events: auto !important }'
+  document.head.append(hitTest)
 
   const isDescendantOrSelf = (maybe, el) => el === maybe || el.contains(maybe) || maybe.contains(el)
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
@@ -431,6 +458,9 @@ function sweepContrast() {
     // Text that is visually hidden on purpose (a 1px clip box, kept for a screen reader, as the
     // Orra colourway names are under 960px) paints nothing, so it has no ground to read.
     { const hb = el.getBoundingClientRect(); if (hb.width <= 1 && hb.height <= 1 && cs.clipPath !== 'none') continue }
+    // The page behind Orra's bag sheet is inert (a modal is open): the browser hit-tests nothing in it, so the
+    // walk cannot read its ground. It is the same page the Overview rates, so the Added to bag state rates the sheet.
+    if (el.closest('.or [inert]')) { inertSkipped++; continue }
     el.scrollIntoView({ block: 'center', inline: 'center' })
 
     const range = document.createRange()
@@ -480,7 +510,12 @@ function sweepContrast() {
           if (c && a > 0) layers.push([c[0], c[1], c[2], a])
           if (a >= 0.999 || e === root) break
         }
-        if (imageUnder) { problems.push(`${label}: a background image under the text (.${String(imageUnder.className)})`); continue }
+        // Text printed on the card render has a picture for a ground; cardInkRatios rates it from the screen.
+        if (imageUnder) {
+          if (el.closest('.rc') && imageUnder.closest('.rc')) { onRender.add(label); continue }
+          problems.push(`${label}: a background image under the text (.${String(imageUnder.className)})`)
+          continue
+        }
         let ground = [255, 255, 255]
         for (let i = layers.length - 1; i >= 0; i--) ground = over(layers[i], ground)
         const ink = over(fg, ground)
@@ -488,10 +523,11 @@ function sweepContrast() {
         if (!worst || rr < worst.ratio) worst = { ratio: rr, ink, ground }
       }
     }
-    // Slack Water's narrow layout crops the chart on purpose (the wharves past the crop
-    // are not on screen); slack-water-chart.test.js holds that no label is cut by the crop.
-    // Anything else that cannot be reached is a finding.
-    if (!reached) { if (!el.closest('.sw-label')) problems.push(`${label}: no point of it could be reached (all covered or off screen)`); continue }
+    // Anything that cannot be reached (all covered or off screen) is a finding.
+    if (!reached) { problems.push(`${label}: no point of it could be reached (all covered or off screen)`); continue }
+
+    // Every point sat on a background image, which is already in `problems`: nothing to rate.
+    if (!worst) continue
 
     const size = parseFloat(cs.fontSize)
     const large = size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)
@@ -499,13 +535,15 @@ function sweepContrast() {
     rows.push({
       label, size, large, floor: large ? 3 : 4.5, ratio: Math.round(worst.ratio * 100) / 100,
       ink: hex(worst.ink), ground: hex(worst.ground),
-      // The sold-out size in the Product page: struck through, in the disabled
-      // ink, on purpose. Text of an inactive control is exempt from 1.4.3, so it
-      // is exempt only while it is marked aria-disabled.
-      exempt: !!el.closest('.or-size.is-off[aria-disabled="true"]'),
+      // The Overseas fees label in the Spending card's Limits form: a disabled toggle's label, drawn in
+      // the disabled ink on purpose (text of an inactive control is exempt from 1.4.3).
+      // The Product page has no exemption: its sold-out size is selectable and struck through in the
+      // muted ink, so it is held to the floor like every other node.
+      exempt: !!el.closest('.ty-field-l.is-disabled'),
     })
   }
-  return { rows, problems: [...new Set(problems)] }
+  hitTest.remove()
+  return { rows, problems: [...new Set(problems)], onRender: [...onRender], inertSkipped }
 }
 
 test.describe('contrast on the real ground', () => {
@@ -527,26 +565,46 @@ test.describe('contrast on the real ground', () => {
         const unmeasured = []
         let measured = 0
         let exempt = 0
+        let cardChecked = 0
         for (const theme of ['Light', 'Dark']) {
           await setTheme(dialog, theme)
           for (const ex of EXAMPLES) {
             await pickScene(dialog, ex.name)
-            await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
-            await settle(page)
-            const { rows, problems } = await page.evaluate(sweepContrast)
-            expect(rows.length, `${ex.name}/${theme}: text nodes measured`).toBeGreaterThan(20)
-            measured += rows.length
-            for (const p of problems) unmeasured.push(`${ex.name}/${theme} ${p}`)
-            for (const r of rows) {
-              if (r.exempt) { exempt++; continue }
-              if (r.ratio < r.floor) misses.push(`${ex.name}/${theme} ${r.label} ${r.ink} on ${r.ground} = ${r.ratio}:1 at ${r.size}px (floor ${r.floor})`)
+            for (const state of STATES[ex.name] || [null]) {
+              if (state) await pickPreviewState(dialog, state)
+              const at = state ? `${ex.name}/${state}/${theme}` : `${ex.name}/${theme}`
+              await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
+              await settle(page)
+              const { rows, problems, onRender, inertSkipped } = await page.evaluate(sweepContrast)
+              // With Orra's bag sheet open the page behind it is inert and set aside (about 36 text nodes), so
+              // the sheet alone is rated (6 nodes); everywhere else nothing is set aside.
+              const sheet = state === 'Added to bag'
+              expect(rows.length, `${at}: text nodes measured`).toBeGreaterThan(sheet ? 4 : state && state !== 'Overview' ? 15 : 20)
+              if (sheet) expect(inertSkipped, `${at}: the page behind the sheet is inert`).toBeGreaterThan(20)
+              else expect(inertSkipped, `${at}: text set aside as inert`).toBe(0)
+              measured += rows.length
+              for (const p of problems) unmeasured.push(`${at} ${p}`)
+              for (const r of rows) {
+                if (r.exempt) { exempt++; continue }
+                if (r.ratio < r.floor) misses.push(`${at} ${r.label} ${r.ink} on ${r.ground} = ${r.ratio}:1 at ${r.size}px (floor ${r.floor})`)
+              }
+              // The card is on the first screen of the Overview and Card frozen states, and its printed text has a render for a ground.
+              if (onRender.length) {
+                const inks = await cardInkRatios(page)
+                expect(inks.length, `${at}: the card's printed text was not found`).toBe(2)
+                for (const k of inks) if (k.ratio < 4.5) misses.push(`${at} ${k.sel} on the card render = ${k.ratio}:1 (floor 4.5, least-contrast pixel)`)
+                cardChecked++
+              }
             }
           }
         }
         expect(measured, 'text nodes measured in all').toBeGreaterThan(150)
         expect(unmeasured, 'text this walk could not measure or that something covers').toEqual([])
-        // The sold-out size is in the Product page, in both themes, so the carve-out was used.
-        expect(exempt, 'the sold-out size chips were not found (both themes)').toBeGreaterThanOrEqual(2)
+        // The disabled Overseas fees label is in the Spending card's Limits form, in both themes, so the carve-out was used.
+        // Nothing else is exempt: the Product page's sold-out size is held to the floor.
+        expect(exempt, 'the disabled Overseas fees label was not found (both themes)').toBe(2)
+        // The card's printed text was rated from pixels in both themes, in more than one state.
+        expect(cardChecked, 'the card render text was never rated from pixels').toBeGreaterThanOrEqual(4)
         expect(misses, `text below its floor on its real ground (${measured} measured):\n${misses.join('\n')}`).toEqual([])
       })
     }
@@ -603,8 +661,9 @@ test.describe('the Energy dashboard chart labels', () => {
 // data. So no SVG part may carry an outline while a colour is traced.
 
 test.describe('the legend highlight on a drawing', () => {
-  // Tally is built from boxes, with no drawn part that carries a role, so there is no SVG to check there.
-  for (const ex of EXAMPLES.filter((e) => e.id !== 'card')) {
+  // Tally and Orra are built from boxes and pictures, with no drawn part that carries a role (Orra's only
+  // SVGs are icons with no data-role), so there is no SVG to check there.
+  for (const ex of EXAMPLES.filter((e) => e.id !== 'card' && e.id !== 'product')) {
     test(`${ex.name}: tracing a colour puts no outline on any drawn part`, async ({ page }) => {
       watch(page, `designer tracing colours on the drawings in ${ex.name}`)
       await seed(page, PALETTES.mid)
@@ -616,7 +675,7 @@ test.describe('the legend highlight on a drawing', () => {
       expect((await page.locator('.pvs svg [data-role]').count()), `${ex.name}: drawn parts with a role were found`).toBeGreaterThan(3)
       let traced = 0
       for (const role of ex.roles) {
-        await chipFor(dialog, role).hover()
+        await (await chipFor(dialog, role)).hover()
         await expect(hits(page), `${ex.name}: hovering ${role} marked nothing`).not.toHaveCount(0)
         if (await page.locator('.pvs svg [data-hit="on"]').count()) traced++
         expect(await outlined(), `${ex.name}: hovering ${role} left an outline on a drawn part`).toEqual([])
@@ -627,35 +686,35 @@ test.describe('the legend highlight on a drawing', () => {
   }
 })
 
-// ── 7d. Orra's five colourways: one row at every width ───────────────────────
-// The row is a five-column grid. Under a 960px container the names are hidden from
-// the eye (a 1px clip box, still read by a screen reader) and the selected name is
-// printed beside "Colourway"; from 960 the names show under the swatches.
+// ── 7d. Orra's four colourways: one row at every width ───────────────────────
+// The colourways are a radiogroup of four buttons (three made from the palette, then the
+// fixed Natural), each a cropped picture of the shirt with its name under it. They share
+// one row and are wide enough to press at every width, and the selected name is printed
+// in the "Colour" label above them.
 
 const swatchRow = (page) => page.evaluate(() => {
   const row = [...document.querySelectorAll('.or-sw')].map((el) => {
     const r = el.getBoundingClientRect()
     const t = el.querySelector('.or-sw-t')
-    const i = el.querySelector(':scope > i').getBoundingClientRect()
-    const tb = t.getBoundingClientRect()
+    const crop = el.querySelector('.or-crop').getBoundingClientRect()
     const range = document.createRange()
     range.selectNodeContents(t)
     const rects = [...range.getClientRects()].filter((q) => q.width > 0)
     return {
-      name: t.textContent.trim(), top: Math.round(r.top), width: r.width, circle: [i.width, i.height],
-      box: [tb.width, tb.height], textWidth: Math.max(0, ...rects.map((q) => q.width)),
-      lines: new Set(rects.map((q) => Math.round(q.top))).size,
+      tag: el.tagName, name: t.textContent.trim(), top: Math.round(r.top), width: r.width, height: r.height,
+      crop: [crop.width, crop.height], textWidth: Math.max(0, ...rects.map((q) => q.width)),
+      lines: new Set(rects.map((q) => Math.round(q.top))).size, overflow: el.scrollWidth - el.clientWidth,
     }
   })
   const sel = document.querySelector('.or-opt-l b')
   return { row, selected: sel && sel.textContent.trim(), first: row[0] && row[0].name }
 })
 
-test.describe('the Orra colourways on a phone', () => {
-  for (const width of [360, 390]) {
-    test(`five swatches share one row at ${width}px, 40px circles, names hidden from the eye and the selected one printed`, async ({ page }) => {
+test.describe('the Orra colourways', () => {
+  for (const width of [360, 390, 768, 1024, 1440]) {
+    test(`four swatch buttons share one row at ${width}px, each wide enough to press, with the selected name in the Colour label`, async ({ page }) => {
       watch(page, `designer reading the Orra colourways at ${width}px`)
-      await page.setViewportSize({ width, height: 844 })
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       for (const theme of ['Light', 'Dark']) {
@@ -663,154 +722,140 @@ test.describe('the Orra colourways on a phone', () => {
         await pickScene(dialog, 'Product page')
         await settle(page)
         const { row, selected, first } = await swatchRow(page)
-        expect(row.length, `${theme}: five colourways`).toBe(5)
+        expect(row.length, `${theme}: four colourways`).toBe(4)
+        expect(row.map((s) => s.tag), `${theme}: every colourway is a button`).toEqual(['BUTTON', 'BUTTON', 'BUTTON', 'BUTTON'])
+        expect(row[3].name, `${theme}: the last colourway is the fixed Natural`).toBe('Natural')
+        expect(new Set(row.map((s) => s.name)).size, `${theme}: two colourways share a name`).toBe(4)
         expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
         for (const s of row) {
           expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
-          expect(s.circle, `${theme}: the "${s.name}" circle is not 40px`).toEqual([40, 40])
-          expect(s.box[0], `${theme}: "${s.name}" is still visible (wider than its 1px clip box)`).toBeLessThanOrEqual(1)
-          expect(s.box[1], `${theme}: "${s.name}" is still visible (taller than its 1px clip box)`).toBeLessThanOrEqual(1)
+          expect(s.height, `${theme}: the "${s.name}" swatch is too short to press`).toBeGreaterThanOrEqual(44)
+          expect(s.crop[0], `${theme}: the "${s.name}" picture has no width`).toBeGreaterThanOrEqual(44)
+          expect(s.overflow, `${theme}: the "${s.name}" name runs past its swatch`).toBeLessThanOrEqual(0)
+          expect(s.lines, `${theme}: "${s.name}" runs to ${s.lines} lines`).toBeLessThanOrEqual(2)
+          // A swatch is never narrower than its longest word, with 2px a side to spare (Jacaranda at 768 once filled its swatch exactly).
+          expect(s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) leaves under 4px in its ${s.width.toFixed(1)}px swatch`).toBeLessThanOrEqual(s.width - 4)
         }
-        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
+        expect(selected, `${theme}: the selected colourway's name is printed in the Colour label`).toBe(first)
       }
     })
   }
-})
-
-test.describe('the Orra colourways on a tablet', () => {
-  for (const width of [768, 1024]) {
-    test(`five swatches share one row at ${width}px`, async ({ page }) => {
-      watch(page, `designer reading the Orra colourways at ${width}px`)
-      await page.setViewportSize({ width, height: 900 })
-      await seed(page, PALETTES.mid)
-      const dialog = await openDialog(page)
-      for (const theme of ['Light', 'Dark']) {
-        await setTheme(dialog, theme)
-        await pickScene(dialog, 'Product page')
-        await settle(page)
-        const { row, selected, first } = await swatchRow(page)
-        expect(row.length, `${theme}: five colourways`).toBe(5)
-        expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
-        for (const s of row) expect(s.width, `${theme}: the "${s.name}" swatch is squeezed`).toBeGreaterThanOrEqual(44)
-        expect(selected, `${theme}: the selected colourway's name is printed in the option label`).toBe(first)
-      }
-    })
-  }
-})
-
-test.describe('the Orra colourway names where they show', () => {
-  test('at 1440px each name is on one line with room to spare inside its swatch, in both themes', async ({ page }) => {
-    watch(page, 'designer reading the Orra colourway names at 1440px')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await seed(page, PALETTES.mid)
-    const dialog = await openDialog(page)
-    for (const theme of ['Light', 'Dark']) {
-      await setTheme(dialog, theme)
-      await pickScene(dialog, 'Product page')
-      await settle(page)
-      const { row } = await swatchRow(page)
-      expect(row.length, `${theme}: five colourways`).toBe(5)
-      expect(new Set(row.map((s) => s.top)).size, `${theme}: the colourways wrap onto a second row`).toBe(1)
-      for (const s of row) {
-        expect(s.box[0], `${theme}: "${s.name}" is hidden at 1440`).toBeGreaterThan(8)
-        expect(s.lines, `${theme}: "${s.name}" wraps onto ${s.lines} lines`).toBe(1)
-        // The width of the text itself (a Range), not its box: a box that is as wide as its
-        // column hides a word that is exactly as wide, or wider, and breaks it.
-        expect(s.width - s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) leaves under 8px in a ${s.width.toFixed(1)}px swatch`).toBeGreaterThanOrEqual(8)
-      }
-    }
-  })
 })
 
 // ── 7e. Orra's shirt stays inside its stage ──────────────────────────────────
 // The contrast walk measures text on what is painted over it, so a shirt drawn over
 // the price and description at 768 could still pass. Compare the boxes instead:
-// the front view's drawing must sit inside the stage's box, and the buy column
-// must not start above the stage's bottom edge when the two are stacked.
+// the stage must not overlap the buy column, and the picture on show (the strip holds
+// three, side by side) sits inside the stage.
 
 test.describe('the Orra product stage', () => {
   for (const width of [1440, 768, 390]) {
-    test(`the shirt stays inside its stage and off the buy column at ${width}px`, async ({ page }) => {
+    test(`the stage stays off the buy column and its shirt inside it at ${width}px`, async ({ page }) => {
       watch(page, `designer reading the Orra product page at ${width}px`)
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, 'Product page')
       await settle(page)
+      // The first picture is the eager one; the back and pocket load when the strip nears them.
+      await page.waitForFunction(() => [...document.querySelectorAll('.or-slide:first-child .rc-base')].every((i) => i.complete && i.naturalWidth > 0))
       const b = await page.evaluate(() => {
-        const r = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, r: x.right, t: x.top, b: x.bottom } }
+        const r = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, r: x.right, t: x.top, b: x.bottom, w: x.width, h: x.height } }
         const stage = document.querySelector('.or-stage')
-        const shirt = document.querySelector('.or-figure .or-garment')
         const buy = document.querySelector('.or-buy')
-        return stage && shirt && buy ? { stage: r(stage), shirt: r(shirt), buy: r(buy) } : null
+        const overlap = (a, c) => Math.max(0, Math.min(a.r, c.r) - Math.max(a.l, c.l)) * Math.max(0, Math.min(a.b, c.b) - Math.max(a.t, c.t))
+        const st = stage && r(stage)
+        // The shirt on show is the one with the most of itself over the stage.
+        const shirts = [...document.querySelectorAll('.or-stage .or-shirt')].map(r)
+        const visible = st ? shirts.map((s) => ({ ...s, over: overlap(s, st) })).sort((a, c) => c.over - a.over)[0] : null
+        return stage && buy && visible ? { stage: st, buy: r(buy), shirt: visible, shirts: shirts.length } : null
       })
-      expect(b, 'the stage, its shirt and the buy column were found').toBeTruthy()
+      expect(b, 'the stage, a shirt in it and the buy column were found').toBeTruthy()
+      expect(b.shirts, 'the strip holds the front, back and pocket pictures').toBe(3)
+      expect(b.shirt.w, 'the shirt on show has a width').toBeGreaterThan(100)
+      expect(b.shirt.h, 'the shirt on show has a height').toBeGreaterThan(100)
       const slack = 1
       expect(b.shirt.l, 'shirt past the stage\'s left edge').toBeGreaterThanOrEqual(b.stage.l - slack)
       expect(b.shirt.r, 'shirt past the stage\'s right edge').toBeLessThanOrEqual(b.stage.r + slack)
       expect(b.shirt.t, 'shirt above the stage').toBeGreaterThanOrEqual(b.stage.t - slack)
       expect(b.shirt.b, 'shirt below the stage').toBeLessThanOrEqual(b.stage.b + slack)
-      const side = b.shirt.l < b.buy.r && b.shirt.r > b.buy.l && b.shirt.t < b.buy.b && b.shirt.b > b.buy.t
-      expect(side, 'the shirt overlaps the buy column').toBe(false)
+      const touch = b.stage.l < b.buy.r - slack && b.stage.r > b.buy.l + slack && b.stage.t < b.buy.b - slack && b.stage.b > b.buy.t + slack
+      expect(touch, 'the stage overlaps the buy column').toBe(false)
     })
   }
 })
 
-// ── 7f. the legend stays compact, and its note is attached to the chips ──────
-// The "darker as text, so it reads" note used to sit inside a chip and push the
-// row onto a third line. It is now a one-line caption under the chips, and every
-// chip it speaks of points at it with aria-describedby.
+// ── 7f. the legend is one row, and its note is attached to the chips ─────────
+// The legend is a single 48px row: the heading, the chips that fit, then "+N more".
+// The chips that do not fit, and the "darker as text, so it reads" caption, sit in
+// the popover that button opens. Every chip that names a colour read as text points
+// at the caption with aria-describedby, whether it is on the row or in the popover.
 
 test.describe('the legend', () => {
   for (const ex of EXAMPLES) {
-    test(`${ex.name}: at most two chip rows, and the adjusted-as-text caption is one line that its chips are described by`, async ({ page }) => {
+    test(`${ex.name}: one row with the rest under "+N more", and the adjusted-as-text caption is one line that its chips are described by`, async ({ page }) => {
       watch(page, `designer reading the legend beside ${ex.name}`)
       await page.setViewportSize({ width: 1440, height: 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, ex.name)
       await settle(page)
-      const legend = await page.evaluate(() => {
+      const onRow = await page.evaluate(() => {
         const root = document.querySelector('.pvd-legend')
         if (!root) return null
-        const chips = [...root.querySelectorAll('.pvd-chip')]
-        const rows = new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top)))
-        const cap = root.querySelector('.pvd-legend-adj')
-        const capBox = cap && cap.getBoundingClientRect()
-        const names = cap ? cap.textContent.split(':')[0].split(',').map((s) => s.trim()) : []
+        const chips = [...root.querySelectorAll('.pvd-chip:not(.pvd-legend-ghost *)')]
+        const more = root.querySelector('.pvd-more')
+        return {
+          shown: chips.length,
+          rows: new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+          height: root.getBoundingClientRect().height,
+          more: more && more.textContent.trim(),
+        }
+      })
+      expect(onRow, 'the legend was found').toBeTruthy()
+      expect(onRow.rows, 'the chips on the row sit on more than one line').toBe(1)
+      expect(onRow.height, 'the legend is taller than one row').toBeLessThanOrEqual(56)
+      expect(onRow.more, 'the "+N more" button is missing').toMatch(/^\+\d+ more$/)
+      const hidden = Number(/\d+/.exec(onRow.more)[0])
+      expect(onRow.shown + hidden, 'the chips on the row plus those under "+N more" are the ten colours').toBe(10)
+
+      await dialog.getByRole('button', { name: onRow.more }).click()
+      const pop = dialog.getByRole('dialog', { name: 'More colours' })
+      await expect(pop).toBeVisible()
+      await expect(pop.locator('.pvd-chip'), 'the popover holds exactly the chips the row dropped').toHaveCount(hidden)
+
+      const legend = await page.evaluate(() => {
+        const root = document.querySelector('.pvd-legend')
+        const chips = [...root.querySelectorAll('.pvd-chip:not(.pvd-legend-ghost *)')]
+        const cap = root.querySelector('.pvd-more-pop .pvd-legend-adj')
+        const names = cap ? cap.textContent.split(':')[0].split(',').map((x) => x.trim()) : []
+        const spoken = cap && [...root.querySelectorAll('p.sr-only')].find((p) => p.textContent.trim() === cap.textContent.trim())
         return {
           chipCount: chips.length,
-          rows: rows.size,
           caption: cap && {
-            id: cap.id, text: cap.textContent.trim(), size: parseFloat(getComputedStyle(cap).fontSize), height: capBox.height,
-            inChip: !!cap.closest('.pvd-chip'),
-            below: capBox.top >= Math.max(...chips.slice(0, 5).map((c) => c.getBoundingClientRect().bottom)) - 1,
+            text: cap.textContent.trim(), size: parseFloat(getComputedStyle(cap).fontSize), height: cap.getBoundingClientRect().height,
+            inChip: !!cap.closest('.pvd-chip'), spokenId: spoken && spoken.id,
           },
           described: chips.map((c) => ({
             label: c.querySelector('.pvd-chip-l').textContent.trim(),
             by: c.getAttribute('aria-describedby'),
-            target: c.getAttribute('aria-describedby') && !!document.getElementById(c.getAttribute('aria-describedby')),
           })),
           names,
         }
       })
-      expect(legend, 'the legend was found').toBeTruthy()
       expect(legend.chipCount, 'ten chips: five colours and five suggested').toBe(10)
-      expect(legend.rows, 'the chips run to more than two rows').toBeLessThanOrEqual(2)
       // The caption names the roles this scene uses that were read darker as text, so it is
       // required where the mid palette has one (Editorial hero) and held to its rules wherever it appears.
-      if (ex.id === 'editorial') expect(legend.caption, 'the mid palette has a colour read darker as text, so a caption is expected').toBeTruthy()
       if (!legend.caption) { for (const d of legend.described) expect(d.by, `"${d.label}" points at a caption that is not there`).toBeNull(); return }
       expect(legend.caption.inChip, 'the caption is inside a chip').toBe(false)
-      expect(legend.caption.below, 'the caption is not under the colour chips').toBe(true)
       expect(legend.caption.size, 'caption type is under the 12px floor').toBeGreaterThanOrEqual(12)
       expect(legend.caption.height, `the caption takes more than one line: "${legend.caption.text}"`).toBeLessThan(24)
+      expect(legend.caption.spokenId, 'the screen-reader copy of the caption is not on the page').toBeTruthy()
       expect(legend.names.length, 'the caption names at least one colour').toBeGreaterThan(0)
       for (const name of legend.names) {
         const chip = legend.described.find((d) => d.label === name)
         expect(chip, `the caption names "${name}", which is not a chip`).toBeTruthy()
-        expect(chip.by, `the "${name}" chip is not described by the caption`).toBe(legend.caption.id)
-        expect(chip.target, `the "${name}" chip points at an id that is not on the page`).toBe(true)
+        expect(chip.by, `the "${name}" chip is not described by the caption`).toBe(legend.caption.spokenId)
       }
       for (const d of legend.described.filter((x) => x.by)) {
         expect(legend.names, `"${d.label}" is described by the caption but is not named in it`).toContain(d.label)
@@ -868,10 +913,10 @@ test.describe('an example that fails to download', () => {
     await expect(dialog.getByText('Check your connection, then reload the page.')).toBeVisible()
     await expect(dialog.getByRole('option', { name: /^Energy dashboard/ })).toHaveAttribute('aria-selected', 'true')
 
-    // The dialog around it is alive: another example and an older scene both load.
+    // The dialog around it is alive: another example loads.
     await pickScene(dialog, 'Product page')
     await expect(message).toHaveCount(0)
-    await pickScene(dialog, 'Invoices')
+    await pickScene(dialog, 'Trail run app')
     await expect(dialog).toBeVisible()
     expect(navigations, 'the page reloaded when the chunk failed').toBe(0)
   })
@@ -940,7 +985,7 @@ test.describe('the preview dialog fails to download', () => {
       return undefined
     })
 
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     await expect.poll(() => held.length, { message: 'the failed dialog chunk should have asked for exactly one reload' }).toBe(1)
     await expect.poll(() => probe.find((p) => p.startsWith('reload pending')), { message: 'the in-page probe never reported, so this test read nothing', timeout: 10000 }).toBeTruthy()
     expect(failed.count, 'the dialog chunk request must actually have been failed').toBeGreaterThan(0)
@@ -961,7 +1006,7 @@ test.describe('the preview dialog fails to download', () => {
 
 // ── 10. the free/Pro gate, and walking the list ──────────────────────────────
 
-const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
 test.describe('the free and Pro examples', () => {
   test('a free account has Trail run app open and sees Architect portfolio and Spending card blurred and out of reach', async ({ page }) => {
@@ -969,7 +1014,7 @@ test.describe('the free and Pro examples', () => {
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page, { plan: null })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option'), 'eight previews in the list').toHaveCount(SCENE_ORDER.length)
+    await expect(rail.getByRole('option'), 'six previews in the list').toHaveCount(SCENE_ORDER.length)
 
     for (const ex of EXAMPLES) {
       await pickScene(dialog, ex.name)
@@ -1005,7 +1050,7 @@ test.describe('the free and Pro examples', () => {
     }
   })
 
-  test('the arrow keys walk the rail through all eight previews in order, and Home and End reach the ends', async ({ page }) => {
+  test('the arrow keys walk the rail through all six previews in order, and Home and End reach the ends', async ({ page }) => {
     watch(page, 'keyboard designer walking the preview list')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)

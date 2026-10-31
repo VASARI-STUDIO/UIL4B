@@ -1769,6 +1769,38 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-error{font-size:12px;color:var(--err-strong);background:color-mix(in srgb,var(--err) 10%,transparent);border:1px solid color-mix(in srgb,var(--err) 30%,transparent);border-radius:var(--radius-s);padding:10px 12px}
 .fb-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
 
+/* ─── Reporting community content ───────────────────────────────────────────
+   The form reuses the feedback dialog's frame (.fb-*); these are only the
+   parts it does not have: a radio list for the reason, a hint line, and the
+   Report control itself. Every row and the control are 44px tall, since a
+   report is sometimes made from a phone in a hurry. */
+.rp-target{font-size:13px;line-height:1.6;color:var(--t1);margin:0;overflow-wrap:anywhere}
+.rp-kind{color:var(--t3)}
+.rp-reasons{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;border:0;min-width:0}
+.rp-reasons legend{padding:0;margin-bottom:6px}
+.rp-opt{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 10px;border:1px solid transparent;border-radius:var(--radius-s);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.rp-opt input{flex-shrink:0;width:16px;height:16px;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+.rp-opt.on{border-color:var(--accent-mid);background:var(--accent-wash)}
+@media(hover:hover){.rp-opt:hover{background:var(--hvr)}.rp-opt.on:hover{background:var(--accent-wash)}}
+.rp-opt-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rp-opt-label{font-size:13px;font-weight:600;color:var(--t0)}
+.rp-opt-hint{font-size:12px;line-height:1.5;color:var(--t2)}
+.rp-opt--check{align-items:center;padding-left:0;padding-right:0}
+.rp-opt--check .rp-opt-label{font-weight:500}
+.rp-hint{font-size:12px;line-height:1.6;color:var(--t2);margin:0}
+.rp-link{color:var(--accent-text);text-decoration:underline;text-underline-offset:2px}
+.rp-overlay{z-index:1100}
+
+.report-btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);cursor:pointer;border:0;background:none;color:inherit;padding:0}
+.report-btn--icon{min-width:44px;min-height:44px}
+.report-btn-chip{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-pill);background:rgba(0,0,0,.55);color:#fff;transition:background var(--dur-1) var(--ease-standard)}
+@media(hover:hover){.report-btn--icon:hover .report-btn-chip{background:rgba(0,0,0,.75)}}
+/* Corner of a card, clear of the save control: the design card's heart is top
+   right, the prompt card's Save is bottom right. */
+.ch-report{position:absolute;top:2px;left:2px;z-index:2}
+.pl-card-cell{position:relative}
+.pl-card-report{position:absolute;top:2px;right:2px;z-index:2}
+
 /* ─── What is attached, shown before it is sent ──────────────────────────────
    A quiet inset block, not a card and not a warning. It is the plain truth
    about the payload, so it should read as part of the form rather than as an
@@ -3839,7 +3871,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    squares. That is a spacing system, not more chrome, so it costs the row no
    width at the very widths where width is short. The clusters here are:
    explore (what you go looking for) · generate · step back · commit. */
-.plb-imgactions .btn{flex:1}
 
 /* Board interactions: insert-grow animation, drag-reorder states, gap inserts */
 @keyframes plb-in{from{flex-grow:.02;opacity:.2}to{flex-grow:1;opacity:1}}
@@ -5042,6 +5073,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    upsell it replaces, with the accent fill taken out so it reads as a status. */
 .lockt-cta.lockt-status{background:none;border-color:var(--border)}
 .lockt-status .lockt-cta-btn{width:auto}
+/* While the library is still arriving, hold roughly the height of the rows that
+   are about to land, so the page does not jump from the free rows to the lot.
+   Library pages only: the Palette Builder shows the same block inside a popup. */
+.lib-surface .lockt-status--reserve{min-height:min(60vh,520px);align-items:flex-start}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}

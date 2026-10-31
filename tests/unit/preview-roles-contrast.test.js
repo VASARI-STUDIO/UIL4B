@@ -1,8 +1,8 @@
 // derivePreviewRoles' onPrimary/primary pair, checked as NUMBERS.
 //
 // role.onPrimary is painted ON role.primary at 12-13px/600 by the primary
-// buttons of the Palette Builder previews (.pvs-btn--primary reads
-// --pv-on-primary on --pv-primary), and .hw-ui-btn on the homepage
+// buttons of the Palette Builder previews (Tally's .ty-btn--primary sits on
+// --pv-primary), and .hw-ui-btn on the homepage
 // workbench. Small text, so the floor is 4.5:1.
 //
 // WHY THIS FILE EXISTS. The engine used to derive the pair as
@@ -617,19 +617,20 @@ test('15 . the engine is WIRED to the page: the hand-off and the ink rules', () 
   assert.equal(vars['--pv-on-primary'], roles.onPrimary, 'pvVars no longer maps --pv-on-primary to onPrimary')
 
   const css = stripSourceComments(ALL_CSS)
-  // The shared stylesheet now holds the two States scenes (Invoices, Settings),
-  // so the text-in-ink rules left in it are the status chips and the error text.
-  // The brand-coloured text of the examples is set in their own recipes, which
-  // preview-role-tags and 153-preview-examples hold.
+  // The shared stylesheet holds only the scene root and the legend's marks, so
+  // the text-in-ink rules to hold are Tally's: its state rows and the Limits
+  // form's error message. The brand-coloured text of the other examples is set
+  // in their own recipes, which preview-role-tags and 153-preview-examples hold.
+  const tallyCss = stripSourceComments(readSource('src/components/palette/examples/Tally.css'))
   const TEXT_RULES = [
-    ['.pvs-chip[data-tone="success"]', '--pv-success-ink'],
-    ['.pvs-chip[data-tone="warning"]', '--pv-warning-ink'],
-    ['.pvs-chip[data-tone="error"]', '--pv-error-ink'],
-    ['.pvs-chip[data-tone="info"]', '--pv-info-ink'],
-    ['.pvs-err', '--pv-error-ink'],
+    ['.ty-tx[data-tone="success"] :is(.ty-note,.ty-money)', '--pv-success-ink'],
+    ['.ty-tx[data-tone="warning"] :is(.ty-note,.ty-money)', '--pv-warning-ink'],
+    ['.ty-tx[data-tone="error"] :is(.ty-note,.ty-money)', '--pv-error-ink'],
+    ['.ty-tx[data-tone="info"] :is(.ty-note,.ty-money)', '--pv-info-ink'],
+    ['.ty-err', '--pv-error-ink'],
   ]
   for (const [selector, token] of TEXT_RULES) {
-    const rule = ruleFor(css, selector)
+    const rule = ruleFor(tallyCss, selector)
     assert.ok(rule, `${selector} has gone from the stylesheet`)
     assert.ok(rule.includes(`color:var(${token})`),
       `${selector} sets text in a FILL role again instead of ${token} - that is the defect returning`)
@@ -640,11 +641,11 @@ test('15 . the engine is WIRED to the page: the hand-off and the ink rules', () 
   // every chip, disc and CTA in the previews, which is the outcome this split
   // exists to prevent.
   const FILL_RULES = [
-    ['.pvs-btn--primary', '--pv-primary'],
-    ['.pvs-check[data-role]', '--pv-primary'],
+    ['.ty-btn--primary', '--pv-primary'],
+    ['.ty-toggle.is-on', '--pv-primary'],
   ]
   for (const [selector, token] of FILL_RULES) {
-    const rule = ruleFor(css, selector)
+    const rule = ruleFor(tallyCss, selector)
     assert.ok(rule, `${selector} has gone from the stylesheet`)
     assert.ok(rule.includes(`background:var(${token})`),
       `${selector} no longer fills with ${token} - the ink split has leaked into the fills`)

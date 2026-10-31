@@ -121,7 +121,10 @@ test.describe('the secondary landings stay compressed', () => {
     const learnHint = await page.locator('.home-hero-hint').innerText()
     expect(learnHint, 'the Learn hint no longer matches the article registry')
       .toContain(String(LEARN_ARTICLES.length))
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+    // The guides only: Help and Design Principles sit after them in the "Using
+    // UIL4B" group and are not articles (207-learn-hub.spec.js).
+    await expect(page.locator('.lidx-sections section:not(#learn-topic-using-uil4b) .lidx-card'))
+      .toHaveCount(LEARN_ARTICLES.length)
     // The unwritten-topics roadmap is an admin-only sight.
     await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
