@@ -90,9 +90,6 @@ export default function FromImageDialog({
     return () => window.removeEventListener('keydown', onKey)
   }, [sheet])
 
-  // A resize past 900px swaps the mood control for the list; the sheet goes with it.
-  useEffect(() => { if (wide) setSheet(false) }, [wide])
-
   // Delete removes the focused slot, which unmounts it, so focus is handed on.
   useEffect(() => {
     if (refocus.current == null) return
