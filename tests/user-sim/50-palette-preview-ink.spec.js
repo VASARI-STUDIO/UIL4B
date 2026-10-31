@@ -48,6 +48,7 @@ const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial
 // A scene with a State menu is swept once per state: the disabled Overseas fees label
 // is only on the Limits form, and the Product page's bag sheet only in Added to bag.
 const STATES = {
+  'Trail run app': ['Activity', 'Live tracking', 'Segment PR'],
   'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
   'Editorial hero': ['Article', 'Subscribe sheet', 'Subscribe, email error'],
   'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
