@@ -49,7 +49,7 @@ test('the feedback form opens on Help Request for support arrivals, and on Featu
   // `ref` is read like `reason`, for the preselect and for the payment marker.
   assert.match(form, /const reason = params\.get\('reason'\) \|\| params\.get\('ref'\) \|\| ''/)
   assert.match(form, /params\.get\('reason'\) === PAYMENT_FAILED \|\| params\.get\('ref'\) === PAYMENT_FAILED/)
-  assert.match(form, /params\.get\('from'\) === 'support' \|\| reason \? 'help' : 'feature'/)
+  assert.match(form, /params\.get\('from'\) === 'support' \|\| reason \? 'help' : typeParam \|\| 'feature'/)
   // Payment mode: its own heading, and a billing link for signed-in visitors only.
   assert.match(form, /paymentFailed \? PAYMENT_TITLE : t\('feedback\.title'\)/)
   assert.match(form, /paymentFailed && accountEmail && \(/)
