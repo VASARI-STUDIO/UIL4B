@@ -51,8 +51,9 @@ function bodies(selector) {
 }
 
 // Fixed or sticky bars on the bottom edge. A rule that places one with a
-// `bottom` value must carry the bottom inset itself, or read --bkit-h, which is
-// declared as 56px/112px plus that inset.
+// `bottom` value must carry the bottom inset itself, or read --bkit-h or
+// --tool-dock-h (the tool dock's height), each of which is
+// declared as a fixed height plus that inset.
 const BOTTOM_BARS = [
   '.pnav-tabs',
   '.bkit-rail',
@@ -67,7 +68,7 @@ for (const sel of BOTTOM_BARS) {
     const placed = bodies(sel).filter((b) => /(^|[;\s])bottom\s*:/.test(b) || /position\s*:\s*fixed/.test(b))
     assert.ok(placed.length > 0, `found a placing rule for ${sel}`)
     for (const body of placed) {
-      assert.match(body, /safe-area-inset-bottom|--bkit-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      assert.match(body, /safe-area-inset-bottom|--bkit-h|--tool-dock-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
     }
   })
 }
