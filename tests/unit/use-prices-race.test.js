@@ -1,7 +1,7 @@
 // usePrices reads its cache through useSyncExternalStore with a version
 // snapshot. A component that rendered before the fetch settled, and subscribed
-// after it, reads a different version on subscribing and renders again. The old
-// useState + useEffect pair missed that settle and stayed on "loading".
+// after it, reads a different version on subscribing and renders again. A
+// useState + useEffect pair would miss that settle and stay on "loading".
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments } from './helpers/source-text.js'

@@ -65,6 +65,19 @@ test('live: the selected cadence has an amount', () => {
   assert.equal(stateOf(answer(), { selectedId: 'monthly' }), 'live')
 })
 
+test('live needs the selected cadence\'s own source to say live, never another cadence\'s', () => {
+  // Yearly is live; the monthly amount carries no live source of its own.
+  const prices = answer({ monthly: 'fallback' })
+  const { offers } = resolveOffers({ prices, currency: 'usd', loaded: true })
+  const withSource = (source) => ({ ...view(prices), source })
+  // An amount whose cadence has no source key is not live, whatever the others say.
+  const offersWithAmounts = offers.map((o) => ({ ...o, amountLabel: '$1' }))
+  assert.equal(priceState({ price: withSource({ yearly: 'live' }), offers: offersWithAmounts, selectedId: 'monthly' }), 'cadence-missing')
+  assert.equal(priceState({ price: withSource({ yearly: 'live', monthly: 'fallback' }), offers: offersWithAmounts, selectedId: 'monthly' }), 'cadence-missing')
+  assert.equal(priceState({ price: withSource({ yearly: 'live' }), offers: offersWithAmounts, selectedId: 'yearly' }), 'live')
+  assert.equal(priceState({ price: withSource({ monthly: 'live' }), offers: offersWithAmounts, selectedId: 'yearly' }), 'cadence-missing')
+})
+
 test('only live may open a checkout', () => {
   const states = ['loading', 'retrying', 'unreachable', 'no-currency', 'cadence-missing', 'live']
   assert.deepEqual(states.filter(canCheckout), ['live'])

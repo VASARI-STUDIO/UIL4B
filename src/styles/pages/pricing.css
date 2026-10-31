@@ -188,7 +188,7 @@
 }
 .pricing .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
 /* The ledger's Pro column is 227px wide at 1024: the size follows the width so
-   "A$10.00" fits it on one line (unmeasured: qa checks 1024, 1090 and 1359). */
+   "A$10.00" fits it on one line. */
 .pricing .pr-c--pro .pr-amt:not(.is-word) { font-size: clamp(40px, 4.2vw, 56px); }
 .pricing .pr-per { font-size: 15px; color: var(--sp-dim); }
 
@@ -482,7 +482,7 @@
 }
 .pricing .pr-pro-main { display: flex; flex-direction: column; min-width: 0; }
 /* The saving is its own line under the plan name, reserved and never wrapped,
-   so it arriving with the prices moves nothing (at 320 it used to wrap). */
+   so it arriving with the prices moves nothing (it stays on one line at 320). */
 .pricing .pr-pro-top { display: block; }
 .pricing .pr-pro-top .pr-plan { margin: 0; }
 .pricing .pr-save {

@@ -152,10 +152,13 @@ export function priceState({ price, offers, selectedId, retrying = false } = {})
   const live = (id) => price.source?.[id] === 'live'
   const noLiveSource = !price.serviceAvailable || !BILLING_OPTIONS.some((o) => live(o.id))
   if (noLiveSource) return 'unreachable'
+  // An amount sells only when its own cadence reports 'live'; a cadence with no
+  // `source` entry is never live.
+  const sellable = (o) => !!o.amountLabel && live(o.id)
   const list = offers || []
   const selected = list.find((o) => o.id === selectedId) || list[0]
-  if (selected?.amountLabel) return 'live'
-  return list.some((o) => o.amountLabel) ? 'cadence-missing' : 'no-currency'
+  if (selected && sellable(selected)) return 'live'
+  return list.some(sellable) ? 'cadence-missing' : 'no-currency'
 }
 
 /** Only a live price may open a checkout. Every other state links nowhere. */

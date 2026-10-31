@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
-import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
+import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, canCheckout, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { usePriceRetry, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
@@ -291,27 +291,12 @@ export default function Checkout() {
     amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
     months: plan?.months,
   })
-  // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and it
-  // used to render it as a lie. `useProPrice` returns `loaded: true`
-  // the moment the fetch SETTLES — including when it settled by failing — and
-  // null for every amount it could not confirm. So with /api/get-prices down:
-  //
-  //   amount slot   `{proPrice.loaded ? amount : '—'}` → loaded was true and
-  //                 amount was null, so React rendered NOTHING. Measured on the
-  //                 built preview: `.checkout-plan-amount` textContent "" above
-  //                 "per year". A blank where a price goes reads as free.
-  //   note          the yearly branch interpolated the per-month figure
-  //                 unconditionally, so the page printed the string
-  //                 "USD · null/mo", in accent colour, on the screen where
-  //                 money changes hands.
-  //
-  // src/pages/Pricing.jsx — the step immediately before this one — already
-  // answers this exact outage, and these are ITS sentences, not new ones. Two
-  // steps of one funnel must not describe one outage two ways.
-  //
-  // "Down" is "no cadence has a live price in this currency", not "the request
-  // failed": a Stripe outage still answers 200, with every cadence a fallback.
-  // The same state and the same words /plans and Settings use (planFacts.js).
+  // The price state is one of loading, retrying, unreachable, no-currency,
+  // cadence-missing or live, the same state and the same words /plans and
+  // Settings use (planFacts.js). `useProPrice` reports `loaded: true` once the
+  // fetch settles, even when it settled by failing, and null for every amount it
+  // could not confirm, so the page reads the state and never infers an outage
+  // from a missing amount. Only `live` sells: the payment form mounts on it.
   const priceStatus = priceState({ price: proPrice, offers: resolved.offers, selectedId: chosenOption?.id, retrying })
   const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
   const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
@@ -503,8 +488,9 @@ export default function Checkout() {
             <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
           ) : !proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
-          ) : !amount ? (
-            // No live price for this cadence in this currency: no payment form.
+          ) : !canCheckout(priceStatus) || !amount ? (
+            // No live price for this cadence in this currency (not `live`, or no
+            // amount): no payment form.
             // The server would refuse it, or worse, charge something the
             // summary does not show.
             <div className="checkout-error">

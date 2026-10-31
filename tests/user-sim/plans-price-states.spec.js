@@ -55,7 +55,7 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         await expect(button).toBeVisible()
         await expect(slot).toContainText(/Unavailable/)
 
-        // No disabled Pro button, no old words, and "unavailable" at most twice.
+        // The Pro button is enabled, there is no "Pricing unavailable" heading, and "unavailable" appears at most twice.
         await expect(page.getByText('Pricing unavailable right now')).toHaveCount(0)
         const text = await page.locator('main, .checkout-page, .stg').first().innerText()
         expect((text.match(/unavailable/gi) || []).length, 'unavailable is said more than twice').toBeLessThanOrEqual(2)
