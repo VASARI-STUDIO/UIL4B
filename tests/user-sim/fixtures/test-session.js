@@ -367,6 +367,20 @@ export function readDelayFor(path) {
   return ms
 }
 
+/* A WRITE THAT ANSWERS LATE. `signIn(page, { slowWrites: [{ path, ms }] })` holds
+ * every setDoc whose path contains `path` for `ms` before it resolves, the shape
+ * of a slow Firestore round trip seen from the app. The data lands in the store at
+ * once, as a write that has left the browser would; only the answer is late, so a
+ * spec can change the account while a save is still waiting. Nothing is slowed
+ * unless a spec asks. */
+export function writeDelayFor(path) {
+  let ms = 0
+  for (const entry of DECLARED?.slowWrites || []) {
+    if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+  }
+  return ms
+}
+
 /* A LISTENER THAT DOES NOT ANSWER UNTIL THE SPEC SAYS SO.
  * `signIn(page, { slowReads: [{ path, hold: true }] })` keeps every onSnapshot
  * whose path contains `path` silent: it fires no snapshot, first or later, until

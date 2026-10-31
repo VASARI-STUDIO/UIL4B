@@ -2,7 +2,7 @@ import { test, expect } from './base.js'
 import { go, watch, overlaysSettled } from './helpers.js'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const card = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
+const card = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
 
 async function pressEntry(page, width, label) {
   if (width === 390) {
