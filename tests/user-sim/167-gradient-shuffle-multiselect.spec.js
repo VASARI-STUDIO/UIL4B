@@ -105,7 +105,6 @@ const hexes = (page) => page.evaluate(() => [...document.querySelectorAll('.grd-
   .map((b) => /#[0-9A-Fa-f]{6}/.exec(b.getAttribute('aria-label'))[0].toUpperCase()))
 /** Everything the page's live regions say right now. */
 const said = (page) => page.evaluate(() => [...document.querySelectorAll('[role="status"]')].map((e) => e.textContent.trim()).filter(Boolean).join(' | '))
-const typeOf = (page) => page.evaluate(() => document.querySelector('[aria-label="Gradient type"] .tl-pill.is-on')?.textContent?.trim() || null)
 
 // ── the Random section ───────────────────────────────────────────────────────
 
