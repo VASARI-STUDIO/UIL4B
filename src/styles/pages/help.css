@@ -88,9 +88,9 @@
  * ground: 5.62:1 light, 8.1:1 dark. */
 .hlp-hint {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: .1em;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
   color: var(--cpg-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -124,10 +124,10 @@
  * own ground on the narrow layout below, so one token for both is the version
  * that cannot drift. */
 .hlp-run-cap {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cpg-faint);
   line-height: 1.4;
 }
@@ -136,7 +136,7 @@
 .hlp-run-stop { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 /* Background is inline — the generated stop. */
 .hlp-run-bar { display: block; height: clamp(76px, 9vw, 124px); border-radius: var(--radius-xs); }
-.hlp-run-stop-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; color: var(--cpg-dim); line-height: 1; }
+.hlp-run-stop-name { font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; color: var(--cpg-dim); line-height: 1; font-variant-numeric: tabular-nums; }
 .hlp-run-stop-hex { font-family: var(--mono); font-size: 10.5px; color: var(--cpg-faint); line-height: 1; }
 
 .hlp-run-out { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
@@ -185,10 +185,10 @@
   content: counter(hlp, decimal-leading-zero);
   display: block;
   margin-bottom: var(--s-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .16em;
+  letter-spacing: normal;
   color: var(--cpg-faint);
 }
 .hlp-band-lede { margin: 0; font-size: 14px; line-height: 1.65; color: var(--cpg-dim); max-width: 44ch; }
@@ -215,7 +215,7 @@
  * 6.33:1 on --card in light and 9.40:1 in dark. */
 .hlp-start-link:hover .hlp-start-label,
 .hlp-start-link:focus-visible .hlp-start-label { color: var(--accent-text); }
-.hlp-start-opens { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--cpg-faint); }
+.hlp-start-opens { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--cpg-faint); }
 .hlp-start-go {
   display: inline-flex;
   align-items: center;

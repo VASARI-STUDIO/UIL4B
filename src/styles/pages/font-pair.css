@@ -39,7 +39,15 @@
    the other card's rows, centring that card's name lower. */
 .fpr-page .fpr-fam { align-content: start; }
 .fpr-page .fpr-text { border-bottom: 0; }
-.fpr-page .fpr-label { font-family: var(--font); font-size: 12.5px; font-weight: 400; line-height: 1.3; color: var(--tl-dim); }
+.fpr-page .fpr-label { font-family: var(--font); font-size: max(var(--fs-caption), 13px); font-weight: 400; line-height: 1.3; color: var(--tl-dim); }
+/* The label line: the family label left, the body family's Best match right. */
+.fpr-page .fpr-fam-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; min-width: 0; }
+.fpr-page .fpr-fam-head .fpr-wand { min-height: 36px; padding-inline: 10px; border-color: transparent; background: transparent; font-size: 13px; }
+.fpr-page .fpr-fam-head .fpr-wand:disabled { color: var(--tl-dim); opacity: 1; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .fpr-page .fpr-fam-head .fpr-wand:hover:not(:disabled) { background: var(--tl-wash); }
+}
+@media (pointer: coarse) { .fpr-page .fpr-fam-head .fpr-wand { min-height: 44px; } }
 .fpr-page .fpr-fam-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
 .fpr-page .fpr-fam-id { flex: 1 1 9rem; min-width: 0; display: grid; gap: 2px; }
 /* The name wraps rather than clipping, so no family is ever cut. */
@@ -51,7 +59,7 @@
   color: var(--tl-ink);
   overflow-wrap: anywhere;
 }
-.fpr-page .fpr-fam-meta { font-size: 12.5px; line-height: 1.4; color: var(--tl-dim); overflow-wrap: anywhere; }
+.fpr-page .fpr-fam-meta { font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); overflow-wrap: anywhere; }
 .fpr-page .fpr-fam-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 /* On a phone both rows stack the same way: the name, then its buttons. */
 @media (max-width: 767px) {
@@ -74,7 +82,7 @@
   font-size: 13px;
 }
 .fpr-page .fpr-input:focus { border-color: var(--tl-line-on); }
-.fpr-page .fpr-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+.fpr-page .fpr-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 /* A tablet sets the two family cards side by side. */
 @media (min-width: 768px) and (max-width: 1023px) {
   .fpr-page .fpr-fams { grid-template-columns: 1fr 1fr; }
@@ -123,9 +131,6 @@
 .fpr-page .fpr-product-actions span { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 18px; border-radius: 999px; font-family: var(--fpr-b-ff); font-size: 14px; font-weight: 600; }
 .fpr-page .fpr-product-primary { color: var(--accent-ink); background: var(--accent-fill); }
 .fpr-page .fpr-product-secondary { color: var(--tl-ink); border: 1px solid var(--tl-line-2); }
-.fpr-page .fpr-product-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--tl-hair); }
-.fpr-page .fpr-product-stats > div { display: flex; flex-direction: column; gap: 2px; }
-.fpr-page .fpr-product-stats .fpr-h2 { margin: 0; }
 .fpr-page .fpr-glyphs { margin: 0 0 10px; color: var(--tl-ink); font-family: var(--fpr-h-ff); font-weight: var(--fpr-b-fw); font-size: clamp(16px, 2vw, 24px); line-height: 1.5; letter-spacing: .02em; word-break: break-word; }
 .fpr-page .fpr-glyphs--heading { font-weight: var(--fpr-h-fw); }
 .fpr-page .fpr-specimen-raw .fpr-body { margin-top: 16px; }
@@ -137,7 +142,7 @@
 .fpr-page .fpr-suggest-loading .fg-loader { margin: 0; }
 .fpr-page .fpr-suggest-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 0; border-top: 1px solid var(--tl-hair); }
 .fpr-page .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
-.fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
+.fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: max(var(--fs-caption), 13px); line-height: 1.55; color: var(--tl-dim); }
 .fpr-page .fpr-suggest-grid { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--tl-hair); }
 .fpr-page .fpr-card { min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--tl-hair); }
 .fpr-page .fpr-card-line { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 52px; }
@@ -245,7 +250,6 @@ html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-h); }
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
-  .fpr-page .fpr-product-stats { grid-template-columns: 1fr; gap: 12px; }
   .fpr-page .fpr-export { font-size: 11px; }
 }
 /* iOS zooms a focused field under 16px. */

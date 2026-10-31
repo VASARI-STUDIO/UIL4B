@@ -180,10 +180,10 @@
  * poor proxy for lowercase text and is what armed this trap in the first place. */
 .lart .lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0);max-width:35.5em}
 .lart .lart-spec-quote b{font-weight:700}
-.lart .lart-spec-cite{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-3);font-family:var(--mono);font-size:11px;letter-spacing:.03em}
+.lart .lart-spec-cite{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-3);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal}
 .lart .lart-spec-cite a{color:var(--t2);text-decoration:none;border-bottom:1px solid var(--border)}
 .lart .lart-spec-cite a:hover{color:var(--t0);border-bottom-color:currentColor;text-decoration:none}
-.lart .lart-spec-level{color:var(--t1);font-size:10.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+.lart .lart-spec-level{color:var(--t1);font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none}
 
 /* ── Formula ── */
 .lart .lart-formula{margin:var(--s-5) 0}
@@ -198,7 +198,7 @@
 .lart .lart-table{width:100%;border-collapse:collapse;font-size:14px}
 .lart .lart-table th,.lart .lart-table td{padding:10px 14px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--border)}
 .lart .lart-table tbody tr:last-child th,.lart .lart-table tbody tr:last-child td{border-bottom:0}
-.lart .lart-table thead th{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);white-space:nowrap}
+.lart .lart-table thead th{font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none;color:var(--t2);background:var(--bg-2);white-space:nowrap}
 .lart .lart-table tbody th{font-weight:600;color:var(--t0)}
 .lart .lart-table td{color:var(--t1)}
 .lart .lart-table [data-num]{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -265,7 +265,7 @@
    widened the DOCUMENT by 39px, giving /learn/colour-contrast a horizontal
    scrollbar at 390px and 320px while every visible box was inside the viewport.
    A containing block on the parent puts it back inside the scroller. */
-.lart .lart-verdict{position:relative;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.lart .lart-verdict{position:relative;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none}
 /* The -strong companions, not --ok/--err. The base state tokens are tuned to
    clear 3:1 as fills, dots and glyphs; this is 11px text, so it needs the 4.5:1
    pair. tests/unit/state-token-contrast.test.js caught this exact rule, which
@@ -345,9 +345,9 @@
 .lart .lart-ladder{list-style:none;margin:0;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .lart .lart-ladder-row{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:baseline;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
 .lart .lart-ladder-row:last-child{border-bottom:0}
-.lart .lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--t3)}
+.lart .lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t3)}
 .lart .lart-ladder-specimen{grid-row:1;grid-column:2;font-family:var(--display);font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--t0);overflow-wrap:anywhere}
-.lart .lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--t3);margin-top:2px}
+.lart .lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:2px}
 
 .lart :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 

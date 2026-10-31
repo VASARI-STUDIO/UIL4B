@@ -42,7 +42,7 @@
 /* .seo-serp.is-mobile moved to pages/seo-inspector.css, under .seo-page. */
 
 /* Contrast tab */
-.cs-sw-badge{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:5px}
+.cs-sw-badge{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;padding:2px 6px;border-radius:5px}
 
 /* ──────────────────────────────────────────────────────────────────────────
    Colour System popup (CS#3.14, Slice 3). Replaces the old cs-add-menu dropdown.
@@ -60,8 +60,8 @@
 .quota.quota--tool{background:var(--card);border-radius:var(--radius-xl);box-shadow:none}
 .quota-row{display:grid;gap:6px}
 .quota-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.quota-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
-.quota-count{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1);font-variant-numeric:tabular-nums}
+.quota-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none;color:var(--t3)}
+.quota-count{font-family:var(--font);font-size:var(--fs-caption);font-weight:500;color:var(--t1);font-variant-numeric:tabular-nums}
 .quota-track{position:relative;height:6px;border-radius:var(--radius-pill);background:var(--bg-3);overflow:hidden}
 .quota-fill{display:block;height:100%;width:var(--quota-pct,0%);border-radius:var(--radius-pill);background:var(--accent);transition:width var(--dur-3) var(--ease-out)}
 .quota-track--low .quota-fill{background:var(--warn)}
