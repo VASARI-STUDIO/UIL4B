@@ -622,9 +622,9 @@ test.describe('Palette row · the chips are one tab stop', () => {
     await page.keyboard.press('ArrowRight')
     await expect.poll(focused).toMatch(/^Secondary 500, #/)
 
-    // One Tab leaves the palette group, not on to its next chip.
+    // One Tab goes past the palette chips (to the +N link), not on to the next chip.
     await page.keyboard.press('Tab')
-    expect(await page.evaluate(() => !!document.activeElement?.closest('.grd-chips:not(.grd-chips--shades)'))).toBe(false)
+    expect(await page.evaluate(() => document.activeElement?.classList.contains('grd-chip') && !!document.activeElement.closest('.grd-chips:not(.grd-chips--shades)'))).toBe(false)
     // And Shift+Tab comes back to the chip that was last used.
     await page.keyboard.press('Shift+Tab')
     await expect.poll(focused).toMatch(/^Secondary 500, #/)
