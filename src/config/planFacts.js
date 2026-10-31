@@ -9,6 +9,8 @@
 //   AI_LIMITS / FREE_SAVE_LIMITS → config/plans.js (mirror of api/_lib/plans.js)
 //   COLOUR_SYSTEMS               → what the palette engine gates on
 //   export formats               → config/exportFormats.js, which renders the buttons
+//   libraries, icons, sizes      → data/libraryTotals.js, utils/lockedPreview.js, data/iconPackTiers.js,
+//                                  utils/iconSize.js, utils/iconLineStyle.js
 //   cadences, trials             → config/planLadder.js (mirror of api/_lib/pricing.js)
 //   prices                       → /api/get-prices, passed in; never typed
 //   the tool count               → data/toolTree.js, live and not beta
@@ -17,7 +19,12 @@
 
 import { AI_LIMITS, FREE_SAVE_LIMITS } from './plans.js'
 import { COLOUR_SYSTEMS } from './colourSystems.js'
-import { freeFormats, proOnlyFormats, styleGuideFormats } from './exportFormats.js'
+import { creditedFormats, freeFormats, proOnlyFormats, styleGuideFormats } from './exportFormats.js'
+import { LIBRARY_TOTALS } from '../data/libraryTotals.js'
+import { GALLERY_TIER_LIMITS } from '../utils/lockedPreview.js'
+import { ICON_PACK_TIERS } from '../data/iconPackTiers.js'
+import { CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, ICON_SIZE_PRESETS } from '../utils/iconSize.js'
+import { LINE_STYLES } from '../utils/iconLineStyle.js'
 import { PLAN_LADDER, formatMoney, livePriceOf } from './planLadder.js'
 import { createTools } from '../data/toolTree.js'
 import { BILLED_EVERY } from '../utils/billingCadence.js'
@@ -64,13 +71,86 @@ export const FREE_POINTS = Object.freeze([
 /** /plans' one minus line on the Free card. */
 export const FREE_EXCLUSION = 'Small mark on exported files'
 
-/** What Pro adds — /plans' Pro card, in order. */
+const joinAnd = (items) => (items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
+const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
+
+// The kinds of paid icon pack, in the order the plan lines name them. Every
+// `tier: 'paid'` entry in data/iconPackTiers.js carries one as its `group`.
+export const PAID_PACK_GROUPS = Object.freeze(['brand', 'flag', 'emoji', 'colour', 'animated'])
+const PACK_GROUP_WORD = Object.freeze({ brand: 'brand', flag: 'flag', emoji: 'emoji', colour: 'coloured', animated: 'animated' })
+const PAID_PACK_WORDS = PAID_PACK_GROUPS
+  .filter((g) => Object.values(ICON_PACK_TIERS).some((t) => t.tier === 'paid' && t.group === g))
+  .map((g) => PACK_GROUP_WORD[g])
+
+const PRO_LINE_STYLE_NAMES = LINE_STYLES.filter((s) => s.pro).map((s) => s.name)
+const FREE_LINE_STYLE_NAMES = LINE_STYLES.filter((s) => !s.pro).map((s) => s.name)
+const FREE_SIZE_NAMES = `${joinAnd(ICON_SIZE_PRESETS.map(String))}px`
+const LIBRARY_CAP = GALLERY_TIER_LIMITS.free
+const LIBRARY_CAP_SIGNED_OUT = GALLERY_TIER_LIMITS.anonymous
+const SYSTEMS_FREE_COUNT = COLOUR_SYSTEMS.filter((s) => s.free).length
+const CREDIT_FREE_NAMES = listNames(creditedFormats())
+const CREDIT_NONE_NAMES = listNames(freeFormats().filter((f) => f.credit === false))
+/** The free files with no place for the credit line, named for the FAQ. */
+export const UNCREDITED_EXPORT_NAMES = CREDIT_NONE_NAMES
+/** The free files that carry the credit line. */
+export const CREDITED_EXPORT_NAMES = CREDIT_FREE_NAMES
+
+/**
+ * WHAT PRO ADDS, as the comparison groups /plans prints. Each row is one limit
+ * or gate the product enforces, quoted from the module that enforces it:
+ *   AI                  config/plans.js (api/_lib/plans.js is the server's copy)
+ *   colour systems      config/colourSystems.js (the palette engine's gate)
+ *   brand palettes      data/libraryTotals.js
+ *   libraries           utils/lockedPreview.js GALLERY_TIER_LIMITS, data/libraryTotals.js
+ *   icon packs          data/iconPackTiers.js (`tier: 'paid'` and its `group`)
+ *   icon size, styles   utils/iconSize.js, utils/iconLineStyle.js
+ *   saved work          config/plans.js FREE_SAVE_LIMITS
+ *   exports             config/exportFormats.js
+ */
+export const PRO_VALUE = Object.freeze([
+  { group: 'AI', rows: [
+    { label: 'AI generations', free: `${AI.free.daily} a day, ${AI.free.monthly} a month`, pro: `${AI.pro.daily} a day, ${AI.pro.monthly} a month` },
+  ] },
+  { group: 'Colour', rows: [
+    { label: 'Colour systems', free: `${SYSTEMS_FREE_COUNT} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
+  ] },
+  { group: 'Libraries', rows: [
+    { label: 'Brand palettes', free: `${LIBRARY_TOTALS.freeBrandPalettes} of ${LIBRARY_TOTALS.brandPalettes}`, pro: `All ${LIBRARY_TOTALS.brandPalettes}` },
+    {
+      label: 'Palette, gradient and prompt libraries',
+      free: `First ${LIBRARY_CAP} of each, ${LIBRARY_CAP_SIGNED_OUT} when signed out`,
+      pro: `All ${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`,
+    },
+  ] },
+  { group: 'Icons', rows: [
+    { label: 'Icon packs', free: 'Outline and solid interface packs', pro: `Plus ${joinAnd(PAID_PACK_WORDS)} packs, and Carbon’s brand logos` },
+    { label: 'Icon export size', free: FREE_SIZE_NAMES, pro: `Any size from ${CUSTOM_SIZE_MIN} to ${CUSTOM_SIZE_MAX}px` },
+    { label: 'Icon line styles', free: joinAnd(FREE_LINE_STYLE_NAMES), pro: `Plus ${joinAnd(PRO_LINE_STYLE_NAMES)}` },
+  ] },
+  { group: 'Your work', rows: [
+    { label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
+    { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
+  ] },
+  { group: 'Exports', rows: [
+    ...proOnlyFormats().map((f) => ({ label: f.name, free: null, pro: 'Included' })),
+    {
+      label: '“Made with UIL4B” line on exports',
+      free: CREDIT_NONE_NAMES ? `Small line, except on ${CREDIT_NONE_NAMES}` : 'Small line',
+      pro: 'Removed',
+    },
+  ] },
+])
+
+/** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
 export const PRO_POINTS = Object.freeze([
   `${AI.pro.daily} AI generations a day, ${AI.pro.monthly} a month`,
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
-  'Style guides and the UI kit with no “Made with UIL4B” line',
+  'Every palette, gradient, prompt and brand palette',
+  `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, at any size`,
   'Unlimited saved projects and custom icons',
-  PRO_EXPORT_NAMES,
+  `${PRO_EXPORT_NAMES}, with no UIL4B line on anything`,
 ])
 
 // ── Cadences ─────────────────────────────────────────────────────────────────

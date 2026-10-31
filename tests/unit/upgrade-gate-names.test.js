@@ -176,6 +176,15 @@ test('the walls that share a title report as separate gates', () => {
   contrastCalls.forEach(c => assert.match(c.text, /gate: 'palette-contrast-view'/))
 })
 
+test('the gradient Use and Base colour wall reports as its own gate', () => {
+  // Free accounts see both rows locked and one press path opens one modal, so it
+  // must name itself rather than borrow another wall's counter.
+  const gg = read(path.join(SRC, 'pages', 'GradientGenerator.jsx'))
+  const calls = callArguments(gg, 'openProModal').filter(c => c.text.includes('Gradients made for where they go'))
+  assert.equal(calls.length, 1, 'expected one guided-gradient wall')
+  assert.match(calls[0].text, /gate: 'gradient-guided'/)
+})
+
 test('the icon and UI-system walls derive their id from the kind they were asked for', () => {
   // Both used to raise one shared modal for several different walls. Deriving
   // the id from `kind` rather than writing it into each preset means a kind

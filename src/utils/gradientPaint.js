@@ -1,9 +1,8 @@
-// The rules behind Available colours' "paint in order": a press paints the
+// The rules behind the palette row's "paint in order": a press paints the
 // target stop, then the target moves on, so two presses make a whole gradient.
 // Kept pure (stops in, indices and stops out) so the page and the unit tests
 // share one definition. A stop's `lockColour` flag means "Random keeps this colour";
 // here it only decides where the target may move next.
-import { mixOklch } from '../components/tool/oklch.js'
 
 // Stop indices in left-to-right order (ties keep the list order).
 export const orderByPosition = (stops) => stops
@@ -25,21 +24,4 @@ export function nextPaintTarget(stops, from) {
     if (!stops[cand].lockColour) return cand
   }
   return from
-}
-
-// A starter pair: the left-most stop takes `left`, the right-most takes `right`,
-// and any stop between is blended in OKLCH by its own position. Other fields of a
-// stop (its lock) are kept.
-export function applyStarterPair(stops, pair) {
-  const order = orderByPosition(stops)
-  const first = order[0]
-  const last = order[order.length - 1]
-  const lo = stops[first].position
-  const span = stops[last].position - lo
-  return stops.map((s, i) => {
-    if (i === first) return { ...s, color: pair.left }
-    if (i === last) return { ...s, color: pair.right }
-    const t = span > 0 ? (s.position - lo) / span : 0.5
-    return { ...s, color: mixOklch(pair.left, pair.right, t) }
-  })
 }

@@ -18,9 +18,9 @@ import { go, watch } from './helpers.js'
 test.describe('gradient randomiser weighting', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer hitting Random') })
 
-  // 60 presses is enough to be decisive about "excludes nothing" without being
-  // a coin-flip test: at the shipped 25% per non-linear type, the chance of
-  // never seeing one of them in 60 draws is about 1 in 5 million.
+  // 20 presses are decisive, not lucky: Random deals its type from a 20-card deck
+  // (16 Linear, 3 Radial, 1 Conic), so every type shows in any 20 presses from a
+  // fresh page. The old 60-press version could fail about one run in twenty.
   //
   // THIS TEST USED TO ALSO ASSERT "AND LINEAR MOST OFTEN". That was a mistake,
   // and CI caught it: 60 draws at 50/25/25 produced linear 24, radial 24, and
@@ -39,7 +39,7 @@ test.describe('gradient randomiser weighting', () => {
     await expect(random).toBeVisible()
 
     const seen = { Linear: 0, Radial: 0, Conic: 0 }
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 20; i++) {
       await random.click()
       const type = await page.evaluate(() => {
         const on = document.querySelector('[aria-label="Gradient type"] .tl-pill.is-on')
@@ -50,9 +50,9 @@ test.describe('gradient randomiser weighting', () => {
 
     // The toggle was actually readable — without this, a selector that stopped
     // matching would make the exclusion check below vacuously true.
-    expect(Object.values(seen).reduce((a, b) => a + b, 0), 'no type could be read from the toggle').toBeGreaterThan(50)
+    expect(Object.values(seen).reduce((a, b) => a + b, 0), 'no type could be read from the toggle').toBeGreaterThan(15)
     for (const [type, n] of Object.entries(seen)) {
-      expect(n, `${type} never came up in 60 presses — that is an exclusion, not a weighting`).toBeGreaterThan(0)
+      expect(n, `${type} never came up in 20 presses — the type deck deals all three in every 20`).toBeGreaterThan(0)
     }
   })
 })
