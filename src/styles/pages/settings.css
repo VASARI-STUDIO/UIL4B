@@ -133,7 +133,7 @@
 .stg .settings-row--fact { display: grid; grid-template-columns: 148px minmax(0, 1fr); align-items: baseline; gap: 4px 16px; }
 .stg .settings-row--fact > .settings-row-label { margin: 0; }
 .stg .settings-fact-body { min-width: 0; }
-.stg .sub-ends-note { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--stg-hair); max-width: 60ch; }
+.stg .sub-ends-note { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--stg-hair); }
 /* Bio: a paragraph, so a textarea, with its count and shortcut underneath. */
 .stg .settings-bio-input { display: block; width: 100%; min-height: 96px; resize: vertical; line-height: 1.5; }
 .stg .settings-count { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; margin-top: 6px; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; color: var(--t2); }
@@ -283,6 +283,7 @@
 
 /* Subscription (Pro): the same one surface, as rows. */
 .stg .sub-active { padding: 0; }
+.stg .sub-active > .settings-card-body { flex: 1 1 100%; min-width: 0; }
 .stg .sub-active-title { font-size: 15px; font-weight: 560; }
 .stg .sub-active-meta { font-size: 12.5px; color: var(--t1); }
 .stg .sub-active-actions { flex-wrap: wrap; }
