@@ -967,6 +967,25 @@ test.describe('Colours: Pick… at 1440px', () => {
     expect(await isNarrowed(page), 'two ticks').toBe(true)
   })
 
+  test('Pick… with one ticked colour shows no narrowed dot, and with two it does', async ({ page }) => {
+    // The dot is the Random icon's ::after: drawn (content "") only on `.is-narrowed`.
+    const dot = () => randomBtn(page).evaluate((el) => getComputedStyle(el, '::after').content)
+    expect(await dot(), 'POSITIVE CONTROL: nothing narrows yet, so no dot').not.toBe('""')
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await expect(pickRadio(page), 'one tick is a mark, not a pool').toHaveText('Pick…')
+    expect(await isNarrowed(page), 'one tick').toBe(false)
+    expect(await dot(), 'one tick: no dot').not.toBe('""')
+    await tick(page, 'Colour 8 500').check()
+    await expect(pickRadio(page)).toHaveText('2 picked')
+    expect(await isNarrowed(page), 'two ticks').toBe(true)
+    expect(await dot(), 'two ticks: the dot is drawn').toBe('""')
+    await tick(page, 'Colour 8 500').uncheck()
+    await expect(pickRadio(page)).toHaveText('Pick…')
+    expect(await isNarrowed(page), 'back to one tick').toBe(false)
+    expect(await dot(), 'back to one tick: the dot goes').not.toBe('""')
+  })
+
   test('Colours: Palette draws every colour from the palette', async ({ page }) => {
     await paletteRadio(page).click()
     await checked(paletteRadio(page))
