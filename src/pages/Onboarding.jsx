@@ -213,13 +213,13 @@ export default function Onboarding() {
             dots that is always full says nothing, and a "Skip" beside a "Not
             now" that does the identical thing is two names for one action. */}
         <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
-          <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
+          <div className="onb-greeting">You're in, <em>{firstName}</em></div>
           <div role="status">
             {lineReady && verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} data-testid="onboarding-verify-line">{verifyLine}</p>}
           </div>
           <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
           <p className="onb-sub">
-            Whichever you pick opens next. You can switch at any time — nothing here is locked in.
+            Whichever you pick opens next. You can switch at any time.
           </p>
 
           <div className="onb-options onb-firstwin-options">
@@ -241,7 +241,7 @@ export default function Onboarding() {
           </div>
 
           <button type="button" className="onb-back" onClick={skipFirstWin}>
-            Not now — take me to my projects
+            Not now, take me to my projects
           </button>
 
           {/* The pricing STEP is gone; the pricing is not hidden. Shortening the

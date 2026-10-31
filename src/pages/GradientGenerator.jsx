@@ -20,6 +20,7 @@ import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection
 import { pushLook, popLook, canGoBack } from '../utils/gradientHistory'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToRgb, hexToOklch } from '../utils/colors'
+import { pickInk, INK_DARK, INK_LIGHT } from '../utils/gradientInk'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
 import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions } from '../utils/gradientLocks'
@@ -500,6 +501,23 @@ const EVERY_COLOUR_LOCKED = 'Every colour is locked, so only the shape changed.'
 function RadioRow({ label, options, value, onChange, locked = false, onLocked, onBlocked, children }) {
   const uid = useId().replace(/:/g, '')
   const ref = useRef(null)
+  // Where the row runs on past its edge (the chips scroll sideways on desktop when they
+  // cannot fit): '' fits, else 'end', 'start' or 'both'. The CSS fades those edges.
+  const [more, setMore] = useState('')
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return undefined
+    const read = () => {
+      const room = el.scrollWidth - el.clientWidth
+      setMore(room <= 1 ? '' : el.scrollLeft <= 1 ? 'end' : el.scrollLeft >= room - 1 ? 'start' : 'both')
+    }
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    if (typeof ResizeObserver === 'undefined') return () => el.removeEventListener('scroll', read)
+    const watcher = new ResizeObserver(read)
+    watcher.observe(el)
+    return () => { el.removeEventListener('scroll', read); watcher.disconnect() }
+  }, [options.length])
   const live = options.filter((o) => !o.unavailable)
   const stop = (live.find((o) => o.value === value) || live[0])?.value
   const move = (e) => {
@@ -517,7 +535,7 @@ function RadioRow({ label, options, value, onChange, locked = false, onLocked, o
   return (
     <div className="grd-gen-row">
       <span className="grd-gen-k" id={`grd-gen-${uid}`}>{label}{locked && <span className="grd-gen-pro"> Pro</span>}</span>
-      <div className="grd-gen-chips" role="radiogroup" aria-labelledby={`grd-gen-${uid}`} ref={ref} onKeyDown={move}>
+      <div className="grd-gen-chips" data-more={more || undefined} role="radiogroup" aria-labelledby={`grd-gen-${uid}`} ref={ref} onKeyDown={move}>
         {options.map((o) => {
           const on = o.value === value
           return (
@@ -629,6 +647,107 @@ function GenSection({ filters, setFilters, isPro, onPro, moreOpen, onMore, coars
   )
 }
 
+
+const PREVIEW_KEY = 'vs-gradient-preview'
+const PREVIEW_CONTEXTS = [
+  { id: 'fill', label: 'Fill', as: '' },
+  { id: 'hero', label: 'Hero', as: ', shown as a hero' },
+  { id: 'card', label: 'Card', as: ', shown as a card' },
+  { id: 'button', label: 'Button', as: ', shown as a button' },
+]
+
+// Where text sits on the area it is drawn over, as fractions of that area, read from the
+// laid-out page so the ink follows the real layout at any width. `measure(root)` returns
+// the boxes (a plain object or array, compared by value); it must be a stable function.
+// Every element marked data-box is watched too, so a font arriving late re-measures.
+function useMeasured(measure) {
+  const ref = useRef(null)
+  const [value, setValue] = useState(null)
+  useLayoutEffect(() => {
+    const root = ref.current
+    if (!root) return undefined
+    const read = () => {
+      const next = measure(root)
+      setValue((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const watcher = new ResizeObserver(read)
+    watcher.observe(root)
+    root.querySelectorAll('[data-box]').forEach((el) => watcher.observe(el))
+    return () => watcher.disconnect()
+  }, [measure])
+  return [ref, value]
+}
+
+const round3 = (n) => Math.round(n * 1000) / 1000
+// `inner` as fractions of `outer`'s rectangle, with the outer's shape (width over height).
+function boxWithin(outer, inner) {
+  if (!outer.width || !outer.height) return null
+  return {
+    aspect: round3(outer.width / outer.height),
+    box: { x: round3((inner.left - outer.left) / outer.width), y: round3((inner.top - outer.top) / outer.height), w: round3(inner.width / outer.width), h: round3(inner.height / outer.height) },
+  }
+}
+// The hero's text block against the whole canvas.
+const measureHero = (view) => boxWithin(view.getBoundingClientRect(), view.querySelector('.grd-ctx-sample').getBoundingClientRect())
+// Each button's words against that button, which paints its own copy of the gradient.
+const measureButtons = (view) => [...view.querySelectorAll('.grd-ctx-btn')].map((btn) => {
+  const words = document.createRange()
+  words.selectNodeContents(btn)
+  return boxWithin(btn.getBoundingClientRect(), words.getBoundingClientRect())
+})
+
+// The ink for a measured box, or for the whole gradient until the box is known.
+const inkFor = (stops, type, angle, spot) => pickInk(stops, spot ? { type, angle, ...spot } : undefined)
+const badge = (ink) => `Text ${ink.ratio.toFixed(1)}:1${ink.low ? ' · low' : ''}`
+
+function PreviewHero({ stops, type, angle }) {
+  const [ref, spot] = useMeasured(measureHero)
+  const ink = useMemo(() => inkFor(stops, type, angle, spot), [stops, type, angle, spot])
+  const flip = ink.css === INK_DARK.css ? INK_LIGHT.css : INK_DARK.css
+  return (
+    <div className="grd-ctx-view grd-ctx-hero" ref={ref}>
+      <div className="grd-ctx-sample" data-box aria-hidden="true" style={{ color: ink.css }}>
+        <p className="grd-ctx-h">Launch week starts Monday</p>
+        <p className="grd-ctx-p">Everything your team needs, in one place.</p>
+        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Get started</span>
+      </div>
+      <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badge(ink)}</span>
+    </div>
+  )
+}
+
+function PreviewButtons({ paint, stops, type, angle }) {
+  const [ref, spots] = useMeasured(measureButtons)
+  const sizes = [32, 40, 48]
+  return (
+    <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true" ref={ref}>
+      {sizes.map((h, i) => {
+        const ink = inkFor(stops, type, angle, spots?.[i])
+        return <span key={h} data-box className="grd-ctx-btn" title={badge(ink)} style={{ background: paint, color: ink.css, height: h }}>Get started</span>
+      })}
+    </div>
+  )
+}
+
+// The sample UI drawn over the canvas. The ink comes from the part of the gradient the
+// text sits over (pickInk), so the text reads whatever colours Random makes; the badge
+// says by how much. The Card's gradient header carries no text, so it needs no ink.
+function PreviewSample({ id, paint, stops, type, angle }) {
+  if (id === 'hero') return <PreviewHero stops={stops} type={type} angle={angle} />
+  if (id === 'button') return <PreviewButtons paint={paint} stops={stops} type={type} angle={angle} />
+  if (id !== 'card') return null
+  return (
+    <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
+      <div className="grd-ctx-card">
+        <div className="grd-ctx-card-head" style={{ background: paint }} />
+        <p className="grd-ctx-card-t">Quarterly report</p>
+        <p className="grd-ctx-card-p">Revenue is up on last quarter. Open the report to see what changed.</p>
+      </div>
+    </div>
+  )
+}
 
 // `onExport` is this tool's ONE declared export hook — the copy of the payload
 // that IS the artefact. It defaults to `onCopy` so the component still copies
@@ -817,6 +936,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
   const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
+  // Where the gradient is previewed (Fill, Hero, Card, Button), kept for the session.
+  const [previewAs, setPreviewAs] = useState(() => {
+    try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
+  })
+  const choosePreview = (id) => {
+    setPreviewAs(id)
+    try { sessionStorage.setItem(PREVIEW_KEY, id) } catch { /* private mode */ }
+  }
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
@@ -1830,8 +1957,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </p>
           )}
           {/* The stage is the canvas's fixed slot. */}
-          <div className="grd-stage">
-            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
+          <div className="grd-stage" data-ctx={previewAs}>
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
+            <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
+            <div className="grd-ctx" role="group" aria-label="Preview as">
+              {PREVIEW_CONTEXTS.map((c) => (
+                <button key={c.id} type="button" className={`grd-ctx-opt${previewAs === c.id ? ' is-on' : ''}`} aria-pressed={previewAs === c.id} onClick={() => choosePreview(c.id)}>{c.label}</button>
+              ))}
+            </div>
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
@@ -1934,6 +2067,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolMain>
 
         <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
+          {/* Two columns at tablet width (Random and Stops, then Stop N and Shape);
+              everywhere else the wrappers dissolve and the sections stack. */}
+          <div className="grd-col">
           <GenSection
             filters={filters}
             setFilters={setFilters}
@@ -2113,7 +2249,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               )}
             </div>
           </ToolSection>
+          </div>
 
+          <div className="grd-col">
           <ToolSection label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={LOCK_CAPTION}>
             {selected && (
               <div className="grd-pick">
@@ -2211,6 +2349,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </div>
             </div>
           </ToolSection>
+          </div>
         </ToolPanel>
       </ToolGrid>
 

@@ -51,9 +51,8 @@
 .grd .grd-stage {
   position: relative;
   isolation: isolate;
-  /* 9px under the clamp: the rail below it holds 9px more, so a stop's mark clears the
-     code box and the page keeps the height it had. */
-  min-height: calc(clamp(240px, 42vh, 440px) - 9px);
+  min-height: 0;
+  aspect-ratio: 16 / 9;
 }
 .grd .grd-canvas {
   position: absolute;
@@ -62,16 +61,75 @@
   border: 1px solid var(--tl-line);
 }
 
-/* Side by side, the 336px panel is taller than the preview column, which left a
-   blank block under the code box before the presets. The preview grows into that
-   height instead (capped, so a twelve-stop panel does not make a tower). The cap sits
-   above the panel's height with the starter stops (976px: stage 750 + rail + code box
-   + gaps), so the palette row's held rows never strand the code box.
-   Stacked at 900px and under, the column is its own height and nothing changes. */
+/* ── THE FRAME (901px and up) ───────────────────────────────────────────────
+   The editor fits one viewport: the grid is the room under the nav and the toolbar
+   (--tl-bar-h, tool-layout.css) less the body's padding top and bottom, and nothing
+   in it grows the page. The left column is a flex column: the stage takes what the
+   rail and code well leave, is never taller than 0.62 of its own width (so it cannot
+   go portrait), and the group is centred when that cap leaves room over. The panel
+   scrolls inside itself; only extras (More options, the shades) ever reach that. */
+.grd { --grd-body-pad: clamp(12px, 2vw, 20px); }
+.grd .tl-body { padding: var(--grd-body-pad); }
 @media (min-width: 901px) {
-  .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
-  .grd .tl-main > * { flex-shrink: 0; }
-  .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 900px; }
+  .grd {
+    --grd-frame: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 2 * var(--grd-body-pad));
+    --grd-sec-pad: 12px;
+    --grd-sec-gap: 8px;
+  }
+  .grd .tl-grid {
+    height: var(--grd-frame);
+    min-height: 560px;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .grd .tl-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+    container-type: inline-size;
+  }
+  .grd .tl-main > * { flex: 0 0 auto; }
+  .grd .tl-main > .grd-stage { flex: 1 1 0; max-height: 62cqi; aspect-ratio: auto; }
+  .grd .tl-panel { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  .grd .tl-panel .tl-sec { gap: var(--grd-sec-gap); padding: var(--grd-sec-pad) 16px; }
+  /* The head rows are 20px; the 26px buttons in them overhang by 3px each side. */
+  .grd .tl-panel .tl-sec-head { min-height: 20px; }
+  .grd .tl-panel .tl-sec-head :is(.grd-iconbtn, .grd-gen-more, .grd-sel-clear) { margin-block: -3px; }
+  .grd .grd-hex { height: 32px; }
+  .grd .grd-col { display: contents; }
+  .grd .grd-col:not(:last-child) > .tl-sec:last-child { border-bottom: 1px solid var(--tl-hair); }
+}
+/* Short screens (1280x720, 1366x768): the wheel goes (its number field and lock stay,
+   and the field takes the arrow keys), the hint goes to screen readers, and the gaps
+   close up. Interpolation may sit in the panel's own scroll; it is the least used. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .grd { --grd-body-pad: 12px; --grd-sec-gap: 6px; }
+  .grd .grd-wheel { display: none; }
+  .grd .grd-row--angle { height: 32px; }
+  .grd .grd-angle { justify-content: flex-end; }
+  .grd .grd-interp-hints { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+
+/* ── STACKED (900px and under) ──────────────────────────────────────────────
+   The main column dissolves into the grid so the code well can follow the panel:
+   preview, rail, panel, code. The first screen holds the preview, the rail and the
+   whole Random section; the rest scrolls. */
+@media (max-width: 900px) {
+  .grd .tl-grid { gap: 12px; }
+  .grd .tl-main { display: contents; }
+  .grd .grd-panel { order: 2; }
+  .grd .grd-code { order: 3; }
+  .grd .grd-col { display: contents; }
+  .grd .grd-col:not(:last-child) > .tl-sec:last-child { border-bottom: 1px solid var(--tl-hair); }
+}
+/* Tablet: the preview is 2:1 and at most 360 tall; the panel is two columns. */
+@media (min-width: 768px) and (max-width: 900px) {
+  .grd .grd-stage { aspect-ratio: 2 / 1; max-height: 360px; }
+  .grd .grd-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .grd .grd-col { display: block; min-width: 0; }
+  .grd .grd-col + .grd-col { border-left: 1px solid var(--tl-hair); }
+  .grd .grd-col > .tl-sec:last-child { border-bottom: 0; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
@@ -166,7 +224,7 @@
 .grd .grd-code {
   display: flex;
   flex-direction: column;
-  height: 152px;
+  height: 120px;
   border-radius: 12px;
   border: 1px solid var(--tl-line);
   background: var(--tl-card);
@@ -353,6 +411,17 @@
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
 .grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
+/* Room for the role name on a fine pointer. The side card keeps one 15px scrollbar
+   gutter and the window another, so "Secondary 500" had 64px of a 96px column once
+   both were drawn. The window bleeds 8px into the section's padding each side (the
+   swatch still sits 14px in, close to the heading's 16px edge) and the row's gaps
+   tighten by 2px and 2px, which gives the role column 90px with both gutters drawn
+   and leaves the 96px cap to be reached with thin ones. Touch has its own grid. */
+@media (pointer: fine) {
+  .grd .grd-stops { margin-inline: -8px; }
+  .grd .grd-stop { gap: 6px; }
+  .grd .grd-stop-select { gap: 4px; }
+}
 .grd .grd-iconbtn {
   display: grid;
   place-items: center;
@@ -426,14 +495,16 @@
 }
 .grd .grd-paint-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-shades { display: grid; gap: 6px; }
-.grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.grd .grd-chips--shades { gap: 3px; }
+/* Nine 28px chips with 4px gaps are 284px, so a full palette row fits one line in the
+   side card's 287px of room (302px less a 15px scrollbar gutter). */
+.grd .grd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.grd .grd-chips--shades { gap: 3px; flex-wrap: nowrap; }
 /* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 /* On a fine pointer the word "more" is spoken, not drawn, so "+2" takes one chip's
    slot and the row stays one line; a finger's wider slots have room for it. */
-.grd .grd-chips-more { position: relative; padding: 0 4px; }
+.grd .grd-chips-more { position: relative; padding: 0 3px; }
 .grd .grd-chips-more-w { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (pointer: coarse) {
   .grd .grd-chips-more { padding: 0 6px; }
@@ -458,8 +529,13 @@
 }
 .grd .grd-chip:active { transform: scale(0.97); }
 .grd .grd-chip.is-light { color: oklch(0.2 0 0); }
-.grd .grd-chips--shades .grd-chip { width: 24px; height: 24px; }
-.grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
+/* Eleven 24px chips with 3px gaps are 294px, 7px more than the card's 287px with a
+   classic scrollbar. The row is nowrap (flex-wrap would break the line on the 24px
+   basis before any shrinking), so each chip gives up to 2px (22px floor) and
+   aspect-ratio keeps it round. The coarse block below restores wrap for 44px chips. */
+.grd .grd-chips--shades .grd-chip { flex: 0 1 24px; width: auto; height: auto; min-width: 22px; aspect-ratio: 1; }
+/* 3px, so the ring clears the next chip across a 4px gap. */
+.grd .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
@@ -517,7 +593,7 @@
 .grd .grd-row > .grd-angle { flex: 1; min-width: 0; }
 /* The angle row is the wheel's height whether the wheel is there or a radial
    gradient has said it has no angle. */
-.grd .grd-row--angle { height: 64px; }
+.grd .grd-row--angle { height: 48px; }
 .grd .grd-angle-none { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); }
 /* The position lock is 26px beside a 24px slider: a 1px overhang each side keeps
    the row the height it had, so adding it moves nothing (44px on touch matches). */
@@ -537,8 +613,8 @@
   position: relative;
   isolation: isolate;
   flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid var(--tl-line-2);
   background: var(--tl-wash-2);
@@ -572,7 +648,7 @@
 .grd .grd-wheel-hand::before {
   content: '';
   position: absolute;
-  top: 14px;
+  top: 12px;
   bottom: 50%;
   left: 50%;
   width: 2px;
@@ -593,7 +669,7 @@
 }
 .grd .grd-wheel-knob {
   position: absolute;
-  top: 8px;
+  top: 6px;
   left: 50%;
   width: 12px;
   height: 12px;
@@ -817,12 +893,14 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-chips { gap: 6px; }
+  .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
   .grd .grd-paint-head { min-height: 44px; }
   .grd .grd-paint-src { height: 44px; padding: 0 10px; font-size: 13px; }
   .grd .grd-paint-link { min-height: 44px; }
   .grd .grd-chips-more { height: 44px; }
-  .grd .grd-chips--shades { gap: 4px; }
-  .grd .grd-chips--shades .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-chips--shades { gap: 4px; flex-wrap: wrap; }
+  .grd .grd-chips--shades .grd-chip { flex: 0 0 auto; width: 44px; height: 44px; min-width: 0; aspect-ratio: auto; }
   .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
   .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
   .grd .grd-stop-role { grid-area: 1 / 1; font-size: 13px; }
@@ -840,7 +918,7 @@
   @media (max-width: 360px) {
     .grd .grd-stop { gap: 6px; padding: 4px; }
   }
-  .grd .grd-row--angle { height: 76px; }
+  .grd .grd-row--angle { height: 64px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
   .grd .grd-sel-clear { height: 44px; min-width: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
@@ -851,7 +929,7 @@
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; --lm-drop: 23px; }
   .grd .grd-stop-select { min-height: 44px; }
-  .grd .grd-wheel { width: 76px; height: 76px; }
+  .grd .grd-wheel { width: 64px; height: 64px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 
@@ -903,8 +981,9 @@
    hairline, a wash for the chosen chip, and a ring so the choice is never colour
    alone. The rules for the old filter rows (FilterGroup) and the colour checklist
    are scoped here too, since both now live inside this section. */
-.grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 8px; }
-.grd .grd-gen-k { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; column-gap: 8px; }
+/* The label sits level with the first line of chips (28px tall, so 6px down), however many lines they take. */
+.grd .grd-gen-k { padding-top: 6px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-gen-pro { display: block; font-size: 10.5px; font-weight: 600; line-height: 12px; letter-spacing: .02em; color: var(--tl-dim); }
 .grd .grd-gen-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .grd .tl-pill.grd-gen-chip {
@@ -916,6 +995,17 @@
   line-height: 1;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
+}
+/* On desktop each row is one line: tighter chips, and a row that still cannot fit (Use,
+   in More options) scrolls sideways with its cut edge faded. The 4px of padding, taken
+   back by the margin, keeps the focus ring inside the scrolling box. */
+@media (min-width: 901px) {
+  .grd .grd-gen-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px; margin: -4px; }
+  .grd .grd-gen-chips::-webkit-scrollbar { display: none; }
+  .grd .tl-pill.grd-gen-chip { flex: 0 0 auto; padding: 0 6px; }
+  .grd .grd-gen-chips[data-more="end"] { mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); }
+  .grd .grd-gen-chips[data-more="start"] { mask-image: linear-gradient(to left, #000 calc(100% - 20px), transparent); }
+  .grd .grd-gen-chips[data-more="both"] { mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent); }
 }
 .grd .tl-pill.grd-gen-chip.is-on { box-shadow: inset 0 0 0 1px var(--tl-line-on); }
 .grd .tl-pill.grd-gen-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
@@ -1023,6 +1113,7 @@
   .grd-gen .tl-pill,
   .grd-gen .grd-shuf-row .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
   .grd .tl-pill.grd-gen-chip { min-height: 44px; min-width: 44px; padding: 0 8px; }
+  .grd .grd-gen-k { padding-top: 14px; }
   .grd .grd-gen-more { height: 44px; min-width: 44px; }
   .grd .grd-gen-lockbtn,
   .grd .grd-gen-base .cpk-trigger { width: 44px; height: 44px; }
@@ -1034,4 +1125,80 @@
 :where(html[data-reduced-motion="true"]) .grd :is(.grd-chip, .grd-paint-src, .grd-gen-lockbtn) { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-chip, .grd-paint-src, .grd-gen-lockbtn) { transition: none !important; }
+}
+
+/* ── PREVIEW CONTEXTS (on the canvas) ────────────────────────────────────────
+   Fill is the gradient alone. Hero, Card and Button draw sample UI over (or on)
+   it; the ink is chosen from the stops in JS (gradientInk.js). The switch and the
+   ratio badge sit on a near-black scrim, so their white text holds its contrast
+   whatever colours are under them. Everything here is flat; the only gradients are
+   the person's own. */
+.grd .grd-ctx-view { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; pointer-events: none; }
+.grd .grd-ctx-ground { display: grid; place-items: center; background: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); border: 1px solid var(--tl-line); }
+.grd .grd-ctx-hero { display: flex; align-items: center; padding: clamp(16px, 5cqi, 48px); }
+.grd .grd-ctx-sample { display: grid; justify-items: start; gap: 8px; max-width: 28ch; }
+.grd .grd-ctx-h { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; }
+.grd .grd-ctx-p { margin: 0; font-size: 14px; line-height: 1.5; }
+.grd .grd-ctx-cta { display: inline-flex; align-items: center; height: 36px; margin-top: 8px; padding: 0 16px; border-radius: var(--btn-radius); font-size: 14px; font-weight: 560; }
+.grd .grd-ctx-ratio {
+  position: absolute; right: 12px; bottom: 12px;
+  padding: 4px 8px; border-radius: 8px;
+  background: rgba(10, 11, 13, .9); color: #fff;
+  font-family: var(--mono); font-size: 12px; line-height: 1.2; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.grd .grd-ctx-ratio.is-low { color: var(--warn, #F5B942); }
+/* The ground is the one bordered surface; the card on it is told apart by its colour alone. */
+.grd .grd-ctx-card { width: min(280px, 80%); overflow: hidden; border-radius: 14px; background: var(--tl-card); }
+.grd .grd-ctx-card-head { height: 120px; max-height: 40cqh; }
+.grd .grd-ctx-card-t { margin: 12px 14px 4px; font-size: 14px; font-weight: 600; color: var(--tl-ink); }
+.grd .grd-ctx-card-p { margin: 0 14px 14px; font-size: 13px; line-height: 1.45; color: var(--tl-dim); }
+@media (max-width: 600px) {
+  .grd .grd-ctx-card-head { height: 56px; }
+  .grd .grd-ctx-card-p { display: none; }
+}
+.grd .grd-ctx-btns { grid-auto-flow: column; justify-content: center; align-content: center; gap: 12px; }
+.grd .grd-ctx-btn { display: inline-flex; align-items: center; padding: 0 18px; border-radius: var(--btn-radius); font-size: 14px; font-weight: 560; white-space: nowrap; }
+.grd .grd-ctx {
+  position: absolute; top: 12px; left: 12px; z-index: 1;
+  display: flex; gap: 2px; padding: 2px;
+  border-radius: var(--btn-radius); background: rgba(10, 11, 13, .72);
+}
+.grd .grd-ctx-opt {
+  height: 28px; padding: 0 10px; border: 0; border-radius: var(--btn-radius);
+  background: transparent; color: #fff;
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-1) var(--ease-standard);
+}
+.grd .grd-ctx-opt.is-on { background: rgba(255, 255, 255, .2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55); }
+.grd .grd-ctx-opt:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-ctx-opt:hover:not(.is-on) { background: rgba(255, 255, 255, .12); }
+}
+@media (pointer: coarse) {
+  .grd .grd-ctx { top: 8px; left: 8px; }
+  .grd .grd-ctx-opt { height: 44px; min-width: 44px; }
+}
+/* Where the stage is short (stacked layouts) the switch gets its own row: the samples
+   start below it, 4px clear of its bottom edge, so it never covers one. */
+@media (max-width: 900px) {
+  .grd .grd-ctx-view { padding-top: 48px; }
+}
+@media (max-width: 900px) and (pointer: coarse) {
+  .grd .grd-ctx-view { padding-top: 60px; }
+}
+@media (max-width: 600px) {
+  /* A sample under the switch needs more room than the 16:9 Fill preview gives it. */
+  .grd .grd-stage:not([data-ctx="fill"]) { aspect-ratio: 4 / 3; }
+  .grd .grd-ctx-h { font-size: 22px; }
+  .grd .grd-ctx-btns { grid-auto-flow: row; gap: 8px; }
+  .grd .grd-ctx-btn { height: auto; min-height: 32px; }
+}
+@media (forced-colors: active) {
+  .grd .grd-ctx, .grd .grd-ctx-ratio { forced-color-adjust: none; }
+}
+:where(html[data-reduced-motion="true"]) .grd .grd-ctx-opt { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-ctx-opt { transition: none !important; }
 }
