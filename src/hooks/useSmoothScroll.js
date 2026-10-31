@@ -64,6 +64,16 @@ export default function useSmoothScroll() {
     const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: true, allowNestedScroll: true })
     setLenis(lenis)
 
+    // Lenis measures the page once and re-measures on a ResizeObserver that waits
+    // 250ms. A lazy page mounts just after the loading shell, so a contents link
+    // clicked in that window was clamped to the shell's height and stopped short.
+    // Measuring again on the way down, before Lenis's own click handler (bubble
+    // phase on the same window) reads the limit, makes every in-page jump land.
+    const remeasureBeforeAnchor = (event) => {
+      if (event.target instanceof Element && event.target.closest('a[href*="#"]')) lenis.resize()
+    }
+    window.addEventListener('click', remeasureBeforeAnchor, true)
+
     let rafId = 0
     const raf = (time) => {
       lenis.raf(time)
@@ -73,6 +83,7 @@ export default function useSmoothScroll() {
 
     return () => {
       cancelAnimationFrame(rafId)
+      window.removeEventListener('click', remeasureBeforeAnchor, true)
       lenis.destroy()
       setLenis(null)
     }
