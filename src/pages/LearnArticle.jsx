@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import useActiveSection from '../hooks/useActiveSection'
 import NotFound from './NotFound'
 import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
@@ -232,50 +233,6 @@ function Chevron() {
       <path d="M3.5 6l4.5 4.5L12.5 6" />
     </svg>
   )
-}
-
-/**
- * Which section the reader is in, for the contents rail.
- *
- * A section is current once its heading has reached the line a contents jump
- * lands it on (the section's own scroll-margin-top, plus a few px of slack), so
- * the answer is the last section at or above that line, and the first section
- * until any has. It is computed from geometry on every scroll frame rather than
- * kept from observer entries: entries only report the sections that changed,
- * which loses the marker when the reader jumps (End, then Home) and nothing is
- * left to report, and an observer cannot see the gap between two sections.
- */
-function useActiveSection(sections) {
-  const [active, setActive] = useState(sections[0]?.id ?? '')
-
-  useEffect(() => {
-    const nodes = sections.map((s) => document.getElementById(s.id)).filter(Boolean)
-    if (!nodes.length) return undefined
-    let frame = 0
-    const pick = () => {
-      frame = 0
-      let current = nodes[0]
-      for (const node of nodes) {
-        const line = (parseFloat(getComputedStyle(node).scrollMarginTop) || 0) + 8
-        if (node.getBoundingClientRect().top > line) break
-        current = node
-      }
-      setActive(current.id)
-    }
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(pick)
-    }
-    pick()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule)
-    return () => {
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
-      if (frame) cancelAnimationFrame(frame)
-    }
-  }, [sections])
-
-  return active
 }
 
 /**
