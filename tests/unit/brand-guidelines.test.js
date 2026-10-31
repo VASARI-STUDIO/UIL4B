@@ -66,7 +66,7 @@ const pageCount = (html) => (html.match(/<section class="sl[ "]/g) || []).length
 
 test('it has the furniture that makes it a brand book', () => {
   // Cover, numbered section openings, a running rail with a folio, a rationale
-  // beside every title, named swatches and alphabet grids. These are what the
+  // beside every title, named swatches and type spreads. These are what the
   // founder's references are made of, and losing any of them silently is the
   // regression worth catching.
   assert.match(DOC, /class="sl sl-cover"/, 'a cover')
@@ -75,7 +75,7 @@ test('it has the furniture that makes it a brand book', () => {
   assert.match(DOC, /class="rail-folio"/, 'a printed page number')
   assert.match(DOC, /class="hd-notes"/, 'a rationale beside the page title')
   assert.match(DOC, /class="sw-name"/, 'swatches carrying a name, not only a hex')
-  assert.match(DOC, /class="alpha"/, 'the boxed alphabet grid')
+  assert.match(DOC, /class="tf-spec"/, 'a type spread with its sentence and glyph strip')
 })
 
 test('it is 16:9 and a plausible length', () => {
@@ -99,7 +99,7 @@ test('it is not the design system book at another paper size', () => {
   for (const marker of ['class="bd-chip"', 'class="mx"', 'class="pg pg-contents"']) {
     assert.ok(!DOC.includes(marker), `the guidelines have adopted the book's ${marker}`)
   }
-  for (const marker of ['class="alpha"', 'class="rail"', 'class="op-field"']) {
+  for (const marker of ['class="tf-spec"', 'class="rail"', 'class="op-field"']) {
     assert.ok(!BOOK.includes(marker), `the book has adopted the guidelines' ${marker}`)
   }
 })

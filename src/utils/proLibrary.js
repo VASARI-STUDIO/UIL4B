@@ -24,6 +24,30 @@
 
 export const libraryKey = (uid, kind) => `${uid}:${kind}`
 
+/**
+ * The state of a library for one viewer, as a pure function of what the hook knows.
+ *
+ *   wanted     the caller wants the library at all (the Palette Builder waits
+ *              for its popup);
+ *   enabled    a Pro account with a resolved plan and a uid: the fetch is on;
+ *   cached / denied / failed   what this tab knows about the request;
+ *   resolving  signed in, or a returning session whose auth has not answered,
+ *              and the plan is not known yet.
+ *
+ * 'resolving' is what keeps a Pro account from being shown the free wall for the
+ * moment before its plan arrives. A cold anonymous visitor is never 'resolving'.
+ */
+export function deriveLibraryStatus({ wanted, enabled, cached, denied, failed, resolving } = {}) {
+  if (wanted !== true) return 'idle'
+  if (enabled === true) {
+    if (cached) return 'ready'
+    if (denied) return 'refused'
+    if (failed) return 'error'
+    return 'loading'
+  }
+  return resolving ? 'resolving' : 'idle'
+}
+
 export function createProLibrary({ loadAuth = null, fetchImpl = null } = {}) {
   const env = { loadAuth, fetchImpl }
   const cache = new Map() // `${uid}:${kind}` -> items

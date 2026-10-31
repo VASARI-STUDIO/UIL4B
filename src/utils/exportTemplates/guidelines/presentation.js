@@ -212,23 +212,15 @@ function css(ctx) {
     font-size:92pt;line-height:.86;letter-spacing:-.035em;overflow:hidden}
   .tf-right{display:flex;flex-direction:column;min-width:0;min-height:0}
   .tf-lbl{font-size:7.5pt;color:var(--mut);margin:0 0 1.5mm}
-  .tf-lbl:not(:first-child){margin-top:3.5mm}
-  /* The boxed grid, OpenPay's signature. Fixed ten columns with hairline cells;
-     the last row runs short and is LEFT short, because a character set padded
-     out to a rectangle has stopped being a character set.
-     THE CELL IS A FIXED HEIGHT, NOT A SQUARE. Square cells at ten columns across
-     the 160mm right-hand column came out 16mm tall, so three grids stood 100mm
-     over the page and both type spreads overflowed, measured in a browser, not
-     guessed. A character grid is a reading object, so it is set at a reading
-     size and the cell follows it. A face set at two weights shows each weight's
-     whole character set in thirteen columns at a lower cell, so both fit. */
-  .alpha{display:grid;grid-template-columns:repeat(10,1fr);
-    border-top:.25mm solid var(--line);border-left:.25mm solid var(--line)}
-  .alpha span{display:flex;align-items:center;justify-content:center;
-    height:8mm;font-size:11pt;line-height:1;
-    border-right:.25mm solid var(--line);border-bottom:.25mm solid var(--line)}
-  .alpha-all{grid-template-columns:repeat(13,1fr)}
-  .alpha-all span{height:7mm;font-size:10.5pt}
+  /* A face's specimen: a sentence about this system set in the face, then the
+     character set as a strip at the foot. A family that sets two roles shows both,
+     each in its own weight, so the sentence drops a size to let both fit. */
+  .tf-spec{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    border-top:.25mm solid var(--line);padding-top:3mm}
+  .tf-spec + .tf-spec{margin-top:6mm}
+  .tf-set{font-size:26pt;line-height:1.2;overflow-wrap:anywhere}
+  .tf-two .tf-set{font-size:19pt}
+  .tf-strip{margin-top:auto}
   .scale{width:100%;border-collapse:collapse;font-size:8pt;table-layout:fixed}
   .scale th,.scale td{text-align:left;padding:1.8mm 2mm;
     border-bottom:.25mm solid var(--hair);vertical-align:middle}

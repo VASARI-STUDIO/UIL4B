@@ -224,11 +224,12 @@ test('Showcase: the scale names its columns once in the head, not under every va
   assert.equal(count(rows, '<td class="vals">'), 6, 'a row for each of the six steps of the scale')
 })
 
-test('Showcase: the heading band sets the alphabet and figures at the Heading 2 step', () => {
+test('Showcase: the heading band sets a sentence about the system at the Heading 2 step, with the alphabet as a strip', () => {
   const html = render('showcase', design())
   const band = /<p class="sc-alpha" style="--size:([\d.]+)">([^<]*)<\/p>/.exec(html)
   assert.ok(band, 'the alphabet line is missing')
-  assert.equal(band[2], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789')
+  assert.match(band[2], /sets the headings, each step [\d.]+ times the one below\.$/)
+  assert.ok(html.includes('class="glyph-strip"'), 'the character set is a strip')
   const h2 = /<code>([\d.]+) px \/ [\d.]+ \/ \d+<\/code><\/button><small class="var">--font-size-heading-2</.exec(html)[1]
   assert.equal(band[1], h2, 'the line is not at the Heading 2 size the scale lists')
   assert.ok(html.indexOf('class="sc-alpha"') < html.indexOf('id="colour"'), 'the line left the heading band')
