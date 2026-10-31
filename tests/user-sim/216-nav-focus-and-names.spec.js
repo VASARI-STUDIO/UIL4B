@@ -109,11 +109,15 @@ for (const size of SIZES) {
         await shiftTabIntoBar(page)
         await expectBarShown(page)
         // Force the hidden flag back on, as if script had not kept it in step.
-        await page.locator('.spnav').evaluate((el) => el.setAttribute('data-nav-hidden', '1'))
-        await expect.poll(async () => {
-          const p = await barPaint(page)
-          return p.opacity === 1 && p.barTop >= 0
-        }, { message: 'focus-visible inside the bar overrides the hidden rule' }).toBe(true)
+        // Let any fade the hidden rule starts run to its end before reading the paint.
+        await page.locator('.spnav').evaluate(async (el) => {
+          el.setAttribute('data-nav-hidden', '1')
+          await Promise.all(el.getAnimations().map((a) => a.finished))
+        })
+        const paint = await barPaint(page)
+        expect(paint.flag, 'precondition: the hidden flag is on').toBe('1')
+        expect(paint.opacity, 'focus-visible inside the bar overrides the hidden rule').toBe(1)
+        expect(paint.barTop).toBeGreaterThanOrEqual(0)
         await ctx.close()
       })
 
