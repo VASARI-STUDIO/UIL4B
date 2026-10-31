@@ -89,6 +89,33 @@ export function sanitizeGradientSubmission(item) {
   }
 }
 
+/**
+ * The `payload` of a gradient submission to the review queue, or null when the
+ * gradient cannot be described faithfully. Only keys firestore.rules allows:
+ * type, angle, stops, c1 and c2 (the end colours, for a card that draws two),
+ * and author when there is a public handle.
+ *
+ * Refuses rather than repairs: a stop that is not a six-digit hex colour, or
+ * more stops than a submission may carry, would otherwise be dropped silently
+ * and the reviewer would see a different gradient from the one the person made.
+ */
+export function buildGradientPayload({ type, angle, stops, author } = {}) {
+  if (!Array.isArray(stops)) return null
+  const g = sanitizeGradientSubmission({ type, angle, stops })
+  if (!g || g.stops.length !== stops.length) return null
+  const ordered = [...g.stops].sort((a, b) => a.position - b.position)
+  const payload = {
+    type: g.type,
+    angle: g.angle,
+    stops: g.stops,
+    c1: ordered[0].color,
+    c2: ordered[ordered.length - 1].color,
+  }
+  const by = clean(author, 80)
+  if (by) payload.author = by
+  return payload
+}
+
 // The stored array exactly as parsed, newest first, or null when the key is
 // missing, unreadable or not a list. Never writes.
 function readRawLegacy(storage) {

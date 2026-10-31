@@ -313,7 +313,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-mode{padding:5px 13px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .plb-mode:hover{color:var(--t0)}
 .plb-mode--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
-.plb-modal-actions{display:flex;justify-content:flex-end}
+.plb-modal-actions{display:flex;justify-content:flex-end;gap:8px}
 /* Submit-to-community popup (Wave 5) */
 .plb-submitcard{width:min(440px,100%)}
 .plb-submit-strip{display:flex;height:56px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
