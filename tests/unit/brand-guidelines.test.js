@@ -126,7 +126,8 @@ test('no description means no line slide and no description on the cover; a desc
   const described = buildBrandGuidelines({ ...DESIGN, identity: { description: text } }, opts)
   assert.ok(described.includes('class="sl sl-line"') && described.includes('class="cv-desc"'), 'the description is missing from the deck')
   for (const html of [DOC, BARE]) {
-    assert.ok(!html.includes('sl-line') && !html.includes('cv-desc'), 'a deck with no description still has a line slide or cover description')
+    // Matched as markup: the stylesheet names both classes in every deck.
+    assert.ok(!html.includes('class="sl sl-line"') && !html.includes('class="cv-desc"'), 'a deck with no description still has a line slide or cover description')
   }
   assert.equal(pageCount(described), pageCount(BARE) + 1)
   const hostile = buildBrandGuidelines({ ...DESIGN, identity: { description: '<script>alert(1)</script> & "quoted"' } }, opts)
@@ -149,7 +150,7 @@ test('there is no logo section unless there is a logo', () => {
   // POSITIVE CONTROL FIRST. "The document contains no logo pages" is trivially
   // true of a document that contains nothing, so the presence case is asserted
   // before the absence case and with the same markers.
-  for (const marker of ['class="mk-hero"', 'class="gts"', 'Logo · Clear space', 'class="cs-box"', 'Appendix · Logo', 'class="lf"']) {
+  for (const marker of ['class="mk mk-hero"', 'class="gts"', 'Logo · Clear space', 'class="cs-box"', 'Appendix · Logo', 'class="lf"']) {
     assert.ok(DOC.includes(marker), `a design WITH a logo is missing ${marker} — the absence test below is vacuous`)
     assert.ok(!BARE.includes(marker), `a design with NO logo still renders ${marker}`)
   }
@@ -365,7 +366,7 @@ test('the panel writes the logo through the shared design store, not a second on
 test('a single colour takes the whole colour slide, and the primary is five twelfths otherwise', () => {
   const one = buildBrandGuidelines({ ...DESIGN, palette: { ...DESIGN.palette, colors: ['#1F4B8E'] } }, opts)
   assert.ok(one.includes('class="cl-main is-solo"') && !one.includes('class="cl-strip"'), 'a lone colour does not fill the slide')
-  assert.ok(DOC.includes('flex:0 0 41.667%') && !DOC.includes('is-solo'), 'the primary field is not five twelfths of the slide')
+  assert.ok(DOC.includes('flex:0 0 41.667%') && !DOC.includes('class="cl-main is-solo"'), 'the primary field is not five twelfths of the slide')
 })
 
 test('the clear-space page draws the geometry it states', () => {
