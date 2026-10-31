@@ -677,5 +677,5 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
   text-decoration:underline;text-underline-offset:3px;cursor:pointer;
 }
 @media(hover:hover){.iel-page .lib-feedback:hover{color:#F7F7F4}}
-.iel-page .lib-feedback:focus-visible{outline:2px solid #F7F7F4;outline-offset:3px;border-radius:2px}
+.iel-page .lib-feedback:focus-visible{outline:2px solid #F7F7F4;outline-offset:3px}
 @media(pointer:coarse){.iel-page .lib-feedback{min-height:44px;padding-inline:8px;margin-inline:-8px}}
