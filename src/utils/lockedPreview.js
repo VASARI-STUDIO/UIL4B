@@ -148,6 +148,30 @@ export function accountTierGain({ tier, eligible, shown } = {}) {
   return Math.max(0, reach - Math.max(0, Number(shown) || 0))
 }
 
+// How many rows a free account opens in all: the free cap, or fewer when the
+// library holds fewer open rows than that. The one place the figure is worked
+// out, so the walls and the closing lines cannot disagree about it.
+export function freeOpens({ eligible } = {}) {
+  return Math.min(GALLERY_TIER_LIMITS.free, Math.max(0, Number(eligible) || 0))
+}
+
+// The sentence that states where this viewer stands on the ladder, for the
+// closing lines and the walls. `noun` is the plural ("palettes"), `shown` is
+// what the viewer has now and `total` is the size of the library.
+//
+//   anonymous  both next steps, with their true numbers;
+//   free       Pro is the next step;
+//   pro        nothing to say.
+export function tierSentence({ tier, shown, total, eligible, noun } = {}) {
+  if (tier === 'anonymous') {
+    return `Signed out, you see ${shown} of the ${total} ${noun}. A free account opens ${freeOpens({ eligible })}; Pro opens all ${total}.`
+  }
+  if (tier === 'free') {
+    return `Free covers ${shown} of the ${total} ${noun}. Pro opens all of them.`
+  }
+  return ''
+}
+
 // Strip a preview down to the whitelist. Undefined values are dropped so a
 // preview never carries an empty `label` that a component would render as a
 // blank line.
