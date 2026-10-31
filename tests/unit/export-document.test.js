@@ -458,7 +458,7 @@ const noBuild = !fs.existsSync(builtAssets) && 'run a build first (see DIST_DIR)
 // Text that each generator writes into its document and that nothing else in the app has.
 const MARKERS = [
   { file: 'src/utils/designSystemBook.js', text: ' | Design System</title>' },
-  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: '<span class="cv-name">' },
+  { file: 'src/utils/exportTemplates/guidelines/presentation.js', text: '<section class="sl sl-cover" style=' },
   { file: 'src/utils/exportTemplates/guidelines/poster.js', text: '<header class="pn-top">' },
   { file: 'src/utils/exportTemplates/guidelines/grid.js', text: '<span class="mh-name">' },
   { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design system</span>' },

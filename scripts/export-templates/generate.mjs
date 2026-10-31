@@ -80,7 +80,6 @@ const TITLE_WAIVED = Object.freeze({
   'book-specification': 10.0,
   'book-monograph': 7.7,
   'book-atlas': 4.2,
-  'guidelines-presentation': 8.1,
   'guidelines-grid': 9.7,
   'kit-manual': 9.8,
 })

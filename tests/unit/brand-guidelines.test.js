@@ -70,17 +70,17 @@ test('it has the furniture that makes it a brand book', () => {
   // founder's references are made of, and losing any of them silently is the
   // regression worth catching.
   assert.match(DOC, /class="sl sl-cover"/, 'a cover')
-  assert.match(DOC, /class="sl sl-open"/, 'section openings')
-  assert.match(DOC, /class="rail"/, 'a running rail')
-  assert.match(DOC, /class="rail-folio"/, 'a printed page number')
-  assert.match(DOC, /class="hd-notes"/, 'a rationale beside the page title')
-  assert.match(DOC, /class="sw-name"/, 'swatches carrying a name, not only a hex')
-  assert.match(DOC, /class="tf-spec"/, 'a type spread with its sentence and glyph strip')
+  assert.match(DOC, /class="ch-folio"/, 'a printed page number')
+  assert.match(DOC, /class="lb-name"/, 'colour fields carrying a name, not only a hex')
+  assert.match(DOC, /class="cl-strip"/, 'the palette laid out as strips')
+  assert.match(DOC, /class="ty-head"/, 'a type slide setting a sentence in the heading face')
+  assert.match(DOC, /class="gl-set"/, 'the character set in the appendix')
+  assert.match(DOC, /Appendix · Colour values/, 'the specifications at the back')
 })
 
 test('it is 16:9 and a plausible length', () => {
   const n = pageCount(DOC)
-  assert.ok(n >= 10 && n <= 20, `expected a 10-20 page document, got ${n}`)
+  assert.ok(n >= 8 && n <= 20, `expected an 8-20 slide document, got ${n}`)
   assert.match(DOC, /@page\{size:297mm 167mm;margin:0\}/, 'a true 16:9 print size')
   assert.match(DOC, /width:297mm;height:167mm/, 'exact 16:9 pages')
 })
@@ -99,34 +99,48 @@ test('it is not the design system book at another paper size', () => {
   for (const marker of ['class="bd-chip"', 'class="mx"', 'class="pg pg-contents"']) {
     assert.ok(!DOC.includes(marker), `the guidelines have adopted the book's ${marker}`)
   }
-  for (const marker of ['class="tf-spec"', 'class="rail"', 'class="op-field"']) {
+  for (const marker of ['class="gl-set"', 'class="cl-strip"', 'class="ty-head"']) {
     assert.ok(!BOOK.includes(marker), `the book has adopted the guidelines' ${marker}`)
   }
 })
 
-test('the section openings follow what is present, with no numeral to leave a hole', () => {
-  // A "02" under a chapter that does not exist is the clearest possible tell
-  // that a fixed template had a piece removed. The openings now carry no numeral at all,
-  // and the sections are decided AFTER what is present: this proves both shapes.
-  const heads = (html) => [...html.matchAll(/class="op-head">([^<]*)</g)].map(m => m[1].trim())
-  assert.deepEqual(heads(DOC), ['Logo', 'Colour', 'Typography'], 'a design with a logo should open three sections')
-  assert.deepEqual(heads(BARE), ['Colour', 'Typography'], 'without a logo there is no Logo opening and nothing in its place')
+test('the deck has no section openings and no rail of section names', () => {
   for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
-    assert.ok(!html.includes('op-num'), `${label}: an opening still prints a section numeral`)
+    assert.ok(!html.includes('sl-open') && !html.includes('class="rail"'), `${label}: a section opening or rail is back`)
   }
 })
 
-test('the folio is the slide place in the PDF, the cover is 1, and openings carry none', () => {
-  for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
+test('the folio is the slide place in the PDF, the cover is 1, and no number is skipped', () => {
+  const described = { ...DESIGN, identity: { description: 'Calm software for small clinics.' } }
+  for (const [label, html] of [['with logo', DOC], ['bare', BARE], ['described', buildBrandGuidelines(described, opts)]]) {
     const slides = html.split('<section class="sl').slice(1)
     assert.equal(slides.length, pageCount(html), `${label}: the split lost a slide`)
-    const folios = slides.map((slide) => (/class="rail-folio">(\d+)</.exec(slide) || [])[1])
-    const numbered = folios.map((f, i) => (f === undefined ? null : [i + 1, Number(f)])).filter(Boolean)
-    assert.ok(numbered.length >= 5, `${label}: too few numbered pages to be a document`)
-    assert.deepEqual(numbered.filter(([place, folio]) => place !== folio), [], `${label}: a folio is not its slide place in the PDF`)
+    const folios = slides.map((slide) => (/class="ch-folio">(\d+)</.exec(slide) || [])[1])
     assert.equal(folios[0], undefined, `${label}: the cover carries a folio`)
-    slides.forEach((slide, i) => { if (slide.startsWith(' sl-open')) assert.equal(folios[i], undefined, `${label}: opening ${i + 1} carries a folio`) })
+    assert.deepEqual(folios.slice(1).map(Number), slides.slice(1).map((_, i) => i + 2), `${label}: a folio is not its slide place in the PDF`)
   }
+})
+
+test('no description means no line slide and no description on the cover; a description gets both', () => {
+  const text = 'Calm software for small clinics.'
+  const described = buildBrandGuidelines({ ...DESIGN, identity: { description: text } }, opts)
+  assert.ok(described.includes('class="sl sl-line"') && described.includes('class="cv-desc"'), 'the description is missing from the deck')
+  for (const html of [DOC, BARE]) {
+    assert.ok(!html.includes('sl-line') && !html.includes('cv-desc'), 'a deck with no description still has a line slide or cover description')
+  }
+  assert.equal(pageCount(described), pageCount(BARE) + 1)
+  const hostile = buildBrandGuidelines({ ...DESIGN, identity: { description: '<script>alert(1)</script> & "quoted"' } }, opts)
+  assert.ok(!hostile.includes('<script>alert(1)') && hostile.includes('&lt;script&gt;'), 'the description is not escaped')
+})
+
+test('13 colours: the colour slide renders every slot and the appendix lists all of them', () => {
+  const colors = ['#1F4B8E', '#2E7BB8', '#3FA9A0', '#C7D9E8', '#0D2540', '#E76E62', '#C95A8C', '#C56D00', '#3C0504', '#FFCEC2', '#F4F1EA', '#6B7280', '#111827']
+  const html = buildBrandGuidelines({ ...WITH_LOGO, palette: { ...DESIGN.palette, colors } }, opts)
+  assert.equal((html.match(/class="cl-strip"/g) || []).length, 12, 'a strip is missing')
+  assert.equal((html.match(/class="lb-name"/g) || []).length, 13, 'a colour carries no name')
+  assert.ok(!/class="cl-strip"[^>]*>\s*<div class="lb">\s*<b class="lb-name">[^<]*<\/b><span class="lb-hex"/.test(html), 'strips still carry a hex at 13 colours')
+  assert.equal((html.match(/<i class="sq/g) || []).length, 13, 'the appendix does not list every colour')
+  for (const hex of colors) assert.ok(html.includes(`<td class="fig">${hex}</td>`), `${hex} is not in the appendix`)
 })
 
 /* ── 2 · it is honest ────────────────────────────────────────────────────── */
@@ -135,12 +149,12 @@ test('there is no logo section unless there is a logo', () => {
   // POSITIVE CONTROL FIRST. "The document contains no logo pages" is trivially
   // true of a document that contains nothing, so the presence case is asserted
   // before the absence case and with the same markers.
-  for (const marker of ['>The mark<', '>On grounds<', '>Clear space<', 'class="cs-box"', 'class="grounds"']) {
+  for (const marker of ['class="mk-hero"', 'class="gts"', 'Logo · Clear space', 'class="cs-box"', 'Appendix · Logo', 'class="lf"']) {
     assert.ok(DOC.includes(marker), `a design WITH a logo is missing ${marker} — the absence test below is vacuous`)
     assert.ok(!BARE.includes(marker), `a design with NO logo still renders ${marker}`)
   }
   assert.ok(!BARE.includes('<img'), 'a document with no logo still emits an image tag')
-  assert.equal(pageCount(BARE) + 4, pageCount(DOC), 'the logo section is not four pages long any more')
+  assert.equal(pageCount(BARE) + 3, pageCount(DOC), 'the logo slides (mark, clear space, logo facts) are not three any more')
 })
 
 test('the mark only ever appears as an <img> source, never as inline SVG markup', () => {
@@ -219,9 +233,9 @@ test('the named swatches carry a name AND a hex, in the ink measured to read on 
   // are asserted because a swatch with a name and no hex is as useless as the
   // reverse.
   for (const hex of DESIGN.palette.colors) {
-    assert.ok(DOC.includes(`<dd>${hex}</dd>`), `${hex} has no printed value`)
+    assert.ok(DOC.includes(`<td class="fig">${hex}</td>`), `${hex} has no printed value`)
   }
-  const names = [...DOC.matchAll(/class="sw-name">([^<]+)</g)].map(m => m[1])
+  const names = [...DOC.matchAll(/class="lb-name">([^<]+)</g)].map(m => m[1])
   assert.equal(names.length, 5, 'not every colour got a name')
   assert.equal(new Set(names).size, 5, 'two colours share a name')
   for (const hex of DESIGN.palette.colors) {
@@ -348,20 +362,10 @@ test('the panel writes the logo through the shared design store, not a second on
     'BrandLogoField has grown a store of its own — the logo would then not travel with the project')
 })
 
-test('no grid in the document ends on an empty cell', () => {
-  // fillRow(). Five colours in a three-wide grid leaves a hole in the second
-  // row, and a hole at the end of a grid is the clearest signal that a machine
-  // ran out of content. Asserted in both directions so it is measuring the
-  // remainder rather than always spanning.
-  const five = [...DOC.matchAll(/<div class="use( is-span\d)?"/g)].map(m => (m[1] || '').trim())
-  assert.equal(five.length, 5)
-  assert.deepEqual(five, ['', '', '', '', 'is-span2'], 'the five-tile grid does not close its second row')
-
-  const six = buildBrandGuidelines(
-    { ...DESIGN, palette: { ...DESIGN.palette, colors: [...DESIGN.palette.colors, '#7A3E9D'] } }, opts)
-  const tiles = [...six.matchAll(/<div class="use( is-span\d)?"/g)].map(m => (m[1] || '').trim())
-  assert.equal(tiles.length, 6)
-  assert.ok(tiles.every(t => t === ''), 'a grid that already fills its rows is being spanned anyway')
+test('a single colour takes the whole colour slide, and the primary is five twelfths otherwise', () => {
+  const one = buildBrandGuidelines({ ...DESIGN, palette: { ...DESIGN.palette, colors: ['#1F4B8E'] } }, opts)
+  assert.ok(one.includes('class="cl-main is-solo"') && !one.includes('class="cl-strip"'), 'a lone colour does not fill the slide')
+  assert.ok(DOC.includes('flex:0 0 41.667%') && !DOC.includes('is-solo'), 'the primary field is not five twelfths of the slide')
 })
 
 test('the clear-space page draws the geometry it states', () => {
@@ -374,9 +378,11 @@ test('the clear-space page draws the geometry it states', () => {
   const box = /class="cs-box" style="width:([\d.]+)mm;height:([\d.]+)mm;padding:([\d.]+)mm"/.exec(DOC)
   assert.ok(box, 'the keep-out box is not drawn')
   const [, w, h, x] = box.map(Number)
-  // 240x60 artwork at a 34mm mark height: X is half of 34, and the box is the
-  // mark plus X on all four sides.
-  assert.equal(x, 17)
-  assert.equal(h, 34 + 2 * 17)
-  assert.equal(Math.round(w), Math.round(34 * 4 + 2 * 17))
+  const mark = Number(/class="mk mk-cs" [^>]*style="height:([\d.]+)mm"/.exec(DOC)?.[1])
+  assert.ok(mark > 0, 'the mark is not drawn inside the box')
+  // 240x60 artwork: X is half the drawn height, and the box is the mark plus X
+  // on all four sides.
+  assert.equal(x, mark / 2)
+  assert.equal(h, mark + 2 * x)
+  assert.equal(Math.round(w), Math.round(mark * 4 + 2 * x))
 })
