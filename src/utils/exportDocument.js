@@ -152,8 +152,11 @@ export function showInPrintWindow(handle, url, open = browserOpen()) {
  * goes to the window, never to what the server returns or what is downloaded: the
  * saved file keeps its no-script guarantee.
  */
-export function withPrintBootstrap(html) {
-  return html.replace(
+export function withPrintBootstrap(html, { title = '' } = {}) {
+  // The title is what a browser offers as the PDF's file name. `title` is a file name
+  // stem from exportFileName.js (lowercase letters, digits and hyphens), so it needs no escaping.
+  const named = title && /^[a-z0-9-]+$/.test(title) ? html.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`) : html
+  return named.replace(
     '</body>',
     '<script>(function(){function go(){try{window.focus();window.print()}catch(e){}}'
     + 'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(go,200)})}'

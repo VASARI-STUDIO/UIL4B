@@ -51,7 +51,7 @@ test.describe('checkout states a price it cannot confirm', () => {
       const amount = page.locator('.checkout-plan-amount')
       const note = page.locator('.checkout-plan-note')
       await expect(amount).toHaveText('Unavailable')
-      await expect(note).toHaveText('Live pricing is unreachable · no price can be shown right now')
+      await expect(note).toHaveText('Stripe didn’t answer, so no checkout can start.')
 
       // The exact string the defect produced, asserted as absent by name so a
       // regression is unmistakable rather than merely "not Unavailable".

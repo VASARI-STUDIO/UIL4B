@@ -247,6 +247,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                   onFile={onFile}
                   onLayout={onLayout}
                   name={name || 'Design System'}
+                  fileProject={name}
                   project={project}
                   strip={strip}
                   coming={comingLine()}

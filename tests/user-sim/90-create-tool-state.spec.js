@@ -445,9 +445,8 @@ test.describe('the catalogue tools name the thing they are for', () => {
   // 122 tab stops at 390px. The tabpanel it lives in is named ("Emoji") but a
   // tabpanel is not a landmark and never appears in this list.
   //
-  // Since the icon pages took the sales pages' ending, the page also carries the
-  // close (a region named by its headline, inside main) and the footer after it
-  // (contentinfo and its Footer navigation); the grid's region still comes first.
+  // The icon pages end at the footer (contentinfo and its Footer navigation) with no sales close;
+  // the grid's region is the only region inside main.
   //
   // MUTATION: drop aria-labelledby from `.emoji-results` in EmojiLibrary.jsx
   // and both halves go red on the landmark list.
@@ -464,7 +463,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("Showing all 1655 emojis")',
-      'region("Now pick the colours and type.")',
       'contentinfo',
       'navigation("Footer")',
     ])
@@ -477,7 +475,6 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("0 emojis for zzzzqqq")',
-      'region("Now pick the colours and type.")',
       'contentinfo',
       'navigation("Footer")',
     ])

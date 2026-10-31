@@ -485,7 +485,7 @@ test('the export engine loads bookRaster only on demand, behind the same Pro che
   for (const f of ['ExportDialog', 'ExportNav', 'ExportSteps', 'ExportFreePreview']) {
     assert.ok(!/^import .*bookRaster/m.test(read(`src/components/export/${f}.jsx`)), `${f} imports bookRaster statically`)
   }
-  assert.match(runner, /`\$\{slug\}-book-2k\.zip`/)
+  assert.match(runner, /formatFileName\(fileProject, 'book-png'\)/)
   // The PNG branch sits after the plan gate and the account gate in runExport.
   const raster = runner.indexOf("await import('../utils/bookRaster')")
   const proCheck = runner.indexOf('if (fmt.pro && !isPro)')

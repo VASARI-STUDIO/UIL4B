@@ -132,7 +132,7 @@ test.describe('Tint · Copy or save menu', () => {
     await expect.poll(async () => (await downloads(page)).length, { message: 'no file was produced' }).toBe(1)
     await expect.poll(async () => (await downloads(page))[0].text).not.toBe('')
     const [file] = await downloads(page)
-    expect(file.name).toMatch(/^tint-[0-9a-f]{6}\.css$/)
+    expect(file.name).toMatch(/^untitled-tint-[0-9a-f]{6}\.css$/)
     expect(file.type).toContain('text/css')
     // The OS clipboard may hand text back with CRLF line ends, so compare on LF.
     const lf = (s) => s.replace(/\r\n/g, '\n').trim()

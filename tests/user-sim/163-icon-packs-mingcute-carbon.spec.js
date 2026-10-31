@@ -64,9 +64,9 @@ async function pickPack(page, pack) {
   }
 }
 
-/** Wait for a pack's own listing: the toolbar count reads "N icons". */
+/** Wait for a pack's own listing: the announced count reads "N icons". */
 async function packListed(page, title, count) {
-  await expect(page.locator('.lbry-count'), `${title} lists ${count} icons`).toHaveText(`${Number(count).toLocaleString('en-US')} icons`, { timeout: 15000 })
+  await expect(page.locator('#ig-result-count'), `${title} lists ${count} icons`).toHaveText(`${Number(count).toLocaleString('en-US')} icons`, { timeout: 15000 })
 }
 
 /**
@@ -97,7 +97,7 @@ async function openLibrary(page, width, who, signedIn) {
 
 async function search(page, query) {
   await page.locator('.lbry-search input').first().fill(query)
-  await expect(page.locator('.lbry-count')).toHaveText(/^[\d,]+ icons?$/, { timeout: 15000 })
+  await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons?$/, { timeout: 15000 })
 }
 
 for (const width of WIDTHS) {
@@ -192,7 +192,7 @@ test.describe('search', () => {
     await openLibrary(page, 1440, 'designer on the free plan searching', 'free')
     await search(page, 'packprobe')
     // The fixture answers this query with carbon:logo-packprobe too; the page must drop it.
-    await expect(page.locator('.lbry-count')).toHaveText('2 icons')
+    await expect(page.locator('#ig-result-count')).toHaveText('2 icons')
     expect((await cellNames(page)).sort()).toEqual(['packprobe', 'packprobe-line'])
     expect(urls.filter((u) => u.includes('logo-packprobe') && !u.includes('/search?')), 'no glyph request names it').toEqual([])
   })
@@ -206,7 +206,7 @@ test.describe('search', () => {
     await openLibrary(page, 1440, 'designer on Pro searching every set', 'pro')
     await search(page, 'packprobe')
 
-    await expect(page.locator('.lbry-count')).toHaveText('3 icons')
+    await expect(page.locator('#ig-result-count')).toHaveText('3 icons')
 
     // The API really did offer the blocked sets, so the absence below is the page's doing.
     // The response body is read asynchronously, so wait for it rather than reading once.

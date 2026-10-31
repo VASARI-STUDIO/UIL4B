@@ -241,9 +241,9 @@ test.describe('the export gate, driven', () => {
     // nothing, and the request may not have been made yet when the window appears.
     // The generated artefact is what shows the round trip finished.
     await expect(book.locator('.cv-title')).toBeVisible()
-    // buildDesignSystemBook titles the document "<project> | Design System"; the
-    // loading label also contains those words, so pin the project name too.
-    await expect(book).toHaveTitle(/ \| Design System$/)
+    // The print window takes the PDF's file name as its title, so Save as PDF
+    // offers the same name the file list shows.
+    await expect(book).toHaveTitle(/-book$/)
     expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
     expect(asked[0].auth).toMatch(/^Bearer .+/)
     expect(asked[0].body.format).toBe('book')
