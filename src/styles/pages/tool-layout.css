@@ -526,15 +526,12 @@
 @media (max-width: 359px) and (pointer: coarse) {
   :is(.tl, .tl-sheet-layer) .tl-btn--back { width: 44px; }
 }
-/* On a phone the row tightens its gaps and gutters, so a whole tool name and a
-   labelled primary still share one line. At 360, with every action already in
-   the overflow, back + name + More + primary are all that is left; a 6px gap
-   left them under 3px from the screen edge, which text that measures slightly
-   wider on another platform used up. 4px buys back 6px. The 390 phone is
-   included: with Switzer its widest row kept under 11px spare, too little for
-   that platform difference. */
+/* On a phone the row tightens its gutters, so a whole tool name and a labelled
+   primary still share one line. The gap between neighbours stays at 8px, the
+   floor for two touch targets; a row that no longer fits at that gap moves its
+   lowest-priority actions into the overflow rather than closing the gap. */
 @media (max-width: 400px) {
-  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
+  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 8px; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
 }
 
 /* ── The phone dock (ToolLayout's `.tl-dock`) ────────────────────────────────

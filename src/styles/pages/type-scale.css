@@ -396,6 +396,17 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .tsc-sample-input:focus,
 .tsc-page .tsc-select:focus { border-color: var(--tl-line-on); }
 .tsc-page .tsc-weights { gap: 4px; margin-top: -6px; margin-bottom: 10px; }
+/* The weight numbers sit beside 13px sans labels, so they take the UI face, not
+   the mono chip. Tabular figures keep 100-900 the same width. */
+.tsc-page .tsc-weights .tsc-weight {
+  min-height: 36px;
+  padding-block: 0;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  text-transform: none;
+}
 
 /* Heading and body families stack in a narrow panel and sit side by side once
    the panel itself is wide enough. The container is the wrapper, not the
@@ -548,6 +559,7 @@ html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-h); }
 @media (pointer: coarse) {
   /* 8px between neighbouring targets, and every control 44px on a finger. */
   .tsc-page .tl-pills { gap: 8px; }
+  .tsc-page .tsc-weights .tsc-weight { min-height: 44px; }
   .tsc-page .snapv input[type="range"] { height: 44px; }
   .tsc-page .tsc-range .snapv-value,
   .tsc-page .tsc-range .snapv-input,
