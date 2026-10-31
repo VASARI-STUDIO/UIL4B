@@ -142,7 +142,7 @@ export default function BillingBanner() {
       await openPortal()
     } catch (err) {
       setBusy(false)
-      setError(err?.message || 'Could not open billing. Try Settings → Subscription.')
+      setError(err?.message || 'Could not open billing. Try Settings → Plan and billing.')
     }
   }
 

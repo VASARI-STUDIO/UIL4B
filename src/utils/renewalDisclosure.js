@@ -10,7 +10,7 @@ export function periodWords(months) {
   return null
 }
 
-const TAIL = 'until you cancel. Cancel any time in Settings → Subscription.'
+const TAIL = 'until you cancel. Cancel any time in Settings → Plan and billing.'
 
 /**
  * @param {{ trialDays: number, amount: string|null, months: number }} plan

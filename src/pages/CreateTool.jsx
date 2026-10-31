@@ -17,6 +17,7 @@ import { EVENTS, sendOnce } from '../utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a tool file that failed to
 // download waits for the recovery reload instead of crashing the route.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import RouteLoading from '../components/RouteLoading'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,
@@ -229,7 +230,7 @@ export default function CreateTool({ toast }) {
   if (!group) return <Navigate to="/home" replace />
 
   if (soonTarget) {
-    if (waitForAuth) return <div className="page-loading"><div className="fg-loader" /></div>
+    if (waitForAuth) return <RouteLoading />
     return <Navigate to={soonTarget} replace />
   }
 
@@ -262,7 +263,7 @@ export default function CreateTool({ toast }) {
           onKeyDownCapture={LiveTool ? markToolUsed : undefined}
         >
           {LiveTool ? (
-            <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+            <Suspense fallback={<RouteLoading />}>
               <LiveTool onCopy={copy} onExport={exportCopy} toast={toast} onCredits={wearsSpectrumFooter ? reportCredits : undefined} />
             </Suspense>
           ) : (

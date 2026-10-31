@@ -242,32 +242,26 @@ for (const size of SIZES) {
       await expect(page.getByTestId('greeting')).toHaveText('Welcome back, Freya.')
     })
 
-    test('an account with no projects is given the starter, where the lead would be', async ({ page }) => {
+    test('an account with no projects is given the first-palette card, where the lead would be', async ({ page }) => {
       watch(page, 'a brand new account with nothing saved')
       await open(page, size, { projects: [] })
 
-      const starter = page.getByTestId('starter-card')
-      await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
-      // Four numbered tool plates (the tools that build each part, in the walkthrough's order).
-      await expect(starter.locator('.uh-steps li .uh-step-label'), 'the plates carry their own letters, so read the label under each').toHaveText(['1 Colour', '2 Type', '3 Type scale', '4 Tints'])
-      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveCount(4)
-      expect(await starter.locator('.uh-steps li').evaluateAll((lis) => lis.map((li) => li.querySelector('.spt-art')?.getAttribute('data-art'))), 'each step draws its tool\'s plate')
-        .toEqual(['palette', 'font-pair', 'type-scale', 'tint'])
-      // The steps are text: Start the walkthrough is the way in, so the list holds no link.
-      await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('link'), 'a step is a link again').toHaveCount(0)
+      const card = page.getByTestId('first-palette-card')
+      await expect(card.getByRole('heading', { level: 2, name: 'Turn one colour into a full palette' })).toBeVisible()
+      // The old starter and its four numbered plates are not drawn for this account.
+      await expect(page.getByTestId('starter-card')).toHaveCount(0)
+      await expect(page.locator('.uh-steps')).toHaveCount(0)
+      // The tool's own ramp, then one filled button that goes into the Palette Builder.
+      expect((await card.locator('.uh-first-ramp > span').count()), 'the ramp has no swatches').toBeGreaterThan(3)
+      await expect(card.getByRole('link', { name: 'Make your first palette' })).toHaveAttribute('href', '/create/palette')
       // No lead, no rows, and it is the first block under the title.
       await expect(page.locator('.uh-rows')).toHaveCount(0)
       await expect(page.locator('.uh-dash-main > .uh-continue')).toHaveCount(1)
-      const s = await box(page, '[data-testid="starter-card"]')
+      const s = await box(page, '[data-testid="first-palette-card"]')
       const h = await box(page, '.uh-h1')
       const start = await box(page, '.uh-start')
-      expect(s.top, 'the starter is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
-      expect(start.top, 'Start something is above the starter').toBeGreaterThanOrEqual(s.bottom - 1)
-      // The four plates sit four across from 768 up and two by two on a phone (spec 5.3), all one size.
-      const cells = await starter.locator('.uh-steps li').evaluateAll((a) => a.map((x) => { const r = x.getBoundingClientRect(); return { left: Math.round(r.left), top: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } }))
-      expect(new Set(cells.map((c) => c.left)).size, `plates per row: ${JSON.stringify(cells)}`).toBe(size.width >= 768 ? 4 : 2)
-      expect(new Set(cells.map((c) => c.top)).size, `rows of plates: ${JSON.stringify(cells)}`).toBe(size.width >= 768 ? 1 : 2)
-      expect(new Set(cells.map((c) => `${c.w}x${c.h}`)).size, `the plates are not one size: ${JSON.stringify(cells)}`).toBe(1)
+      expect(s.top, 'the card is not under the title').toBeGreaterThanOrEqual(h.bottom - 1)
+      expect(start.top, 'Start something is not below the card').toBeGreaterThanOrEqual(s.bottom - 1)
     })
 
     for (const theme of ['light', 'dark']) {
@@ -294,12 +288,12 @@ for (const size of SIZES) {
         await fresh.setViewportSize({ width: size.width, height: size.height })
         await go(fresh, '/projects')
         await expectRendered(fresh, '/projects')
-        await expect(fresh.getByTestId('starter-card')).toBeVisible()
+        await expect(fresh.getByTestId('first-palette-card')).toBeVisible()
         const empty = await fresh.evaluate(() => {
           const de = document.documentElement
           return { overflow: de.scrollWidth - de.clientWidth, bleed: [...document.querySelectorAll('.uh *')].filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > de.clientWidth + 1 || r.left < -1) }).length }
         })
-        expect(empty, 'the starter state overflows').toEqual({ overflow: 0, bleed: 0 })
+        expect(empty, 'the first-palette state overflows').toEqual({ overflow: 0, bleed: 0 })
       })
     }
   })
@@ -320,15 +314,17 @@ test.describe('the first screen', () => {
   })
 
   // The spec's "one filled button on the first screen", at each width and in each state: Continue when
-  // there is a project, Start the walkthrough when there is none, New project when signed out.
+  // there is a project, Make your first palette when there is none, Start the walkthrough when every
+  // project is archived, New project when signed out.
   for (const size of SIZES) {
     for (const [label, opts, only] of [
       ['with a project', {}, 'Check the contrast, Violet Lime'],
-      ['with no project', { projects: [] }, 'Start the walkthrough'],
+      ['with no project', { projects: [] }, 'Make your first palette'],
+      ['with every project archived', () => ({ projects: ALL_ARCHIVED }), 'Start the walkthrough'],
     ]) {
       test(`${label}, at ${size.width}x${size.height} the first screen holds one filled button, and it is ${only}`, async ({ page }) => {
         watch(page, `a designer opening their workspace on a ${size.name}, ${label}`)
-        await open(page, size, opts)
+        await open(page, size, typeof opts === 'function' ? opts() : opts)
         expect(await filledOnFirstScreen(page), 'the filled buttons on the first screen').toEqual([only])
       })
     }
@@ -1038,10 +1034,11 @@ test.describe('on a tablet, Today is one row', () => {
 test.describe('the starter\'s steps', () => {
   // The steps were a 32px text list; they are now four numbered tool plates (spec 5.3). What is kept: a
   // numbered sequence, plain text under each plate, nothing to click or focus (Start the walkthrough is the way in).
+  // The starter now serves the all-archived account only: an account with no project gets the first-palette card.
   for (const size of SIZES) {
     test(`at ${size.width}px are four numbered plates in order, not links`, async ({ page }) => {
-      watch(page, 'a new account reading the walkthrough')
-      await open(page, size, { projects: [] })
+      watch(page, 'a designer whose projects are all archived reading the walkthrough')
+      await open(page, size, { projects: ALL_ARCHIVED })
       const steps = await page.getByTestId('starter-card').getByRole('list', { name: 'The walkthrough' }).evaluate((ol) => ({
         tag: ol.tagName,
         interactive: ol.querySelectorAll('a, button, [tabindex]').length,
@@ -1126,10 +1123,10 @@ test.describe('the greeting holds its place', () => {
 // with a `.uh-mini` strip and no hairline inset, `.uh-quick` tiles). Recorded in the commit message.
 for (const size of SIZES) {
   test.describe(`the workspace in the /tools language at ${size.width}px`, () => {
-    for (const [label, opts] of [['the lead', {}], ['the starter', { projects: [] }]]) {
+    for (const [label, opts] of [['the lead', {}], ['the starter', () => ({ projects: ALL_ARCHIVED })]]) {
       test(`${label} is a drawn plate with no framed panel around it`, async ({ page }) => {
         watch(page, `a designer looking at ${label} on a ${size.name}`)
-        await open(page, size, opts)
+        await open(page, size, typeof opts === 'function' ? opts() : opts)
         const found = await page.evaluate(() => {
           const lead = document.querySelector('.uh-dash-main > .uh-continue')
           const plate = lead.querySelector('.spt-art') || null
@@ -1152,6 +1149,26 @@ for (const size of SIZES) {
         expect(found.plateFrame.radius, 'the plate is the /tools plate (12px lead, 10px thumb)').toBe(label === 'the lead' ? '12px' : '10px')
       })
     }
+
+    test('the first-palette card draws its ramp with no framed panel around it', async ({ page }) => {
+      watch(page, `a new account looking at the first-palette card on a ${size.name}`)
+      await open(page, size, { projects: [] })
+      const found = await page.evaluate(() => {
+        const ramp = document.querySelector('.uh-dash-main > .uh-continue .uh-first-ramp')
+        const framed = []
+        for (let el = ramp ? ramp.parentElement : null; el && !el.classList.contains('uh-main'); el = el.parentElement) {
+          const cs = getComputedStyle(el)
+          const border = ['Top', 'Right', 'Bottom', 'Left'].some((side) => parseFloat(cs[`border${side}Width`]) > 0 && cs[`border${side}Style`] !== 'none')
+          const fill = !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor) || cs.backgroundImage !== 'none'
+          const ring = cs.boxShadow !== 'none' || (parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== 'none')
+          if (border || fill || ring) framed.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`)
+        }
+        return { ramp: !!ramp, framed, hairline: ramp ? getComputedStyle(ramp, '::after').boxShadow : 'none' }
+      })
+      expect(found.ramp, 'no ramp in the lead: the measurement below would be empty').toBe(true)
+      expect(found.framed, 'a framed panel round the ramp').toEqual([])
+      expect(found.hairline, 'the ramp keeps its one hairline').not.toBe('none')
+    })
 
     test('the hairlines between rows stay inside the content column, in Other projects and Start something', async ({ page }) => {
       watch(page, `a designer scanning the ruled rows on a ${size.name}`)

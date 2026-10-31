@@ -17,7 +17,7 @@ import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
-// Settings → Subscription says exactly what /plans says: the same lines, the
+// Settings → Plan and billing says exactly what /plans says: the same lines, the
 // same cadences, the same per-month amounts and trial terms, from the one
 // module /plans reads. See src/config/planFacts.js for why.
 import {
@@ -84,13 +84,19 @@ const PROFILE_WRITE_WAIT_MS = 8000
 const SIGN_OUT_FLUSH_WAIT_MS = 10000
 const PROFILE_QUEUED_TEXT ='Saved on this device. It reaches your account once you’re back online.'
 
-function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength }) {
+// Bio is a paragraph, so it gets a textarea where Enter adds a line and the
+// modifier-Enter saves. The shortcut named in its count line follows the OS.
+const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? 'Cmd' : 'Ctrl'
+
+function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength, inputMode, multiline = false }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [hi, setHi] = useState(-1)
   const errId = useId()
+  const inputId = useId()
+  const countId = useId()
 
   // Suggestions only exist while the user is typing: the list opens on input,
   // never on focus, and an exact match (i.e. a just-picked option) yields none.
@@ -149,6 +155,11 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
   // the list open closes the list rather than the edit. Only a key the list
   // did not consume reaches the save/cancel branch.
   const onFieldKey = (e) => {
+    if (multiline) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSave() }
+      else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+      return
+    }
     if (options) {
       const listOpen = suggestOpen && matches.length > 0
       onSuggestKey(e)
@@ -164,20 +175,56 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
       <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">{label}</div>
-          <div className="settings-row-value">{value || <span className="settings-row-empty">—</span>}</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
         </div>
-        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit</button>
+        {/* The hidden suffix gives each Edit button its own name. */}
+        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
+      </div>
+    )
+  }
+
+  if (multiline) {
+    return (
+      <div className="settings-row settings-row--open">
+        <label htmlFor={inputId} className="settings-row-label">{label}</label>
+        <textarea
+          id={inputId}
+          className="settings-bio-input"
+          rows={4}
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={onFieldKey}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          enterKeyHint="enter"
+          autoFocus
+          readOnly={saving}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={[countId, error ? errId : ''].filter(Boolean).join(' ')}
+        />
+        <div id={countId} className="settings-count">
+          <span>{val.length.toLocaleString('en-AU')} / {Number(maxLength).toLocaleString('en-AU')}</span>
+          <span>{MOD_KEY}+Enter to save</span>
+        </div>
+        <div className="settings-edit-actions">
+          <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
+          <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+        </div>
+        {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       </div>
     )
   }
 
   return (
     <div className="settings-row settings-row--open">
-      <div className="settings-row-label">{label}</div>
+      <label htmlFor={inputId} className="settings-row-label">{label}</label>
       <div className="settings-edit-line">
         <div className="settings-suggest-wrap">
           <input
+            id={inputId}
             type={type}
+            inputMode={inputMode}
+            enterKeyHint="done"
             value={val}
             onChange={e => { setVal(e.target.value); setSuggestOpen(true); setHi(-1) }}
             onKeyDown={onFieldKey}
@@ -262,7 +309,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
           </div>
         </div>
         <button className="btn btn-s" onClick={() => setOpen(true)}>
-          {current ? 'Change' : 'Add'}
+          {current ? 'Change' : 'Add'}<span className="sr-only"> flair</span>
         </button>
       </div>
     )
@@ -394,16 +441,9 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
     try { await onReset(); setResetState('sent') } catch { setResetState('failed') }
   }
 
-  if (googleOnly) {
-    return (
-      <div className="settings-row">
-        <div className="settings-row-main">
-          <div className="settings-row-label">Password</div>
-          <div className="settings-row-value">Signed in with Google</div>
-        </div>
-      </div>
-    )
-  }
+  // A Google-only account has no password to change; the sign-in method row
+  // already says how it signs in.
+  if (googleOnly) return null
 
   if (!open) {
     return (
@@ -412,7 +452,7 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
           <div className="settings-row-label">Password</div>
           <div className="settings-row-value">••••••••</div>
         </div>
-        <button className="btn btn-s" onClick={() => setOpen(true)}>Change</button>
+        <button className="btn btn-s" onClick={() => setOpen(true)}>Change<span className="sr-only"> password</span></button>
       </div>
     )
   }
@@ -556,8 +596,8 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
       <div className="settings-row">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
-          <div className="settings-row-value">{value || '—'}</div>
-          <div className="settings-row-meta">Signed in with Google</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
+          <div className="settings-row-meta">Managed by your Google account</div>
         </div>
       </div>
     )
@@ -568,7 +608,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
       <div className="settings-row settings-row--field">
         <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
-          <div className="settings-row-value">{value || '—'}</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
           {verification?.owed && (
             <EmailVerificationNote address={value} onSend={verification.onSend} onRefresh={verification.onRefresh} />
           )}
@@ -578,7 +618,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
             </div>
           )}
         </div>
-        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit</button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setEmail(value || ''); setEditing(true); setStep('email') }}>Edit<span className="sr-only"> email address</span></button>
       </div>
     )
   }
@@ -726,10 +766,10 @@ function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending
       onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); closePanel() } }}
     >
       <ul className="danger-confirm-list">
-        {isPro && <li>Your subscription is cancelled immediately — you will not be billed again.</li>}
+        {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
         <li>Your profile, saved projects, icons and synced designs are deleted.</li>
         <li>Prompts you submitted to the community, and any media with them, are removed.</li>
-        <li>This cannot be undone, and the same email can sign up again as a new account.</li>
+        <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
       </ul>
 
       {/* A way out to the export, before anything is deleted. It only changes
@@ -825,9 +865,10 @@ export default function Settings({ toast }) {
   // `state={{ section: 'support' }}`.
   const [chosen, setActive] = useState(() => rememberedSection() || 'account')
   // 'account' is the one section that only exists signed in. Signed out — and
-  // for the instant before auth resolves — it falls back to the first section
-  // rather than to a blank page, which is what an id matching no panel gives.
-  const active = chosen === 'account' && !user ? 'support' : chosen
+  // for the instant before auth resolves — it falls back to Appearance (which
+  // works without an account) rather than to a blank page, which is what an id
+  // matching no panel gives.
+  const active = chosen === 'account' && !user ? 'accessibility' : chosen
   const location = useLocation()
   // MOBILE FIRST, and a tab row never wraps. On a
   // phone the sections are a list you open one at a time, with a way back —
@@ -1268,12 +1309,14 @@ export default function Settings({ toast }) {
     toast(t('settings.dataCleared') || 'Local data cleared')
   }
 
+  // The ids are stable (links and the remembered section use them); the labels
+  // are what the person reads. The order follows how often each is used.
   const sections = [
-    { id: 'support', label: 'Subscription' },
-    { id: 'accessibility', label: t('settings.accessibility') || 'Accessibility' },
-    { id: 'language', label: t('settings.language') || 'Language' },
     ...(user ? [{ id: 'account', label: t('settings.account') || 'Account' }] : []),
-    { id: 'data', label: t('settings.dataManagement') || 'Data' },
+    { id: 'support', label: 'Plan and billing' },
+    { id: 'accessibility', label: t('settings.appearance') || 'Appearance' },
+    { id: 'language', label: t('settings.language') || 'Language' },
+    { id: 'data', label: t('settings.dataManagement') || 'Your data' },
     { id: 'privacy', label: t('settings.privacyLegal') || 'Privacy' },
   ]
 
@@ -1315,6 +1358,33 @@ export default function Settings({ toast }) {
     }
     focusOwed.current = ''
   }, [phoneView, isPhone, chosen, active, sectionInState])
+
+  // How this account signs in, as one read-only fact.
+  const signInMethod = !user ? ''
+    : isGoogleOnlyAccount() ? 'Google'
+      : (user.providerData || []).some((p) => p?.providerId === 'google.com') ? 'Google and email'
+        : 'Email and password'
+
+  // Pro, as labelled facts: one fact a line. Admin and one-off access have no
+  // subscription to describe, so they keep a single note instead.
+  const noBillingNote = isAdmin && !subscription && !lifetimeEntitlement ? 'Admin account — Pro included, no billing'
+    : lifetimeEntitlement?.active && !subscription ? 'One-off Pro access — no subscription or renewal'
+      : ''
+  const longDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+  const trialing = subscription?.status === 'trialing' && Number.isFinite(subscription?.trialEndsAt)
+  const cancelling = !!subscription?.cancelAtPeriodEnd
+  const endsOn = cancelling && subscription?.currentPeriodEnd ? longDate(subscription.currentPeriodEnd) : ''
+  // The cadence comes from the plan-facts module. A `month` subscription whose
+  // count is not stored could be monthly OR quarterly, so the row is left out
+  // and nothing is guessed.
+  const cadenceLabel = CADENCE_LABEL[subscriptionCadence(subscription)]
+  const proFacts = [
+    ['Status', cancelling ? (endsOn ? `Ends on ${endsOn}` : 'Ends at the end of this billing period')
+      : trialing ? `Free trial until ${longDate(subscription.trialEndsAt)}`
+        : 'Active'],
+    cadenceLabel && ['Billing cycle', cadenceLabel.replace(/^Billed /, '').replace(/^./, (c) => c.toUpperCase())],
+    !cancelling && !trialing && subscription?.currentPeriodEnd && ['Next payment', longDate(subscription.currentPeriodEnd)],
+  ].filter(Boolean)
 
   // The two plan blocks, held apart so a narrow screen can put Pro first.
   const tierFree = (
@@ -1424,11 +1494,11 @@ export default function Settings({ toast }) {
 
         <div className="settings-content" hidden={isPhone && phoneView === 'list'}>
 
-          {/* Subscription */}
+          {/* Plan and billing */}
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Subscription</h2>
-              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You\'re on UIL4B Pro — thank you for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
+              <h2 tabIndex={-1}>Plan and billing</h2>
+              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UIL4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
             {planPending ? (
@@ -1438,45 +1508,31 @@ export default function Settings({ toast }) {
               // at the Pro Plan row's height, so nothing jumps when it resolves.
               <div className="settings-card sub-active sub-checking" aria-busy="true">
                 <div className="settings-card-body">
-                  <div className="settings-row">
-                    <div className="settings-row-main">
-                      <div className="settings-row-label">Plan</div>
-                      <div className="settings-row-value" role="status">Checking your plan…</div>
-                    </div>
+                  <div className="settings-row settings-row--fact">
+                    <div className="settings-row-label">Plan</div>
+                    <div className="settings-row-value" role="status">Checking your plan…</div>
                   </div>
                 </div>
               </div>
             ) : isPro ? (
               <div className="settings-card sub-active">
                 <div className="settings-card-body">
-                  <div className="settings-row">
-                    <div className="settings-row-main">
-                      <div className="settings-row-label">Plan</div>
+                  <div className="settings-row settings-row--fact">
+                    <div className="settings-row-label">Plan</div>
+                    <div className="settings-fact-body">
                       <div className="settings-row-value sub-active-title">UIL4B Pro</div>
-                      <div className="settings-row-meta sub-active-meta">
-                        {isAdmin && !subscription && !lifetimeEntitlement ? 'Admin account — Pro included, no billing'
-                          : lifetimeEntitlement?.active && !subscription ? 'One-off Pro access — no subscription or renewal'
-                            : (
-                          <>
-                            {/* The cadence comes from the plan-facts module. A
-                                `month` subscription whose count is not stored
-                                could be monthly OR quarterly, so it says when it
-                                renews and not how often — "Billed monthly" on a
-                                quarterly plan was the wrong fact this fixes. */}
-                            {[
-                              subscription?.status === 'trialing' && Number.isFinite(subscription?.trialEndsAt)
-                                ? `Free trial until ${new Date(subscription.trialEndsAt).toLocaleDateString()}` : null,
-                              CADENCE_LABEL[subscriptionCadence(subscription)] || null,
-                              subscription?.currentPeriodEnd
-                                ? `${subscription.cancelAtPeriodEnd ? 'Access until' : 'Renews'} ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                                : null,
-                              subscription?.cancelAtPeriodEnd ? 'Cancels at period end' : null,
-                            ].filter(Boolean).join(' · ')}
-                          </>
-                        )}
-                      </div>
+                      {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
                     </div>
                   </div>
+                  {!noBillingNote && proFacts.map(([label, value]) => (
+                    <div className="settings-row settings-row--fact" key={label}>
+                      <div className="settings-row-label">{label}</div>
+                      <div className="settings-row-value">{value}</div>
+                    </div>
+                  ))}
+                  {!noBillingNote && endsOn && (
+                    <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
+                  )}
                   {/* Admins without a real Stripe subscription have no billing
                       portal to open — no buttons rather than a 500. */}
                   {!!subscription && (
@@ -1511,7 +1567,7 @@ export default function Settings({ toast }) {
               // free trial" button — under a small "Sign in to upgrade" note.
               // Plans owns pricing; this owns your account.
               <div className="sub-signin-note">
-                <p>Settings are for your account — <NavLink to="/login">sign in</NavLink> to manage a subscription.</p>
+                <p><NavLink to="/login">Sign in</NavLink> to see your plan and billing.</p>
                 <p>Comparing plans first? <NavLink to="/plans">See Free and Pro</NavLink>.</p>
               </div>
             ) : (
@@ -1553,8 +1609,8 @@ export default function Settings({ toast }) {
           {/* Accessibility */}
           <section id="set-accessibility" className="settings-section" role="tabpanel" aria-labelledby="settab-accessibility" hidden={active !== 'accessibility'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Accessibility</h2>
-              <p>Choose a theme and reduce motion for a calmer, distraction-free interface. Both are also in the menu at the top of every page.</p>
+              <h2 tabIndex={-1}>Appearance</h2>
+              <p>Theme and motion. Both are also in the menu at the top of every page.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
@@ -1637,9 +1693,17 @@ export default function Settings({ toast }) {
             <section id="set-account" className="settings-section" role="tabpanel" aria-labelledby="settab-account" hidden={active !== 'account'}>
               <div className="settings-section-h">
                 <h2 tabIndex={-1}>Account</h2>
-                <p>Manage your profile, email, and password.</p>
+                <p>Your profile, how you sign in, and deleting your account.</p>
               </div>
-              <div className="settings-card">
+              {/* Three cards, one job each. The first is what other people see. */}
+              <div className="settings-cards">
+              <div className="settings-card" role="group" aria-labelledby="acct-h-profile">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-profile">Public profile</h3>
+                    <p>Shown with your name in Discover and the community.</p>
+                  </div>
+                </div>
                 <div className="settings-profile">
                   <button
                     type="button"
@@ -1671,9 +1735,64 @@ export default function Settings({ toast }) {
                       <button type="button" className="settings-avatar-remove" onClick={removeAvatar} disabled={photoBusy}>Remove photo</button>
                     )}
                   </div>
-                  <button className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                 </div>
                 <div className="settings-card-body">
+                  {profileSyncError && (
+                    <div className="settings-sync-alert" role="alert">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                      </svg>
+                      <span>{profileSyncError}</span>
+                      <button type="button" onClick={dismissProfileSyncError}>Dismiss</button>
+                    </div>
+                  )}
+                  <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" maxLength={200} />
+                  {/* Every profile field is AWAITED (saveProfile): a refused
+                      write keeps the field open with the reason, and no toast
+                      says "updated" for a save that did not happen. */}
+                  <EditField label="Location" value={userProfile?.location} onSave={saveLocation} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
+                  <EditField label="Company or studio" value={userProfile?.company} onSave={saveCompany} placeholder="e.g. Paper Lane Studio" maxLength={200} />
+                  <EditField label="Website" value={userProfile?.website} type="url" inputMode="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
+                  <EditField label="Bio" value={userProfile?.bio} onSave={saveBio} placeholder="A short bio about yourself" maxLength={5000} multiline />
+                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={saveFlair} />
+                </div>
+              </div>
+
+              <div className="settings-card" role="group" aria-labelledby="acct-h-signin">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-signin">Sign-in and security</h3>
+                    <p>How you sign in to UIL4B.</p>
+                  </div>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-row">
+                    <div className="settings-row-main">
+                      <div className="settings-row-label">Signed in with</div>
+                      <div className="settings-row-value">{signInMethod}</div>
+                      {isGoogleOnlyAccount() && <div className="settings-row-meta">{user.email}</div>}
+                    </div>
+                  </div>
+                  {/* AWAITED, so a failure stays in the field, in words, and the
+                      toast means the confirmation link really went out. */}
+                  <EmailEditField
+                    value={user.email}
+                    googleOnly={isGoogleOnlyAccount()}
+                    onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
+                    verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
+                  />
+                  <PasswordChange
+                    onSave={(current, next) => updatePassword(current, next)}
+                    googleOnly={isGoogleOnlyAccount()}
+                    onReset={() => resetPassword(user.email)}
+                  />
+                  <div className="settings-row">
+                    <div className="settings-row-main">
+                      <div className="settings-row-label">Sign out</div>
+                      <div className="settings-row-meta">Signs out of UIL4B in this browser.</div>
+                    </div>
+                    <button type="button" className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
+                  </div>
                   {signOutIssue && (
                     <div className="settings-sync-alert" role="alert">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1692,40 +1811,18 @@ export default function Settings({ toast }) {
                       </span>
                     </div>
                   )}
-                  {profileSyncError && (
-                    <div className="settings-sync-alert" role="alert">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
-                      </svg>
-                      <span>{profileSyncError}</span>
-                      <button type="button" onClick={dismissProfileSyncError}>Dismiss</button>
-                    </div>
-                  )}
-                  <EditField label="Display name" value={userProfile?.displayName} onSave={saveDisplayName} placeholder="Enter your display name" maxLength={200} />
-                  {/* AWAITED, so a failure stays in the field, in words, and the
-                      toast means the confirmation link really went out. */}
-                  <EmailEditField
-                    value={user.email}
-                    googleOnly={isGoogleOnlyAccount()}
-                    onSave={async (email, pw) => { await updateEmail(email, pw); toast('Confirmation link sent') }}
-                    verification={{ owed: emailVerificationOwed, onSend: sendVerificationEmail, onRefresh: refreshEmailVerified }}
-                  />
-                  {/* Every profile field below is AWAITED (saveProfile): a refused
-                      write keeps the field open with the reason, and no toast
-                      says "updated" for a save that did not happen. */}
-                  <EditField label="Location" value={userProfile?.location} onSave={saveLocation} placeholder="e.g. Melbourne, Australia" options={LOCATIONS} maxLength={200} />
-                  <EditField label="Company / studio" value={userProfile?.company} onSave={saveCompany} placeholder="e.g. Acme Design" maxLength={200} />
-                  <EditField label="Website" value={userProfile?.website} type="url" onSave={saveWebsite} placeholder="https://yoursite.com" maxLength={2048} />
-                  <EditField label="Bio" value={userProfile?.bio} onSave={saveBio} placeholder="A short bio about yourself" maxLength={5000} />
-                  <FlairPicker value={userProfile?.flair} displayName={userProfile?.displayName} email={user.email} onSave={saveFlair} />
-                  <PasswordChange
-                    onSave={(current, next) => updatePassword(current, next)}
-                    googleOnly={isGoogleOnlyAccount()}
-                    onReset={() => resetPassword(user.email)}
-                  />
+                </div>
+              </div>
 
+              <div className="settings-card" role="group" aria-labelledby="acct-h-delete">
+                <div className="settings-card-h">
+                  <div>
+                    <h3 id="acct-h-delete">Delete account</h3>
+                    <p>Permanently remove your account and everything in it.</p>
+                  </div>
+                </div>
+                <div className="settings-card-body">
                   <div className="danger-zone">
-                    <div className="danger-zone-h">Danger zone</div>
                     <p>
                       Deletes your profile, projects and everything synced to your account{isPro ? ', and cancels Pro' : ''}.
                       {' '}This can&rsquo;t be undone.
@@ -1739,6 +1836,7 @@ export default function Settings({ toast }) {
                     />
                   </div>
                 </div>
+              </div>
               </div>
             </section>
           )}
@@ -1765,7 +1863,7 @@ export default function Settings({ toast }) {
                     {user ? ', plus your account’s copy on the server' : ''}
                   </p>
                 </div>
-                <NavLink to="/privacy" className="btn btn-s">Full disclosure</NavLink>
+                <NavLink to="/privacy" className="btn btn-s">Read the privacy policy</NavLink>
               </div>
               <div className="settings-card-body">
                 <p className="settings-data-note">
@@ -1818,7 +1916,7 @@ export default function Settings({ toast }) {
           {/* Privacy */}
           <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Privacy &amp; legal</h2>
+              <h2 tabIndex={-1}>Privacy</h2>
               <p>What we keep, where it lives, and who else sees it.</p>
             </div>
             <div className="settings-card">
@@ -1837,12 +1935,7 @@ export default function Settings({ toast }) {
                     <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
                     'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
-                    <li key={i}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      {line}
-                    </li>
+                    <li key={i}>{line}</li>
                   ))}
                 </ul>
                 <div className="settings-legal-links">

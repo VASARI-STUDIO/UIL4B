@@ -83,7 +83,7 @@ for (const vp of VIEWPORTS) {
         await openSection(page, 'account')
         const section = page.locator('#set-account')
         const row = section.locator('.settings-row', { has: page.locator('.settings-row-label', { hasText: new RegExp(`^${field.label}$`) }) })
-        await row.getByRole('button', { name: 'Edit' }).click()
+        await row.getByRole('button', { name: `Edit ${field.label.toLowerCase()}` }).click()
         const input = row.locator('input, textarea').first()
         await input.fill(field.fill)
         await row.getByRole('button', { name: 'Save' }).click()
@@ -101,7 +101,7 @@ for (const vp of VIEWPORTS) {
       await openSection(page, 'account')
       const section = page.locator('#set-account')
       const row = section.locator('.settings-row', { has: page.locator('.settings-row-label', { hasText: /^Flair$/ }) })
-      await row.getByRole('button', { name: 'Add' }).click()
+      await row.getByRole('button', { name: 'Add flair' }).click()
       await row.locator('.flairpick-chip').first().click()
       await expect(row.getByRole('alert')).toContainText('Your flair could not be saved')
       await expect(row.locator('.flairpick-grid').first()).toBeVisible()
@@ -200,7 +200,7 @@ for (const vp of VIEWPORTS) {
       await openSection(page, 'account')
       const section = page.locator('#set-account')
       const row = section.locator('.settings-row', { has: page.locator('.settings-row-label', { hasText: /^Location$/ }) })
-      await row.getByRole('button', { name: 'Edit' }).click()
+      await row.getByRole('button', { name: 'Edit location' }).click()
       await row.locator('input, textarea').first().fill('Perth, Australia')
       await row.getByRole('button', { name: 'Save' }).click()
 
@@ -284,7 +284,9 @@ for (const vp of VIEWPORTS) {
 
       await openSection(page, 'account')
       const section = page.locator('#set-account')
-      await section.getByRole('button', { name: 'Sign out', exact: true }).click()
+      // Sign out sits in the Sign-in and security card, and only there.
+      await expect(section.getByRole('button', { name: 'Sign out', exact: true })).toHaveCount(1)
+      await section.getByRole('group', { name: 'Sign-in and security' }).getByRole('button', { name: 'Sign out', exact: true }).click()
       const alert = section.getByRole('alert').filter({ hasText: 'haven’t reached your account' })
       await expect(alert).toBeVisible()
       await expect(section.getByRole('button', { name: 'Try again' })).toBeVisible()
