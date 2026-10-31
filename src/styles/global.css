@@ -2949,8 +2949,8 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-signout-alert{margin:2px 0;padding:10px;border:1px solid color-mix(in srgb,var(--warn) 35%,rgba(var(--ink-rgb),.13));border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 9%,var(--card));color:rgba(var(--ink-rgb),.86);font-size:12.5px;line-height:1.45}
 .pnav-signout-alert p{margin:0 0 6px}
 .pnav-signout-alert-actions{display:flex;flex-wrap:wrap;gap:0 16px}
-.pnav-signout-alert button{min-height:36px;padding:0;border:0;background:none;color:rgb(var(--ink-rgb));font-family:var(--font);font-size:12.5px;font-weight:560;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.pnav-signout-alert button:focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:var(--radius-xs)}
+.pnav-signout-alert button{min-height:36px;padding:0;border:0;background:none;color:rgb(var(--ink-rgb));font-family:var(--font);font-size:12.5px;font-weight:560;text-decoration:underline;text-underline-offset:3px;border-radius:var(--radius-xs);cursor:pointer}
+.pnav-signout-alert button:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .pnav-sheet .pnav-signout-alert{padding:12px;font-size:14px}
 .pnav-sheet .pnav-signout-alert button{min-height:44px;font-size:14px}
 
