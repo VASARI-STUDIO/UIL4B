@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useSyncExternalStore } fr
 import { Link, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
+import useOnline from '../hooks/useOnline'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
@@ -32,7 +33,7 @@ const TYPES = [
   { id: 'feature', labelKey: 'feedback.featureRequest' },
   { id: 'bug', labelKey: 'feedback.bugReport' },
   { id: 'general', labelKey: 'feedback.general' },
-  { id: 'help', label: 'Help Request' },
+  { id: 'help', labelKey: 'feedback.helpRequest' },
 ]
 
 // The 404's "Report a broken link" opens `?type=bug&page=<path>`, with
@@ -43,6 +44,7 @@ const sitePath = (value) => (/^\/(?!\/)\S{0,199}$/.test(value || '') ? value : '
 
 export default function Feedback({ toast }) {
   const { t } = useI18n()
+  const online = useOnline()
   const [params] = useSearchParams()
   const reason = params.get('reason') || params.get('ref') || ''
   const typeParam = TYPES.some((x) => x.id === params.get('type')) ? params.get('type') : ''
@@ -286,7 +288,7 @@ export default function Feedback({ toast }) {
                 aria-labelledby="fb-type-label"
                 onKeyDown={onTypeKeyDown}
               >
-                {TYPES.map(({ id, labelKey, label }) => (
+                {TYPES.map(({ id, labelKey }) => (
                   <button
                     key={id}
                     type="button"
@@ -299,7 +301,7 @@ export default function Feedback({ toast }) {
                     className={`pt-t${type === id ? ' on' : ''}`}
                     onClick={() => setType(id)}
                   >
-                    {labelKey ? t(labelKey) : label}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>
@@ -369,8 +371,19 @@ export default function Feedback({ toast }) {
 
             {error && <p className="fb-error" id="fb-error" role="alert">{error}</p>}
 
-            <button className="btn btn-accent fb-submit" type="submit" disabled={busy} aria-busy={busy}>
-              {busy ? 'Sending…' : t('common.submit')}
+            {/* Offline, the message stays in the form and Send waits for the
+                connection. */}
+            {!online && (
+              <p className="fb-hint" id="fb-offline" role="status">{t('feedback.offline')}</p>
+            )}
+            <button
+              className="btn btn-accent fb-submit"
+              type="submit"
+              disabled={busy || !online}
+              aria-busy={busy}
+              aria-describedby={online ? undefined : 'fb-offline'}
+            >
+              {busy ? 'Sending…' : t('feedback.send')}
             </button>
           </form>
         )}

@@ -83,14 +83,14 @@
   text-wrap: pretty;
 }
 .hlp-hero-cta { margin-top: var(--s-2); }
-/* Counted, not typed — the tool tallies. A mono line under the call to action,
- * at the caption family's own size and tracking. --cpg-faint on the page
- * ground: 5.62:1 light, 8.1:1 dark. */
+/* Counted, not typed — the tool tallies. A plain label under the call to
+ * action, in the UI sans; the figure keeps tabular numerals. --cpg-faint on the
+ * page ground: 5.62:1 light, 8.1:1 dark. */
 .hlp-hint {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: .1em;
+  font-family: var(--font);
+  font-size: 13px;
+  letter-spacing: 0;
   color: var(--cpg-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -119,15 +119,16 @@
 .hlp-run-chip { flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--radius); border: 1px solid var(--cpg-line); }
 .hlp-run-seed-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .hlp-run-hex { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cpg-ink); }
-/* --cpg-faint, not --cpg-quiet: 11px uppercase mono on `--card`. --t3 clears
- * 5.34:1 there and would pass, but this label also appears over the panel's
- * own ground on the narrow layout below, so one token for both is the version
- * that cannot drift. */
+/* --cpg-faint, not --cpg-quiet: --t3 clears 5.34:1 on `--card` and would pass,
+ * but this label also appears over the panel's own ground on the narrow layout
+ * below, so one token for both is the version that cannot drift. A label, so
+ * the UI sans; the hex and stop names beside it are literal values and stay
+ * mono. */
 .hlp-run-cap {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--cpg-faint);
   line-height: 1.4;
 }
@@ -157,17 +158,14 @@
 .hlp-run-note code { font-family: var(--mono); font-size: .92em; color: var(--cpg-dim); }
 
 /* ── The bands ───────────────────────────────────────────────────────────────
- * Heading held in its own column, the set beside it. The numeral above each
- * heading is a counter on `.hlp` rather than a typed digit, so a band added or
- * removed cannot leave a hole in the sequence. */
-.hlp { counter-reset: hlp; }
+ * Heading held in its own column, the set beside it. The bands are not a
+ * sequence, so they carry no numerals. */
 .hlp-band {
   display: grid;
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: var(--s-6) clamp(32px, 5vw, 72px);
   align-items: start;
   min-width: 0;
-  counter-increment: hlp;
 }
 .hlp-band-head { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
 .hlp-h2 {
@@ -180,16 +178,6 @@
   letter-spacing: -.03em;
   color: var(--cpg-ink);
   text-wrap: balance;
-}
-.hlp-h2::before {
-  content: counter(hlp, decimal-leading-zero);
-  display: block;
-  margin-bottom: var(--s-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .16em;
-  color: var(--cpg-faint);
 }
 .hlp-band-lede { margin: 0; font-size: 14px; line-height: 1.65; color: var(--cpg-dim); max-width: 44ch; }
 
@@ -215,7 +203,7 @@
  * 6.33:1 on --card in light and 9.40:1 in dark. */
 .hlp-start-link:hover .hlp-start-label,
 .hlp-start-link:focus-visible .hlp-start-label { color: var(--accent-text); }
-.hlp-start-opens { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--cpg-faint); }
+.hlp-start-opens { font-family: var(--font); font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--cpg-faint); }
 .hlp-start-go {
   display: inline-flex;
   align-items: center;
@@ -245,7 +233,7 @@
 .hlp-answer-link:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
 
 /* The closing band has no heading column — it is one statement and one
- * destination, so it takes the full width and keeps its numeral. */
+ * destination, so it takes the full width. */
 .hlp-band--close { grid-template-columns: minmax(0, 1fr); }
 .hlp-close { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); padding-top: var(--s-6); border-top: 1px solid var(--cpg-line-strong); min-width: 0; }
 .hlp-close .hlp-band-lede { max-width: 56ch; }

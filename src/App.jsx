@@ -605,7 +605,6 @@ function AppInner({ toast }) {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/credits" element={<Credits />} />
-              <Route path="/sitemap" element={<SiteMap />} />
               <Route path="/learn/help" element={<HelpCentre />} />
               <Route path="/learn/principles" element={<DesignPrinciples />} />
               <Route path="/info" element={<InfoCentre />} />

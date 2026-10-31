@@ -9,7 +9,7 @@
 //   /feedback        purpose & content 6 → 9. A signed-out submission carried
 //                    `email: ""`, the form had nowhere to type one, and the
 //                    confirmation said "received and will be reviewed" either
-//                    way. The form's own "Help Request" type is the sharp end:
+//                    way. The form's own "Help request" type is the sharp end:
 //                    a question asked with no return address, answered with a
 //                    green tick. /api/support has always taken the field.
 //

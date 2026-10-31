@@ -665,7 +665,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
   test('a payment reason still gives "Get help", its own subject, and ignores a broken-link page', async ({ page }) => {
     await go(page, '/feedback?reason=payment_failed&type=bug&page=%2Fnope-xyz')
     await expect(page.getByRole('heading', { level: 1, name: 'Get help' })).toBeVisible()
-    await expect(checked(page)).toHaveText('Help Request')
+    await expect(checked(page)).toHaveText('Help request')
     await expect(form(page).locator('#fb-subject')).toHaveValue('Payment failed')
     await expect(form(page).locator('#fb-message')).toHaveValue('')
   })
