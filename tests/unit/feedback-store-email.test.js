@@ -54,3 +54,33 @@ test('saving nothing does not throw and does not bring an address back', async (
   assert.doesNotThrow(() => saveFeedback(undefined))
   assert.equal(stored().some(f => 'email' in f), false)
 })
+
+// A stored list that is not a list (another tab, an older build, a hand edit)
+// is treated as empty: saving still works, it does not throw, and what was sent
+// is kept.
+for (const [name, junk] of [
+  ['an object', '{"id":"x","email":"x@example.com"}'],
+  ['a string', '"hello"'],
+  ['a number', '42'],
+  ['null', 'null'],
+  ['text that is not JSON', 'not json at all'],
+]) {
+  test(`a stored value that is ${name} is treated as an empty list`, async (t) => {
+    const { saveFeedback } = await withStorage(t, { 'vs-feedback': junk })
+    assert.doesNotThrow(() => saveFeedback({ id: 'fb-1', message: 'kept', email: 'a@example.com' }))
+    const all = stored()
+    assert.equal(Array.isArray(all), true)
+    assert.equal(all.length, 1)
+    assert.equal(all[0].message, 'kept')
+    assert.equal('email' in all[0], false)
+  })
+}
+
+test('entries in the stored list that are not objects are dropped, the rest kept without an address', async (t) => {
+  const mixed = [null, 'oops', 7, { id: 'old-1', message: 'older', email: 'old@example.com' }]
+  const { saveFeedback } = await withStorage(t, { 'vs-feedback': JSON.stringify(mixed) })
+  assert.doesNotThrow(() => saveFeedback({ id: 'fb-2', message: 'new one' }))
+  const all = stored()
+  assert.deepEqual(all.map(f => f.id), ['old-1', 'fb-2'])
+  assert.equal(all.some(f => 'email' in f), false)
+})

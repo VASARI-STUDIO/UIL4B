@@ -19,6 +19,19 @@
 //   - vs-feedback holds no address afterwards, including one written by an older
 //     build.
 //
+// Further down (the second half of the file):
+//   - More is always on the row. Below 768px it is a square (36px, 44px on a
+//     coarse pointer, label gone); from 768px it keeps its label;
+//   - below 768px the primary action is in the bottom dock, `[data-tl-dock]`
+//     (spec 220), and More still ends in Send feedback: the open dialog covers
+//     the dock, and closing it brings the dock back. Tools without a dock
+//     (File Converter, Type Scale) and the 1440 desktop have none;
+//   - the dialog's right-click tip (`.fb-cap-tip`) is absent on a coarse pointer
+//     and present with a mouse, at the same 390px width;
+//   - the Icon and Emoji libraries have no More menu, so a `.lib-feedback` text
+//     button in the masthead opens the same dialog with the route as context
+//     (390 touch and 1440).
+//
 // /api/support is ALWAYS intercepted; nothing here reaches a real endpoint.
 //
 // MUTATIONS this file was seen to fail under (one each, restored after):
@@ -26,6 +39,12 @@
 //        fails the "browser copy" checks in the signed-out test at both widths.
 //   src/components/tool/ToolLayout.jsx  remove the `data-tl-menu-item="feedback"`
 //        row            fails every test in this file.
+//   src/pages/IconEmojiLibrary.jsx  remove the `.lib-feedback` button
+//        fails the four library tests and the keyboard one.
+//   src/components/FeedbackModal.jsx  drop `&& !coarsePointer` from the tip
+//        fails "the right-click tip is left out at 390 touch".
+//   src/styles/pages/tool-layout.css  delete the `.tl-more-btn { width: 36px }`
+//        square rule   fails "More is a 36px square" at 600 and 767.
 import { test, expect } from './base.js'
 import { go, watch, signIn, chooseMenuOption } from './helpers.js'
 
@@ -198,3 +217,189 @@ for (const view of VIEWS) {
     })
   }
 }
+
+// ── The More button below 768px, and the dock ───────────────────────────────
+// More is always on the row (it holds "Send feedback"). Below 768px its label is
+// gone, so it is a square like the back arrow: 36px, and 44px on a coarse pointer.
+// From 768px it keeps its label and is wider than it is tall.
+
+const TOUCH = (width) => ({ viewport: { width, height: 844 }, hasTouch: true, isMobile: true })
+const MOUSE = (width) => ({ viewport: { width, height: 900 } })
+
+const SQUARE = [
+  { name: '390 touch', context: TOUCH(390), side: 44 },
+  { name: '320 touch', context: TOUCH(320), side: 44 },
+  { name: '600 mouse', context: MOUSE(600), side: 36 },
+  { name: '767 mouse', context: MOUSE(767), side: 36 },
+]
+
+for (const sq of SQUARE) {
+  for (const tool of TOOLS) {
+    test(`${tool.id}: More is a ${sq.side}px square at ${sq.name}`, async ({ browser }) => {
+      const ctx = await browser.newContext(sq.context)
+      const page = await ctx.newPage()
+      watch(page, `someone on the ${tool.id} tool at ${sq.name}`)
+      await go(page, tool.route)
+      const more = page.locator('.tl-more-btn').first()
+      await expect(more).toBeVisible()
+      const b = await more.boundingBox()
+      expect([Math.round(b.width), Math.round(b.height)], 'More is a square').toEqual([sq.side, sq.side])
+      await expect(more.locator('.tl-btn-label--collapse'), 'its label is gone below 768px').toBeHidden()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'the page scrolls sideways').toBeLessThanOrEqual(0)
+      await ctx.close()
+    })
+  }
+}
+
+for (const width of [768, 1440]) {
+  test(`More keeps its label and is wider than it is tall at ${width}`, async ({ browser }) => {
+    const ctx = await browser.newContext(MOUSE(width))
+    const page = await ctx.newPage()
+    watch(page, `someone on a ${width}px desktop`)
+    await go(page, '/create/tint')
+    const more = page.locator('.tl-more-btn').first()
+    await expect(more.locator('.tl-btn-label--collapse')).toBeVisible()
+    const b = await more.boundingBox()
+    expect(b.width, 'a labelled button, not a square').toBeGreaterThan(b.height + 8)
+    await ctx.close()
+  })
+}
+
+// The dock tools: the primary lives in the dock, More stays on the row.
+const DOCK_TOOLS = TOOLS.filter((t) => ['palette', 'gradient', 'tint'].includes(t.id))
+const NO_DOCK_TOOLS = TOOLS.filter((t) => ['converter', 'type scale'].includes(t.id))
+
+for (const tool of DOCK_TOOLS) {
+  test(`${tool.id}: with the primary in the dock, More still ends in Send feedback; the dialog covers the dock and closing it brings the dock back`, async ({ browser }) => {
+    const view = VIEWS[0]
+    const { ctx, page } = await newPage(browser, view, `someone on the ${tool.id} tool on a phone`)
+    await go(page, tool.route)
+    const dock = page.locator('[data-tl-dock]')
+    await expect(dock, 'the primary has moved to the dock').toBeVisible()
+    await expect(page.locator('[data-tool-toolbar] .tl-primary'), 'and is not also on the toolbar').toHaveCount(0)
+    await expect(page.locator('.tl-more-btn').first(), 'More is on the toolbar all the same').toBeVisible()
+
+    await sendFeedbackFromMore(page, view)
+    const underDialog = () => page.evaluate(() => {
+      const button = document.querySelector('[data-tl-dock] button')
+      if (!button) return 'no dock button'
+      const r = button.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return hit && !hit.closest('[data-tl-dock]') ? 'covered' : 'reachable'
+    })
+    expect(await underDialog(), 'a tap on the dock button under the open dialog').toBe('covered')
+
+    await page.keyboard.press('Escape')
+    await expect(dialog(page)).toHaveCount(0)
+    await expect(page.locator('.tl-more-btn').first()).toBeFocused()
+    await expect(dock).toBeVisible()
+    expect(await underDialog(), 'the dock button works again once the dialog is closed').toBe('reachable')
+    await ctx.close()
+  })
+}
+
+for (const tool of NO_DOCK_TOOLS) {
+  test(`${tool.id}: no [data-tl-dock] on a phone, More still ends in Send feedback`, async ({ browser }) => {
+    const view = VIEWS[0]
+    const { ctx, page } = await newPage(browser, view, `someone on the ${tool.id} tool on a phone`)
+    await go(page, tool.route)
+    await expect(page.locator('[data-tl-dock]')).toHaveCount(0)
+    await sendFeedbackFromMore(page, view)
+    await expect(dialog(page).locator('.fb-cap-row').filter({ hasText: 'Page you were on' })).toContainText(tool.route)
+    await ctx.close()
+  })
+}
+
+for (const tool of TOOLS) {
+  test(`${tool.id}: no dock at 1440, and More still ends in Send feedback`, async ({ browser }) => {
+    const view = VIEWS[1]
+    const { ctx, page } = await newPage(browser, view, `someone on the ${tool.id} tool on a desktop`)
+    await go(page, tool.route)
+    await expect(page.locator('[data-tl-dock]')).toHaveCount(0)
+    await sendFeedbackFromMore(page, view)
+    await ctx.close()
+  })
+}
+
+// ── The right-click tip is for a mouse ──────────────────────────────────────
+// The dialog's "right-click ..." tip (.fb-cap-tip) names a gesture a touch screen
+// does not have, so it is left out on a coarse primary pointer (the markup is
+// absent, not hidden). A narrow window with a mouse still shows it: it is the
+// pointer, not the width.
+
+const TIP_CASES = [
+  { name: '390 touch', phone: true, context: TOUCH(390), tip: false },
+  { name: '390 with a mouse', phone: false, context: MOUSE(390), tip: true },
+  { name: '1440 with a mouse', phone: false, context: MOUSE(1440), tip: true },
+]
+
+for (const c of TIP_CASES) {
+  test(`the right-click tip is ${c.tip ? 'shown' : 'left out'} at ${c.name}`, async ({ browser }) => {
+    const { ctx, page } = await newPage(browser, c, 'someone opening feedback from a tool')
+    await go(page, '/create/tint')
+    // POSITIVE CONTROL: the context has the pointer it claims.
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'pointer: coarse').toBe(c.phone)
+    await sendFeedbackFromMore(page, c)
+    await expect(dialog(page).locator('.fb-cap-row').first(), 'the context list itself is there').toBeVisible()
+    if (c.tip) await expect(dialog(page).locator('.fb-cap-tip')).toBeVisible()
+    else await expect(dialog(page).locator('.fb-cap-tip')).toHaveCount(0)
+    await ctx.close()
+  })
+}
+
+// ── Send feedback on the Icon and Emoji libraries ───────────────────────────
+// These routes are chromeless: no More menu and no floating Feedback button. A
+// quiet text button in the masthead's status line opens the same dialog, with the
+// route as its context.
+
+const LIBRARIES = [
+  { route: '/create/icons', label: 'icons' },
+  { route: '/create/emoji', label: 'emoji' },
+]
+
+for (const view of VIEWS) {
+  for (const lib of LIBRARIES) {
+    test(`${lib.label} library at ${view.name}: "Send feedback" opens the dialog with this route`, async ({ browser }) => {
+      const { ctx, page } = await newPage(browser, view, `someone in the ${lib.label} library who wants to say something`)
+      const seen = await interceptSupport(page)
+      await go(page, lib.route)
+      const button = page.locator('.lib-feedback')
+      await expect(button).toBeVisible()
+      await expect(button).toHaveText('Send feedback')
+      if (view.phone) {
+        const b = await button.boundingBox()
+        expect(b.height, 'a touch target of at least 44px').toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'the page scrolls sideways').toBeLessThanOrEqual(0)
+
+      await press(view, button)
+      await expect(dialog(page)).toBeVisible()
+      await expect(dialog(page).locator('.fb-type.on')).toContainText('Feedback')
+      await expect(dialog(page).locator('.fb-cap-row').filter({ hasText: 'Page you were on' })).toContainText(lib.route)
+      await test.info().attach(`dialog-${lib.label}-${view.name}`, { body: await page.screenshot(), contentType: 'image/png' })
+
+      // It sends, with the route in the message.
+      await page.locator('#fb-message').fill(`Note from the ${lib.label} library.`)
+      await dialog(page).getByRole('button', { name: 'Submit' }).click()
+      await expect(page.locator('.fb-success-reply')).toBeVisible()
+      expect(seen).toHaveLength(1)
+      expect(seen[0].message).toContain(lib.route)
+      expect(seen[0].source).toBe('inline')
+      await ctx.close()
+    })
+  }
+}
+
+test('the library button opens the dialog from the keyboard and Escape returns focus to it', async ({ browser }) => {
+  const view = VIEWS[1]
+  const { ctx, page } = await newPage(browser, view, 'a keyboard user in the icon library')
+  await go(page, '/create/icons')
+  const button = page.locator('.lib-feedback')
+  await button.focus()
+  await page.keyboard.press('Enter')
+  await expect(dialog(page)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog(page)).toHaveCount(0)
+  await expect(button).toBeFocused()
+  await ctx.close()
+})

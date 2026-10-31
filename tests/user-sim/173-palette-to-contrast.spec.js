@@ -528,10 +528,83 @@ test.describe('R1 the layout of the hand-off', () => {
     await expect(back.locator('.tl-btn-label')).toBeHidden()
     expect((await back.boundingBox()).width, 'the arrow is a touch target').toBeGreaterThanOrEqual(44)
     await ctx.close()
-    // From 360px the word is back.
+    // From 360px the word is back, and the title is still whole beside it.
     const wider = await openAt(browser, PHONE(360, 640), READING)
+    watch(wider.page, 'a 360px phone')
     await expect(backLink(wider.page).locator('.tl-btn-label')).toHaveText('Palette')
+    const wide = await wider.page.evaluate(() => {
+      const t = document.querySelector('.tl-title')
+      return { clip: t.scrollWidth - t.clientWidth, clipY: t.scrollHeight - t.clientHeight, text: t.textContent }
+    })
+    expect(wide.text).toBe('Contrast Checker')
+    expect(wide.clip, 'the title is cut with an ellipsis at 360').toBeLessThanOrEqual(0)
+    expect(wide.clipY, 'the title loses a line at 360').toBeLessThanOrEqual(0)
     await wider.ctx.close()
+  })
+
+  // Below 400px a name that does not fit on one line takes a second line (two
+  // 18px lines are the 36px More button, so the row does not grow) and only a
+  // third line is cut. The stand-in: a real tool name never needs it at these
+  // widths, so a longer name is written into the title element (React does not
+  // redraw it) and the stylesheet's own rule is what is measured. What this does
+  // not cover is ToolToolbar's measuring of a real name (.is-measuring).
+  const LONG_NAME = 'Contrast Checker and Accessibility Pairing'
+  const TOO_LONG_NAME = `${LONG_NAME} for Every Single Surface of the Product Family`
+  for (const [width, height] of [[320, 568], [360, 640], [390, 844]]) {
+    test(`R1 at ${width} touch a long toolbar name takes two lines, the toolbar stays one row, and a third line is cut`, async ({ browser }) => {
+      const { ctx, page } = await openAt(browser, PHONE(width, height), READING)
+      watch(page, `a ${width}px phone`)
+      const measure = () => page.evaluate(() => {
+        const t = document.querySelector('.tl-title')
+        const bar = document.querySelector('[data-tool-toolbar]')
+        const line = parseFloat(getComputedStyle(t).lineHeight)
+        const more = document.querySelector('.tl-more-btn').getBoundingClientRect()
+        const kids = [...bar.children].filter((c) => c.getBoundingClientRect().height > 0)
+        const centres = kids.map((c) => { const r = c.getBoundingClientRect(); return r.top + r.height / 2 })
+        return {
+          lines: Math.round(t.getBoundingClientRect().height / line),
+          clipX: t.scrollWidth - t.clientWidth,
+          clipY: t.scrollHeight - t.clientHeight,
+          bar: Math.round(bar.getBoundingClientRect().height),
+          drift: Math.max(...centres) - Math.min(...centres),
+          moreSide: [Math.round(more.width), Math.round(more.height)],
+          pageX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        }
+      })
+      const set = (text) => page.evaluate((s) => { document.querySelector('.tl-title').textContent = s }, text)
+
+      const one = await measure()
+      expect(one.lines, 'the real name is one line').toBe(1)
+
+      await set(LONG_NAME)
+      const two = await measure()
+      expect(two.lines, 'the long name takes two lines').toBe(2)
+      expect(two.clipX, 'nothing is cut sideways').toBeLessThanOrEqual(0)
+      expect(two.clipY, 'two lines lose nothing').toBeLessThanOrEqual(0)
+      expect(two.bar, 'the toolbar is as tall as with a one-line name').toBe(one.bar)
+      expect(two.drift, 'every item on the row is centred on the same line').toBeLessThanOrEqual(1)
+      expect(two.moreSide[0], 'More keeps its square').toBe(two.moreSide[1])
+      expect(two.pageX, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+
+      await set(TOO_LONG_NAME)
+      const three = await measure()
+      expect(three.lines, 'a name that needs three lines still shows two').toBe(2)
+      expect(three.clipY, 'the third line is cut').toBeGreaterThan(0)
+      expect(three.bar, 'and the toolbar does not grow').toBe(one.bar)
+      await ctx.close()
+    })
+  }
+
+  test('R1 from 400 a long toolbar name stays on one line, as before', async ({ browser }) => {
+    const { ctx, page } = await openAt(browser, PHONE(400, 844), READING)
+    watch(page, 'a 400px phone')
+    const lines = await page.evaluate((s) => {
+      const t = document.querySelector('.tl-title')
+      t.textContent = s
+      return Math.round(t.getBoundingClientRect().height / parseFloat(getComputedStyle(t).lineHeight))
+    }, LONG_NAME)
+    expect(lines, 'the wrap is for phones narrower than 400').toBe(1)
+    await ctx.close()
   })
 
   test('R1 a field label names the role on a hand-off, and drops it after the colour is edited', async ({ page }) => {
