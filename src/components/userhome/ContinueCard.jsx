@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import Glyph from './Glyph'
+import OpenPill from '../spectrum/OpenPill'
+import ProjectPlate from './ProjectPlate'
 import { projectIcon, projectStatus, ratioName } from './workspace'
 import { projectDigest } from '../../utils/userHome'
 
@@ -53,22 +55,23 @@ export default function ContinueCard({ project, design, onSignIn }) {
   const icon = working ? null : projectIcon(project.id, project.icon)
   const paletteSet = digest.parts.find((p) => p.id === 'palette')?.done
   const colors = digest.colors
+  const colourShown = !!paletteSet && colors.length > 0
   const step = nextStepOf(digest)
   const name = digest.name
 
   return (
     <section className="proj-card uh-continue" aria-labelledby="uh-continue-h">
       <h2 id="uh-continue-h" className="uh-sr">Pick up where you left off</h2>
-      {paletteSet && colors.length > 0 ? (
-        <span className="uh-strip" aria-hidden="true">
-          {colors.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
-        </span>
-      ) : (
-        <div className="uh-strip-empty">
-          <p>Colour not set.</p>
-          <Link to="/create/palette">Build the palette</Link>
-        </div>
-      )}
+      {/* The plate is aria-hidden, so the words for an unset colour sit beside it, not inside it. */}
+      <div className="uh-plate-slot">
+        <ProjectPlate colors={colourShown ? colors : []} size="card" />
+        {!colourShown && (
+          <div className="uh-plate-empty">
+            <p>Colour not set.</p>
+            <Link to="/create/palette">Build the palette</Link>
+          </div>
+        )}
+      </div>
       <div className="uh-continue-body">
         <div className="uh-continue-top">
           <p className="uh-continue-name uh-card-title" title={name}>{name}</p>
@@ -94,13 +97,13 @@ export default function ContinueCard({ project, design, onSignIn }) {
           ))}
         </ul>
         <div className="uh-continue-actions">
-          <Link
+          <OpenPill
             className="uh-cta"
             to={step.to}
             aria-label={working ? undefined : `${step.label}, ${name}`}
           >
             {step.label}
-          </Link>
+          </OpenPill>
           {working ? (
             <button type="button" className="uh-ghost" onClick={onSignIn}>Sign in</button>
           ) : (

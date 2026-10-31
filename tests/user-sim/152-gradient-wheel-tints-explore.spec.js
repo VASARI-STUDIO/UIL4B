@@ -15,6 +15,7 @@ import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+import { tintRampForHex } from '../../src/utils/tintRamp.js'
 
 const ROUTE = '/create/gradient'
 // Tests start from Indigo Night's angle, 160deg; the first-visit stops are
@@ -271,6 +272,60 @@ test.describe('the stop tints menu', () => {
     await expect(modal, 'and drops the unrelated bullets').not.toContainText('Unlimited saved projects')
     await expect(menu).toBeHidden()
     expect((await stopHex(page, 1).innerText()).trim(), 'a free account does not get the tint').toBe(before)
+  })
+
+  // The ramp's hexes are the Pro value. MUTATION: in StopTintMenu.jsx print
+  // t.hex in the locked row (or put it back in the aria-label); the free test goes red.
+  test('a free account\'s tint menu holds none of the real tint hexes, in text or names, and the stand-in is blurred', async ({ page }) => {
+    watch(page, 'a free designer reading the locked tints')
+    await signIn(page, { plan: 'free' })
+    await open(page)
+    const stop = (await stopHex(page, 1).innerText()).match(/#[0-9A-F]{6}/)[0]
+    const real = tintRampForHex(stop, 11).map((t) => t.hex.toUpperCase())
+    expect(new Set(real).size, 'POSITIVE CONTROL: eleven distinct real tints to look for').toBe(11)
+
+    await page.getByRole('button', { name: 'Tints of stop 1 (Pro)', exact: true }).click()
+    const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
+    await expect(menu.getByRole('menuitem')).toHaveCount(11)
+
+    const read = await menu.evaluate((el) => ({
+      html: el.innerHTML.toUpperCase(),
+      text: el.textContent.toUpperCase(),
+      names: [...el.querySelectorAll('[role="menuitem"]')].map((i) => i.getAttribute('aria-label')),
+      slots: [...el.querySelectorAll('.grd-tintmenu-hex')].map((s) => {
+        const cs = getComputedStyle(s)
+        return { hidden: s.getAttribute('aria-hidden'), filter: cs.filter, select: cs.userSelect || cs.webkitUserSelect, text: s.textContent }
+      }),
+    }))
+    for (const hex of real) {
+      // The chip paints its colour as rgb(), so its hex never reaches the markup either.
+      expect(read.html, `${hex} is in the locked menu markup`).not.toContain(hex)
+      expect(read.text, `${hex} is readable in the locked menu`).not.toContain(hex)
+      expect(read.names.join('|').toUpperCase(), `${hex} is in an accessible name`).not.toContain(hex)
+    }
+    expect(read.names.every((n) => /^Tint \d+ \(Pro\)$/.test(n)), `names: ${read.names}`).toBe(true)
+    expect(read.slots, 'a hex slot on every row').toHaveLength(11)
+    for (const s of read.slots) {
+      expect(s.hidden, 'the stand-in is hidden from a screen reader').toBe('true')
+      expect(s.filter, 'the stand-in is blurred').toMatch(/blur\(/)
+      expect(s.select, 'and cannot be selected').toBe('none')
+      expect(s.text).not.toMatch(/[0-9A-F]{6}/i)
+    }
+  })
+
+  test('a Pro account sees the real tint hexes in the same menu', async ({ page }) => {
+    watch(page, 'a Pro designer reading the tints')
+    await signIn(page, { plan: 'pro' })
+    await open(page)
+    const stop = (await stopHex(page, 1).innerText()).match(/#[0-9A-F]{6}/)[0]
+    const real = tintRampForHex(stop, 11).map((t) => t.hex.toUpperCase())
+
+    await page.getByRole('button', { name: 'Tints of stop 1', exact: true }).click()
+    const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
+    await expect(menu.getByRole('menuitem')).toHaveCount(11)
+    const shown = await menu.locator('.grd-tintmenu-hex').allInnerTexts()
+    expect(shown.map((t) => t.trim()), 'the hex column is the real ramp').toEqual(real)
+    await expect(menu.locator('.grd-tintmenu-hex--locked')).toHaveCount(0)
   })
 
   test('right-click on a free account also shows the locked ramp, and a press outside closes it', async ({ page }) => {

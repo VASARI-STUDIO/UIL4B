@@ -136,6 +136,7 @@ function importFirestore() {
           updateDoc: sdk.updateDoc, deleteDoc: sdk.deleteDoc,
           query: sdk.query, orderBy: sdk.orderBy, limit: sdk.limit,
           increment: sdk.increment, deleteField: sdk.deleteField,
+          runTransaction: sdk.runTransaction, serverTimestamp: sdk.serverTimestamp,
         }
         return firestoreNs
       })

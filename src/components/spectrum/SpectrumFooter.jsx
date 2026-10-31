@@ -7,6 +7,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
+import { TOOL_VOTES_ON } from '../../data/toolVotes'
 import '../../styles/pages/spectrum-chrome.css'
 
 // The marketing footer — `UIL4B - Spectrum.dc.html` lines 1595-1633.
@@ -62,6 +63,7 @@ const EXPLORE = [
   ['/community', 'Community'],
   ['/learn/principles', 'Design principles'],
   ['/plans', 'Plans'],
+  ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
   ['/sitemap', 'Sitemap'],
   ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],
@@ -148,7 +150,9 @@ function Column({ heading, children }) {
   )
 }
 
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false }) {
+// `notice` is a small-print row between the link columns and the baseline: the
+// licence credits a library page owes, kept inside the contentinfo landmark.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -214,6 +218,8 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
             )}
           </nav>
         </div>
+
+        {notice}
 
         <div className="sp-footer-legal">
           <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>

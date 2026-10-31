@@ -56,7 +56,8 @@ test.describe('the front door', () => {
     // count of zero was then true of every page in the app, so the flash test
     // was asserting nothing at all while passing. It names the element that
     // would actually flash now.
-    await expect(page.locator('.spectrum')).toHaveCount(0)
+    // The workspace now wears .spectrum too (.uh.spectrum), so the sales page is the .spectrum that is not .uh.
+    await expect(page.locator('.spectrum:not(.uh)')).toHaveCount(0)
   })
 
   test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
@@ -159,10 +160,11 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
 
     // Start something: every tile a real tool route, none gated.
     const start = page.locator('.uh-start')
-    await expect(start.getByRole('link', { name: /Palette Builder/ })).toHaveAttribute('href', '/create/palette')
-    // The links only: the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    await expect(start.getByRole('link', { name: /^Palette/ })).toHaveAttribute('href', '/create/palette')
+    // The links only (the Palette row is the first row now, not a lead tile): the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    // The Palette Library is not one of them: its link lives in New in Discover.
     const hrefs = await start.locator('a.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
-    expect(hrefs).toEqual(['/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons', '/discover/palettes'])
+    expect(hrefs).toEqual(['/create/palette', '/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons'])
     await expect(start.locator('.uh-tool--all'), 'the phone-only row is not drawn at a laptop width').toBeHidden()
 
     // The sign-in sits in Today (the rail), under the date and time. It is a line of text, not a
@@ -176,7 +178,7 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
 
     // New in Discover: four real library palettes and the way to the rest.
     await expect(page.locator('.uh-disc-card')).toHaveCount(4)
-    await expect(page.getByRole('link', { name: 'Browse all' })).toHaveAttribute('href', '/discover/palettes')
+    await expect(page.getByRole('link', { name: 'Browse the Palette Library' })).toHaveAttribute('href', '/discover/palettes')
     // A visitor cannot open the Pro palettes, so those cards draw the server's blurred picture under
     // "Opens with Pro" (the pictures load as they scroll into view), never the text fallback.
     const locked = page.locator('.uh-disc-card.is-locked')
@@ -302,6 +304,8 @@ test.describe('the plan strip reads the real plan', () => {
     const cta = pro.getByRole('link', { name: 'See Pro', exact: true })
     await expect(cta, 'every upgrade CTA goes to /plans').toHaveAttribute('href', '/plans')
     const text = await pro.innerText()
+    expect(text, 'the panel opens on its heading, with no "UIL4B Pro" label above it').not.toMatch(/UIL4B Pro/)
+    expect((await pro.locator('.uh-pro-copy > *').first().getAttribute('id')), 'the heading is the first thing in the panel').toBe('uh-pro-h')
     expect(text, 'there is no version history').not.toMatch(/version history/i)
     expect(text, 'there is no cancel flow').not.toMatch(/cancel/i)
     expect(text).toContain(`${AI_LIMITS.pro.daily} generations a day`)
@@ -322,7 +326,7 @@ test.describe('a recent project card is read off the project', () => {
     // The newest project that is not archived leads, as a card of its own.
     const lead = page.locator('.proj-card', { hasText: 'Violet Lime' })
     await expect(lead.locator('.uh-card-line')).toHaveText('Ready · Edited 2 hours ago')
-    await expect(lead.locator('.uh-strip > span'), 'the strip is the project’s own five colours').toHaveCount(5)
+    await expect(lead.locator('.uh-plate rect.spt-step'), 'the lead plate is the project’s own five colours').toHaveCount(5)
     await expect(lead.locator('.uh-parts > li')).toHaveText([
       'Colour, done, 5 colours', 'Type, done, Fraunces over Manrope', 'Type scale, done, 17px, Perfect fourth', 'Tints, done, 6 steps',
     ])
@@ -445,7 +449,7 @@ test.describe('a new account', () => {
     await expect(starter.getByRole('heading', { level: 2, name: 'Start your first project' })).toBeVisible()
     await expect(starter).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
     // The four parts, in order: a true sequence, so numbered. Plain text: Start the walkthrough is the way in.
-    await expect(starter.getByRole('list', { name: 'The walkthrough' }).getByRole('listitem')).toHaveText(['Colour', 'Type', 'Type scale', 'Tints'])
+    await expect(starter.locator('.uh-steps li .uh-step-label')).toHaveText(['1 Colour', '2 Type', '3 Type scale', '4 Tints'])
     await expect(page.getByText('No projects yet'), 'an account with no projects is not told it has none').toHaveCount(0)
     // Projects sync to a signed-in account, so "Nothing leaves the browser
     // until you export it" was false and is gone.
@@ -607,9 +611,8 @@ test.describe('the project menu', () => {
 
 test.describe('"Start something" opens every tool for a visitor with no account', () => {
   for (const [label, path] of [
-    ['Palette Builder', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
-    ['Semantic', '/create/semantic-color'], ['Contrast', '/create/contrast'], ['Icon set', '/create/icons'],
-    ['Palette Library', '/discover/palettes'],
+    ['Palette', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
+    ['Semantic Colour', '/create/semantic-color'], ['Contrast Checker', '/create/contrast'], ['Icon Library', '/create/icons'],
   ]) {
     test(`${label} opens ${path} with no sign-in asked`, async ({ page }) => {
       watch(page, `a signed-out visitor opening ${label} from the workspace`)

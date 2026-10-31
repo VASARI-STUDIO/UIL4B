@@ -275,3 +275,24 @@ export function allPackCredits() {
     tier: ICON_PACK_TIERS[prefix].tier,
   }))
 }
+
+/**
+ * The credit rows for a list of pack prefixes: name, link and licence name.
+ *
+ * A pack with no row above is one a Pro search reached outside the twenty-five
+ * this product curates (the /search endpoint answers from the whole registry
+ * when it is left unscoped). It is credited by its prefix and linked to the
+ * Iconify set page, which states that set's licence. `liveOf(prefix)` is the
+ * licence the registry answered for that pack, if it has.
+ */
+export function creditRows(packs, liveOf) {
+  return (packs || []).map((prefix) => {
+    const row = packCredit(prefix, liveOf ? liveOf(prefix) : null)
+    return {
+      prefix,
+      name: row?.name || prefix,
+      url: row?.url || `https://icon-sets.iconify.design/${prefix}/`,
+      licenceName: row?.licenceName || 'licence on Iconify',
+    }
+  })
+}

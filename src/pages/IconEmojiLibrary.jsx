@@ -1,9 +1,16 @@
-import { Suspense, useCallback, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
+import SpectrumClose from '../components/spectrum/SpectrumClose'
+import SpectrumRamp from '../components/spectrum/SpectrumRamp'
+import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { ICON_GROUPS_ROUTE } from '../data/iconGroups'
+import { ICON_CLOSE_COPY, iconCloseSecondary } from '../data/iconPageClose'
+import { viewerTier } from '../data/iconPackTiers'
+import { categoryDestination } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -19,6 +26,9 @@ import { lazyRoute as lazy } from '../utils/lazyRoute'
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
 const IconGroups = lazy(() => import('./IconGroups'))
+
+// A stable empty list, so a tab that reports nothing never changes identity.
+const NO_CREDITS = []
 
 // THE LIBRARY TABS ARE DATA. Each row is a route (also registered in
 // toolTree.js, which feeds the router and the route tables), its title and
@@ -64,7 +74,7 @@ const tabFor = (pathname) => {
 // toggles `hidden` (display:none), so state, scroll and fetched data survive and
 // the switch is instant. The inactive panel's IntersectionObservers idle while
 // hidden, so there's no background cost either.
-export default function IconEmojiLibrary({ onCopy }) {
+export default function IconEmojiLibrary({ onCopy, onCredits }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -91,6 +101,29 @@ export default function IconEmojiLibrary({ onCopy }) {
   // built in and never asks the catalogue for anything.
   const iconFallback = tab === 'icon' && catalogue === 'fallback'
   const tabRefs = useRef({})
+
+  // The licence rows each tab reports for the footer's notice, kept per tab so a
+  // hidden (kept-alive) tab cannot overwrite the visible one. The active tab's
+  // list goes up to the page. The Emoji tab draws no third-party artwork and
+  // reports nothing.
+  const [credits, setCredits] = useState({ icon: NO_CREDITS, groups: NO_CREDITS })
+  const reportCredits = useMemo(() => ({
+    icon: (rows) => setCredits((c) => (c.icon === rows ? c : { ...c, icon: rows })),
+    groups: (rows) => setCredits((c) => (c.groups === rows ? c : { ...c, groups: rows })),
+  }), [])
+  const activeCredits = credits[tab] || NO_CREDITS
+  useEffect(() => {
+    onCredits?.(activeCredits, tab === 'groups' ? 'group' : 'page')
+  }, [onCredits, activeCredits, tab])
+
+  // The closing block's second button follows the viewer; its words and first
+  // button are the same for everyone (ICON_CLOSE_COPY).
+  const { isPro, planKnown } = useSubscription()
+  const { user, loading: authLoading } = useAuth()
+  const closeSecondary = iconCloseSecondary({
+    tier: viewerTier({ user, isPro, resolving: authLoading }),
+    known: !authLoading && planKnown,
+  })
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
 
   const activateTab = (next) => navigate(LIB_TABS.find((t) => t.id === next).route)
@@ -214,13 +247,29 @@ export default function IconEmojiLibrary({ onCopy }) {
           {mounted.has(id) && (
             <Suspense fallback={fallback}>
               {id === 'icon'
-                ? <LibBody onCopy={onCopy} onCatalogue={onCatalogue} />
-                : <LibBody onCopy={onCopy} />}
+                ? <LibBody onCopy={onCopy} onCatalogue={onCatalogue} onCredits={reportCredits.icon} />
+                : id === 'groups'
+                  ? <LibBody onCopy={onCopy} onCredits={reportCredits.groups} />
+                  : <LibBody onCopy={onCopy} />}
             </Suspense>
           )}
         </div>
         )
       })}
+
+      {/* THE PAGE ENDS AS THE SALES PAGES DO: a close, the spectrum strip, then
+          the footer (rendered by CreateTool, outside <main>). It follows the
+          panels, once per page, so it shows on all three tabs. */}
+      <div className="spectrum ig-close">
+        <SpectrumClose
+          id="ig-close-h"
+          heading={ICON_CLOSE_COPY.heading}
+          body={ICON_CLOSE_COPY.body}
+          primary={{ label: ICON_CLOSE_COPY.primary, to: categoryDestination('colour') }}
+          secondary={closeSecondary}
+        />
+        <SpectrumRamp className="sp-ramp--close" />
+      </div>
     </div>
     </>
   )

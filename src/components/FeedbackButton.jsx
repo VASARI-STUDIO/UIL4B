@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import FeedbackModal from './FeedbackModal'
 import FeedbackContextMenu from './FeedbackContextMenu'
 import { chromelessRoutes } from '../data/toolTree'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 
 // Persistent, low-profile way to reach the feedback form from anywhere in the app.
@@ -49,6 +50,8 @@ const NO_BUTTON = new Set([
   // '/plans' and '/mobile' are Spectrum screens now, with the marketing nav and
   // footer like '/', so they take no fixed button either.
   '/', '/home', '/plans', '/mobile', '/tools', '/sitemap', '/welcome', '/onboarding', '/feedback',
+  // The roadmap page is a Spectrum screen with its own footer; it exists only while voting is on.
+  ...(TOOL_VOTES_ON ? ['/roadmap'] : []),
 ])
 
 // ROUTES WHERE THE BUTTON STAYS BUT STEPS ASIDE ON A SMALL SCREEN.

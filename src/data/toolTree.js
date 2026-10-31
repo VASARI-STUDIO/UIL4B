@@ -195,6 +195,8 @@ export function createTools({ includeHidden = false } = {}) {
       // flag. A tool cannot be beta by virtue of its group -- a category is
       // not a maturity -- so this is the tool's own flag only.
       beta: !!t.beta,
+      // 'YYYY-MM-DD', set when a tool goes live; the roadmap lists it as Shipped for 90 days.
+      ...(t.shipped ? { shipped: t.shipped } : {}),
     })),
   )
 }

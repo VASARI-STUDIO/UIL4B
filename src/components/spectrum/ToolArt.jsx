@@ -275,10 +275,22 @@ function varsRef(vars) {
   }
 }
 
-function Palette() {
+// A page can hand Palette its own colours. With five or more valid hex values the drawing takes
+// five evenly spaced picks across them; with fewer it keeps its own five (PALETTE).
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
+function palettePicks(colors) {
+  const valid = Array.isArray(colors) ? colors.filter((c) => typeof c === 'string' && HEX.test(c)) : []
+  if (valid.length < 5) return PALETTE.map((r) => ({ key: r.step, hex: r.hex }))
+  return [0, 1, 2, 3, 4].map((i) => {
+    const at = Math.round((i * (valid.length - 1)) / 4)
+    return { key: `${at}-${valid[at]}`, hex: valid[at] }
+  })
+}
+
+function Palette({ colors }) {
   return (
     <svg viewBox="0 0 160 100">
-      {PALETTE.map((r, i) => <rect key={r.step} className="spt-step" fill={r.hex} x={27 + i * 22} y={i === 2 ? 24 : 28} width="18" height={i === 2 ? 52 : 44} rx="5" />)}
+      {palettePicks(colors).map((r, i) => <rect key={r.key} className="spt-step" fill={r.hex} x={27 + i * 22} y={i === 2 ? 24 : 28} width="18" height={i === 2 ? 52 : 44} rx="5" />)}
     </svg>
   )
 }
@@ -339,9 +351,10 @@ function SoonTile({ id }) {
 
 const DRAW = { palette: Palette, contrast: Contrast, 'font-gallery': FontGallery, 'type-scale': TypeScale, '3d-converter': Model3D, icons: Icons, 'file-converter': Converter, semantic: Semantic, tint: Tint, gradient: Gradient, 'font-pair': FontPair, emoji: Emoji, ratio: Ratio, 'alt-text': AltText }
 
-export default function ToolArt({ id, size = 'thumb', soon = false }) {
+// `colors` is read by the palette drawing only (see palettePicks); every other drawing ignores it.
+export default function ToolArt({ id, size = 'thumb', soon = false, colors }) {
   if (soon) return <Plate id={id} size={size}><SoonTile id={id} /></Plate>
   const Draw = DRAW[id]
   if (!Draw) return null
-  return <Plate id={id} size={size}><Draw size={size} /></Plate>
+  return <Plate id={id} size={size}><Draw size={size} colors={colors} /></Plate>
 }

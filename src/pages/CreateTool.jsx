@@ -2,6 +2,9 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
+import SpectrumFooter from '../components/spectrum/SpectrumFooter'
+import IconCredits from '../components/library/IconCredits'
+import { toolWearsSpectrumFooter } from '../components/nav/footerRoutes'
 import { findCreateGroup, resolveTool, soonRedirect } from '../data/toolTree'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { readSessionHint } from '../utils/sessionHint'
@@ -182,6 +185,15 @@ export default function CreateTool({ toast }) {
     try { trackToolAction(toolSlug) } catch { /* never break a tool */ }
   }, [toolSlug])
 
+  // The Icon and Emoji libraries end with the sales pages' footer, carrying the
+  // licence notice for the sets on screen. The library reports those rows (and
+  // whether they are for the whole page or one group) up to here.
+  const wearsSpectrumFooter = toolWearsSpectrumFooter(location.pathname)
+  const [credits, setCredits] = useState({ rows: [], scope: 'page' })
+  const reportCredits = useCallback((rows, scope = 'page') => {
+    setCredits((c) => (c.rows === rows && c.scope === scope ? c : { rows, scope }))
+  }, [])
+
   const group = findCreateGroup(location.pathname)
   const { name, isHome, tool } = resolveTool(location.pathname)
 
@@ -251,7 +263,7 @@ export default function CreateTool({ toast }) {
         >
           {LiveTool ? (
             <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
-              <LiveTool onCopy={copy} onExport={exportCopy} toast={toast} />
+              <LiveTool onCopy={copy} onExport={exportCopy} toast={toast} onCredits={wearsSpectrumFooter ? reportCredits : undefined} />
             </Suspense>
           ) : (
             <SoonState title={isHome ? group.label : name} isPro={isPro} />
@@ -259,7 +271,9 @@ export default function CreateTool({ toast }) {
         </main>
       </div>
 
-      <AppFooter compact />
+      {wearsSpectrumFooter
+        ? <SpectrumFooter notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />
+        : <AppFooter compact />}
     </>
   )
 }

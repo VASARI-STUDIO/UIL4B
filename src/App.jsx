@@ -20,8 +20,10 @@ import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
-import { DEFAULT_DESCRIPTION, LOGIN_SIGNUP_TITLE, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaMap'
+import { LOGIN_SIGNUP_TITLE } from './data/routeMetaMap'
+import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaGated'
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
+import { TOOL_VOTES_ON } from './data/toolVotes'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
@@ -75,6 +77,7 @@ const Pricing = lazy(() => import('./pages/Pricing'))
 const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
 // /tools: the tool previews. Lazy, so its live demos load only on that page.
 const SpectrumTools = lazy(() => import('./pages/SpectrumTools'))
+const Roadmap = lazy(() => import('./pages/Roadmap'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
@@ -282,7 +285,10 @@ function AppInner({ toast }) {
     // read "UI L4B | Design Toolkit" in the tab, in history and in a bookmark,
     // so a 404 was indistinguishable from the homepage everywhere except the
     // page body. The strings match scripts/prerender.mjs's 404 shell.
-    const missing = isUnknownRoute(location.pathname)
+    // routeMeta.js cannot know /roadmap (it is bundled into api/ and must not read
+    // the flag), so the page that exists only while the flag is on is cleared here.
+    const roadmapPage = TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap'
+    const missing = !roadmapPage && isUnknownRoute(location.pathname)
     // THE LOOKUP KEY IS NORMALISED, and it has to be, because the other two
     // readers of this same pathname already are: canonicalUrl() strips a
     // trailing slash (routeMeta.js) and so does isUnknownRoute() one line
@@ -377,6 +383,18 @@ function AppInner({ toast }) {
       <>
         <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
           <SpectrumTools />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
+  // /roadmap wears the same shell. Behind the roadmap-voting flag, so with it off
+  // the path is an unknown route and answers the 404.
+  if (TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <Roadmap />
         </Suspense>
         <GoogleOneTap />
       </>

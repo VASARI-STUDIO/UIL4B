@@ -31,6 +31,9 @@ import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/wor
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
+// The /tools rows and drawn plates this page reuses (.spt-row, .spt-art). The Spectrum tokens and
+// the ink pill (.spectrum, .sp-pill) come from spectrum.css, which is already in the entry graph.
+import '../styles/pages/spectrum-tools.css'
 
 // ── YOUR WORKSPACE ──────────────────────────────────────────────────────────
 //
@@ -187,7 +190,7 @@ export default function Projects() {
        "No projects yet" here would tell a returning user their work was gone for the second auth takes. */
     body = (
       <div className="uh-continue uh-resolving" role="status">
-        <div className="uh-strip-skel" aria-hidden="true" />
+        <div className="uh-plate-skel" aria-hidden="true" />
         <div className="uh-continue-body">
           <span className="uh-bar" style={{ width: '40%' }} aria-hidden="true" />
           <span className="uh-bar" style={{ width: '60%' }} aria-hidden="true" />
@@ -259,7 +262,7 @@ export default function Projects() {
   )
 
   return (
-    <div className="uh">
+    <div className="uh spectrum spt uh-spt">
       <div className="uh-main">
         <div className="uh-dash">
           <div className="uh-dash-head">

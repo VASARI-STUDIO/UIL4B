@@ -90,7 +90,7 @@ export default function DiscoverPicks() {
     <section className="uh-disc" aria-labelledby="uh-disc-h">
       <div className="uh-disc-head">
         <h2 id="uh-disc-h" className="uh-sec-h">New in Discover</h2>
-        <Link className="uh-disc-all" to="/discover/palettes">Browse all</Link>
+        <Link className="uh-disc-all" to="/discover/palettes">Browse the Palette Library</Link>
       </div>
       <div className="uh-disc-grid">
         {picks.map((p, i) => {

@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { categoryDestination, isSoonPath } from '../data/toolTree'
 import { useIsAdmin } from '../hooks/useIsAdmin'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
 import { BrandLockup } from './BrandLogo'
@@ -52,6 +53,7 @@ const FOOTER_GROUPS = [
       ['/community', 'Community'],
       ['/learn/principles', 'Design principles'],
       ['/plans', 'Plans'],
+      ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
       ['/sitemap', 'Sitemap'],
     ],
   },
