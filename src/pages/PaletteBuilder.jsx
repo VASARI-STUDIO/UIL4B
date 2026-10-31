@@ -1192,31 +1192,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // tabs. Explore has two, 'community' (Palettes) and 'brands'. A pick applies
   // straight onto the board.
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
-  // The toolbar button that opened the gallery, or null when it was opened from
-  // the Extra tools menu, which has no button on screen to sit under.
-  const [galleryAnchor, setGalleryAnchor] = useState(null)
+  // The panel is placed by CSS alone (a flex sibling of the board, a bottom dock,
+  // or a sheet), so nothing positions it from script.
   const galleryRef = useRef(null)
-  // Above phone width the gallery opens under the button that opened it, its
-  // right edge on the button's, kept 16px inside the viewport; without one on screen it keeps its docked place.
-  useLayoutEffect(() => {
-    const wrap = galleryRef.current
-    if (!galleryOpen || !wrap) return undefined
-    const place = () => {
-      const btn = galleryAnchor?.isConnected && galleryAnchor.getClientRects().length ? galleryAnchor : null
-      if (!btn || window.innerWidth <= 640) {
-        wrap.style.top = ''; wrap.style.left = ''; wrap.style.right = ''
-        return
-      }
-      const r = btn.getBoundingClientRect()
-      const max = window.innerWidth - wrap.offsetWidth - 16
-      wrap.style.top = `${Math.round(r.bottom + 8)}px`
-      wrap.style.right = 'auto'
-      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.right - wrap.offsetWidth, max)))}px`
-    }
-    place()
-    window.addEventListener('resize', place)
-    return () => window.removeEventListener('resize', place)
-  }, [galleryOpen, galleryAnchor])
   // Focus goes to the selected tab (or Close) when a panel opens, and back to the
   // button that opened it, or Extra tools, when it closes with focus nowhere.
   const galleryOpenerRef = useRef({ el: null, pointer: false })
@@ -2637,7 +2615,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   const openGallery = (tab, anchor = null, pointer = false) => {
     galleryOpenerRef.current = { el: anchor, pointer }
-    closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true)
+    closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true)
   }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
