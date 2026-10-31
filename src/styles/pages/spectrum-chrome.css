@@ -354,12 +354,21 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   /* Two stacks side by side, each holding whole columns in reading order, so the
      short columns do not leave a hole beside the long one. */
   .sp-footer .sp-footer-grid{grid-template-columns:minmax(0,1fr);row-gap:32px}
-  .sp-footer .sp-footer-links{display:block;columns:2;column-gap:16px}
-  .sp-footer .sp-footer-col{break-inside:avoid;padding-bottom:24px}
+  .sp-footer .sp-footer-links{display:block;columns:2;column-gap:16px;--sp-row:35px;--sp-row-gap:11px}
+  .sp-footer .sp-footer-col{break-inside:avoid;padding-bottom:var(--sp-row-gap)}
+  /* Everything in a stack sits on one row pitch: a link row (its 24px box plus the
+     11px gap, or 44px on touch) is a pitch, and a group head takes exactly one
+     pitch too, with its text on the lower edge. A second group's head in the
+     left stack then lands on a row of the right stack instead of between two. */
+  .sp-footer .sp-footer-col-h{display:flex;align-items:flex-end;box-sizing:border-box;min-height:var(--sp-row);padding-bottom:8px}
+  .sp-footer .sp-footer-col ul{margin-top:0}
   /* The LEGAL column is hidden on a phone (its links sit in the baseline), so
      the column before it is the last one drawn. */
   .sp-footer .sp-footer-col--legal{display:none}
   .sp-footer .sp-footer-col:nth-last-child(2){padding-bottom:0}
+}
+@media(max-width:760px) and (pointer:coarse){
+  .sp-footer .sp-footer-links{--sp-row:44px;--sp-row-gap:0px}
 }
 /* The notice row: small print a page owes (the icon sets' licences), between the
    columns and the baseline. Sans, because it is prose; links are underlined at

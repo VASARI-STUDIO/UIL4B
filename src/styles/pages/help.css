@@ -240,19 +240,19 @@
 
 /* ── Narrow ──────────────────────────────────────────────────────────────────
  * The ramp is eleven columns of type and cannot compress; below the desktop
- * band it becomes a scroller inside its own box rather than shrinking its
- * stops into unreadable slivers or pushing the page sideways. 24-mobile
- * -overhaul's overflow sweep allows a child past the viewport edge only when
- * an ancestor is genuinely scrollable, which is what `overflow-x:auto` here
- * makes true. */
+ * band its stops wrap onto more rows rather than shrinking into unreadable
+ * slivers, being cut at the box's edge, or pushing the page sideways. */
 @media (max-width: 1180px) {
   .hlp-run-stop-hex { display: none; }
 }
 @media (max-width: 960px) {
   .hlp-run { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
-  .hlp-run-ramp { display: flex; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--s-2); }
-  .hlp-run-stop { flex: 0 0 clamp(46px, 11vw, 72px); }
-  .hlp-run-bar { height: 88px; }
+  /* Stops wrap onto further rows, each track at least as wide as a seven-glyph
+   * hex at 10.5px mono (about 44px) plus air, so every label sits whole inside
+   * the box and nothing is cut at an edge. auto-fit lets the eleven stretch over
+   * one row where the panel is wide enough. */
+  .hlp-run-ramp { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); row-gap: var(--s-3); }
+  .hlp-run-bar { height: 56px; }
   .hlp-run-stop-hex { display: block; }
   .hlp-band { grid-template-columns: minmax(0, 1fr); }
   .hlp-h2 { max-width: 22ch; }

@@ -18,9 +18,7 @@ const ROUTES = ['/terms', '/privacy']
 
 // How far below the nav's bottom edge a landed heading may sit: the clause's
 // scroll margin and top padding (measured about 65px), with room to spare. The jump
-// tests run with reduced motion: a smooth jump from the top of a page stalled
-// part-way (scrollY 541) in headless Chromium on /terms and a Learn guide alike, so
-// the landing position is read from the instant jump.
+// tests run with smooth scrolling on, so they cover the real reader's path.
 // A heading further down than this was not scrolled to the top.
 const LAND_SLACK = 110
 
@@ -31,12 +29,11 @@ const VIEWS = {
 }
 
 /** A page in its own context, with the theme seeded before first paint. */
-async function open(browser, route, { view = 'desktop', theme = 'light', viewport, reducedMotion } = {}) {
+async function open(browser, route, { view = 'desktop', theme = 'light', viewport } = {}) {
   const ctx = await browser.newContext({
     ...VIEWS[view],
     ...(viewport ? { viewport } : {}),
     colorScheme: theme,
-    ...(reducedMotion ? { reducedMotion } : {}),
   })
   await ctx.addInitScript((t) => {
     try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
@@ -129,7 +126,7 @@ for (const route of ROUTES) {
 
     for (const view of ['phone', 'tablet']) {
       test(`at ${view} width a contents link lands the heading under the nav and focuses it`, async ({ browser }) => {
-        const { ctx, page } = await open(browser, route, { view, reducedMotion: 'reduce' })
+        const { ctx, page } = await open(browser, route, { view })
         const target = await reachableClause(page)
         await page.locator('.lgl-toc-m-sum').click()
         await page.locator(`.lgl-toc-m a[href="#${target}"]`).click()
@@ -145,7 +142,7 @@ for (const route of ROUTES) {
     }
 
     test('at 1440 a rail link lands the heading under the nav and the rail marks that clause', async ({ browser }) => {
-      const { ctx, page } = await open(browser, route, { reducedMotion: 'reduce' })
+      const { ctx, page } = await open(browser, route)
       const target = await reachableClause(page)
       await page.locator(`.lgl-toc a[href="#${target}"]`).click()
       await landed(page, target)
