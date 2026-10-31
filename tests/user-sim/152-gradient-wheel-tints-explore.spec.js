@@ -658,10 +658,11 @@ test.describe('the library when the signed-out cap empties a mood', () => {
       })
       await go(page, `${LIBRARY}?mood=dark`)
       // POSITIVE CONTROL: the page is inside the loading window. The session has
-      // not answered, so the library still reads signed out and holds the plain
-      // empty state, and no card has appeared yet.
-      await expect(emptyOf(page), `${plan}: the empty state shows while auth is pending`).toBeVisible()
-      await expect(emptyOf(page)).toContainText('No gradients match those filters.')
+      // not answered, but this is a returning session (the hint), so the library
+      // shows the neutral loading block rather than reading as signed out: no
+      // "No gradients match" and no offer, and no card has appeared yet.
+      await expect(page.locator('.lockt-status'), `${plan}: the neutral loading block shows while auth is pending`).toContainText('Loading the gradient library')
+      await expect(emptyOf(page), `${plan}: no empty state while the plan is unknown`).toHaveCount(0)
       await expect(page.locator('.grg-card')).toHaveCount(0)
       // Then the account answers and the dark gradients arrive.
       await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
