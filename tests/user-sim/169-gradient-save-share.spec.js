@@ -13,7 +13,8 @@
 //   4. Copy link writes the share URL (no `gn` while the gradient is unnamed);
 //      Copy CSS and Copy Tailwind write the snippet; Download SVG is
 //      aria-disabled with its reason for Conic and works for Linear.
-//   5. "Submit for review" is gone (see also spec 14).
+//   5. The browser-held "Submit for review" is gone (see also spec 14); the
+//      menu's Community row submits to the account's review queue instead.
 //   6. The gallery: a signed-out visitor with gradients left in this browser by
 //      an earlier visit gets one note, not a list; a signed-in member sees the
 //      account's own pending gradients and can withdraw one; browser-held
@@ -90,7 +91,7 @@ async function logInAtTheGate(page) {
 /* ── 1 · The menu opens and closes ───────────────────────────────────────── */
 
 test.describe('Save or share menu on the gradient', () => {
-  test('the toolbar primary opens a dialog with Save, Share and Export, and no Submit for review', async ({ page }) => {
+  test('the toolbar primary opens a dialog with Save, Share, Export and Community', async ({ page }) => {
     watch(page, 'designer opening Save or share on a gradient')
     await signIn(page, { plan: 'free' })
     await go(page, HANDOFF)
@@ -107,7 +108,9 @@ test.describe('Save or share menu on the gradient', () => {
     await expect(menu.getByRole('button', { name: 'Copy CSS', exact: true })).toBeVisible()
     await expect(menu.getByRole('button', { name: 'Copy Tailwind class' })).toBeVisible()
     await expect(menu.getByRole('button', { name: /Download SVG/ })).toBeVisible()
-    await expect(menu.getByText(/submit/i)).toHaveCount(0)
+    await expect(menu.getByRole('button', { name: 'Submit to the community…' })).toBeVisible()
+    // The old browser-held "Submit for review" stays gone.
+    await expect(menu.getByText(/submit for review/i)).toHaveCount(0)
   })
 
   test('the name starts as "<type> gradient" and is selected, so typing replaces it', async ({ page }) => {
@@ -482,15 +485,64 @@ test.describe('share and export rows on the gradient', () => {
     expect(downloads).toHaveLength(0)
   })
 
-  test('there is no Submit for review anywhere on the page', async ({ page }) => {
+  test('there is no Submit for review on the page, and submitting is only in the menu', async ({ page }) => {
     watch(page, 'designer looking for the old submit button')
     await signIn(page, { plan: 'free' })
     await go(page, HANDOFF)
     await expect(saveButton(page)).toBeVisible()
     await expect(page.getByRole('button', { name: /submit/i })).toHaveCount(0)
     await saveButton(page).click()
-    await expect(page.getByRole('button', { name: /submit/i })).toHaveCount(0)
-    await expect(page.getByRole('menuitem', { name: /submit/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /submit for review/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Submit to the community…' })).toHaveCount(1)
+  })
+
+  // Seam: the Save or share menu -> "Submit to the community…" -> the dialog.
+  // The write is community-submissions only; the browser queue key is never written.
+  // MUTATION: in GradientGenerator.jsx submitToCommunity, drop `await` before
+  // publishToQueue -> the failure test goes red (a false "Submitted").
+  const COMMUNITY_ROW = 'Submit to the community…'
+  const submitDialog = (page) => page.getByRole('dialog', { name: 'Submit gradient to the community' })
+
+  test('signed in: submits a pending gradient to the account queue and says where to see it', async ({ page }) => {
+    watch(page, 'member submitting a gradient')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: COMMUNITY_ROW }).click()
+    const dialog = submitDialog(page)
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('A reviewer checks every submission before it appears')
+    await dialog.getByLabel('Gradient name for the community').fill('Harbour fade')
+    await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-done')).toContainText('Your submissions')
+    await expect(dialog.getByRole('link', { name: 'See your submissions' })).toHaveAttribute('href', '/discover/gradients')
+    // Nothing is written to the browser queue.
+    expect(await page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()
+  })
+
+  test('a refused write keeps the form and shows an inline error, never a success', async ({ page }) => {
+    watch(page, 'member whose submission is refused')
+    await signIn(page, { plan: 'free', deny: ['community-submissions'] })
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'freya_free'))
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: COMMUNITY_ROW }).click()
+    const dialog = submitDialog(page)
+    await dialog.getByLabel('Gradient name for the community').fill('Harbour fade')
+    await dialog.getByRole('button', { name: 'Submit gradient' }).click()
+    await expect(page.getByTestId('community-submit-error')).toBeVisible()
+    await expect(page.getByTestId('community-submit-done')).toHaveCount(0)
+    await expect(dialog.getByLabel('Gradient name for the community')).toHaveValue('Harbour fade')
+  })
+
+  test('signed out: the menu row asks to sign in, then opens the form', async ({ page }) => {
+    watch(page, 'visitor trying to submit')
+    await go(page, HANDOFF)
+    await saveButton(page).click()
+    await menuOf(page).getByRole('button', { name: COMMUNITY_ROW }).click()
+    await expect(page.locator('#ui-login-title')).toBeVisible()
+    await expect(submitDialog(page)).toHaveCount(0)
   })
 })
 
