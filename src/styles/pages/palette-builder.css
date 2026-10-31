@@ -955,9 +955,11 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sg-tabs { flex-wrap: nowrap; }
 .plb .plb-sg-tabs .tl-pill { flex: 0 0 auto; white-space: nowrap; }
 .plb .plb-sx-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-padding-block-end: 40px; padding-bottom: var(--s-4); }
+/* --plb-sx-hide is how much of the sheet sits below the screen (0 except at Peek
+   on a phone); the fade belongs at the edge people can see. */
 .plb .plb-sx-body[data-more="true"] {
-  -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
-  mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px - var(--plb-sx-hide, 0px)), transparent calc(100% - var(--plb-sx-hide, 0px)));
+  mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px - var(--plb-sx-hide, 0px)), transparent calc(100% - var(--plb-sx-hide, 0px)));
 }
 .plb .plb-sx-intro { margin: 0; padding: 12px var(--s-4) 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .plb .plb-sx-group { margin: 0; padding: var(--s-4) var(--s-4) 4px; font-size: 12px; font-weight: 560; line-height: 16px; color: var(--tl-dim); }
@@ -1069,11 +1071,30 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
     bottom: 0;
     height: 88dvh;
     border-radius: 22px 22px 0 0;
-    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    transform: translateY(calc(88dvh - min(360px, 48dvh)));
+    --plb-sx-peek: min(360px, 48dvh);
+    --plb-sx-hide: 0px;
+    transform: translateY(calc(88dvh - var(--plb-sx-peek)));
     transition: transform 240ms var(--tl-ease);
   }
   .plb .plb-sx[data-snap="full"] { transform: none; }
+  .plb .plb-sx[data-snap="peek"] { --plb-sx-hide: calc(88dvh - var(--plb-sx-peek)); }
+  /* The safe-area padding lives on the list, not the sheet, so a row at the top of
+     the list can use the sheet's last pixels. At Peek the list also gets the
+     hidden part of the sheet as bottom padding and scroll padding, so its last row
+     scrolls up into view and scrollIntoView lands inside the visible sheet. */
+  .plb .plb-sx-body {
+    padding-bottom: calc(var(--s-4) + 14px + env(safe-area-inset-bottom, 0px) + var(--plb-sx-hide));
+    scroll-padding-block-end: calc(var(--plb-sx-hide) + 14px + env(safe-area-inset-bottom, 0px) + 8px);
+  }
+  /* Three rows must show at Peek: 360 - 20 (handle) - 52 (head) - 65 (Your palette)
+     leaves 223px, which holds three 64px rows (192px) only without the intro line
+     (32px) and the group labels (36px each). Both come back at Full; the groups
+     stay in the accessibility tree, and an applied row says "Tap again to go back". */
+  .plb .plb-sx-intro--sg { display: none; }
+  .plb .plb-sx[data-snap="peek"] .plb-sx-group {
+    position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .plb .plb-sx[data-snap="full"] .plb-sx-intro--sg { display: block; }
   .plb .plb-sx-handle { display: grid; place-items: center; flex: 0 0 auto; width: 100%; height: 20px; padding: 0; border: 0; background: none; cursor: pointer; }
   .plb .plb-sx-handle span { width: 36px; height: 4px; border-radius: 999px; background: var(--tl-line-2); }
   .plb .plb-sx-head { height: 52px; gap: var(--s-2); }
