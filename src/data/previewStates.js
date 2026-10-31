@@ -19,6 +19,11 @@ export const PREVIEW_STATES = {
     { id: 'added', label: 'Added to bag' },
     { id: 'focus', label: 'Focused size' },
   ],
+  trail: [
+    { id: 'activity', label: 'Activity' },
+    { id: 'live', label: 'Live tracking' },
+    { id: 'pr', label: 'Segment PR' },
+  ],
   card: [
     { id: 'overview', label: 'Overview' },
     { id: 'frozen', label: 'Card frozen' },

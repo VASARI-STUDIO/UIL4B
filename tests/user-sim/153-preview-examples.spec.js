@@ -63,6 +63,7 @@ import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-h
 // roles: the roles each example tags, by hand, from its ROLES in <File>.data.js.
 // The states a preview can be shown in, by the label in the dialog's State menu. A preview with no entry has one frame.
 const STATES = {
+  'Trail run app': ['Activity', 'Live tracking', 'Segment PR'],
   'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
   'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
 }
