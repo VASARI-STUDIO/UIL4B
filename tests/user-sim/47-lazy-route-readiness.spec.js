@@ -426,9 +426,14 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
 
     // ── The vacuity, as five facts from one instant. Every condition the old
     // contract required is TRUE here, and the gallery is empty. ──
+    // The loader shows from the first render, but /api/fonts is only asked for after the static
+    // catalogue (a 404 here) has answered, so wait for the request instead of reading it at once.
+    await expect.poll(() => served, {
+      message: 'the catalogue request must actually have been held, or this proves nothing',
+      timeout: 10000,
+    }).toBeGreaterThan(0)
+    await expect(page.locator('.typ-loading > .fg-loader'), 'and the tool is still waiting on it').toBeVisible()
     const held = await renderState(page)
-    expect(served, 'the catalogue request must actually have been held, or this proves nothing')
-      .toBeGreaterThan(0)
     expect(held.mounted, 'THE OLD CONTRACT: React has mounted').toBe(true)
     expect(held.booting, 'THE OLD CONTRACT: the static boot shell is gone').toBe(false)
     expect(held.loading, 'THE OLD CONTRACT: no Suspense fallback is on screen').toBe(false)
