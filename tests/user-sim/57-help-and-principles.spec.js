@@ -170,7 +170,13 @@ test.describe('Help & Getting Started', () => {
       .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('href')))])
     expect(hrefs.length, 'the page offers no destinations').toBeGreaterThanOrEqual(6)
 
-    for (const href of hrefs) {
+    // An email link (the no-account way to report community content) is a
+    // destination too, but not a page: it must name the support address, and
+    // it is not navigated to.
+    const mailLinks = hrefs.filter((href) => href.startsWith('mailto:'))
+    for (const href of mailLinks) expect(href, 'an email link names no one').toMatch(/^mailto:support@uil4b\.com(\?|$)/)
+
+    for (const href of hrefs.filter((h) => !h.startsWith('mailto:'))) {
       expect(href, 'a link points nowhere').toMatch(/^\//)
       await go(page, href)
       await expectRendered(page, href)

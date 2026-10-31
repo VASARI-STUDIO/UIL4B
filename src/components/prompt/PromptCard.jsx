@@ -6,6 +6,8 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 import useInViewPlayback, { allowsAnimatedPreview } from '../../hooks/useInViewPlayback'
 import UserName from '../UserName'
 import PromptSaveButton from './PromptSaveButton'
+import ReportButton from '../ReportButton'
+import { buildReportTarget } from '../../utils/contentReport'
 
 // A single prompt tile in the gallery. Presentational — all behaviour is wired
 // through props by the parent library.
@@ -129,6 +131,12 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
           {!isCommunity && <div className="pl-card-date-inline">{p.date}</div>}
         </div>
       </div>
+      {isCommunity && (
+        <ReportButton
+          className="pl-card-report"
+          target={buildReportTarget({ kind: 'prompt', id: p.id, name })}
+        />
+      )}
       {isCommunity && onToggleSave && (
         <PromptSaveButton
           className="lib-btn pl-card-save"

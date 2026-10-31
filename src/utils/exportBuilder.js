@@ -9,6 +9,7 @@ import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { tintLabelsFor } from './tintLabels.js'
 import { PALETTE_LABELS } from './paletteRoles.js'
 import { initialOf } from './initials.js'
+import { systemSentence, glyphStrip } from './exportTemplates/shared.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -204,7 +205,8 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <div class="sg-font-card">
           <div class="sg-font-label">Heading · ${headingFamily} ${headingWeight}</div>
           <p class="sg-font-sample" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:48px">The quick brown fox</p>
-          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</p>
+          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">${systemSentence({ heading: headingFamily, headingWeight, ratio: ts.ratio || 1.25 }, 'heading')}</p>
+          ${glyphStrip(`font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight}`)}
         </div>
         <div class="sg-font-card">
           <div class="sg-font-label">Body · ${bodyFamily} ${bodyWeight}</div>
