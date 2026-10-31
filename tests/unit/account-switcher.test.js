@@ -55,6 +55,19 @@ test('pending account changes are sent before a switch and before every sign-out
   const src = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/components/nav/AccountSwitcher.jsx'), 'utf8'))
   assert.match(src, /import \{ flushAccountSync \} from '\.\.\/\.\.\/hooks\/useFirestoreSync'/)
   assert.match(src, /await flushAccountSync\(\)\s*\n\s*const res = await switchAccount\(acct\)/, 'the switch does not flush first')
-  assert.match(src, /const signOut = async \(\) => \{[^}]*await flushAccountSync\(\);\s*logout\(\)/, 'sign-out does not flush first')
-  assert.match(src, /await flushAccountSync\(\)\s*\n\s*await logout\(\)/, '"Sign out of all" does not flush first')
+  // Both sign-out rows share one run(): the limited flush, and a stop when
+  // changes are unsent, come before logout().
+  assert.match(src, /import \{ flushBeforeSignOut[^}]*\} from '\.\.\/\.\.\/utils\/signOutFlush'/)
+  assert.match(src, /await flushBeforeSignOut\(\) !== 'sent'[\s\S]*?return\s*\}[\s\S]*?await logout\(\)/, 'sign-out does not flush first')
+  const flush = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/utils/signOutFlush.js'), 'utf8'))
+  assert.match(flush, /flushAccountSync/, 'the shared flush no longer sends pending changes')
+  assert.match(flush, /getSyncState/, 'the shared flush no longer reads the sync store for a failure')
+})
+
+test('a failed sign-out is told in the menu, with a retry', () => {
+  const src = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/components/nav/AccountSwitcher.jsx'), 'utf8'))
+  assert.match(src, /role="alert"/)
+  assert.match(src, />Try again</)
+  assert.match(src, />Sign out anyway</)
+  assert.doesNotMatch(src, /await flushAccountSync\(\);\s*logout\(\)/, 'sign-out went back to an unguarded flush')
 })
