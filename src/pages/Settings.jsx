@@ -614,6 +614,7 @@ function EmailEditField({ value, onSave, googleOnly, verification }) {
 // ever mapped, so every other failure — including the one Google accounts hit
 // on every single attempt — surfaced as that.
 const OFFLINE_DELETE = 'You appear to be offline. Nothing was deleted. Try again when you’re connected.'
+const UNCONFIRMED_DELETE = 'We lost the connection, so we can’t confirm whether your account was deleted. Sign in again to check. If you can’t, contact support@uil4b.com.'
 const DELETE_ERRORS = {
   'auth/wrong-password': 'That password is incorrect.',
   'auth/invalid-credential': 'That password is incorrect.',
@@ -630,13 +631,13 @@ const DELETE_ERRORS = {
 function deleteErrorText(e) {
   const mapped = DELETE_ERRORS[e?.code]
   if (mapped) return mapped
-  // The request to our own server has no Firebase code: offline it is a bare
-  // TypeError ("Failed to fetch"). Offline, the request never left, so nothing
-  // was deleted. Online, the answer was lost and we cannot say.
+  // The request to our own server has no Firebase code: a dropped connection
+  // is a bare TypeError ("Failed to fetch"). That can happen after the server
+  // has already deleted the account, online or offline, so nothing can be said
+  // about whether it was deleted. Only auth/network-request-failed, raised
+  // before the request is sent, is safe to answer with "Nothing was deleted".
   if (e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(e?.message || '')) {
-    return (typeof navigator !== 'undefined' && navigator.onLine === false)
-      ? OFFLINE_DELETE
-      : 'We could not reach our server, so we cannot confirm whether your account was deleted. Check your connection and try again.'
+    return UNCONFIRMED_DELETE
   }
   // The server's own messages are already written for a user to read, and carry
   // a correlation id support can trace.
@@ -996,15 +997,23 @@ export default function Settings({ toast }) {
   // on that would leave the field on "Saving…", so offline (or after the wait
   // below) the edit is kept on this device and the answer says that it has not
   // reached the account yet. It resolves 'queued' then, 'saved' otherwise.
+  //
+  // The write can wait several seconds, and the account can change in that
+  // time (a switch, a sign-out). The uid is read again from a ref that tracks
+  // the latest auth state, and the edit is dropped if it is no longer the
+  // account the edit was made for.
+  const uidRef = useRef(user?.uid)
+  uidRef.current = user?.uid
   const saveProfile = async (fields, what) => {
     const refused = () => new Error(`Your ${what} could not be saved. Nothing was changed. Please try again.`)
-    if (!user?.uid) throw refused()
+    const uid = user?.uid
+    if (!uid) throw refused()
     let outcome = 'queued'
     if (typeof navigator === 'undefined' || navigator.onLine !== false) {
       let timer
       try {
         const fs = await loadFirestore()
-        const write = fs.setDoc(fs.doc(fs.db, 'users', user.uid), fields, { merge: true })
+        const write = fs.setDoc(fs.doc(fs.db, 'users', uid), fields, { merge: true })
         const wait = new Promise((resolve) => { timer = setTimeout(resolve, PROFILE_WRITE_WAIT_MS, 'queued') })
         outcome = await Promise.race([write.then(() => 'saved'), wait])
       } catch {
@@ -1013,6 +1022,7 @@ export default function Settings({ toast }) {
         clearTimeout(timer)
       }
     }
+    if (uidRef.current !== uid) throw refused()
     updateProfile(fields)
     return outcome
   }

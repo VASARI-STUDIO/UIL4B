@@ -162,10 +162,30 @@ test('a signed-out export says so rather than looking identical to a failed one'
 })
 
 test('the disclosure table is generated from the keys actually present', () => {
-  const out = buildExport({ local: { 'vs-accounts': [], 'vs-mystery': 1 }, session: {} })
+  const out = buildExport({ local: { 'vs-lang': 'en', 'vs-mystery': 1 }, session: {} })
   const keys = out.disclosure.map((d) => d.key)
-  assert.deepEqual(keys, ['vs-accounts', 'vs-mystery'])
+  assert.deepEqual(keys, ['vs-lang', 'vs-mystery'])
   assert.equal(out.about.browserKeys, 2)
+})
+
+test('other accounts\' details are withheld; only the signed-in profile-cache entry stays', () => {
+  const local = {
+    'vs-lang': 'en',
+    'vs-accounts': [{ uid: 'u1', email: 'a@b.c' }, { uid: 'u2', email: 'x@y.z' }],
+    'vs-profile-cache': { u1: { displayName: 'A' }, u2: { displayName: 'B' } },
+  }
+  const out = buildExport({ local, session: {}, account: { uid: 'u1' } })
+  assert.equal(out.browser.local['vs-accounts'], undefined)
+  assert.deepEqual(out.browser.local['vs-profile-cache'], { u1: { displayName: 'A' } })
+  assert.equal(out.browser.local['vs-lang'], 'en')
+  assert.deepEqual(out.about.withheldKeys, ['vs-accounts'])
+  assert.ok(!JSON.stringify(out).includes('x@y.z'))
+  // Signed out: no entry belongs to anyone, so the cache goes too.
+  const anon = buildExport({ local, session: {} })
+  assert.deepEqual(Object.keys(anon.browser.local), ['vs-lang'])
+  assert.deepEqual(anon.about.withheldKeys, ['vs-accounts', 'vs-profile-cache'])
+  // The inputs are not mutated, and clearing still sees every owned key.
+  assert.ok('vs-accounts' in local)
 })
 
 // ── Clearing ────────────────────────────────────────────────────────────────
