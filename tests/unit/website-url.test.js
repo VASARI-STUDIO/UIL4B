@@ -63,6 +63,6 @@ test('safeHttpUrl lets only http(s) through to an href', () => {
 test('Settings saves the website only through the check', () => {
   const src = stripJs(fs.readFileSync(path.join(process.cwd(), 'src/pages/Settings.jsx'), 'utf8'))
   assert.match(src, /checkWebsite\(raw\)/)
-  assert.match(src, /updateProfile\(\{ website: checked\.value \}\)/)
-  assert.doesNotMatch(src, /updateProfile\(\{ website: v \}\)/, 'the raw value went back to the profile')
+  assert.match(src, /saveProfile\(\{ website: checked\.value \}, 'website'\)/)
+  assert.doesNotMatch(src, /(updateProfile|saveProfile)\(\{ website: (v|raw) \}/, 'the raw value went back to the profile')
 })

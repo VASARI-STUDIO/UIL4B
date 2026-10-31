@@ -194,6 +194,8 @@ export function updatePassword(user, newPassword) {
  * read a resolved reauthentication as proof the password was right. */
 export function reauthenticateWithCredential(user, credential) {
   if (!isFakeUser(user)) return realReauthenticateWithCredential(user, credential)
+  const refused = authFailFor('reauthenticateWithCredential')
+  if (refused) return Promise.reject(refused)
   return Promise.resolve({ user, providerId: 'password', operationType: 'reauthenticate' })
 }
 
