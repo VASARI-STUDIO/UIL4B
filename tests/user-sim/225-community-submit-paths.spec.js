@@ -257,6 +257,23 @@ test.describe('/community: Submit design', () => {
     expectCreditedTo(docs[0], 'Freya Free', account.email)
   })
 
+  // Storage can be edited outside the dialog that checks a handle, so a stored value
+  // that breaks the handle rules is ignored and the profile name is used instead.
+  test('design: a stored handle that breaks the handle rules is not used', async ({ page }) => {
+    watch(page, 'member whose stored handle was edited to an invalid value')
+    await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'Freya Free!'))
+    const account = await signIn(page, { plan: 'free' })
+    await go(page, '/community')
+    await page.getByRole('button', { name: 'Submit design' }).first().click()
+    await designDialog(page).getByLabel('Name', { exact: true }).fill('Harbour landing')
+    await designDialog(page).getByRole('button', { name: 'Submit design' }).click()
+    await expect(toastText(page)).toContainText('Design submitted for review')
+    const docs = await docsIn(page, 'community-submissions')
+    expect(docs).toHaveLength(1)
+    expectCreditedTo(docs[0], 'Freya Free', account.email)
+    expect(docs[0].authorName).not.toContain('!')
+  })
+
   test('design: a refused write never says "submitted for review"', async ({ page }) => {
     watch(page, 'member whose design submission is refused')
     await signIn(page, { plan: 'free', deny: [{ path: 'community-submissions', code: 'permission-denied' }] })
