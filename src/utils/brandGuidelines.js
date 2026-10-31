@@ -9,7 +9,7 @@
 // The references are not token files and they are not a longer style guide. They
 // are PRESENTATION-QUALITY BRAND GUIDELINES: landscape spreads with a cover, a
 // running rail of section markers, a rationale paragraph beside every page
-// title, swatches carrying a NAME as well as a hex, boxed alphabet grids, logo
+// title, swatches carrying a NAME as well as a hex, type spreads, logo
 // pages, and a clear-space rule drawn with X measurements.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@
 //
 // The distinction is visible on the page, not just in the description. The book
 // sets full-width specification bands, mono figures and a running foot; this
-// sets named swatch cards, a section rail, boxed alphabet grids, and a rationale
+// sets named swatch cards, a section rail, type spreads, and a rationale
 // column beside every title. Neither is a reflow of the other.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,8 +76,9 @@
 //  · OpenPay (by SlabPixel) — the page anatomy. A rail carrying the mark, the
 //    section markers with the current one lit, and the year; then a page title
 //    on the left with TWO short rationale columns beside it; then a hairline and
-//    the content. Also the boxed alphabet grid, which is the single most
-//    recognisable thing on its typography spread.
+//    the content. Its typography spread also boxed the alphabet; this one sets a
+//    sentence about the system in each face instead, with the character set as a
+//    small strip, so a change of font changes the words on the page.
 //  · DSC Labs, “Mini Brand Identity Guidelines” — the numbered section openings
 //    (“01 Logo”) with the leaf pages listed beneath a hairline, and the swatch
 //    that carries its NAME and its hex INSIDE the colour rather than in a
@@ -106,7 +107,7 @@ import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExp
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
-import { esc, orderSections, paletteLayout, specimenScale, fmtRatio, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, paletteLayout, specimenScale, fmtRatio, systemSentence, glyphStrip, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
 import { guidelineNotes } from './exportTemplates/guidelines/notes.js'
@@ -475,44 +476,26 @@ function inUsePage(ctx, group, first, folio) {
 
 /* ── type pages ───────────────────────────────────────────────────────────── */
 
-const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-const LOWER = 'abcdefghijklmnopqrstuvwxyz'.split('')
-const FIGURES = '0123456789'.split('')
-
-/** The boxed alphabet grid — OpenPay's signature. Ten columns, hairline cells,
- *  set in the real face; the last row runs short and is left short, because a
- *  grid padded to squareness stops being a character set. */
-function alphabet(chars, family, weight, cls = '') {
-  const cells = chars.map(c => `<span>${esc(c)}</span>`).join('')
-  return `<div class="alpha${cls}" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">${cells}</div>`
-}
-
-/** The weights `family` is set in by this document, heading's first: the weight of each role that uses it. */
-function weightsUsed(d, family) {
-  return [...new Set([family === d.heading ? d.headingWeight : null, family === d.body ? d.bodyWeight : null].filter(Boolean))]
-}
-
 /**
- * The grids on a face's page. One weight: uppercase, lowercase and figures as three
- * grids. A family set at two weights (one family for both roles): each weight's whole
- * character set in one grid, so both are shown and the page still holds them.
+ * What a face's page sets: for each role that uses the family (headings, body), a
+ * sentence about this system in the family at that role's weight, then the character
+ * set as a strip. A family that sets both roles shows both, each at its own weight.
  */
-function alphabets(family, weights) {
-  if (weights.length < 2) {
-    const [weight] = weights
-    return `<p class="tf-lbl">Uppercase</p>
-        ${alphabet(UPPER, family, weight)}
-        <p class="tf-lbl">Lowercase</p>
-        ${alphabet(LOWER, family, weight)}
-        <p class="tf-lbl">Figures</p>
-        ${alphabet(FIGURES, family, weight)}`
-  }
-  return weights.map(weight => `<p class="tf-lbl">Weight ${esc(weight)}</p>
-        ${alphabet([...UPPER, ...LOWER, ...FIGURES], family, weight, ' alpha-all')}`).join('')
+function specimens(d, family) {
+  const roles = [['heading', 'Headings', d.headingWeight], ['body', 'Body', d.bodyWeight]].filter(([key]) => d[key] === family)
+  const specs = roles.map(([key, label, weight]) => {
+    const face = `font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}`
+    return `<div class="tf-spec">
+        <p class="tf-lbl">${label}, weight ${esc(weight)}</p>
+        <p class="tf-set" style="${face}">${esc(systemSentence(d, key))}</p>
+        <div class="tf-strip">${glyphStrip(face)}</div>
+      </div>`
+  })
+  return { html: specs.join(''), two: specs.length > 1 }
 }
 
 function facePage(ctx, { role, family, weight, spacing, folio, notes }) {
-  const weights = weightsUsed(ctx.d, family)
+  const { html, two } = specimens(ctx.d, family)
   return spread(ctx, {
     section: 'type',
     title: role,
@@ -523,8 +506,8 @@ function facePage(ctx, { role, family, weight, spacing, folio, notes }) {
         <p class="tf-name" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight};letter-spacing:${spacing || 0}em">${esc(family)}</p>
         <p class="tf-ag" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">Ag</p>
       </div>
-      <div class="tf-right">
-        ${alphabets(family, weights)}
+      <div class="tf-right${two ? ' tf-two' : ''}">
+        ${html}
       </div>
     </div>`,
     folio,

@@ -8,7 +8,7 @@
 // column with a 6 mm gap. Recto pages (odd folios) put the margin column on the
 // outer right edge; verso pages mirror it, so a printed spread reads as a book.
 
-import { esc, safeHex, inkName, paletteLayout, chromeFor, clampTitle, specimenScale, fmtRatio, matrixBlocks } from '../shared.js'
+import { esc, safeHex, inkName, paletteLayout, chromeFor, clampTitle, specimenScale, fmtRatio, matrixBlocks, systemSentence, glyphStrip } from '../shared.js'
 import { mixHex } from '../roles.js'
 
 const CHROME = Object.freeze({ family: 'Literata', weights: '200 900', file: 'literata-latin.woff2' })
@@ -182,7 +182,8 @@ function typography(ctx) {
   const { d, ladder } = ctx
   const family = (role, name, weight, spacing) => `<div class="rw fm">
       <div class="tx"><p class="fm-name" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight};letter-spacing:${spacing || 0}em">${esc(name)}</p>
-      <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ., : ; ! ? ( ) &ndash; @ # % $</p></div>
+      <p class="fm-set" style="font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}">${esc(systemSentence(d, role === 'Headings' ? 'heading' : 'body'))}</p>
+      ${glyphStrip(`font-family:'${esc(name)}',system-ui,sans-serif;font-weight:${weight}`)}</div>
       <div class="mg"><p class="role">${esc(role)}</p>${dl([['Weight', weight], ['Tracking', spacing ? `${spacing}em` : 'normal']])}</div>
     </div>`
   // One factor for every step, so the ratios between the specimens stay true.
