@@ -130,7 +130,8 @@ async function expectWaitingForReload(page, seen, held, { fallback = true } = {}
 async function expectLoadFailedCard(page) {
   const card = page.locator('.error-boundary')
   await expect(card).toBeVisible()
-  await expect(card.getByRole('heading', { name: "This page didn't load" })).toBeVisible()
+  // Level 1 and the typographic apostrophe: the card's heading is the page's h1.
+  await expect(card.getByRole('heading', { level: 1, name: 'This page didn’t load' })).toBeVisible()
   return card
 }
 
@@ -229,7 +230,7 @@ test.describe('a lazy page that fails to download', () => {
     await expect.poll(() => held.length).toBe(1)
   })
 
-  test('offline, the page says the connection is down, does not reload, and offers the retry once back online', async ({ page }) => {
+  test('offline, the page says the connection is down, does not reload, holds Try again, and frees it once back online', async ({ page }) => {
     const seen = watchReports(page)
     await go(page, '/privacy')
     await page.route(CREDITS_CHUNK, (route) => route.abort())
@@ -243,18 +244,53 @@ test.describe('a lazy page that fails to download', () => {
     await navigateInApp(page, '/credits')
 
     const card = await expectLoadFailedCard(page)
-    await expect(card).toContainText("You're offline")
-    await expect(card.getByRole('button', { name: 'Try again' })).toHaveCount(0)
+    await expect(card).toContainText(/You['’]re offline, so this page couldn['’]t be downloaded\. You can try again once you reconnect\./)
+    const tryAgain = card.getByRole('button', { name: 'Try again' })
+    // Held, not removed: the button stays so the person can see why it waits,
+    // and the lead explains it.
+    await expect(tryAgain).toBeVisible()
+    await expect(tryAgain).toBeDisabled()
+    await expect(tryAgain).toHaveAccessibleDescription(/You['’]re offline/)
+    await expect(card.getByRole('link', { name: 'Go to the home page' })).toBeEnabled()
+    await expect(card.getByRole('button', { name: 'Report this problem' })).toBeEnabled()
+    await expect(card.locator('.error-boundary-status')).toHaveText('')
     expect(held.length, 'reloaded while offline').toBe(0)
 
     await page.evaluate(() => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => true })
       window.dispatchEvent(new Event('online'))
     })
-    await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(tryAgain).toBeEnabled()
+    await expect(card.getByRole('status')).toContainText('You’re back online.')
+    await expect(card, 'the offline sentence should give way to the ordinary one')
+      .toContainText(/Part of this page couldn['’]t be downloaded/)
+    // Back online must not reload by itself (the person may be reading), and
+    // must not move focus off the heading.
+    await expect(card.getByRole('heading', { level: 1 })).toBeFocused()
+    expect(held.length, 'reloaded on its own when the connection returned').toBe(0)
     expect(seen.reports, 'an offline download failure is not the site\'s fault').toEqual([])
     expect(seen.defaultThrows).toEqual([])
     expect(seen.posted).toEqual([])
+  })
+
+  test('offline, Go to the home page still works: it reaches / and renders the sales page', async ({ page, context }) => {
+    await go(page, '/privacy')
+    await page.route(CREDITS_CHUNK, (route) => route.abort())
+    await holdReloads(page, '/credits')
+    await page.evaluate(() => {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false })
+      window.dispatchEvent(new Event('offline'))
+    })
+    await navigateInApp(page, '/credits')
+    const card = await expectLoadFailedCard(page)
+    // Really offline for the click too: the home page is in the entry bundle,
+    // so the client-side link needs no network.
+    await context.setOffline(true)
+    await card.getByRole('link', { name: 'Go to the home page' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.locator('.error-boundary')).toHaveCount(0)
+    await expectRendered(page, '/')
+    await context.setOffline(false)
   })
 
   test('its stylesheet and its JS file both: the page still waits for the one reload', async ({ page }) => {
@@ -300,7 +336,7 @@ test.describe('a lazy page that fails to download', () => {
     await expect(page.locator('.page-loading'), 'the page should wait for its reload first').toBeVisible()
 
     const card = page.locator('.error-boundary')
-    await expect(card.getByRole('heading', { name: "This page didn't load" })).toBeVisible({ timeout: 25000 })
+    await expect(card.getByRole('heading', { level: 1, name: 'This page didn’t load' })).toBeVisible({ timeout: 25000 })
     await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
     await expect.poll(() => seen.reports.length, {
       message: 'the failure that outlived its reload was never reported',
