@@ -274,6 +274,28 @@ export function nextArticle(slug) {
   return LEARN_ARTICLES[(at + 1) % LEARN_ARTICLES.length]
 }
 
+/**
+ * The next article on the same topic, in registry order, wrapping within the
+ * topic. A topic with a single article has nothing to wrap to, so it falls back
+ * to nextArticle(); the caller tells the two apart by comparing `topic`.
+ * Undefined for an unknown slug.
+ */
+export function nextInTopic(slug) {
+  const here = findArticle(slug)
+  if (!here) return undefined
+  const sameTopic = LEARN_ARTICLES.filter((a) => a.topic === here.topic)
+  if (sameTopic.length < 2) return nextArticle(here.slug)
+  const at = sameTopic.findIndex((a) => a.slug === here.slug)
+  return sameTopic[(at + 1) % sameTopic.length]
+}
+
+/**
+ * The id of a topic's group on the /learn index, which is where an article's
+ * breadcrumb sends the reader. The index builds its ids with the same
+ * expression, which tests/unit/learn-articles.test.js asserts.
+ */
+export const topicAnchorId = (topic) => `learn-topic-${String(topic).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+
 /** Titles + descriptions for routeMetaMap, keyed by route. */
 export const LEARN_PAGE_TITLES = Object.freeze(
   Object.fromEntries(LEARN_ARTICLES.map((a) => [`/learn/${a.slug}`, `UI L4B | ${a.title}`])),
