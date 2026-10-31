@@ -281,23 +281,22 @@ test.describe('image to palette picker', () => {
 
     const before = await page.locator(MARKER).first().getAttribute('data-hex')
     const beforeX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
-    // One press = one SOURCE pixel: 1/400 of a 400px-wide image = 0.25%.
+    // One press = 1% of the displayed image, whatever the photo's own size.
     await page.keyboard.press('ArrowRight')
     const afterX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
-    expect(afterX - beforeX, 'one arrow press should step exactly one source pixel').toBeCloseTo(0.25, 2)
+    expect(afterX - beforeX, 'one arrow press should step 1% of the displayed image').toBeCloseTo(1, 1)
 
-    // Shift steps ten, so crossing a 400px photo does not take 400 presses.
-    // From band 1 (12.5% ≈ x=50) ten Shift presses is 1000px — clamped to the
-    // right edge, which is band 4. Cross one band boundary instead: 5 presses
-    // of Shift from mid-band-1 lands at x=101, inside band 2.
-    for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight')
+    // Shift steps 5%. Five presses move a quarter of the image: one band of
+    // this four-band picture. Head for the middle so the edge cannot clamp it.
+    const dir = beforeX + 1 < 50 ? 'Shift+ArrowRight' : 'Shift+ArrowLeft'
+    for (let i = 0; i < 5; i++) await page.keyboard.press(dir)
     const after = await page.locator(MARKER).first().getAttribute('data-hex')
     expect(after, 'Shift+Arrow should cross into the next band').not.toBe(before)
 
     // The nudge is announced — the loupe is aria-hidden (a canvas of pixels is
     // not something to read out), so without this a screen-reader user moving a
     // marker gets silence.
-    await expect(page.locator('.plb-imgcard p[aria-live]')).toContainText(after.toUpperCase())
+    await expect(page.locator('.plb-imgcard p[aria-live]').filter({ hasText: /^Point \d+ is on/ })).toContainText(after.toUpperCase())
   })
 
   // The picker moved out of the toolbar's dismiss layer (which closes anything
