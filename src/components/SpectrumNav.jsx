@@ -105,7 +105,9 @@ function QuietLink({ href, label, className, current, mi, onClick, onHash }) {
 // (lines 2094-2116), with its own numbers: nothing hides in the first 120px, a
 // downward move of more than 2px hides it, and an upward move waits 140ms
 // before bringing it back so a stray wheel nudge does not flash the bar. The
-// menu being open pins it visible.
+// menu being open pins it visible, and so does keyboard focus inside the bar: a
+// bar that hides while a control in it holds focus leaves the focus indicator
+// off screen (WCAG 2.4.7 / 2.4.11).
 //
 // IT RETURNS A FLAG, NOT A STYLE. The design wrote `transform` and `opacity`
 // straight onto the element and branched on reduced motion in JS. Here the flag
@@ -134,6 +136,7 @@ export default function SpectrumNav() {
   }, [])
   const [searchOpen, setSearchOpen] = useState(false)
 
+  const navRef = useRef(null)
   const burgerRef = useRef(null)
   const sheetRef = useRef(null)
   const lastY = useRef(0)
@@ -141,6 +144,17 @@ export default function SpectrumNav() {
   const openRef = useRef(false)
 
   useEffect(() => { openRef.current = open }, [open])
+
+  // Keyboard focus arriving in the bar while it is hidden brings it back at
+  // once. :focus-visible, not any focus, so a mouse click on the theme button
+  // does not pin the bar open. The stylesheet's :has(:focus-visible) shows it on
+  // the same frame; this keeps the hidden flag in step.
+  const onNavFocus = (e) => {
+    if (!e.target.matches(':focus-visible')) return
+    clearTimeout(returnTimer.current)
+    returnTimer.current = null
+    setHidden(false)
+  }
 
   // The exit's unmount. Under reduced motion there is no exit to wait for.
   useEffect(() => {
@@ -156,7 +170,9 @@ export default function SpectrumNav() {
       const y = Math.max(0, window.scrollY || 0)
       const dy = y - lastY.current
       lastY.current = y
-      if (y < HIDE_AFTER || openRef.current) {
+      const active = document.activeElement
+      const focusInBar = !!(active && navRef.current?.contains(active) && active.matches(':focus-visible'))
+      if (y < HIDE_AFTER || openRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(false)
@@ -250,6 +266,14 @@ export default function SpectrumNav() {
       // Lenis reads the target's scroll-margin-top itself.
       if (lenis) lenis.scrollTo(el)
       else el.scrollIntoView({ block: 'start' })
+      // The link that held focus has just unmounted, so focus would fall to the
+      // body and the next Tab would restart at the skip link. Focus goes to the
+      // section instead; a plain section is made focusable by script only.
+      if (!el.hasAttribute('tabindex') && el.tabIndex < 0) {
+        el.setAttribute('tabindex', '-1')
+        el.setAttribute('data-menu-jump', '')
+      }
+      el.focus({ preventScroll: true })
     })
   }, [setOpen])
 
@@ -296,6 +320,8 @@ export default function SpectrumNav() {
     <>
       <nav
         className="spnav"
+        ref={navRef}
+        onFocus={onNavFocus}
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
         data-hero-cta={heroCta ? '1' : '0'}
@@ -303,12 +329,12 @@ export default function SpectrumNav() {
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>
             {/* One accessible name for the logo, so a screen reader meets
-                "UI L4B home" and not "UI L 4 B". */}
+                "UIL4B home" and not "UI L 4 B". */}
             <span className="spnav-word" aria-hidden="true">
               <BrandLockup className="brand-logo-wide" />
               <BrandSymbol className="brand-logo-narrow" />
             </span>
-            <span className="sr-only">UI L4B home</span>
+            <span className="sr-only">UIL4B home</span>
           </Link>
 
           <span className="spnav-rule" aria-hidden="true" />

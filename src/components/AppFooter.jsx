@@ -115,7 +115,7 @@ export default function AppFooter({ compact = false }) {
         <nav className="app-footer-links" aria-label="Footer">
           {FOOTER_GROUPS.map((group) => (
             <div className="app-footer-group" key={group.label}>
-              <p>{group.label}</p>
+              <h2 className="app-footer-group-h">{group.label}</h2>
               {/* Unfinished pages are listed for admins only. */}
               {group.links.filter(([to, , soon]) => isAdmin || !(soon || isSoonPath(to))).map(([to, label, soon]) => (
                 soon ? (
