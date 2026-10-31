@@ -35,6 +35,40 @@ export const PREVIEW_ASSETS = {
       changes: 'Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
     },
   },
+  'ferry-morning': {
+    folder: 'ferry',
+    file: 'ferry-morning',
+    widths: [640, 1080],
+    width: 1672,
+    height: 941,
+    alt: 'A cream and green harbour ferry pulling away from a sandstone wharf on calm water in the early morning',
+    recolourable: false,
+    placeholder: 'data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAADQAQCdASoQAAkAA4BaJZQAAxZfLMk4AAD+9kiF/6ItpYzyUFWCjScnSLfCLxd/2qDIO3xnAAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'Two small shapes on the upper deck and in the wheelhouse glass painted out, saturation lowered by a tenth, highlights held under 97 percent, and resized to 640 and 1080 pixels wide.',
+    },
+  },
+  'ferry-morning-portrait': {
+    folder: 'ferry',
+    file: 'ferry-morning-portrait',
+    widths: [480, 752],
+    width: 752,
+    height: 940,
+    alt: 'A cream and green harbour ferry pulling away from a sandstone wharf on calm water in the early morning, cropped upright',
+    recolourable: false,
+    placeholder: 'data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAADQAwCdASoQABQAPu1kqk4ppaQiMAgBMB2JZwDE2CHfrXCHIn1QDwwA/uqK5kkFXupXhgQCHqgemjaCiIKJb4yrDND/tslGPwPfrkCHkQ4Ded87gAA=',
+    credit: {
+      source: 'Generated',
+      author: 'Generated with OpenAI image generation via Codex CLI',
+      licence: 'Generated image, made for UIL4B; no person depicted',
+      url: '',
+      changes: 'The upright 4 by 5 crop of the same picture, with the same retouching and grade, resized to 480 and 752 pixels wide.',
+    },
+  },
 }
 
 export const EXTENSIONS = ['avif', 'webp']
