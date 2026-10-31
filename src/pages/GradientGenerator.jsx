@@ -2092,7 +2092,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 ))}
                 {hiddenRow > 0 && (
                   <Link to="/create/palette" className="grd-chips-more">
-                    +{hiddenRow} more<span className="sr-only">{hiddenRow === 1 ? ' colour' : ' colours'} in Palette Builder</span>
+                    +{hiddenRow}<span className="grd-chips-more-w"> more</span><span className="sr-only">{hiddenRow === 1 ? ' colour' : ' colours'} in Palette Builder</span>
                   </Link>
                 )}
               </div>

@@ -431,6 +431,14 @@
 /* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* On a fine pointer the word "more" is spoken, not drawn, so "+2" takes one chip's
+   slot and the row stays one line; a finger's wider slots have room for it. */
+.grd .grd-chips-more { position: relative; padding: 0 4px; }
+.grd .grd-chips-more-w { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) {
+  .grd .grd-chips-more { padding: 0 6px; }
+  .grd .grd-chips-more-w { position: static; width: auto; height: auto; overflow: visible; clip-path: none; margin-left: .25em; }
+}
 .grd .grd-chip {
   display: grid;
   place-items: center;
@@ -968,7 +976,7 @@
 /* A narrowing filter puts a dot on Random's icon (the toolbar button). */
 .grd .tl-btn.grd-random { position: relative; }
 .grd .grd-random.is-narrowed::after {
-  content: ""; position: absolute; top: 5px; left: 22px; width: 6px; height: 6px;
+  content: ""; position: absolute; top: 9px; left: 25px; width: 6px; height: 6px;
   border-radius: 50%; background: var(--t0); forced-color-adjust: none;
 }
 /* Back with nothing to go back to: stepped back, never scaled, still focusable so
@@ -978,16 +986,21 @@
 
 /* The filter rows kept from the old Shuffle settings (Type, Stops) and the
    checklist behind "Pick…". */
-.grd-gen .grd-shuf-row { display: grid; gap: 6px; }
-.grd-gen .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
-.grd-gen .tl-pills { flex-wrap: wrap; }
+.grd-gen .grd-shuf-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 4px; }
+.grd-gen .grd-shuf-k { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd-gen .grd-shuf-row > .tl-pills { grid-column: 2; }
+.grd-gen .grd-shuf-row > .grd-shuf-lock { grid-column: 1 / -1; grid-row: 2; }
+.grd-gen .grd-shuf-row > .grd-shuf-lock ~ .tl-pills { grid-row: 1; }
+.grd-gen .tl-pills { gap: 4px; flex-wrap: wrap; }
 .grd-gen .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* Type and Stops use the same chip as the rows above, so the section reads as one list. */
+.grd-gen .grd-shuf-row .tl-pill { justify-content: center; min-height: 28px; padding: 0 8px; border-radius: var(--btn-radius); font-size: 12px; line-height: 1; }
 /* A lock has overruled this row: the pills keep the setting the person made but
    step back, and the note under the label says why. */
 .grd-gen .grd-shuf-lock { margin: -2px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-ink); }
 .grd-gen .grd-shuf-row[data-locked] .tl-pill { opacity: .6; cursor: not-allowed; }
 .grd-gen .grd-shuf-row[data-locked] .tl-pill:active { transform: none; }
-.grd-gen .grd-shuf-hint { margin: -4px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+.grd-gen .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
 /* The palette colours Random may use. It scrolls inside itself, so a long palette
    never stretches the panel; hairlines frame it rather than a second card. */
 .grd-gen .grd-pool { display: grid; gap: 2px; max-height: 208px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; border-block: 1px solid var(--tl-hair); }
@@ -1007,7 +1020,8 @@
 @media (pointer: coarse) {
   .grd-gen .grd-pool-opt { min-height: 44px; }
   .grd-gen .grd-pool-opt input { width: 22px; height: 22px; }
-  .grd-gen .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
+  .grd-gen .tl-pill,
+  .grd-gen .grd-shuf-row .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
   .grd .tl-pill.grd-gen-chip { min-height: 44px; min-width: 44px; padding: 0 8px; }
   .grd .grd-gen-more { height: 44px; min-width: 44px; }
   .grd .grd-gen-lockbtn,
