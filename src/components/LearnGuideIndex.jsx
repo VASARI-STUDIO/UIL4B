@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import LibrarySearch from './library/LibrarySearch'
 import { LEARN_ARTICLES, TOPICS, readingMinutes } from '../data/learnIndex'
+import { LEARN_GROUPS } from '../data/toolTree'
 import { PLACES, searchGuides, termsOf } from '../utils/learnSearch'
 
 // The guide index on /learn: every published guide, grouped by the topic its
@@ -28,6 +29,15 @@ import { PLACES, searchGuides, termsOf } from '../utils/learnSearch'
 // shows the sentence fragment it was found in, because the card otherwise
 // gives the reader no way to see why it matched.
 //
+// ── Pages that help rather than teach ──────────────────────────────────────
+//
+// Help and Design Principles live under /learn/ but are not guides, so they
+// are not in the registry and the topic groups never list them. They get one
+// extra group after the topics, shown only while the field is empty. Labels and
+// routes are read from LEARN_GROUPS so the rows cannot drift from the menu; the
+// summaries are the ones the site map prints for the same two pages. Search
+// does not match these rows.
+//
 // ── The reveal attribute ───────────────────────────────────────────────────
 //
 // The cards carry `data-reveal` for the landing's one-shot scroll reveal,
@@ -47,17 +57,29 @@ const loadBodies = () => {
   return bodiesPromise
 }
 
+const USING_ID = 'learn-topic-using-uil4b'
+const USING_ROWS = [
+  { id: 'help', dek: 'What each tool opens with, and what the free plan covers.' },
+  { id: 'principles', dek: 'The rules the tools enforce, with the measurements beside them.' },
+].flatMap(({ id, dek }) => {
+  const group = LEARN_GROUPS.find((g) => g.id === id)
+  return group ? [{ id, dek, label: group.label, route: group.route }] : []
+})
+
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 export default function LearnGuideIndex() {
   const [query, setQuery] = useState('')
   const [bodies, setBodies] = useState(null)
   const [touched, setTouched] = useState(false)
+  // True once the full-text module has failed to load, so the status can say
+  // that results come from titles, deks and headings only.
+  const [failed, setFailed] = useState(false)
   const wrap = useRef(null)
 
   const ensureBodies = () => {
     if (bodies) return
-    loadBodies().then(setBodies).catch(() => setBodies({}))
+    loadBodies().then(setBodies).catch(() => { setFailed(true); setBodies({}) })
   }
   const change = (value) => {
     setTouched(true)
@@ -95,7 +117,9 @@ export default function LearnGuideIndex() {
   if (searching) {
     status = !bodies
       ? 'Searching…'
-      : hits.length === 0
+      : failed
+        ? 'Searching titles only. The full text didn’t load, so matches inside a guide won’t show.'
+        : hits.length === 0
         ? `No guide mentions “${query.trim()}”.`
         : `${plural(hits.length, 'guide')} ${hits.length === 1 ? 'matches' : 'match'} “${query.trim()}”.`
   } else if (touched) {
@@ -107,7 +131,8 @@ export default function LearnGuideIndex() {
   // The live region keeps its sentence for assistive technology in every
   // state, but when the empty state prints the same sentence as its heading
   // a sighted reader would see it twice, so it is visually hidden then.
-  const statusClass = empty ? 'lidx-status sr-only' : 'lidx-status'
+  // The failed-load notice is the one status a sighted reader needs to see.
+  const statusClass = empty && !failed ? 'lidx-status sr-only' : 'lidx-status'
 
   return (
     <>
@@ -117,7 +142,7 @@ export default function LearnGuideIndex() {
           onChange={change}
           onFocus={ensureBodies}
           label="Search the guides"
-          placeholder="Search titles and text — luminance, clamp(), swap…"
+          placeholder="Search guides, e.g. clamp()"
         />
         {!searching && (
           <nav className="lidx-topics" aria-label="Guide topics">
@@ -127,6 +152,7 @@ export default function LearnGuideIndex() {
                 <span className="lidx-topic-n">{g.total}</span>
               </a>
             ))}
+            <a href={`#${USING_ID}`}>Using UIL4B</a>
           </nav>
         )}
       </div>
@@ -136,10 +162,11 @@ export default function LearnGuideIndex() {
         <div className="lidx-empty">
           <p className="lidx-empty-h">No guide mentions “{query.trim()}”.</p>
           <p className="lidx-empty-p">
-            Try one word rather than a phrase — luminance, ratio, swap — or a
-            topic: {TOPICS.map((t) => t.toLowerCase()).join(', ')}. The search
-            reads every guide’s full text, so a term that is not here is not in
-            any guide yet.
+            Try one word, such as luminance, ratio or swap, or a topic:{' '}
+            {TOPICS.map((t) => t.toLowerCase()).join(', ')}.
+            {!failed && ' Search reads the full text of every guide.'}
+            {' '}For help with the tools, see{' '}
+            <Link to="/learn/help">Help and getting started</Link>.
           </p>
           {/* A rectangle, not the retired `.ui-pill`: an app control, drawn
               the way the app design file draws its secondary buttons. */}
@@ -177,6 +204,20 @@ export default function LearnGuideIndex() {
               </div>
             </section>
           ))}
+          {!searching && USING_ROWS.length > 0 && (
+            <section className="lidx-topic-sec" id={USING_ID} aria-labelledby={`${USING_ID}-h`}>
+              <h3 className="lidx-topic-h" id={`${USING_ID}-h`}>Using UIL4B</h3>
+              <div className="lidx-grid">
+                {USING_ROWS.map((r) => (
+                  <Link className="lidx-card" key={r.id} to={r.route} {...reveal}>
+                    <span className="lidx-title">{r.label}</span>
+                    <span className="lidx-dek">{r.dek}</span>
+                    <span className="lidx-go" aria-hidden="true">&rarr;</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </>
