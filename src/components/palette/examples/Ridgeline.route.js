@@ -3,7 +3,7 @@
 // The Ridgeline route and its map. Map data (c) OpenStreetMap contributors, ODbL 1.0.
 // Heights: Copernicus DEM GLO-90 through Open-Meteo, sampled every 100 m along the walk.
 // Every x and y is in the layers' own 1200 x 970 box (public/previews/ridgeline/*.svg),
-// where one unit is 3 m.
+// where one unit is 2.96 m.
 
 export const VIEW = { w: 1200, h: 970, metresPerUnit: 2.963 }
 
