@@ -47,6 +47,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
 import SaveShareMenu from '../components/tool/SaveShareMenu'
@@ -800,6 +801,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
+  // The preview opens in the theme the site is showing.
+  const { theme: siteTheme } = useTheme()
   const { openProModal } = useProModal()
   // The gallery popup's two library tabs. The bundle holds the free brands and
   // the free curated palettes in full and a name-only stub for every Pro brand;
@@ -1613,7 +1616,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       }
     }
     const onEsc = (e) => {
-      if (e.key !== 'Escape') return
+      // An Escape a layer inside the preview dialog already took (its State menu, say) is not ours.
+      if (e.key !== 'Escape' || e.defaultPrevented) return
       if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
       const cp = colPanelRef.current
       if (cp && !ctxMenu) panelReturnRef.current = { i: cp.i, opener: panelOpenerRef.current }
@@ -2525,7 +2529,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   const compareVariation = (v) => {
     setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: v })
+    setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: v })
   }
   // Generic "line it up against the current palette" — used by the brand and
   // community rows, which carry no precomputed score, so we compute one here.
@@ -2533,7 +2537,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
     if (cols.length < 2) return
     setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: { label, colors: cols, score: scorePalette(cols) } })
+    setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: { label, colors: cols, score: scorePalette(cols) } })
   }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
@@ -3021,7 +3025,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
   const openPreview = () => {
     closeAllMenus()
-    setPreview({ mode: 'light', scene: openingScene(lastScene, isPro && planKnown), compare: null })
+    setPreview({ mode: siteTheme, scene: openingScene(lastScene, isPro && planKnown), compare: null })
   }
   // Secondary actions move into Extra tools when the toolbar runs out of room.
   // Left of the divider is what builds the board; right of it is what you do
