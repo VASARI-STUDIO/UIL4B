@@ -487,7 +487,7 @@
 /* Nine 28px chips with 4px gaps are 284px, so a full palette row fits one line in the
    side card's 287px of room (302px less a 15px scrollbar gutter). */
 .grd .grd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.grd .grd-chips--shades { gap: 3px; }
+.grd .grd-chips--shades { gap: 3px; flex-wrap: nowrap; }
 /* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
@@ -519,8 +519,9 @@
 .grd .grd-chip:active { transform: scale(0.97); }
 .grd .grd-chip.is-light { color: oklch(0.2 0 0); }
 /* Eleven 24px chips with 3px gaps are 294px, 7px more than the card's 287px with a
-   classic scrollbar. Each may give up to 2px (22px floor), so the row stays one line
-   and the chips stay round. The 3px ring below then ends where the next chip begins. */
+   classic scrollbar. The row is nowrap (flex-wrap would break the line on the 24px
+   basis before any shrinking), so each chip gives up to 2px (22px floor) and
+   aspect-ratio keeps it round. The coarse block below restores wrap for 44px chips. */
 .grd .grd-chips--shades .grd-chip { flex: 0 1 24px; width: auto; height: auto; min-width: 22px; aspect-ratio: 1; }
 /* 3px, so the ring clears the next chip across a 4px gap. */
 .grd .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
@@ -887,7 +888,7 @@
   .grd .grd-paint-src { height: 44px; padding: 0 10px; font-size: 13px; }
   .grd .grd-paint-link { min-height: 44px; }
   .grd .grd-chips-more { height: 44px; }
-  .grd .grd-chips--shades { gap: 4px; }
+  .grd .grd-chips--shades { gap: 4px; flex-wrap: wrap; }
   .grd .grd-chips--shades .grd-chip { flex: 0 0 auto; width: 44px; height: 44px; min-width: 0; aspect-ratio: auto; }
   .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
   .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
