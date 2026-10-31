@@ -484,14 +484,16 @@
 }
 .grd .grd-paint-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-shades { display: grid; gap: 6px; }
-.grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Nine 28px chips with 4px gaps are 284px, so a full palette row fits one line in the
+   side card's 287px of room (302px less a 15px scrollbar gutter). */
+.grd .grd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .grd .grd-chips--shades { gap: 3px; }
 /* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 /* On a fine pointer the word "more" is spoken, not drawn, so "+2" takes one chip's
    slot and the row stays one line; a finger's wider slots have room for it. */
-.grd .grd-chips-more { position: relative; padding: 0 4px; }
+.grd .grd-chips-more { position: relative; padding: 0 3px; }
 .grd .grd-chips-more-w { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (pointer: coarse) {
   .grd .grd-chips-more { padding: 0 6px; }
@@ -517,7 +519,8 @@
 .grd .grd-chip:active { transform: scale(0.97); }
 .grd .grd-chip.is-light { color: oklch(0.2 0 0); }
 .grd .grd-chips--shades .grd-chip { width: 24px; height: 24px; }
-.grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
+/* 3px, so the ring clears the next chip across a 4px gap. */
+.grd .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--t0); }
 .grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
@@ -875,6 +878,8 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
+  .grd .grd-chips { gap: 6px; }
+  .grd .grd-chip.is-on { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
   .grd .grd-paint-head { min-height: 44px; }
   .grd .grd-paint-src { height: 44px; padding: 0 10px; font-size: 13px; }
   .grd .grd-paint-link { min-height: 44px; }
@@ -1142,10 +1147,10 @@
 .grd .grd-ctx {
   position: absolute; top: 12px; left: 12px; z-index: 1;
   display: flex; gap: 2px; padding: 2px;
-  border-radius: 10px; background: rgba(10, 11, 13, .72);
+  border-radius: var(--btn-radius); background: rgba(10, 11, 13, .72);
 }
 .grd .grd-ctx-opt {
-  height: 28px; padding: 0 10px; border: 0; border-radius: 8px;
+  height: 28px; padding: 0 10px; border: 0; border-radius: var(--btn-radius);
   background: transparent; color: #fff;
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
