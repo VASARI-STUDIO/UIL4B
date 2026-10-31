@@ -24,6 +24,7 @@
 // idle, so the next click is usually instant.
 import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import PreviewScene from './PalettePreview'
+import { EscapeLayerContext, useEscapeLayer } from './escapeLayer'
 import { preloadExample } from './examples/registry'
 import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
@@ -66,30 +67,8 @@ const IcoX = () => (
   </svg>
 )
 
-// Registers `close` as the layer Escape closes first while `open`.
-// useModalDialog stands aside while a menu trigger is expanded, so the layer takes
-// the key itself, as usePopover does: a capture listener that closes the layer,
-// returns focus to its trigger (inside `close`) and consumes the key. Consumed
-// means stopPropagation and preventDefault, so the dialog's own close and the
-// Palette Builder's window handler both leave the dialog open; a second Escape
-// finds no layer and closes it.
-function useEscapeLayer(layerRef, open, close) {
-  useEffect(() => {
-    if (!open) return undefined
-    layerRef.current = close
-    const onKey = (e) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return
-      e.preventDefault()
-      e.stopPropagation()
-      close()
-    }
-    document.addEventListener('keydown', onKey, true)
-    return () => {
-      document.removeEventListener('keydown', onKey, true)
-      if (layerRef.current === close) layerRef.current = null
-    }
-  }, [layerRef, open, close])
-}
+// useEscapeLayer (./escapeLayer) registers a menu or sheet as the layer Escape
+// closes first; the layer ref also goes down to the scene through context.
 
 // ── The scene list ──────────────────────────────────────────────────────────
 
@@ -787,6 +766,7 @@ export default function PalettePreviewDialog({
   )
 
   return (
+    <EscapeLayerContext.Provider value={layerRef}>
     <div
       className="plb-modal plb-modal--preview"
       data-layout={layout}
@@ -935,5 +915,6 @@ export default function PalettePreviewDialog({
         )}
       </div>
     </div>
+    </EscapeLayerContext.Provider>
   )
 }
