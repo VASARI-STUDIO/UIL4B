@@ -19,14 +19,16 @@
 //   the Add button unmounted at 12                -> "Add a stop stays drawn at twelve"
 //   the angle row unmounted for Radial            -> the Linear > Radial > Conic sequence
 //   .grd .grd-code { height: auto }               -> the CSS > Tailwind > SVG sequence
-//   the Available colours note given a height that
-//     changes when Shuffle from palette is pressed -> the "no palette" sequence
+//   the palette row's status line given a height that
+//     changes when Colours: Palette is pressed        -> the "no palette" sequence
 //   the stop row's role label wrapping or growing  -> the "chips change the labels" sequence
-//   .grd-chip back to a square at 8px              -> "the Available colours chips are round"
+//   .grd-chip back to a square at 8px              -> "the palette row chips are round"
 //   popClassName dropped from ColorPickerPop      -> the picker popover swatches
 //   removeStop ends in setActiveStop(0)           -> the four "removing ..." selection tests
 //   the angle lock ignored by Random                  -> "Radial says it has no angle ... the angle lock holds the angle"
 //   Add/Remove back to the disabled attribute     -> "at twelve stops Add ..." / "at two stops Remove ..."
+//   the Add icon button resized                    -> "Add a stop is an icon button"
+//   the palette row's +N link dropped or uncapped   -> "the palette row holds eight colours ..."
 //   the "N of 12" count dropped                   -> "the Stops header counts the visible rows ..."
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -44,14 +46,14 @@ const SCREENS = [
 
 const panelOf = (page) => page.getByRole('complementary', { name: 'Gradient controls' })
 const stopRows = (page) => page.locator('.grd-stop')
-const addButton = (panel) => panel.getByRole('button', { name: /^(Add a stop|12 stops is the most)$/ })
+const addButton = (panel) => panel.getByRole('button', { name: 'Add a stop', exact: true })
 const removeButtons = (panel) => panel.getByRole('button', { name: /^Remove stop \d+$/ })
 
 /** Two animation frames: layout and any state-driven re-render have landed. */
 const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 
 /** The sizes that must not move, in CSS pixels. */
-const SHAPE_KEYS = ['page', 'panel', 'main', 'stage', 'window', 'code', 'avail', 'role']
+const SHAPE_KEYS = ['page', 'panel', 'main', 'stage', 'window', 'code', 'gen', 'paint', 'role']
 async function shapeOf(page) {
   return page.evaluate(() => {
     const h = (sel) => {
@@ -65,10 +67,11 @@ async function shapeOf(page) {
       stage: h('.grd-stage'),
       window: h('.grd-stops'),
       code: h('.grd-code'),
-      // The Available colours section, and the first stop row's role label
-      // ("Custom", "Primary 500"): a name that wraps or a note that appears would
-      // change one of them.
-      avail: h('.grd-avail'),
+      // The Random section and the palette row inside Stops, and the first stop
+      // row's role label ("Custom", "Primary 500"): a status line that wraps or a
+      // note that appears would change one of them.
+      gen: h('.grd-gen'),
+      paint: h('.grd-paint'),
       role: h('.grd-stop-role'),
     }
   })
@@ -111,8 +114,8 @@ async function toolbarAction(page, name, { force = false } = {}) {
 }
 
 
-/** With no palette, "Shuffle from palette" is aria-disabled but still answers a press (a toast, and focus on the note). */
-const shuffleFromPalette = (page) => toolbarAction(page, /^Shuffle from palette/, { force: true })
+/** A choice in the Random section's Colours row. With no palette, Palette is aria-disabled but still answers a press with a toast. */
+const coloursChoice = (page, name) => panelOf(page).getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name, exact: true })
 
 /** A palette of thirteen colours with a ramp made from the first, as a project would hold. */
 const THIRTEEN = [
@@ -129,7 +132,18 @@ const withFullPalette = (page) => page.addInitScript(([colors, scale]) => {
     tints: { from: colors[0], scale },
   }))
 }, [THIRTEEN, RAMP])
-const chipNamed = (page, name) => page.locator('.grd-avail').getByRole('button', { name: new RegExp(`^${name}, #`) }).first()
+/** A twelve-stop gradient whose stop n holds palette colour n, saved as the project's gradient. */
+const withTwelveStops = (page) => page.addInitScript(([colors, scale]) => {
+  const stops = colors.slice(0, 12).map((color, i) => ({ color, position: Math.round((i / 11) * 100) }))
+  localStorage.setItem('vs-current-design', JSON.stringify({
+    palette: { base: colors[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors },
+    tints: { from: colors[0], scale },
+    gradient: { type: 'Linear', angle: 90, stops },
+  }))
+}, [THIRTEEN, RAMP])
+// The palette row draws eight colours and a "+N more" link (five on touch, where the cap is six slots).
+const chipCapFor = (touch) => (touch ? 5 : 8)
+const chipNamed = (page, name) => page.locator('.grd-paint').getByRole('button', { name: new RegExp(`^${name}, #`) }).first()
 const roleOf = (page, n) => stopRows(page).nth(n - 1).locator('.grd-stop-role')
 
 async function open(page) {
@@ -256,31 +270,32 @@ for (const screen of SCREENS) {
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
-    test('Shuffle from palette with no palette answers with a toast and focus on the note, and changes nothing', async ({ page }) => {
+    test('Colours: Palette with no palette answers with a toast and changes nothing', async ({ page }) => {
       watch(page, 'a designer with no palette yet')
       await open(page)
       const l = ledger(page)
-      // The note is part of Available colours from the first paint (a fresh visit
-      // holds the one seed colour), so a press has nothing to add to the page.
-      const note = page.locator('.grd-avail-note')
-      await expect(note).toBeVisible()
+      // A fresh visit holds the one seed colour, so the palette row already offers
+      // the starter colours and the way to make a palette: a press has nothing to add.
+      await expect(page.locator('.grd-paint-link')).toHaveText('Make a palette')
       await l.mark('before the press')
-      expect((await l.first()).avail, 'the Available colours section is drawn').toBeGreaterThan(0)
+      expect((await l.first()).gen, 'the Random section is drawn').toBeGreaterThan(0)
+      expect((await l.first()).paint, 'the palette row is drawn').toBeGreaterThan(0)
       expect((await l.first()).role, 'the first stop row has a role label').toBeGreaterThan(0)
 
-      await shuffleFromPalette(page)
+      const palette = coloursChoice(page, 'Palette')
+      await palette.click({ force: true })
       await expect(page.locator('.toast.show')).toContainText('Needs a palette with two or more colours')
-      await expect(note).toBeFocused()
+      await expect(palette, 'a press on an inert choice does not select it').toHaveAttribute('aria-checked', 'false')
       await l.mark('pressed')
 
-      await shuffleFromPalette(page)
+      await palette.click({ force: true })
       await l.mark('pressed again')
       // The canvas slot is only the canvas now: nothing lies over it.
       await expect(page.locator('.grd-stage > :not(.grd-canvas)')).toHaveCount(0)
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
-    test('pressing Available colours chips changes the stop labels and nothing\'s size', async ({ page }) => {
+    test('pressing palette row chips changes the stop labels and nothing\'s size', async ({ page }) => {
       watch(page, 'a designer filling stops from a full palette')
       await withFullPalette(page)
       await open(page)
@@ -291,10 +306,10 @@ for (const screen of SCREENS) {
       await expect(chipNamed(page, 'Primary 500')).toBeVisible()
       for (const [stop, chip, label] of [
         [1, 'Primary 500', 'Primary 500'],
-        [2, 'Colour 7 500', 'Colour 7 500'],
-        [3, 'Primary 300', 'Primary 300'],
-        [1, 'Highlight 500', 'Highlight 500'],
         [2, 'Secondary 500', 'Secondary 500'],
+        [3, 'Primary 300', 'Primary 300'],
+        [1, 'Neutral 500', 'Neutral 500'],
+        [2, 'Accent 500', 'Accent 500'],
         [3, 'Primary 950', 'Primary 950'],
       ]) {
         await page.getByRole('button', { name: new RegExp(`^Select stop ${stop}, #`) }).click()
@@ -306,53 +321,45 @@ for (const screen of SCREENS) {
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
-    // T-A8 (spec gradient-generation-v2 §10): the section's height is decided by its
+    // T-A8 (spec gradient-generation-v2 §10): the row's height is decided by its
     // state and never moves in a session. Each sequence is one state, and every step
     // is a press that changes content only: the target, a colour, a lock, a status sentence.
-    const dotOf = (page, n) => page.locator(`.grd-avail .grd-ramp-dot[data-stop="${n - 1}"]`)
     const lock = (page, n) => stopRows(page).nth(n - 1).locator('.grd-lock')
 
-    test('palette state: chips, target moves, ramp keys, locks and every status sentence change nothing', async ({ page }) => {
+    test('palette state: chips, target moves, locks and every status sentence change nothing', async ({ page }) => {
       watch(page, 'a designer painting from a full palette')
       await withFullPalette(page)
       await open(page)
       const l = ledger(page)
       await l.mark('start')
       // Paint round the gradient twice: each press moves the target and rewrites the status line.
-      for (const [i, name] of ['Primary 500', 'Secondary 500', 'Accent 500', 'Highlight 500', 'Primary 300', 'Colour 8 500'].entries()) {
+      for (const [i, name] of ['Primary 500', 'Secondary 500', 'Accent 500', 'Neutral 500', 'Primary 300', 'Surface 500'].entries()) {
         await chipNamed(page, name).click()
         await l.mark(`press ${i + 1}: ${name}`)
       }
       // Press a colour a stop already has: the "already" sentence.
-      await dotOf(page, 1).click()
-      await chipNamed(page, 'Colour 8 500').click()
-      await chipNamed(page, 'Colour 8 500').click()
+      await stopRows(page).nth(0).locator('.grd-stop-select').click()
+      await chipNamed(page, 'Surface 500').click()
+      await chipNamed(page, 'Surface 500').click()
       await l.mark('already sentence')
-      // The ramp: a dot, then the keys that aim the paint.
-      await dotOf(page, 3).click()
-      await l.mark('dot 3')
-      await dotOf(page, 3).focus()
-      for (const key of ['Home', 'ArrowRight', 'End', 'ArrowLeft']) {
-        await page.keyboard.press(key)
-        await l.mark(`ramp ${key}`)
-      }
-      // A multi-selection: its own head and sentence.
+      // A multi-selection: its own sentence.
       await stopRows(page).nth(0).locator('.grd-stop-select').click()
       await stopRows(page).nth(2).locator('.grd-stop-select').click({ modifiers: ['Control'] })
       await l.mark('two stops selected')
-      await chipNamed(page, 'Surface 500').click()
+      await chipNamed(page, 'Neutral 500').click()
       await l.mark('two stops painted')
       await stopRows(page).nth(0).locator('.grd-stop-select').click()
-      // Locks: one, then every stop (the longest sentence, "Every colour is locked. Unlock a stop to paint it."), then back.
+      // Locks: one, then every stop (the longest sentence, "Every colour is locked"), then back.
       await lock(page, 2).click()
       await l.mark('one lock')
       await chipNamed(page, 'Primary 500').click()
       await l.mark('press with a locked stop')
       await lock(page, 1).click()
       await lock(page, 3).click()
-      await expect(page.locator('.grd-avail-tip')).toHaveText('Every colour is locked')
       await l.mark('every colour locked')
+      // A press on a locked gradient is refused and says so (the label's longest sentence).
       await chipNamed(page, 'Primary 500').evaluate((el) => el.click())
+      await expect(page.locator('.grd-paint-label')).toContainText('Every colour is locked.')
       await l.mark('refused press')
       for (const n of [1, 2, 3]) await lock(page, n).click()
       await l.mark('unlocked')
@@ -361,47 +368,33 @@ for (const screen of SCREENS) {
         await toolbarAction(page, /^Random/)
         await l.mark(`Random #${i}`)
       }
-      expect(l.count).toBe(25)
+      expect(l.count).toBe(20)
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
-    test('no palette: pair presses, starter colours, target moves, locks and every sentence change nothing', async ({ page }) => {
-      watch(page, 'someone with no palette starting from pairs')
+    test('no palette: starter colours, target moves, locks and every sentence change nothing', async ({ page }) => {
+      watch(page, 'someone with no palette starting from the starter colours')
       // A fresh visit holds one seed colour; an empty palette is the no-palette state.
       await page.addInitScript(() => localStorage.setItem('vs-current-design', JSON.stringify({
         palette: { base: '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: [] },
       })))
       await open(page)
-      const pairBtn = (name) => page.locator('.grd-avail').getByRole('button', { name: new RegExp(`^${name}, #`) })
-      await expect(page.locator('.grd-avail-note')).toHaveText('No palette yet. Start from a pair or a starter colour, or make a palette.')
-      await expect(page.locator('.grd-avail .grd-pair')).toHaveCount(6)
+      await expect(page.locator('.grd-paint-link')).toHaveText('Make a palette')
+      await expect(page.getByRole('button', { name: 'Colour source' })).toContainText('Starter colours')
       const l = ledger(page)
       await l.mark('start')
-      for (const name of ['Harbour night', 'Ember', 'Sea glass', 'Citrus', 'Fog', 'Plum']) {
-        await pairBtn(name).click()
-        await l.mark(`pair ${name}`)
-      }
-      for (const name of ['Starter blue', 'Starter paper']) {
+      for (const name of ['Starter blue', 'Starter navy', 'Starter violet', 'Starter pink', 'Starter orange']) {
         await chipNamed(page, name).click()
         await l.mark(`starter ${name}`)
       }
-      await dotOf(page, 2).click()
-      await l.mark('dot 2')
-      await dotOf(page, 2).focus()
-      for (const key of ['End', 'Home']) {
-        await page.keyboard.press(key)
-        await l.mark(`ramp ${key}`)
-      }
       await lock(page, 2).click()
-      await pairBtn('Ember').click()
-      await l.mark('pair with the middle locked')
+      await chipNamed(page, 'Starter pink').click()
+      await l.mark('starter with the middle locked')
       await lock(page, 1).click()
       await lock(page, 3).click()
-      await expect(page.locator('.grd-avail-tip')).toHaveText('Every colour is locked')
       await l.mark('every colour locked')
-      await pairBtn('Plum').evaluate((el) => el.click())
-      await l.mark('refused pair')
       await chipNamed(page, 'Starter blue').evaluate((el) => el.click())
+      await expect(page.locator('.grd-paint-label')).toContainText('Every colour is locked.')
       await l.mark('refused starter')
       for (const n of [1, 2, 3]) await lock(page, n).click()
       await l.mark('unlocked')
@@ -409,45 +402,47 @@ for (const screen of SCREENS) {
         await toolbarAction(page, /^Random/)
         await l.mark(`Random #${i}`)
       }
-      expect(l.count).toBe(22)
+      expect(l.count).toBe(15)
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
+    // With one palette colour the row holds the starter colours and the way to make
+    // a palette; the single colour is not a chip. Pressing through it moves nothing.
     test('one colour: the same presses change nothing either', async ({ page }) => {
-      watch(page, 'someone with a one-colour palette starting from a pair')
+      watch(page, 'someone with a one-colour palette starting from the starter colours')
       await page.addInitScript(() => localStorage.setItem('vs-current-design', JSON.stringify({
         palette: { base: '#0051FF', harmony: 'auto', extraColors: [], activeIdx: 0, colors: ['#0051FF'] },
       })))
       await open(page)
-      await expect(page.locator('.grd-avail-note')).toHaveText('Add a second colour in Palette Builder to shuffle from it.')
+      await expect(page.locator('.grd-paint-link')).toHaveText('Make a palette')
       const l = ledger(page)
       await l.mark('start')
-      await page.locator('.grd-avail').getByRole('button', { name: /^Citrus, #/ }).click()
-      await l.mark('pair')
-      await chipNamed(page, 'Primary 500').click()
-      await l.mark('its one colour')
-      await dotOf(page, 3).click()
-      await l.mark('dot 3')
+      // Locked from the start the line has no press to recall, so it says what the state is.
       for (const n of [1, 2, 3]) await lock(page, n).click()
+      await expect(page.locator('.grd-paint-label')).toHaveText('Every colour is locked')
       await l.mark('every colour locked')
+      await chipNamed(page, 'Starter violet').evaluate((el) => el.click())
+      await expect(page.locator('.grd-paint-label')).toContainText('Every colour is locked.')
+      await l.mark('refused starter')
+      for (const n of [1, 2, 3]) await lock(page, n).click()
+      await chipNamed(page, 'Starter violet').click()
+      await l.mark('a starter')
+      await chipNamed(page, 'Starter pink').click()
+      await l.mark('another starter')
       expect(l.drift(), l.drift().join('\n')).toEqual([])
     })
 
     test('the longest role names fit their cell on every row, at twelve stops', async ({ page }) => {
       watch(page, 'a designer reading role labels')
-      await withFullPalette(page)
+      // The palette row shows eight colours at most, so the gradient is saved with
+      // stop n already holding palette colour n: Primary, Secondary, Accent, Neutral,
+      // Surface, Highlight, then Colour 7 to Colour 12.
+      await withTwelveStops(page)
       await open(page)
-      const panel = panelOf(page)
-      while ((await stopRows(page).count()) < MAX_STOPS) await addButton(panel).click()
-      // Stop n takes palette colour n: Primary, Secondary, Accent, Neutral, Surface,
-      // Highlight, then Colour 7 to Colour 12.
+      await expect(stopRows(page)).toHaveCount(MAX_STOPS)
       const names = ['Primary 500', 'Secondary 500', 'Accent 500', 'Neutral 500', 'Surface 500', 'Highlight 500',
         'Colour 7 500', 'Colour 8 500', 'Colour 9 500', 'Colour 10 500', 'Colour 11 500', 'Colour 12 500']
-      for (let n = 1; n <= MAX_STOPS; n++) {
-        await stopRows(page).nth(n - 1).locator('.grd-stop-select').click()
-        await chipNamed(page, names[n - 1]).click()
-        await expect(roleOf(page, n)).toHaveText(names[n - 1])
-      }
+      for (let n = 1; n <= MAX_STOPS; n++) await expect(roleOf(page, n)).toHaveText(names[n - 1])
       const cut = await page.locator('.grd-stop-role').evaluateAll((els) => els
         .map((el) => ({ text: el.textContent, cut: el.scrollWidth - el.clientWidth }))
         .filter((e) => e.cut > 0))
@@ -548,18 +543,20 @@ test.describe('the stop list is a fixed window', () => {
         }
       })
 
-      // The design gives the button 36px (44 on touch), so the section body is
-      // 168px (224 on touch) at every count.
-      test('Add a stop is 36px tall, 44px on touch, at two stops and at twelve', async ({ page }) => {
+      // Add is an icon button in the Stops header: 26px square (44px on touch).
+      test('Add a stop is a 26px icon button, 44px on touch, at two stops and at twelve', async ({ page }) => {
         watch(page, 'a designer reading the panel')
         await open(page)
-        const addH = screen.touch ? 44 : 36
+        const side = screen.touch ? 44 : 26
         const panel = panelOf(page)
         await reduceTo(page, 2)
-        const heightOf = () => page.locator('.grd-add').evaluate((el) => el.getBoundingClientRect().height)
-        expect(await heightOf(), 'at 2 stops').toBe(addH)
+        const sizeOf = () => addButton(panel).evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          return { w: r.width, h: r.height, text: el.textContent.trim() }
+        })
+        expect(await sizeOf(), 'at 2 stops').toEqual({ w: side, h: side, text: '' })
         while ((await stopRows(page).count()) < MAX_STOPS) await addButton(panel).click()
-        expect(await heightOf(), 'at 12 stops').toBe(addH)
+        expect(await sizeOf(), 'at 12 stops').toEqual({ w: side, h: side, text: '' })
       })
 
       test('with more than three stops the window scrolls inside itself and draws a line where rows continue', async ({ page }) => {
@@ -674,26 +671,28 @@ test.describe('the buttons that change the stop count stay drawn', () => {
     expect(widthAt2).toBe(widthAt3)
   })
 
-  test('Add a stop stays drawn at twelve, disabled, and says why', async ({ page }) => {
+  test('Add a stop stays drawn at twelve, aria-disabled, and says why', async ({ page }) => {
     watch(page, 'a designer at the stop limit')
     await open(page)
     const panel = panelOf(page)
     while ((await stopRows(page).count()) < MAX_STOPS - 1) await addButton(panel).click()
-    const add = panel.getByRole('button', { name: 'Add a stop', exact: true })
+    const add = addButton(panel)
     await expect(add).toBeEnabled()
+    await expect(add).toHaveAttribute('title', 'Add a stop')
     await add.click()
     await expect(stopRows(page)).toHaveCount(MAX_STOPS)
 
-    await expect(panel.getByRole('button', { name: 'Add a stop', exact: true })).toHaveCount(0)
-    const full = panel.getByRole('button', { name: '12 stops is the most', exact: true })
-    await expect(full).toBeVisible()
-    await expect(full).toBeDisabled()
-    await full.click({ force: true })
+    // The same button, same name, now inert with the reason as its title.
+    await expect(addButton(panel)).toHaveCount(1)
+    await expect(add).toHaveAttribute('aria-disabled', 'true')
+    await expect(add).toHaveAttribute('title', '12 stops is the most')
+    await add.click({ force: true })
     await expect(stopRows(page)).toHaveCount(MAX_STOPS)
 
     // Taking one away brings the working button back.
     await removeButtons(panel).last().click()
-    await expect(panel.getByRole('button', { name: 'Add a stop', exact: true })).toBeEnabled()
+    await expect(add).toBeEnabled()
+    await expect(add).toHaveAttribute('title', 'Add a stop')
   })
 })
 
@@ -756,13 +755,13 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await open(page)
         const panel = panelOf(page)
         await grow(page, MAX_STOPS - 1)
-        const live = panel.getByRole('button', { name: 'Add a stop', exact: true })
-        await expect(live, 'below the limit it is a live button').not.toHaveAttribute('aria-disabled', /.*/)
-        await live.click()
+        const full = addButton(panel)
+        await expect(full, 'below the limit it is a live button').not.toHaveAttribute('aria-disabled', /.*/)
+        await full.click()
         await expect(stopRows(page)).toHaveCount(MAX_STOPS)
 
-        const full = panel.getByRole('button', { name: '12 stops is the most', exact: true })
         await expect(full).toHaveAttribute('aria-disabled', 'true')
+        await expect(full, 'the reason is its title').toHaveAttribute('title', '12 stops is the most')
         await expect(full, 'aria-disabled, not the disabled attribute').not.toHaveAttribute('disabled', /.*/)
         await full.focus()
         await expect(full, 'still reachable by keyboard').toBeFocused()
@@ -774,7 +773,7 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await page.keyboard.press('Space')
         await expect(stopRows(page)).toHaveCount(MAX_STOPS)
         await expect(removeButtons(panel)).toHaveCount(MAX_STOPS)
-        await expect(full, 'the label is unchanged by the presses').toBeVisible()
+        await expect(full, 'the button is unchanged by the presses').toHaveAttribute('aria-disabled', 'true')
       })
 
       test('at two stops Remove is aria-disabled, points at its reason, and a click or a key removes nothing', async ({ page }) => {
@@ -968,10 +967,10 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         reducedMotion: 'reduce',
       })
 
-      test('the stop rows and the selected stop swatch are round', async ({ page }) => {
+      test('the stop row swatches are round', async ({ page }) => {
         watch(page, 'a designer looking at the stop swatches')
         await open(page)
-        for (const sel of ['.grd-stop-swatch', '.grd-pick-swatch .cpk-trigger', '.grd-pick-swatch .cpk-trigger-chip']) {
+        for (const sel of ['.grd-stop-swatch']) {
           const r = await roundReport(page, sel)
           expect(r.count, `${sel} is drawn`).toBeGreaterThan(0)
           expect(r.bad, r.bad.join('\n')).toEqual([])
@@ -984,12 +983,12 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         expect(r.bad, r.bad.join('\n')).toEqual([])
       })
 
-      test('the Available colours chips and the shades are round', async ({ page }) => {
-        watch(page, 'a designer looking at the Available colours chips')
+      test('the palette row chips and the shades are round', async ({ page }) => {
+        watch(page, 'a designer looking at the palette row chips')
         await withFullPalette(page)
         await open(page)
         const palette = await roundReport(page, '.grd-chips:not(.grd-chips--shades) .grd-chip')
-        expect(palette.count, 'thirteen palette chips are drawn').toBe(13)
+        expect(palette.count, 'the palette row draws eight chips (five on touch) and a +N link').toBe(chipCapFor(screen.touch))
         expect(palette.bad, palette.bad.join('\n')).toEqual([])
         const shades = await roundReport(page, '.grd-chips--shades .grd-chip')
         expect(shades.count, 'eleven shade chips are drawn').toBe(11)
@@ -1005,7 +1004,7 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         })
         await open(page)
         const starters = await roundReport(page, '.grd-chips .grd-chip')
-        expect(starters.count, 'ten starter chips are drawn').toBe(10)
+        expect(starters.count, 'the row draws eight starter chips (five on touch) and a +N link').toBe(chipCapFor(screen.touch))
         expect(starters.bad, starters.bad.join('\n')).toEqual([])
       })
 
@@ -1014,20 +1013,6 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         await open(page)
         await page.getByRole('button', { name: 'Pick stop 2 colour' }).click()
         const pop = page.getByRole('dialog', { name: 'Pick stop 2 colour' })
-        await expect(pop).toBeVisible()
-        await expect(pop).toHaveClass(/grd-cpk-pop/)
-        for (const sel of ['.cpk-pop.grd-cpk-pop .cpk-swatch', '.cpk-pop.grd-cpk-pop .cpk-chip']) {
-          const r = await roundReport(page, sel)
-          expect(r.count, `${sel} is drawn in the open picker`).toBeGreaterThan(0)
-          expect(r.bad, r.bad.join('\n')).toEqual([])
-        }
-      })
-
-      test('the picker the Selected stop swatch opens has round colour samples', async ({ page }) => {
-        watch(page, 'a designer opening the selected stop picker')
-        await open(page)
-        await page.locator('.grd-pick-swatch .cpk-trigger').click()
-        const pop = page.getByRole('dialog', { name: /^Stop \d+ colour$/ })
         await expect(pop).toBeVisible()
         await expect(pop).toHaveClass(/grd-cpk-pop/)
         for (const sel of ['.cpk-pop.grd-cpk-pop .cpk-swatch', '.cpk-pop.grd-cpk-pop .cpk-chip']) {
