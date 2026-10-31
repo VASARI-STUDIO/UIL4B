@@ -31,7 +31,9 @@ test('a fresh palette exports the colours on screen without saving the random dr
   const downloaded = page.waitForEvent('download')
   await primaryButton(page).click()
   const tokens = JSON.parse(await readFile(await (await downloaded).path(), 'utf8'))
-  const exported = Object.values(tokens.color).filter((token) => token.$root)
+  // Palette colours come first under color, in palette order; the interface
+  // roles after them are references or derived values.
+  const exported = Object.values(tokens.color).filter((token) => token.$root).slice(0, colours.length)
     .map((token) => token.$root.$value.hex.toUpperCase())
   expect(exported).toEqual(colours)
   expect(await page.evaluate(() => localStorage.getItem('vs-current-design'))).toBe(savedBefore)
