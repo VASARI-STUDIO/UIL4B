@@ -345,7 +345,7 @@ function routeLoop(graph) {
     ids.push(...l.slice(1))
     cur = wp
   }
-  return ids.map((id) => graph.pos.get(id))
+  return ids
 }
 
 // ── Elevation ─────────────────────────────────────────────────────────────────
@@ -395,7 +395,8 @@ const areas = areasData.elements
 const tag = (e, k) => (e.tags || {})[k]
 
 const graph = buildGraph(roads)
-const polyline = routeLoop(graph)
+const routeIds = routeLoop(graph)
+const polyline = routeIds.map((id) => graph.pos.get(id))
 const { samples, length } = resample(polyline)
 const raw = await heights(samples)
 // The 90 m cells step; a three-point mean takes the stairs out without moving the peaks much.
