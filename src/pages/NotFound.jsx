@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -58,12 +58,20 @@ const SUGGESTIONS = [
   { to: '/discover', label: 'Discover', desc: `${DISCOVER_LIVE} libraries open` },
 ]
 
+// Whether the person got here by moving around the app. The router numbers its
+// history entries from 0 on the first load of a tab, so anything above 0 is an
+// in-app step. useNavigationType() cannot say this: the routes below App.jsx's
+// <Routes location> always report POP.
+function arrivedInApp() {
+  return typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0
+}
+
 // The page that linked here, when the browser can say so: a same-site path only
 // (never a query string, and never another site), and only on a fresh load.
 // After in-app navigation document.referrer still names the page the visit
 // started from, which would blame the wrong link.
 function linkingPath(pathname) {
-  if (typeof document === 'undefined' || !document.referrer) return ''
+  if (typeof document === 'undefined' || !document.referrer || arrivedInApp()) return ''
   try {
     const from = new URL(document.referrer)
     return from.origin === window.location.origin && from.pathname !== pathname ? from.pathname : ''
@@ -74,19 +82,18 @@ function linkingPath(pathname) {
 
 export default function NotFound() {
   const { pathname } = useLocation()
-  const navigationType = useNavigationType()
   const headingRef = useRef(null)
 
   // Arriving here from a link or a redirect leaves focus on a control that is
-  // no longer on screen, so move it to the heading. A fresh load or a
-  // back/forward step keeps the browser's own focus handling.
+  // no longer on screen, so move it to the heading. A fresh load keeps the
+  // browser's own focus handling.
   useEffect(() => {
-    if (navigationType !== 'POP') headingRef.current?.focus()
-  }, [navigationType, pathname])
+    if (arrivedInApp()) headingRef.current?.focus()
+  }, [pathname])
 
   // The report form opens as a bug report with the broken path filled in.
   const report = new URLSearchParams({ type: 'bug', page: pathname })
-  const from = navigationType === 'POP' ? linkingPath(pathname) : ''
+  const from = linkingPath(pathname)
   if (from) report.set('referrer', from)
 
   return (

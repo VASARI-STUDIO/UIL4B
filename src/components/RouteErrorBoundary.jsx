@@ -61,14 +61,14 @@ function ErrorCard({ error, outer, load }) {
   let lead = (
     <>
       Part of this page failed while it was running. Trying again usually fixes it.
-      If it keeps happening, tell us and we&apos;ll look into it.
+      If it keeps happening, tell us and we&rsquo;ll look into it.
     </>
   )
   if (load) {
     title = 'This page didn’t load'
     lead = offline
-      ? <>You&apos;re offline, so this page couldn&apos;t be downloaded. You can try again once you reconnect.</>
-      : <>Part of this page couldn&apos;t be downloaded. Trying again usually fixes it.</>
+      ? <>You&rsquo;re offline, so this page couldn&rsquo;t be downloaded. You can try again once you reconnect.</>
+      : <>Part of this page couldn&rsquo;t be downloaded. Trying again usually fixes it.</>
   }
 
   const card = (

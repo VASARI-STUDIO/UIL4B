@@ -1485,7 +1485,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .error-boundary-actions .btn{min-height:44px;padding-inline:20px;font-size:14px;justify-content:center}
 .error-boundary-actions .btn:disabled{opacity:.4;cursor:not-allowed}
 /* The quietest of the three: a text button, so it never weighs the same as the fix. */
-.error-boundary-report{display:inline-flex;align-items:center;justify-content:center;min-height:24px;margin-top:var(--s-3);padding:0 var(--s-2);background:none;border:0;border-radius:var(--radius-s);color:var(--accent-text);font-family:var(--font);font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.error-boundary-report{display:inline-flex;align-items:center;justify-content:center;min-height:24px;margin-top:var(--s-3);padding:0 var(--s-2);background:none;border:0;border-radius:var(--btn-radius);color:var(--accent-text);font-family:var(--font);font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 @media(pointer:coarse){.error-boundary-report{min-height:44px}}
 @media(hover:hover){.error-boundary-report:hover{text-decoration-thickness:2px}}
 
