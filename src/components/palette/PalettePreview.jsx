@@ -81,7 +81,7 @@ export default function PreviewScene({ roles, labels, sceneId, highlight = null,
     const ro = new ResizeObserver(mark)
     ro.observe(root)
     return () => ro.disconnect()
-  }, [highlight, scene.id, failKey, onRoles, roles])
+  }, [highlight, scene.id, state, failKey, onRoles, roles])
 
   return (
     <div
