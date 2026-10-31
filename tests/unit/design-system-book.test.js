@@ -381,8 +381,8 @@ test('the downloaded artefact never receives the print bootstrap', () => {
   // every downloaded book would carry executable code.
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/window\.print|<script/.test(src), 'the generator emits no script')
-  assert.match(RUNNER, /withPrintBootstrap\(html\)/, 'the bootstrap is applied in the export engine, to a copy')
+  assert.match(RUNNER, /withPrintBootstrap\(html, \{ title \}\)/, 'the bootstrap is applied in the export engine, to a copy')
   const util = stripComments(read('src/utils/exportDocument.js'))
-  assert.match(util, /export function withPrintBootstrap\(html\) \{\s*return html\.replace\(/,
+  assert.match(util, /export function withPrintBootstrap\(html, \{ title = '' \} = \{\}\) \{[\s\S]*?return named\.replace\(/,
     'the bootstrap is applied by replace, to the copy handed in')
 })

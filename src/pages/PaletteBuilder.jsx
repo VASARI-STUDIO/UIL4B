@@ -42,6 +42,7 @@ import HarmonyWheel from '../components/palette/HarmonyWheel'
 import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
+import { fileName } from '../utils/exportFileName'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -2464,7 +2465,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'uil4b-palette.png'
+        a.download = fileName(design?.name, 'palette', 'png')
         a.click()
         setTimeout(() => URL.revokeObjectURL(url), 4000)
       })

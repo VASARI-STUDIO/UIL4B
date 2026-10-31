@@ -210,7 +210,7 @@ export default function BenchConverter({ onResult }) {
   const stripLen = Math.min(8, frameCount)
   const strip = Array.from({ length: stripLen }, (_, i) => {
     const k = i / Math.max(1, stripLen - 1)
-    return { pos: `${Math.round(k * 100)}% 50%`, time: `0:0${Math.min(8, Math.round(k * 8))}` }
+    return { pos: `${Math.round(k * 100)}% 50%` }
   })
   const target = MODEL_OUTPUTS[outFmt]
   const fileToolHref = route('file-converter')
@@ -383,7 +383,6 @@ export default function BenchConverter({ onResult }) {
             {strip.map((f) => (
               <span key={f.pos}>
                 <img src={CONVERTER_SOURCE} alt="" width="1600" height="900" loading="lazy" decoding="async" style={{ objectPosition: f.pos }} />
-                <small>{f.time}</small>
               </span>
             ))}
             <span className="sp-art-over" aria-hidden="true">
@@ -403,7 +402,7 @@ export default function BenchConverter({ onResult }) {
                 <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} frames</button>
               ))}
             </div>
-            <small>{frameCount > 8 ? `Eight of ${frameCount} frames, evenly sampled` : `${frameCount} frames`}</small>
+            <small>{`${stripLen} crops of one sample photo`}</small>
           </div>
         </div>
 

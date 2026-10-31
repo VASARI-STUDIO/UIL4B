@@ -17,6 +17,8 @@ import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
+import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
+import { formatFileName } from '../utils/exportFileName'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
@@ -76,20 +78,19 @@ export const PRO_GATE = {
 // plan, and only a Pro account gets the HTML back. What is looked up here is just
 // how each one is named and reported.
 //
-// Keyed by format id, like PRO_GATE. `file` ends the downloaded name, `activation`
-// is the analytics name (the paid deliverables are not averaged into the free
-// style guide), `fallback` is what the notice says when the browser blocks the
-// print window and the file is saved instead, `noun` is how the errors name it.
+// Keyed by format id, like PRO_GATE. `activation` is the analytics name (the paid
+// deliverables are not averaged into the free style guide), `fallback` is what the
+// notice says when the browser blocks the print window and the file is saved
+// instead, `noun` is how the errors name it. The saved file's name is
+// utils/exportFileName.js's.
 export const PRO_DOCUMENT = {
   book: {
-    file: 'design-system-book.html',
     activation: 'design-system-book',
     fallback: 'The book downloaded instead.',
     noun: 'book',
     waiting: 'Preparing your design system book…',
   },
   guidelines: {
-    file: 'brand-guidelines.html',
     activation: 'brand-guidelines',
     fallback: 'The guidelines downloaded instead.',
     noun: 'guidelines',
@@ -148,8 +149,8 @@ const download = (blob, filename) => {
 // what the server returned: the file that is downloaded keeps its no-script
 // guarantee. Returns false when the browser blocked the window, and the file
 // was saved instead.
-const showDocument = (html, filename, win) => {
-  const url = URL.createObjectURL(new Blob([withPrintBootstrap(html)], { type: 'text/html;charset=utf-8' }))
+const showDocument = (html, filename, win, title) => {
+  const url = URL.createObjectURL(new Blob([withPrintBootstrap(html, { title })], { type: 'text/html;charset=utf-8' }))
   const shown = showInPrintWindow(win, url)
   if (!shown) {
     // Popup blocked. Fall back to the file rather than failing: the user
@@ -166,7 +167,7 @@ const showDocument = (html, filename, win) => {
 /**
  * The export engine behind the dialog.
  *   run(formatId, { projectId })  make the file; see the statuses above
- *   copy(formatId)                put the CSS or JSON on the clipboard: { ok, count } (count is the
+ *   copy(formatId)                put a Code file on the clipboard: { ok, count } (count is the
  *                                 number of tokens). Never asks for an account. Raises no toast.
  *   upgradeTarget(formatId, projectId)  where a Pro pick goes for this account: { to, checkout, pick, gate }
  *   reset()                       clear the notice, the error and the success line (a new pick)
@@ -256,8 +257,10 @@ export default function useExportRunner() {
 
   const runExport = async (format, projectId) => {
     // The name the dialog shows on the file: the open project's, else the design's own.
-    const projectName = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || 'Design System'
-    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+    // `fileProject` is that name as typed ('' for an unnamed project), which the file
+    // names are made from; `projectName` is what the documents print, with a stand-in.
+    const fileProject = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || ''
+    const projectName = fileProject || 'Design System'
     const fmt = EXPORT_FORMATS.find((f) => f.id === format)
     if (!fmt?.live) { stop(FAILED_LINE); return { status: 'failed' } }
 
@@ -302,7 +305,7 @@ export default function useExportRunner() {
     // Producing a FILE needs a free account; copying a value never does
     // (sign-in only for saving, exporting and account actions). See
     // src/hooks/useExportGate.js for the map that puts the line here.
-    const tokenFile = format === 'css' || format === 'json'
+    const tokenFile = isCodeFile(format)
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : 'export this style guide'
     const signedOut = !user
     if (!(await requireExportAccount(reason))) { closePrintWin(); return { status: 'cancelled' } }
@@ -349,6 +352,7 @@ export default function useExportRunner() {
         const { blob, filename, missing } = await buildUiKit(design, {
           tier: proNow ? 'pro' : 'free',
           projectName,
+          fileProject,
           template: chosenTemplates.kit,
           onStage: setStage,
         })
@@ -370,7 +374,7 @@ export default function useExportRunner() {
         setStage('pages')
         const { renderBookPng } = await import('../utils/bookRaster')
         const blob = await renderBookPng(design, { projectName, watermark: !proNow })
-        savedFile = download(blob, `${slug}-book-2k.zip`)
+        savedFile = download(blob, formatFileName(fileProject, 'book-png'))
       } else if (proDocument) {
         // The book and the brand guidelines, as a PDF or as HTML. The server checks the plan and builds
         // the document; a refusal means there is no file to hand over.
@@ -404,11 +408,12 @@ export default function useExportRunner() {
         if (answer.status !== 'ok') {
           throw new Error(`The ${doc.noun} couldn’t be made. Check your connection and try again.`)
         }
-        const file = `${slug}-${doc.file}`
+        const file = formatFileName(fileProject, format, { saved: true })
         if (htmlDocument) {
           savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
         } else {
-          opened = showDocument(answer.html, file, printWin)
+          // The print window is titled with the PDF's name, so "Save as PDF" offers the name the manifest shows.
+          opened = showDocument(answer.html, file, printWin, formatFileName(fileProject, format).replace(/\.pdf$/, ''))
           printWin = null
           if (!opened) {
             // The document WAS produced, so this is a notice and not an error: the
@@ -418,26 +423,19 @@ export default function useExportRunner() {
           }
         }
       } else if (tokenFile) {
-        // Both token files come from one token list (utils/designTokens.js), so
-        // they always carry the same names and values. Loaded on demand like the
-        // other generators.
-        const { buildTokensCss, buildTokensJson } = await import('../utils/designTokens')
+        // The token, Tailwind and contrast files all read one token list
+        // (utils/designTokens.js), so they carry the same names and values. Built by
+        // utils/codeFiles.js, which loads each generator on demand.
         activation = 'design-tokens'
-        const css = format === 'css'
-        const body = css
-          ? buildTokensCss(design, { projectName, watermark: !proNow })
-          : buildTokensJson(design, { projectName, watermark: !proNow })
-        savedFile = download(
-          new Blob([body], { type: css ? 'text/css;charset=utf-8' : 'application/json;charset=utf-8' }),
-          `${slug}.tokens.${css ? 'css' : 'json'}`,
-        )
+        const body = await buildCodeFile(format, design, { projectName, watermark: !proNow })
+        savedFile = download(new Blob([body], { type: CODE_FILES[format].mime }), codeFileName(format, fileProject))
       } else if (format === 'png' || format === 'jpeg') {
         // Drawn on a canvas rather than rasterised from the HTML — see the note
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
         // raster path costs nothing to anyone exporting HTML.
         const { renderStyleGuideImage } = await import('../utils/styleGuideRaster')
         const blob = await renderStyleGuideImage(design, { projectName, watermark: !proNow, format })
-        savedFile = download(blob, `${slug}-style-guide.${format === 'jpeg' ? 'jpg' : 'png'}`)
+        savedFile = download(blob, formatFileName(fileProject, format))
       } else {
         const markdown = format === 'md'
         const body = markdown
@@ -445,7 +443,7 @@ export default function useExportRunner() {
           : buildStyleGuideHtml(design, { projectName, watermark: !proNow })
         savedFile = download(
           new Blob([body], { type: markdown ? 'text/markdown;charset=utf-8' : 'text/html;charset=utf-8' }),
-          `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
+          formatFileName(fileProject, format),
         )
       }
       // ACTIVATION (export half). Fired only after the file actually
@@ -490,22 +488,21 @@ export default function useExportRunner() {
     try { return await runExport(formatId, projectId) } finally { exporting.current = false }
   }
 
-  // Copy the CSS or the JSON: the same text the download carries (with the credit
+  // Copy a Code file: the same text the download carries (with the credit
   // comment on a free account), straight to the clipboard. A copy is free forever and
   // needs no account (useExportGate.js), so none of the gates above run. It waits for
   // the plan like the file does, so a Pro account is never handed the credit.
   const copy = async (formatId) => {
     const none = { ok: false, count: 0 }
-    if ((formatId !== 'css' && formatId !== 'json') || !design || live.current.planKnown === false) return none
+    if (!isCodeFile(formatId) || !design || live.current.planKnown === false) return none
     try {
-      const { buildTokensCss, buildTokensJson, designTokens } = await import('../utils/designTokens')
       const projectName = design.name || 'Design System'
       const watermark = !live.current.isPro
-      const text = formatId === 'css'
-        ? buildTokensCss(design, { projectName, watermark })
-        : buildTokensJson(design, { projectName, watermark })
+      const text = await buildCodeFile(formatId, design, { projectName, watermark })
       await navigator.clipboard.writeText(text)
-      return { ok: true, count: designTokens(design).length }
+      // The token count is only true of the two token files.
+      const count = formatId === 'css' || formatId === 'json' ? (await import('../utils/designTokens')).designTokens(design).length : 0
+      return { ok: true, count }
     } catch { return none }
   }
 

@@ -44,7 +44,7 @@ test('the renderer is deterministic for a fixture project', () => {
   const a = render(DESIGN, { tier: 'free' })
   const b = render(DESIGN, { tier: 'free' })
   assert.equal(a.html, b.html)
-  assert.equal(a.filename, 'ui-kit.html', 'an unnamed kit is never filed under UIL4B')
+  assert.equal(a.filename, 'untitled-ui-kit.html', 'an unnamed kit is never filed under UIL4B')
   assert.ok(!/@@[A-Z_]+@@/.test(a.html), 'a placeholder was left unfilled')
   assert.ok(a.html.length > 30000, 'the kit is a real document')
 })
@@ -96,7 +96,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   const unnamed = render({ ...DESIGN, identity: { description: IDENTITY.description } }, { tier: 'pro', logo })
   assert.ok(!unnamed.html.includes('class="chapter personal-identity"'))
   assert.ok(!unnamed.html.includes(IDENTITY.description))
-  assert.equal(unnamed.filename, 'ui-kit.html')
+  assert.equal(unnamed.filename, 'untitled-ui-kit.html')
 })
 
 test('the identity is read from the working design, never from a field it does not have', () => {
@@ -175,7 +175,11 @@ test('every variable the document names is in the CSS and JSON it hands over', (
   // The JSON is the app's DTCG token file, not a second format.
   const json = JSON.parse(data.json)
   assert.equal(json.color.primary.$root.$type, 'color')
-  assert.equal(json.color.background.$value.hex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex)
+  // The canvas role is an alias when a palette or tint token holds its value, else a literal colour.
+  const background = json.color.background.$value
+  const target = typeof background === 'string' ? background.slice(1, -1).split('.').reduce((n, k) => n[k], json) : null
+  const canvasHex = (target ? (target.$root || target).$value.hex : background.hex)
+  assert.equal(canvasHex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex.toLowerCase())
   assert.deepEqual(json.space['4'].$value, { value: 4, unit: 'px' })
 })
 

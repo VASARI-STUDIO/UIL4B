@@ -75,6 +75,11 @@ function LibraryToolbar({
   search,
   count,
   action,
+  // A node that stays at the row's right end at every stage and is never moved
+  // into the Filters panel (the Icon Library's My icons toggle). Giving one also
+  // sends a phone's `action` straight to the sheet, so the row holds search,
+  // Filters and the pinned control only.
+  pinned,
   extra,
   children,
   // Index into `children` of the group a phone keeps on screen as a
@@ -94,7 +99,7 @@ function LibraryToolbar({
   const quickGroup = quickIndex >= 0 ? groups[quickIndex] : null
   const panelGroups = quickIndex >= 0 ? groups.filter((_, i) => i !== quickIndex) : groups
 
-  const minStage = phone ? 2 : 0
+  const minStage = phone ? (pinned && action ? 3 : 2) : 0
   const [stage, setStage] = useState(minStage)
   // Crossing the phone query starts the climb again from the new floor. The two
   // modes count the search field at different floors and put different things
@@ -164,7 +169,7 @@ function LibraryToolbar({
     obs.observe(row)
     for (const el of row.children) obs.observe(el)
     return () => obs.disconnect()
-  }, [decide, effective, phone, groups.length, count, action])
+  }, [decide, effective, phone, groups.length, count, action, pinned])
 
   // A font swap changes every option's width, so every cached need is stale.
   // Cleared ONCE, when the fonts settle: clearing on every stage change would
@@ -221,6 +226,7 @@ function LibraryToolbar({
           />
         )}
         {action && effective < 3 && <div className="lbry-toolbar-action">{action}</div>}
+        {pinned && <div className="lbry-toolbar-pinned">{pinned}</div>}
       </div>
       {quickGroup && (
         <ToolbarModeContext.Provider value="expand">

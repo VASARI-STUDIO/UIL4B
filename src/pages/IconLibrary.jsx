@@ -2962,10 +2962,10 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
 }
 
 /* ── THE END OF THE GRID ─────────────────────────────────────────────────────
-   The closing band at the bottom of the results: one display sentence, one dim
-   line, one filled pill and, where a second way on is true, a ghost pill. It is
-   one surface with no card. The text and both controls are always on screen;
-   nothing here depends on hover.
+   The closing block at the bottom of the results, centred: one display
+   sentence, one dim line, one filled pill and, where a second way on is true, a
+   text link. It is one surface with no card and no hairline. The text and both
+   controls are always on screen; nothing here depends on hover.
 
    `kind` is 'anon' or 'free' (see endBandKind). `to` makes the primary control
    a link to /plans; without it the primary control is a button that calls
@@ -2987,7 +2987,7 @@ function IconEndBand({ kind, heading, body, names, action, onAction, to, seconda
           {to
             ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}</Link>
             : <button type="button" className="ig-end-pill" onClick={onAction}>{action}</button>}
-          {secondary && <Link to="/plans" className="ig-end-ghost">{secondary}</Link>}
+          {secondary && <Link to="/plans" className="ig-end-link">{secondary}</Link>}
         </div>
       </div>
     </section>
@@ -3804,12 +3804,21 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     else browseAll()
   }
 
+  // My icons is one toggle. Pressing it opens the local store; pressing it again
+  // returns to All packs (weight kept, query and group cleared) rather than to
+  // wherever the visitor was before.
+  const handleMineToggle = () => {
+    clearTimeout(timer.current)
+    setQuery('')
+    if (source === 'custom') browseAll('chip')
+    else browseCustom()
+  }
+
   // Search text, pack and collection chip are three independent filters that
   // compose — changing one never clears the others (My Icons excepted: it's a
   // local store, not a CDN scope).
   const handlePackChange = (p) => {
     clearTimeout(timer.current)
-    if (p === 'custom') { setQuery(''); browseCustom(); return }
     const nextPack = p === 'all' ? '' : p
     setPack(nextPack)
     // A pack that does not draw the chosen weight puts it back to Regular, so
@@ -3908,11 +3917,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // The dropdown reflects the PACK filter only — an active chip leaves it on
   // "All packs" so the two filters read as independent.
-  const selectValue = source === 'custom' ? 'custom' : (pack || 'all')
+  const selectValue = pack || 'all'
 
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
   const isMyIcons = source === 'custom'
+  // Add icon lives on the My icons view, where the icons it makes are kept:
+  // beside the Saved heading and under the empty state.
+  const addIconButton = (
+    <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+      <span className="ig-addbtn-label">Add icon</span>
+    </button>
+  )
 
   /* ── MY ICONS IS NOT GATED. THE RECENT RAIL IS A DIFFERENT THING. ────────
      The SAVED half of My Icons carries each icon's own markup in the record
@@ -3937,8 +3954,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   /* The group tray, marked the same way the pack menu is. A chip whose every
      pack is locked says which tier opens it; a chip the viewer can browse says
      nothing, because a badge on everything is a badge that says nothing.
-     "My Icons" never carries one — it is not a catalogue group and it is not
-     gated.
+     My icons is not in the tray at all: it is a toggle beside the pack menu.
 
      MEMOISED ON THE TIER, which is what the module-level GROUP_OPTIONS existed
      to guarantee: LibraryFilterGroup measures its sliding indicator off the
@@ -3985,15 +4001,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      rule is the pack menu's: a group is marked only when EVERY pack in it is
      out of reach, and the word is the cheapest tier that opens one of them —
      the same answer `needFor` gives the wall. */
-  const groupOptions = useMemo(() => [
-    { id: 'custom', label: 'My Icons' },
-    ...GROUP_ORDER.map((key) => {
-      const { label, packs } = ICON_GROUPS[key]
-      const locked = packs.every((p) => !canSeePack(p, tier))
-      if (!locked) return { id: key, label }
-      return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
-    }),
-  ], [tier])
+  const groupOptions = useMemo(() => GROUP_ORDER.map((key) => {
+    const { label, packs } = ICON_GROUPS[key]
+    const locked = packs.every((p) => !canSeePack(p, tier))
+    if (!locked) return { id: key, label }
+    return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
+  }), [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -4230,9 +4243,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
+  const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
   const packsBehindLogin = useMemo(
-    () => visiblePacks(ALL_PACKS, 'free').length - visiblePacks(ALL_PACKS, 'anon').length,
-    [],
+    () => freeSetCount - visiblePacks(ALL_PACKS, 'anon').length,
+    [freeSetCount],
   )
   // How many packs Pro adds over a free account, derived the same way.
   const packsProAddsCount = useMemo(() => packsProAdds(ALL_PACKS), [])
@@ -4649,7 +4663,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         <LibraryToolbar
           className="ig-toolbar"
           quick={0}
-          count={toolbarCount}
           activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
           search={{
             value: query,
@@ -4657,41 +4670,46 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             placeholder: 'Search icons…',
             label: 'Search icons',
           }}
+          /* The pack menu is a scope, not a filter, so it sits at the right end
+             of the row (and in the Filters sheet on a phone). */
           action={(
-            <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              <span className="ig-addbtn-label">Add icon</span>
+            /* Locked packs stay selectable so choosing one can show the access gate. */
+            <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
+              options={[
+                { value: 'all', label: 'All packs' },
+                ...PACK_MENU.map(g => {
+                  const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
+                  const uniform = marks.length === 1
+                  return {
+                    group: g.label,
+                    mark: uniform ? marks[0] : '',
+                    options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
+                  }
+                }),
+              ]}
+            />
+          )}
+          pinned={(
+            <button type="button" className="ig-mine" aria-pressed={isMyIcons} title="My icons" onClick={handleMineToggle}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={isMyIcons ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+              <span className="ig-mine-label">My icons</span>
             </button>
           )}
         >
           {/* FIRST, so a phone keeps it on screen under the search (the
               toolbar's quick row) exactly where the design's phone mock draws it; the
-              pack menu and the collection chips go to the Filters sheet. */}
+              collection chips go to the Filters sheet. */}
           <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
-          {/* Locked packs stay selectable so choosing one can show the access gate. */}
-          <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
-            options={[
-              { value: 'all', label: 'All packs' },
-              { group: 'Yours', options: [{ value: 'custom', label: 'My Icons' }] },
-              ...PACK_MENU.map(g => {
-                const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
-                const uniform = marks.length === 1
-                return {
-                  group: g.label,
-                  mark: uniform ? marks[0] : '',
-                  options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
-                }
-              }),
-            ]}
-          />
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"
-            value={source === 'custom' ? 'custom' : group}
-            onChange={(id) => (id === 'custom' ? browseCustom() : handleGroupToggle(id))}
+            value={group}
+            onChange={handleGroupToggle}
             options={groupOptions}
           />
         </LibraryToolbar>
+        {/* The result count is announced, not drawn: the row has no room for it. */}
+        <p id="ig-result-count" className="sr-only" role="status">{toolbarCount || ''}</p>
         </div>
 
         {isMyIcons ? (
@@ -4702,17 +4720,23 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             <section className="ig-mysec">
               <div className="ig-mysec-head">
                 <h3 className="ig-mysec-title">Saved</h3>
-                {icons.length > 0 && (
-                  <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    Clear all
-                  </button>
-                )}
+                <div className="ig-mysec-actions">
+                  {addIconButton}
+                  {icons.length > 0 && (
+                    <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      Clear all
+                    </button>
+                  )}
+                </div>
               </div>
               {icons.length > 0 ? (
                 <div className="ig">{renderGrid(shown)}</div>
               ) : (
-                <div className="ig-custom-empty">No saved icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
+                <div className="ig-custom-empty">
+                  <p>No saved icons yet. Open any icon, adjust it, then press Save to keep it here.</p>
+                  {addIconButton}
+                </div>
               )}
               {!isPro && (
                 <p className="ig-custom-hint">
@@ -4876,7 +4900,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             {endKind === 'anon' && (
               <IconEndBand
                 kind="anon"
-                heading={ICON_GATE_COPY.end.anon.heading}
+                heading={ICON_GATE_COPY.end.anon.heading(freeSetCount)}
                 body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, packsBehindLogin)}
                 names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}

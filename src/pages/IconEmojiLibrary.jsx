@@ -3,14 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
-import SpectrumClose from '../components/spectrum/SpectrumClose'
-import SpectrumRamp from '../components/spectrum/SpectrumRamp'
-import { useAuth } from '../contexts/AuthContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
 import { ICON_GROUPS_ROUTE } from '../data/iconGroups'
-import { ICON_CLOSE_COPY, iconCloseSecondary } from '../data/iconPageClose'
-import { viewerTier } from '../data/iconPackTiers'
-import { categoryDestination } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -116,14 +109,6 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
     onCredits?.(activeCredits, tab === 'groups' ? 'group' : 'page')
   }, [onCredits, activeCredits, tab])
 
-  // The closing block's second button follows the viewer; its words and first
-  // button are the same for everyone (ICON_CLOSE_COPY).
-  const { isPro, planKnown } = useSubscription()
-  const { user, loading: authLoading } = useAuth()
-  const closeSecondary = iconCloseSecondary({
-    tier: viewerTier({ user, isPro, resolving: authLoading }),
-    known: !authLoading && planKnown,
-  })
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
 
   const activateTab = (next) => navigate(LIB_TABS.find((t) => t.id === next).route)
@@ -256,20 +241,9 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
         </div>
         )
       })}
-
-      {/* THE PAGE ENDS AS THE SALES PAGES DO: a close, the spectrum strip, then
-          the footer (rendered by CreateTool, outside <main>). It follows the
-          panels, once per page, so it shows on all three tabs. */}
-      <div className="spectrum ig-close">
-        <SpectrumClose
-          id="ig-close-h"
-          heading={ICON_CLOSE_COPY.heading}
-          body={ICON_CLOSE_COPY.body}
-          primary={{ label: ICON_CLOSE_COPY.primary, to: categoryDestination('colour') }}
-          secondary={closeSecondary}
-        />
-        <SpectrumRamp className="sp-ramp--close" />
-      </div>
+      {/* THE PAGE ENDS AT THE FOOTER (rendered by CreateTool, outside <main>).
+          A tool page carries at most one call to action before it: the Icon
+          panel's own end block, for signed-out and free viewers. */}
     </div>
     </>
   )

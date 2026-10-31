@@ -6,6 +6,7 @@ import {
   resolveStateShades, readSemanticStates,
 } from '../data/semanticPresets'
 import { useProject } from '../contexts/ProjectContext'
+import { fileName } from '../utils/exportFileName'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo'
 import {
   ToolLayout, ToolButton, ToolPills, ToolSlider, ToolCode, ToolIcon,
@@ -649,7 +650,7 @@ ${stateVars}
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'colour-system.html'
+        a.download = fileName(design?.name, 'colour-system', 'html')
         a.click()
         URL.revokeObjectURL(url)
       },
@@ -661,7 +662,7 @@ ${stateVars}
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'colour-system.css'
+        a.download = fileName(design?.name, 'colour-system', 'css')
         a.click()
         URL.revokeObjectURL(url)
       },

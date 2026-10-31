@@ -4,9 +4,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
-import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, resolveOffers } from '../config/planFacts'
+import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, canCheckout, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
-import { refreshPrices, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
+import { usePriceRetry, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
@@ -216,6 +216,7 @@ export default function Checkout() {
   const plan = PLANS[planKey]
   const proPrice = useProPrice()
   const { prices } = usePrices()
+  const { retrying, retry } = usePriceRetry()
   const [error, setError] = useState('')
   // The server's reason code for the error, when it sent one, or 'log-in' when
   // the sign-in expired (what the panel offers instead of Try again).
@@ -290,38 +291,26 @@ export default function Checkout() {
     amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
     months: plan?.months,
   })
-  // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and it
-  // used to render it as a lie. `useProPrice` returns `loaded: true`
-  // the moment the fetch SETTLES — including when it settled by failing — and
-  // null for every amount it could not confirm. So with /api/get-prices down:
-  //
-  //   amount slot   `{proPrice.loaded ? amount : '—'}` → loaded was true and
-  //                 amount was null, so React rendered NOTHING. Measured on the
-  //                 built preview: `.checkout-plan-amount` textContent "" above
-  //                 "per year". A blank where a price goes reads as free.
-  //   note          the yearly branch interpolated the per-month figure
-  //                 unconditionally, so the page printed the string
-  //                 "USD · null/mo", in accent colour, on the screen where
-  //                 money changes hands.
-  //
-  // src/pages/Pricing.jsx — the step immediately before this one — already
-  // answers this exact outage, and these are ITS sentences, not new ones. Two
-  // steps of one funnel must not describe one outage two ways.
-  //
-  // "Down" is "no cadence has a live price in this currency", not "the request
-  // failed": a Stripe outage still answers 200, with every cadence a fallback.
-  const priceServiceDown = resolved.priceServiceDown
+  // The price state is one of loading, retrying, unreachable, no-currency,
+  // cadence-missing or live, the same state and the same words /plans and
+  // Settings use (planFacts.js). `useProPrice` reports `loaded: true` once the
+  // fetch settles, even when it settled by failing, and null for every amount it
+  // could not confirm, so the page reads the state and never infers an outage
+  // from a missing amount. Only `live` sells: the payment form mounts on it.
+  const priceStatus = priceState({ price: proPrice, offers: resolved.offers, selectedId: chosenOption?.id, retrying })
+  const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
+  const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
   const note = !proPrice.loaded
     // Not settled: no rate yet, because there is no offer to take it from.
     ? 'Checking the live price…'
-    : priceServiceDown
-      ? 'Live pricing is unreachable · no price can be shown right now'
+    : priceStatus === 'unreachable'
+      ? priceCopy.line1
       // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
       // THIS ONE IN THIS CURRENCY (a fallback default is not one). Without this
       // branch the line would print "GBP · null/mo". Settings' sentence for the
       // same state.
       : !amount
-        ? (chosenOption?.unavailableNote || `No ${proPrice.currencyLabel} price for this billing period right now`)
+        ? priceCopy.line1
         : chosenOption.months > 1
           // A cadence longer than a month names its per-month rate, how often it
           // bills, and its saving when it has one.
@@ -446,8 +435,8 @@ export default function Checkout() {
               <div className="checkout-plan-price">
                 {/* `amount || 'Unavailable'` is the same word /plans prints, for
                     the reason given above: `loaded` means settled, not known. */}
-                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
-                <span className="checkout-plan-per">{plan.per}</span>
+                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{amount || priceCopy.word}</span>
+                {amount && <span className="checkout-plan-per">{plan.per}</span>}
               </div>
             </div>
 
@@ -456,13 +445,19 @@ export default function Checkout() {
             {/* usePrices caches the failure for the life of the module, so
                 without this the summary stays on "Unavailable" until a full
                 reload. Same control and same label as /plans. */}
-            {priceServiceDown && (
-              <button type="button" className="btn btn-s checkout-price-retry" onClick={() => refreshPrices()}>
-                Retry live pricing
+            {canRetryPrice(priceStatus) && (
+              <button
+                type="button"
+                className="btn btn-s checkout-price-retry"
+                aria-disabled={priceStatus === 'retrying' ? 'true' : undefined}
+                aria-busy={priceStatus === 'retrying' ? 'true' : undefined}
+                onClick={() => { if (priceStatus !== 'retrying') retry() }}
+              >
+                {priceCopy.button}
               </button>
             )}
 
-            {plan.trial && (
+            {plan.trial && amount && (
               <div className="checkout-trial">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 {plan.trial}
@@ -493,13 +488,14 @@ export default function Checkout() {
             <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
           ) : !proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
-          ) : !amount ? (
-            // No live price for this cadence in this currency: no payment form.
+          ) : !canCheckout(priceStatus) || !amount ? (
+            // No live price for this cadence in this currency (not `live`, or no
+            // amount): no payment form.
             // The server would refuse it, or worse, charge something the
             // summary does not show.
             <div className="checkout-error">
               <strong className="checkout-error-h">Checkout unavailable</strong>
-              <span className="checkout-error-p">{note}</span>
+              <span className="checkout-error-p">{priceCopy.line2 || note}</span>
             </div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">

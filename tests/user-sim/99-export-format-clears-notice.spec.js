@@ -41,8 +41,8 @@ test('choosing another format clears the finished-export notice', async ({ page 
     primaryButton(panel).click(),
   ])
   // A free kit is named for the project, not the product. This board has no saved
-  // project, so the export runner's own fallback name ("Design System") is used.
-  expect(download.suggestedFilename()).toBe('design-system-ui-kit.html')
+  // project, so the file is filed as untitled.
+  expect(download.suggestedFilename()).toBe('untitled-ui-kit.html')
   await expect(dockStatus(panel)).toContainText('Your UI kit downloaded.')
   await expect(dockStatus(panel).locator('strong')).toHaveText('Your UI kit downloaded.')
   // With the message on screen the button offers another go.

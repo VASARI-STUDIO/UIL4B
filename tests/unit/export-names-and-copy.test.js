@@ -24,6 +24,7 @@ import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../../src/utils/styleGuideExport.js'
 import { buildStyleGuideHTML } from '../../src/utils/exportBuilder.js'
 import { buildTokensCss, buildTokensJson } from '../../src/utils/designTokens.js'
+import { codeFileName } from '../../src/utils/codeFiles.js'
 import { describeKey } from '../../src/utils/dataExport.js'
 
 const hex2 = (n) => n.toString(16).padStart(2, '0').toUpperCase()
@@ -264,4 +265,35 @@ test('an empty value reads "None", not a lone dash', () => {
 test('the contents line on the book no longer has the dash from the report', () => {
   const book = buildDesignSystemBook(FULL, PRO)
   assert.match(book, /<p>The colour, type and token specification for <b>Harbour<\/b>\.<\/p>/)
+})
+
+// ── file names: the kit and the dialog agree ────────────────────────────────
+
+const kitFiles = (opts) => JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(
+  renderUiKit(FULL, { template: TEMPLATE, fonts: FONTS, tier: 'free', date: new Date('2026-01-02T00:00:00Z'), ...opts }).html,
+)[1]).brand.files
+
+test('the kit\'s own download buttons save under the names the Code files have in the dialog', () => {
+  const files = kitFiles({ projectName: 'Lumen' })
+  assert.equal(files.css, codeFileName('css', 'Lumen'))
+  assert.equal(files.json, codeFileName('json', 'Lumen'))
+  assert.equal(files.html, 'lumen-ui-kit.html')
+  assert.equal(files.fonts, 'lumen-fonts.css')
+})
+
+test('an unnamed project is untitled in every kit file, and the product is never the name', () => {
+  for (const files of [kitFiles({}), kitFiles({ projectName: 'Design System', fileProject: '' })]) {
+    assert.deepEqual(files, { html: 'untitled-ui-kit.html', css: 'untitled.tokens.css', json: 'untitled.tokens.json', fonts: 'untitled-fonts.css' })
+  }
+  assert.ok(!Object.values(kitFiles({})).some((f) => /uil4b/.test(f)))
+})
+
+test('a Pro identity retitles the kit page, and the token files keep the project name the dialog shows', () => {
+  const files = kitFiles({ tier: 'pro', projectName: 'Lumen', fileProject: 'Lumen', logo: null, ...{} })
+  assert.equal(files.css, 'lumen.tokens.css')
+  const withIdentity = JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(
+    renderUiKit({ ...FULL, identity: { name: 'Harbour' } }, { template: TEMPLATE, fonts: FONTS, tier: 'pro', projectName: 'Lumen', date: new Date('2026-01-02T00:00:00Z') }).html,
+  )[1]).brand.files
+  assert.equal(withIdentity.html, 'harbour-ui-kit.html')
+  assert.equal(withIdentity.css, 'lumen.tokens.css')
 })

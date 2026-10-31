@@ -27,6 +27,7 @@ import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS, proOnlyFormats } from '../../src/config/exportFormats.js'
 import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
+import { formatFileName } from '../../src/utils/exportFileName.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -283,7 +284,8 @@ test('the export engine actually asks the server for this format', () => {
   const code = stripComments(RUNNER)
   assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
     'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
-  assert.match(code, /file: 'brand-guidelines\.html'/, 'the file is not named after the document it is')
+  assert.match(code, /formatFileName\(fileProject, format, \{ saved: true \}\)/, 'the file is not named through the one name helper')
+  assert.equal(formatFileName('Lumen', 'guidelines', { saved: true }), 'lumen-brand-guidelines.html', 'the file is not named after the document it is')
   assert.match(code, /requestExportDocument\(\{ format: documentKey, design, projectName, template: chosenTemplates\[documentKey\] \}/,
     'the engine is not asking the server for the document')
   assert.ok(!/brandGuidelines/.test(code), 'useExportRunner imports the guidelines generator again')

@@ -459,6 +459,21 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     return out.filter(l => l !== '').join('\n')
   }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
 
+  // Tailwind v4 reads its theme from CSS: each --text-<name> makes a text-<name>
+  // utility, and --text-<name>--line-height sets its leading. The clamp is a valid value there.
+  const tailwind4Export = useMemo(() => {
+    const out = ['@theme {']
+    steps.forEach(s => {
+      out.push(`  --text-${s.name}: ${fluid ? s.css : `${trim(s.rem)}rem`};`)
+      out.push(`  --text-${s.name}--line-height: ${trim(lineHeight, 3)};`)
+    })
+    if (headingFont) out.push(`  --font-heading: ${headingStack};`)
+    if (bodyFont) out.push(`  --font-body: ${bodyStack};`)
+    out.push('}')
+    return out.join('\n')
+  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+
+  // The v3 config. Tailwind v4 loads it only through @config in the stylesheet.
   const tailwindExport = useMemo(() => {
     // Tailwind takes the clamp directly — an arbitrary value in a fontSize map
     // is valid and is how fluid type is done there, so the theme carries the
@@ -498,7 +513,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     ].filter(l => l !== '').join('\n')
   }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
-  const currentExport = format === 'tailwind' ? tailwindExport : format === 'scss' ? scssExport : cssExport
+  const currentExport = format === 'tailwind' ? tailwindExport : format === 'tailwind4' ? tailwind4Export : format === 'scss' ? scssExport : cssExport
   // Both Copy buttons (the dock's and the Code drawer's) export through here.
   const exportCode = () => onExport?.(currentExport)
 
@@ -615,7 +630,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [sheetOpen])
 
-  const formatLabel = format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'
+  const formatLabel = { css: 'CSS', tailwind: 'v3 config', tailwind4: 'v4 theme', scss: 'SCSS' }[format] || 'SCSS'
 
   // Keeping the scale in a project is the one step here that asks for an
   // account; everything else on the page works signed out. The trigger sits in
@@ -786,7 +801,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   const formatPills = (
     <div className="tsc-fmt tl-pills" role="group" aria-label="Export format">
-      {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
+      {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
         <button
           key={id}
           type="button"

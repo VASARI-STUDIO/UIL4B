@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { detectCurrency, formatCurrency } from '../utils/currency'
 import { livePriceOf } from '../config/planLadder'
 
@@ -7,7 +7,16 @@ export const formatPrice = formatCurrency
 let priceCache = null
 let priceSettled = false
 let inflight = null
+// Rises on every settle and every refreshPrices(). It is what React compares: a
+// component that rendered before a settle and subscribes after it reads a
+// different number on subscribing, and renders again.
+let version = 0
 const subscribers = new Set()
+
+function bump() {
+  version += 1
+  subscribers.forEach((notify) => notify())
+}
 
 function fetchPricesOnce() {
   if (priceCache) return Promise.resolve(priceCache)
@@ -22,7 +31,7 @@ function fetchPricesOnce() {
     .finally(() => {
       priceSettled = true
       inflight = null
-      subscribers.forEach((notify) => notify())
+      bump()
     })
   return inflight
 }
@@ -35,19 +44,34 @@ export function refreshPrices() {
   if (inflight) return inflight
   priceCache = null
   priceSettled = false
-  subscribers.forEach((notify) => notify())
+  bump()
   return fetchPricesOnce()
 }
 
+function subscribe(notify) {
+  subscribers.add(notify)
+  if (!priceCache) fetchPricesOnce()
+  return () => { subscribers.delete(notify) }
+}
+const getSnapshot = () => version
+const getServerSnapshot = () => 0
+
 export function usePrices() {
-  const [, force] = useState(0)
-  useEffect(() => {
-    const rerender = () => force((value) => value + 1)
-    subscribers.add(rerender)
-    if (!priceCache) fetchPricesOnce()
-    return () => { subscribers.delete(rerender) }
-  }, [])
+  useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   return { prices: priceCache, settled: priceSettled }
+}
+
+// A Retry the person pressed. `retrying` is true from the press until the
+// request it made settles, so the Retry button can read "Checking Stripe…" in
+// its own place.
+export function usePriceRetry() {
+  const [retrying, setRetrying] = useState(false)
+  const retry = useCallback(() => {
+    const request = refreshPrices()
+    setRetrying(true)
+    request.finally(() => setRetrying(false))
+  }, [])
+  return { retrying, retry }
 }
 
 export function useProPrice(requestedCurrency) {

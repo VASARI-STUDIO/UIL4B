@@ -23,8 +23,8 @@ const ROUTE = '**/api/ai?export=document'
 const DESIGN = { palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }
 
 const DOCS = {
-  book: { html: () => buildDesignSystemBook(DESIGN, { projectName: 'Stub' }), title: /Stub \| Design System/, noun: 'book' },
-  guidelines: { html: () => buildBrandGuidelines(DESIGN, { projectName: 'Stub' }), title: /Stub \| Brand Guidelines/, noun: 'guidelines' },
+  book: { html: () => buildDesignSystemBook(DESIGN, { projectName: 'Stub' }), title: 'untitled-book', noun: 'book' },
+  guidelines: { html: () => buildBrandGuidelines(DESIGN, { projectName: 'Stub' }), title: 'untitled-brand-guidelines', noun: 'guidelines' },
 }
 
 async function open(browser, plan) {
@@ -68,6 +68,9 @@ for (const id of ['book', 'guidelines']) {
       // The window is reserved inside the click, so it exists before the answer
       // arrives: the document itself is what proves the round trip finished.
       await expect(doc.locator('.cv-title')).toBeVisible()
+      // The print window is titled with the PDF's file name, which the browser offers on
+      // Save as PDF. This board has no project name, so it is `untitled-…`, not the
+      // "Stub | …" heading inside the server's document.
       await expect(doc).toHaveTitle(DOCS[id].title)
 
       expect(asked, 'the panel must ask the server exactly once').toHaveLength(1)

@@ -56,7 +56,8 @@ test('the stripper still works, so every source read below can be trusted', () =
 // is deliberately absent: the icon library really does hand over SVG, so "SVG"
 // after "export" is not always the asset bundle. That case is pinned by name
 // on the two surfaces that made it, below.
-const FORMAT_WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON' }
+// Tailwind, CSS and JSON are all built now; the asset bundle is the one still unbuilt, named by its own phrase.
+const FORMAT_WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON', assets: 'asset bundle' }
 
 // "export" then, inside the same sentence, the format. "Copy CSS" is not
 // caught, on purpose: the tools have per-tool Copy buttons and index.html

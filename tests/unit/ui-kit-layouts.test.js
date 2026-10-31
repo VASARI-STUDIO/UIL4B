@@ -251,7 +251,7 @@ test('Showcase: tokens are set in an explicit monospace stack, or in the mono fa
 
 const downloadOf = (html) => {
   const css = JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(html)[1]).css
-  return new Map([...css.matchAll(/^\s*--([\w-]+):\s*(.*?);\s*$/gm)].map((m) => [m[1], m[2]]))
+  return new Map([...css.matchAll(/^\s*--([\w-]+):\s*(.*?);\s*(?:\/\*.*?\*\/)?\s*$/gm)].map((m) => [m[1], m[2]]))
 }
 const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 

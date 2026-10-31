@@ -191,6 +191,13 @@ const choosePack = async (page, pack) => {
   }
 }
 
+// My icons is a pinned toggle at the toolbar's right end, not a pack-menu entry.
+const openMyIcons = async (page) => {
+  const mine = page.locator('.ig-toolbar button.ig-mine')
+  await mine.click()
+  await expect(mine).toHaveAttribute('aria-pressed', 'true')
+}
+
 const openFlagGrid = async (browser, scheme, width) => {
   const touch = width <= 768
   const ctx = await browser.newContext({
@@ -695,7 +702,7 @@ test.describe('saved icons', () => {
       await page.evaluate((list) => localStorage.setItem('vs-custom-icons', JSON.stringify(list)), seeded)
       await go(page, '/create/icons')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-      await choosePack(page, 'custom')
+      await openMyIcons(page)
       const mono = page.locator('.ig .ic', { hasText: 'Custom (mono 1)' }).locator('.ig-chip')
       const flag = page.locator('.ig .ic', { hasText: 'Custom (flag 1)' }).locator('.ig-chip')
       await expect(mono).toBeVisible({ timeout: 20000 })
@@ -761,16 +768,19 @@ const measureToolbar = (page) => page.evaluate(() => {
       const r = e.getBoundingClientRect()
       return { name: e.getAttribute('aria-label') || e.textContent.trim() || e.className, w: r.width, h: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
     })
-  const add = tb.querySelector('.ig-addbtn')
+  const mine = tb.querySelector('button.ig-mine')
   const slot = tb.querySelector('.lbry-toolbar-action')
   return {
     coarse: matchMedia('(pointer:coarse)').matches,
     rowH: rr.height, rowRight: rr.right, rowLeft: rr.left,
     pageOverflow: document.documentElement.scrollWidth - innerWidth,
     controls,
-    addW: add ? add.getBoundingClientRect().width : null,
+    addOnToolbar: tb.querySelectorAll('.ig-addbtn').length,
+    mineW: mine ? mine.getBoundingClientRect().width : null,
+    // The pack menu sits in the action slot on the row; on a phone it moves to the Filters sheet, so no slot.
     slotW: slot ? slot.getBoundingClientRect().width : null,
-    addLabelVisible: add ? (() => { const l = add.querySelector('.ig-addbtn-label'); const r = l.getBoundingClientRect(); return r.width > 8 && r.height > 8 })() : null,
+    mineLabelVisible: mine ? (() => { const l = mine.querySelector('.ig-mine-label'); const r = l.getBoundingClientRect(); return r.width > 8 && r.height > 8 })() : null,
+    mineAtRightEnd: mine ? Math.round(rr.right - mine.getBoundingClientRect().right) : null,
   }
 })
 
@@ -786,7 +796,7 @@ test.describe('the icon toolbar', () => {
         watch(page, `someone browsing icons at ${w}px`)
         await go(page, '/create/icons')
         await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-        await expect(page.locator('.ig-addbtn')).toBeVisible()
+        await expect(page.locator('.ig-toolbar button.ig-mine')).toBeVisible()
         await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Outlined/ })).toHaveCount(0)
         await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Solid/ })).toHaveCount(0)
         const m = await measureToolbar(page)
@@ -801,10 +811,14 @@ test.describe('the icon toolbar', () => {
           expect(c.left, `${c.name} starts before the toolbar`).toBeGreaterThanOrEqual(m.rowLeft - 1)
         }
         expect(m.pageOverflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
-        // The Add icon control is a whole control, not a sliver.
-        expect(m.addW, 'Add icon is squeezed').toBeGreaterThanOrEqual(44)
-        expect(m.slotW, 'the action slot is squeezed').toBeGreaterThanOrEqual(44)
-        if (w > 640) expect(m.addLabelVisible, 'the Add icon word is clipped').toBe(true)
+        // Add icon is not on the toolbar; the pinned My icons toggle is, whole, at the row's right end.
+        expect(m.addOnToolbar, 'Add icon is back on the toolbar').toBe(0)
+        expect(m.mineW, 'the My icons toggle is missing or squeezed').toBeGreaterThanOrEqual(44)
+        expect(m.mineAtRightEnd, 'My icons does not hold the right end of the row').toBeLessThanOrEqual(1)
+        // The pack menu's slot, when the pack menu is on the row (a phone keeps it in the Filters sheet).
+        if (m.slotW !== null) expect(m.slotW, 'the pack menu slot is squeezed').toBeGreaterThanOrEqual(44)
+        if (w > 640) expect(m.mineLabelVisible, 'the My icons word is clipped').toBe(true)
+        else expect(m.mineLabelVisible, 'on a phone the My icons word is hidden and the glyph stays').toBe(false)
         if (touch) {
           expect(m.coarse).toBe(true)
           for (const c of m.controls) {
@@ -1019,7 +1033,7 @@ test('a saved duotone icon reopens with the Original colour chip', async ({ page
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-custom-icons') || '[]')
     .some(icon => /-duotone$/.test(icon.base)))).toBe(true)
   await page.keyboard.press('Escape')
-  await choosePack(page, 'custom')
+  await openMyIcons(page)
   const saved = page.locator('.ig-mysec').filter({ has: page.getByRole('heading', { name: 'Saved', exact: true }) }).locator('.ic').first()
   await expect(saved).toContainText(/Custom \(.*-duotone 1\)/)
   await saved.click()

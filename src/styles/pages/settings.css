@@ -270,9 +270,8 @@
    the same fault /plans fixed in its own list. */
 .stg .sub-check { position: absolute; left: 0; top: 3px; padding: 0; margin: 0; background: none; color: var(--accent-mid); }
 .stg .sub-minus { color: var(--t2); }
-.stg .sub-tier-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; }
+.stg .sub-tier-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; text-decoration: none; white-space: nowrap; }
 .stg .sub-tier-current { margin: 0; padding: 12px 0 0; border-top: 1px solid var(--stg-hair); font-size: 13px; font-weight: 500; color: var(--t1); }
-.stg .sub-price-retry { align-self: flex-start; margin-top: 10px; }
 
 /* Subscription (Pro): the same one surface, as rows. */
 .stg .sub-active { padding: 0; }
