@@ -228,6 +228,8 @@
    straight to both edges instead of bending into the row's radius. */
 :is(.tl, .tl-sheet-layer) .tl-menu-custom + .tl-menu-row { border-top-left-radius: 0; border-top-right-radius: 0; }
 :is(.tl, .tl-sheet-layer) .tl-menu-custom .tl-select { width: 100%; }
+/* The hairline between a tool's own actions and the built-in feedback row. */
+:is(.tl, .tl-sheet-layer) .tl-menu-sep { height: 1px; margin: 4px 0; background: var(--tl-hair); }
 .tl-sheet-layer .tl-menu-row { min-height: 48px; font-size: 15px; }
 @media (hover: hover) and (pointer: fine) {
   :is(.tl, .tl-sheet-layer) .tl-menu-row:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-2); }

@@ -28,6 +28,29 @@ import { waitUntil } from '@vercel/functions'
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
 const VALID_SOURCES = ['feedback-form', 'inline', 'email']
 
+// The routing choices the feedback dialog offers, by the type they file under
+// ('feedback' in the dialog is stored as 'general'). A value outside the list for
+// its type is dropped, never stored or echoed. This restates
+// src/utils/feedbackRouting.js, which a unit test holds equal to it.
+export const ROUTING_ALLOWED = Object.freeze({
+  general: {
+    category: ['General', 'UI / Design', 'Performance', 'Pricing', 'Something else'],
+  },
+  bug: {
+    category: ['Colour Studio', 'Typography / Fonts', 'Icons', 'File Converter', 'AI Tools', 'Account / Login', 'Billing', 'Other'],
+    severity: ['Minor — cosmetic', 'Major — feature broken', "Blocking — can't use the app"],
+  },
+  feature: {
+    category: ['A brand-new tool', 'Improve an existing tool', 'Export / integration', 'Other'],
+  },
+  help: {
+    category: ['Getting started', 'Using a specific tool', 'Account', 'Billing', 'Other'],
+  },
+})
+
+const routingChoice = (type, field, value) =>
+  typeof value === 'string' && ROUTING_ALLOWED[type]?.[field]?.includes(value) ? value : ''
+
 export const MESSAGE_MAX = 5000
 export const SUBJECT_MAX = 200
 export const EMAIL_MAX = 254
@@ -49,7 +72,7 @@ const oneLine = (text) => text.replace(/[\r\n\u{2028}\u{2029}]+/gu, ' ')
  * 400, never an exception.
  */
 export function validateSupportBody(body, now = new Date()) {
-  const { type, subject, message, email, source } = body && typeof body === 'object' ? body : {}
+  const { type, subject, message, email, source, category, severity } = body && typeof body === 'object' ? body : {}
 
   if (typeof message !== 'string' || !message.trim()) {
     return { error: 'Message is required' }
@@ -70,10 +93,14 @@ export function validateSupportBody(body, now = new Date()) {
   const safeType = VALID_TYPES.includes(type) ? type : 'general'
   const safeSource = VALID_SOURCES.includes(source) ? source : 'feedback-form'
   const stamp = now.toISOString()
+  const safeCategory = routingChoice(safeType, 'category', category)
+  const safeSeverity = routingChoice(safeType, 'severity', severity)
 
   return {
     entry: {
       type: safeType,
+      ...(safeCategory ? { category: safeCategory } : {}),
+      ...(safeSeverity ? { severity: safeSeverity } : {}),
       subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
       email: (email || '').trim().slice(0, EMAIL_MAX),
@@ -242,12 +269,12 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     }
   }
 
-  // The message contract: exactly these five fields, everything else dropped.
-  // tests/unit/report-context.test.js pins this line — the feedback modal folds
-  // its captured context into `message` precisely so the contract never grows.
+  // The message contract: exactly these fields, everything else dropped.
+  // tests/unit/report-context.test.js pins this line. `category` and `severity`
+  // are checked against ROUTING_ALLOWED; the rest is the message itself.
   // `requestId` is not message content; it is read on its own below.
-  const { type, subject, message, email, source } = req.body || {}
-  const validated = validateSupportBody({ type, subject, message, email, source })
+  const { type, subject, message, email, source, category, severity } = req.body || {}
+  const validated = validateSupportBody({ type, subject, message, email, source, category, severity })
   if (validated.error) {
     return res.status(400).json({ error: validated.error })
   }
@@ -353,6 +380,8 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
                 <div style="display:flex;gap:8px;margin-bottom:12px">
                   <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;background:#eef;color:#55e">${escHtml(entry.type)}</span>
                   <span style="font-size:11px;color:#888">${escHtml(entry.source)}</span>
+                  ${entry.category ? `<span style="font-size:11px;color:#888">${escHtml(entry.category)}</span>` : ''}
+                  ${entry.severity ? `<span style="font-size:11px;color:#888">${escHtml(entry.severity)}</span>` : ''}
                 </div>
                 <h2 style="font-size:18px;font-weight:700;margin:0 0 8px">${escHtml(entry.subject)}</h2>
                 <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap">${escHtml(entry.message)}</p>

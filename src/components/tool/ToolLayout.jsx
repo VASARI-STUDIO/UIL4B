@@ -27,6 +27,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
+import { REPORT_PROBLEM_EVENT } from '../../utils/errorReport'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -59,13 +60,14 @@ function useMedia(query) {
 //   ...rest    spread onto the root (data-* instrumentation, etc.)
 export function ToolLayout({
   className, title, titleId, showTitle = true, back, items, primary, overflowLabel, overflowIcon,
-  bleed = false, children, ...rest
+  feedback, bleed = false, children, ...rest
 }) {
   return (
     <div className={cx('tl', className)} {...rest}>
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
+        feedback={feedback}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
     </div>
@@ -100,9 +102,16 @@ export function ToolLayout({
 //                             Explore / Preview / History / Reset)
 // primary      node — the one primary action; always on the row
 // overflowLabel 'More' by default (the palette says 'Extra tools')
+// feedback     true by default: the overflow ends with "Send feedback", which
+//              opens the app's feedback dialog for this page. It keeps the
+//              More button on the row even when every action fits, so a
+//              phone has a way to the dialog from inside any tool. Pass
+//              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
+  feedback = true,
 }) {
+  const navigate = useNavigate()
   const backProps = back === false ? null : { to: '/projects', label: 'Back to workspace', ...(back || {}) }
   const rowRef = useRef(null)
   const widths = useRef(new Map())
@@ -144,7 +153,7 @@ export function ToolToolbar({
     const more = row.querySelector(':scope > [data-tl-more]')
     const moreW = w(more)
     // Overflow-only items keep the More button on the row whatever fits.
-    const alwaysMore = items.some((it) => it.inline === false)
+    const alwaysMore = feedback || items.some((it) => it.inline === false)
     const list = items.filter((it) => it.inline !== false).map((it, idx) => {
       const el = row.querySelector(`:scope > [data-tl-item="${CSS.escape(String(it.id))}"]`)
       const width = el ? w(el) : (widths.current.get(it.id) || 0)
@@ -178,7 +187,7 @@ export function ToolToolbar({
     setHidden(next)
     setMeasuring(false)
     setMeasuredKey(itemKey)
-  }, [needsMeasure, itemKey, items])
+  }, [needsMeasure, itemKey, items, feedback])
 
   // Re-measure when the row's width changes (viewport, sidebar, zoom) and
   // when the set of items changes.
@@ -218,7 +227,7 @@ export function ToolToolbar({
   }, [])
 
   const overflow = needsMeasure ? [] : items.filter((it) => (it.inline === false || hidden.has(it.id)) && !it.divider && it.menu !== false)
-  const showMore = needsMeasure || overflow.length > 0
+  const showMore = needsMeasure || overflow.length > 0 || feedback
   // The menu cannot stay open once its button has left the row.
   if (!showMore && open) setOpen(false)
 
@@ -237,6 +246,14 @@ export function ToolToolbar({
       </div>
     )
   })
+
+  // The app-wide feedback dialog (FeedbackButton) answers this event and fills in
+  // the route and tool name itself. Nothing answering means no dialog is mounted,
+  // so the feedback page takes over.
+  const openFeedback = () => {
+    const event = new CustomEvent(REPORT_PROBLEM_EVENT, { cancelable: true, detail: { typeId: 'feedback' } })
+    if (window.dispatchEvent(event)) navigate('/feedback')
+  }
 
   const panelBody = (
     <div className="tl-menu-list">
@@ -264,10 +281,17 @@ export function ToolToolbar({
           </button>
         )
       })}
+      {feedback && overflow.length > 0 && <div className="tl-menu-sep" role="separator" />}
+      {feedback && (
+        <button type="button" className="tl-menu-row" data-tl-menu-item="feedback" onClick={() => { closeToTrigger(); openFeedback() }}>
+          <ToolIcon name="chat-text" size={16} />
+          <span className="tl-menu-row-label">Send feedback</span>
+        </button>
+      )}
     </div>
   )
 
-  const panel = open && overflow.length > 0 && (phone
+  const panel = open && (overflow.length > 0 || feedback) && (phone
     ? createPortal(
       <div className="tl-sheet-layer">
         <div className="tl-sheet-scrim" aria-hidden="true" onClick={close} />

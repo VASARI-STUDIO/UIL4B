@@ -47,6 +47,8 @@ const GLYPHS = {
   'circle-notch': (<path d="M16.5 4.2a9 9 0 1 1-9 0" />),
   // A thumbtack: the position a stop keeps. A tapered head and a needle, so it reads at 12px.
   'push-pin': (<><path d="M8.25 3.75h7.5l-.75 5.25 3 3.75H6l3-3.75-.75-5.25Z" /><path d="M12 12.75v7.5" /></>),
+  // A speech bubble with two lines of text: "Send feedback".
+  'chat-text': (<><path d="M3.75 12a8.25 8.25 0 1 1 3.4 6.67l-3.4 1.58 1.1-3.7A8.2 8.2 0 0 1 3.75 12Z" /><path d="M8.25 10.5h7.5" /><path d="M8.25 13.5h4.5" /></>),
 }
 
 

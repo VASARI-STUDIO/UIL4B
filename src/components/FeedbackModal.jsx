@@ -11,6 +11,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
+import { FEEDBACK_ROUTING } from '../utils/feedbackRouting'
+import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 import {
@@ -26,7 +28,7 @@ const TYPES = [
     label: 'Feedback',
     icon: (<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
     selects: [
-      { key: 'category', label: 'Topic', options: ['General', 'UI / Design', 'Performance', 'Pricing', 'Something else'] },
+      { key: 'category', label: 'Topic', options: FEEDBACK_ROUTING.feedback.category },
     ],
     subjectLabel: 'Subject',
     subjectPlaceholder: 'Brief summary',
@@ -38,8 +40,8 @@ const TYPES = [
     label: 'Bug',
     icon: (<><path d="M8 2l1.88 1.88" /><path d="M14.12 3.88L16 2" /><path d="M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 014-4h4a4 4 0 014 4v3c0 3.3-2.7 6-6 6" /><path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4" /><path d="M22 13h-4" /><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" /></>),
     selects: [
-      { key: 'category', label: 'Area', options: ['Colour Studio', 'Typography / Fonts', 'Icons', 'File Converter', 'AI Tools', 'Account / Login', 'Billing', 'Other'] },
-      { key: 'severity', label: 'Severity', options: ['Minor — cosmetic', 'Major — feature broken', "Blocking — can't use the app"] },
+      { key: 'category', label: 'Area', options: FEEDBACK_ROUTING.bug.category },
+      { key: 'severity', label: 'Severity', options: FEEDBACK_ROUTING.bug.severity },
     ],
     subjectLabel: 'What went wrong?',
     subjectPlaceholder: 'e.g. Export button not working',
@@ -51,7 +53,7 @@ const TYPES = [
     label: 'Feature',
     icon: (<><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></>),
     selects: [
-      { key: 'category', label: 'Area', options: ['A brand-new tool', 'Improve an existing tool', 'Export / integration', 'Other'] },
+      { key: 'category', label: 'Area', options: FEEDBACK_ROUTING.feature.category },
     ],
     subjectLabel: 'Feature name',
     subjectPlaceholder: 'e.g. Dark mode scheduling',
@@ -63,7 +65,7 @@ const TYPES = [
     label: 'Help',
     icon: (<><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>),
     selects: [
-      { key: 'category', label: 'Topic', options: ['Getting started', 'Using a specific tool', 'Account', 'Billing', 'Other'] },
+      { key: 'category', label: 'Topic', options: FEEDBACK_ROUTING.help.category },
     ],
     subjectLabel: 'Subject',
     subjectPlaceholder: 'Brief summary',
@@ -103,6 +105,10 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const [selections, setSelections] = useState(() => delivery.status === 'sent' ? {} : delivery.draft?.selections ?? {}) // { category, severity }
   const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
   const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
+  // The return address of someone who is not signed in. Optional, and cleared
+  // whenever the dialog opens afresh so it is never carried to the next person.
+  const [contact, setContact] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.contact ?? '')
+  const [contactError, setContactError] = useState('')
   const sending = delivery.status === 'sending'
   const sent = sending || delivery.status === 'sent'
   const error = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
@@ -117,6 +123,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
   const messageRef = useRef(null)
+  const contactRef = useRef(null)
 
   // Send bookkeeping, held in refs so a second submit in the same tick sees it
   // (state would still read the old value):
@@ -150,6 +157,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
       setRemoved(draft.removed)
       setSubject(draft.subject)
       setMessage(draft.message)
+      setContact(draft.contact ?? '')
     } else if (current.status === 'sent') {
       setSubject('')
       setMessage('')
@@ -237,6 +245,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     if (seed?.subject) setSubject(seed.subject)
     if (seed?.message) setMessage(seed.message)
     setRemoved([])
+    setContact('')
+    setContactError('')
     setCapture(buildReportContext({
       pathname: location.pathname,
       tool: resolveTool(location.pathname)?.tool?.label || null,
@@ -273,7 +283,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   const send = (body, retry = true) => {
-    const draft = { typeId, selections, subject, message, capture, removed, attempt: attemptRef.current }
+    const draft = { typeId, selections, subject, message, contact, capture, removed, attempt: attemptRef.current }
     overlaySuppressedRef.current = true
     clearTimeout(overlayTimerRef.current)
     overlayTimerRef.current = setTimeout(() => { overlaySuppressedRef.current = false }, 400)
@@ -298,7 +308,16 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     e.preventDefault()
     if (!message.trim() || sendingRef.current) return
 
-    const email = user?.email || ''
+    // Checked here so a mistyped address is named as one, rather than arriving
+    // as the generic "didn't send" the server's 400 would turn into.
+    if (!user && !isContactEmail(contact)) {
+      setContactError('That email address does not look right. Correct it, or clear the field to send without one.')
+      contactRef.current?.focus()
+      return
+    }
+    setContactError('')
+
+    const email = user?.email || contact.trim()
     const payload = {
       type: typeId,
       category: selectedValue('category'),
@@ -378,13 +397,19 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
             </div>
             <h3 className="fb-success-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h3>
             <p className="fb-success-text">{sending ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
+            {/* Whether a reply is possible, which is a fact about what was sent. */}
+            <p className="fb-success-text fb-success-reply">
+              {delivery.body?.email
+                ? t('feedback.replyAddress', { email: delivery.body.email })
+                : t('feedback.noReplyAddress')}
+            </p>
             <div className="fb-success-actions">
               <button type="button" className="btn" onClick={sendAnother} disabled={sending}>Send another</button>
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
             </div>
           </div>
         ) : (
-          <form className="fb-body" onSubmit={handleSubmit}>
+          <form className="fb-body" onSubmit={handleSubmit} noValidate>
             <div className="fb-field">
               <div className="fb-label">Type</div>
               <div className="fb-types" role="group" aria-label="Submission type">
@@ -498,7 +523,29 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               </div>
             )}
 
-            {user && <div className="fb-sending-as">Sending as {user.email}</div>}
+            {user ? <div className="fb-sending-as">Sending as {user.email}</div> : (
+              <div className="fb-field">
+                <label className="fb-label" htmlFor="fb-contact">
+                  Email <span className="fb-optional">(so we can reply)</span>
+                </label>
+                <input
+                  id="fb-contact"
+                  ref={contactRef}
+                  type="email"
+                  className="fb-input"
+                  value={contact}
+                  onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  maxLength={CONTACT_EMAIL_MAX}
+                  aria-invalid={!!contactError}
+                  aria-describedby={contactError ? 'fb-contact-error' : 'fb-contact-hint'}
+                />
+                {contactError
+                  ? <p className="fb-error" id="fb-contact-error" role="alert">{contactError}</p>
+                  : <p className="fb-hint" id="fb-contact-hint">Optional. Without an email we can read your message but can&rsquo;t reply.</p>}
+              </div>
+            )}
 
             <div className="fb-actions">
               <button type="button" className="btn" onClick={onClose} disabled={sending}>Cancel</button>
