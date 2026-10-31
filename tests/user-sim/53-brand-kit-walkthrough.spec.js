@@ -167,7 +167,7 @@ test.describe('Brand kit walkthrough', () => {
 
     // And the flow is actually running on it.
     await expect(rail(page)).toBeVisible()
-    await expect(rail(page)).toContainText('0 of 4 parts')
+    await expect(rail(page)).toContainText('Step 1 of 4')
     await inView(rail(page))
     await settle(rail(page))
 
@@ -289,7 +289,8 @@ test.describe('Brand kit walkthrough', () => {
 
     // Do real work in step one, through the tool's own control.
     await setSeed(page, '#B5179E')
-    await expect(rail(page)).toContainText('1 of 4 parts')
+    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     // Walk forward with the rail's own Next, the way the flow is meant to run.
     await page.getByRole('button', { name: /^Next: Fonts/ }).click()
@@ -300,7 +301,7 @@ test.describe('Brand kit walkthrough', () => {
     // shows its swatches — that is the whole point of a guided flow rather than
     // four bookmarks, and it is carried by the saved design, not by a cursor.
     // The bar shows a built step's artefact only once its content box is 1240px
-    // wide (a container query). Below that the bar is the one 56px row of steps
+    // wide (a container query). Below that the bar is one row of steps
     // and buttons with no swatches, and the colours step one built are in the
     // help panel; at 1440px the bar carries them itself.
     await page.getByRole('link', { name: /Icons/ }).first().click()
@@ -328,7 +329,7 @@ test.describe('Brand kit walkthrough', () => {
     await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
     await page.keyboard.press('Escape')
     await expect(card(page)).toBeHidden()
-    await expect(rail(page)).toContainText(/[1-9] of 4 parts/)
+    await expect(rail(page)).toContainText('Step 4 of 4')
     // The rail has to be ON SCREEN here, on the tallest page in the flow — this
     // is the claim that it is always to hand, not merely always rendered.
     await inView(rail(page))
@@ -358,7 +359,7 @@ test.describe('Brand kit walkthrough', () => {
     // reading "Build a brand kit" that then drops you at step two has lied.
     expect(label).toBe('Resume: Fonts')
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('1 of 4 parts')
+    await expect(rail(page)).toContainText('Step 2 of 4')
 
     // And it does NOT re-teach: the card is not thrown up again on resume.
     await expect(card(page)).toBeHidden()

@@ -393,27 +393,34 @@ test.describe('Brand kit walkthrough: naming the kit on a touch screen', () => {
 })
 
 test.describe('Brand kit walkthrough: ticks', () => {
-  test('pressing Next through every step with the defaults finishes at 4 of 4', async ({ page }) => {
+  test('pressing Next through every step with the defaults ticks all four and reads Step 4 of 4', async ({ page }) => {
     watch(page, 'designer happy with the defaults')
     await seed(page)
     await go(page, '/create/palette')
-    await expect(rail(page)).toContainText('0 of 4 parts')
+    // The count says where the person is; the ticks say what is built.
+    const ticks = rail(page).locator('.bkit-step.is-done')
+    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(ticks).toHaveCount(0)
 
     await rail(page).getByRole('button', { name: /^Next: Fonts/ }).click()
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('1 of 4 parts')
+    await expect(rail(page)).toContainText('Step 2 of 4')
+    await expect(ticks).toHaveCount(1)
     await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     await rail(page).getByRole('button', { name: /^Next: Type scale/ }).click()
     await expect(page).toHaveURL(/\/create\/type-scale$/)
-    await expect(rail(page)).toContainText('2 of 4 parts')
+    await expect(rail(page)).toContainText('Step 3 of 4')
+    await expect(ticks).toHaveCount(2)
 
     await rail(page).getByRole('button', { name: /^Next: Icons/ }).click()
     await expect(page).toHaveURL(/\/create\/icons$/)
-    await expect(rail(page)).toContainText('3 of 4 parts')
+    await expect(rail(page)).toContainText('Step 4 of 4')
+    await expect(ticks).toHaveCount(3)
 
     await rail(page).getByRole('button', { name: /^Name your project/ }).click()
-    await expect(rail(page)).toContainText('4 of 4 parts')
+    await expect(rail(page)).toContainText('Step 4 of 4')
+    await expect(ticks).toHaveCount(4)
     await expect(nameField(page)).toBeVisible()
   })
 })
@@ -589,9 +596,9 @@ test.describe('Brand kit walkthrough: Name your project', () => {
   // a sheet whose foot sits on the bar's top edge on a phone.
   const NAME_PANEL_WIDTHS = [
     { width: 1440, height: 900, barHeight: 56, gap: 8 },
-    { width: 1024, height: 900, barHeight: 56, gap: 8 },
-    { width: 768, height: 900, barHeight: 56, gap: 8 },
-    { width: 390, height: 844, barHeight: 112, gap: 0 },
+    { width: 1024, height: 900, barHeight: 76, gap: 8 },
+    { width: 768, height: 900, barHeight: 76, gap: 8 },
+    { width: 390, height: 844, barHeight: 132, gap: 0 },
   ]
   for (const { width, height, barHeight, gap } of NAME_PANEL_WIDTHS) {
     test(`${width}px: the name step is a panel ${gap ? `${gap}px above` : 'joined to'} the bar, and the bar does not change`, async ({ page }) => {
