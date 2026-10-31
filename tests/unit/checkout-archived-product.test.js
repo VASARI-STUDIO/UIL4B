@@ -268,7 +268,7 @@ test('a cached price Stripe now refuses answers 503, not 500, and is re-checked 
   assert.equal(next.statusCode, 503)
 })
 
-test('a refused price is still retried once without the currency, and the retry\'s error decides', async (t) => {
+test('a refused price answers 503 on the first attempt, even when a currency was sent, and is not retried', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   const { calls } = setup(t, {
     prices: { price_env: price('price_env') },
@@ -277,17 +277,18 @@ test('a refused price is still retried once without the currency, and the retry\
   const res = await startCheckout('monthly', { currency: 'eur' })
 
   assert.equal(res.statusCode, 503)
-  assert.equal(calls.sessions.length, 2, 'the currency-less retry always happens when a currency was sent')
+  assert.equal(res.body.error, 'The monthly price is temporarily unavailable. No payment session was created.')
+  assert.equal(calls.sessions.length, 1, 'a session is never retried without the currency the buyer was shown')
   assert.equal(calls.sessions[0].currency, 'eur')
-  assert.equal(calls.sessions[1].currency, undefined)
 })
 
-test('a currency the customer is locked out of is not mistaken for an unsellable price', async (t) => {
+test('a currency the customer is locked out of is refused with 409, not mistaken for an unsellable price', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
+  let locked = false
   const { calls } = setup(t, {
     prices: { price_env: price('price_env') },
     createSession: async (params) => {
-      if (params.currency) {
+      if (locked && params.currency) {
         throw Stripe.errors.StripeError.generate({
           type: 'invalid_request_error', param: 'currency', message: 'You cannot combine currencies on a single customer.',
         })
@@ -295,31 +296,29 @@ test('a currency the customer is locked out of is not mistaken for an unsellable
       return { client_secret: 'cs_secret_1' }
     },
   })
-  const res = await startCheckout('monthly', { currency: 'eur' })
+  assert.equal((await startCheckout('monthly')).statusCode, 200)
 
-  assert.equal(res.statusCode, 200)
-  assert.equal(res.body.clientSecret, 'cs_secret_1', 'the retry without the currency opened the session')
-  assert.equal(calls.sessions.length, 2)
-  assert.equal(calls.sessions[0].currency, 'eur')
-  assert.equal(calls.sessions[1].currency, undefined)
-  assert.deepEqual(calls.sessions[1].line_items, calls.sessions[0].line_items, 'the retry sells the same price')
+  locked = true
+  const res = await startCheckout('monthly', { currency: 'eur' })
+  assert.equal(res.statusCode, 409)
+  assert.match(res.body.error, /can't be opened in EUR/)
+  assert.equal(calls.sessions.length, 2, 'one earlier success and the refused attempt, with no retry in another currency')
+
+  // The price itself is fine, so it stays cached.
+  locked = false
+  assert.equal((await startCheckout('monthly')).statusCode, 200)
+  assert.equal(calls.retrieve.length, 1, 'the cached price was kept')
 })
 
-test('a price that is inactive on the retry answers 503 with a reference id and drops the cached price', async (t) => {
+test('a price that turns inactive after being cached answers 503 with a reference id even when a currency was sent', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   let archived = false
   const prices = { price_env: price('price_env') }
   const { calls } = setup(t, {
     prices,
-    createSession: async (params) => {
-      if (!archived) return { client_secret: 'cs_secret_1' }
-      // The locked currency is refused first; only the retry shows the price is the problem.
-      if (params.currency) {
-        throw Stripe.errors.StripeError.generate({
-          type: 'invalid_request_error', param: 'currency', message: 'You cannot combine currencies on a single customer.',
-        })
-      }
-      throw unsellable()
+    createSession: async () => {
+      if (archived) throw unsellable()
+      return { client_secret: 'cs_secret_1' }
     },
   })
 
@@ -331,20 +330,19 @@ test('a price that is inactive on the retry answers 503 with a reference id and 
   assert.equal(refused.statusCode, 503)
   assert.equal(refused.body.error, 'The monthly price is temporarily unavailable. No payment session was created.')
   assert.match(refused.body.correlationId, /^[0-9a-z]+$/)
-  assert.equal(calls.sessions.length, 3, 'one earlier success, then the refused attempt and its currency-less retry')
+  assert.equal(calls.sessions.length, 2, 'one earlier success, then the single refused attempt')
 
   // The entry is gone: the next request asks Stripe again and stops at the guard.
   prices.price_env = price('price_env', { product: archivedProduct })
   assert.equal((await startCheckout('monthly')).statusCode, 503)
   assert.equal(calls.retrieve.length, 2, 'Stripe was asked about the price again')
-  assert.equal(calls.sessions.length, 3)
+  assert.equal(calls.sessions.length, 2)
 })
 
-test('an error that mentions the price or currency but not that it is inactive stays a 500 and keeps the cached price', async (t) => {
+test('an error that mentions the price but not that it is inactive stays a 500 and keeps the cached price', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   const errors = {
     'a price param with no resource_missing code': { param: 'line_items[0][price]', message: 'The price currency does not match the customer.' },
-    'a currency param': { param: 'currency', message: 'You cannot combine currencies on a single customer.' },
   }
   for (const [name, fields] of Object.entries(errors)) {
     let broken = false
@@ -358,8 +356,7 @@ test('an error that mentions the price or currency but not that it is inactive s
 
     assert.equal((await startCheckout('monthly')).statusCode, 200, name)
     broken = true
-    // The same error comes back on the currency-less retry, so it is the retry's error that is classified.
-    const failed = await startCheckout('monthly', { currency: 'eur' })
+    const failed = await startCheckout('monthly')
     assert.equal(failed.statusCode, 500, name)
     assert.match(failed.body.error, /No payment was taken/, name)
 
