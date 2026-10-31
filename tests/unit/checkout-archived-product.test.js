@@ -94,7 +94,7 @@ function setup(t, { prices = {}, lookup = {}, createSession = async () => ({ cli
   })
 
   const db = memoryDb()
-  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.test' }))
+  t.mock.method(adminAuth(), 'verifyIdToken', async () => ({ uid: 'uid_1', email: 'person@example.test', email_verified: true }))
   t.mock.method(adminDb(), 'collection', db.collection)
   t.mock.method(adminDb(), 'runTransaction', db.runTransaction)
 
@@ -112,7 +112,7 @@ const startCheckout = async (interval = 'monthly', extra = {}) => {
   const res = fakeRes()
   await checkout({
     method: 'POST',
-    headers: { authorization: 'Bearer test-token', host: 'localhost' },
+    headers: { authorization: 'Bearer test-token', host: 'localhost', 'x-forwarded-for': '198.51.100.20' },
     body: { interval, ...extra },
   }, res)
   return res

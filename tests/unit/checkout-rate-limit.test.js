@@ -30,7 +30,7 @@ function fakeStripe() {
     sessions,
     prices: {
       retrieve: async () => { throw new Error('not used') },
-      list: async () => ({ data: [{ id: 'price_live', active: true, recurring: { interval: 'month', interval_count: 1 } }] }),
+      list: async () => ({ data: [{ id: 'price_live', active: true, product: { id: 'prod_1', active: true }, recurring: { interval: 'month', interval_count: 1 } }] }),
     },
     customers: { create: async () => ({ id: 'cus_1' }) },
     checkout: { sessions: { create: async (params) => { sessions.push(params); return { client_secret: 'cs_secret' } } } },

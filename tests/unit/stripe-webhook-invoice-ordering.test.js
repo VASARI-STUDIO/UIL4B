@@ -446,6 +446,8 @@ const PERMANENT_ERRORS = {
 const KEY_ERRORS = {
   'key rejected (401 authentication error)': { type: 'StripeAuthenticationError', statusCode: 401 },
   'key may not read invoices (403 permission error)': { type: 'StripePermissionError', statusCode: 403 },
+  'an authentication error carrying no status code': { type: 'StripeAuthenticationError' },
+  'a permission error carrying no status code': { type: 'StripePermissionError' },
   'a bare 401 with no error type': { statusCode: 401 },
   'a bare 403 with no error type': { statusCode: 403 },
 }
