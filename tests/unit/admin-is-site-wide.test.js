@@ -152,7 +152,7 @@ test('the four tabs the founder had removed are gone, and stay gone', () => {
   // The positive half: the tabs that stayed are the ones that had a source
   // capable of answering them, and Overview is still first because the route
   // opens on it.
-  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe'],
+  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe', 'settings'],
     'the tab set changed. Adding one is fine; this assertion exists so that it is a decision rather '
     + 'than a drift, and so the order Overview-first survives (tests/user-sim/57 opens on it).')
   // And each id must actually have a branch, or the tab is a dead button.
