@@ -291,7 +291,7 @@ test.describe('the ferry slider', () => {
 // The drawing is cropped to cover its box, so a place name cannot sit at a fixed fraction of the
 // box: it is placed from the same crop, and kept inside the box. At every width each name is
 // inside the map, no two overlap, none covers a wharf dot, and the two wharves carry theirs:
-// Circular Quay's name is below its dot and Manly's is to the right of its dot and within a label's height of it (it hangs about 12px low at 768 and up: LABEL_AT.right puts its top 4px under the point).
+// Circular Quay's name is below its dot and Manly's is to the right of its dot and within a label's height of it (it sits level with its dot at 768 and up: LABEL_AT.right puts its top 4px under the point).
 //
 // To make it go red (undo it after): in SlackWater.jsx CrossingMap's `place`, set `k` to
 // `bw / w` and `oy` to `0`; or revert to a0eb72a4~1 for SlackWater.jsx and SlackWater.css.
