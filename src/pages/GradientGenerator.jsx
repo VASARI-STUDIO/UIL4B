@@ -13,7 +13,7 @@ import {
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
-import { GRAD_TYPE_WEIGHTS, rollGradient } from '../utils/gradientRandom'
+import { GRAD_TYPE_WEIGHTS, rollGradient, parseMoodFilters, moodFor, moodWords, poolMatching } from '../utils/gradientRandom'
 import { pushRecent } from '../utils/gradientScore'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
@@ -65,7 +65,10 @@ const COUNT_OPTIONS = [ANY, 2, 3, 4, 5]
 // `pool` is the colours Shuffle from palette draws from, as upper-case hexes. Empty
 // means every palette colour. An entry saved before the pool existed has none and
 // reads as empty.
-const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], pool: [] }
+// `hue`, `tone`, `use` and `base` are the mood filters (utils/gradientRandom): Warm,
+// Light, Hero and a base colour. Each is null when off. Hue and Tone are free; Use and
+// Base colour are Pro, so a free account's saved Use or Base is read but not rolled.
+const DEFAULT_FILTERS = { types: [ANY], counts: [ANY], pool: [], hue: null, tone: null, use: null, base: null }
 // The geometry locks (type, angle, interpolation) are kept for the session beside
 // the filters. An older filters entry's `keepAngle: true` becomes the angle lock
 // on load (parseGeometryLocks), and the filters no longer carry it.
@@ -84,15 +87,16 @@ function readFilters() {
     const ok = (arr, allowed) => Array.isArray(arr) && arr.length > 0 && arr.every((v) => allowed.includes(v))
     if (f && ok(f.types, [ANY, ...GRAD_TYPES]) && ok(f.counts, COUNT_OPTIONS)) {
       const pool = Array.isArray(f.pool) ? [...new Set(f.pool.filter((h) => typeof h === 'string' && HEX_6.test(h)))] : []
-      return { types: f.types, counts: f.counts, pool }
+      return { types: f.types, counts: f.counts, pool, ...parseMoodFilters(f) }
     }
   } catch { /* storage blocked or unreadable: the defaults stand */ }
   return DEFAULT_FILTERS
 }
 // The engine's view of a filter: an empty list means Any.
-const engineFilters = (f) => ({
+const engineFilters = (f, isPro) => ({
   types: f.types.includes(ANY) ? [] : f.types,
   counts: f.counts.includes(ANY) ? [] : f.counts,
+  ...moodFor(f, isPro),
 })
 // The pool colours that are still on offer, in the order they were picked. A colour
 // the palette no longer holds is ignored rather than deleted, so coming back to the
@@ -104,7 +108,7 @@ const livePool = (pool, colours) => {
 // True when any setting narrows what Random and Shuffle may make from the default.
 // Picked colours count from two up, the same rule Shuffle from palette uses. A lock
 // is not a setting here: it sits beside the control it keeps.
-const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || livePool(f.pool, colours).length >= 2
+const isNarrowed = (f, colours) => !f.types.includes(ANY) || !f.counts.includes(ANY) || livePool(f.pool, colours).length >= 2 || moodWords(f).length > 0
 // "Linear and radial", "2, 3 and 4": what the live region says after a press.
 const sentence = (vals) => {
   const t = vals.map((v) => String(v).toLowerCase())
@@ -655,7 +659,8 @@ function ShuffleBody({ filters, setFilters, colours, lockedType, lockedStops }) 
   const stopsNote = lockedStops ? `Locked stops keep the count at ${lockedStops}.` : null
   const typeSay = lockedType ? [lockedType] : filters.types.filter((t) => t !== ANY).length ? filters.types : ['any type']
   const countSay = lockedStops ? [`${lockedStops} stops`] : filters.counts.filter((c) => c !== ANY).length ? filters.counts.map((c) => `${c} stops`) : ['any number of stops']
-  const summary = `Random makes ${sentence(typeSay)}, ${sentence(countSay)}`
+  const mood = moodWords(filters)
+  const summary = `Random makes ${mood.length ? `${sentence(mood)} gradients: ` : ''}${sentence(typeSay)}, ${sentence(countSay)}`
   return (
     <div className="grd-shuf-body">
       {/* STYLE_FAMILIES is empty until a family is built. The Style row,
@@ -1183,8 +1188,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The roll also gets the stops, because it lays the stop locks over each of its
   // candidates before scoring them (utils/gradientRandom), and the recent results.
   const rollOptions = useCallback(
-    (kind) => ({ ...lockedRollOptions(engineFilters(filters), locks, { type, angle, space }, stops), stops, recent: recentRolls.current[kind], deck: typeDeck.current }),
-    [filters, locks, type, angle, space, stops],
+    (kind) => ({ ...lockedRollOptions(engineFilters(filters, isPro), locks, { type, angle, space }, stops), stops, recent: recentRolls.current[kind], deck: typeDeck.current }),
+    [filters, isPro, locks, type, angle, space, stops],
   )
 
   // Put a rolled gradient on the page. The roll's stops already honour the stop
@@ -1256,9 +1261,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // two-colour pick has to differ in lightness or hue, the pool cycles if there
     // are more stops than colours, and the radial gate runs on the palette colours
     // (a locked Radial keeps the best of its draws rather than becoming Linear).
-    applyRoll(rollGradient(Math.random, { ...rollOptions('palette'), palette: pool }), 'palette')
-    toast?.(everyColourKept ? EVERY_COLOUR_LOCKED : usingPicks ? `Random gradient from ${pool.length} picked colours` : 'Random gradient from your palette')
-  }, [pool, usingPicks, randomise, applyRoll, rollOptions, toast, stops])
+    // A Hue or Tone narrows the pool first; with fewer than two matches the whole pool
+    // stands and the toast says so.
+    const mood = poolMatching(pool, filters.hue, filters.tone)
+    applyRoll(rollGradient(Math.random, { ...rollOptions('palette'), palette: mood.pool }), 'palette')
+    toast?.(everyColourKept ? EVERY_COLOUR_LOCKED : mood.note || (usingPicks ? `Random gradient from ${pool.length} picked colours` : 'Random gradient from your palette'))
+  }, [pool, filters.hue, filters.tone, usingPicks, randomise, applyRoll, rollOptions, toast, stops])
 
   const fromPalette = useCallback(() => {
     if (!canRandomFromPalette) {
