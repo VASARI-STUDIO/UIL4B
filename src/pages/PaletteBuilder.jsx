@@ -1246,13 +1246,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     window.addEventListener('scroll', place, { passive: true })
     return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place) }
   }, [galleryOpen, wideDock])
-  const hasRows = exploring || variations.length > 0
-  useEffect(() => {
-    if (!galleryOpen) return
-    const wrap = galleryRef.current
-    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row') || wrap?.querySelector('.plb-pop-x')
-    target?.focus({ preventScroll: true })
-  }, [galleryOpen, exploring, hasRows])
   useEffect(() => {
     if (galleryOpen) { wasGalleryOpen.current = true; return }
     if (!wasGalleryOpen.current) return
@@ -1358,6 +1351,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     else out.push({ label: v.group, items: [v] })
     return out
   }, []), [variations])
+  // Focus moves into the panel on open. These read `variations`, so they sit below
+  // that memo: a const read before its declaration throws.
+  const hasRows = exploring || variations.length > 0
+  useEffect(() => {
+    if (!galleryOpen) return
+    const wrap = galleryRef.current
+    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row') || wrap?.querySelector('.plb-pop-x')
+    target?.focus({ preventScroll: true })
+  }, [galleryOpen, exploring, hasRows])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
   // brand pick) invalidates the frozen variation snapshot so the list rebuilds.
