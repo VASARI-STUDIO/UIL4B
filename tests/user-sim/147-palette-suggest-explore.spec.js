@@ -144,10 +144,12 @@ async function settled(loc, what = 'the panel') {
   await expect.poll(async () => { const a = await top(); await loc.page().waitForTimeout(120); return a === await top() }, { message: `${what} has settled` }).toBe(true)
 }
 
-// Every chip's box in a panel, grouped by the strip it is in.
+// Every chip's layout box in a panel, grouped by the strip it is in. offsetWidth and
+// offsetHeight ignore transforms: a locked row's chips are drawn at scale(1.15) so the
+// blur's soft edge falls outside the clip, and getBoundingClientRect would report 36.8px.
 const chipBoxes = (panel) => panel.locator('.plb-sw-strip').evaluateAll((strips) => strips
   .map((strip) => [...strip.querySelectorAll(':scope > .plb-sw-chips:not(.plb-sw-chips--mine) > .plb-sw-chip')]
-    .map((c) => { const r = c.getBoundingClientRect(); return { w: r.width, h: r.height } }))
+    .map((c) => ({ w: c.offsetWidth, h: c.offsetHeight })))
   .filter((boxes) => boxes.length > 0))
 
 test.describe('the panel docks beside the board', () => {
