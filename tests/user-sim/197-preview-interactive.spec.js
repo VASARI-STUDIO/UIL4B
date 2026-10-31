@@ -384,7 +384,7 @@ test.describe('the compare view', () => {
     await seed(page, MID)
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Suggest variations and brands', 'Suggest')
+    await clickPaletteAction(page, 'Suggest variations')
     const compare = page.getByRole('button', { name: /^Compare .* with your palette$/ }).first()
     await expect(compare).toBeVisible()
     await compare.click()
