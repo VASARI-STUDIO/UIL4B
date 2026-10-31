@@ -48,6 +48,10 @@
   --tl-ease: cubic-bezier(.23, 1, .32, 1);
   --tl-pad: clamp(12px, 2vw, 18px);
   --tl-gap: clamp(12px, 1.6vw, 18px);
+  /* The toolbar's height: 9px padding top and bottom, a 36px button, a 1px rule.
+     A tool that fits the viewport in one frame subtracts it. Keep it in step with
+     .tl-toolbar and .tl-btn below (the coarse 44px button is set in the media rule). */
+  --tl-bar-h: 55px;
 
   /* Full bleed under the fixed nav. The margins cancel .rail-content's padding
      (24px / --page-inline / --s-9, global.css) exactly as the palette board
@@ -573,6 +577,7 @@ html.bkit-on .tl { --tl-dock-h: 0px; }
    (57-create-tool-target-size, 99-coarse-targets-44). The design draws 36px
    for a mouse; on a finger the same control grows, nothing else moves. */
 @media (pointer: coarse) {
+  .tl { --tl-bar-h: 63px; }
   :is(.tl, .tl-sheet-layer) .tl-btn,
   :is(.tl, .tl-sheet-layer) .tl-select { height: 44px; min-height: 44px; }
   :is(.tl, .tl-sheet-layer) .tl-btn--square { width: 44px; }

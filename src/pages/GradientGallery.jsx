@@ -19,7 +19,7 @@ import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegac
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -240,12 +240,14 @@ export default function GradientGallery({ toast }) {
   // PaletteGallery.jsx.
   const anonymous = tier === 'anonymous'
   const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
+  // Where the viewer stands on the ladder, in words, for the wall and the close.
+  const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'gradients' })
   const lockedBlock = teaseVisible ? (
     anonymous ? (
       <div className="lockt-cta">
         <div className="lockt-cta-copy">
           <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'gradient' : 'gradients'} with a free account`}</p>
-          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${rows.length} gradients. Pro opens all ${rows.length}.`}</p>
+          <p className="lockt-cta-body">{ladderLine}</p>
         </div>
         <button
           type="button"
@@ -438,14 +440,18 @@ export default function GradientGallery({ toast }) {
         <DiscoverResultHead
           eyebrow="Curated collection"
           title="Gradients worth building with"
-          count={visible.length}
+          // No count while a Pro library is on its way: the number of free
+          // rows would be the wrong one. Otherwise the whole library's size sits
+          // beside the part this viewer has, on the unnarrowed view only.
+          count={proPending ? undefined : visible.length}
+          total={teaseVisible ? rows.length : undefined}
           noun="gradient"
           id="grg-grid-heading"
         />
 
         {visible.length > 0 ? (
           <GradientGalleryGrid toast={toast} gradients={visible} />
-        ) : (
+        ) : proPending ? null : (
           // The reset is unconditional now. It used to render only when the page
           // could prove a filter was set, which hid it in precisely the case
           // where working out what to undo by hand was hardest.
@@ -491,12 +497,24 @@ export default function GradientGallery({ toast }) {
           to="/create/gradient"
         />
       ) : !teaseVisible && !proPending && lockedCount > 0 ? (
-        <GalleryCloseCta
-          className="grg-cta"
-          detail={`Free covers ${browsable.length} of the ${rows.length}. Pro opens all of them.`}
-          action="See what Pro includes"
-          to="/plans"
-        />
+        // A signed-out visitor's next step is the free account, with the same
+        // numbers the wall states; a free account's next step is Pro.
+        anonymous ? (
+          <GalleryCloseCta
+            className="grg-cta"
+            detail={ladderLine}
+            action="Create your free account"
+            onAction={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+            busy={authLoading}
+          />
+        ) : (
+          <GalleryCloseCta
+            className="grg-cta"
+            detail={ladderLine}
+            action="See what Pro includes"
+            to="/plans"
+          />
+        )
       ) : null}
     </div>
   )

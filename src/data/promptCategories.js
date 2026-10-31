@@ -1,4 +1,4 @@
-// Category chips for filtering community prompts, and the free-tier gate count.
+// Category chips for filtering community prompts. How many prompts a free account opens is GALLERY_TIER_LIMITS.free (src/utils/lockedPreview.js).
 export const TAG_CATEGORIES = [
   { label: 'Website', tags: ['business', 'local', 'one-page', 'restaurant', 'portfolio', 'freelancer', 'construction', 'ecommerce', 'real-estate', 'coffee', 'fitness', 'saas', 'listing', 'property', 'landing', 'blog', 'editorial'] },
   { label: '3D & Motion', tags: ['3d', 'threejs', 'animation', 'motion', 'hero', 'scroll', 'gsap', 'transitions', 'lottie', 'particles', 'wave', 'blob', 'shader', 'glsl', 'text'] },
@@ -7,10 +7,3 @@ export const TAG_CATEGORIES = [
   { label: 'Branding', tags: ['branding', 'identity', 'creative', 'premium', 'elegant', 'warm', 'typography'] },
 ]
 
-// How many community prompts a free account can open. Raised from 5 to 12 when
-// the library moved to Discover and became a paid surface: five is too few to
-// judge whether the rest is worth paying for, and a browse surface whose value
-// is invisible until you buy it does not convert — it just annoys. Twelve is
-// enough to cover every category at least once, which is what makes the
-// remainder a credible offer rather than a wall.
-export const FREE_PROMPT_LIMIT = 12
