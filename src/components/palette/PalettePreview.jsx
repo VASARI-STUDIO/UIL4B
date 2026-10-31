@@ -24,10 +24,11 @@ import '../../styles/pages/palette-preview.css'
  * @param {string[]} props.labels the five slot names, in BRAND_ROLES order
  * @param {string} props.sceneId one of PREVIEW_SCENES
  * @param {string|null} props.highlight a role to outline, or null
+ * @param {string} [props.state] the State menu's pick, for an example that has states
  * @param {(roles: string[], adjusted: string[]) => void} props.onRoles the roles
  *   this scene paints, and those it painted as text in an adjusted colour
  */
-export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles }) {
+export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles, state }) {
   const scene = sceneById(sceneId)
   const Body = EXAMPLES[scene.id]
   const rootRef = useRef(null)
@@ -93,7 +94,7 @@ export default function PreviewScene({ roles, labels, sceneId, highlight = null,
       role="img"
       aria-label={`${scene.name} preview using your palette, ${roles.mode} theme`}
     >
-      <Body roles={roles} labels={labels} />
+      <Body roles={roles} labels={labels} state={state} />
     </div>
   )
 }
