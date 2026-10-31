@@ -114,6 +114,15 @@ const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) =
 // Elements a redesigned route gained. They join the measure only while
 // regenerating; once they are in the fixture they are compared like any other.
 const ADDED_SELECTORS = {
+  // Below 768px a Create tool's primary is in the dock fixed to the foot of the screen, not
+  // the toolbar (`.tl-primary` is not rendered at 390 any more). The dock takes its place
+  // in the measure at 390; it is not mounted at 1440.
+  '/create/palette': ['.tl-dock'],
+  '/create/semantic-color': ['.tl-dock'],
+  '/create/gradient': ['.tl-dock'],
+  '/create/tint': ['.tl-dock'],
+  '/create/contrast': ['.tl-dock'],
+  '/create/alt-text': ['.tl-dock'],
   '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
     '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the

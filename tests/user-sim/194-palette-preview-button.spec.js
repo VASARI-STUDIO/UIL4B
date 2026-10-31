@@ -3,8 +3,8 @@
 //
 // It has priority 3, under Redo (4), Undo, Randomise and Suggest (5), so it
 // leaves the row before any of them. Under 768px it is overflow-only
-// (`inline: false`), so a phone's row is Undo, Randomise, Suggest and Save as
-// it was.
+// (`inline: false`), so a phone's row is Undo, Randomise, Suggest and More; Save
+// or share has moved to the dock at the foot of the screen (`[data-tl-dock]`).
 //
 // Measured with the Switzer build at 900px tall: Preview joins the row from about
 // 1050px and Explore from about 1240px, so Preview is in Extra tools at 768 and
@@ -77,6 +77,11 @@ test.describe('Preview is a main toolbar button', () => {
       }
 
       const boxes = await rowBoxes(page)
+      // On a phone the primary is in the dock, not on the row.
+      if (PHONES.includes(width)) {
+        expect(boxes.map((b) => b.id), `${width}px: Save or share is in the dock, not on the row`).not.toContain('primary')
+        await expect(page.locator('[data-tl-dock] button').first(), `${width}px: the dock holds Save or share`).toHaveAccessibleName(/^Save or share/)
+      }
       // Centre lines, not tops: the seed chip is 37px tall, the buttons 36px and the divider 24px,
       // and the row centres them, so their tops differ by up to 7px on one line. A wrapped item
       // would sit a whole row (36px or more) off the centre.
