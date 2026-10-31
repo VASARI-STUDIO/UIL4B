@@ -1,98 +1,223 @@
-// E1, "Slack Water": an editorial landing hero. The palette's primary is the
-// harbour itself, a full-bleed field under the masthead; the land, the wharves
-// and the ferry are the other slots. Content and chart geometry live in
-// SlackWater.data.js.
-import { memo } from 'react'
-import { brandAsText, fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles'
-import { CHART_BOX, CONTENTS, FERRY, HERO, LAND, MAST, NEXT, ROUTE, WHARVES } from './SlackWater.data'
+// "Slack Water": a harbour quarterly's article page. The ferry photograph leads;
+// the headline, dek and story follow on the page; a drawn map of the crossing
+// sits in the story with a time slider. The palette is spent as a masthead
+// spends a brand (see SlackWater.data.js for where each role lands).
+//
+// One state at a time: `state` is the dialog's State menu pick (Article,
+// Subscribe, Subscribe with an email error). Softly interactive when the dialog
+// hands it `onState`: Subscribe opens the sheet, the nav swaps the panel under
+// the story, the slider moves the ferry, Save flips. Nothing submits, fetches or
+// is kept after the preview closes. Without `onState` the same markup is a still picture.
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import PreviewImage from '../PreviewImage.jsx'
+import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
+import { BODY, CROSSING, HERO, MAP, MAST, PANELS, SUBSCRIBE, clockAt, emailProblem, slackVars, whereAt } from './SlackWater.data.js'
 import './SlackWater.css'
+
+const Live = createContext(null)
+
+// A control is a real button while the scene is live and a plain span when it is a still picture.
+function Ctl({ className, children, ...rest }) {
+  const live = useContext(Live)
+  if (!live) return <span className={className}>{children}</span>
+  return <button type="button" className={className} {...rest}>{children}</button>
+}
 
 const pct = (v, of) => `${(v / of) * 100}%`
 
-function SlackWater({ roles }) {
-  const inks = { on: roles.onPrimary, text: roles.text, canvas: roles.canvas }
-  // The Contrast Checker's pair is under test, so nothing is corrected: the type
-  // on the field is the background colour, and the one brand-coloured text is the
-  // text colour.
-  const pair = Boolean(roles.pair)
-  const ink = inkOnField(roles.primary, inks, { keep: pair })
-  const sec = pair ? { hex: roles.text, adjusted: false } : brandAsText(roles.secondary, [roles.canvas])
-  const vars = {
-    // Type set on the field: wharf labels, the caption, and the Subscribe button.
-    '--sw-ink': ink.hex,
-    '--sw-edge': fieldEdge(roles.primary, roles.canvas, roles.borderStrong),
-    '--sw-sec': sec.hex,
+function Masthead({ nav, setNav, onSubscribe }) {
+  const live = useContext(Live)
+  return (
+    <header className="sw-mast" data-role="neutral">
+      <span className="sw-name">{MAST.name}</span>
+      <nav className="sw-nav" aria-label={live ? 'Slack Water' : undefined}>
+        {MAST.nav.map((n) => (
+          <Ctl key={n} className={n === nav ? 'sw-navi is-current' : 'sw-navi'} aria-current={n === nav ? 'page' : undefined} onClick={() => setNav(n)}>
+            {n}
+            {n === nav && <i className="sw-ul" data-role="secondary" />}
+          </Ctl>
+        ))}
+      </nav>
+      <span className="sw-issue">{MAST.issue}</span>
+      <Ctl className="sw-cta" data-role="primary" onClick={onSubscribe}>{MAST.cta}</Ctl>
+    </header>
+  )
+}
+
+function Photo({ narrow }) {
+  const asset = PREVIEW_ASSETS[narrow ? 'ferry-morning-portrait' : 'ferry-morning']
+  return (
+    <figure className="sw-photo" data-role="neutral">
+      <PreviewImage asset={asset} sizes={narrow ? '100vw' : '(min-width: 1100px) 1080px, 100vw'} eager className="sw-img" />
+      <figcaption className="sw-cap">{HERO.caption}</figcaption>
+    </figure>
+  )
+}
+
+function Lede({ saved, setSaved }) {
+  return (
+    <section className="sw-lede" data-role="neutral">
+      <p className="sw-rubric">{HERO.rubric}</p>
+      <h2 className="sw-head">{HERO.head}</h2>
+      <div className="sw-aside">
+        <p className="sw-dek">{HERO.dek}</p>
+        <p className="sw-by">{HERO.byline} · {HERO.credit} · {HERO.length}</p>
+        <Ctl className={saved ? 'sw-save is-on' : 'sw-save'} aria-pressed={saved} onClick={() => setSaved((s) => !s)}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M4 2h8v12l-4-3-4 3Z" /></svg>
+          {saved ? 'Saved' : 'Save for later'}
+        </Ctl>
+      </div>
+    </section>
+  )
+}
+
+// The drawn map: neutral land and water, the crossing as the primary line, the two wharves deep, the ferry the accent.
+function CrossingMap({ p }) {
+  const routeRef = useRef(null)
+  const [pt, setPt] = useState({ x: 300, y: 236 })
+  useEffect(() => {
+    const path = routeRef.current
+    if (path?.getTotalLength) setPt(path.getPointAtLength(path.getTotalLength() * p))
+  }, [p])
+  const { w, h } = MAP.box
+  return (
+    <div className="sw-map" role="img" aria-label="A drawn map of the ferry's crossing from Circular Quay to Manly" data-role="neutral">
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path className="sw-land" d={MAP.north} />
+        <path className="sw-land" d={MAP.south} />
+        {MAP.streets.map((d) => <path key={d} className="sw-street" d={d} />)}
+        {MAP.islands.map((i) => <circle key={i.x} className="sw-isle" cx={i.x} cy={i.y} r="5" />)}
+        <path className="sw-casing" d={MAP.route} />
+        <path ref={routeRef} className="sw-line" data-role="primary" d={MAP.route} />
+        {MAP.places.filter((pl) => pl.wharf).map((pl) => <circle key={pl.name} className="sw-wharf" data-role="deep" cx={pl.x} cy={pl.y} r="5" />)}
+        <circle className="sw-ferry" data-role="accent" cx={pt.x} cy={pt.y} r="7" />
+      </svg>
+      {MAP.places.map((pl) => (
+        <span key={pl.name} className={`sw-pl is-${pl.side}`} style={{ left: pct(pl.x, w), top: pct(pl.y, h) }}>{pl.name}</span>
+      ))}
+    </div>
+  )
+}
+
+function Crossing() {
+  const live = useContext(Live)
+  const [p, setP] = useState(CROSSING.rest)
+  return (
+    <figure className="sw-cross">
+      <CrossingMap p={p} />
+      <figcaption className="sw-readout" data-role="neutral">
+        <span className="sw-time">{clockAt(p)}</span>
+        <span>{whereAt(p)}</span>
+        {live && (
+          <input
+            className="sw-range" type="range" min="0" max="100" value={Math.round(p * 100)}
+            aria-label="Follow the 7:12 across the harbour" aria-valuetext={`${clockAt(p)}, ${whereAt(p)}`}
+            style={{ '--fill': `${p * 100}%` }} data-role="primary"
+            onChange={(e) => setP(Number(e.target.value) / 100)}
+          />
+        )}
+      </figcaption>
+    </figure>
+  )
+}
+
+function Panel({ nav }) {
+  const panel = PANELS[nav]
+  return (
+    <section className="sw-panel" id="sw-panel" data-role="neutral" aria-label={panel.kicker}>
+      <h3 className="sw-kicker">{panel.kicker}</h3>
+      <ol>
+        {panel.rows.map((r) => (
+          <li key={r.a} className={r.on ? 'sw-row is-on' : 'sw-row'} data-role={r.on ? 'subtle' : undefined}>
+            <span className="sw-a">{r.a}</span><span className="sw-b">{r.b}</span><span className="sw-c">{r.c}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="sw-note">{panel.note}</p>
+    </section>
+  )
+}
+
+// The Subscribe sheet hangs from the masthead; the dock keeps it in view at any scroll.
+function Sheet({ view, onClose }) {
+  const live = useContext(Live)
+  const [email, setEmail] = useState('')
+  const [tried, setTried] = useState(false)
+  const [done, setDone] = useState(false)
+  const field = useRef(null)
+  useEffect(() => { if (live) field.current?.focus() }, [live])
+  const shown = email || (view === 'error' ? SUBSCRIBE.sample : '')
+  const err = (view === 'error' || tried) && emailProblem(shown)
+  const submit = (e) => {
+    e.preventDefault()
+    if (emailProblem(shown)) setTried(true)
+    else setDone(true)
   }
   return (
-    <div className="sw" style={vars}>
-      <header className="sw-mast" data-role="neutral">
-        <span className="sw-name">{MAST.name}</span>
-        <span className="sw-issue">{MAST.issue}</span>
-        <nav className="sw-nav">
-          {MAST.nav.map((n, i) => (
-            <span key={n} className="sw-navi">
-              {n}
-              {i === 0 && <i className="sw-ul" data-role="secondary" />}
-            </span>
-          ))}
-        </nav>
-        <span className="sw-cta" data-role="primary">{MAST.cta}</span>
-        <span className="sw-menu" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 6h14M3 10h14M3 14h14" /></svg>
-        </span>
-      </header>
-
-      <section className="sw-hero">
-        <div className="sw-copy" data-role="neutral">
-          <h2 className="sw-head">{HERO.head} <span className="sw-tail">{HERO.tail}</span></h2>
-          <p className="sw-stand">{HERO.standfirst}</p>
-          <p className="sw-by">{HERO.byline.join(' · ')}</p>
-        </div>
-
-        <figure className="sw-field" data-role="primary">
-          <div className="sw-chart">
-            <svg viewBox={`0 0 ${CHART_BOX.w} ${CHART_BOX.h}`} aria-hidden="true">
-              {LAND.map((d) => <path key={d} className="sw-land" data-role="subtle" d={d} />)}
-              <g className="sw-route">
-                <path className="sw-routeline" d={ROUTE} />
-              </g>
-              {WHARVES.map((w) => (
-                <circle key={w.name} className="sw-wharf" cx={w.x} cy={w.y} r="4" data-role="deep" />
-              ))}
-              <g className="sw-ferry" transform={`translate(${FERRY.x} ${FERRY.y}) rotate(${FERRY.turn})`}>
-                <path d="M-8 -2H8L5 4H-5Z M-3 -6H3V-2H-3Z" data-role="accent" />
-              </g>
-            </svg>
-            {WHARVES.map((w) => (
-              <span
-                key={w.name}
-                className={`sw-label is-${w.side}`}
-                style={{ left: pct(w.x, CHART_BOX.w), top: pct(w.y, CHART_BOX.h), '--gap': `${w.gap}px` }}
-              >
-                {w.name}
-              </span>
-            ))}
+    <div className="sw-dock">
+      <form className="sw-sheet" data-role="neutral" onSubmit={submit} noValidate>
+        <h3 className="sw-sheet-h">{SUBSCRIBE.title}</h3>
+        <p className="sw-sheet-lead">{SUBSCRIBE.lead}</p>
+        {done ? <p className="sw-done" role="status">{SUBSCRIBE.done}</p> : (
+          <div className="sw-field">
+            <label htmlFor="sw-email">{SUBSCRIBE.label}</label>
+            <input
+              id="sw-email" ref={field} className={`sw-input is-focus${err ? ' is-error' : ''}`} type="email" autoComplete="off"
+              value={shown} onChange={(e) => setEmail(e.target.value)} aria-invalid={Boolean(err)} aria-describedby={err ? 'sw-email-err' : undefined}
+              data-role={err ? 'error' : 'primary'} readOnly={!live}
+            />
+            {err && <p className="sw-err" id="sw-email-err" data-role="error"><span aria-hidden="true">▲ </span>{SUBSCRIBE.error}</p>}
           </div>
-          <figcaption className="sw-cap">{HERO.caption}</figcaption>
-        </figure>
-      </section>
-
-      <section className="sw-contents" data-role="neutral">
-        <p className="sw-kicker">In this issue</p>
-        <ol className="sw-list">
-          {CONTENTS.map((c) => (
-            <li key={c.page} className="sw-row">
-              {c.active
-                ? <span className="sw-page is-on" data-role="secondary" data-adjusted={sec.adjusted ? 'true' : undefined}>{c.page}</span>
-                : <span className="sw-page">{c.page}</span>}
-              <span className="sw-title">{c.title}</span>
-              <span className="sw-desk">{c.desk}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="sw-next">{NEXT}</p>
-      </section>
+        )}
+        <div className="sw-sheet-foot">
+          <button type="button" className="sw-btn" onClick={onClose}>{done ? 'Close' : 'Cancel'}</button>
+          {!done && <button type="submit" className="sw-btn sw-btn--primary" data-role="primary">Continue</button>}
+        </div>
+      </form>
     </div>
+  )
+}
+
+/**
+ * @param {{roles: object, state?: string, onState?: (id: string) => void}} props roles:
+ *   derivePaletteRoles() output; state: the State menu's pick (article, subscribe, error);
+ *   onState: asks the dialog to move its State menu. Without it the scene is a still picture.
+ */
+function SlackWater({ roles, state, onState }) {
+  const vars = useMemo(() => slackVars(roles), [roles])
+  const view = state === 'subscribe' || state === 'error' ? state : 'article'
+  const isLive = !roles.pair && typeof onState === 'function'
+  const [nav, setNavName] = useState('Issues')
+  const [saved, setSaved] = useState(false)
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 600)
+  const rootRef = useRef(null)
+  // The narrow layout takes the upright crop; the scene's own width decides, not the window's.
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => setNarrow(el.getBoundingClientRect().width < 600))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const setNav = (n) => {
+    setNavName(n)
+    rootRef.current?.querySelector('#sw-panel')?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }
+  const live = isLive ? { nav } : null
+  return (
+    <Live.Provider value={live}>
+      <div className={isLive ? 'sw is-live' : 'sw'} style={vars} data-state={view} ref={rootRef}>
+        <Masthead nav={nav} setNav={setNav} onSubscribe={() => onState(view === 'article' ? 'subscribe' : 'article')} />
+        {view !== 'article' && <Sheet key={view} view={view} onClose={() => onState?.('article')} />}
+        <Photo narrow={narrow} />
+        <Lede saved={saved} setSaved={setSaved} />
+        <article className="sw-story">
+          {BODY.map((t, i) => <p key={i} className={i === 0 ? 'sw-p sw-p--first' : 'sw-p'}>{t}</p>)}
+          <Crossing />
+        </article>
+        <Panel nav={nav} />
+      </div>
+    </Live.Provider>
   )
 }
 

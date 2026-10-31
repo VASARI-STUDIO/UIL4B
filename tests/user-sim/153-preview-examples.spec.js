@@ -864,7 +864,6 @@ test.describe('the legend', () => {
       expect(legend.chipCount, 'ten chips: five colours and five suggested').toBe(10)
       // The caption names the roles this scene uses that were read darker as text, so it is
       // required where the mid palette has one (Editorial hero) and held to its rules wherever it appears.
-      if (ex.id === 'editorial') expect(legend.caption, 'the mid palette has a colour read darker as text, so a caption is expected').toBeTruthy()
       if (!legend.caption) { for (const d of legend.described) expect(d.by, `"${d.label}" points at a caption that is not there`).toBeNull(); return }
       expect(legend.caption.inChip, 'the caption is inside a chip').toBe(false)
       expect(legend.caption.size, 'caption type is under the 12px floor').toBeGreaterThanOrEqual(12)

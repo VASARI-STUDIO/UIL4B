@@ -1,100 +1,139 @@
-// E1, "Slack Water": a made-up harbour quarterly whose cover is a drawn chart
-// of the harbour, painted with the palette. Plain data, no React, so tests can
-// read the roles, the text recipe, the copy and the chart geometry without a DOM.
-//
-// The chart is drawn in a 480 x 360 box. Labels are HTML, placed at the same
-// points as percentages of that box, so they keep their real pixel size at any
-// width while the drawing scales.
+// "Slack Water": a made-up harbour quarterly, shown as one article's opening
+// page. The ferry photograph leads, the type sits on the page beside it, and the
+// palette is spent the way a masthead spends a brand: Subscribe and the route on
+// the map are the primary, the nav underline and the current issue row the
+// secondary, the ferry on the map the accent, the two wharves the deep and the
+// current row's ground the subtle. Plain data, no React, so tests read the roles,
+// the text recipe, the copy and the crossing without a DOM.
+import { contrastRatio, mixHex } from '../../../utils/colors.js'
+import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 
-// Every role this example paints. A test renders the example and checks each
-// one is on at least one element; the legend shows the rest as "Not in this
-// preview".
 export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral']
 
 // What each text sets its colour from, for the contrast sweep.
-// ink: 'inkOnField:primary' is inkOnField(primary, {on, text, canvas});
-// 'brandAsText:secondary' is brandAsText(secondary, [canvas]); 'text', 'muted'
-// and 'on-primary' are the neutral and button inks. The wharf labels and the
-// caption sit on a plate in the field's colour, so the field is their ground
-// wherever they land.
 export const TEXT_RECIPE = [
-  { el: 'wordmark', ink: 'text' },
-  { el: 'issue', ink: 'muted' },
-  { el: 'nav', ink: 'text' },
-  { el: 'subscribe', ink: 'inkOnField:primary' },
-  { el: 'headline', ink: 'text', large: true },
-  { el: 'headline-tail', ink: 'muted', large: true },
-  { el: 'standfirst', ink: 'muted' },
-  { el: 'byline', ink: 'muted' },
-  { el: 'wharf-label', ink: 'inkOnField:primary', plate: 'primary' },
-  { el: 'caption', ink: 'inkOnField:primary', plate: 'primary' },
-  { el: 'page-active', ink: 'brandAsText:secondary' },
-  { el: 'page', ink: 'muted' },
-  { el: 'title', ink: 'text' },
-  { el: 'desk', ink: 'muted' },
+  { el: 'wordmark, nav, headline, dek, body, panel titles', ink: 'text', large: false },
+  { el: 'issue line, rubric, byline, caption, map labels, readout, panel notes', ink: 'muted', large: false },
+  { el: 'Subscribe, Continue', ink: 'inkOnField:primary', large: false },
+  { el: 'current issue row', ink: 'inkOnField:subtle', large: false },
+  { el: 'email error', ink: 'error-ink', large: false },
 ]
 
-export const MAST = {
-  name: 'Slack Water',
-  issue: 'Issue 09 · Out today',
-  nav: ['Issues', 'Ferries', 'Tides'],
-  cta: 'Subscribe $48/yr',
-}
+export const MAST = { name: 'Slack Water', issue: 'Issue 09 · Out today', nav: ['Issues', 'Ferries', 'Tides'], cta: 'Subscribe' }
 
 export const HERO = {
-  head: 'The 7:12 to Manly,',
-  tail: 'and everyone on it.',
-  standfirst: 'Four hundred people cross the harbour on the first ferry every weekday. We rode it for a month and drew the route they never look at.',
-  byline: ['Words by the Ferries desk', 'Drawings by the Chart desk', '11 min read'],
-  caption: 'The F1, Circular Quay to Manly, 7:12 am',
+  rubric: 'The commute',
+  head: 'The 7:12 to Manly, and everyone on it.',
+  dek: 'Four hundred people cross the harbour on the first ferry every weekday. We rode it for a month and drew the route they never look at.',
+  byline: 'By Ana Whitlock',
+  credit: 'Photographs by Theo Ruiz',
+  length: '11 min read',
+  caption: 'The 7:12 leaving Circular Quay, one minute late and full.',
 }
 
-// ── The chart ───────────────────────────────────────────────────────────────
-// The two land shapes run far past the box on every open side, so when the
-// field is taller or wider than the chart the land goes on to the field's edge
-// instead of ending in a visible rectangle. Absolute commands only (M H V C Z):
-// a test flattens these to polygons to place the labels.
-export const CHART_BOX = { w: 480, h: 360 }
-export const LAND = [
-  'M-1200 -1200H1700V118H480C462 126 448 112 430 116C404 122 384 150 352 146C326 142 310 104 278 102C250 100 236 132 208 130C182 128 172 108 140 110C108 112 96 136 66 134C40 132 20 118 0 122H-1200Z',
-  'M-1200 1700V254H0C30 248 52 266 82 262C120 256 132 232 172 238C212 244 222 276 262 270C300 264 316 238 352 244C368 246 376 238 384 222C392 202 402 194 412 198C424 204 426 238 440 262C452 270 468 256 480 252H1700V1700Z',
+export const BODY = [
+  'Nobody on the 7:12 looks at the harbour. The regulars have their thumbs on their phones before the ropes are off, and by Fort Denison the lower deck smells of coffee and wet umbrellas. It is the one half hour of the day nobody can ask them for anything.',
+  'The ferry takes thirty minutes door to door, and in that time it crosses four kinds of water: the shallow green of the cove, the tidal run past the islands, the deep channel under the heads and the slack at the other end, where the wash settles and the wharf comes up slowly.',
 ]
-export const ROUTE = 'M44 252C120 216 200 200 260 188C320 176 380 150 452 126'
 
-// What part of the chart each layout shows, in chart units: the window is `w`
-// wide from `x0`, centred on `yc` vertically. The field's width sets the scale
-// (px per unit = field width / w), so a narrower window is a closer crop.
-// Nothing is hidden by a rule: a wharf is either inside the window with its
-// whole label, or outside it with none of it. `fields` is the range of field
-// widths in px that layout meets. The CSS carries the same three numbers.
-export const WINDOWS = {
-  wide: { w: 520, x0: -20, yc: 180, fields: [549, 578] },
-  mid: { w: 300, x0: 110, yc: 175, fields: [287, 466] },
-  narrow: { w: 220, x0: 170, yc: 180, fields: [286, 598] },
+export const MAP = {
+  box: { w: 600, h: 400 },
+  north: 'M0 0H600V120C585 128 560 118 540 126C520 134 520 150 500 156C480 162 470 140 450 146C430 152 430 176 408 178C386 180 380 160 356 164C330 168 322 192 296 196C270 200 262 178 236 184C210 190 200 214 172 216C144 218 130 196 100 200C70 204 40 222 0 220Z',
+  south: 'M0 400V290C30 286 60 300 92 294C120 288 130 266 160 266C190 266 196 286 226 288C256 290 264 270 292 268C320 266 330 286 360 286C392 286 400 262 430 258C460 254 474 270 504 268C540 266 560 250 600 252V400Z',
+  streets: ['M20 330H180M40 350H200M60 310V390M110 300V396M160 280V380', 'M300 40H470M330 70H520M360 20V110M420 20V120M470 30V110'],
+  route: 'M96 288C170 262 250 250 310 236C376 220 420 200 458 178C480 166 496 158 506 153',
+  islands: [{ x: 214, y: 232 }, { x: 262, y: 226 }],
+  // `at` is how far along the route the place is (0 to 1); `wharf` places a dot.
+  places: [
+    { name: 'Circular Quay', x: 96, y: 288, at: 0, wharf: true, side: 'below' },
+    { name: 'Fort Denison', x: 214, y: 232, at: 0.22, side: 'above' },
+    { name: 'Bradleys Head', x: 330, y: 150, at: 0.55, side: 'land' },
+    { name: 'North Head', x: 548, y: 92, at: 0.9, side: 'land' },
+    { name: 'Manly', x: 506, y: 153, at: 1, wharf: true, side: 'right' },
+  ],
 }
 
-// Wharves, in chart units. `side` is where the label sits against its dot and
-// `gap` pushes it that many px further out. Each label is a plate in the
-// field's colour; a test checks it against the land, the route, the other
-// labels and the windows above, so no label sits on land.
-export const WHARVES = [
-  { name: 'Circular Quay', x: 44, y: 252, side: 'above', gap: 16 },
-  { name: 'Kirribilli', x: 66, y: 137, side: 'below', gap: 0 },
-  { name: 'Neutral Bay', x: 208, y: 133, side: 'below', gap: 24 },
-  { name: 'Mosman Bay', x: 352, y: 149, side: 'left', gap: 16 },
-  { name: 'Watsons Bay', x: 380, y: 226, side: 'left', gap: 8 },
-  { name: 'Manly', x: 452, y: 126, side: 'below', gap: 8 },
-]
+// The crossing: leaves at 7:12 and takes 30 minutes. `rest` is where the still picture shows the ferry.
+export const CROSSING = { startMin: 7 * 60 + 12, minutes: 30, rest: 0.58 }
 
-// Where the 7:12 is now, on the route; `turn` is the hull's heading in degrees.
-export const FERRY = { x: 296, y: 179, turn: -12 }
+export const clockAt = (p) => {
+  const t = CROSSING.startMin + Math.round(Math.min(1, Math.max(0, p)) * CROSSING.minutes)
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} am`
+}
 
-// The contents list. Page numbers are a real sequence; the first is the page
-// this issue opens on.
-export const CONTENTS = [
-  { page: 14, title: 'Eleven wharves, one tide table', desk: 'Tides desk', active: true },
-  { page: 26, title: 'Coffee on the lower deck', desk: 'Ferries desk' },
-  { page: 41, title: 'Drawing a harbour from memory', desk: 'Chart desk' },
-]
+/** What the ferry is doing at `p`: at a wharf at either end, otherwise off the nearest place. */
+export function whereAt(p) {
+  if (p <= 0.02) return 'Leaving Circular Quay'
+  if (p >= 0.98) return 'Alongside at Manly'
+  const near = MAP.places.slice(1, -1).reduce((best, pl) => (Math.abs(pl.at - p) < Math.abs(best.at - p) ? pl : best))
+  return `Off ${near.name}`
+}
 
-export const NEXT = 'Next issue back in 4 weeks'
+// One small dataset per nav item, shown under the story. `on` marks the current row.
+export const PANELS = {
+  Issues: {
+    kicker: 'In this issue',
+    rows: [
+      { a: '14', b: 'Eleven wharves, one tide table', c: 'Tides desk', on: true },
+      { a: '26', b: 'Coffee on the lower deck', c: 'Ferries desk' },
+      { a: '41', b: 'Drawing a harbour from memory', c: 'Chart desk' },
+    ],
+    note: 'Next issue back in 4 weeks',
+  },
+  Ferries: {
+    kicker: 'Leaving Circular Quay, Wharf 3',
+    rows: [
+      { a: '7:12', b: 'Manly, direct', c: '30 min', on: true },
+      { a: '7:27', b: 'Manly, direct', c: '30 min' },
+      { a: '7:42', b: 'Manly, direct', c: '30 min' },
+    ],
+    note: 'Times for a weekday',
+  },
+  Tides: {
+    kicker: 'Sydney Heads today',
+    rows: [
+      { a: '5:48 am', b: 'High tide', c: '1.7 m' },
+      { a: '12:02 pm', b: 'Low tide', c: '0.4 m', on: true },
+      { a: '6:11 pm', b: 'High tide', c: '1.6 m' },
+    ],
+    note: 'Slack water lasts about twenty minutes either side of each tide',
+  },
+}
+
+export const SUBSCRIBE = {
+  title: 'Subscribe to Slack Water',
+  lead: '$48 a year. Four issues, and the tide table for your wharf.',
+  label: 'Email address',
+  error: 'Enter an email address like name@domain.com.au',
+  done: 'You are on the list. Nothing was sent: this is a preview.',
+  sample: 'ana.whitlock@',
+}
+
+/** Whether a typed address is not yet a usable one (so the error stays true as the user types). */
+export const emailProblem = (text) => !/^[^\s@]+@[^\s@]+\.[^\s@.]{2,}$/.test(String(text).trim())
+
+// The primary button's hover and pressed fills, kept where the label still reads.
+function primaryFills(r) {
+  const floor = Math.min(4.5, contrastRatio(r.onPrimary, r.primary))
+  const away = contrastRatio(r.onPrimary, r.canvas) >= contrastRatio(r.onPrimary, r.text) ? r.canvas : r.text
+  const reads = (c) => contrastRatio(r.onPrimary, c) >= floor
+  const [h, p] = [0.3, 0.6].map((t) => mixHex(r.primary, r.deep, t))
+  if (reads(h) && reads(p) && contrastRatio(h, r.primary) >= 1.1 && contrastRatio(p, h) >= 1.1) return { hover: h, press: p }
+  return { hover: mixHex(r.primary, away, 0.2), press: mixHex(r.primary, away, 0.38) }
+}
+
+/** The colours this scene works out per palette and mode. */
+export function slackVars(r) {
+  const keep = Boolean(r.pair)
+  const grounds = { text: r.text, canvas: r.canvas }
+  const fills = primaryFills(r)
+  return {
+    '--sw-ink': inkOnField(r.primary, { on: r.onPrimary, ...grounds }, { keep }).hex,
+    '--sw-edge': fieldEdge(r.primary, r.canvas, r.borderStrong),
+    '--sw-sub-ink': inkOnField(r.subtle, { on: r.onSubtle, ...grounds }, { keep }).hex,
+    '--sw-acc-edge': fieldEdge(r.accent, r.raised, r.borderStrong),
+    '--sw-hover': fills.hover,
+    '--sw-press': fills.press,
+    '--sw-ring': contrastRatio(r.primary, r.canvas) < 3 && r.primaryBorder !== 'transparent' ? r.primaryBorder : r.primary,
+  }
+}

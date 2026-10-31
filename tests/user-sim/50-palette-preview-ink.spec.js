@@ -55,8 +55,8 @@ const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Decline
 // two print in exactly the brand fill. They are named by scene and class so the rule
 // above still catches any other text node that does the same; the contrast floor is
 // still measured on them like every other node. Source: 'now label' in
-// Sundial.data.js TEXT_RECIPE and 'page-active' in SlackWater.data.js TEXT_RECIPE.
-const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'], 'Editorial hero': ['sw-page'] }
+// Sundial.data.js TEXT_RECIPE. Slack Water sets no brand colour as text.
+const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'] }
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }

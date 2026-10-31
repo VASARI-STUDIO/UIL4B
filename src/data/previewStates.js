@@ -8,6 +8,11 @@
 // Plain data, so the dialog can build the menu without loading the example.
 
 export const PREVIEW_STATES = {
+  editorial: [
+    { id: 'article', label: 'Article' },
+    { id: 'subscribe', label: 'Subscribe sheet' },
+    { id: 'error', label: 'Subscribe, email error' },
+  ],
   card: [
     { id: 'overview', label: 'Overview' },
     { id: 'frozen', label: 'Card frozen' },
