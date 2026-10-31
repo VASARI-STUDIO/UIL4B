@@ -14,6 +14,7 @@
 //   the toggle goes back to a pack-menu entry ('custom')            -> "pressing My icons again returns to the app packs"
 //   <LibraryToolbar> gets the Add icon button back as its action    -> "Add icon is not on the toolbar"
 //   IconEmojiLibrary.jsx renders a SpectrumClose again              -> "the page has one call to action"
+//   .ig-end-band loses its 48px top margin (free block, no tease)   -> "a free account ... sees the Pro block"
 //   .lbry-toolbar-pinned loses margin-left:auto                     -> "My icons holds the row's right end"
 //   the pack menu leaves the right of the row for its old place     -> "the pack menu sits left of My icons"
 // Each of these was also run against the build from before the change: every test below that names a
@@ -228,6 +229,12 @@ test.describe('the page has one call to action before the footer, centred on the
       expect(Math.abs((b.cta.l + b.cta.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the action row is centred on the grid').toBeLessThanOrEqual(2)
       expect(Math.abs((b.h.l + b.h.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the heading is centred on the grid').toBeLessThanOrEqual(2)
       expect(b.gate.b, 'the block ends before the footer starts').toBeLessThanOrEqual(b.footer.t + 1)
+      // No blurred row sits above this block, so it must not ride up over the last result.
+      const lastCellBottom = await page.evaluate(() => {
+        const cells = document.querySelectorAll('.ig .ic')
+        return cells[cells.length - 1].getBoundingClientRect().bottom + window.scrollY
+      })
+      expect(b.h.t, 'the heading starts below the last result').toBeGreaterThanOrEqual(lastCellBottom)
     })
 
     test(`${width}: a Pro account has no call to action between the grid and the footer`, async ({ page }) => {

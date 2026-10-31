@@ -4655,9 +4655,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
             THE PACK SELECT STAYS A SELECT. Twenty-six packs in six optgroups is
             not a pill tray, and forcing it into one to look consistent would
-            trade a working control for a matching one. It sits in the toolbar's
-            filter row beside the group tray and takes the shared field metrics,
-            which is what "consistent" has to mean for a control this size. */}
+            trade a working control for a matching one. It sits at the right end
+            of the toolbar row, apart from the filters, and takes the shared
+            field metrics, which is what "consistent" has to mean for a control
+            this size. */}
         <div className="ig-band-sentinel" ref={bandSentinelRef} aria-hidden="true" />
         <div className="ig-band" ref={bandRef}>
         <LibraryToolbar
