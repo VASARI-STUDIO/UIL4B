@@ -411,6 +411,17 @@
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
 .grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
+/* Room for the role name on a fine pointer. The side card keeps one 15px scrollbar
+   gutter and the window another, so "Secondary 500" had 64px of a 96px column once
+   both were drawn. The window bleeds 8px into the section's padding each side (the
+   swatch still sits 14px in, close to the heading's 16px edge) and the row's gaps
+   tighten by 2px and 2px, which gives the role column 90px with both gutters drawn
+   and leaves the 96px cap to be reached with thin ones. Touch has its own grid. */
+@media (pointer: fine) {
+  .grd .grd-stops { margin-inline: -8px; }
+  .grd .grd-stop { gap: 6px; }
+  .grd .grd-stop-select { gap: 4px; }
+}
 .grd .grd-iconbtn {
   display: grid;
   place-items: center;
