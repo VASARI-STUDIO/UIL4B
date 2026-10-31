@@ -82,28 +82,28 @@ export const ICON_PACK_TIERS = {
   // Read the `why` before moving one of these. The first four HAVE a free
   // official browser; they are paid because brand marks are the founder's
   // named exclusion, which is a product decision, not an oversight.
-  'simple-icons':     { tier: 'paid', why: 'simpleicons.org IS free and official — so this is a PRODUCT decision, not a browser one: "free users dont get access to brands".' },
-  logos:              { tier: 'paid', why: 'svgporn.com is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  devicon:            { tier: 'paid', why: 'devicon.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  'skill-icons':      { tier: 'paid', why: 'skillicons.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  'vscode-icons':     { tier: 'paid', why: 'No browser at all — it ships as a VS Code extension and a GitHub repo. Brand and file-type marks.' },
-  'token-branded':    { tier: 'paid', why: 'No browser at all — a GitHub repo of crypto token marks. Brand marks.' },
-  logodev:            { tier: 'paid', why: 'img.logo.dev, a commercial API on our publishable token. Real company logos, and the one pack whose cost is ours.' },
+  'simple-icons':     { tier: 'paid', group: 'brand', why: 'simpleicons.org IS free and official — so this is a PRODUCT decision, not a browser one: "free users dont get access to brands".' },
+  logos:              { tier: 'paid', group: 'brand', why: 'svgporn.com is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  devicon:            { tier: 'paid', group: 'brand', why: 'devicon.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  'skill-icons':      { tier: 'paid', group: 'brand', why: 'skillicons.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  'vscode-icons':     { tier: 'paid', group: 'brand', why: 'No browser at all — it ships as a VS Code extension and a GitHub repo. Brand and file-type marks.' },
+  'token-branded':    { tier: 'paid', group: 'brand', why: 'No browser at all — a GitHub repo of crypto token marks. Brand marks.' },
+  logodev:            { tier: 'paid', group: 'brand', why: 'img.logo.dev, a commercial API on our publishable token. Real company logos, and the one pack whose cost is ours.' },
 
   // ── paid · coloured decorative ───────────────────────────────────────────
-  'flat-color-icons': { tier: 'paid', why: 'Icons8’s set: the SVGs live in a GitHub repo, not in a browser Icons8 run for this set, and it is decorative rather than an interface pack. JUDGEMENT CALL — change one word to disagree.' },
+  'flat-color-icons': { tier: 'paid', group: 'colour', why: 'Icons8’s set: the SVGs live in a GitHub repo, not in a browser Icons8 run for this set, and it is decorative rather than an interface pack. JUDGEMENT CALL — change one word to disagree.' },
 
   // ── paid · flags ─────────────────────────────────────────────────────────
-  'circle-flags':     { tier: 'paid', why: 'No browser — HatScripts/circle-flags is a GitHub repo. Named paid with the other flag sets.' },
-  flag:               { tier: 'paid', why: 'flagicons.lipis.dev is the creator’s own free browser — named paid by the founder with the other flag sets.' },
-  flagpack:           { tier: 'paid', why: 'flagpack.xyz is the creator’s own free browser — named paid by the founder with the other flag sets.' },
-  cif:                { tier: 'paid', why: 'No browser — currency-flags is a GitHub repo. Named paid with the other flag sets.' },
+  'circle-flags':     { tier: 'paid', group: 'flag', why: 'No browser — HatScripts/circle-flags is a GitHub repo. Named paid with the other flag sets.' },
+  flag:               { tier: 'paid', group: 'flag', why: 'flagicons.lipis.dev is the creator’s own free browser — named paid by the founder with the other flag sets.' },
+  flagpack:           { tier: 'paid', group: 'flag', why: 'flagpack.xyz is the creator’s own free browser — named paid by the founder with the other flag sets.' },
+  cif:                { tier: 'paid', group: 'flag', why: 'No browser — currency-flags is a GitHub repo. Named paid with the other flag sets.' },
 
   // ── paid · emoji ─────────────────────────────────────────────────────────
-  twemoji:            { tier: 'paid', why: 'No live browser since Twitter archived it; the maintained fork is a GitHub repo. Named paid with the other emoji sets.' },
-  'fluent-emoji':     { tier: 'paid', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
-  noto:               { tier: 'paid', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
-  openmoji:           { tier: 'paid', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
+  twemoji:            { tier: 'paid', group: 'emoji', why: 'No live browser since Twitter archived it; the maintained fork is a GitHub repo. Named paid with the other emoji sets.' },
+  'fluent-emoji':     { tier: 'paid', group: 'emoji', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
+  noto:               { tier: 'paid', group: 'emoji', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
+  openmoji:           { tier: 'paid', group: 'emoji', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
 
   // ── paid · animated ──────────────────────────────────────────────────────
   // Iconify's free animated sets (all MIT), Pro only. `animated: true` is the
@@ -112,9 +112,9 @@ export const ICON_PACK_TIERS = {
   // GET /api/ai?animatedIcons=<prefix>, which checks the plan on the server
   // (api/_lib/icons/animated.js keeps the matching allowlist, and
   // tests/unit/animated-icons-endpoint.test.js pins the two together).
-  'line-md':          { tier: 'paid', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
-  'svg-spinners':     { tier: 'paid', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
-  meteocons:          { tier: 'paid', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'line-md':          { tier: 'paid', group: 'animated', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'svg-spinners':     { tier: 'paid', group: 'animated', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  meteocons:          { tier: 'paid', group: 'animated', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
 }
 
 /* ── PACKS THAT ARE NEVER SHOWN OR EXPORTED ─────────────────────────────────

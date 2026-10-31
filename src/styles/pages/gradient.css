@@ -66,20 +66,12 @@
    blank block under the code box before the presets. The preview grows into that
    height instead (capped, so a twelve-stop panel does not make a tower). The cap sits
    above the panel's height with the starter stops (976px: stage 750 + rail + code box
-   + gaps), so the Available colours block's held rows never strand the code box.
+   + gaps), so the palette row's held rows never strand the code box.
    Stacked at 900px and under, the column is its own height and nothing changes. */
 @media (min-width: 901px) {
   .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
   .grd .tl-main > * { flex-shrink: 0; }
   .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 900px; }
-  /* The From a project row was held while the account loaded, then dropped because it
-     has no projects. The preview was sized to the panel with the row in it, so the panel
-     keeps that height (the row and its 8px gap, as padding at the card's foot) and the
-     preview and code box do not jump up when the account answers. */
-  .grd .grd-panel--held { padding-bottom: 40px; }
-}
-@media (min-width: 901px) and (pointer: coarse) {
-  .grd .grd-panel--held { padding-bottom: 52px; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
@@ -122,8 +114,8 @@
 /* Selected with others: a ring outside the dot, so it reads without colour. */
 .grd .grd-handle.is-sel .grd-handle-dot { border-color: var(--t0); box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--t0); }
 .grd .grd-handle.is-locked .grd-handle-dot { border-style: double; }
-/* What Random keeps on a stop, under its dot just below the bar (rail and mini
-   ramp share it): a 12px closed lock for the colour, a 12px pin for the position.
+/* What Random keeps on a stop, under its dot just below the bar:
+   a 12px closed lock for the colour, a 12px pin for the position.
    It hangs on the card, not on the gradient, so ink always reads. `--lm-drop` is
    the distance from the handle's centre to just past the bar's edge. */
 .grd .grd-handle { --lm-drop: 20px; }
@@ -383,13 +375,10 @@
   /* A lock that is on keeps its on look under the pointer. */
   .grd .grd-lock.is-on:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-on); }
 }
-.grd .grd-add { width: 100%; height: 36px; min-height: 36px; font-size: 13px; }
-/* Out of stops: the label keeps full text contrast (it says why), and only the
-   dashed border and the plus step back. The button stays focusable, so a press
-   can still explain itself. */
-.grd .tl-btn.grd-add[aria-disabled="true"] { border-color: var(--tl-line); color: var(--tl-ink); cursor: not-allowed; }
-.grd .tl-btn.grd-add[aria-disabled="true"]:active { transform: none; }
-.grd .tl-btn.grd-add[aria-disabled="true"] .tl-btn-ico { opacity: .4; }
+/* Add a stop: the plus in the Stops head, an icon button like Flip beside it. At
+   twelve stops it steps back but stays focusable, so a press can say why. */
+.grd .grd-iconbtn.grd-add { color: var(--tl-ink); }
+.grd .grd-iconbtn.grd-add:active:not([aria-disabled="true"]) { background: var(--tl-wash-on); }
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 /* A free account sees "Pro" as a word beside Tints, not a second padlock. */
@@ -405,27 +394,51 @@
   .grd .grd-lock-cap-short { display: inline; }
 }
 
-/* ── AVAILABLE COLOURS ──────────────────────────────────────────────────────
-   Round chips: every palette colour, then the active colour's shades. The chosen
-   chip carries a ring and a tick, so the state is not colour alone. */
-.grd .grd-avail-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); scroll-margin-top: calc(var(--chrome-h) + 72px); border-radius: 6px; }
-.grd .grd-avail-note:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-.grd .grd-avail-link { display: inline-flex; align-items: center; min-height: 28px; border-radius: var(--btn-radius); font-size: 12.5px; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
-.grd .grd-avail-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-/* "Choose colours for Shuffle" is a button that reads as the same quiet link. */
-.grd button.grd-avail-link { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
-@media (hover: hover) and (pointer: fine) {
-  .grd .grd-avail-link:hover { color: var(--tl-ink); }
+/* ── PALETTE ROW (inside Stops) ─────────────────────────────────────────────
+   Round chips: the palette's colours, then the active colour's shades. The chosen
+   chip carries a ring and a tick, so the state is not colour alone. The label line
+   above them says which stop a press paints (and, for four seconds after a press,
+   what it did); it is one 28px row so its words never move the panel. */
+.grd .grd-paint { display: grid; gap: 8px; margin-top: 4px; }
+.grd .grd-paint-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; min-width: 0; }
+.grd .grd-paint-label { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--tl-ink); }
+.grd .grd-paint-src {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 150px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--tl-line);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-dim);
+  font-size: 12px;
+  transition: border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard);
 }
-.grd .grd-avail-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-paint-src:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-paint-src:hover { border-color: var(--tl-line-on); color: var(--tl-ink); }
+}
+.grd .grd-paint-link { display: inline-flex; align-items: center; flex: 0 0 auto; min-height: 28px; border-radius: var(--btn-radius); font-size: 12px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
+.grd .grd-paint-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-paint-link:hover { color: var(--tl-ink); }
+}
+.grd .grd-paint-sub { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .grd .grd-shades { display: grid; gap: 6px; }
 .grd .grd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .grd .grd-chips--shades { gap: 3px; }
-/* The Colours slot is two even rows of five, so ten starters never wrap nine and one. */
-.grd .grd-chips--slot { display: grid; grid-template-columns: repeat(5, 28px); grid-template-rows: repeat(2, 28px); justify-content: space-between; gap: 8px; }
-/* "+3 more": a palette past thirteen colours, at chip height so the rows keep theirs. */
+/* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
 .grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* On a fine pointer the word "more" is spoken, not drawn, so "+2" takes one chip's
+   slot and the row stays one line; a finger's wider slots have room for it. */
+.grd .grd-chips-more { position: relative; padding: 0 4px; }
+.grd .grd-chips-more-w { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) {
+  .grd .grd-chips-more { padding: 0 6px; }
+  .grd .grd-chips-more-w { position: static; width: auto; height: auto; overflow: visible; clip-path: none; margin-left: .25em; }
+}
 .grd .grd-chip {
   display: grid;
   place-items: center;
@@ -453,75 +466,13 @@
   .grd .grd-chip:hover { border-color: var(--tl-line-on); }
 }
 
-/* Starter pairs: two flat halves in one pill, one press sets the first and last stop. */
-.grd .grd-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
-.grd .grd-pair {
-  display: flex;
-  flex: 0 0 auto;
-  width: 56px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--tl-line);
-  border-radius: var(--btn-radius);
-  overflow: hidden;
-  background: none;
-  cursor: pointer;
-  transition: border-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
-}
-.grd .grd-pair-half { flex: 1 1 50%; }
-.grd .grd-pair:active { transform: scale(0.97); }
-.grd .grd-pair:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
-.grd .grd-pair[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
-@media (hover: hover) and (pointer: fine) {
-  .grd .grd-pair:hover { border-color: var(--tl-line-on); }
-}
-
-/* The no-palette and one-colour states: a note (held at two lines), the Pairs, and a
-   Colours block that is always two rows of five, whether it holds the ten starters, a
-   palette of one or a project's colours. Nothing is held as spare room except the
-   "From a project" row, and that only while a person is signed in. So a press, a
-   project choice or the projects loading moves nothing. */
-.grd .grd-sparse { display: grid; gap: 8px; }
-.grd .grd-sparse .grd-avail-note { min-height: 36px; line-height: 18px; }
-.grd .grd-sparse-body { display: grid; gap: 8px; align-content: start; }
-.grd .grd-avail-block { display: grid; gap: 6px; align-content: start; }
-/* The Colours label and the way to the Palette Builder share one row. */
-.grd .grd-avail-subrow { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
-.grd .grd-avail-subrow .grd-avail-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The link keeps the label's height; its hit area grows by padding with an equal
-   negative margin, so the row stays one line tall (28px hit box here, 44px on touch). */
-.grd .grd-avail-subrow .grd-avail-link { flex: 0 0 auto; align-items: flex-end; min-height: 16px; line-height: 16px; padding-block: 6px; margin-block: -6px; }
-.grd .grd-avail-from { display: flex; align-items: center; gap: 8px; min-height: 32px; }
-.grd .grd-from-select {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 190px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--tl-line);
-  border-radius: var(--btn-radius);
-  background: transparent;
-  color: var(--tl-ink);
-  font-size: 12.5px;
-  transition: border-color var(--dur-1) var(--ease-standard);
-}
-.grd .grd-from-select .menu-select-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grd .grd-from-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-@media (hover: hover) and (pointer: fine) {
-  .grd .grd-from-select:hover { border-color: var(--tl-line-on); }
-}
-
 /* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
 .grd .grd-pick { display: flex; align-items: center; gap: 8px; }
-.grd .grd-pick-swatch { flex: 0 0 auto; display: flex; }
-/* Every swatch in the panel is a circle: the trigger, the chip inside it, and
-   the colour samples in the picker it opens. The picker panel can be portalled
-   out of .grd, so it carries its own class. */
-.grd .grd-pick-swatch .cpk-trigger { width: 36px; height: 36px; border-radius: 50%; }
-.grd .grd-pick-swatch .cpk-trigger-chip { border-radius: 50%; }
+/* Every swatch in the panel is a circle: the colour samples in the picker a stop
+   or the base colour opens. The picker panel can be portalled out of .grd, so it
+   carries its own class. */
 .cpk-pop.grd-cpk-pop .cpk-swatch,
 .cpk-pop.grd-cpk-pop .cpk-chip { border-radius: 50%; }
-.grd .grd-pick-swatch .cpk-pop { left: 0; right: auto; }
 .grd .grd-hex-field { position: relative; flex: 1; min-width: 0; display: flex; }
 .grd .grd-hex {
   width: 100%;
@@ -866,16 +817,12 @@
 @media (pointer: coarse) {
   .grd { --grd-row: 56px; }
   .grd .grd-chip { width: 44px; height: 44px; }
-  .grd .grd-pair { width: 72px; height: 44px; }
-  .grd .grd-sparse .grd-avail-note { min-height: 36px; }
-  .grd .grd-avail-from { min-height: 44px; }
-  .grd .grd-from-select { height: 44px; font-size: 13px; }
-  .grd .grd-chips--slot { grid-template-columns: repeat(5, 44px); grid-template-rows: repeat(2, 44px); }
+  .grd .grd-paint-head { min-height: 44px; }
+  .grd .grd-paint-src { height: 44px; padding: 0 10px; font-size: 13px; }
+  .grd .grd-paint-link { min-height: 44px; }
   .grd .grd-chips-more { height: 44px; }
   .grd .grd-chips--shades { gap: 4px; }
   .grd .grd-chips--shades .grd-chip { width: 44px; height: 44px; }
-  .grd .grd-avail-link { min-height: 44px; }
-  .grd .grd-avail-subrow .grd-avail-link { min-height: 16px; padding-block: 14px; margin-block: -14px; }
   .grd .grd-stop { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
   .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr) 36px; grid-template-rows: auto auto; row-gap: 0; }
   .grd .grd-stop-role { grid-area: 1 / 1; font-size: 13px; }
@@ -886,7 +833,6 @@
     .grd .grd-stop-select { grid-template-columns: minmax(0, 1fr); }
     .grd .grd-stop-pos { display: none; }
   }
-  .grd .grd-add { height: 44px; min-height: 44px; }
   /* Touch scrollbars overlay the content, so the window keeps its full width for the hex fields.
      A finger that runs past the end of the window carries on scrolling the page, so the list is never a trap. */
   .grd .grd-stops { scrollbar-gutter: auto; overscroll-behavior: auto; }
@@ -900,7 +846,6 @@
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
-  .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }
   .grd .grd-fmt-btn { min-height: 44px; }
   .grd .grd-copy { height: 44px; min-height: 44px; padding: 0 12px; }
   .grd .grd-rail { height: 44px; }
@@ -910,20 +855,20 @@
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 
-/* On the narrowest phones the Selected stop row (swatch, hex, colour lock, Tints)
-   gives the hex its width: Tints is its icon alone (the button keeps its name and
-   its Pro note in aria-label and title), the same 26px as a lock, 44px on a finger. */
+/* On the narrowest phones the stop row (hex, Tints) gives the hex its width: the
+   word "Tints" goes, and the icon stays with the "Pro" tag, so a free account still
+   sees the cue. The button keeps its full name in aria-label and title. */
 @media (max-width: 360px) {
-  .grd .grd-tints-btn { width: 26px; min-width: 0; padding: 0; gap: 0; }
-  .grd .grd-tints-label, .grd .grd-pro-tag { display: none; }
+  .grd .grd-tints-btn { gap: 4px; padding: 0 6px; }
+  .grd .grd-tints-label { display: none; }
 }
 @media (max-width: 360px) and (pointer: coarse) {
-  .grd .grd-tints-btn { width: 44px; min-width: 44px; }
+  .grd .grd-tints-btn { min-width: 44px; }
 }
 
 :where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
 :where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
-:where(html[data-reduced-motion="true"]) .grd :is(.grd-chip, .grd-pair):active { transform: none; }
+:where(html[data-reduced-motion="true"]) .grd .grd-chip:active { transform: none; }
 :where(html[data-reduced-motion="true"]) .grd .grd-copy,
 :where(html[data-reduced-motion="true"]) .grd .grd-copy-idle,
 :where(html[data-reduced-motion="true"]) .grd .grd-copy-done { transition: none !important; }
@@ -935,10 +880,10 @@
   :where(html:not([data-reduced-motion="false"])) .grd .grd-copy:active { transform: none; }
   :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
   :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-chip, .grd-pair):active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-chip:active { transform: none; }
 }
 @media (forced-colors: active) {
-  .grd :is(.grd-chip, .grd-pair) { forced-color-adjust: none; border-color: CanvasText; }
+  .grd .grd-chip { forced-color-adjust: none; border-color: CanvasText; }
   .grd .grd-chip.is-on,
   .grd .grd-stop.is-on,
   .grd .grd-preset.is-on { outline: 2px solid Highlight; }
@@ -952,152 +897,141 @@
   .grd .grd-stop-swatch { forced-color-adjust: none; }
 }
 
-/* ── Shuffle settings: a popover from 768px, a bottom sheet below ──────────
-   Below 768px the component draws the shared .tl-sheet-layer (tool-layout.css),
-   portalled to <body>: a fixed panel inside the toolbar would be positioned
-   against the toolbar's backdrop-filter, not the screen. Only the popover is
-   styled here. The wrapper anchors it to its button. Pills reuse the tool's own.
-   The body is shared by the popover, the sheet and the More menu's copy, and the
-   sheet renders in .tl-sheet-layer outside .grd, so everything inside the body
-   is scoped by .grd-shuf-body (and the title / inline wrapper by their own
-   classes), never by .grd. */
-.grd .grd-shuf-wrap { position: relative; display: inline-flex; }
-.grd .tl-pop.grd-shuf { width: 320px; right: auto; left: 0; display: grid; gap: 12px; padding: 12px; }
-.grd-shuf-inline { display: grid; gap: 12px; padding: 8px 12px 12px; }
-.grd-shuf-body { display: grid; gap: 12px; }
-.grd .grd-shuf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.grd-shuf-title { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
-/* A setting narrows what Random makes: the toolbar button wears a wash and a
-   dot, and the More menu's copy says so beside its title. */
-.grd .tl-btn.grd-shuf-btn { position: relative; }
-.grd .tl-btn.grd-shuf-btn.is-narrowed { background: var(--tl-wash-on); border-color: var(--tl-line-on); }
-.grd .grd-shuf-btn.is-narrowed::after {
-  content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--tl-link); forced-color-adjust: none;
-}
-.grd-shuf-inline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.grd-shuf-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tl-dim); }
-.grd-shuf-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tl-link); forced-color-adjust: none; }
-.grd-shuf-body .grd-shuf-row { display: grid; gap: 6px; }
-.grd-shuf-body .grd-shuf-k { font-size: 12px; color: var(--tl-dim); }
-.grd-shuf-body .tl-pills { flex-wrap: wrap; }
-.grd-shuf-body .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-/* A lock has overruled this row: the pills keep the setting the person made but
-   step back, and the note under the label says why. */
-.grd-shuf-body .grd-shuf-lock { margin: -2px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-ink); }
-.grd-shuf-body .grd-shuf-row[data-locked] .tl-pill { opacity: .6; cursor: not-allowed; }
-.grd-shuf-body .grd-shuf-row[data-locked] .tl-pill:active { transform: none; }
-.grd-shuf-body .grd-shuf-hint { margin: -6px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
-/* The Colours row's checklist: the palette colours Shuffle from palette may use.
-   It scrolls inside itself, so a long palette never stretches the popover or sheet. */
-.grd-shuf-body .grd-pool { display: grid; gap: 2px; max-height: 208px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; border: 1px solid var(--tl-line); border-radius: 8px; }
-.grd-shuf-body .grd-pool-opt { -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; color: var(--tl-ink); cursor: pointer; }
-.grd-shuf-body .grd-pool-opt input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--tl-link); }
-.grd-shuf-body .grd-pool-opt:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: -2px; }
-.grd-shuf-body .grd-pool-dot { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--tl-line); }
-.grd-shuf-body .grd-pool-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grd-shuf-body .grd-pool-count { margin: 2px 6px 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
-@media (hover: hover) and (pointer: fine) {
-  .grd-shuf-body .grd-pool-opt:hover { background: var(--tl-wash-on); }
-}
-@media (forced-colors: active) {
-  .grd-shuf-body .grd-pool-dot { forced-color-adjust: none; border-color: CanvasText; }
-}
-@media (pointer: coarse) {
-  .grd-shuf-body .grd-pool-opt { min-height: 44px; }
-  .grd-shuf-body .grd-pool-opt input { width: 22px; height: 22px; }
-  .grd-shuf-body .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
-  .grd .grd-shuf-x { width: 44px; height: 44px; }
-}
-
-/* The Available colours head row holds one line ("Painting stop 1 of 2") at a
-   fixed height, so what it says never moves the panel. */
-.grd .grd-avail > .tl-sec-head { min-height: 26px; }
-.grd .grd-avail > .tl-sec-head .tl-sec-label { flex: 0 0 auto; white-space: nowrap; }
-.grd .grd-avail-tip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--tl-dim); }
-@media (pointer: coarse) { .grd .grd-avail > .tl-sec-head { min-height: 44px; } }
-
-/* Available colours: "Painting stop 1 of 2" in the head, and the status under the
-   chips. The status takes the section's full width and is never cut. With a palette
-   it is always drawn at two lines' height, so a press changes its words and never the
-   section's height; the Shuffle link sits on its own row below it. */
-.grd .grd-avail-tip { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
-.grd .grd-avail-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
-.grd .grd-avail-status {
-  align-self: stretch;
-  min-width: 0;
-  margin: 0;
-  min-height: 16px;
+/* ── RANDOM SECTION (top of the panel) ───────────────────────────────────────
+   Hue, Tone and Colours are rows of chips that act as radio groups; More options
+   holds Use, Base colour and the Type and Stops filters. Everything is flat: a
+   hairline, a wash for the chosen chip, and a ring so the choice is never colour
+   alone. The rules for the old filter rows (FilterGroup) and the colour checklist
+   are scoped here too, since both now live inside this section. */
+.grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 8px; }
+.grd .grd-gen-k { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-gen-pro { display: block; font-size: 10.5px; font-weight: 600; line-height: 12px; letter-spacing: .02em; color: var(--tl-dim); }
+.grd .grd-gen-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.grd .tl-pill.grd-gen-chip {
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: var(--btn-radius);
   font-size: 12px;
-  line-height: 16px;
-  color: var(--tl-ink);
-  overflow-wrap: anywhere;
-}
-.grd .grd-avail-status--two { min-height: 32px; }
-.grd .grd-avail-idle { color: var(--tl-dim); }
-.grd .grd-chip[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
-
-/* ── Mini ramp (Available colours) ───────────────────────────────────────────
-   The gradient being painted, with a dot button per stop. The track is a fixed 24px
-   (32px on a finger), so the section never changes height; the dot hit areas are
-   24px (44px on a finger), centred on the dot and free to overhang the track. The
-   bar is a gradient image, which cannot transition, so it repaints at once; the dot
-   colours ease. The target dot has a ring in --t0 (an outline under forced colours),
-   so the state is never colour alone. */
-/* The 5px taken from the gap above is given back below, so a mark under a dot (12px, 1px under
-   the bar) clears the colours that follow and the section keeps its height. */
-.grd .grd-ramp { padding: 0 12px; margin-block: -5px 5px; }
-.grd .grd-ramp-track { position: relative; height: 24px; }
-.grd .grd-ramp-bar { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--tl-line); }
-.grd .grd-ramp-dot {
-  position: absolute;
-  top: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
-.grd .grd-ramp-dot { --lm-drop: 13px; }
-.grd .grd-ramp-dot:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
-.grd .grd-ramp-dot-vis {
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--tl-card);
-  box-shadow: 0 0 0 1px var(--tl-line-on);
-  transition: background-color 150ms var(--ease-standard), transform var(--dur-1) var(--ease-standard);
-}
-/* The target ring is ink, with a 1px ring of the card tone outside it, so it holds
-   against a stop as dark as the ink (light mode) or as pale as it (dark mode). */
-.grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { box-shadow: 0 0 0 2px var(--t0), 0 0 0 3px var(--tl-card); }
+.grd .tl-pill.grd-gen-chip.is-on { box-shadow: inset 0 0 0 1px var(--tl-line-on); }
+.grd .tl-pill.grd-gen-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* Out of reach (Palette with under two colours, and the Pro rows for a free account):
+   the border steps back, the word keeps its contrast, and a press still answers. */
+.grd .tl-pill.grd-gen-chip[aria-disabled="true"] { border-color: color-mix(in srgb, var(--tl-line) 45%, transparent); cursor: not-allowed; }
+.grd .tl-pill.grd-gen-chip[aria-disabled="true"]:active { transform: none; }
 @media (hover: hover) and (pointer: fine) {
-  .grd .grd-ramp-dot:hover .grd-ramp-dot-vis { transform: scale(1.15); }
+  .grd .tl-pill.grd-gen-chip:hover:not(.is-on):not([aria-disabled="true"]) { background: var(--tl-wash-2); color: var(--tl-ink); }
 }
-.grd .grd-ramp-dot:active .grd-ramp-dot-vis { transform: scale(0.94); }
-/* The chip zone adds no box of its own: the section's gaps stay where they were. */
-.grd .grd-avail-zone { display: contents; }
-@media (pointer: coarse) {
-  .grd .grd-ramp { padding: 0 16px; }
-  .grd .grd-ramp-track { height: 32px; }
-  .grd .grd-ramp-bar { border-radius: 16px; }
-  .grd .grd-ramp-dot { width: 44px; height: 44px; margin: -22px 0 0 -22px; --lm-drop: 17px; }
-  .grd .grd-ramp-dot-vis { width: 20px; height: 20px; }
+/* "More options": a quiet link in the section head. */
+.grd .grd-gen-more {
+  height: 26px;
+  padding: 0 6px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--tl-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
 }
-:where(html[data-reduced-motion="true"]) .grd :is(.grd-ramp-dot-vis, .grd-chip) { transition: none !important; }
-@media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-ramp-dot-vis, .grd-chip) { transition: none !important; }
+.grd .grd-gen-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-gen-more:active { background: var(--tl-wash-on); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-gen-more:hover { background: var(--tl-wash-2); }
+}
+/* The extras sit under a hairline, not in a box of their own. */
+.grd .grd-gen-extra { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--tl-hair); }
+.grd .grd-gen-base { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.grd .grd-gen-base .cpk-trigger { width: 28px; height: 28px; border-radius: 50%; }
+.grd .grd-gen-base .cpk-trigger-chip { border-radius: 50%; }
+.grd .grd-gen-base .cpk-pop { left: 0; right: auto; }
+.grd .grd-gen-lockbtn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--tl-line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tl-dim);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard);
+}
+.grd .grd-gen-lockbtn:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-gen-lockbtn:hover { border-color: var(--tl-line-on); color: var(--tl-ink); }
+}
+.grd .grd-gen-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
+
+/* A narrowing filter puts a dot on Random's icon (the toolbar button). */
+.grd .tl-btn.grd-random { position: relative; }
+.grd .grd-random.is-narrowed::after {
+  content: ""; position: absolute; top: 9px; left: 25px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--t0); forced-color-adjust: none;
+}
+/* Back with nothing to go back to: stepped back, never scaled, still focusable so
+   its title can say why. */
+.grd .tl-btn.grd-back[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+.grd .tl-btn.grd-back[aria-disabled="true"]:active { transform: none; }
+
+/* The filter rows in the Random section (Type, Stops) and the
+   checklist behind "Pick…". */
+.grd-gen .grd-shuf-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 4px; }
+.grd-gen .grd-shuf-k { font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd-gen .grd-shuf-row > .tl-pills { grid-column: 2; }
+.grd-gen .grd-shuf-row > .grd-shuf-lock { grid-column: 1 / -1; grid-row: 2; }
+.grd-gen .grd-shuf-row > .grd-shuf-lock ~ .tl-pills { grid-row: 1; }
+.grd-gen .tl-pills { gap: 4px; flex-wrap: wrap; }
+.grd-gen .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+/* Type and Stops use the same chip as the rows above, so the section reads as one list. */
+.grd-gen .grd-shuf-row .tl-pill { justify-content: center; min-height: 28px; padding: 0 8px; border-radius: var(--btn-radius); font-size: 12px; line-height: 1; }
+/* A lock has overruled this row: the pills keep the setting the person made but
+   step back, and the note under the label says why. */
+.grd-gen .grd-shuf-lock { margin: -2px 0 0; font-size: 12px; line-height: 1.45; color: var(--tl-ink); }
+.grd-gen .grd-shuf-row[data-locked] .tl-pill { opacity: .6; cursor: not-allowed; }
+.grd-gen .grd-shuf-row[data-locked] .tl-pill:active { transform: none; }
+.grd-gen .grd-shuf-hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
+/* The palette colours Random may use. It scrolls inside itself, so a long palette
+   never stretches the panel; hairlines frame it rather than a second card. */
+.grd-gen .grd-pool { display: grid; gap: 2px; max-height: 208px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; border-block: 1px solid var(--tl-hair); }
+.grd-gen .grd-pool-opt { -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; color: var(--tl-ink); cursor: pointer; }
+.grd-gen .grd-pool-opt input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--tl-link); }
+.grd-gen .grd-pool-opt:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+.grd-gen .grd-pool-dot { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--tl-line); }
+.grd-gen .grd-pool-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd-gen .grd-pool-count { margin: 2px 6px 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .grd-gen .grd-pool-opt:hover { background: var(--tl-wash-on); }
 }
 @media (forced-colors: active) {
-  .grd .grd-ramp-bar { forced-color-adjust: none; border-color: CanvasText; }
-  .grd .grd-ramp-dot-vis { forced-color-adjust: none; border: 1px solid CanvasText; box-shadow: none; }
-  .grd .grd-ramp-dot[aria-pressed="true"] .grd-ramp-dot-vis { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
-  .grd .grd-ramp-dot:focus-visible { outline-color: Highlight; }
+  .grd-gen .grd-pool-dot { forced-color-adjust: none; border-color: CanvasText; }
+  .grd-gen .tl-pill.grd-gen-chip.is-on { outline: 2px solid Highlight; }
+}
+@media (pointer: coarse) {
+  .grd-gen .grd-pool-opt { min-height: 44px; }
+  .grd-gen .grd-pool-opt input { width: 22px; height: 22px; }
+  .grd-gen .tl-pill,
+  .grd-gen .grd-shuf-row .tl-pill { min-height: 44px; min-width: 44px; justify-content: center; }
+  .grd .tl-pill.grd-gen-chip { min-height: 44px; min-width: 44px; padding: 0 8px; }
+  .grd .grd-gen-more { height: 44px; min-width: 44px; }
+  .grd .grd-gen-lockbtn,
+  .grd .grd-gen-base .cpk-trigger { width: 44px; height: 44px; }
+}
+
+/* The chips' state while the page is read aloud lives in aria; the colour of a
+   disabled chip needs no extra rule. */
+.grd .grd-chip[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+:where(html[data-reduced-motion="true"]) .grd :is(.grd-chip, .grd-paint-src, .grd-gen-lockbtn) { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-chip, .grd-paint-src, .grd-gen-lockbtn) { transition: none !important; }
 }
