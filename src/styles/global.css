@@ -5042,6 +5042,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    upsell it replaces, with the accent fill taken out so it reads as a status. */
 .lockt-cta.lockt-status{background:none;border-color:var(--border)}
 .lockt-status .lockt-cta-btn{width:auto}
+/* While the library is still arriving, hold roughly the height of the rows that
+   are about to land, so the page does not jump from the free rows to the lot.
+   Library pages only: the Palette Builder shows the same block inside a popup. */
+.lib-surface .lockt-status--reserve{min-height:min(60vh,520px);align-items:flex-start}
 @media(max-width:640px){
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}
