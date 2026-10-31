@@ -918,8 +918,8 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .tl-toolbar .tl-item[data-tl-item="redo"] { margin-left: -6px; }
 }
 @media (max-width: 340px) {
-  .plb .plb-save { width: 44px; padding-inline: 0; justify-content: center; }
-  .plb .plb-save .tl-btn-label { display: none; }
+  .plb .tl-toolbar .plb-save { width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .tl-toolbar .plb-save .tl-btn-label { display: none; }
 }
 
 /* ── Preview: a main action, quiet (hairline) but in full ink so it reads
