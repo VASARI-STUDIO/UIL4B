@@ -10,9 +10,31 @@
 // the example tints it at render time (src/components/palette/Recolour.jsx), so
 // one file serves every palette. A fixed image has no mask and is never tinted.
 //
+// A vector asset (a map) is a set of monochrome SVG layers that share one viewBox,
+// <file>.svg per layer name in `vector.layers`. The example paints each layer with a
+// palette colour through CSS mask-image, so the layers flip with the mode and the
+// palette like any other part of the scene. It has no sized files, mask or placeholder.
+//
 // Plain data, no React.
 
 export const PREVIEW_ASSETS = {
+  'coot-tha-osm': {
+    folder: 'ridgeline',
+    // Painted back to front: bush and parks, water, streets, then paths.
+    vector: { layers: ['park', 'water', 'roads', 'paths'] },
+    // The viewBox every layer shares.
+    width: 1200,
+    height: 970,
+    alt: 'A map of Mt Coot-tha in Brisbane: bushland and parks, creeks, streets and walking tracks',
+    recolourable: false,
+    credit: {
+      source: 'Map',
+      author: 'OpenStreetMap contributors',
+      licence: 'Open Database Licence (ODbL) 1.0',
+      url: 'https://www.openstreetmap.org/copyright',
+      changes: 'Streets, tracks, bushland, parks and water for the Mt Coot-tha area, simplified and redrawn as four single-colour layers. The route drawn over it was found on the same tracks, with ground heights from NASA SRTM (public domain), read through OpenTopoData.',
+    },
+  },
   'card-front': {
     folder: 'card',
     // The base name of the sized files: <file>-<width>.avif and .webp.
@@ -139,8 +161,12 @@ export const maskUrl = (asset) => `/previews/${asset.folder}/${asset.mask}`
 /** A srcset string for one format: "<url> 640w, <url> 1080w". */
 export const srcSet = (asset, ext) => asset.widths.map((w) => `${assetUrl(asset, w, ext)} ${w}w`).join(', ')
 
+/** The public URL of one layer of a vector asset. */
+export const layerUrl = (asset, layer) => `/previews/${asset.folder}/${layer}.svg`
+
 /** The path, relative to public/previews/, of every file an asset owns. */
 export function assetFiles(asset) {
+  if (asset.vector) return asset.vector.layers.map((l) => `${asset.folder}/${l}.svg`)
   const files = []
   for (const w of asset.widths) for (const ext of EXTENSIONS) files.push(`${asset.folder}/${asset.file}-${w}.${ext}`)
   if (asset.mask) files.push(`${asset.folder}/${asset.mask}`)

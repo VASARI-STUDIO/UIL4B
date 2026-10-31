@@ -28,6 +28,8 @@ const dialogHeading = (page) => page.locator('#ui-login-title').first()
  * what makes these tests locale-proof: the heading comes from en.json /
  * en-US.json and would drift with a copy change, but a form that collects a
  * NAME is a signup form in any language. */
+// Only the sign-up form carries the password hint, so it tells the two forms apart.
+const signupOnly = (page) => page.locator('#ui-login-pw-help')
 const nameField = (page) => page.locator('#ui-login-name')
 
 test.describe('signup intent', () => {
@@ -41,31 +43,12 @@ test.describe('signup intent', () => {
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
     await page.getByRole('button', { name: 'Create a free account' }).click()
     await expect(dialogHeading(page)).toBeVisible()
-    await expect(nameField(page), 'a signup form collects a name').toBeVisible()
+    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
-    // …and that field is LABELLED, which the id lookup above cannot prove. This
-    // asserts the accessible name of THAT element rather than searching the page
-    // for one containing "Name".
-    //
-    // It used to be `page.getByLabel('Name')`, and that broke for
-    // a reason worth keeping: getByLabel does a SUBSTRING match, and the
-    // positioning line — "No more trying to remember the names of
-    // the 1 tool websites." — labels the closing `.system-cta` region on this
-    // very page. So the locator matched the region AND the input, and Playwright
-    // refused it in strict mode. The page was correct; the locator was never
-    // anchored.
-    // A REAL <label>, not a placeholder. `toHaveAccessibleName` alone was not
-    // enough and this was proved rather than assumed: orphaning the <label> and
-    // re-running left all five tests GREEN, because Playwright falls back to
-    // `placeholder="Your name"` when computing the name. A placeholder is not a
-    // label — it disappears the moment someone types, so a person who looks away
-    // mid-form has nothing left telling them what the field is.
-    //
-    // So this asserts the association itself.
-    await expect(
-      page.locator('label[for="ui-login-name"]'),
-      'the name field is labelled by a real <label>, not just a placeholder',
-    ).toHaveCount(1)
+    // Two fields, not three: the form no longer asks for a name, and the
+    // password hint is tied to its input.
+    await expect(nameField(page), 'the signup form still asks for a name').toHaveCount(0)
+    await expect(page.locator('#ui-login-password')).toHaveAttribute('aria-describedby', 'ui-login-pw-help')
   })
 
   test('"Log in" still opens the sign-in form — the two are not the same button', async ({ page }) => {
@@ -74,7 +57,7 @@ test.describe('signup intent', () => {
 
     await page.getByRole('button', { name: 'Log in' }).first().click()
     await expect(dialogHeading(page)).toHaveText(/log in to uil4b/i)
-    await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
+    await expect(signupOnly(page), 'a sign-in form is not a signup form').toHaveCount(0)
   })
 
   test('the homepage hero CTA carries its intent through a real navigation', async ({ page }) => {
@@ -101,7 +84,7 @@ test.describe('signup intent', () => {
     await expect(hero).toHaveAttribute('href', '/projects')
     await hero.click()
     await expect(page).toHaveURL(/\/projects$/)
-    await expect(nameField(page), 'opening the toolkit put a sign-up form in the way').toHaveCount(0)
+    await expect(signupOnly(page), 'opening the toolkit put a sign-up form in the way').toHaveCount(0)
 
     // The closing band's CTA is free too: the workspace, no sign-up form.
     await go(page, '/')
@@ -110,7 +93,7 @@ test.describe('signup intent', () => {
     await expect(page.locator('.sp-close-cta').getByRole('button'), 'the closing band opens a sign-up form again').toHaveCount(0)
 
     await go(page, '/login?signup=1')
-    await expect(nameField(page), 'a signup form collects a name').toBeVisible()
+    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
   })
 
@@ -118,7 +101,7 @@ test.describe('signup intent', () => {
     watch(page, 'a returning visitor opening a bookmark')
     await go(page, '/login')
     await expect(dialogHeading(page)).toHaveText(/log in to uil4b/i)
-    await expect(nameField(page), 'a sign-in form does not').toHaveCount(0)
+    await expect(signupOnly(page), 'a sign-in form is not a signup form').toHaveCount(0)
   })
 
   // The Free column on /plans reads "Open the toolkit". This spec checks that it
