@@ -263,6 +263,9 @@
    an old blue: --accent-strong → --accent-mid, --brand → --accent, --info →
    --accent-mid, --accent-fg → --accent-ink. */
 :root{
+  /* Paper ink for @media print (legal.css): a warm near-black ramp that does
+     not follow the theme, so a page printed from dark mode is dark on white. */
+  --print-ink:oklch(0.22 0.01 90);--print-ink-2:oklch(0.40 0.01 90);--print-line:oklch(0.85 0.005 90);
   --accent:#2A60E8;
   --accent-paper:#EFEEEA;
   --accent-deep:#0B0C0E;

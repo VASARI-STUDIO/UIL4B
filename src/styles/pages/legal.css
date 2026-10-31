@@ -30,14 +30,27 @@
  * The h1 and the date, and nothing between them. The date is the first thing a
  * reader checks on a legal page and it was 15px body grey under a 52px
  * headline — the same weight as the lede on every other page, on a page that
- * has no lede. It is a mono caption now, which is what a stamp looks like. */
+ * has no lede. It is plain sans body type, so it reads as a date and not a
+ * label (labels and dates stay out of mono caps; mono is for literal values). */
 .lgl-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
 .lgl-head .cpg-h1 { max-width: 16ch; }
 /* `em` inside the h1 is /privacy's own emphasis on the word "data". The
  * italic display cut carries it; `--cpg-dim` at 64px is display type and well
  * over its 3:1 floor (8.02:1 light on --bg-0, 9.1:1 dark). */
 .lgl-head .cpg-h1 em { font-style: italic; font-weight: 400; color: var(--cpg-dim); padding-right: .06em; }
-.lgl-updated { display: block; margin: 0; }
+/* `.cpg-cap` (mono, 10.5px, tracked capitals) is still on the element; two
+ * classes here beat it without editing content.css. The string is unchanged.
+ * --cpg-faint is --t2: 5.62:1 on the page ground. */
+.lgl .lgl-updated {
+  display: block;
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cpg-faint);
+}
 
 /* ── The index ──
  * One long list of clause titles, so it is set tighter than content.css's
@@ -52,6 +65,69 @@
   line-height: 1.45;
 }
 .lgl-toc .cpg-rail-label { overflow-wrap: anywhere; }
+/* The rail is sticky, so a list taller than the window (Privacy is eleven rows,
+ * many of them two lines) would hide its last entries behind the fold with no
+ * way to reach them. It scrolls inside itself instead; LegalContents keeps the
+ * current row in view. 56px is the 28px sticky offset above and the same below.
+ * The ring is drawn inside the row because this box clips anything outside it. */
+@media (min-width: 1001px) {
+  .lgl .lgl-toc-col {
+    max-height: calc(100dvh - var(--chrome-h) - 56px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .lgl .cpg-rail-row:focus-visible { outline-offset: -2px; }
+}
+
+/* ── The contents on a phone or tablet (1000px and narrower) ──
+ * A closed "On this page" disclosure over a plain vertical list: every title
+ * wraps in full, nothing scrolls sideways. LegalContents renders it only at
+ * these widths, so the rules need no media query of their own. */
+.lgl-toc-m {
+  border-top: 1px solid var(--cpg-line);
+  border-bottom: 1px solid var(--cpg-line);
+}
+.lgl-toc-m-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 48px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 560;
+  color: var(--cpg-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.lgl-toc-m-sum::-webkit-details-marker { display: none; }
+.lgl-toc-m-sum::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.lgl-toc-m[open] > .lgl-toc-m-sum::after { transform: translateY(2px) rotate(-135deg); }
+.lgl-toc-m ol { list-style: none; margin: 0; padding: 0; }
+.lgl-toc-m-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 0;
+  border-top: 1px solid var(--cpg-line);
+  font-family: var(--font);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--cpg-dim);
+  text-decoration: none;
+}
+@media (hover: hover) {
+  .lgl-toc-m-row:hover { color: var(--cpg-ink); }
+}
 
 /* ── The document ──
  * `.legal-card` STAYS ON THIS ELEMENT, and that is a contract rather than a
@@ -182,7 +258,24 @@
 }
 .lgl .storage-table { font-size: 13px; }
 .lgl .storage-table thead { background: var(--cpg-wash); }
-.lgl .storage-table th { color: var(--cpg-faint); font-weight: 600; letter-spacing: .12em; }
+/* Column heads, the Yes / No / Account-bound values and the phone row labels
+ * are words, so they are set in the UI sans. Only `.storage-key` below is a
+ * literal value and stays mono. */
+.lgl .storage-table th {
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cpg-faint);
+}
+.lgl .storage-table .storage-pii {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: 0;
+  text-transform: none;
+}
 .lgl .storage-table td { color: var(--cpg-dim); }
 .lgl .storage-table .storage-purpose { color: var(--cpg-dim); }
 /* THE TOKEN CORRECTION. See the note on .lgl-a. --accent-text tracks
@@ -203,6 +296,13 @@
 @media (max-width: 640px) {
   /* The stacked cards draw their own border; the wrapper's would double it. */
   .lgl-table-wrap { border: 0; border-radius: 0; overflow: visible; }
+  .lgl .storage-table td::before {
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
 }
 
 /* ── Narrow ── */
@@ -210,10 +310,50 @@
   /* The document is the whole column once the rail is a row above it, so the
    * measure cap becomes the only thing holding the line length. */
   .lgl-doc { max-width: var(--lgl-measure); }
-  .lgl-toc .cpg-rail-row { min-height: 44px; align-items: center; }
-  .lgl-toc .cpg-rail-label { overflow-wrap: normal; }
 }
 @media (max-width: 560px) {
   .lgl-head .cpg-h1 { max-width: none; }
   .lgl-p, .lgl-list { font-size: 14.5px; }
+}
+
+/* ── Print ──
+ * A printed policy is black on white whatever the screen theme: browsers drop
+ * the page background but keep text colour, so a dark-theme page would print
+ * light grey on white. The theme tokens the document reads are redefined on
+ * `.lgl` to the paper ramp (global.css `--print-*`), which also reaches the
+ * storage table and the aliases content.css derives from them. The app chrome,
+ * the contents and the floating controls are removed, headings keep with the
+ * text under them, and a link that leaves the site prints its address. */
+@page { margin: 18mm 16mm; }
+@media print {
+  .skip-link, .pnav, .pnav-menu, .notice-stack, .bill-banner, .toast,
+  .app-footer, .sp-footer, .global-feedback-btn, .lgl .lgl-toc-col {
+    display: none !important;
+  }
+  html, body, .app-shell { background: none !important; }
+  .app-page { max-width: none; padding: 0; }
+  .lgl {
+    --t0: var(--print-ink);
+    --t1: var(--print-ink);
+    --t2: var(--print-ink-2);
+    --t3: var(--print-ink-2);
+    --border: var(--print-line);
+    --bh: var(--print-line);
+    --warn-strong: var(--print-ink);
+    --ok-strong: var(--print-ink);
+    --accent-text: var(--print-ink);
+    --lgl-measure: none;
+    gap: 0;
+    padding: 0;
+  }
+  .lgl .cpg-split { display: block; }
+  .lgl-head { margin-bottom: 14pt; }
+  .lgl-head .cpg-h1 { font-size: 22pt; max-width: none; }
+  .lgl-sec { padding: 10pt 0; }
+  .lgl .lgl-h { font-size: 13pt; break-after: avoid; }
+  .lgl-p, .lgl-list { font-size: 10.5pt; line-height: 1.5; orphans: 3; widows: 3; }
+  .lgl-aside { font-size: 9.5pt; }
+  .lgl .storage-table tr { break-inside: avoid; }
+  .lgl .storage-table { font-size: 9.5pt; }
+  .lgl-a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .9em; }
 }

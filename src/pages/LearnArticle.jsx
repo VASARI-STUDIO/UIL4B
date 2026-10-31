@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import useActiveSection from '../hooks/useActiveSection'
 import { Link, useParams } from 'react-router-dom'
 import NotFound from './NotFound'
 import { findArticle, nextArticle, readingMinutes } from '../data/learnIndex'
@@ -166,38 +166,6 @@ function Article({ article }) {
       </div>
     </div>
   )
-}
-
-/**
- * Which section the reader is in, for the contents rail.
- *
- * The observer window is pinned near the top of the viewport rather than its
- * middle: the question the rail answers is "what am I reading now", and the
- * moment a heading crosses under the nav the reader is in that section even
- * though most of the previous one is still on screen. Intersecting sections are
- * sorted by position so the topmost wins, which keeps the marker stable when
- * two short sections are visible at once.
- */
-function useActiveSection(sections) {
-  const [active, setActive] = useState('')
-
-  useEffect(() => {
-    const nodes = sections.map((s) => document.getElementById(s.id)).filter(Boolean)
-    if (!nodes.length || typeof IntersectionObserver === 'undefined') return undefined
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const seen = entries.filter((e) => e.isIntersecting)
-        if (!seen.length) return
-        seen.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        setActive(seen[0].target.id)
-      },
-      { rootMargin: '-88px 0px -60% 0px', threshold: 0 },
-    )
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
-  }, [sections])
-
-  return active
 }
 
 function formatDate(iso) {
