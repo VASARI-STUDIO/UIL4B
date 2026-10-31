@@ -287,6 +287,63 @@ test.describe('the ferry slider', () => {
   })
 })
 
+// ── 4b. the map's place names ────────────────────────────────────────────────
+// The drawing is cropped to cover its box, so a place name cannot sit at a fixed fraction of the
+// box: it is placed from the same crop, and kept inside the box. At every width each name is
+// inside the map, no two overlap, none covers a wharf dot, and the two wharves carry theirs:
+// Circular Quay's name is below its dot and Manly's is to the right of its dot and within a label's height of it (it hangs about 12px low at 768 and up: LABEL_AT.right puts its top 4px under the point).
+//
+// To make it go red (undo it after): in SlackWater.jsx CrossingMap's `place`, set `k` to
+// `bw / w` and `oy` to `0`; or revert to a0eb72a4~1 for SlackWater.jsx and SlackWater.css.
+test.describe('the map labels', () => {
+  const measure = (sc) => sc.locator('.sw-map').evaluate((map) => {
+    const box = map.getBoundingClientRect()
+    const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 } }
+    return {
+      box: rect(map),
+      names: [...map.querySelectorAll('.sw-pl')].map((el) => ({ name: el.textContent.trim(), ...rect(el), shown: getComputedStyle(el).visibility !== 'hidden' })),
+      wharves: [...map.querySelectorAll('.sw-wharf')].map(rect),
+      width: box.width,
+    }
+  })
+  const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b
+
+  for (const [width, height, mobile] of [[390, 844, true], [768, 900, false], [1440, 900, false]]) {
+    test.describe(`at ${width}px`, () => {
+      test.use({ viewport: { width, height }, ...(mobile ? { hasTouch: true, isMobile: true } : {}) })
+
+      test('every place name is inside the map, clear of the others and of the wharf dots, and Quay and Manly sit by their dots', async ({ page }) => {
+        watch(page, `designer reading the Slack Water map at ${width}px`)
+        const dialog = await openSlack(page)
+        const sc = scene(dialog)
+        await sc.locator('.sw-map').scrollIntoViewIfNeeded()
+        await expect(sc.locator('.sw-pl').first(), 'the labels are placed, not left hidden').toBeVisible()
+        await expect.poll(async () => (await measure(sc)).names.every((n) => n.shown), 'every name is placed').toBe(true)
+        const m = await measure(sc)
+        expect(m.names.map((n) => n.name), 'the five places').toEqual(['Circular Quay', 'Fort Denison', 'Bradleys Head', 'North Head', 'Manly'])
+        const slack = 0.5
+        for (const n of m.names) {
+          expect(n.l, `${n.name} runs off the map's left edge`).toBeGreaterThanOrEqual(m.box.l - slack)
+          expect(n.r, `${n.name} runs off the map's right edge`).toBeLessThanOrEqual(m.box.r + slack)
+          expect(n.t, `${n.name} runs off the map's top`).toBeGreaterThanOrEqual(m.box.t - slack)
+          expect(n.b, `${n.name} runs off the map's bottom`).toBeLessThanOrEqual(m.box.b + slack)
+        }
+        for (let i = 0; i < m.names.length; i++) {
+          for (let j = i + 1; j < m.names.length; j++) expect(overlap(m.names[i], m.names[j]), `${m.names[i].name} overlaps ${m.names[j].name}`).toBe(false)
+          for (const [w, dot] of m.wharves.entries()) expect(overlap(m.names[i], dot), `${m.names[i].name} covers wharf dot ${w + 1}`).toBe(false)
+        }
+        const [quay, manly] = [m.names[0], m.names[4]]
+        const [dotQ, dotM] = m.wharves
+        expect(Math.abs(quay.cx - dotQ.cx), 'Circular Quay is not under its dot').toBeLessThanOrEqual(quay.r - quay.l)
+        expect(quay.t, 'Circular Quay is not below its dot').toBeGreaterThanOrEqual(dotQ.b - slack)
+        expect(manly.l, 'Manly is not to the right of its dot').toBeGreaterThanOrEqual(dotM.r - slack)
+        expect(Math.abs(manly.cy - dotM.cy), 'Manly is not beside its dot (within one label height)').toBeLessThanOrEqual(16)
+        expect(manly.l - dotM.r, 'Manly is far from its dot').toBeLessThanOrEqual(24)
+      })
+    })
+  }
+})
+
 // ── 5. Save ──────────────────────────────────────────────────────────────────
 
 test.describe('Save', () => {

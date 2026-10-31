@@ -748,3 +748,52 @@ test.describe('the compare view', () => {
     await expect(dialog.getByRole('button', { name: /^Use / })).toBeVisible()
   })
 })
+
+// ── The tint masks stop at the hem ───────────────────────────────────────────
+// The shirt's colour is multiplied through a mask picture (the tint shows only where the mask
+// is solid). A mask that runs on past the hem tints the soft shadow under it, and one that
+// covers the backdrop beside the sleeves tints the floor: the colour then leaks out of the
+// garment. The numbers are the rows and corners of the 1080 x 1350 masks, by hand from the
+// photographs: the front hem ends at row 1194 and the back hem at row 1208, and the old
+// masks ran to rows 1218 and 1219 and painted 8298 and 2377 pixels below them.
+//
+// To make it go red (undo it after): `git checkout d186adfb~1 -- public/previews/overshirt/overshirt-front-mask.png`
+// (or the back-mask).
+test.describe('the tint masks', () => {
+  const solidPixels = (page, file, box) => page.evaluate(async ({ url, rect }) => {
+    const img = new Image()
+    img.src = url
+    await img.decode()
+    const cv = document.createElement('canvas')
+    cv.width = img.width
+    cv.height = img.height
+    const cx = cv.getContext('2d')
+    cx.drawImage(img, 0, 0)
+    const [x0, y0, x1, y1] = rect
+    const px = cx.getImageData(x0, y0, x1 - x0, y1 - y0).data
+    let n = 0
+    for (let k = 3; k < px.length; k += 4) if (px[k] > 128) n++
+    return { size: [img.width, img.height], n }
+  }, { url: `/previews/overshirt/${file}`, rect: box })
+
+  test('the front mask paints nothing below the hem', async ({ page }) => {
+    watch(page, 'designer checking the Orra shirt tint below the hem')
+    await go(page, '/')
+    const { size, n } = await solidPixels(page, 'overshirt-front-mask.png', [0, 1196, 1080, 1350])
+    expect(size, 'the mask is 1080 x 1350, the size the box above is measured on').toEqual([1080, 1350])
+    expect(n, 'pixels of the front mask below the hem (its shadow would be tinted)').toBe(0)
+  })
+
+  test('the back mask paints nothing below the hem or on the backdrop beside the cuffs', async ({ page }) => {
+    watch(page, 'designer checking the Orra back tint below the hem')
+    await go(page, '/')
+    const below = await solidPixels(page, 'overshirt-back-mask.png', [0, 1210, 1080, 1350])
+    expect(below.size).toEqual([1080, 1350])
+    expect(below.n, 'pixels of the back mask below the hem').toBe(0)
+    // The floor shadow between each cuff and the body: the old mask held 2981 and 1829 solid pixels here.
+    const left = await solidPixels(page, 'overshirt-back-mask.png', [90, 1148, 250, 1200])
+    const right = await solidPixels(page, 'overshirt-back-mask.png', [830, 1148, 1000, 1200])
+    expect(left.n, 'backdrop pixels of the back mask left of the body').toBeLessThanOrEqual(20)
+    expect(right.n, 'backdrop pixels of the back mask right of the body').toBeLessThanOrEqual(20)
+  })
+})
