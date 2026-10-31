@@ -293,9 +293,9 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
    clamp(48px,6vw,80px) clamp(20px,4vw,52px); ONE auto-fit grid of
    minmax(min(220px,100%),1fr) at a 36px gap holding the brand cell and the
    link columns (the Footer nav is display:contents so its columns are cells of
-   that grid); headings in 10px mono at .18em, faint, weight 540; lists at an
+   that grid); headings in the caption size, faint, weight 540; lists at an
    11px gap, 16px under the heading; links in the design's link style above;
-   the baseline in 10.5px mono at .1em, faint, over another 9% hairline. */
+   the baseline in the caption size, faint, over another 9% hairline. */
 .sp-footer{position:relative;z-index:2;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);background:var(--bg-0);color:var(--t0)}
 /* The curtain reveal (SpectrumFooter `reveal`, set only while the whole footer
    fits the window and it is on the verge of view): stuck to the bottom of the window one layer under the
@@ -327,7 +327,7 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta-icon{transition:none}
 html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:hover .sp-footer-cta-icon,
 html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none}
 .sp-footer .sp-footer-col{min-width:0}
-.sp-footer .sp-footer-col-h{margin:0;font-family:var(--mono);font-size:10px;font-weight:540;letter-spacing:.18em;color:var(--t2)}
+.sp-footer .sp-footer-col-h{margin:0;font-family:var(--font);font-size:var(--fs-caption);font-weight:540;letter-spacing:normal;text-transform:none;color:var(--t2)}
 /* The design's 11px gap between rows. Every footer link holds at least a 24px
    box (WCAG 2.5.8, 58-target-size-24). */
 .sp-footer .sp-footer-col ul{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:11px}
@@ -375,7 +375,7 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
 @media(pointer:coarse){.sp-footer .sp-footer-notice-list{line-height:2}}
 .sp-footer .sp-footer-notice + .sp-footer-legal{margin-top:24px;padding-top:0;border-top:0}
 /* The baseline (1631). */
-.sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t2)}
+.sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t2)}
 .sp-footer .sp-footer-legal a{color:var(--t1)}
 .sp-footer .sp-footer-legal a:hover{color:var(--t0)}
 /* THE FOUNDER CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
@@ -385,12 +385,12 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
 .sp-footer .sp-footer-legal a.sp-footer-attrib:hover{text-decoration-color:currentColor}
 /* The founder's note trigger, restyled to the baseline and nothing else — its
    element, label, aria-haspopup and press-only opening are FounderNote's. */
-.sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sp-footer .app-footer-note:hover{color:var(--t0)}
-/* The baseline holds links on a phone, so it keeps to the 12px text floor. */
-@media(max-width:760px){.sp-footer .sp-footer-legal,.sp-footer .app-footer-note{font-size:12px}.sp-footer .sp-footer-legal{margin-top:32px}}
+/* The baseline holds links on a phone, so it keeps the caption size (no smaller phone override). */
+@media(max-width:760px){.sp-footer .sp-footer-legal{margin-top:32px}}
 /* On a phone the legal links (Privacy, Terms, Credits) sit in the baseline row
-   with the copyright and the about note, in the same mono, each underlined like
+   with the copyright and the about note, in the same sans, each underlined like
    the note so it reads as a link without a hover. The three share a row of their
    own, so at 320px none is left alone on a wrapped line. On a touch screen each
    is a box at least 44px tall and wide, so a thumb never meets two. */

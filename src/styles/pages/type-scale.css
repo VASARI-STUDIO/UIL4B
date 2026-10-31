@@ -26,10 +26,18 @@
    too: a focused row or control scrolls clear of the docked bar, not under it. */
 html:has(.tsc-page),
 .tsc-page { --tsc-dock-h: 64px; }
-/* With a mouse the bar is one 36px row between two 10px pads and a hairline. */
-@media (min-width: 768px) and (pointer: fine) {
+/* From 768 the bar exists only in the split, where it holds Code; below the
+   split there is no bar and nothing to clear. With a mouse the bar is one 36px
+   row between two 10px pads and a hairline. */
+@media (min-width: 768px) {
   html:has(.tsc-page),
-  .tsc-page { --tsc-dock-h: 57px; }
+  .tsc-page { --tsc-dock-h: 0px; }
+  html:has(.tsc-page .tsc-dock),
+  .tsc-page:has(.tsc-dock) { --tsc-dock-h: 64px; }
+}
+@media (min-width: 768px) and (pointer: fine) {
+  html:has(.tsc-page .tsc-dock),
+  .tsc-page:has(.tsc-dock) { --tsc-dock-h: 57px; }
 }
 html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
 html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
@@ -41,7 +49,7 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 .tsc-page .typ-picker .seg-label,
 .tsc-page .tsc-k {
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: max(var(--fs-caption), 13px);
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
@@ -52,6 +60,17 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 
 /* ── Views switch ───────────────────────────────────────────────────────── */
 .tsc-page .tsc-view-switch { flex-wrap: nowrap; }
+/* The switch with the Preview width menu: one row from 768, the menu on its own
+   44px row under the switch on a phone. */
+.tsc-page .tsc-view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.tsc-page .tsc-view-bar .tsc-width-select { flex: 0 1 220px; width: auto; min-width: 176px; }
+@media (pointer: coarse) {
+  .tsc-page .tsc-view-bar .tsc-width-select { min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .tsc-page .tsc-view-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tsc-page .tsc-view-bar .tsc-width-select { flex: 0 0 auto; width: 100%; min-height: 44px; }
+}
 
 /* ── The ladder ─────────────────────────────────────────────────────────── */
 .tsc-page .tsc-ladder { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: calc(var(--tsc-top) + 4px); }
@@ -59,7 +78,7 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
   margin: 0;
   padding: 10px 0;
   border-bottom: 1px solid var(--tl-hair);
-  font-size: 12px;
+  font-size: max(var(--fs-caption), 13px);
   line-height: 1.45;
   color: var(--tl-soft);
 }
@@ -112,9 +131,9 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 /* ── Page view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-page-view { display: grid; gap: 10px; min-width: 0; }
 .tsc-page .tsc-page-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tsc-page .tsc-page-label { flex: 0 0 auto; margin: 0; font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+.tsc-page .tsc-page-label { flex: 0 0 auto; margin: 0; font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); white-space: nowrap; }
 .tsc-page .tsc-width-select { flex: 0 1 220px; width: auto; min-width: 176px; }
-.tsc-page .tsc-width-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
+.tsc-page .tsc-width-note { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 
 /* ── The split (Scale B) ─────────────────────────────────────────────────────
    The ladder and the page side by side. The page keeps its true sizes in a
@@ -256,9 +275,19 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .tsc-drawer .tsc-export:focus-visible { outline-offset: -2px; }
 @keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-/* The save menu (SaveTypeSystemPanel) opens upward from the docked bar, at the
-   right where Save is. Below 561px the menu is already a bottom sheet
-   (global.css .svt-menu). */
+/* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save
+   from 768, and upward from the docked bar on a phone, at the right where Save
+   is. Below 561px the menu is already a bottom sheet (global.css .svt-menu). */
+.tsc-page .tsc-save-wrap { position: relative; display: inline-flex; }
+.tsc-page .tl-toolbar .svt-pop {
+  display: block;
+  position: absolute;
+  top: calc(100% + 8px);
+  bottom: auto;
+  right: 0;
+  z-index: 60;
+}
+.tsc-page .tl-toolbar .svt-pop .svt-menu { position: static; }
 .tsc-page .svt-pop { display: contents; }
 @media (min-width: 561px) {
   .tsc-page .svt-pop {
@@ -347,7 +376,7 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
   cursor: pointer;
 }
 .tsc-page .tsc-select option { background: var(--card); color: var(--t0); }
-.tsc-page .tsc-scale-out { display: grid; gap: 2px; margin: 0; font-size: 12.5px; color: var(--tl-dim); }
+.tsc-page .tsc-scale-out { display: grid; gap: 2px; margin: 0; font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
 /* The summary is plain Geist: only the px values inside it are literal. */
 .tsc-page .tsc-scale-range { font-variant-numeric: tabular-nums; color: var(--tl-ink); }
 
@@ -383,7 +412,7 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .typ-picker .typ-picker-trigger { padding: 4px 0; border: 0; background: transparent; border-radius: 0; }
 .tsc-page .typ-picker .typ-picker-face { font-size: 22px; }
 .tsc-page .typ-picker .typ-picker-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.tsc-page .typ-picker .typ-picker-meta { font-family: var(--font); font-size: 12px; color: var(--tl-dim); }
+.tsc-page .typ-picker .typ-picker-meta { font-family: var(--font); font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
 .tsc-page .typ-picker .typ-picker-cue { display: inline-flex; align-items: center; min-height: 36px; }
 
 /* Fine tuning: a text disclosure, then groups separated by hairlines. */
@@ -409,8 +438,8 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .tsc-bp { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 14px 0; border: 0; border-top: 1px solid var(--tl-hair); }
 .tsc-page .tsc-bp legend { float: left; width: 100%; margin: 0 0 2px; padding: 0; }
 .tsc-page .tsc-slider-row { display: grid; gap: 4px; min-width: 0; }
-.tsc-page .tsc-slider-k { font-size: 12.5px; color: var(--tl-dim); }
-.tsc-page .tsc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
+.tsc-page .tsc-slider-k { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
+.tsc-page .tsc-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 
 /* The sheet's row and head exist on a phone only. */
 .tsc-page .tsc-sheet-row,
@@ -487,7 +516,7 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
   .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
   .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
-  .tsc-page .tsc-sheet-title { font-size: 12.5px; color: var(--tl-dim); }
+  .tsc-page .tsc-sheet-title { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
   .tsc-page .tsc-sheet-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: max(0px, env(safe-area-inset-left, 0px)); }
 
   .tsc-page .tsc-dock {
