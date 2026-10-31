@@ -1573,7 +1573,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-start:hover{gap:12px;color:var(--accent-mid);text-decoration:none}
 .app-footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
 .app-footer-group{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-.app-footer-group p{margin-bottom:3px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.app-footer-group-h{margin:0 0 3px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
 /* 94.8x21.4 measured, at every width. These stack in a column with a 9px gap,
    so a 24px circle centred on each one clears its neighbour by a hair and the
    SPACING exception technically covers them — but "technically conforming and
