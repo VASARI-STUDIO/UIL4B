@@ -435,6 +435,222 @@ test('the settings report whether email is configured, without revealing the add
   assert.ok(!JSON.stringify(res.body).includes('example.test'))
 })
 
+// ── Counting rules, end to end ───────────────────────────────────────────────
+
+const mailCapKey = (db) => [...db.docs.keys()].find((k) => k.startsWith('rate-limits/community-notify-mail_'))
+
+test('with every-1, each post gets its own email and a replay of one adds none', async (t) => {
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({
+    'community-submissions/a': post({ name: 'Alpha' }),
+    'community-submissions/b': post({ name: 'Bravo' }),
+    'community-prompts/c': { title: 'Charlie', authorUid: 'alice', authorName: 'Alice', status: 'pending', createdAt: minutesAgo(1) },
+  })
+
+  await call(db, claim('a'))
+  await call(db, claim('b'))
+  await call(db, claim('c', 'community-prompts'))
+  await Promise.all([call(db, claim('a')), call(db, claim('b')), call(db, claim('a'))])
+
+  assert.equal(sent.length, 3, 'one email per post, none for the replays')
+  assert.deepEqual(sent.map((s) => s.body.subject), Array(3).fill('[UIL4B community] 1 new submission waiting'))
+  assert.deepEqual(['Alpha', 'Bravo', 'Charlie'].map((n, i) => sent[i].body.html.includes(n)), [true, true, true])
+  assert.equal(readSettings(db.docs.get(SETTINGS_KEY)).sinceLast, 0)
+})
+
+test('a replayed id is only ever counted once towards a threshold', async (t) => {
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({
+    [SETTINGS_KEY]: { enabled: true, everyN: 2, sinceLast: 0, pending: [] },
+    'community-submissions/a': post({ name: 'Alpha' }),
+    'community-submissions/b': post({ name: 'Bravo' }),
+  })
+  for (let i = 0; i < 4; i++) await call(db, claim('a'))
+  assert.equal(sent.length, 0, 'four claims of one post are not two posts')
+  await call(db, claim('b'))
+  assert.equal(sent.length, 1)
+  assert.ok(sent[0].body.subject.includes(' 2 new '))
+})
+
+test('a claim that does not qualify gets exactly the answer a counted one gets', async (t) => {
+  withEnv(t)
+  stubFetch(t)
+  const counted = await call(fakeDb({ 'community-submissions/p1': post() }), claim())
+  const unqualified = {
+    'another user': { 'community-submissions/p1': post({ authorUid: 'bob' }) },
+    'not pending (approved)': { 'community-submissions/p1': post({ status: 'approved' }) },
+    'not pending (rejected)': { 'community-submissions/p1': post({ status: 'rejected' }) },
+    'just over ten minutes old': { 'community-submissions/p1': post({ createdAt: minutesAgo(10.5) }) },
+    'dated in the future': { 'community-submissions/p1': post({ createdAt: minutesAgo(-60) }) },
+    'no date at all': { 'community-submissions/p1': post({ createdAt: undefined }) },
+    'a document that does not exist': {},
+    'the id of a post in the other collection': { 'community-prompts/p1': post() },
+  }
+  for (const [label, seed] of Object.entries(unqualified)) {
+    const db = fakeDb(seed)
+    const res = await call(db, claim())
+    assert.equal(res.code, counted.code, label)
+    assert.deepEqual(res.body, counted.body, label)
+    assert.equal(db.docs.has(SETTINGS_KEY), false, `${label} must not touch the counter`)
+  }
+  const fresh = fakeDb({ 'community-submissions/p1': post({ createdAt: minutesAgo(9.5) }) })
+  await call(fresh, claim())
+  assert.ok(fresh.docs.get('community-submissions/p1').notifiedAt, 'nine and a half minutes is still fresh')
+})
+
+test('an unknown collection and a malformed id are all turned away alike, and count nothing', async (t) => {
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({ 'community-submissions/p1': post(), 'users/p1': post() })
+  const bad = [
+    { collection: 'users', id: 'p1' },
+    { collection: 'admin-settings', id: 'community-notify' },
+    { collection: 'community-submissions/p1/x', id: 'p1' },
+    { collection: 'community-submissions', id: '../x' },
+    { collection: 'community-submissions', id: '' },
+    { collection: 'community-submissions', id: 'x'.repeat(5000) },
+    { collection: 'community-submissions', id: 'p1/../p1' },
+    { collection: 'community-submissions', id: 'p 1' },
+    { collection: 'community-submissions' },
+    { id: 'p1' },
+  ]
+  const shapes = new Set()
+  for (const body of bad) {
+    const res = await call(db, { type: 'community-submission', ...body })
+    assert.equal(res.code, 400, JSON.stringify(body).slice(0, 80))
+    shapes.add(JSON.stringify(res.body))
+  }
+  assert.equal(shapes.size, 1, 'one answer for every bad request')
+  assert.equal(db.docs.has(SETTINGS_KEY), false)
+  assert.equal(db.docs.get('community-submissions/p1').notifiedAt, undefined)
+  assert.equal(sent.length, 0)
+})
+
+test('with the setting off, no post is counted or emailed, and it stays uncounted for later', async (t) => {
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({ 'community-submissions/p1': post(), [SETTINGS_KEY]: { enabled: false, everyN: 1, sinceLast: 0, pending: [] } })
+  const res = await call(db, claim())
+  assert.deepEqual(res.body, { ok: true })
+  assert.equal(sent.length, 0)
+  assert.equal(db.docs.get('community-submissions/p1').notifiedAt, undefined)
+})
+
+test('past the email cap the items are kept and go out together in the next email', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({ 'community-submissions/a': post({ name: 'Held one' }), 'community-submissions/b': post({ name: 'Next one' }) })
+  for (let i = 0; i < MAIL_CAP.limit; i++) await consume(db, MAIL_CAP)
+
+  await call(db, claim('a'))
+  assert.equal(sent.length, 0)
+  assert.equal(readSettings(db.docs.get(SETTINGS_KEY)).pending[0].name, 'Held one')
+
+  db.docs.delete(mailCapKey(db)) // the hour rolls over
+  await call(db, claim('b'))
+
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].body.subject, '[UIL4B community] 2 new submissions waiting')
+  assert.ok(sent[0].body.html.includes('Held one') && sent[0].body.html.includes('Next one'))
+  assert.deepEqual(readSettings(db.docs.get(SETTINGS_KEY)), { enabled: true, everyN: 1, sinceLast: 0, pending: [] })
+})
+
+test('after a provider failure the kept items are sent with the next post', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  withEnv(t)
+  let up = false
+  const bodies = []
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    bodies.push(JSON.parse(init.body))
+    return { ok: up, status: up ? 200 : 503 }
+  })
+  const db = fakeDb({ 'community-submissions/a': post({ name: 'Lost then found' }), 'community-submissions/b': post({ name: 'Later' }) })
+
+  await call(db, claim('a'))
+  assert.equal(readSettings(db.docs.get(SETTINGS_KEY)).sinceLast, 1)
+  up = true
+  await call(db, claim('b'))
+
+  assert.equal(bodies.length, 2)
+  assert.equal(bodies[1].subject, '[UIL4B community] 2 new submissions waiting')
+  assert.ok(bodies[1].html.includes('Lost then found'))
+  assert.equal(readSettings(db.docs.get(SETTINGS_KEY)).sinceLast, 0)
+})
+
+test('what a visitor typed is escaped in the email and never reaches the subject', async (t) => {
+  withEnv(t)
+  const sent = stubFetch(t)
+  const db = fakeDb({
+    'community-submissions/p1': post({ name: '<script>alert(1)</script>', authorName: '<img src=x onerror=alert(2)>', kind: '<b>x</b>' }),
+  })
+  await call(db, claim())
+  assert.equal(sent.length, 1)
+  assert.match(sent[0].body.subject, /^\[UIL4B community\] \d+ new submissions? waiting$/)
+  const { html } = sent[0].body
+  assert.ok(!html.includes('<script') && !html.includes('<img') && !html.includes('<b>x'))
+  assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'))
+})
+
+// ── Admin settings, end to end ───────────────────────────────────────────────
+
+tokens.moderator = { uid: 'mod-uid', email: 'moderator@example.test', email_verified: true, moderator: true }
+tokens.adminClaimOnly = { uid: 'claim-uid', email: 'claim@example.test', email_verified: true, admin: true }
+
+test('a moderator, or a token that only claims admin, is refused for both actions', async (t) => {
+  withEnv(t)
+  const db = fakeDb({ [SETTINGS_KEY]: { enabled: true, everyN: 4, sinceLast: 2, pending: [] } })
+  for (const token of ['moderator', 'adminClaimOnly']) {
+    for (const body of [{ action: 'get' }, { action: 'set', enabled: false, everyN: 9 }]) {
+      const res = await call(db, { type: 'admin-settings', ...body }, { token })
+      assert.equal(res.code, 403, `${token} ${body.action}`)
+      assert.deepEqual(Object.keys(res.body), ['error'])
+    }
+  }
+  assert.deepEqual(readSettings(db.docs.get(SETTINGS_KEY)), { enabled: true, everyN: 4, sinceLast: 2, pending: [] })
+})
+
+test('an administrator can save 1 and 100 and is refused 0, 101, 2.5, "3" and a missing number', async (t) => {
+  withEnv(t)
+  const db = fakeDb()
+  const set = (extra) => call(db, { type: 'admin-settings', action: 'set', ...extra }, { token: 'owner' })
+  assert.equal((await set({ enabled: true, everyN: 1 })).body.everyN, 1)
+  assert.equal((await set({ enabled: true, everyN: 100 })).body.everyN, 100)
+  for (const bad of [{ everyN: 0 }, { everyN: 101 }, { everyN: 2.5 }, { everyN: '3' }, { everyN: null }, {}]) {
+    const res = await set({ enabled: true, ...bad })
+    assert.equal(res.code, 400, JSON.stringify(bad))
+    assert.equal(typeof res.body.error, 'string')
+  }
+  assert.equal(db.docs.get(SETTINGS_KEY).everyN, 100, 'a refused change leaves the saved value alone')
+})
+
+test('a server fault answers 500 with a fixed message and none of the cause', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  withEnv(t)
+  const SECRET = 'projects/uil4b-prod/databases/(default) permission-denied sk_live_123'
+  const faulty = (db) => ({
+    ...db,
+    runTransaction: (fn) => db.runTransaction((tx) => fn({
+      ...tx,
+      get: (r) => { if (r.key.startsWith('admin-settings/') || r.key.startsWith('community-')) throw new Error(SECRET); return tx.get(r) },
+    })),
+  })
+  const attempts = [
+    ['admin set', { type: 'admin-settings', action: 'set', enabled: true, everyN: 2 }, 'owner'],
+    ['submission', claim(), 'alice'],
+  ]
+  for (const [label, body, token] of attempts) {
+    const res = await call(faulty(fakeDb({ 'community-submissions/p1': post() })), body, { token })
+    assert.equal(res.code, 500, label)
+    assert.ok(!JSON.stringify(res.body).includes('uil4b-prod') && !JSON.stringify(res.body).includes('sk_live'), label)
+    assert.equal(res.body.error, 'Something went wrong. Try again shortly.', label)
+  }
+  const res = await call(null, claim())
+  assert.equal(res.code, 500)
+})
+
 // ── Dispatch from /api/support ───────────────────────────────────────────────
 
 test('support hands both request types to this handler and stores no feedback for them', async (t) => {
