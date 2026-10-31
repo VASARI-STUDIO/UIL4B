@@ -237,10 +237,21 @@ for (const tool of TOOLS) {
         const overflowSelects = inSheet ? [] : missingSelects
         const overflowSliders = inSheet ? [] : missingSliders
         const overflowFields = inSheet ? [] : missingFields
-        // An overflow with nothing in it is a defect too: it means the row is
-        // stuck in its measuring pass (seen once on /create/tint).
+        // Every toolbar keeps its overflow button, because the overflow always ends
+        // with "Send feedback". When every action fits on the row, that row is the
+        // ONLY thing in it: anything else listed means the row is stuck in its
+        // measuring pass (seen once on /create/tint).
         if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length) {
-          await expect(bar.getByRole('button', { name: overflowName, exact: true }), `${width}px: a ${overflowName} button with nothing in it`).toHaveCount(0)
+          const more = bar.getByRole('button', { name: overflowName, exact: true })
+          await expect(more, `${width}px: the ${overflowName} button that holds Send feedback`).toBeVisible()
+          await more.click()
+          const panel = page.getByRole('dialog', { name: overflowName })
+          await expect(panel).toBeVisible()
+          await expect(panel.locator('[data-tl-menu-item]'), `${width}px: the ${overflowName} holds more than Send feedback although every action fits`).toHaveCount(1)
+          await expect(panel.locator('[data-tl-menu-item="feedback"]')).toBeVisible()
+          await page.keyboard.press('Escape')
+          await expect(panel).toBeHidden()
+          await expect(more).toBeFocused()
         }
         if (inOverflow.length || overflowSelects.length || overflowSliders.length || overflowFields.length) {
           const more = bar.getByRole('button', { name: overflowName, exact: true })
