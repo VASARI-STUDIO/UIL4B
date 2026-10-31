@@ -70,7 +70,7 @@ export function SystemRunStrip() {
         <span className="hlp-run-chip" style={{ background: cfg.hex }} aria-hidden="true" />
         <span className="hlp-run-seed-text">
           <span className="hlp-run-hex">{cfg.hex.toUpperCase()}</span>
-          <span className="hlp-run-cap">what a new project starts from</span>
+          <span className="hlp-run-cap">What a new project starts from</span>
         </span>
       </div>
 
@@ -85,7 +85,7 @@ export function SystemRunStrip() {
       </ol>
 
       <div className="hlp-run-out">
-        <span className="hlp-run-cap">leaves as</span>
+        <span className="hlp-run-cap">Leaves as</span>
         <ul className="hlp-run-files">
           {files.map((f) => <li key={f.id}>{f.name}</li>)}
         </ul>
