@@ -49,6 +49,8 @@ const KEEP = {
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
     'xd-type', 'xd-cat',
+    // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
+    'pvd-state',
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
     'grd-stop-select', 'grd-tintmenu-item',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
@@ -67,7 +69,9 @@ const KEEP = {
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
     'cc-lg-chip'],
   // fields drawn as inputs or selects
-  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
+  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
+    // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
+    'plb-imgmoodbtn'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
   // the two halves of one split button: together they draw a single pill, so each keeps its

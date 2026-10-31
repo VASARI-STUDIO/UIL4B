@@ -40,7 +40,7 @@ import { readIdentity, IDENTITY_NAME_MAX } from './kitIdentity.js'
 import { fileName } from './exportFileName.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
-import { MAX_SLOTS, fitTitle, clampTitle, plural } from './exportTemplates/shared.js'
+import { MAX_SLOTS, fitTitle, clampTitle, plural, systemSentence, glyphStrip } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
 import { manualParts } from './kitManual.js'
 import { showcaseParts } from './kitShowcase.js'
@@ -222,6 +222,16 @@ export function kitSelections(design, { tier = 'free', logo = null, projectName 
     colourCount,
     semantic,
     fonts: { display, body },
+    // The facts the type specimens set as a sentence (systemSentence).
+    system: {
+      heading: display.name,
+      headingWeight: display.weight,
+      body: body.name,
+      bodyWeight: body.weight,
+      baseSize: book.baseSize,
+      ratio: book.ratio,
+      lineHeight: book.lineHeight,
+    },
     typeScale,
     spacing: [...SPACING],
     radius: { ...RADIUS },
@@ -548,6 +558,10 @@ export function renderUiKit(design, {
     return `<div class="contrast-pair"><span style="background:${bg};color:${fg}">Aa</span><div><strong>${esc(`Text on ${label.toLowerCase()}`)}</strong><small>${ratio.toFixed(2)}:1 · ${gradeOf(ratio)}</small></div></div>`
   }).join('')
 
+  // The "In use" specimen's wordmark is the primary where it reads on its ground at 4.5:1,
+  // else the ink that does: on the canvas, the text colour; on the accent, the accent's label ink.
+  const wordmark = (ground, fallback) => (contrast(slot.pine.hex, ground) >= 4.5 ? 'var(--color-pine)' : fallback)
+
   const coverText = (opts) => {
     const fit = fitTitle(sel.title, opts)
     return { size: fit.size, text: fit.clamp ? clampTitle(sel.title, fit.size, opts) : sel.title }
@@ -621,6 +635,12 @@ export function renderUiKit(design, {
     FONT_BODY: esc(sel.fonts.body.name),
     WEIGHT_DISPLAY: String(sel.fonts.display.weight),
     WEIGHT_BODY: String(sel.fonts.body.weight),
+    SPECIMEN_DISPLAY: esc(systemSentence(sel.system, 'heading')),
+    SPECIMEN_BODY: esc(systemSentence(sel.system, 'body')),
+    STRIP_DISPLAY: glyphStrip('font-family:var(--font-display);font-weight:var(--weight-display)'),
+    STRIP_BODY: glyphStrip('font-family:var(--font-body);font-weight:var(--weight-body)'),
+    WORDMARK_NAV: wordmark(slot.chalk.hex, 'var(--color-ink)'),
+    WORDMARK_ART: wordmark(slot.citron.hex, 'var(--on-citron)'),
     FONT_EMBED_NOTE: esc(notes.embedNote),
     LICENSE_NOTE: esc(notes.licenseNote),
     PRINT_WATERMARK: `@page { ${attributionMargin}${pageNumber} }`,

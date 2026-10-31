@@ -25,7 +25,7 @@
 //   7c. tracing a colour leaves no outline on a drawn (SVG) part
 //   7d. Orra's five colourways sit in one row at 360, 390, 768, 1024 and 1440; names hidden under 960, fitting at 1440
 //   7e. Orra's shirt stays inside its stage and off the buy column at 1440, 768, 390
-//   7f. the legend: at most two chip rows, the adjusted-as-text caption is one line and its chips point at it
+//   7f. the legend: one row, the chips that do not fit under "+N more", the adjusted-as-text caption is one line and its chips point at it
 //   7g. the Slack Water headline runs to at most three lines at 1440 and 768
 //   8. a chunk that fails shows "This example didn't load" and the dialog lives
 //   10. the free/Pro gate: a free account sees Architect portfolio and Spending card blurred
@@ -57,10 +57,12 @@
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { clickPaletteAction } from './palette-helpers.js'
+import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
 
 // name: the option in the dialog's list. text: a string only that example prints.
 // roles: the roles each example tags, by hand, from its ROLES in <File>.data.js.
+// The states a preview can be shown in, by the label in the dialog's State menu. A preview with no entry has one frame.
+const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'] }
 const ALL_ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral']
 const EXAMPLES = [
   {
@@ -84,8 +86,8 @@ const EXAMPLES = [
     roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'neutral'],
   },
   {
-    name: 'Spending card', id: 'card', text: 'Corner Grocer, Newtown', pro: true,
-    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'warning', 'error', 'info', 'neutral'],
+    name: 'Spending card', id: 'card', text: 'Marrickville Fresh Market', pro: true,
+    roles: ['primary', 'secondary', 'accent', 'subtle', 'deep', 'success', 'neutral'],
   },
 ]
 
@@ -148,11 +150,26 @@ async function setTheme(dialog, theme) {
   await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
 }
 
-/** The legend chip for a role, wherever the layout puts the legend. */
-function chipFor(scope, role) {
-  if (BRAND.includes(role)) return scope.getByRole('group', { name: 'Your colours' }).getByRole('button').nth(BRAND.indexOf(role))
-  return scope.getByRole('group', { name: 'Suggested colours' }).getByRole('button', { name: SUGGESTED_LABEL[role] })
+/** Every chip in the order the legend lists them: the five slots, then the suggested ones. */
+const CHIP_ORDER = [...BRAND, 'success', 'warning', 'error', 'info', 'neutral']
+
+/**
+ * The legend chip for a role, wherever the layout puts it. The one-row legend keeps the chips
+ * that fit and moves the rest, in order, into the "+N more" popover, which this opens when the
+ * chip is not on the row. The phone sheet lists all ten. The hidden measuring copy is skipped.
+ */
+async function chipFor(scope, role) {
+  const live = scope.locator('.pvd-chip:not(.pvd-legend-ghost *)')
+  const at = CHIP_ORDER.indexOf(role)
+  if ((await live.count()) <= at) {
+    await scope.getByRole('button', { name: /^\+\d+ more$/ }).click()
+    await expect(live).toHaveCount(CHIP_ORDER.length)
+  }
+  return live.nth(at)
 }
+
+/** The legend's heading, once: the row also holds a hidden copy of it for measuring. */
+const legendHeading = (dialog) => dialog.getByText('Where each colour lands').first()
 
 /** Jump every running animation to its end, so text is measured at rest and not part-way through a fade in. */
 const settle = (page) => page.evaluate(() => { for (const a of document.getAnimations()) { try { a.finish() } catch { /* an endless one */ } } })
@@ -200,10 +217,10 @@ test.describe('"where each colour lands"', () => {
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, ex.name)
-      await expect(dialog.getByText('Where each colour lands')).toBeVisible()
+      await expect(legendHeading(dialog)).toBeVisible()
 
       for (const role of ex.roles) {
-        const chip = chipFor(dialog, role)
+        const chip = await chipFor(dialog, role)
         await expect(chip, `${role}: the chip is live, not marked "Not in this preview"`).not.toHaveAttribute('aria-disabled', 'true')
 
         // Hover (a mouse pointer).
@@ -225,7 +242,7 @@ test.describe('"where each colour lands"', () => {
 
       // The roles the example does not use say so, and do not trace.
       for (const role of ALL_ROLES.filter((r) => !ex.roles.includes(r))) {
-        const chip = chipFor(dialog, role)
+        const chip = await chipFor(dialog, role)
         await expect(chip, `${ex.name} does not use ${role}`).toHaveAttribute('aria-disabled', 'true')
         await expect(chip).toContainText('Not in this preview')
         await chip.focus()
@@ -239,10 +256,10 @@ test.describe('"where each colour lands"', () => {
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)
     await pickScene(dialog, 'Product page')
-    await expect(dialog.getByText('Where each colour lands')).toBeVisible()
+    await expect(legendHeading(dialog)).toBeVisible()
     await expect(hits(page)).toHaveCount(0)
 
-    const primary = chipFor(dialog, 'primary')
+    const primary = await chipFor(dialog, 'primary')
     await primary.hover()
     await expect(hits(page)).not.toHaveCount(0)
     // Everything that is not the traced role is dimmed, and the legend names it.
@@ -280,7 +297,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Colours', exact: true }).tap()
     const sheet = page.getByRole('dialog', { name: 'Where each colour lands' })
     await expect(sheet).toBeVisible()
-    await chipFor(sheet, 'primary').tap()
+    await (await chipFor(sheet, 'primary')).tap()
 
     const showing = dialog.locator('.pvd-showing')
     await expect(showing).toContainText('Showing:')
@@ -416,6 +433,12 @@ function sweepContrast() {
   const over = (fg, bg) => [0, 1, 2].map((i) => fg[i] * fg[3] + bg[i] * (1 - fg[3]))
   const problems = []
   const rows = []
+  const onRender = new Set()
+  // elementsFromPoint skips anything with pointer-events:none, such as the Spending card's toast dock,
+  // which is printed all the same. Hit-testing is switched on for the walk and put back after it.
+  const hitTest = document.createElement('style')
+  hitTest.textContent = '.pvs, .pvs * { pointer-events: auto !important }'
+  document.head.append(hitTest)
 
   const isDescendantOrSelf = (maybe, el) => el === maybe || el.contains(maybe) || maybe.contains(el)
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
@@ -479,7 +502,12 @@ function sweepContrast() {
           if (c && a > 0) layers.push([c[0], c[1], c[2], a])
           if (a >= 0.999 || e === root) break
         }
-        if (imageUnder) { problems.push(`${label}: a background image under the text (.${String(imageUnder.className)})`); continue }
+        // Text printed on the card render has a picture for a ground; cardInkRatios rates it from the screen.
+        if (imageUnder) {
+          if (el.closest('.rc') && imageUnder.closest('.rc')) { onRender.add(label); continue }
+          problems.push(`${label}: a background image under the text (.${String(imageUnder.className)})`)
+          continue
+        }
         let ground = [255, 255, 255]
         for (let i = layers.length - 1; i >= 0; i--) ground = over(layers[i], ground)
         const ink = over(fg, ground)
@@ -491,6 +519,9 @@ function sweepContrast() {
     // are not on screen); slack-water-chart.test.js holds that no label is cut by the crop.
     // Anything else that cannot be reached is a finding.
     if (!reached) { if (!el.closest('.sw-label')) problems.push(`${label}: no point of it could be reached (all covered or off screen)`); continue }
+
+    // Every point sat on a background image, which is already in `problems`: nothing to rate.
+    if (!worst) continue
 
     const size = parseFloat(cs.fontSize)
     const large = size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)
@@ -506,7 +537,8 @@ function sweepContrast() {
       exempt: !!el.closest('.or-size.is-off[aria-disabled="true"], .ty-field-l.is-disabled'),
     })
   }
-  return { rows, problems: [...new Set(problems)] }
+  hitTest.remove()
+  return { rows, problems: [...new Set(problems)], onRender: [...onRender] }
 }
 
 test.describe('contrast on the real ground', () => {
@@ -528,19 +560,31 @@ test.describe('contrast on the real ground', () => {
         const unmeasured = []
         let measured = 0
         let exempt = 0
+        let cardChecked = 0
         for (const theme of ['Light', 'Dark']) {
           await setTheme(dialog, theme)
           for (const ex of EXAMPLES) {
             await pickScene(dialog, ex.name)
-            await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
-            await settle(page)
-            const { rows, problems } = await page.evaluate(sweepContrast)
-            expect(rows.length, `${ex.name}/${theme}: text nodes measured`).toBeGreaterThan(20)
-            measured += rows.length
-            for (const p of problems) unmeasured.push(`${ex.name}/${theme} ${p}`)
-            for (const r of rows) {
-              if (r.exempt) { exempt++; continue }
-              if (r.ratio < r.floor) misses.push(`${ex.name}/${theme} ${r.label} ${r.ink} on ${r.ground} = ${r.ratio}:1 at ${r.size}px (floor ${r.floor})`)
+            for (const state of STATES[ex.name] || [null]) {
+              if (state) await pickPreviewState(dialog, state)
+              const at = state ? `${ex.name}/${state}/${theme}` : `${ex.name}/${theme}`
+              await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
+              await settle(page)
+              const { rows, problems, onRender } = await page.evaluate(sweepContrast)
+              expect(rows.length, `${at}: text nodes measured`).toBeGreaterThan(state && state !== 'Overview' ? 15 : 20)
+              measured += rows.length
+              for (const p of problems) unmeasured.push(`${at} ${p}`)
+              for (const r of rows) {
+                if (r.exempt) { exempt++; continue }
+                if (r.ratio < r.floor) misses.push(`${at} ${r.label} ${r.ink} on ${r.ground} = ${r.ratio}:1 at ${r.size}px (floor ${r.floor})`)
+              }
+              // The card is on the first screen of the Overview and Card frozen states, and its printed text has a render for a ground.
+              if (onRender.length) {
+                const inks = await cardInkRatios(page)
+                expect(inks.length, `${at}: the card's printed text was not found`).toBe(2)
+                for (const k of inks) if (k.ratio < 4.5) misses.push(`${at} ${k.sel} on the card render = ${k.ratio}:1 (floor 4.5, least-contrast pixel)`)
+                cardChecked++
+              }
             }
           }
         }
@@ -548,6 +592,8 @@ test.describe('contrast on the real ground', () => {
         expect(unmeasured, 'text this walk could not measure or that something covers').toEqual([])
         // The sold-out size is in the Product page, in both themes, so the carve-out was used.
         expect(exempt, 'the sold-out size chips were not found (both themes)').toBeGreaterThanOrEqual(2)
+        // The card's printed text was rated from pixels in both themes, in more than one state.
+        expect(cardChecked, 'the card render text was never rated from pixels').toBeGreaterThanOrEqual(4)
         expect(misses, `text below its floor on its real ground (${measured} measured):\n${misses.join('\n')}`).toEqual([])
       })
     }
@@ -617,7 +663,7 @@ test.describe('the legend highlight on a drawing', () => {
       expect((await page.locator('.pvs svg [data-role]').count()), `${ex.name}: drawn parts with a role were found`).toBeGreaterThan(3)
       let traced = 0
       for (const role of ex.roles) {
-        await chipFor(dialog, role).hover()
+        await (await chipFor(dialog, role)).hover()
         await expect(hits(page), `${ex.name}: hovering ${role} marked nothing`).not.toHaveCount(0)
         if (await page.locator('.pvs svg [data-hit="on"]').count()) traced++
         expect(await outlined(), `${ex.name}: hovering ${role} left an outline on a drawn part`).toEqual([])
@@ -757,61 +803,78 @@ test.describe('the Orra product stage', () => {
   }
 })
 
-// ── 7f. the legend stays compact, and its note is attached to the chips ──────
-// The "darker as text, so it reads" note used to sit inside a chip and push the
-// row onto a third line. It is now a one-line caption under the chips, and every
-// chip it speaks of points at it with aria-describedby.
+// ── 7f. the legend is one row, and its note is attached to the chips ─────────
+// The legend is a single 48px row: the heading, the chips that fit, then "+N more".
+// The chips that do not fit, and the "darker as text, so it reads" caption, sit in
+// the popover that button opens. Every chip that names a colour read as text points
+// at the caption with aria-describedby, whether it is on the row or in the popover.
 
 test.describe('the legend', () => {
   for (const ex of EXAMPLES) {
-    test(`${ex.name}: at most two chip rows, and the adjusted-as-text caption is one line that its chips are described by`, async ({ page }) => {
+    test(`${ex.name}: one row with the rest under "+N more", and the adjusted-as-text caption is one line that its chips are described by`, async ({ page }) => {
       watch(page, `designer reading the legend beside ${ex.name}`)
       await page.setViewportSize({ width: 1440, height: 900 })
       await seed(page, PALETTES.mid)
       const dialog = await openDialog(page)
       await pickScene(dialog, ex.name)
       await settle(page)
-      const legend = await page.evaluate(() => {
+      const onRow = await page.evaluate(() => {
         const root = document.querySelector('.pvd-legend')
         if (!root) return null
-        const chips = [...root.querySelectorAll('.pvd-chip')]
-        const rows = new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top)))
-        const cap = root.querySelector('.pvd-legend-adj')
-        const capBox = cap && cap.getBoundingClientRect()
-        const names = cap ? cap.textContent.split(':')[0].split(',').map((s) => s.trim()) : []
+        const chips = [...root.querySelectorAll('.pvd-chip:not(.pvd-legend-ghost *)')]
+        const more = root.querySelector('.pvd-more')
+        return {
+          shown: chips.length,
+          rows: new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+          height: root.getBoundingClientRect().height,
+          more: more && more.textContent.trim(),
+        }
+      })
+      expect(onRow, 'the legend was found').toBeTruthy()
+      expect(onRow.rows, 'the chips on the row sit on more than one line').toBe(1)
+      expect(onRow.height, 'the legend is taller than one row').toBeLessThanOrEqual(56)
+      expect(onRow.more, 'the "+N more" button is missing').toMatch(/^\+\d+ more$/)
+      const hidden = Number(/\d+/.exec(onRow.more)[0])
+      expect(onRow.shown + hidden, 'the chips on the row plus those under "+N more" are the ten colours').toBe(10)
+
+      await dialog.getByRole('button', { name: onRow.more }).click()
+      const pop = dialog.getByRole('dialog', { name: 'More colours' })
+      await expect(pop).toBeVisible()
+      await expect(pop.locator('.pvd-chip'), 'the popover holds exactly the chips the row dropped').toHaveCount(hidden)
+
+      const legend = await page.evaluate(() => {
+        const root = document.querySelector('.pvd-legend')
+        const chips = [...root.querySelectorAll('.pvd-chip:not(.pvd-legend-ghost *)')]
+        const cap = root.querySelector('.pvd-more-pop .pvd-legend-adj')
+        const names = cap ? cap.textContent.split(':')[0].split(',').map((x) => x.trim()) : []
+        const spoken = cap && [...root.querySelectorAll('p.sr-only')].find((p) => p.textContent.trim() === cap.textContent.trim())
         return {
           chipCount: chips.length,
-          rows: rows.size,
           caption: cap && {
-            id: cap.id, text: cap.textContent.trim(), size: parseFloat(getComputedStyle(cap).fontSize), height: capBox.height,
-            inChip: !!cap.closest('.pvd-chip'),
-            below: capBox.top >= Math.max(...chips.slice(0, 5).map((c) => c.getBoundingClientRect().bottom)) - 1,
+            text: cap.textContent.trim(), size: parseFloat(getComputedStyle(cap).fontSize), height: cap.getBoundingClientRect().height,
+            inChip: !!cap.closest('.pvd-chip'), spokenId: spoken && spoken.id,
           },
           described: chips.map((c) => ({
             label: c.querySelector('.pvd-chip-l').textContent.trim(),
             by: c.getAttribute('aria-describedby'),
-            target: c.getAttribute('aria-describedby') && !!document.getElementById(c.getAttribute('aria-describedby')),
           })),
           names,
         }
       })
-      expect(legend, 'the legend was found').toBeTruthy()
       expect(legend.chipCount, 'ten chips: five colours and five suggested').toBe(10)
-      expect(legend.rows, 'the chips run to more than two rows').toBeLessThanOrEqual(2)
       // The caption names the roles this scene uses that were read darker as text, so it is
       // required where the mid palette has one (Editorial hero) and held to its rules wherever it appears.
       if (ex.id === 'editorial') expect(legend.caption, 'the mid palette has a colour read darker as text, so a caption is expected').toBeTruthy()
       if (!legend.caption) { for (const d of legend.described) expect(d.by, `"${d.label}" points at a caption that is not there`).toBeNull(); return }
       expect(legend.caption.inChip, 'the caption is inside a chip').toBe(false)
-      expect(legend.caption.below, 'the caption is not under the colour chips').toBe(true)
       expect(legend.caption.size, 'caption type is under the 12px floor').toBeGreaterThanOrEqual(12)
       expect(legend.caption.height, `the caption takes more than one line: "${legend.caption.text}"`).toBeLessThan(24)
+      expect(legend.caption.spokenId, 'the screen-reader copy of the caption is not on the page').toBeTruthy()
       expect(legend.names.length, 'the caption names at least one colour').toBeGreaterThan(0)
       for (const name of legend.names) {
         const chip = legend.described.find((d) => d.label === name)
         expect(chip, `the caption names "${name}", which is not a chip`).toBeTruthy()
-        expect(chip.by, `the "${name}" chip is not described by the caption`).toBe(legend.caption.id)
-        expect(chip.target, `the "${name}" chip points at an id that is not on the page`).toBe(true)
+        expect(chip.by, `the "${name}" chip is not described by the caption`).toBe(legend.caption.spokenId)
       }
       for (const d of legend.described.filter((x) => x.by)) {
         expect(legend.names, `"${d.label}" is described by the caption but is not named in it`).toContain(d.label)

@@ -67,8 +67,9 @@ const RUNTIME_FAMILIES = [
 // each column its index as --i (AuthWall.jsx) for the settle stagger. The
 // Gradient Generator's angle wheel (AngleWheel.jsx) sets two inline: --grd-tick
 // on each tick mark (its own rotation) and --grd-wheel-angle on the hand (the
-// current angle), which the stylesheet reads as `rotate(var(...))`.
-const RUNTIME_EXACT = new Set(['--i', '--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px'])
+// current angle), which the stylesheet reads as `rotate(var(...))`. The From image dialog sets --c
+// (a point's or strip slot's sampled hex) inline on each marker and slot (FromImageDialog.jsx).
+const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()

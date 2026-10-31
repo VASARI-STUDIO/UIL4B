@@ -351,7 +351,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     // A locked preview still shows its real scene, blurred and not reachable,
     // behind a plain Unlock preview button.
     const LOCKED = [
-      ['Spending card', 'Corner Grocer, Newtown'],
+      ['Spending card', 'Marrickville Fresh Market'],
       ['Architect portfolio', 'Gully House'],
     ]
     for (const [name, text] of LOCKED) {

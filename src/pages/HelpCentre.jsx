@@ -210,6 +210,12 @@ export default function HelpCentre() {
             reaches the same place whether you send it from here or from the tool
             that broke.
           </p>
+          <p className="hlp-band-lede">
+            To report community content that is illegal or harmful, use the
+            Report button on the item, or email{' '}
+            <a className="hlp-answer-link" href="mailto:support@uil4b.com?subject=Content%20report">support@uil4b.com</a>{' '}
+            with a link to it and why. You do not need an account.
+          </p>
           <Link className="cpg-cta cpg-cta--ghost" to="/feedback">
             <span>Report it</span>
             <span className="cpg-cta-icon" aria-hidden="true">
