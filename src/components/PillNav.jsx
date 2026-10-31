@@ -1218,13 +1218,6 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                             data-pnav-menuitem
                           >
                             <span className="pnav-tool-ico" aria-hidden="true">
-                              {moment === 'gradient' && <span className="pnav-fx pnav-fx-g" />}
-                              {moment === 'gradient-library' && (
-                                <>
-                                  <span className="pnav-fx pnav-fx-a" />
-                                  <span className="pnav-fx pnav-fx-b" />
-                                </>
-                              )}
                               <NavIcon id={t.icon} moment={moment} />
                             </span>
                             <span className="pnav-tool-label">
