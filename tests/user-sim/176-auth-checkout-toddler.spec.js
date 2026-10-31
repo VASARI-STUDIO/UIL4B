@@ -69,7 +69,6 @@ const field = (page, label) => page.getByLabel(label, { exact: true })
 const createButton = (page) => page.getByRole('button', { name: 'Create account', exact: true })
 
 async function fillSignUp(page, password) {
-  await field(page, 'Name (optional)').fill('Tod Dler')
   await field(page, 'Email').fill('tod@dler.example')
   await field(page, 'Password').fill(password)
 }
@@ -106,16 +105,16 @@ test.describe('the sign-up form checks what is typed before it asks for an accou
     await expect.poll(() => signUps.length, 'a good password sent no sign-up request, so the counter above proves nothing').toBe(1)
   })
 
-  // MUTATION: in AuthForm.jsx remove `maxLength={NAME_MAX}` or
-  //   `maxLength={EMAIL_MAX}` from the input. Its attribute goes missing.
-  test('the name takes 200 characters and the email 254, no more', async ({ page }) => {
-    watch(page, 'visitor pasting a huge name')
+  // MUTATION: in AuthForm.jsx remove `maxLength={EMAIL_MAX}` from the input.
+  //   Its attribute goes missing.
+  test('the sign-up form asks for two fields, and the email takes 254 characters, no more', async ({ page }) => {
+    watch(page, 'visitor pasting a huge email')
     await go(page, '/login?signup=1')
-    await expect(field(page, 'Name (optional)')).toHaveAttribute('maxlength', '200')
+    await expect(page.getByLabel('Name (optional)', { exact: true }), 'the form still asks for a name').toHaveCount(0)
     await expect(field(page, 'Email')).toHaveAttribute('maxlength', '254')
     // The cap holds for typed text as well as the attribute.
-    await field(page, 'Name (optional)').pressSequentially('n'.repeat(260), { delay: 0 })
-    expect((await field(page, 'Name (optional)').inputValue()).length).toBe(200)
+    await field(page, 'Email').pressSequentially('e'.repeat(300), { delay: 0 })
+    expect((await field(page, 'Email').inputValue()).length).toBe(254)
   })
 })
 
