@@ -261,8 +261,8 @@ test.describe('/plans says what it claims', () => {
       .toHaveText(/^Improve your design systems for less than 1 cup of coffee\s+per month\.$/)
 
     await expect(page.locator('.pr-hero .pr-sub')).toHaveText(
-      `Pro lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, `
-      + `opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`,
+      `Pro opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems and every icon pack and library, `
+      + `lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, and takes the UIL4B line off your exports.`,
     )
     // The line for what both plans share counts the real tools.
     await expect(page.locator('.pr-row--same .pr-c--same')).toContainText(`All ${numberWord(TOOL_COUNT)} tools.`)

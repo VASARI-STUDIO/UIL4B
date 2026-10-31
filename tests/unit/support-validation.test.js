@@ -18,7 +18,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { validateSupportBody, MESSAGE_MAX, SUBJECT_MAX, EMAIL_MAX } from '../../api/support.js'
+import { validateSupportBody, stampReporter, verifiedReporterEmail, MESSAGE_MAX, SUBJECT_MAX, EMAIL_MAX } from '../../api/support.js'
 
 const NOW = new Date('2026-09-06T10:00:00Z')
 
@@ -117,10 +117,98 @@ test('the handler validates through the pure function and boots through the shar
     .replace(/^\s*\/\/.*$/gm, '')
   assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source \}\)/,
     'the handler no longer validates through validateSupportBody')
-  assert.match(src, /import \{ adminDb \} from '\.\/_lib\/firebase-admin\.js'/,
+  assert.match(src, /import \{[^}]*\badminDb\b[^}]*\} from '\.\/_lib\/firebase-admin\.js'/,
     'support.js must use the shared Firebase Admin bootstrap')
   assert.doesNotMatch(src, /initializeApp\(/,
     'support.js has grown its own initializeApp() again — that is the divergence this test exists to stop')
   assert.doesNotMatch(src, /'uil4b'\s*\)?\s*$/m,
     'a hard-coded projectId is back')
+})
+
+// A subject becomes an email subject line, so every kind of line break has to go.
+// Each separator is checked on its own: a character class that misses one of the
+// four passes any test that uses two of them together.
+for (const [name, ch] of [['CR', '\r'], ['LF', '\n'], ['U+2028 line separator', '\u2028'], ['U+2029 paragraph separator', '\u2029']]) {
+  test(`a ${name} in the subject is replaced by a space, so the subject stays on one line`, () => {
+    const { entry } = validateSupportBody({ message: 'hi', subject: `before${ch}after` }, NOW)
+    assert.equal(entry.subject, 'before after')
+  })
+}
+
+test('a run of line breaks in the subject becomes one space, and a subject of only breaks is labelled by type', () => {
+  assert.equal(validateSupportBody({ message: 'hi', subject: 'a\r\n\r\n\u2028\u2029b' }, NOW).entry.subject, 'a b')
+  assert.equal(validateSupportBody({ message: 'hi', type: 'report', subject: '\r\n\u2028\u2029' }, NOW).entry.subject, '[report] Submission')
+})
+
+// ── The Reporter line is the server's ────────────────────────────────────────
+// A report's `Reporter:` header line decides whether the admin queue labels the
+// address as typed by the reporter, so the route writes it and ignores any the
+// request carried.
+
+const reportEntry = (message, email = 'typed@example.test') => validateSupportBody({ type: 'report', message, email }, NOW).entry
+
+test('a Reporter line in the submitted header is dropped and the server\'s line stands', () => {
+  for (const forged of ['Reporter: signed in', 'reporter:signed in', '  Reporter: signed in', 'Reporter: signed in\r', 'Reporter: signed out']) {
+    const out = stampReporter(reportEntry(`CONTENT REPORT\n${forged}\nReason: Spam (spam)\nDetails:\nhello`), null)
+    assert.equal(out.message, 'CONTENT REPORT\nReporter: signed out\nReason: Spam (spam)\nDetails:\nhello', JSON.stringify(forged))
+  }
+})
+
+test('line breaks other than LF cannot hide a forged Reporter line', () => {
+  for (const sep of ['\r', '\r\n', '\u2028', '\u2029']) {
+    const out = stampReporter(reportEntry(`CONTENT REPORT${sep}Reporter: signed in${sep}Reason: x`), null)
+    assert.doesNotMatch(out.message, /signed in/)
+    assert.match(out.message, /^Reporter: signed out$/m)
+  }
+})
+
+test('a message with Details first still ends with exactly one server-written line', () => {
+  const out = stampReporter(reportEntry('Details:\nReporter: signed in'), null)
+  assert.equal(out.message.match(/Reporter:/g).length, 1)
+  assert.match(out.message, /^Reporter: signed out$/m)
+})
+
+test('the reporter\'s own text after Details: is left as written', () => {
+  const out = stampReporter(reportEntry('CONTENT REPORT\nReason: x\nDetails:\nPlease act.\nReporter: signed in'), null)
+  assert.ok(out.message.endsWith('Details:\nPlease act.\nReporter: signed in'))
+  assert.match(out.message, /^Reporter: signed out$/m)
+})
+
+test('a verified email makes the line "signed in" and replaces the typed address', () => {
+  const out = stampReporter(reportEntry('CONTENT REPORT\nReason: x', 'forged@example.test'), 'member@example.test')
+  assert.match(out.message, /^Reporter: signed in$/m)
+  assert.equal(out.email, 'member@example.test')
+})
+
+test('signed out keeps the typed address, and other types are not touched', () => {
+  assert.equal(stampReporter(reportEntry('x', 'typed@example.test'), null).email, 'typed@example.test')
+  const bug = validateSupportBody({ type: 'bug', message: 'Reporter: signed in' }, NOW).entry
+  assert.deepEqual(stampReporter(bug, 'member@example.test'), bug)
+})
+
+test('the stamped message still fits MESSAGE_MAX', () => {
+  const out = stampReporter(reportEntry('x'.repeat(MESSAGE_MAX)), 'member@example.test')
+  assert.ok(out.message.length <= MESSAGE_MAX)
+})
+
+test('verifiedReporterEmail: valid token gives the email; missing, malformed, failing or unverified gives null', async () => {
+  const req = (authorization) => ({ headers: authorization === undefined ? {} : { authorization } })
+  const ok = async (token) => ({ email: `${token}@example.test`, email_verified: true })
+  assert.equal(await verifiedReporterEmail(req('Bearer abc'), ok), 'abc@example.test')
+  assert.equal(await verifiedReporterEmail(req(undefined), ok), null)
+  assert.equal(await verifiedReporterEmail(req('abc'), ok), null)
+  assert.equal(await verifiedReporterEmail(req('Basic abc'), ok), null)
+  assert.equal(await verifiedReporterEmail(req('Bearer bad'), async () => { throw new Error('auth/argument-error') }), null)
+  assert.equal(await verifiedReporterEmail(req('Bearer abc'), async () => ({ email: 'a@b.co', email_verified: false })), null)
+  assert.equal(await verifiedReporterEmail(req('Bearer abc'), async () => ({ email_verified: true })), null)
+})
+
+test('verifiedReporterEmail: a token that fails to verify logs one fixed line and nothing from the token', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const out = await verifiedReporterEmail(
+    { headers: { authorization: 'Bearer secret-token-value' } },
+    async () => { throw new Error('auth/argument-error secret-token-value') },
+  )
+  assert.equal(out, null)
+  assert.deepEqual(warn.mock.calls.map((c) => c.arguments), [['support: report token could not be verified']])
 })
