@@ -1,5 +1,5 @@
 // Orra Workroom names its colourways by the OKLCH hue of the colour: a lookup table in
-// OrraWorkroom.data.js (hueName), a "Pale" or "Dark" for the extremes of lightness, and a
+// OrraWorkroom.data.js (hueName), a "Pale" (light and soft) or "Dark" for the extremes of lightness, and a
 // rule that no two colourways in one palette share a name. The names are what a shopper
 // reads, so they are held here with fixed, hand-picked inputs and fixed expected words,
 // not by working out the bucket the way the code does.
@@ -58,7 +58,7 @@ test('a colour with chroma under 0.03 is Natural at any hue, and one over 0.03 i
   assert.equal(hueName('#000000'), 'Natural', 'black')
 })
 
-test('lightness over 80 adds Pale and under 35 adds Dark, and between them adds nothing', () => {
+test('lightness over 80 with low chroma adds Pale and under 35 adds Dark, and between them adds nothing', () => {
   const one = (L) => colourwayNames([at(230, L, 0.06)], [])[0]
   assert.equal(one(0.6), 'Harbour')
   assert.equal(one(0.85), 'Pale Harbour')
@@ -68,6 +68,15 @@ test('lightness over 80 adds Pale and under 35 adds Dark, and between them adds 
   assert.equal(one(0.83), 'Pale Harbour', 'L 83 is pale')
   assert.equal(one(0.37), 'Harbour', 'L 37 is not dark')
   assert.equal(one(0.32), 'Dark Harbour', 'L 32 is dark')
+})
+
+test('Pale needs low chroma as well as high lightness: a vivid or mid blue is never Pale', () => {
+  // #2994c7 (L 63, chroma 0.12) used to come out as "Pale Harbour" when #20838d had taken Harbour.
+  assert.deepEqual(colourwayNames(['#20838d', '#2994c7'], []), ['Harbour', 'Light Harbour'])
+  assert.ok(!colourwayNames(['#2994c7'], [])[0].startsWith('Pale'), 'a mid blue alone')
+  // Light but vivid (chroma 0.14) is not pale; light and soft (chroma 0.06) is.
+  assert.equal(colourwayNames([at(160, 0.85, 0.14)], [])[0], 'Lagoon', 'L 85 at chroma 0.14')
+  assert.equal(colourwayNames([at(230, 0.85, 0.06)], [])[0], 'Pale Harbour', 'L 85 at chroma 0.06')
 })
 
 test('the lightness test reads the colour on the 0 to 100 scale hexToOklch uses', () => {
@@ -85,7 +94,7 @@ test('two colours of one hue in a palette get different names, not the same word
 })
 
 test('a name already taken by an earlier colourway takes the modifier that fits its lightness', () => {
-  assert.deepEqual(colourwayNames([at(230, 0.6), at(230, 0.62)], []), ['Harbour', 'Pale Harbour'], 'light-ish second one goes Pale')
+  assert.deepEqual(colourwayNames([at(230, 0.6), at(230, 0.62)], []), ['Harbour', 'Light Harbour'], 'light-ish second one goes Light')
   assert.deepEqual(colourwayNames([at(230, 0.6), at(230, 0.4)], []), ['Harbour', 'Dark Harbour'], 'dark-ish second one goes Dark')
 })
 

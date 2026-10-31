@@ -13,7 +13,7 @@
 // same markup is a still picture. Text never sits on an image.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Recolour from '../Recolour.jsx'
-import { useSceneEscape } from '../escapeLayer.js'
+import { useEscapeLayer } from '../escapeLayer.js'
 import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
 import { PRODUCT, colourways, orraVars } from './OrraWorkroom.data.js'
 import './OrraWorkroom.css'
@@ -154,7 +154,8 @@ function Disclosures() {
 }
 
 // The bag sheet rides in a dock stuck to the bottom of the stage, so it is in view however
-// far the page is scrolled. It is a modal: the page behind it is inert.
+// far the page is scrolled. It is a modal: the page behind it is inert. `item` is null when the
+// sheet was opened from the header with nothing in the bag.
 function Sheet({ count, item, contRef }) {
   const live = useContext(Live)
   return (
@@ -162,15 +163,21 @@ function Sheet({ count, item, contRef }) {
       <div className="or-scrim" onClick={live ? () => live.close() : undefined} />
       <div className="or-sheet" role="dialog" aria-modal="true" aria-label="Your bag" data-role="neutral">
         <h3 className="or-sheet-h">Your bag</h3>
-        <p className="or-added" data-role="success"><Check /><span>Added to your bag</span></p>
-        <div className="or-line">
-          <Crop color={item.way.color} role={item.way.role} className="or-crop or-crop--line" />
-          <div className="or-line-t">
-            <b>{PRODUCT.name}</b>
-            <small>{item.way.name}, size {item.size}{count > 1 ? `, quantity ${count}` : ''}</small>
-          </div>
-          <span className="or-line-p">{price(count)}</span>
-        </div>
+        {item ? (
+          <>
+            <p className="or-added" data-role="success"><Check /><span>Added to your bag</span></p>
+            <div className="or-line">
+              <Crop color={item.way.color} role={item.way.role} className="or-crop or-crop--line" />
+              <div className="or-line-t">
+                <b>{PRODUCT.name}</b>
+                <small>{item.way.name}, size {item.size}{count > 1 ? `, quantity ${count}` : ''}</small>
+              </div>
+              <span className="or-line-p">{price(count)}</span>
+            </div>
+          </>
+        ) : (
+          <p className="or-empty" data-role="neutral">Your bag is empty</p>
+        )}
         <div className="or-sheet-foot">
           <Ctl className="or-btn or-btn--primary" data-role="primary" ref={contRef} onClick={() => live.close()}>Continue shopping</Ctl>
         </div>
@@ -196,6 +203,7 @@ export default function OrraWorkroom({ roles, state, onState }) {
   const [size, setSize] = useState(PRODUCT.defaultSize)
   const [count, setCount] = useState(0)
   const [bought, setBought] = useState(null)
+  const [emptyBag, setEmptyBag] = useState(false)
   const [saved, setSaved] = useState(false)
   const [notified, setNotified] = useState(false)
   const [open, setOpen] = useState({})
@@ -210,7 +218,11 @@ export default function OrraWorkroom({ roles, state, onState }) {
   const sheetOpen = view === 'added'
   const sel = view === 'soldout' ? SOLD : size
   const sold = sel === SOLD
-  const shown = Math.max(count, sheetOpen ? 1 : 0)
+  // The header's Bag button with nothing in the bag opens an empty sheet; the State menu's
+  // "Added to bag" always shows one. Closing the sheet by any route forgets which it was.
+  const empty = sheetOpen && emptyBag && count === 0
+  if (!sheetOpen && emptyBag) setEmptyBag(false)
+  const shown = empty ? 0 : Math.max(count, sheetOpen ? 1 : 0)
 
   useEffect(() => {
     askRef.current = onState
@@ -227,7 +239,7 @@ export default function OrraWorkroom({ roles, state, onState }) {
     refocus.current = true
     askRef.current?.('overview')
   }, [])
-  useSceneEscape(sheetOpen && isLive, close)
+  useEscapeLayer(sheetOpen && isLive, close)
 
   const show = (i) => {
     setPic(i)
@@ -247,16 +259,18 @@ export default function OrraWorkroom({ roles, state, onState }) {
   }
   const openBag = () => {
     opener.current = document.activeElement
+    setEmptyBag(count === 0)
     onState('added')
   }
   const add = () => {
     opener.current = addRef.current
     setCount((c) => c + 1)
     setBought({ way: ways[way], size })
+    setEmptyBag(false)
     onState('added')
   }
   const live = isLive ? { nav, setNav, way, setWay, show, onStrip, stripRef, pickSize, open, close, openBag, toggle: (id) => setOpen((o) => ({ ...o, [id]: !o[id] })) } : null
-  const item = bought || { way: ways[way], size: sel }
+  const item = empty ? null : bought || { way: ways[way], size: sel }
 
   return (
     <Live.Provider value={live}>

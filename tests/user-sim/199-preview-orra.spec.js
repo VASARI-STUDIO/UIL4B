@@ -417,6 +417,27 @@ test.describe('Add to bag', () => {
     await expect(add(sc), 'aria-expanded follows the sheet').toHaveAttribute('aria-expanded', 'true')
   })
 
+  test('the header Bag button with nothing in the bag opens an empty bag, not an added one', async ({ page }) => {
+    watch(page, 'shopper opening the Orra bag before adding anything')
+    const dialog = await openOrra(page)
+    const sc = scene(dialog)
+    await bagBtn(sc).click()
+    const s = sheet(sc)
+    await expect(s).toBeVisible()
+    await expect(s.getByText('Your bag is empty')).toBeVisible()
+    await expect(s.getByText('Added to your bag'), 'nothing was added').toHaveCount(0)
+    await expect(s.getByText('The Field Overshirt'), 'no line for a product that is not in the bag').toHaveCount(0)
+    await expect(sc.locator('.or-count'), 'the count stays 0').toHaveText('0')
+    await expect(bagBtn(sc)).toHaveAttribute('aria-label', 'Bag, 0 items')
+    await s.getByRole('button', { name: 'Continue shopping' }).click()
+    await expect(sheet(sc)).toHaveCount(0)
+    // The State menu's own "Added to bag" still shows one.
+    await trigger(dialog).click()
+    await dialog.getByRole('menuitemradio', { name: 'Added to bag' }).click()
+    await expect(sheet(sc).getByText('Added to your bag')).toBeVisible()
+    await expect(sc.locator('.or-count')).toHaveText('1')
+  })
+
   test('a second one makes it two: quantity two, $480, and the count follows', async ({ page }) => {
     const dialog = await openOrra(page)
     const sc = scene(dialog)
@@ -477,13 +498,8 @@ test.describe('the bag sheet closes', () => {
   })
 
   test('Escape with the State menu open closes the menu first, and the sheet stays', async ({ page }) => {
-    // KNOWN PRODUCT BUG (measured 31 Oct): with the bag sheet open and then the State menu opened over it, the
-    // first Escape closes the SHEET (the older layer) and leaves the menu up; the second closes the menu. Each
-    // layer adds its own capture listener to the document in the order it opened (escapeLayer.js
-    // useEscapeLayer), so the oldest one answers first, and the newer one sees defaultPrevented and stands
-    // aside. Escape should close the layer opened last. test.fail keeps this red-for-the-right-reason: it
-    // flips to a failure the day the bug is fixed, and then this line comes out.
-    test.fail(true, 'escapeLayer.js: Escape closes the oldest open layer, not the newest')
+    // Was a product bug: with the bag sheet open and then the State menu opened over it, the first Escape
+    // closed the sheet (the older layer). escapeLayer.js keeps one stack and closes the layer opened last.
     const dialog = await openOrra(page)
     const sc = scene(dialog)
     await add(sc).click()

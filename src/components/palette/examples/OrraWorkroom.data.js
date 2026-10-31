@@ -59,19 +59,20 @@ export function hueName(hex) {
 }
 
 /**
- * Names for the palette-made colourways, in order. L above 80 adds "Pale" and under 35 adds "Dark".
- * A name that is already taken (by an earlier colourway, or by the fixed Natural) takes the
- * modifier that fits its lightness, then the other, then a numeral, so no two colourways share a name.
+ * Names for the palette-made colourways, in order. L above 80 with chroma under 0.1 adds "Pale"
+ * (a light tint, not a vivid mid colour) and L under 35 adds "Dark".
+ * A name that is already taken (by an earlier colourway, or by the fixed Natural) takes "Light" or
+ * "Dark", whichever fits its lightness first, then the other, then a numeral, so no two colourways share a name.
  * @param {string[]} hexes
  * @param {string[]} [taken] names that are spoken for
  */
 export function colourwayNames(hexes, taken = [NATURAL.name]) {
   const used = new Set(taken)
   return hexes.map((hex) => {
-    const [l] = hexToOklch(hex)
+    const [l, c] = hexToOklch(hex)
     const base = hueName(hex)
-    const mod = l > 80 ? 'Pale ' : l < 35 ? 'Dark ' : ''
-    const fits = l >= 50 ? ['Pale ', 'Dark '] : ['Dark ', 'Pale ']
+    const mod = l > 80 && c < 0.1 ? 'Pale ' : l < 35 ? 'Dark ' : ''
+    const fits = l >= 50 ? ['Light ', 'Dark '] : ['Dark ', 'Light ']
     const tries = [mod + base, ...fits.map((m) => m + base)]
     let name = tries.find((t) => !used.has(t))
     for (let n = 2; !name; n++) if (!used.has(`${base} ${n}`)) name = `${base} ${n}`

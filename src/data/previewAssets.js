@@ -51,7 +51,7 @@ export const PREVIEW_ASSETS = {
       author: 'Generated with OpenAI image generation via Codex CLI',
       licence: 'Generated image, made for UIL4B; no person depicted',
       url: '',
-      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the buttons and their holes left out of the mask.',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem, the buttons and their holes left out of the mask.',
     },
   },
   'overshirt-back': {
@@ -70,7 +70,7 @@ export const PREVIEW_ASSETS = {
       author: 'Generated with OpenAI image generation via Codex CLI',
       licence: 'Generated image, made for UIL4B; no person depicted',
       url: '',
-      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep and the buttons left out of the mask.',
+      changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem and the buttons left out of the mask.',
     },
   },
   'overshirt-pocket': {

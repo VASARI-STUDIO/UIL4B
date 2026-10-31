@@ -735,8 +735,8 @@ test.describe('the Orra colourways', () => {
           expect(s.crop[0], `${theme}: the "${s.name}" picture has no width`).toBeGreaterThanOrEqual(44)
           expect(s.overflow, `${theme}: the "${s.name}" name runs past its swatch`).toBeLessThanOrEqual(0)
           expect(s.lines, `${theme}: "${s.name}" runs to ${s.lines} lines`).toBeLessThanOrEqual(2)
-          // Half a pixel of slack for the text measure; at 768 the longest word (Jacaranda) fills its swatch with nothing to spare.
-          expect(s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) is wider than its ${s.width.toFixed(1)}px swatch`).toBeLessThanOrEqual(s.width + 0.5)
+          // A swatch is never narrower than its longest word, with 2px a side to spare (Jacaranda at 768 once filled its swatch exactly).
+          expect(s.textWidth, `${theme}: "${s.name}" (${s.textWidth.toFixed(1)}px) leaves under 4px in its ${s.width.toFixed(1)}px swatch`).toBeLessThanOrEqual(s.width - 4)
         }
         expect(selected, `${theme}: the selected colourway's name is printed in the Colour label`).toBe(first)
       }
