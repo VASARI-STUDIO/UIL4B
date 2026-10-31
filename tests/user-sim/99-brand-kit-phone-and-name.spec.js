@@ -21,7 +21,7 @@ const DESIGN_KEY = 'vs-current-design'
 const SEED_COLOURS = ['#1D3557', '#E63946', '#F1FAEE']
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const introCard = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
+const introCard = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
 const nameCard = (page) => page.getByRole('dialog', { name: 'Name your project' })
 // The closing step is one panel at every width: a sheet joined to the bar on a phone, a popover above it from 768px.
 const nameForm = nameCard

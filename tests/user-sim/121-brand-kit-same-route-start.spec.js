@@ -12,7 +12,7 @@ import { go, watch } from './helpers.js'
 const GUIDE_KEY = 'vs-uikit-guide'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const card = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
+const card = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
 
 async function pressBrandKit(page) {
   await page.getByRole('button', { name: 'Create', exact: true }).click()

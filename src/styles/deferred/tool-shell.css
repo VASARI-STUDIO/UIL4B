@@ -404,6 +404,8 @@
 .bkit-card-artefact .bkit-step-swatch{width:14px;height:14px}
 .bkit-card-artefact .bkit-step-value{display:block;white-space:normal}
 .bkit-card-go{width:100%;height:44px;margin-top:var(--s-4);padding:0 var(--s-4);justify-content:center;font-size:15px;font-weight:560}
+/* Straight after the one sentence the body's own margin is the gap. */
+.bkit-card-body + .bkit-card-go{margin-top:0}
 .bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* The closing step: a name field in the same panel. */

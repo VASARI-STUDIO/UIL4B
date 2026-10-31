@@ -6,6 +6,8 @@
 //   · It is drawn (not visually hidden) and at least 13px.
 //   · The bar keeps one height, one x and one width across all four steps, and
 //     the count keeps its own x and width, so Next never makes anything jump.
+//   · The card that opens on arrival is one sentence and one button; the four
+//     steps are behind "What's this?".
 //   · Below 1056px the count sits in a band above the steps and does not touch
 //     them.
 import { test, expect } from './base.js'
@@ -48,6 +50,41 @@ const measure = (page) => rail(page).evaluate((bar) => {
     stepTop: box(firstStep).top,
     stepLeft: box(firstStep).x,
     barBottomOverflow: bar.scrollWidth > bar.clientWidth,
+  }
+})
+
+// The card that opens on arrival is one sentence and one button. The list of
+// all four steps is still there, behind the bar's "What's this?".
+test.describe('Brand kit walkthrough: the arrival card', () => {
+  for (const { width, height } of WIDTHS) {
+    test(`${width}px: short on arrival, the four steps behind "What's this?"`, async ({ page }) => {
+      watch(page, 'designer arriving at the brand kit for the first time')
+      await page.setViewportSize({ width, height })
+      await page.addInitScript((g) => {
+        try { localStorage.setItem(g, '1') } catch { /* private mode */ }
+      }, GUIDE_KEY)
+
+      await go(page, '/create/palette')
+      const card = page.getByRole('dialog', { name: 'Step 1 of 4: Colours' })
+      await expect(card).toBeVisible()
+      await expect(card.locator('.bkit-card-body')).toHaveText('Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.')
+      await expect(card.locator('.bkit-card-steps'), 'the list is on the arrival card').toHaveCount(0)
+      await expect(card.getByRole('button', { name: 'Start with colours' })).toBeVisible()
+      // Nothing in the card scrolls.
+      expect(await card.evaluate((el) => el.scrollHeight <= el.clientHeight + 1), 'the arrival card scrolls').toBe(true)
+      await page.screenshot({ path: test.info().outputPath(`brand-kit-arrival-card-${width}.png`), fullPage: false })
+
+      // "What's this?" grows the same card to the list.
+      await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
+      await expect(card).toBeVisible()
+      await expect(card.locator('.bkit-card-steps li')).toHaveCount(4)
+      await expect(card.locator('.bkit-card-steps')).toContainText('Type scale')
+      await page.screenshot({ path: test.info().outputPath(`brand-kit-whats-this-${width}.png`), fullPage: false })
+
+      // Pressed again, it closes.
+      await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
+      await expect(card).toBeHidden()
+    })
   }
 })
 

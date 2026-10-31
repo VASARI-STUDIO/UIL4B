@@ -115,6 +115,9 @@ export default function UIKitGuide({ step }) {
     () => isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
+  // The orientation panel opens short, on arrival; "What's this?" opens it with
+  // the list of all four steps.
+  const [introFull, setIntroFull] = useState(false)
   // Only one panel exists at a time: the orientation copy, or the naming step.
   const panelOpen = showIntro || showName
   // Each explicit start opens the panel, including starts on the current page.
@@ -124,6 +127,7 @@ export default function UIKitGuide({ step }) {
     setCardArrival(location.key)
     if (location.state?.openBrandKitCard) {
       setShowName(false)
+      setIntroFull(false)
       setShowIntro(true)
     }
   }
@@ -142,6 +146,7 @@ export default function UIKitGuide({ step }) {
     const onStart = () => {
       setActive(true)
       setAccepted(newProject ? [] : acceptedSteps())
+      setIntroFull(false)
       setShowIntro(newProject || !introSeen())
     }
     window.addEventListener(GUIDE_START_EVENT, onStart)
@@ -499,7 +504,6 @@ export default function UIKitGuide({ step }) {
   const count = `Step ${position} of ${total}`
   // "Start with" belongs to the first step. Reopened on a later one, the same
   // button leads back to where the person already is.
-  const stepNumber = ['one', 'two', 'three', 'four', 'five', 'six'][position - 1] || String(position)
   const goLabel = `${firstStep ? 'Start with' : 'Back to'} ${current.label.toLowerCase()}`
 
   return (
@@ -513,31 +517,33 @@ export default function UIKitGuide({ step }) {
           panelRef={cardRef}
           style={dockStyle}
           titleId={titleId}
-          title="Four steps to a full system."
+          title={`${count}: ${current.label}`}
           tabIndex={-1}
           onClose={closeIntro}
           onEscape={closeIntro}
         >
           <p className="bkit-card-body">
-            You&rsquo;re on step {stepNumber}, and the tool is ready to use. Each step saves into
-            the same system as you work, so the last step knows what you chose in the
-            first. You can leave and pick it up later.
+            {firstStep
+              ? 'Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.'
+              : 'This step uses what you chose in the steps before it.'}
           </p>
-          <ol className="bkit-card-steps">
-            {steps.map((s) => (
-              <li key={s.id} className={`${s.id === step ? 'is-current' : ''}${s.done ? ' is-done' : ''}`}>
-                <span className="bkit-card-num" aria-hidden="true">
-                  <span className="bkit-step-num">{s.number}</span>
-                  {TICK_ICON}
-                </span>
-                <span className="bkit-card-text">
-                  <strong>{s.label}</strong>
-                  <span className="bkit-card-blurb">{s.blurb}</span>
-                  {s.done && <span className="bkit-card-artefact"><StepArtefact step={s} /></span>}
-                </span>
-              </li>
-            ))}
-          </ol>
+          {introFull && (
+            <ol className="bkit-card-steps">
+              {steps.map((s) => (
+                <li key={s.id} className={`${s.id === step ? 'is-current' : ''}${s.done ? ' is-done' : ''}`}>
+                  <span className="bkit-card-num" aria-hidden="true">
+                    <span className="bkit-step-num">{s.number}</span>
+                    {TICK_ICON}
+                  </span>
+                  <span className="bkit-card-text">
+                    <strong>{s.label}</strong>
+                    <span className="bkit-card-blurb">{s.blurb}</span>
+                    {s.done && <span className="bkit-card-artefact"><StepArtefact step={s} /></span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
           <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro}>
             {goLabel}
           </button>
@@ -635,7 +641,14 @@ export default function UIKitGuide({ step }) {
           <button
             type="button"
             className="bkit-rail-help"
-            onClick={(e) => { introOpenerRef.current = e.currentTarget; setShowName(false); setShowIntro((v) => !v) }}
+            onClick={(e) => {
+              setShowName(false)
+              // Open on arrival, it grows to the full list; open with the list, it closes.
+              if (showIntro && !introFull) { setIntroFull(true); return }
+              introOpenerRef.current = e.currentTarget
+              setIntroFull(true)
+              setShowIntro((v) => !v)
+            }}
             aria-expanded={showIntro}
             aria-controls={showIntro ? cardId : undefined}
             ref={introTriggerRef}
