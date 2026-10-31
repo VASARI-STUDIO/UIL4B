@@ -69,7 +69,9 @@ const KEEP = {
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
     'cc-lg-chip'],
   // fields drawn as inputs or selects
-  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
+  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
+    // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
+    'plb-imgmoodbtn'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
   // the two halves of one split button: together they draw a single pill, so each keeps its
