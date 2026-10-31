@@ -155,12 +155,15 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // "ICK SEED COLOUR" and the first preset column was gone. The gradient
   // tool's stop picker had the same fault at the same width.
   //
-  // MUTATION: restore `left:50%;transform:translateX(-50%)` on
-  // `.pop[data-pop-align="clamp"]` in global.css — both routes report the
-  // panel 24px past the left edge.
-  // WHICH ROUTE STILL REPRODUCES THE CLAMP. The guarantee both routes carry is
-  // the last two assertions: the panel is on screen at 320. Only the gradient
-  // stop still forces the 'clamp' branch to get there.
+  // MUTATION (historic): restoring `left:50%;transform:translateX(-50%)` on
+  // `.pop[data-pop-align="clamp"]` in global.css moved both pickers 24px past the
+  // left edge. Neither route reaches 'clamp' now, so that mutation stays green here.
+  // WHICH ROUTE PROVES WHAT. The guarantee both routes carry is the last two
+  // assertions: the panel is on screen at 320. The gradient stop's picker is
+  // portalled (global.css, max-width 767px): a bottom sheet pinned left:0 right:0,
+  // so usePopover never aligns it and it carries no data-pop-align (null). It
+  // used to be an inline popover that forced the 'clamp' branch; nothing on
+  // these two routes forces that branch now.
   //
   // /create/palette's seed trigger used to sit 79px from the left, behind the
   // 15px `h1.plb-title` in the toolbar. That h1 moved into a heading area above
@@ -171,7 +174,7 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // asserting 'clamp' there would be asserting that the trigger stays crowded.
   for (const [route, trigger, what, align] of [
     ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour', 'start'],
-    ['/create/gradient', '.grd-pick-swatch .cpk-trigger', 'a gradient stop', 'start'],
+    ['/create/gradient', '.grd-stop-swatch', 'a gradient stop', null],
   ]) {
     test(`${route} · the picker for ${what} at 320`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 320)
@@ -481,7 +484,7 @@ test('/create/palette · “Use →” on a community card in the Explore popup 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
-  await clickPaletteAction(page, 'Explore palettes')
+  await clickPaletteAction(page, 'Explore palettes and brands')
   const use = page.locator('.plb-galpopup-body .pgal-use')
   await expect(use.first()).toBeVisible()
   await settled(page, '.plb-galpopup')

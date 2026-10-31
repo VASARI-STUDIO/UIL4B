@@ -230,7 +230,7 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   assert.ok(freeFormats().includes(kit))
   assert.ok(!styleGuideFormats().includes(kit))
   assert.ok(FREE_POINTS.some((l) => l.startsWith('The UI kit')))
-  assert.ok(PRO_POINTS.some((l) => /UI kit with no “Made with UIL4B” line/.test(l)))
+  assert.ok(PRO_POINTS.some((l) => /with no UIL4B line on anything/.test(l)), 'Pro no longer says the UIL4B line comes off')
   // The dialog gives the kit its own rail row, a free one with one file.
   const row = EXPORT_TYPES.find((t) => t.id === 'kit')
   assert.deepEqual(row?.categories.map((c) => [c.id, c.pro, c.files]), [['kit', false, ['kit']]], 'the kit is not a free row of its own')

@@ -43,7 +43,7 @@ import { clickPaletteAction } from './palette-helpers.js'
 // 4.075:1 in light.
 const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 
-const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio', 'Invoices', 'Settings']
+const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
 
 // The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
 // user's own hex when it clears the floor on every ground it sits on (and walks it a
@@ -134,7 +134,7 @@ const SWEEP = `((inkVars, fillVars) => {
 })`
 
 test.describe('Palette Builder preview ink', () => {
-  test('every text node clears its floor on its real ground, in all eight scenes and both preview themes', async ({ page }) => {
+  test('every text node clears its floor on its real ground, in all six scenes and both preview themes', async ({ page }) => {
     watch(page, 'designer checking a palette on a UI mockup')
     await page.addInitScript((colors) => {
       const raw = localStorage.getItem('vs-current-design')
@@ -149,7 +149,7 @@ test.describe('Palette Builder preview ink', () => {
     }, PALETTE)
 
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Preview on a UI')
+    await clickPaletteAction(page, 'Preview')
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const scene = page.locator('.pvs')
@@ -210,7 +210,7 @@ test.describe('Palette Builder preview ink', () => {
           if (s.ground === roles.surface) onSurface++
           const where = `${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground}`
             + ` = ${s.ratio}:1 at ${s.size}px/${s.weight} (floor ${s.floor})`
-          // The one exemption: the disabled Upload button in Settings. WCAG
+          // The one exemption: the disabled Overseas fees label in the Spending card's Limits form. WCAG
           // 1.4.3 exempts the text of an inactive control, and the scene shows
           // the disabled state on purpose. Anything else in the disabled
           // colour, or the same colour on a control that is not disabled, is
@@ -220,7 +220,7 @@ test.describe('Palette Builder preview ink', () => {
           // the sizes that can be picked. It is named by scene, class and ink role, and
           // it must be marked aria-disabled, so any other node in the Product page is
           // still held to the floor, and so is a sold-out look that is not announced.
-          const inactive = (name === 'Settings' && s.inactive)
+          const inactive = (name === 'Spending card' && s.inactive && s.role === 'disabled')
             || (name === 'Product page' && s.inactive && s.off && s.role === 'disabled')
           if (inactive) disabledSeen++
           else if (s.ratio < s.floor) failures.push('  ' + where)
@@ -236,7 +236,7 @@ test.describe('Palette Builder preview ink', () => {
     // The pair the contrast backlog named: a muted note ON the surface step.
     expect(onSurface, 'no ink was measured on --pv-surface, which is the ground this spec exists for').toBeGreaterThan(20)
 
-    expect(disabledSeen, 'the disabled Upload button (Settings) and the sold-out size (Product page) were not both found, in both themes').toBe(4)
+    expect(disabledSeen, 'the disabled Overseas fees label (Spending card) and the sold-out size (Product page) were not both found, in both themes').toBe(4)
 
     // Anti-vacuity for the roles the rules must be reading. If any reaches
     // zero the stylesheet has stopped painting that role as text, and every

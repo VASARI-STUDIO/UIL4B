@@ -28,6 +28,7 @@ import { preloadExample } from './examples/registry'
 import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
+import useBackClosesDialog from '../../hooks/useBackClosesDialog'
 import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById } from '../../data/palettePreviewScenes'
 import { BRAND_ROLES, derivePaletteRoles } from '../../utils/palettePreviewRoles'
 import { roleLabel } from '../../utils/paletteRoles'
@@ -361,6 +362,8 @@ export default function PalettePreviewDialog({
   const mid = useMediaQuery('(min-width: 768px)')
   const tall = useMediaQuery('(min-height: 500px)')
   const layout = !tall ? 'strip' : wide ? 'rail' : mid ? 'menu' : 'strip'
+  // The full-screen phone sheet: the system Back button closes it.
+  useBackClosesDialog(layout === 'strip', onClose)
 
   const layerRef = useRef(null)
   const requestClose = useCallback(() => {
