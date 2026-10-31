@@ -60,3 +60,32 @@ export const LABELS = [
     "kind": "road"
   }
 ]
+
+/** The named tracks the walk follows, in order, as metres along the route (at least 300 m each). */
+export const STRETCHES = [
+  {
+    "name": "Simpson Falls Track",
+    "from": 0,
+    "to": 2761
+  },
+  {
+    "name": "Eugenia Circuit",
+    "from": 2761,
+    "to": 3855
+  },
+  {
+    "name": "Ghost Hole Track",
+    "from": 3855,
+    "to": 4497
+  },
+  {
+    "name": "Litchfield Track",
+    "from": 4497,
+    "to": 7476
+  },
+  {
+    "name": "Summit Track",
+    "from": 7476,
+    "to": 9621
+  }
+]
