@@ -21,7 +21,11 @@ const COVER_FIT = Object.freeze({ steps: Object.freeze([110, 84, 64, 48, 36]), m
 const LINE_FIT = Object.freeze({ steps: Object.freeze([44, 36, 30, 26, 22, 18]), maxLines: 5, measure: 680 })
 // The type slide's heading sentence, 240 mm measure.
 const TYPE_FIT = Object.freeze({ steps: Object.freeze([54, 44, 36, 30, 24]), maxLines: 3, measure: 680 })
-// The project name on the primary field of the colour slide: 5/12 of the slide less its padding (98.75 mm), or the whole width alone.
+// The generator keeps at most this many characters of the description, so a text this long may end mid-word.
+const DESCRIPTION_CAP = 280
+// The cover carries the description's first sentence only when it is this short.
+const COVER_SENTENCE_MAX = 140
+// The primary colour's name on the primary field of the colour slide: 5/12 of the slide less its padding (98.75 mm), or the whole width alone.
 const FIELD_SHARE = 5 / 12
 const FIELD_PAD_MM = 25
 const NAME_FIT = Object.freeze({ steps: Object.freeze([48, 38, 30, 24]), maxLines: 2, measure: 280 })
@@ -41,6 +45,32 @@ const SCALE_FIT = Object.freeze({ roomMm: 116, widthMm: 107, padMm: 3.7, textMm:
 
 const pad = (n) => String(n).padStart(2, '0')
 const fam = (name) => `'${esc(name)}',system-ui,sans-serif`
+// A sentence end: a full stop, ! or ?, any closing quote or bracket after it, then a space or the end.
+const SENTENCE_END = /[.!?]["')\]”’]*(?=\s|$)/g
+
+/**
+ * The description as it may be shown whole. A text the generator cut at its cap and
+ * left unfinished is trimmed back to its last sentence end, or failing that to its
+ * last whole word with an ellipsis; a text that ends properly, or is shorter than the
+ * cap, is returned as written.
+ */
+function wholeDescription(text) {
+  const t = String(text || '').trim()
+  if (t.length < DESCRIPTION_CAP || /[.!?]["')\]”’]*$/.test(t)) return t
+  let end = -1
+  for (const m of t.matchAll(SENTENCE_END)) end = m.index + m[0].length
+  if (end > 0) return t.slice(0, end)
+  const word = t.slice(0, t.lastIndexOf(' ')).replace(/[\s,;:–—-]+$/, '')
+  return `${word || t}…`
+}
+
+/** The description's first sentence, or '' when it is too long for the cover. */
+function coverSentence(text) {
+  const t = wholeDescription(text)
+  const first = t.match(/^[\s\S]*?[.!?]["')\]”’]*(?=\s|$)/)?.[0] || t
+  return first.length <= COVER_SENTENCE_MAX ? first : ''
+}
+
 const spacing = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
 /** The one chrome line of a slide: the section on the left and the slide number on the right. */
@@ -69,7 +99,8 @@ function cover(ctx) {
   // With a mark the label moves to the right, beside the year.
   const left = d.logo ? ctx.markImg({ cls: 'mk-cover', alt: `${projectName} logo` }) : LABEL
   const right = d.logo ? `${LABEL} · ${esc(year)}` : esc(year)
-  const desc = d.description ? `<p class="cv-desc">${esc(d.description)}</p>` : ''
+  const sentence = coverSentence(d.description)
+  const desc = sentence ? `<p class="cv-desc">${esc(sentence)}</p>` : ''
   // A name cut for the cover is printed whole beneath it.
   const full = fit.clamp ? `<p class="cv-full">${esc(projectName)}</p>` : ''
   return `<section class="sl sl-cover" style="background:${safeHex(field, 'Canvas')};color:${safeHex(ink, 'CanvasText')};--soft:${safeHex(soft, 'CanvasText')}">
@@ -83,7 +114,7 @@ function cover(ctx) {
 
 /** The description set large in the heading face: the one thing on the slide. */
 function lineSlide(ctx, n) {
-  const text = ctx.d.description
+  const text = wholeDescription(ctx.d.description)
   const fit = fitTitle(text, LINE_FIT)
   const shown = clampTitle(text, fit.size, LINE_FIT)
   return paperSlide(ctx, n, ctx.projectName, 'sl-line', `<p class="ln" style="font-size:${fit.size}pt">${esc(shown)}</p>`)
@@ -142,15 +173,15 @@ function colourLabel(ctx, s, { hex = true } = {}) {
     </div>`
 }
 
-/** The palette at work: the primary as a field with the project's name on it, the rest as full-height strips. */
+/** The palette at work: the primary as a field with its own name on it, the rest as full-height strips. */
 function colourSlide(ctx, n) {
   const [primary, ...rest] = ctx.slots
   const solo = rest.length === 0
   const tall = rest.length > WIDE_MAX
   const paint = (s) => `background:${safeHex(s.hex, 'GrayText')};color:${safeHex(s.ink, 'CanvasText')};--soft:${safeHex(softInk(s.ink, s.hex, ctx.contrast), 'CanvasText')}`
   const spec = solo ? NAME_FIT_SOLO : NAME_FIT
-  const fit = fitTitle(ctx.projectName, spec)
-  const shown = clampTitle(ctx.projectName, fit.size, spec)
+  const fit = fitTitle(primary.name, spec)
+  const shown = clampTitle(primary.name, fit.size, spec)
   const strips = rest.map((s) => `<div class="cl-strip" style="${paint(s)}">${colourLabel(ctx, s, { hex: !tall || rest.length <= HEX_MAX })}</div>`).join('')
   const box = solo ? '' : `right:auto;width:${(SLIDE_MM * FIELD_SHARE - FIELD_PAD_MM).toFixed(2)}mm`
   // The slide number sits in the primary field when there are strips, so it never lands across a seam.
@@ -351,7 +382,7 @@ function css(ctx) {
   /* ── the line ───────────────────────────────────────────────────────── */
   .sl-line{justify-content:center}
   .ln{font-family:var(--head);font-weight:${d.headingWeight};max-width:240mm;
-    letter-spacing:-.02em;line-height:1.12;overflow-wrap:anywhere}
+    letter-spacing:-.02em;line-height:1.2;padding-bottom:.1em;overflow-wrap:anywhere}
 
   /* ── logo ───────────────────────────────────────────────────────────── */
   .mk{display:block;max-width:100%}
@@ -425,7 +456,7 @@ function css(ctx) {
   .lf-note{margin-top:5mm;max-width:150mm;font-size:10pt;line-height:1.5;color:var(--soft)}
 
   /* ── scope ──────────────────────────────────────────────────────────── */
-  .sc-h{font-size:28pt;letter-spacing:-.02em}
+  .sc-h{font-size:28pt;letter-spacing:-.02em;line-height:1.2;padding-bottom:.08em}
   .sc-note{margin-top:2mm;font-size:10pt;color:var(--soft)}
   .sc-grid{display:grid;grid-template-columns:1fr 1.35fr;gap:14mm;margin-top:8mm;min-height:0}
   .sc-lbl{font-size:7.5pt;color:var(--soft);margin-bottom:2mm}

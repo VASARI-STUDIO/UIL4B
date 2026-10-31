@@ -387,3 +387,47 @@ test('the clear-space page draws the geometry it states', () => {
   assert.equal(h, mark + 2 * x)
   assert.equal(Math.round(w), Math.round(mark * 4 + 2 * x))
 })
+
+/* ── 3 · what the description and the colour slide show ──────────────────── */
+
+// The text of the first element of a class, matched as markup.
+const textOf = (html, tag, cls) => /^[^<]*/.exec(html.split(`<${tag} class="${cls}`)[1]?.replace(/^[^>]*>/, '') ?? '')?.[0]
+
+test('a description cut at 280 characters is never shown ending mid-word', () => {
+  const words = Array.from({ length: 80 }, (_, i) => `word${String(i).padStart(4, '0')}`)
+  const unfinished = (lead) => buildBrandGuidelines({ ...DESIGN, identity: { description: `${lead}${words.join(' ')}` } }, opts)
+  const shownOf = (html) => textOf(html, 'p', 'ln')
+
+  // No sentence end anywhere: cut back to the last whole word, with an ellipsis.
+  const noEnd = shownOf(unfinished(''))
+  assert.match(noEnd, /…$/, 'a cut description does not say it was cut')
+  for (const word of noEnd.slice(0, -1).split(' ')) assert.match(word, /^word\d{4}$/, `"${word}" is a word cut short`)
+
+  // A sentence end earlier in the text: cut back to it, with no ellipsis.
+  const withEnd = shownOf(unfinished('The first sentence is short. '))
+  assert.equal(withEnd, 'The first sentence is short.')
+
+  // A short text with no full stop is not a cut text: it is shown as written.
+  const short = buildBrandGuidelines({ ...DESIGN, identity: { description: 'Calm software for small clinics' } }, opts)
+  assert.equal(shownOf(short), 'Calm software for small clinics')
+})
+
+test('a long first sentence keeps the description off the cover; the line slide still carries it', () => {
+  const long = `${'A sentence that keeps going '.repeat(7)}and then ends. A second one.`
+  const html = buildBrandGuidelines({ ...DESIGN, identity: { description: long } }, opts)
+  assert.ok(!html.includes('class="cv-desc"'), 'a long first sentence is on the cover')
+  assert.ok(html.includes('class="sl sl-line"'), 'the line slide is gone')
+  // A short first sentence is the only part of the description the cover shows.
+  const two = buildBrandGuidelines({ ...DESIGN, identity: { description: 'Calm software for small clinics. Built to be read in a hurry.' } }, opts)
+  assert.equal(textOf(two, 'p', 'cv-desc'), 'Calm software for small clinics.')
+})
+
+test('the colour slide sets the primary colour\'s name large, never the project name', () => {
+  const large = textOf(DOC, 'h2', 'cl-name')
+  const named = /class="cl-main"[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<div class="lb">\s*<b class="lb-name">([^<]+)</.exec(DOC)?.[1]
+  assert.ok(named, 'the primary field carries no colour name')
+  assert.equal(large, named, 'the large text is not the primary colour\'s name')
+  assert.notEqual(large, opts.projectName, 'the colour slide repeats the project name')
+  const one = buildBrandGuidelines({ ...DESIGN, palette: { ...DESIGN.palette, colors: ['#1F4B8E'] } }, opts)
+  assert.notEqual(textOf(one, 'h2', 'cl-name'), opts.projectName, 'a lone colour still repeats the project name')
+})

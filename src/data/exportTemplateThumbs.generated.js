@@ -203,7 +203,7 @@ export const EXPORT_TEMPLATE_THUMBS = {
     },
     "guidelines": {
       "presentation": {
-        "sourceSha256": "51eb614c768acee35bbff46585496c30d3df126c03c9db512d0218e56df5c4b0",
+        "sourceSha256": "8cae1830ed2bb505def412cde425425c8ef5cf8bb1d46b737ddba359d7858b7c",
         "files": [
           {
             "file": "guidelines-presentation-240.webp",
