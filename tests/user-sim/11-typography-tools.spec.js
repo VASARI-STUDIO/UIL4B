@@ -753,26 +753,73 @@ test.describe('Font Gallery', () => {
 
   test('rows reserve their metrics so the list never reflows as faces load', async ({ page }) => {
     watch(page, 'designer on a slow connection')
+    // The test drives the face arriving itself. Left to the live font service,
+    // the rows would be measured in whatever mix of skeletons and faces the
+    // network happened to produce, so the same code could pass or fail.
+    // Every stylesheet is held shut until the "before" snapshot is taken; the
+    // FontFaceSet stub answers "not loaded" until the flag flips.
+    await page.addInitScript(() => {
+      window.__fontFaceReady = false
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: {
+          load: async () => window.__fontFaceReady ? [{}] : [],
+          check: () => window.__fontFaceReady,
+          ready: Promise.resolve(),
+        },
+      })
+    })
+    let releaseStylesheets
+    const stylesheetGate = new Promise(resolve => { releaseStylesheets = resolve })
+    await page.route('https://fonts.googleapis.com/css2**', async route => {
+      await stylesheetGate
+      await route.fulfill({ contentType: 'text/css', body: '/* registered by the test FontFaceSet */' })
+    })
+
     await go(page, '/create/font-gallery')
+    const rows = page.locator('.fg-card')
+    await expect(rows.first()).toBeVisible()
+    // Precondition: nothing has landed, so this snapshot is every row as a skeleton.
+    await expect(page.locator('.fg-card-preview--pending')).toHaveCount(await rows.count())
+    await expect(page.locator('.fg-card-sample')).toHaveCount(0)
 
-    await expect(page.locator('.fg-card').first()).toBeVisible()
-    const heights = await page.locator('.fg-card').evaluateAll(
-      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
-    )
-    expect(new Set(heights).size, 'every gallery row must be the same reserved height').toBe(1)
+    // For each row: where it sits, how tall it is, how tall the reserved sample
+    // box is, and where the middle of the sample line falls inside that box.
+    const measure = () => page.evaluate(() => [...document.querySelectorAll('.fg-card')].map((card) => {
+      const row = card.getBoundingClientRect()
+      const box = card.querySelector('.fg-card-preview').getBoundingClientRect()
+      const line = card.querySelector('.fg-card-preview').firstElementChild.getBoundingClientRect()
+      return {
+        top: Math.round(row.top + window.scrollY),
+        row: Math.round(row.height),
+        box: Math.round(box.height),
+        middle: line.top + line.height / 2 - box.top,
+      }
+    }))
 
-    const boxes = await page.locator('.fg-card-preview > :first-child').evaluateAll(
-      (nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)),
-    )
-    expect(new Set(boxes).size, 'the sample line must keep a fixed box whatever face lands in it').toBe(1)
+    const before = await measure()
+    expect(new Set(before.map((r) => r.row)).size, 'every gallery row must be the same reserved height').toBe(1)
+    expect(new Set(before.map((r) => r.box)).size, 'every sample box must be the same reserved height').toBe(1)
 
-    // The row's third line — the weight ladder — has its own reserved box, and
-    // it is the line most likely to break this contract because its content
-    // varies most. It is asserted in "a full-width row spends its width on the
-    // typeface" rather than here: this test runs before any face has verified,
-    // so every row is still a skeleton and a ladder-height check would be
-    // uniform whatever the rule said. There it compares a nine-cut family
-    // against a two-cut one with both faces actually painting.
+    // Faces land: the rows in view swap their skeleton for a name in its own
+    // face, and the rows below stay as skeletons — a mix of both states.
+    await page.evaluate(() => { window.__fontFaceReady = true })
+    releaseStylesheets()
+    await expect(page.locator('.fg-card-sample').first()).toBeVisible()
+    await expect(page.locator('.fg-card-preview--pending').first()).toBeAttached()
+
+    const after = await measure()
+    const fixed = (rs) => rs.map(({ top, row, box }) => ({ top, row, box }))
+    expect(fixed(after), 'no row may move or change height when a face lands in it').toEqual(fixed(before))
+    // The sample line itself differs by state (a skeleton is shorter than a name
+    // line), so what must hold is that the box it sits in is fixed and its
+    // middle stays on the same line.
+    after.forEach((r, i) => {
+      expect(
+        Math.abs(r.middle - before[i].middle),
+        `row ${i}: the sample line must stay centred in its reserved box whichever face is in it`,
+      ).toBeLessThanOrEqual(1)
+    })
   })
 
   test('a full-width row spends its width on the typeface, not on empty space', async ({ page }) => {
