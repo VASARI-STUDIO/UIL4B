@@ -39,9 +39,9 @@
 - [AI Website Design Prompts Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
 
 ## Plans
-- Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens and JSON tokens, with a "Made with UIL4B" footer line.
+- Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens, JSON tokens, Tailwind theme, Contrast pairs CSV and Contrast pairs JSON, with a "Made with UIL4B" footer line.
 - Pro, from $4 USD a month: 30 AI generations a day and 300 a month; adds Design system book (PDF) and Brand guidelines (presentation); removes the footer line. Same AI model as Free.
-- Not built, on any plan, and not for sale: Tailwind theme and Asset bundle.
+- Not built, on any plan, and not for sale: Asset bundle.
 
 ## More
 - [Pricing & Plans](https://uil4b.com/plans): Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.

@@ -66,7 +66,9 @@ export const EXPORT_FORMATS = Object.freeze([
   Object.freeze({ id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file, for anywhere that will not take a PNG.', live: true, group: 'guide', option: 'JPEG', action: 'Export style guide (JPEG)' }),
   Object.freeze({ id: 'css', name: 'CSS tokens', desc: 'Custom properties for the palette and its tints, semantic colours and type. Drop into any stylesheet.', live: true, group: 'tokens', option: 'CSS', action: 'Export CSS tokens' }),
   Object.freeze({ id: 'json', name: 'JSON tokens', desc: 'The same tokens in the W3C Design Tokens (DTCG) format, for token pipelines and tools that read it.', live: true, group: 'tokens', option: 'JSON', action: 'Export JSON tokens' }),
-  Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.', coming: 'a Tailwind theme' }),
+  Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A Tailwind v4 @theme file: your colours, interface roles, fonts and type sizes as utilities.', live: true, group: 'tokens', option: 'Tailwind', action: 'Export Tailwind theme' }),
+  Object.freeze({ id: 'contrast', name: 'Contrast pairs CSV', desc: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result. Opens in any spreadsheet.', live: true, group: 'tokens', option: 'Contrast CSV', action: 'Export contrast pairs' }),
+  Object.freeze({ id: 'contrast-json', name: 'Contrast pairs JSON', desc: 'The same contrast pairs as JSON, with the ratio as a number and each WCAG result as a true or false.', live: true, group: 'tokens', option: 'Contrast JSON', action: 'Export contrast pairs' }),
   Object.freeze({ id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.', coming: 'an asset bundle' }),
 ])
 
@@ -96,9 +98,8 @@ export const isGroupPro = (groupId) => {
   return formats.length > 0 && formats.every((f) => f.pro)
 }
 
-// The one quiet line for formats that are not built: "A Tailwind theme and an
-// asset bundle are on the way." Empty when nothing is unbuilt, so the line
-// disappears instead of lying.
+// The one quiet line for formats that are not built: "An asset bundle is on the way."
+// Empty when nothing is unbuilt, so the line disappears instead of lying.
 export const comingLine = () => {
   const names = unbuiltFormats().map((f) => f.coming).filter(Boolean)
   if (!names.length) return ''

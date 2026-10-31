@@ -10,6 +10,7 @@ import {
 } from '../components/tool/ToolLayout'
 import { hexToOklchRaw, oklchToHex } from '../components/tool/oklch'
 import { useProject } from '../contexts/ProjectContext'
+import { fileName } from '../utils/exportFileName'
 import { textColorForBg } from '../utils/colors'
 import { bestPole, contrastNotes, GRADE_WORDS, GRADE_MARKS } from '../utils/tintContrast'
 import { getLenis } from '../hooks/useSmoothScroll'
@@ -515,7 +516,7 @@ export default function TintTool({ onCopy, toast }) {
   const copyCss = () => { onCopy?.(allCss) }
   const downloadCss = () => {
     const stem = `tint-${selected.hex.replace('#', '').toLowerCase()}${multi ? `-plus-${sources.length - 1}` : ''}`
-    return gatedDownload(new Blob([`${allCss}\n`], { type: 'text/css' }), `${stem}.css`, 'download these tints')
+    return gatedDownload(new Blob([`${allCss}\n`], { type: 'text/css' }), fileName(design?.name, stem, 'css'), 'download these tints')
   }
   const startSave = async () => {
     if (!canSaveProjects) {

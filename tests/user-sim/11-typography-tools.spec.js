@@ -130,7 +130,7 @@ test.describe('Type Scale Generator', () => {
     await expect(page.getByRole('button', { name: /^Copy CSS$/ })).toBeVisible()
     await expect(page.locator('.tsc-drawer-copy')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Tailwind' }).click()
+    await page.getByRole('button', { name: 'Tailwind v3' }).click()
     await expect(code).toContainText('fontSize: {')
     await expect(code).toContainText("'base': ['clamp(")
 

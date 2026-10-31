@@ -345,3 +345,14 @@ test('/plans offers only the cadences checkout accepts, from the one ladder', ()
   assert.ok(!/\$(?:[1-9]|0\.)/.test(code.replace(/\$\{/g, '')), 'Pricing.jsx types a Pro dollar amount')
 })
 
+
+test('Tailwind and the contrast pairs files are built and free, so they are not Pro claims and not on the way', () => {
+  for (const id of ['tailwind', 'contrast', 'contrast-json']) {
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    assert.equal(f?.live, true, `${id} is live`)
+    assert.notEqual(f.pro, true, `${id} is free`)
+    assert.ok(freeFormats().some((x) => x.id === id), `${id} is in the free list /plans derives`)
+    assert.ok(!unbuiltFormats().some((x) => x.id === id), `${id} is not named as on the way`)
+  }
+  assert.deepEqual(unbuiltFormats().map((f) => f.id), ['assets'], 'only the asset bundle is still unbuilt')
+})

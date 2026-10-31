@@ -18,15 +18,15 @@ const TYPE_FIT = Object.freeze({ roomMm: 140, widthMm: 80, padMm: 5, textMm: 7 }
 
 // Foreground, background, label: the pairs an interface is built from.
 const PAIRS = Object.freeze([
-  ['Text on canvas', 'color-text', 'color-background'],
-  ['Secondary text on canvas', 'color-text-muted', 'color-background'],
-  ['Secondary text on surface', 'color-text-muted', 'color-surface'],
+  ['Text on canvas', 'color-on-surface', 'color-background'],
+  ['Secondary text on canvas', 'color-on-surface-muted', 'color-background'],
+  ['Secondary text on surface', 'color-on-surface-muted', 'color-surface'],
   ['Text on primary', 'color-on-primary', 'color-primary'],
   ['Text on accent', 'color-on-accent', 'color-accent'],
   ['Text on supporting colour', 'on-lilac', 'color-lilac'],
   ['Primary on canvas', 'color-primary', 'color-background'],
   ['Focus ring on canvas', 'color-focus', 'color-background'],
-  ['Disabled text', 'color-disabled-text', 'color-disabled-background'],
+  ['Disabled text', 'color-on-disabled', 'color-disabled'],
 ])
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -76,7 +76,7 @@ export function manualParts(sel, h) {
 
   // ── Colour: one row per colour; its tints are a 16 px ramp, their values sit in the Tints table ──
   const canvasHex = hex(tokens['color-background']).toLowerCase()
-  const textHex = hex(tokens['color-text']).toLowerCase()
+  const textHex = hex(tokens['color-on-surface']).toLowerCase()
   // A colour graded against itself is no result: the cell names the role instead.
   const gradeOrRole = (c, ratio, label, own, word) => (hex(c.hex).toLowerCase() === own
     ? `<td class="ct self"><small class="lbl">${label}</small><small>${word}</small></td>`

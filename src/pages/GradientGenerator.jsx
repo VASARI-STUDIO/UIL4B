@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, use
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
+import { fileName } from '../utils/exportFileName'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
@@ -1480,7 +1481,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'uil4b-gradient.svg'
+    a.download = fileName(design?.name, 'gradient', 'svg')
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 4000)
   }

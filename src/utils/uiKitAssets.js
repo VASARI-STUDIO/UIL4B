@@ -33,7 +33,7 @@ async function catalogWithin(ms, signal) {
  * Resolves { blob, filename, missing } — `missing` lists families that could
  * not be embedded, which the document itself also states.
  */
-export async function buildUiKit(design, { tier, template: templateId = DEFAULT_KIT_TEMPLATE, onStage = () => {}, signal, projectName = '' } = {}) {
+export async function buildUiKit(design, { tier, template: templateId = DEFAULT_KIT_TEMPLATE, onStage = () => {}, signal, projectName = '', fileProject = projectName } = {}) {
   const id = Object.hasOwn(KIT_TEMPLATES, templateId) ? templateId : DEFAULT_KIT_TEMPLATE
   const load = KIT_TEMPLATES[id]
   onStage('fonts')
@@ -47,6 +47,7 @@ export async function buildUiKit(design, { tier, template: templateId = DEFAULT_
   const { html, filename, missing } = renderUiKit(design, {
     tier,
     projectName,
+    fileProject,
     template,
     fonts,
     ...publisher,

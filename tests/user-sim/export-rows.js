@@ -30,6 +30,7 @@ export const FILE_LABEL = {
   guidelines: 'PDF', 'guidelines-html': 'HTML',
   html: 'HTML', png: 'PNG', jpeg: 'JPEG', md: 'Markdown',
   kit: null, css: 'CSS stylesheet', json: 'JSON',
+  tailwind: 'Tailwind theme', contrast: 'Contrast CSV', 'contrast-json': 'Contrast JSON',
 }
 
 // The primary button's words once the file is the pick (an account that may have it).
@@ -38,6 +39,7 @@ export const ACTION = {
   guidelines: 'Export PDF', 'guidelines-html': 'Export HTML',
   html: 'Export style guide', png: 'Export style guide', jpeg: 'Export style guide', md: 'Export style guide',
   kit: 'Export UI kit', css: 'Export CSS', json: 'Export JSON',
+  tailwind: 'Export Tailwind theme', contrast: 'Export contrast pairs', 'contrast-json': 'Export contrast pairs',
 }
 
 /** The primary button's label for a format. */
