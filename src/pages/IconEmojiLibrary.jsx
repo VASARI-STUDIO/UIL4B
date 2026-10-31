@@ -4,6 +4,7 @@ import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import { ICON_GROUPS_ROUTE } from '../data/iconGroups'
+import { requestFeedbackDialog } from '../utils/errorReport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -212,6 +213,12 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
                 </span>
               )}
               <span className="lib-keyhint">Use ← → to switch</span>
+              {/* These routes are chromeless, so the floating Feedback button is not
+                  drawn here and a touch screen has no right-click. This opens the
+                  same dialog the Create tools' More menu does. */}
+              <button type="button" className="lib-feedback" onClick={() => { if (requestFeedbackDialog()) navigate('/feedback') }}>
+                Send feedback
+              </button>
             </div>
           </>
         )}

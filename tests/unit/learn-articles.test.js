@@ -31,7 +31,9 @@ import {
   TOPICS,
   findArticle,
   nextArticle,
+  nextInTopic,
   readingMinutes,
+  topicAnchorId,
 } from '../../src/data/learnIndex.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP, LEARN_TOPIC_ROWS } from '../../src/data/toolTree.js'
@@ -285,6 +287,46 @@ test('read-next walks every article and returns to the first', () => {
   }
   assert.equal(at.slug, LEARN_ARTICLES[0].slug, 'nextArticle() does not wrap back to the first')
   assert.equal(seen.size, LEARN_ARTICLES.length)
+})
+
+test('next-in-topic stays inside the topic, wraps, and falls back when the topic has one guide', () => {
+  for (const a of LEARN_ARTICLES) {
+    const same = LEARN_ARTICLES.filter((b) => b.topic === a.topic)
+    const next = nextInTopic(a.slug)
+    if (same.length < 2) {
+      assert.equal(next?.slug, nextArticle(a.slug)?.slug,
+        `${a.slug} is alone in ${a.topic}, so next-in-topic should be the registry's next article`)
+      continue
+    }
+    assert.equal(next.topic, a.topic, `${a.slug}: next-in-topic left the topic`)
+    assert.notEqual(next.slug, a.slug)
+    // Walking it returns to the start after visiting the whole topic once.
+    const seen = new Set()
+    let at = a
+    for (let i = 0; i < same.length; i++) {
+      assert.ok(!seen.has(at.slug), `${a.topic}: revisited ${at.slug} before covering the topic`)
+      seen.add(at.slug)
+      at = nextInTopic(at.slug)
+    }
+    assert.equal(at.slug, a.slug)
+    assert.equal(seen.size, same.length)
+  }
+  // Registry order, not alphabetical: the last typography guide wraps to the first.
+  assert.equal(nextInTopic('type-scales').slug, 'typeface-metrics')
+  assert.equal(nextInTopic('font-loading').slug, 'type-scales')
+  assert.equal(nextInTopic('nonsense'), undefined)
+})
+
+test('a topic breadcrumb targets the id the Learn index gives that topic group', () => {
+  const index = read(path.join('src', 'components', 'LearnGuideIndex.jsx'))
+  assert.ok(
+    index.includes("const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`"),
+    'LearnGuideIndex.jsx builds topic ids differently from topicAnchorId() in learnIndex.js',
+  )
+  for (const topic of TOPICS) {
+    assert.match(topicAnchorId(topic), /^learn-topic-[a-z0-9-]+$/)
+  }
+  assert.equal(topicAnchorId('Colour'), 'learn-topic-colour')
 })
 
 test('an unknown slug resolves to nothing rather than to the first article', () => {

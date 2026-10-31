@@ -1127,3 +1127,95 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   :where(html:not([data-reduced-motion="false"])) .plb .plb-sx { animation: none !important; }
   :where(html:not([data-reduced-motion="false"])) .plb .plb-sw-row { transition: none !important; transform: none !important; }
 }
+
+/* ── FIRST-PALETTE COACH (components/PaletteCoach.jsx) ───────────────────── */
+/* Two beats, docked on the top edge of the bottom toolbar so the pair reads as
+   one stack. PaletteCoach measures that edge into --plb-coach-bottom. On a
+   phone it is a bar the full width of the screen; from 768px a card 420px wide
+   on the toolbar's leading edge, 8px clear of it. It never covers the board's
+   controls above it and never takes the page's scroll or focus.
+   One height across both beats: the body holds a fixed number of lines (3 on a
+   phone, 2 from 768px) and truncates inside them, so moving to the next beat
+   moves nothing. */
+.plb-coach {
+  --plb-coach-lines: 3;
+  position: fixed;
+  z-index: 60;
+  isolation: isolate;
+  inset-inline: 0;
+  bottom: max(var(--plb-coach-bottom, 0px), var(--plb-coach-floor, 0px));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--s-1);
+  padding: var(--s-3) max(var(--s-4), env(safe-area-inset-right, 0px)) var(--s-3) max(var(--s-4), env(safe-area-inset-left, 0px));
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  font-family: var(--font);
+  color: var(--t1);
+  animation: plb-coach-in 240ms var(--ease-entrance);
+}
+/* On a phone the coach never goes below the fixed tab bar and the home-indicator inset, whether it hangs from the
+   adjust bar or, with that bar below the fold, rests on the screen's edge. */
+@media (max-width: 767px) {
+  html.has-tabbar .plb-coach { --plb-coach-floor: calc(var(--tabbar-h, 0px) + env(safe-area-inset-bottom, 0px)); }
+}
+@keyframes plb-coach-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .plb-coach { animation-name: plb-coach-fade; }
+}
+@keyframes plb-coach-fade { from { opacity: 0; } to { opacity: 1; } }
+/* Another overlay is open: the coach stays mounted, fades out and goes inert. */
+.plb-coach[data-overlay-hidden] { animation: none; opacity: 1; transition: opacity 150ms var(--ease-exit), visibility 0s; }
+.plb-coach[data-overlay-hidden="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 150ms var(--ease-exit), visibility 0s 150ms; }
+
+.plb-coach-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 20px; }
+.plb-coach-count { margin: 0; font-size: var(--fs-caption); font-weight: 400; line-height: 1.2; color: var(--t2); font-variant-numeric: tabular-nums; }
+.plb-coach-x {
+  position: relative; flex: none; display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 32px; height: 32px; margin: -6px -6px -6px 0; padding: 0;
+  border: 1px solid transparent; border-radius: var(--btn-radius); background: transparent; color: var(--t1); cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-out);
+}
+/* A pad wider than the drawn control keeps the target at 44px. */
+.plb-coach-x::after, .plb-coach-hide::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+.plb-coach-x:active { transform: scale(.97); }
+.plb-coach-x:focus-visible, .plb-coach-hide:focus-visible, .plb-coach-go:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+@media (hover: hover) {
+  .plb-coach-x:hover { border-color: var(--bh); color: var(--t0); background: var(--hvr); }
+  .plb-coach-hide:hover { color: var(--t0); }
+}
+.plb-coach-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.25; letter-spacing: normal; color: var(--t0); }
+.plb-coach-body {
+  margin: 0; max-width: 60ch; font-size: var(--fs-caption); line-height: 1.5; color: var(--t1);
+  height: calc(1.5em * var(--plb-coach-lines)); overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--plb-coach-lines); line-clamp: var(--plb-coach-lines);
+}
+.plb-coach-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-top: var(--s-1); }
+.plb-coach-hide {
+  position: relative; padding: 0; border: 0; background: none; font-family: var(--font); font-size: var(--fs-caption); font-weight: 500;
+  line-height: 1.2; color: var(--t2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard);
+}
+.plb-coach-go { height: 36px; padding: 0 var(--s-4); justify-content: center; white-space: nowrap; font-size: var(--fs-caption); font-weight: 560; }
+.plb-coach-go:active { transform: scale(.97); }
+@media (pointer: coarse) {
+  .plb-coach-go { height: 44px; font-size: 15px; }
+  .plb-coach-hide { min-height: 44px; display: inline-flex; align-items: center; }
+}
+@media (min-width: 768px) {
+  .plb-coach {
+    --plb-coach-lines: 2;
+    inset-inline: auto;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    bottom: calc(var(--plb-coach-bottom, 0px) + var(--s-2));
+    width: min(420px, 100vw - 24px);
+    padding: var(--s-4) var(--s-4) var(--s-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-m);
+  }
+}
+/* The control the beat points at wears a ring; no motion, so reduced motion needs nothing. */
+.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--accent-fill); outline-offset: 2px; }

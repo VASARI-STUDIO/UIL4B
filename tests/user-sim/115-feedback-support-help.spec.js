@@ -118,7 +118,7 @@ test.describe('the feedback form for a failed payment', () => {
 
     await page.getByRole('link', { name: 'Update your card' }).click()
     await expect(page).toHaveURL(/\/settings(\?|#|$)/)
-    // It opens on the Subscription section (id `support`), not the last one used.
+    // It opens on the Plan and billing section (id `support`), not the last one used.
     await expect(page.locator('#settab-support')).toHaveClass(/(^| )active( |$)/)
     await expect(page.locator('#settab-support')).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('#set-support')).toBeVisible()

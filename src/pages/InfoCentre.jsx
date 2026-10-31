@@ -252,9 +252,9 @@ const SECTIONS = [
             documents, the colour systems and HCT editing, the brand palettes
             and unlimited saves. The phrase appeared nowhere else in src/.
 
-            "Settings → Support" is corrected to "Settings → Subscription",
+            "Settings → Support" is corrected to "Settings → Plan and billing",
             which is the label Settings.jsx gives that tab (`{ id: 'support',
-            label: 'Subscription' }`) — a visitor looking for "Support" would
+            label: 'Plan and billing' }`) — a visitor looking for "Support" would
             not find it. And "or cancel" is deleted from the second sentence
             on the same evidence /plans used to delete "cancel any time": the
             Stripe portal has no cancellation flow enabled until the
