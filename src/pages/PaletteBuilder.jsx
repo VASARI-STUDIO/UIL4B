@@ -32,14 +32,13 @@ import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
-import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
+import { IcoSearchSm, ProBlock, RovingRows, RowSkeletons, SwatchRow, YourPaletteRow } from '../components/palette/SwatchRows'
 // The preview dialog: the scene list and the role legend. Its own chunk, loaded
 // when Preview is first pointed at or opened (previewLoader.js).
 import { DEFAULT_SCENE, PREVIEW_SCENES, openingScene } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import HarmonyWheel from '../components/palette/HarmonyWheel'
-import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
 import { fileName } from '../utils/exportFileName'
@@ -86,6 +85,21 @@ function returnMenuFocus(el, pointer) {
 }
 // A brand's tick in Explore shares `importedGalleryId` with the community palettes, so its id is prefixed.
 const brandTickId = (b) => `brand:${b.id}`
+// True from 1024px up, where Suggest and Explore dock beside the board.
+function useWideDock() {
+  const Q = '(min-width: 1024px)'
+  const get = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(Q).matches
+  const [wide, setWide] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(Q)
+    const on = () => setWide(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return wide
+}
 // The phone layout's breakpoint (the same one ToolLayout's overflow uses).
 const PHONE_QUERY = '(max-width: 767px)'
 function usePhone() {
@@ -100,32 +114,6 @@ function usePhone() {
     return () => mq.removeEventListener?.('change', on)
   }, [])
   return phone
-}
-
-// The Suggest footer: the score before and after, and a "?" that shows a one-line
-// explanation instead of leaving it to a tooltip (a tooltip never shows on touch
-// or to a keyboard). The line is always in the DOM so the button's
-// aria-describedby always has something to point at; `hidden` keeps it out of
-// sight until the button is pressed. Its own state, so it closes when the footer
-// goes away.
-function BalanceScoreFoot({ before, after }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="plb-sg-foot">
-      <span>Balance score <b>{before}</b> &rarr; <b>{after}</b></span>
-      <button
-        type="button"
-        className="plb-sg-info"
-        aria-label="What the balance score measures"
-        aria-expanded={open}
-        aria-describedby="plb-sg-score-help"
-        onClick={() => setOpen(o => !o)}
-      >
-        <span aria-hidden="true">?</span>
-      </button>
-      <p id="plb-sg-score-help" className="plb-sg-foot-help" hidden={!open}>It scores tone range, evenness, chroma profile and distinctness.</p>
-    </div>
-  )
 }
 
 // Marks a scrolling body that has more below it, so the CSS can fade its bottom
@@ -1234,12 +1222,37 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const galleryOpenerRef = useRef({ el: null, pointer: false })
   const wasGalleryOpen = useRef(false)
   const exploring = galleryTab !== 'variations'
+  // The search field's text (cleared when the panel or its tab changes), and the
+  // phone sheet's height: Peek or Full. Suggest and Brands open at Peek, Explore's
+  // Palettes at Full, because browsing needs height. At 1024 and up the panel docks
+  // beside the board as a complementary region; below that it is a non-modal dialog.
+  const [exQuery, setExQuery] = useState('')
+  const [sheetFull, setSheetFull] = useState(false)
+  const wideDock = useWideDock()
+  useEffect(() => { setExQuery(''); setSheetFull(galleryTab === 'community') }, [galleryOpen, galleryTab])
+  // Below 1024 the panel is a dock that sits directly on top of the adjust bar and
+  // never below it, so the bar's distance from the viewport bottom is measured.
+  // A phone sheet covers the bar and ignores it (bottom: 0 in the CSS).
+  useLayoutEffect(() => {
+    const wrap = galleryRef.current
+    if (!galleryOpen || !wrap) return undefined
+    const bar = document.querySelector('.plb .plb-adjust')
+    const place = () => {
+      const top = bar ? bar.getBoundingClientRect().top : window.innerHeight
+      wrap.style.setProperty('--plb-dock-b', `${Math.max(0, Math.round(window.innerHeight - top))}px`)
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, { passive: true })
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place) }
+  }, [galleryOpen, wideDock])
+  const hasRows = exploring || variations.length > 0
   useEffect(() => {
     if (!galleryOpen) return
     const wrap = galleryRef.current
-    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('.plb-pop-x')
+    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row') || wrap?.querySelector('.plb-pop-x')
     target?.focus({ preventScroll: true })
-  }, [galleryOpen, exploring])
+  }, [galleryOpen, exploring, hasRows])
   useEffect(() => {
     if (galleryOpen) { wasGalleryOpen.current = true; return }
     if (!wasGalleryOpen.current) return
@@ -2238,18 +2251,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setPanelApplied(null)
     setLiveMsg('Your palette is back.')
   }
-  const compareVariation = (v) => {
-    setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: v })
-  }
-  // Generic "line it up against the current palette" — used by the brand and
-  // community rows, which carry no precomputed score, so we compute one here.
-  const comparePalette = (label, colors) => {
-    const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
-    if (cols.length < 2) return
-    setGalleryOpen(false)
-    setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: { label, colors: cols, score: scorePalette(cols) } })
-  }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
   // SAME (ticked) card — or switching to a different card and toggling it —
@@ -3162,6 +3163,178 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             )
           })}
         </div>
+        {/* Suggest / Explore: one docked panel beside the board (a bottom dock below
+            1024, a sheet on a phone). It pushes the board and never covers it.
+            `.plb-menuwrap` keeps the page's dismiss layer from closing it on a press
+            inside it. Design: memory/designs/design-2026-10-31-suggest-explore.md. */}
+        {galleryOpen && (() => {
+          const mineColors = trialSnapRef.current?.mine || adjusted
+          const q = exQuery.trim().toLowerCase()
+          const match = (n) => !q || String(n).toLowerCase().includes(q)
+          const searchable = galleryTab === 'brands' || communityRows.length > 12
+          const shownPalettes = communityRows.filter(r => match(r.name))
+          const shownBrands = openBrands.filter(b => match(b.name))
+          const shownLocked = lockedBrands.filter(p => match(p.label))
+          const noun = galleryTab === 'brands' ? 'brands' : 'palettes'
+          const noMatch = Boolean(q) && (galleryTab === 'brands' ? shownBrands.length + shownLocked.length : shownPalettes.length) === 0
+          const rowLabel = (name, detail, on) => (on ? `${name}, on your board. Press again to go back to your palette.` : detail ? `${name}: ${detail}` : name)
+          const clearSearch = () => { setExQuery(''); document.getElementById('plb-sx-search')?.focus() }
+          return (
+            <div
+              className="plb-menuwrap plb-sx"
+              ref={galleryRef}
+              data-snap={sheetFull ? 'full' : 'peek'}
+              role={wideDock ? 'complementary' : 'dialog'}
+              aria-modal={wideDock ? undefined : 'false'}
+              aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'}
+              data-lenis-prevent
+            >
+              <button type="button" className="plb-sx-handle" aria-label={sheetFull ? 'Collapse' : 'Expand'} onClick={() => setSheetFull(f => !f)}><span aria-hidden="true" /></button>
+              <div className="plb-sx-head">
+                <div className="plb-menu-title">{exploring ? 'Explore' : 'Suggest'}</div>
+                {exploring && (
+                  <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
+                    {['community', 'brands'].map(tab => (
+                      <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        id={`plb-ex-tab-${tab}`}
+                        aria-selected={galleryTab === tab}
+                        aria-controls={galleryTab === tab ? `plb-ex-panel-${tab}` : undefined}
+                        tabIndex={galleryTab === tab ? 0 : -1}
+                        className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
+                        onClick={() => setGalleryTab(tab)}
+                      >
+                        {tab === 'community' ? 'Palettes' : 'Brands'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
+              </div>
+              <YourPaletteRow
+                colors={mineColors}
+                detail={exploring ? null : `Balance ${trialSnapRef.current?.before ?? paletteScore}`}
+                help={exploring ? null : 'It scores tone range, evenness, chroma profile and distinctness.'}
+                onCompare={panelApplied?.compare ? () => { setGalleryOpen(false); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: panelApplied.compare }) } : null}
+                compareLabel={`Compare ${panelApplied?.name || 'the applied option'} with your palette`}
+              />
+              <div className="plb-sx-body" ref={scrollCue} {...(exploring ? { role: 'tabpanel', id: `plb-ex-panel-${galleryTab}`, 'aria-labelledby': `plb-ex-tab-${galleryTab}` } : {})}>
+                {!exploring && (variations.length === 0 ? (
+                  <p className="plb-sx-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
+                ) : (
+                  <>
+                    <p className="plb-sx-intro">Each one reworks the colours on your board. Click one to try it, and click it again to go back.</p>
+                    <RovingRows>
+                      {variationGroups.map(group => (
+                        <section key={group.label} aria-label={group.label}>
+                          <h3 className="plb-sx-group">{group.label}</h3>
+                          <ul className="plb-sw-list" role="list">
+                            {group.items.map(v => {
+                              const gated = !isPro && !freeVarIds.has(v.id)
+                              const active = panelApplied?.kind === 'variation' && panelApplied.id === v.id
+                              return (
+                                <SwatchRow
+                                  key={v.id}
+                                  id={`var-${v.id}`}
+                                  variant={gated ? 'gate' : 'press'}
+                                  name={v.label}
+                                  detail={v.desc}
+                                  meta={v.score}
+                                  colors={v.colors}
+                                  applied={active}
+                                  mine={mineColors}
+                                  ariaLabel={gated ? `${v.label}, Pro only. Opens Pro plans.` : rowLabel(v.label, v.desc, active)}
+                                  onPress={() => pickVariation(v, gated)}
+                                />
+                              )
+                            })}
+                          </ul>
+                        </section>
+                      ))}
+                    </RovingRows>
+                    {!isPro && variations.length > freeVarIds.size && (
+                      <ProBlock
+                        heading={`${variations.length - freeVarIds.size} more ${variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro`}
+                        body="Free covers the three best-balanced variations for your palette."
+                        onOpen={openVariationGate}
+                      />
+                    )}
+                  </>
+                ))}
+
+                {exploring && (
+                  <>
+                    <p className="plb-sx-intro">{galleryTab === 'brands'
+                      ? 'Loads a brand’s published colours and its colour system. Click it again to go back.'
+                      : 'Loads a palette in place of yours. Click it again to go back.'}</p>
+                    {searchable && (
+                      <div className="plb-sx-search">
+                        <IcoSearchSm />
+                        <label className="sr-only" htmlFor="plb-sx-search">{`Search ${noun}`}</label>
+                        <input
+                          id="plb-sx-search"
+                          type="search"
+                          enterKeyHint="search"
+                          autoComplete="off"
+                          placeholder={`Search ${noun}`}
+                          value={exQuery}
+                          onFocus={() => { if (!wideDock && window.matchMedia?.('(max-width: 640px)').matches) setSheetFull(true) }}
+                          onChange={(e) => setExQuery(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    {noMatch ? (
+                      <p className="plb-sx-note">No {noun} match &ldquo;{exQuery.trim()}&rdquo;. <button type="button" className="plb-sx-link" onClick={clearSearch}>Clear search</button></p>
+                    ) : (
+                      <RovingRows>
+                        <ul className="plb-sw-list" role="list">
+                          {galleryTab === 'community' && shownPalettes.map(p => {
+                            const on = importedGalleryId === p.id
+                            return (
+                              <SwatchRow key={p.id} id={`pal-${p.id}`} name={p.name} colors={p.colors} applied={on} mine={mineColors}
+                                ariaLabel={rowLabel(p.name, '', on)} onPress={() => importGalleryPalette(p.colors, p.name, p.id)} />
+                            )
+                          })}
+                          {galleryTab === 'brands' && shownBrands.map(b => {
+                            const on = importedGalleryId === brandTickId(b)
+                            return (
+                              <SwatchRow key={b.id} id={`brand-${b.id}`} name={b.name} colors={b.colors} applied={on} mine={mineColors}
+                                ariaLabel={rowLabel(b.name, '', on)} onPress={() => pickBrand(b)} />
+                            )
+                          })}
+                          {galleryTab === 'brands' && !proPending && shownLocked.map(p => (
+                            <SwatchRow key={p.id} id={`lock-${p.id}`} variant="static" name={p.label} slots={p.slots} />
+                          ))}
+                        </ul>
+                      </RovingRows>
+                    )}
+                    {proPending && <RowSkeletons />}
+                    {proPending && <ProLibraryStatus library={proLib} noun={galleryTab === 'brands' ? 'brand library' : 'palette library'} />}
+                    {!proPending && galleryTab === 'community' && communityLocked > 0 && (
+                      <ProBlock
+                        gate="palette-builder-community-lock"
+                        heading={`Another ${communityLocked} ${communityLocked === 1 ? 'palette' : 'palettes'} with Pro`}
+                        body={`Free covers ${communityRows.length} of the ${LIBRARY_TOTALS.curatedPalettes} curated palettes.`}
+                      />
+                    )}
+                    {!proPending && galleryTab === 'brands' && lockedBrandCount > 0 && (
+                      <ProBlock
+                        gate="palette-builder-brand-lock"
+                        heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
+                        body="Each brand loads its whole colour system, not only its swatches."
+                      />
+                    )}
+                    {galleryTab === 'community' && (
+                      <div className="plb-sx-foot">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })()}
         {/* The ADD rail (D:1037-1040). */}
         <button type="button" className="plb-add" onClick={addCol} aria-label="Add a colour">
           <ToolIcon name="plus" size={19} />
@@ -3244,204 +3417,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           {colors.length > 2 && (
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={(e) => { removeCol(ctxMenu.i, e); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
-        </div>
-      )}
-
-      {/* ── The floating panels: Suggest / Explore, History, Save or share ──
-          Fixed under the toolbar (a bottom sheet on a phone). The gallery is
-          moved under the button that opened it when there is one on screen;
-          opened from the Extra tools sheet it stays docked. `.plb-menuwrap`
-          keeps the page's one dismiss layer from closing a panel on a press
-          inside it. */}
-      {galleryOpen && (
-        <div className="plb-menuwrap plb-float" ref={galleryRef}>
-          <div className={exploring ? 'plb-menu plb-galpopup plb-galpopup--explore' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'} data-lenis-prevent>
-            <div className="plb-galpopup-head">
-              <div className="plb-menu-title">{exploring ? 'Explore palettes and brands' : 'Suggest'}</div>
-              {exploring && (
-                <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
-                  {['community', 'brands'].map(tab => (
-                    <button
-                      key={tab}
-                      type="button"
-                      role="tab"
-                      id={`plb-ex-tab-${tab}`}
-                      aria-selected={galleryTab === tab}
-                      aria-controls={galleryTab === tab ? `plb-ex-panel-${tab}` : undefined}
-                      tabIndex={galleryTab === tab ? 0 : -1}
-                      className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
-                      onClick={() => setGalleryTab(tab)}
-                    >
-                      {tab === 'community' ? 'Palettes' : 'Brands'}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {/* Suggest's one Back button sits between the title and Close in the
-                  DOM, so the tab order is the visual order at every width. Its text
-                  shortens to "Back" (still inside its name) on phones, and only the
-                  narrowest screens get the icon alone. */}
-              {!exploring && (
-                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={() => revertTrial()}>
-                  <span className="plb-sg-back-text">Back to my palette</span>
-                  <span className="plb-sg-back-short" aria-hidden="true">Back</span>
-                  <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
-                </button>
-              )}
-              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
-            </div>
-
-            {galleryTab === 'community' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-community" aria-labelledby="plb-ex-tab-community">
-                <PaletteGalleryGrid
-                  toast={toast}
-                  palettes={communityRows}
-                  selectedId={importedGalleryId}
-                  onPick={(cols, name, id) => importGalleryPalette(cols, name, id)}
-                  onCompare={(cols, name) => comparePalette(name, cols)}
-                />
-                {proPending ? <ProLibraryStatus library={proLib} noun="palette library" /> : communityLocked > 0 && (
-                  <LockedTeaseCta
-                    gate="palette-builder-community-lock"
-                    heading={`Another ${communityLocked} ${communityLocked === 1 ? 'palette' : 'palettes'} with Pro`}
-                    body={`Free covers ${communityRows.length} of the ${LIBRARY_TOTALS.curatedPalettes} curated palettes.`}
-                    action="See what Pro includes"
-                  />
-                )}
-                <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
-              </div>
-            )}
-
-            {!exploring && (
-              <div className="plb-sg-pin">
-                <span className="plb-sg-pin-label">Your palette</span>
-                <div className="plb-sg-pin-strip" aria-hidden="true">
-                  {(panelApplied?.mine || adjusted).map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}
-                </div>
-              </div>
-            )}
-
-            {!exploring && (
-              <div className="plb-galpopup-body" ref={scrollCue}>
-                {variations.length === 0 ? (
-                  <p className="plb-sg-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
-                ) : (
-                  <>
-                    <p className="plb-sg-intro">Each one changes the colours you have. Pick one to try it.</p>
-                    <div className="plb-sg-groups">
-                      {variationGroups.map(group => (
-                        <section key={group.label} className="plb-sg-group" aria-label={group.label}>
-                          <h3 className="plb-sg-group-label">{group.label}</h3>
-                          <div className="plb-sg-grid">
-                            {group.items.map(v => {
-                              const gated = !isPro && !freeVarIds.has(v.id)
-                              const active = panelApplied?.kind === 'variation' && panelApplied.id === v.id
-                              return (
-                                <div key={v.id} className={`plb-sg-card${gated ? ' plb-sg-card--locked' : ''}${active ? ' plb-sg-card--on' : ''}`}>
-                                  <button
-                                    type="button"
-                                    id={`plb-sg-var-${v.id}`}
-                                    className="plb-sg-main"
-                                    aria-pressed={gated ? undefined : active}
-                                    aria-label={gated ? `${v.label}, Pro only. Opens Pro plans.` : `${v.label}: ${v.desc}`}
-                                    onClick={() => pickVariation(v, gated)}
-                                  >
-                                    <span className="plb-sg-strip" aria-hidden="true">
-                                      <span className="plb-sg-cells">{v.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
-                                      {gated && <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>}
-                                      {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
-                                    </span>
-                                    <span className="plb-sg-name">{v.label}</span>
-                                    <span className="plb-sg-desc">{v.desc}</span>
-                                  </button>
-                                  {!gated && (
-                                    <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${v.label} with your palette`} onClick={() => compareVariation(v)}>
-                                      <IcoEye />
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                    {!isPro && variations.length > freeVarIds.size && (
-                      <div className="plb-sg-pro">
-                        <span>{variations.length - freeVarIds.size} more {variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro</span>
-                        <button type="button" className="tl-btn" onClick={openVariationGate}>See what Pro includes</button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {galleryTab === 'brands' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-brands" aria-labelledby="plb-ex-tab-brands">
-                <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system. Pick it again to put your palette back.</p>
-                {/* openBrands holds only the rows this viewer may load; a
-                    Pro-gated brand's colours never enter the DOM. */}
-                <div className="plb-sg-groups">
-                  <div className="plb-sg-grid plb-sg-grid--brands">
-                    {openBrands.map(b => {
-                      const active = importedGalleryId === brandTickId(b)
-                      return (
-                        <div key={b.id} className={`plb-sg-card plb-sg-card--brand${active ? ' plb-sg-card--on' : ''}`}>
-                          <button type="button" className="plb-sg-main" aria-pressed={active} aria-label={b.name} onClick={() => pickBrand(b)}>
-                            <span className="plb-sg-strip" aria-hidden="true">
-                              <span className="plb-sg-cells">{b.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
-                              {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
-                            </span>
-                            <span className="plb-sg-name">{b.name}</span>
-                          </button>
-                          <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${b.name} with your palette`} onClick={() => comparePalette(b.name, b.colors)}>
-                            <IcoEye />
-                          </button>
-                        </div>
-                      )
-                    })}
-                    {proPending && [0, 1, 2, 3].map(k => (
-                      <div key={`ph-${k}`} className="plb-sg-card plb-sg-card--brand plb-sg-card--ph" aria-hidden="true">
-                        <div className="plb-sg-main"><span className="plb-sg-strip" /><span className="plb-sg-name" /></div>
-                      </div>
-                    ))}
-                    {!proPending && lockedBrands.map(p => (
-                      <div key={p.id} className="plb-sg-card plb-sg-card--brand plb-sg-card--locked plb-sg-card--static">
-                        <div className="plb-sg-main">
-                          <span className="plb-sg-strip" aria-hidden="true">
-                            <span className="plb-sg-cells">
-                              {Array.from({ length: Math.max(1, Number(p.slots) || 1) }, (_, k) => <span key={k} className="plb-sg-cell lockt-rowcell" data-step={k % 4} />)}
-                            </span>
-                            <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>
-                          </span>
-                          <span className="plb-sg-name">{p.label}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {proPending && <ProLibraryStatus library={proLib} noun="brand library" />}
-                {!proPending && lockedBrandCount > 0 && (
-                  <LockedTeaseCta
-                    gate="palette-builder-brand-lock"
-                    heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
-                    body="Loading a brand applies its whole colour system, not only its swatches."
-                    action="See what Pro includes"
-                    modal={{
-                      eyebrow: 'Pro colour tools',
-                      title: 'Load any brand system',
-                      subtitle: `Free covers ${brandRows.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
-                    }}
-                  />
-                )}
-              </div>
-            )}
-
-            {!exploring && panelApplied?.kind === 'variation' && (
-              <BalanceScoreFoot before={panelApplied.before} after={panelApplied.after} />
-            )}
-          </div>
         </div>
       )}
 
