@@ -39,6 +39,7 @@ import { promptTagList, promptTagString } from '../utils/promptStore'
 import { PLAN_STATES, planStateOf, planSortKey, PLAN_STATE_ORDER } from '../utils/adminUsers'
 import { toCsv } from '../utils/csv'
 import { cadenceOf } from '../utils/billingCadence'
+import { isUnverifiedReporter } from '../utils/contentReport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -61,8 +62,8 @@ const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--info)', done: 
 // The tints are color-mix() on the signal tokens rather than rgba() literals,
 // so they track both themes and any future change to the signal ramp.
 const STATUS_BGS = { new: 'color-mix(in srgb,var(--warn) 12%,transparent)', 'in-progress': 'color-mix(in srgb,var(--info) 12%,transparent)', done: 'color-mix(in srgb,var(--ok) 12%,transparent)' }
-const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--info)' }
-const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--info) 12%,transparent)' }
+const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--info)', report: 'var(--t1)' }
+const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--info) 12%,transparent)', report: 'color-mix(in srgb,var(--t1) 10%,transparent)' }
 const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--accent-soft)', 'var(--t3)']
 
 // ── TEN TABS, AUDITED, SIX LEFT ───────────────────────────────────────────
@@ -109,6 +110,7 @@ function FilterGlyph({ id }) {
     feature: <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />,
     general: <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20l1.2-5.1A8.5 8.5 0 1 1 21 11.5z" />,
     help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+    report: <><path d="M5 21V4" /><path d="M5 4h12l-2.5 4L17 12H5" /></>,
     new: <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />,
     'in-progress': <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>,
     done: <polyline points="4 12.5 10 18.5 20 6.5" />,
@@ -302,7 +304,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
               rendered, saying what is withheld — a silently missing field
               reads as a report with no sender. */}
           {item.email && (canSeeEmail
-            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong></div>
+            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}</div>
             : <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>From: <span style={{ fontStyle: 'italic' }}>address withheld from moderators</span></div>)}
 
           {/* WHO ACTED ON THIS.
@@ -1975,7 +1977,7 @@ export default function Admin({ toast }) {
   }, [feedback])
 
   const feedbackDonut = useMemo(() => {
-    const types = ['bug', 'feature', 'general', 'help']
+    const types = ['bug', 'feature', 'general', 'help', 'report']
     return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: feedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
   }, [feedback])
 
@@ -2565,7 +2567,7 @@ export default function Admin({ toast }) {
           <div className="adm-sub-toolbar">
             <input type="search" className="adm-search" placeholder="Search subject, message, email…" value={subSearch} onChange={e => setSubSearch(e.target.value)} />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {['all', 'bug', 'feature', 'general', 'help'].map(t => (
+              {['all', 'bug', 'feature', 'general', 'help', 'report'].map(t => (
                 <button
                   key={t}
                   className={`adm-time-btn${filterType === t ? ' active' : ''}`}

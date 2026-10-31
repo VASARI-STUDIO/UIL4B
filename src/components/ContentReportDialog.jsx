@@ -121,10 +121,8 @@ function ReportForm({ target, onClose }) {
           <div className="fb-success" role="status">
             <h3 className="fb-success-title" ref={doneRef} tabIndex={-1}>Thank you</h3>
             <p className="fb-success-text">
-              We have your report of &ldquo;{target.name}&rdquo; and will look at it.
-              {' '}{sentTo
-                ? `We will send our decision to ${sentTo}.`
-                : 'You did not give an email address, so we will not be able to tell you what we decide.'}
+              Thanks. We&rsquo;ll review your report of &ldquo;{target.name}&rdquo;.
+              {sentTo ? ` If we need more, we may write to ${sentTo}.` : ''}
             </p>
             <div className="fb-success-actions">
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
@@ -181,7 +179,7 @@ function ReportForm({ target, onClose }) {
             </div>
 
             {accountEmail ? (
-              <p className="fb-sending-as">Our decision will go to {accountEmail}.</p>
+              <p className="fb-sending-as">If we need more, we may write to {accountEmail}.</p>
             ) : (
               <div className="fb-field">
                 <label className="fb-label" htmlFor="rp-email">
@@ -207,8 +205,8 @@ function ReportForm({ target, onClose }) {
                   ? <p className="fb-error" id="rp-email-error" role="alert">{errors.email}</p>
                   : <p className="rp-hint" id="rp-email-hint">
                       {reason?.id === 'illegal'
-                        ? 'You can leave this out if you are reporting child sexual abuse material. Otherwise we need it to tell you what we decide.'
-                        : 'We use it only to tell you what we decide. You do not need an account to report.'}
+                        ? 'You can leave this out if you are reporting child sexual abuse material. Otherwise we ask for it so we can write to you if we need more.'
+                        : 'We may use it to write to you about this report. You do not need an account to report.'}
                     </p>}
               </div>
             )}

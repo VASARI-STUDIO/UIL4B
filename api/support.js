@@ -24,6 +24,7 @@ import { waitUntil } from '@vercel/functions'
 // configured. One bootstrap, one set of encodings, one project id.
 
 // 'report' is a content report from a community item (src/utils/contentReport.js).
+// A report is only ever read by a person: nothing here acts on it automatically.
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
 const VALID_SOURCES = ['feedback-form', 'inline', 'email']
 
@@ -31,6 +32,9 @@ export const MESSAGE_MAX = 5000
 export const SUBJECT_MAX = 200
 export const EMAIL_MAX = 254
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// The subject becomes an email subject line, so it is always a single line.
+const oneLine = (text) => text.replace(/[\r\n\u{2028}\u{2029}]+/gu, ' ')
 
 /**
  * Validate and shape one submission. Pure, so the rules are testable under
@@ -70,7 +74,7 @@ export function validateSupportBody(body, now = new Date()) {
   return {
     entry: {
       type: safeType,
-      subject: (subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
+      subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
       email: (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
@@ -104,6 +108,19 @@ export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all
 // One "the cap was reached" email an hour, so a spent cap is visible to the
 // founder instead of silent. Counted separately and never against MAIL_CAP.
 export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
+// Content reports have their own email allowance and their own notice, so a
+// flood of bug or feedback messages cannot stop a report from being emailed,
+// and the reverse. A report is stored whether or not its allowance is spent.
+export const REPORT_MAIL_CAP = Object.freeze({ bucket: 'support-mail-report', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
+export const REPORT_MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-report-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
+/** The email allowance (and its notice) a submission of this type counts against. */
+export function mailCapFor(type) {
+  return type === 'report'
+    ? { cap: REPORT_MAIL_CAP, notice: REPORT_MAIL_CAP_NOTICE, label: 'report' }
+    : { cap: MAIL_CAP, notice: MAIL_CAP_NOTICE, label: 'support' }
+}
 
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -239,8 +256,9 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   // its only copy (see below), so that email is never held back.
   let mailAllowed = Boolean(resendKey && notifyEmail)
   let capNotice = null
+  const { cap, notice: noticeCap, label } = mailCapFor(entry.type)
   if (mailAllowed && stored) {
-    const verdict = await consume(db, MAIL_CAP)
+    const verdict = await consume(db, cap)
     if (!verdict.allowed) {
       mailAllowed = false
       if (verdict.contended) {
@@ -249,12 +267,12 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
         // so this is neither logged as the cap nor announced to the founder.
         console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
-        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
-        // founder gets one notice an hour. It is exempt from MAIL_CAP and holds
-        // no user content.
-        const notice = await consume(db, MAIL_CAP_NOTICE)
-        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail })
+        // founder gets one notice an hour per allowance. It is exempt from the
+        // caps and holds no user content.
+        const notice = await consume(db, noticeCap)
+        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail, cap, label })
       }
     }
   }
@@ -274,7 +292,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
           // Resend sandbox, because reply_to needs no verified domain.
           reply_to: REPLY_TO,
           to: [notifyEmail],
-          subject: `[UIL4B ${entry.type}] ${entry.subject}`,
+          subject: oneLine(`[UIL4B ${entry.type}] ${entry.subject}`),
           html: `
             <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
               <div style="background:#f8f8f6;border:1px solid #e5e5e0;border-radius:12px;padding:24px;margin-bottom:16px">
@@ -318,9 +336,9 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   return res.status(200).json({ ok: true })
 }
 
-// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
-// wrote. Resolves to whether Resend took it; never rejects.
-async function sendCapNotice({ resendKey, notifyEmail }) {
+// The notice sent when an email allowance is spent. It never carries anything a
+// visitor wrote. Resolves to whether Resend took it; never rejects.
+async function sendCapNotice({ resendKey, notifyEmail, cap = MAIL_CAP, label = 'support' }) {
   try {
     const sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -330,10 +348,10 @@ async function sendCapNotice({ resendKey, notifyEmail }) {
         from: mailFrom(),
         reply_to: REPLY_TO,
         to: [notifyEmail],
-        subject: '[UIL4B] Support email cap reached',
+        subject: `[UIL4B] ${label === 'report' ? 'Report' : 'Support'} email cap reached`,
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
+            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${cap.limit} ${label} notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
           </div>
         `,
       }),

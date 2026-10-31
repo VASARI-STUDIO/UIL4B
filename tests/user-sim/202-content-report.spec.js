@@ -172,7 +172,7 @@ test.describe('the content-report form', () => {
     await reasonRadio(page, 'Harassment or hate').check()
     await formDialog(page).getByRole('checkbox').check()
     await sendButton(page).click()
-    await expect(formDialog(page).getByText('Add your email so we can tell you what we decide.')).toBeVisible()
+    await expect(formDialog(page).getByText('Add your email so we can write to you if we need more.')).toBeVisible()
     await expect(formDialog(page).getByLabel(/^Your email/)).toBeFocused()
     expect(posts).toEqual([])
 
@@ -211,7 +211,7 @@ test.describe('the content-report form', () => {
     await sendButton(page).click()
 
     await expect(page.getByRole('dialog', { name: 'Report sent' })).toBeVisible()
-    await expect(page.getByRole('dialog', { name: 'Report sent' })).toContainText(`We will send our decision to ${EMAIL}`)
+    await expect(page.getByRole('dialog', { name: 'Report sent' })).toContainText(`If we need more, we may write to ${EMAIL}.`)
     expect(posts).toHaveLength(1)
     const sent = posts[0]
     expect(sent).toMatchObject({ type: 'report', email: EMAIL, source: 'inline', subject: `Content report: ${design.name}` })
@@ -231,7 +231,7 @@ test.describe('the content-report form', () => {
     await gotoCommunity(page)
     await (await firstDesign(page)).button.click()
 
-    await expect(formDialog(page)).toContainText(`Our decision will go to ${me.email}`)
+    await expect(formDialog(page)).toContainText(`If we need more, we may write to ${me.email}.`)
     await expect(formDialog(page).getByLabel(/^Your email/)).toHaveCount(0)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByRole('checkbox').check()

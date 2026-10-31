@@ -109,20 +109,37 @@ export function validateReport({ target, reasonId, details, email, signedIn, goo
   if (!signedIn) {
     const address = typeof email === 'string' ? email.trim() : ''
     if (address && !isContactEmail(address)) errors.email = 'That email address does not look right.'
-    else if (!address && reason && reason.id !== 'illegal') errors.email = 'Add your email so we can tell you what we decide.'
+    else if (!address && reason && reason.id !== 'illegal') errors.email = 'Add your email so we can write to you if we need more.'
   }
   if (!goodFaith) errors.goodFaith = 'Confirm the report is accurate before sending it.'
   return { ok: Object.keys(errors).length === 0, errors }
+}
+
+const REPORTER_LINE = 'Reporter: '
+
+/**
+ * Whether the address on a stored report should be shown as unverified: every
+ * report, unless its message says it was sent signed in. The server takes the
+ * address as typed (the route has no session), so the signed-in line only
+ * narrows the label; anything without it, including a hand-made request, reads
+ * as unverified.
+ */
+export function isUnverifiedReporter(item) {
+  if (!item || item.type !== 'report') return false
+  // Only the header lines count; the reporter's own text comes after "Details:".
+  const header = String(item.message || '').split('\nDetails:')[0]
+  return !new RegExp(`^${REPORTER_LINE}signed in$`, 'm').test(header)
 }
 
 /**
  * The message body: the same lines every time, so a reviewer scanning the
  * queue reads the reason and the item first and the free text last.
  */
-export function buildReportMessage({ target, reasonId, details }) {
+export function buildReportMessage({ target, reasonId, details, signedIn = false }) {
   const reason = reasonById(reasonId)
   const lines = [
     'CONTENT REPORT',
+    `${REPORTER_LINE}${signedIn ? 'signed in' : 'signed out'}`,
     `Reason: ${reason ? `${reason.label} (${reason.id})` : 'not given'}`,
     `Item: ${target.name}`,
     `Kind: ${target.kind}`,
@@ -146,7 +163,7 @@ export function buildReportPayload({ target, reasonId, details, email, accountEm
   return {
     type: 'report',
     subject: reportSubject(target),
-    message: buildReportMessage({ target, reasonId, details }),
+    message: buildReportMessage({ target, reasonId, details, signedIn: !!accountEmail }),
     email: (accountEmail || (typeof email === 'string' ? email.trim() : '')).slice(0, CONTACT_EMAIL_MAX),
     source: 'inline',
   }

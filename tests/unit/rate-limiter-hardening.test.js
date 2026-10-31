@@ -11,7 +11,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { clientIp, consume, normaliseIp } from '../../api/_lib/rateLimit.js'
-import { handleSupport, MAIL_CAP } from '../../api/support.js'
+import {
+  handleSupport, MAIL_CAP, MAIL_CAP_NOTICE, REPORT_MAIL_CAP, REPORT_MAIL_CAP_NOTICE, mailCapFor,
+} from '../../api/support.js'
 
 /** A Firestore stand-in with the transaction shape the limiter uses. */
 function limiterDb({ error = null } = {}) {
@@ -204,6 +206,8 @@ function supportDb() {
     stored: () => [...docs.keys()].filter((k) => k.startsWith('feedback/')).length,
     // How many emails the site-wide cap has counted.
     capCount: () => [...docs.entries()].find(([k]) => k.startsWith('rl/support-mail-global_'))?.[1].count || 0,
+    // How many emails the separate content-report allowance has counted.
+    reportCapCount: () => [...docs.entries()].find(([k]) => k.startsWith('rl/support-mail-report_'))?.[1].count || 0,
     collection: (name) => ({
       doc: (id) => ({
         id,
@@ -246,6 +250,7 @@ function withEmail(t) {
   return {
     // Emails about a visitor's message, and the "cap reached" notices, kept apart.
     emails: () => resend().filter((m) => !isNotice(m)).length,
+    sent: () => resend().filter((m) => !isNotice(m)),
     notices: () => resend().filter(isNotice),
   }
 }
@@ -298,6 +303,57 @@ test('the 31st and 32nd support messages in an hour are stored and confirmed but
   assert.match(notices[0].html, /30/)
   // Nothing a visitor wrote may reach the notice.
   assert.doesNotMatch(JSON.stringify(notices[0]), /Report 3[12]|Something broke/)
+})
+
+test('reports have their own email allowance, apart from bug and feedback traffic', () => {
+  assert.notEqual(REPORT_MAIL_CAP.bucket, MAIL_CAP.bucket)
+  assert.notEqual(REPORT_MAIL_CAP_NOTICE.bucket, MAIL_CAP_NOTICE.bucket)
+  assert.equal(mailCapFor('report').cap, REPORT_MAIL_CAP)
+  for (const type of ['bug', 'feature', 'general', 'help']) assert.equal(mailCapFor(type).cap, MAIL_CAP, type)
+})
+
+test('a spent site-wide cap does not stop a report being emailed, and reports do not spend it', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+
+  for (let n = 1; n <= 31; n += 1) await send(db, n)
+  assert.equal(mail.emails(), 30, 'the site-wide cap did not fill first')
+  const before = mail.emails()
+
+  const report = await send(db, 100, { type: 'report', subject: 'Content report: x' })
+  assert.equal(report.code, 200)
+  assert.equal(mail.emails(), before + 1, 'a report was held back by the bug and feedback cap')
+  assert.equal(db.capCount(), 30, 'a report spent the site-wide allowance')
+  assert.equal(db.reportCapCount(), 1)
+})
+
+test('a report past its own allowance is stored, confirmed and not emailed, with its own notice', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+
+  const replies = []
+  for (let n = 1; n <= REPORT_MAIL_CAP.limit + 2; n += 1) replies.push(await send(db, n, { type: 'report' }))
+
+  assert.ok(replies.every((r) => r.code === 200 && r.body.ok === true))
+  assert.equal(db.stored(), REPORT_MAIL_CAP.limit + 2)
+  assert.equal(mail.emails(), REPORT_MAIL_CAP.limit)
+  assert.equal(db.capCount(), 0, 'reports counted against the site-wide allowance')
+  const notices = mail.notices()
+  assert.equal(notices.length, 1)
+  assert.match(notices[0].subject, /Report email cap reached/)
+  assert.doesNotMatch(JSON.stringify(notices[0]), /Something broke/)
+})
+
+test('a subject with line breaks reaches the email on one line', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+  await send(db, 1, { subject: 'first\r\nBcc: someone@example.test' })
+  const [sent] = mail.sent()
+  assert.match(sent.subject, /^\[UIL4B bug\] first Bcc: someone@example\.test$/)
+  assert.doesNotMatch(sent.subject, /[\r\n]/)
 })
 
 test('the notice is sent once per hour, not once per refused message', async (t) => {
