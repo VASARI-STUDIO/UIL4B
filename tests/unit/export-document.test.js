@@ -25,6 +25,11 @@ import {
   requestExportDocument, documentDesign, withPrintBootstrap, reservePrintWindow, showInPrintWindow, releasePrintWindow,
 } from '../../src/utils/exportDocument.js'
 
+// The Pro documents the server builds. The app-ready bundle is Pro too, but it is
+// zipped in the browser (utils/appBundle.js), so it has no server builder.
+const CLIENT_BUILT = new Set(['app-bundle'])
+const serverPro = () => proOnlyFormats().filter((f) => !CLIENT_BUILT.has(f.id))
+
 const DESIGN = {
   palette: { base: '#1F4B8E', harmony: 'analogous', colors: ['#1F4B8E', '#2E7BB8', '#3FA9A0', '#C7D9E8', '#0D2540'] },
   fonts: { heading: { family: 'Space Grotesk', weight: 700 }, body: { family: 'Inter', weight: 400 } },
@@ -80,20 +85,20 @@ const ask = async (token, body, deps) => {
 function spyBuilders() {
   const loaded = []
   const table = {}
-  for (const f of proOnlyFormats()) {
+  for (const f of serverPro()) {
     table[f.id] = async () => { loaded.push(f.id); return () => `<html>${f.id}</html>` }
   }
   return { loaded, table }
 }
 
 test('every Pro format has a server builder, and the builders are exactly the Pro formats', () => {
-  const pro = proOnlyFormats().map((f) => f.id).sort()
+  const pro = serverPro().map((f) => f.id).sort()
   assert.ok(pro.length >= 2, 'the export table lost its Pro documents')
   assert.deepEqual(Object.keys(BUILDERS).sort(), pro,
     'a Pro format with no server builder cannot be exported, and a builder for a non-Pro format would be dead code')
 })
 
-for (const format of proOnlyFormats().map((f) => f.id)) {
+for (const format of serverPro().map((f) => f.id)) {
   test(`${format}: a signed-out caller gets 401 and no document`, async () => {
     const { deps } = fakeDeps()
     const res = await ask(null, { format, design: DESIGN }, deps)
@@ -230,7 +235,7 @@ function templateSpy() {
   const loaded = []
   const built = []
   const table = {}
-  for (const f of proOnlyFormats()) {
+  for (const f of serverPro()) {
     table[f.id] = async () => {
       loaded.push(f.id)
       return (d, o) => { built.push({ format: f.id, template: o.template }); return `<html>${f.id}</html>` }
@@ -350,7 +355,7 @@ test('more than MAX_COLOURS colours is a 400 too_many_colours, before any genera
   const { deps } = fakeDeps({ builders: table })
 
   const over = { ...DESIGN, palette: { ...DESIGN.palette, colors: colours(MAX_COLOURS + 1) } }
-  for (const format of proOnlyFormats().map((f) => f.id)) {
+  for (const format of serverPro().map((f) => f.id)) {
     const res = await ask('tok-pro', { format, design: over }, deps)
     assert.equal(res.code, 400, `${format}: ${MAX_COLOURS + 1} colours were not refused`)
     assert.equal(res.body.code, 'too_many_colours')

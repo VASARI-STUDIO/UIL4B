@@ -69,10 +69,13 @@ export const EXPORT_FORMATS = Object.freeze([
   Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A Tailwind v4 @theme file: your colours, interface roles, fonts and type sizes as utilities.', live: true, group: 'tokens', option: 'Tailwind', action: 'Export Tailwind theme' }),
   Object.freeze({ id: 'contrast', credit: false, name: 'Contrast pairs CSV', desc: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result. Opens in any spreadsheet.', live: true, group: 'tokens', option: 'Contrast CSV', action: 'Export contrast pairs' }),
   Object.freeze({ id: 'contrast-json', credit: false, name: 'Contrast pairs JSON', desc: 'The same contrast pairs as JSON, with the ratio as a number and each WCAG result as a true or false.', live: true, group: 'tokens', option: 'Contrast JSON', action: 'Export contrast pairs' }),
+  // The app-ready zip: files for Figma, Adobe, Affinity, Procreate and code, one folder per app. Built in the browser
+  // (utils/appBundle.js), so no server document stands behind this Pro gate.
+  Object.freeze({ id: 'app-bundle', name: 'App-ready bundle', desc: 'Figma variables, Adobe and Affinity swatches, Procreate palette and code tokens, in folders by app, with a README', live: true, pro: true, group: 'apps', option: 'ZIP', action: 'Export app-ready bundle' }),
   Object.freeze({ id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.', coming: 'an asset bundle' }),
 ])
 
-// THE FIVE THINGS THE PANEL OFFERS, in the order it lists them. Each is one
+// THE SIX THINGS THE PANEL OFFERS, in the order it lists them. Each is one
 // deliverable; where it comes in more than one file type, its formats above
 // share its `group` and the panel shows them as a switch (`option` is the
 // switch label, `action` the primary button's words). The ids never change, so
@@ -87,6 +90,7 @@ export const EXPORT_GROUPS = Object.freeze([
   Object.freeze({ id: 'tokens', name: 'Design tokens', desc: 'Your palette, tints and type as code.' }),
   Object.freeze({ id: 'book', name: 'Design system book', desc: 'An A4 book of your system, as a PDF or as 2K page images.', preview: 'book' }),
   Object.freeze({ id: 'guidelines', name: 'Brand guidelines', desc: 'Your logo, colour and type as 16:9 slides.', preview: 'guidelines' }),
+  Object.freeze({ id: 'apps', name: 'App-ready bundle', desc: 'Your colours and tokens as files for Figma, Adobe, Affinity, Procreate and code, in one zip.' }),
 ])
 
 // The built formats of one row, in the order the switch shows them.

@@ -41,6 +41,7 @@ const FILE_COPY = {
   tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
   contrast: { label: 'Contrast CSV', blurb: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result.', action: 'Export contrast pairs' },
   'contrast-json': { label: 'Contrast JSON', blurb: 'The same pairs as JSON, with each WCAG result as true or false.', action: 'Export contrast pairs' },
+  'app-bundle': { label: 'ZIP', blurb: 'Figma variables, Adobe and Affinity swatches, a Procreate palette and code tokens, in folders by app, with a README.', action: 'Export app-ready bundle' },
 }
 
 // Where the free credit sits in each code file, for the dock line. The contrast

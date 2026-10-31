@@ -3,7 +3,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildTokensCss, buildTokensJson } from '../../src/utils/designTokens.js'
-import { PREVIEW_LINES, freePreviewKey, previewLines } from '../../src/utils/exportFreePreview.js'
+import { PREVIEW_LINES, bundleTreeLines, freePreviewKey, previewLines } from '../../src/utils/exportFreePreview.js'
+import { appBundleEntries } from '../../src/utils/appBundle.js'
 
 const design = {
   name: 'Harbour',
@@ -52,4 +53,44 @@ test('the kit template is part of the key only for the kit', () => {
   assert.notEqual(freePreviewKey({ ...base, template: 'manual' }), freePreviewKey(base))
   const code = { ...base, kind: 'code' }
   assert.equal(freePreviewKey({ ...code, template: 'manual' }), freePreviewKey(code))
+})
+
+// ── The app-ready bundle's folder tree ──────────────────────────────────────
+
+test('the bundle preview lists each app folder with its files, from the real entries', () => {
+  const entries = appBundleEntries(design, { date: '2026-10-31', name: 'Harbour' })
+  const lines = bundleTreeLines(entries.map((e) => e.path))
+  assert.deepEqual(lines, [
+    '00 Start here/',
+    '  README.md',
+    '01 Figma/',
+    '  1-primitives.tokens.json',
+    '  2-semantic.light.tokens.json',
+    '  2-semantic.dark.tokens.json',
+    '02 Adobe/',
+    '  harbour-colours.ase',
+    '  harbour-colours.aco',
+    '03 Other design apps/',
+    '  Affinity/harbour-colours.ase',
+    '  Procreate/harbour-colours.ase',
+    '04 Code/',
+    '  css/harbour.tokens.css',
+    '  tokens/harbour.tokens.json',
+    '',
+    'How to import.md in each app folder',
+  ])
+  assert.ok(lines.length <= PREVIEW_LINES, 'the tree fits the lines the preview box is sized for')
+})
+
+test('the bundle preview handles an empty or odd list without throwing', () => {
+  assert.deepEqual(bundleTreeLines([]), [])
+  assert.deepEqual(bundleTreeLines(undefined), [])
+  assert.deepEqual(bundleTreeLines(['root', 'root/', 'root/folder']), [])
+  assert.deepEqual(bundleTreeLines(['root/a/How to import.md']), ['', 'How to import.md in each app folder'])
+})
+
+test('the bundle preview is drawn from the project name, so a rename draws it again', () => {
+  const base = { kind: 'bundle', watermark: true, projectName: 'Harbour', design, project: 'Harbour' }
+  assert.notEqual(freePreviewKey({ ...base, project: 'Quay' }), freePreviewKey(base))
+  assert.equal(freePreviewKey({ ...base, project: 'Quay', kind: 'code', file: 'css' }), freePreviewKey({ ...base, kind: 'code', file: 'css' }))
 })

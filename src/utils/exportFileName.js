@@ -62,6 +62,7 @@ const FORMAT_FILES = Object.freeze({
   tailwind: Object.freeze(['tailwind', 'css']),
   contrast: Object.freeze(['contrast-pairs', 'csv']),
   'contrast-json': Object.freeze(['contrast-pairs', 'json']),
+  'app-bundle': Object.freeze(['app-ready', 'zip']),
 })
 
 /** True for an export format id this module can name. */
