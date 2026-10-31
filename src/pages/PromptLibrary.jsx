@@ -11,7 +11,7 @@ import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { TAG_CATEGORIES } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
 import { onAccountApplied } from '../utils/accountEvents'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryToolbar from '../components/library/LibraryToolbar'
@@ -314,6 +314,8 @@ export default function PromptLibrary({ onCopy, toast }) {
   // is actually locked. `lockedCount` is 0 for a Pro viewer, so the block
   // disappears for them without a second condition.
   const lockedBlockVisible = isCommunity && !proPending && lockedCount > 0 && !q.trim() && !activeCategory
+  // Where the viewer stands on the ladder, in words, for the wall and the close.
+  const ladderLine = tierSentence({ tier, shown: openCommunity.length, total: communityRows.length, eligible, noun: 'community prompts' })
 
   const filtered = sourceList.filter(p => {
     if (activeCategory) {
@@ -381,9 +383,11 @@ export default function PromptLibrary({ onCopy, toast }) {
           {/* The number of prompts THIS TAB WILL SHOW, not the size of the
               library behind it. Its sibling counts the prompts you have, so a
               badge reading 20 over a grid of three would be the one number on
-              the page that disagrees with the page. How many are withheld is
-              the wall's job, and the wall states it exactly. */}
-          <span className="pl-tab-count">{browsableCommunity.length}</span>
+              the page that disagrees with the page. While anything is
+              withheld, neither number is the right one, so the badge stands
+              down: how many are withheld is the wall's job, and the wall
+              states it exactly. */}
+          {lockedCount === 0 && <span className="pl-tab-count">{browsableCommunity.length}</span>}
         </button>
       </div>
 
@@ -471,12 +475,16 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       ) : (
         isCommunity ? (
-          /* LibraryEmpty announces empty results and lets visitors clear filters. */
-          <LibraryEmpty
-            className="pl-empty"
-            title="No prompts match your search"
-            onClear={clearFilters}
-          />
+          /* LibraryEmpty announces empty results and lets visitors clear filters.
+             While a Pro library is on its way the status block below speaks
+             instead: the full set may well match. */
+          proPending ? null : (
+            <LibraryEmpty
+              className="pl-empty"
+              title="No prompts match your search"
+              onClear={clearFilters}
+            />
+          )
         ) : (
           <div className="pl-empty">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
@@ -512,7 +520,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           <div className="lockt-cta">
             <div className="lockt-cta-copy">
               <p className="lockt-cta-head">{`Another ${accountAdds} community ${accountAdds === 1 ? 'prompt' : 'prompts'} with a free account`}</p>
-              <p className="lockt-cta-body">{`A free account opens ${browsableCommunity.length + accountAdds} of the ${communityRows.length} community prompts. Pro opens all ${communityRows.length}.`}</p>
+              <p className="lockt-cta-body">{ladderLine}</p>
             </div>
             <button
               type="button"
@@ -566,12 +574,24 @@ export default function PromptLibrary({ onCopy, toast }) {
           busy={authLoading}
         />
       ) : !lockedBlockVisible && !proPending && lockedCount > 0 ? (
-        <GalleryCloseCta
-          className="pl-cta"
-          detail={`Free covers ${openCommunity.length} of the ${communityRows.length} community prompts. Pro opens all of them.`}
-          action="See what Pro includes"
-          to="/plans"
-        />
+        // A signed-out visitor's next step is the free account, with the same
+        // numbers the wall states; a free account's next step is Pro.
+        tier === 'anonymous' ? (
+          <GalleryCloseCta
+            className="pl-cta"
+            detail={ladderLine}
+            action="Create your free account"
+            onAction={() => requireLogin('browse more of the community prompts', { free: true, signup: true })}
+            busy={authLoading}
+          />
+        ) : (
+          <GalleryCloseCta
+            className="pl-cta"
+            detail={ladderLine}
+            action="See what Pro includes"
+            to="/plans"
+          />
+        )
       ) : null}
 
       {/* Detail Modal */}
