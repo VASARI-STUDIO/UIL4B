@@ -108,7 +108,7 @@ test.describe('hover styles', () => {
 })
 
 // ── 3b: the quiet links' touch hit area ──────────────────────────────────────
-const QUIET = [['Tools', 67], ['Pricing', 82], ['On mobile', 98]]
+const QUIET = ['Tools', 'Pricing', 'On mobile']
 
 const quietBoxes = (page) => page.locator('.spnav-quiet-link').evaluateAll((els) => els.map((el) => {
   const r = el.getBoundingClientRect()
@@ -132,10 +132,11 @@ test.describe('quiet links', () => {
 
     const drawn = await quietBoxes(touch.page)
     const base = await quietBoxes(mouse.page)
-    expect(drawn.map((b) => b.text)).toEqual(QUIET.map(([t]) => t))
+    expect(drawn.map((b) => b.text)).toEqual(QUIET)
     drawn.forEach((b, i) => {
       expect(b.h, `${b.text} changed height`).toBe(32)
-      expect(Math.abs(b.w - QUIET[i][1]), `${b.text} is not about ${QUIET[i][1]}px wide`).toBeLessThan(1)
+      // Each link is wider than the 44px target, so only its height grows and neighbouring areas never overlap.
+      expect(b.w, `${b.text} is narrower than 44px`).toBeGreaterThan(44)
       // Layout is unchanged by the hit area: every edge matches the mouse layout.
       for (const k of ['x', 'y', 'w', 'h']) expect(b[k], `${b.text} ${k} moved on touch`).toBeCloseTo(base[i][k], 2)
     })
