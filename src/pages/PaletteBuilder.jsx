@@ -1416,11 +1416,31 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Focus moves into the panel on open. These read `variations`, so they sit below
   // that memo: a const read before its declaration throws.
   const hasRows = exploring || variations.length > 0
+  // Only an opening (or a switch between Suggest and Explore) moves focus. The
+  // close button stands in while the rows render; once a tab or row has focus,
+  // or the person has moved focus out of the panel (to an adjust slider, say),
+  // the rows coming and going as the board changes leave focus where it is.
+  const galleryFocusRef = useRef({ pending: false, standIn: null })
   useEffect(() => {
-    if (!galleryOpen) return
+    if (galleryOpen) galleryFocusRef.current = { pending: true, standIn: null }
+  }, [galleryOpen, exploring])
+  useEffect(() => {
+    const pass = galleryFocusRef.current
+    if (!galleryOpen || !pass.pending) return
+    // Focus left the stand-in: the person chose somewhere else, so the arrival is over.
+    if (pass.standIn && document.activeElement !== pass.standIn) { pass.pending = false; return }
     const wrap = galleryRef.current
-    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row') || wrap?.querySelector('.plb-pop-x')
-    target?.focus({ preventScroll: true })
+    const row = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row')
+    if (row) {
+      pass.pending = false
+      row.focus({ preventScroll: true })
+      return
+    }
+    const close = wrap?.querySelector('.plb-pop-x')
+    if (close) {
+      pass.standIn = close
+      close.focus({ preventScroll: true })
+    }
   }, [galleryOpen, exploring, hasRows])
   // On a phone, applying a row (a variation, a palette or a brand) drops the sheet
   // from Full to Peek so the board shows the change, then brings the applied row
