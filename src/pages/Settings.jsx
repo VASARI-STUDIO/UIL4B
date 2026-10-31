@@ -17,7 +17,7 @@ import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useVerificationRecheck from '../hooks/useVerificationRecheck'
-// Settings → Subscription says exactly what /plans says: the same lines, the
+// Settings → Plan and billing says exactly what /plans says: the same lines, the
 // same cadences, the same per-month amounts and trial terms, from the one
 // module /plans reads. See src/config/planFacts.js for why.
 import {
@@ -1916,7 +1916,7 @@ export default function Settings({ toast }) {
           {/* Privacy */}
           <section id="set-privacy" className="settings-section" role="tabpanel" aria-labelledby="settab-privacy" hidden={active !== 'privacy'}>
             <div className="settings-section-h">
-              <h2 tabIndex={-1}>Privacy &amp; legal</h2>
+              <h2 tabIndex={-1}>Privacy</h2>
               <p>What we keep, where it lives, and who else sees it.</p>
             </div>
             <div className="settings-card">
