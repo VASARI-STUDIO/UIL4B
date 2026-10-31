@@ -11,11 +11,12 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     // The tool opens on its toolbar label, and its controls are one
-    // named side panel (the drawn STOPS / SELECTED STOP / GEOMETRY card).
+    // named side panel (the drawn RANDOM / STOPS / STOP N / SHAPE card).
     await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
     const panel = page.getByRole('complementary', { name: 'Gradient controls' })
     await expect(panel).toBeVisible()
-    for (const name of ['Stops', 'Selected stop', 'Geometry']) {
+    // The selected stop's section is named for it ("Stop 1"); Geometry is now Shape.
+    for (const name of ['Random', 'Stops', 'Stop 1', 'Shape']) {
       await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
     }
 
@@ -64,11 +65,16 @@ test.describe('Gradient Generator workbench resilience', () => {
     while (await page.locator('.grd-stop').count() < 12) await add.click()
     await expect(page.locator('.grd-stop')).toHaveCount(12)
     // At the ceiling the button stays drawn, so the panel does not change
-    // height; it is disabled and says why.
-    await expect(add).toHaveCount(0)
-    const full = page.getByRole('button', { name: '12 stops is the most' })
-    await expect(full).toBeVisible()
-    await expect(full).toBeDisabled()
+    // height; it is aria-disabled and its title says why. (Its accessible name
+    // stays "Add a stop": the aria-label wins over the title.)
+    await expect(add).toHaveCount(1)
+    await expect(add).toHaveAttribute('aria-disabled', 'true')
+    await expect(add).toHaveAttribute('title', '12 stops is the most')
+    await expect(add).toBeDisabled()
+    // Pressing it still does not add a 13th stop. force: Playwright treats an
+    // aria-disabled button as not actionable, and a real press is the point.
+    await add.click({ force: true })
+    await expect(page.locator('.grd-stop')).toHaveCount(12)
   })
 
   test('clipboard denial is recoverable and the mobile canvas stays contained', async ({ page }) => {

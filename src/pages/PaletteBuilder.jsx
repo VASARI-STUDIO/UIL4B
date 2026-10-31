@@ -35,7 +35,7 @@ import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 // The preview dialog: the scene list and the role legend. Its own chunk, loaded
 // when Preview is first pointed at or opened (previewLoader.js).
-import { DEFAULT_SCENE } from '../data/palettePreviewScenes'
+import { DEFAULT_SCENE, PREVIEW_SCENES, openingScene } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import HarmonyWheel from '../components/palette/HarmonyWheel'
@@ -84,6 +84,8 @@ function returnMenuFocus(el, pointer) {
   el.focus({ preventScroll: true, get focusVisible() { supported = true; return false } })
   if (!supported || el.matches(':focus-visible')) el.blur()
 }
+// A brand's tick in Explore shares `importedGalleryId` with the community palettes, so its id is prefixed.
+const brandTickId = (b) => `brand:${b.id}`
 // The phone layout's breakpoint (the same one ToolLayout's overflow uses).
 const PHONE_QUERY = '(max-width: 767px)'
 function usePhone() {
@@ -979,7 +981,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // menu shows the same list with the active row ticked; any real edit to the
   // palette clears both so the list regenerates off the new colours.
   const [varBase, setVarBase] = useState(null)
-  // { kind: 'variation' | 'brand', id, name, before, after, mine } while the board shows something applied
+  // { kind: 'variation', id, name, before, after, mine } while the board shows something applied
   // from the Suggest panel; `suggestSnapRef` holds the board as it was before the first apply.
   const [panelApplied, setPanelApplied] = useState(null)
   const suggestSnapRef = useRef(null)
@@ -1118,6 +1120,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
   const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
+  // The last preview viewed this visit: closing and reopening returns to it. Not saved, so a reload starts on the default.
+  const [lastScene, setLastScene] = useState(DEFAULT_SCENE)
   const [saveName, setSaveName] = useState('')
   // The save runs here, not in doSave: right after the sign-in resolves, doSave's
   // closure still holds the signed-out `saveProject`, which throws "Sign in to
@@ -1190,8 +1194,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // with tests/user-sim/12-ui-system-builder.spec.js still describing the
   // contract; re-entering the tool means giving it its own route, not putting
   // this button back.
-  // Combined community-gallery popup (Discover hand-in): one large popup with
-  // Community / Variations / Brands tabs, applying a pick straight onto the board.
+  // The two floating panels share one slot. Suggest is 'variations' and has no
+  // tabs. Explore has two, 'community' (Palettes) and 'brands'. A pick applies
+  // straight onto the board.
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
   // The toolbar button that opened the gallery, or null when it was opened from
   // the Extra tools menu, which has no button on screen to sit under.
@@ -1222,7 +1227,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // button that opened it, or Extra tools, when it closes with focus nowhere.
   const galleryOpenerRef = useRef({ el: null, pointer: false })
   const wasGalleryOpen = useRef(false)
-  const exploring = galleryTab === 'community'
+  const exploring = galleryTab !== 'variations'
   useEffect(() => {
     if (!galleryOpen) return
     const wrap = galleryRef.current
@@ -1350,9 +1355,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Freeze a snapshot the first time the variations tab is viewed (or after
   // invalidation). The variations grid now lives inside the combined Gallery
   // popup, so the snapshot freezes when that popup is open on the variations tab.
-  // While a brand or variation is applied, the board is not the user's own: the
-  // list is derived from the Suggest snapshot ("mine"), so opening Variations
-  // after a brand shows variations of the user's palette, not of the brand.
+  // While a variation is applied, the board is not the user's own: the list is
+  // derived from the Suggest snapshot ("mine"), so it stays the variations of
+  // the user's palette, not of the variation on the board.
   useEffect(() => {
     if (galleryOpen && galleryTab === 'variations' && !varBase) {
       setVarBase(suggestSnapRef.current?.mine || applyAdjust(colors, adjust))
@@ -2189,7 +2194,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const pickVariation = (v, gated) => {
     if (gated) { openVariationGate(); return }
-    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) return
+    // The applied card is a toggle: pressing it again puts the user's palette back.
+    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) { backToMine(); return }
     if (isNoopApply(v.colors)) return
     const snap = panelSnap()
     if (!applyPalette(v.colors, `Applied variation: ${v.label}`, { quiet: true })) return
@@ -2201,9 +2207,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // next real edit.
     skipVarInvalidate.current = true
     setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine })
-    setLiveMsg(`${v.label} applied. Back to my palette undoes it.`)
+    setLiveMsg(`${v.label} applied. Select it again, or Back to my palette, to undo it.`)
   }
   // Put the board back as the first apply found it: colours, lens, seed and system.
+  // Called from the applied card (pressing it again) and from the Back button.
   const backToMine = () => {
     const snap = suggestSnapRef.current
     if (!snap) return
@@ -2216,10 +2223,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setHarmony(snap.harmony)
     suggestSnapRef.current = null
     setPanelApplied(null)
-    setLiveMsg('Your palette is back.')
-    // The button disables itself now it has nothing left to undo, which would
-    // drop focus to the page. The selected tab is the next stop in the dialog.
-    document.getElementById(`plb-sg-tab-${galleryTab}`)?.focus({ preventScroll: true })
+    setLiveMsg('Back to your palette')
+    // The Back button disables itself now it has nothing left to undo, which
+    // would drop focus to the page. Focus goes to the card that was applied
+    // (where it already is when the card itself was pressed), else to Close.
+    const target = (panelApplied && document.getElementById(`plb-sg-var-${panelApplied.id}`))
+      || galleryRef.current?.querySelector('.plb-pop-x')
+    target?.focus({ preventScroll: true })
   }
   const compareVariation = (v) => {
     setGalleryOpen(false)
@@ -2240,7 +2250,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Any edit afterwards clears the tick (see the edit-detection effect) because
   // the board is now a derivative. Enabling a palette applies it directly — no
   // info popup — so the whole gallery swatch reads as a one-click select.
-  const importGalleryPalette = (cols, name, id) => {
+  // A brand from the Brands tab goes through here too (`system` is the colour
+  // system it carries): the same snapshot, tick and revert, with the system
+  // restored along with the colours.
+  const importGalleryPalette = (cols, name, id, system = null) => {
     setColPanel(null)
     if (importedGalleryId === id && preImportRef.current) {
       const snap = preImportRef.current
@@ -2248,8 +2261,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setAdjust(snap.adjust)
       setSeed(snap.seed)
       setSeedInput(snap.seedInput)
-      // Present when "mine" was taken from the Suggest snapshot, where a brand
-      // may have changed the system as well.
+      // A brand changes the colour system as well, so the snapshot carries it.
       if (snap.harmony) setHarmony(snap.harmony)
       preImportRef.current = null
       importedSigRef.current = null
@@ -2262,8 +2274,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // import. Switching gallery A → B must NOT overwrite it, so revert always
     // lands on the user's work, not the previously-selected gallery item.
     //
-    // After a variation or brand was applied from Suggest, the board is not the
-    // user's own any more. The Suggest snapshot is, so "mine" is taken from it:
+    // After a variation was applied from Suggest, the board is not the user's
+    // own any more. The Suggest snapshot is, so "mine" is taken from it:
     // unticking an Explore card then lands on the user's palette, not on
     // Variation X. An Explore import is a real change to the board, so it ends
     // the Suggest session (the snapshot, the tick and Back all clear below).
@@ -2271,10 +2283,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const mine = suggestSnapRef.current
     const original = preImportRef.current || (mine
       ? { colors: mine.colors, adjust: mine.adjust, seed: mine.seed, seedInput: mine.seedInput, harmony: mine.harmony }
-      : { colors, adjust, seed, seedInput })
+      : { colors, adjust, seed, seedInput, harmony })
     // A refused apply (fewer than two valid colours) changes nothing, and must
-    // not leave a snapshot or a cleared Suggest session behind.
+    // not leave a snapshot, a changed system or a cleared Suggest session behind.
     if (!applyPalette(cols, `Loaded ${name}`)) return
+    if (system) setHarmony(system)
     preImportRef.current = original
     importedSigRef.current = null // let the effect record the imported baseline
     suggestSnapRef.current = null
@@ -2304,21 +2317,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       openProModal({ gate: 'palette-brand-system', eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
       return
     }
-    if (panelApplied?.kind === 'brand' && panelApplied.id === b.id) return
     // Selecting a brand applies its WHOLE system. Pro users keep the brand's
     // system; free users get the exact colours on the free default so the brand
     // can't smuggle in the paid harmony engine when they start editing.
-    const sys = resolveSystem(b.system || 'custom')
-    if (sys === harmony && isNoopApply(b.colors)) return
-    const snap = panelSnap()
-    // The system is set only if the colours go through, so a brand with fewer
-    // than two valid colours changes nothing at all.
-    if (!applyPalette(b.colors, `Loaded the ${b.name} palette`, { quiet: true })) return
-    setHarmony(sys)
-    keepPanelSnap(snap)
-    skipVarInvalidate.current = true
-    setPanelApplied({ kind: 'brand', id: b.id, name: b.name, before: snap.before, after: null, mine: snap.mine })
-    setLiveMsg(`${b.name} applied. Back to my palette undoes it.`)
+    // A brand is an Explore import: the card toggles, and its own id (prefixed,
+    // so it can never match a community palette's) is what gets ticked.
+    importGalleryPalette(b.colors, `the ${b.name} palette`, brandTickId(b), resolveSystem(b.system || 'custom'))
   }
 
   const cssExport = useMemo(() => {
@@ -2706,13 +2710,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       />
     </span>
   )
-  // Secondary actions move into Extra tools when the toolbar runs out of room.
-  // Left of the divider is what builds the board; right of it is what you do
-  // with it next. Departure order is lowest priority first, then the item
-  // furthest along the row, so on a phone only Undo, Randomise and Suggest stay.
-  // Arrow keys, Home and End move between the two Suggest tabs (focus follows).
-  const onSuggestTabKey = (e) => {
-    const tabs = ['variations', 'brands']
+  // Arrow keys, Home and End move between Explore's two tabs (focus follows).
+  const onExploreTabKey = (e) => {
+    const tabs = ['community', 'brands']
     const at = tabs.indexOf(galleryTab)
     let to = -1
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (at + 1) % tabs.length
@@ -2722,11 +2722,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (to < 0) return
     e.preventDefault()
     setGalleryTab(tabs[to])
-    document.getElementById(`plb-sg-tab-${tabs[to]}`)?.focus({ preventScroll: true })
+    document.getElementById(`plb-ex-tab-${tabs[to]}`)?.focus({ preventScroll: true })
   }
   const historyButton = (kind) => (kind === 'undo'
     ? <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
     : <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />)
+  const openPreview = () => {
+    closeAllMenus()
+    setPreview({ mode: 'light', scene: openingScene(lastScene, isPro && planKnown), compare: null })
+  }
+  // Secondary actions move into Extra tools when the toolbar runs out of room.
+  // Left of the divider is what builds the board; right of it is what you do
+  // with it next. Departure order is lowest priority first, then the item
+  // furthest along the row, so on a phone only Undo, Randomise and Suggest stay.
   const toolbarItems = [
     {
       id: 'back', priority: 2,
@@ -2758,7 +2766,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       id: 'suggest', priority: 5, align: 'end',
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && !exploring ? closeAllMenus() : openGallery('variations', e.currentTarget, e.detail > 0))} aria-label="Suggest variations and brands" title="Suggest variations and brands" aria-haspopup="dialog" aria-expanded={galleryOpen && !exploring}>Suggest</ToolButton>
+          <ToolButton icon="magic-wand" collapse onClick={(e) => (galleryOpen && !exploring ? closeAllMenus() : openGallery('variations', e.currentTarget, e.detail > 0))} aria-label="Suggest variations" title="Suggest variations" aria-haspopup="dialog" aria-expanded={galleryOpen && !exploring}>Suggest</ToolButton>
         </span>
       ),
       menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
@@ -2767,17 +2775,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       id: 'explore', priority: 2, align: 'end',
       render: () => (
         <span className="plb-menuwrap">
-          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && exploring ? closeAllMenus() : openGallery('community', e.currentTarget, e.detail > 0))} aria-label="Explore palettes" title="Explore palettes" aria-haspopup="dialog" aria-expanded={galleryOpen && exploring}>Explore</ToolButton>
+          <ToolButton icon="swatches" collapse onClick={(e) => (galleryOpen && exploring ? closeAllMenus() : openGallery('community', e.currentTarget, e.detail > 0))} aria-label="Explore palettes and brands" title="Explore palettes and brands" aria-haspopup="dialog" aria-expanded={galleryOpen && exploring}>Explore</ToolButton>
         </span>
       ),
-      menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') },
+      menu: { label: 'Explore palettes and brands', icon: 'swatches', onSelect: () => openGallery('community') },
     },
+    // Preview is a labelled button on the row where there is room, but it
+    // leaves before Undo, Redo, Randomise and Suggest do (priority 3, under
+    // Redo's 4). On a phone it is an Extra tools row only: a labelled button
+    // does not fit beside those four there. `measure` makes the row measure
+    // again when the phone breakpoint is crossed.
     {
-      id: 'preview', priority: 3, align: 'end',
+      id: 'preview', priority: 3, align: 'end', inline: !phone, measure: phone ? 'phone' : null,
       render: () => (
-        <ToolButton icon="eye" collapse {...warmPreview} onClick={() => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) }} aria-label="Preview on a UI" title="Preview on a UI" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
+        <ToolButton icon="eye" className="plb-preview-btn" {...warmPreview} onClick={openPreview} aria-label="Preview" title="Preview your palette on real designs" aria-haspopup="dialog" aria-expanded={!!preview}>Preview</ToolButton>
       ),
-      menu: { label: 'Preview on a UI', icon: 'eye', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', scene: DEFAULT_SCENE, compare: null }) } },
+      menu: { label: 'Preview', icon: 'eye', onSelect: openPreview },
     },
     // Overflow only — never on the row.
     { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
@@ -3247,34 +3260,34 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           inside it. */}
       {galleryOpen && (
         <div className="plb-menuwrap plb-float" ref={galleryRef}>
-          <div className={exploring ? 'plb-menu plb-galpopup' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes' : 'Suggest'} data-lenis-prevent>
+          <div className={exploring ? 'plb-menu plb-galpopup plb-galpopup--explore' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'} data-lenis-prevent>
             <div className="plb-galpopup-head">
-              <div className="plb-menu-title">{exploring ? 'Explore palettes' : 'Suggest'}</div>
-              {!exploring && (
-                <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Suggest sections" onKeyDown={onSuggestTabKey}>
-                  {['variations', 'brands'].map(tab => (
+              <div className="plb-menu-title">{exploring ? 'Explore palettes and brands' : 'Suggest'}</div>
+              {exploring && (
+                <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
+                  {['community', 'brands'].map(tab => (
                     <button
                       key={tab}
                       type="button"
                       role="tab"
-                      id={`plb-sg-tab-${tab}`}
+                      id={`plb-ex-tab-${tab}`}
                       aria-selected={galleryTab === tab}
-                      aria-controls={galleryTab === tab ? `plb-sg-panel-${tab}` : undefined}
+                      aria-controls={galleryTab === tab ? `plb-ex-panel-${tab}` : undefined}
                       tabIndex={galleryTab === tab ? 0 : -1}
                       className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
                       onClick={() => setGalleryTab(tab)}
                     >
-                      {tab === 'variations' ? 'Variations' : 'Brands'}
+                      {tab === 'community' ? 'Palettes' : 'Brands'}
                     </button>
                   ))}
                 </div>
               )}
-              {/* One Back button, between the tabs and Close in the DOM, so the tab
-                  order is the visual order at every width. Its text shortens to
-                  "Back" (still inside its name) on phones, and only the narrowest
-                  screens get the icon alone. */}
+              {/* Suggest's one Back button sits between the title and Close in the
+                  DOM, so the tab order is the visual order at every width. Its text
+                  shortens to "Back" (still inside its name) on phones, and only the
+                  narrowest screens get the icon alone. */}
               {!exploring && (
-                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={backToMine}>
+                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={() => backToMine()}>
                   <span className="plb-sg-back-text">Back to my palette</span>
                   <span className="plb-sg-back-short" aria-hidden="true">Back</span>
                   <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
@@ -3283,8 +3296,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
             </div>
 
-            {exploring && (
-              <div className="plb-galpopup-body" ref={scrollCue}>
+            {galleryTab === 'community' && (
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-community" aria-labelledby="plb-ex-tab-community">
                 <PaletteGalleryGrid
                   toast={toast}
                   palettes={communityRows}
@@ -3313,8 +3326,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               </div>
             )}
 
-            {!exploring && galleryTab === 'variations' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-variations" aria-labelledby="plb-sg-tab-variations">
+            {!exploring && (
+              <div className="plb-galpopup-body" ref={scrollCue}>
                 {variations.length === 0 ? (
                   <p className="plb-sg-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
                 ) : (
@@ -3332,6 +3345,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                                 <div key={v.id} className={`plb-sg-card${gated ? ' plb-sg-card--locked' : ''}${active ? ' plb-sg-card--on' : ''}`}>
                                   <button
                                     type="button"
+                                    id={`plb-sg-var-${v.id}`}
                                     className="plb-sg-main"
                                     aria-pressed={gated ? undefined : active}
                                     aria-label={gated ? `${v.label}, Pro only. Opens Pro plans.` : `${v.label}: ${v.desc}`}
@@ -3368,15 +3382,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               </div>
             )}
 
-            {!exploring && galleryTab === 'brands' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-sg-panel-brands" aria-labelledby="plb-sg-tab-brands">
-                <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system.</p>
+            {galleryTab === 'brands' && (
+              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-brands" aria-labelledby="plb-ex-tab-brands">
+                <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system. Pick it again to put your palette back.</p>
                 {/* openBrands holds only the rows this viewer may load; a
                     Pro-gated brand's colours never enter the DOM. */}
                 <div className="plb-sg-groups">
                   <div className="plb-sg-grid plb-sg-grid--brands">
                     {openBrands.map(b => {
-                      const active = panelApplied?.kind === 'brand' && panelApplied.id === b.id
+                      const active = importedGalleryId === brandTickId(b)
                       return (
                         <div key={b.id} className={`plb-sg-card plb-sg-card--brand${active ? ' plb-sg-card--on' : ''}`}>
                           <button type="button" className="plb-sg-main" aria-pressed={active} aria-label={b.name} onClick={() => pickBrand(b)}>
@@ -3429,7 +3443,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               </div>
             )}
 
-            {!exploring && galleryTab === 'variations' && panelApplied?.kind === 'variation' && (
+            {!exploring && panelApplied?.kind === 'variation' && (
               <BalanceScoreFoot before={panelApplied.before} after={panelApplied.after} />
             )}
           </div>
@@ -3644,7 +3658,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         <Suspense fallback={null}>
           <PalettePreviewDialog
             preview={preview}
-            onChange={(patch) => setPreview((p) => (p ? { ...p, ...patch } : p))}
+            onChange={(patch) => { if (patch.scene) setLastScene(patch.scene); setPreview((p) => (p ? { ...p, ...patch } : p)) }}
             onClose={closePreview}
             colors={adjusted}
             paletteScore={paletteScore}
@@ -3654,7 +3668,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}
-            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: `See your palette on all ${PREVIEW_SCENES.length} previews, in light and dark.` })}
             onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
           />
         </Suspense>

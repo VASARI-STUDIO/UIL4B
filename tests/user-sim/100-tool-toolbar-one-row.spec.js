@@ -17,7 +17,7 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 // An action's accessible name starts with its label; a disabled one may add a
-// reason after it ("Shuffle from palette — add 2+ colours …").
+// reason after it.
 const startsWith = (s) => new RegExp('^' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 
 const WIDTHS = [320, 360, 390, 480, 640, 768, 900, 1024, 1280, 1440, 1920]
@@ -39,10 +39,10 @@ const TOOLS = [
     overflow: 'Extra tools',
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
-      { row: 'Suggest variations and brands', menu: 'Suggest' },
+      { row: 'Suggest variations', menu: 'Suggest' },
       // Lower-priority buttons (icon-only below 768px): on the row where there is room, else in Extra tools.
-      'Explore palettes',
-      'Preview on a UI',
+      'Explore palettes and brands',
+      'Preview',
       'Undo',
       'Redo',
       'Randomise',
@@ -50,7 +50,9 @@ const TOOLS = [
     selects: ['Colour system', 'Colour vision check'],
     menuOnly: ['Open in Gradient', 'History', 'Reset palette'],
   },
-  { route: '/create/gradient', actions: ['Random', 'Shuffle from palette', 'Reset'], primary: /^Save or share/, title: 'Gradient' },
+  // Back is an icon-only square on the row (named "Back to the previous gradient") and a
+  // text row named "Back" in the overflow.
+  { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, 'Reset'], primary: /^Save or share/, title: 'Gradient' },
   { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker' },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint' },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here.

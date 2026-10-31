@@ -6,7 +6,7 @@
 // Pure: no state, no effects. Colours arrive as --pv-* custom properties from
 // the dialog; the ones this scene works out itself are set on its root.
 import { useMemo } from 'react'
-import { ACTIONS, CARD, CATS, FIGURES, TXNS, amountText, tallyVars } from './Tally.data.js'
+import { ACTIONS, CARD, CATS, FIGURES, LIMITS, TXNS, amountText, tallyVars } from './Tally.data.js'
 import './Tally.css'
 
 const ACTION_ICONS = {
@@ -86,7 +86,7 @@ function Transactions({ pair }) {
             <h3 className="ty-dayname">{g.day}</h3>
             <ul>
               {rows.map((t) => (
-                <li key={t.who} className="ty-tx" data-tone={t.tone}>
+                <li key={t.who} className={t.hover ? 'ty-tx is-hover' : 'ty-tx'} data-tone={t.tone}>
                   <span className="ty-ini">{t.ini}</span>
                   <span className="ty-who">
                     <b>{t.who}</b>
@@ -99,6 +99,54 @@ function Transactions({ pair }) {
           </div>
         )
       })}
+    </section>
+  )
+}
+
+const Icon = ({ children }) => (
+  <svg className="ty-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+)
+
+// The Limits action, shown open. A semantic state needs a word and a shape as
+// well as a colour, so the toast and the error each carry an icon.
+function Limits() {
+  return (
+    <section className="ty-limits" data-role="neutral">
+      <div className="ty-toast" data-role="success">
+        <Icon><circle cx="12" cy="12" r="9" /><path d="m8 12.5 3 3 5-6" /></Icon>
+        {LIMITS.toast}
+      </div>
+      <h3 className="ty-limits-h">Limits</h3>
+      <div className="ty-field">
+        <span className="ty-field-l">{LIMITS.budget.label}</span>
+        <span className="ty-input is-focus" data-role="primary">{LIMITS.budget.value}</span>
+      </div>
+      <div className="ty-field">
+        <span className="ty-field-l">{LIMITS.eating.label}</span>
+        <span className="ty-input is-error" data-role="error">{LIMITS.eating.value}</span>
+        <p className="ty-err" data-role="error">
+          <Icon><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Icon>
+          <span>{LIMITS.eating.error}</span>
+        </p>
+      </div>
+      <div className="ty-switch">
+        <span className="ty-switch-t">
+          <span className="ty-field-l">{LIMITS.roundUps.label}</span>
+          <small className="ty-help">{LIMITS.roundUps.help}</small>
+        </span>
+        <span className="ty-toggle is-on" data-role="primary"><i /></span>
+      </div>
+      <div className="ty-switch">
+        <span className="ty-switch-t">
+          <span className="ty-field-l is-disabled">{LIMITS.overseas.label}</span>
+          <small className="ty-help">{LIMITS.overseas.help}</small>
+        </span>
+        <span className="ty-toggle is-disabled"><i /></span>
+      </div>
+      <div className="ty-limits-foot">
+        <span className="ty-btn">Cancel</span>
+        <span className="ty-btn ty-btn--primary" data-role="primary">Save limits</span>
+      </div>
     </section>
   )
 }
@@ -119,6 +167,8 @@ export default function Tally({ roles }) {
           <Budget />
           <Transactions pair={pair} />
         </div>
+        {/* A two-colour pair has no semantic roles, so the Contrast Checker's use of this scene leaves the form out. */}
+        {!pair && <Limits />}
       </div>
     </div>
   )

@@ -257,7 +257,7 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
     const bar = page.locator('.plb [data-tool-toolbar]')
     await expect(bar).not.toHaveClass(/is-measuring/)
 
-    for (const name of ['Undo', 'Randomise', 'Suggest variations and brands', 'Extra tools', 'Save or share']) {
+    for (const name of ['Undo', 'Randomise', 'Suggest variations', 'Extra tools', 'Save or share']) {
       await expect(bar.getByRole('button', { name, exact: true })).toHaveCount(1)
     }
     // Redo is in Extra tools on a phone, under the same name.

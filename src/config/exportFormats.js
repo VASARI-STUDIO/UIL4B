@@ -67,8 +67,8 @@ export const EXPORT_FORMATS = Object.freeze([
   Object.freeze({ id: 'css', name: 'CSS tokens', desc: 'Custom properties for the palette and its tints, semantic colours and type. Drop into any stylesheet.', live: true, group: 'tokens', option: 'CSS', action: 'Export CSS tokens' }),
   Object.freeze({ id: 'json', name: 'JSON tokens', desc: 'The same tokens in the W3C Design Tokens (DTCG) format, for token pipelines and tools that read it.', live: true, group: 'tokens', option: 'JSON', action: 'Export JSON tokens' }),
   Object.freeze({ id: 'tailwind', name: 'Tailwind theme', desc: 'A Tailwind v4 @theme file: your colours, interface roles, fonts and type sizes as utilities.', live: true, group: 'tokens', option: 'Tailwind', action: 'Export Tailwind theme' }),
-  Object.freeze({ id: 'contrast', name: 'Contrast pairs CSV', desc: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result. Opens in any spreadsheet.', live: true, group: 'tokens', option: 'Contrast CSV', action: 'Export contrast pairs' }),
-  Object.freeze({ id: 'contrast-json', name: 'Contrast pairs JSON', desc: 'The same contrast pairs as JSON, with the ratio as a number and each WCAG result as a true or false.', live: true, group: 'tokens', option: 'Contrast JSON', action: 'Export contrast pairs' }),
+  Object.freeze({ id: 'contrast', credit: false, name: 'Contrast pairs CSV', desc: 'Every colour on every other colour, and on white and black, with its ratio and WCAG result. Opens in any spreadsheet.', live: true, group: 'tokens', option: 'Contrast CSV', action: 'Export contrast pairs' }),
+  Object.freeze({ id: 'contrast-json', credit: false, name: 'Contrast pairs JSON', desc: 'The same contrast pairs as JSON, with the ratio as a number and each WCAG result as a true or false.', live: true, group: 'tokens', option: 'Contrast JSON', action: 'Export contrast pairs' }),
   Object.freeze({ id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.', coming: 'an asset bundle' }),
 ])
 
@@ -109,6 +109,10 @@ export const comingLine = () => {
 
 // Built, and available without paying.
 export const freeFormats = () => EXPORT_FORMATS.filter((f) => f.live && !f.pro)
+
+// Free formats that carry the small "Made with UIL4B" line. The contrast pairs
+// files have no place for one (`credit: false`).
+export const creditedFormats = () => freeFormats().filter((f) => f.credit !== false)
 
 // The free formats other than the UI kit: the style guide files and the tokens.
 export const styleGuideFormats = () => freeFormats().filter((f) => !f.kit)
