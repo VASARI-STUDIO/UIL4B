@@ -327,7 +327,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // src/data/palettePreviewScenes.js. This goes red on the count of options.
   // Deleting the import of the preview component instead takes the whole route
   // down, which this also catches, on the dialog never opening.
-  test('all eight scenes render, each with the full --pv-* role set', async ({ page }) => {
+  test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Preview')
@@ -370,7 +370,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
       seen.add(s.name)
     }
-    expect(seen.size, 'eight distinct scenes did not render').toBe(8)
+    expect(seen.size, 'six distinct scenes did not render').toBe(NAMES.length)
   })
 })
 

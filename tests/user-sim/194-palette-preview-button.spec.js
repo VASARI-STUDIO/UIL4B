@@ -28,7 +28,7 @@ const rowBoxes = (page) => paletteToolbar(page).evaluate((bar) => [...bar.childr
     const r = el.getBoundingClientRect()
     return {
       id: el.getAttribute('data-tl-item') || (el.hasAttribute('data-tl-more') ? 'more' : el.classList.contains('tl-primary') ? 'primary' : el.tagName.toLowerCase()),
-      top: r.top, left: r.left, right: r.right, width: r.width,
+      top: r.top, mid: r.top + r.height / 2, left: r.left, right: r.right, width: r.width,
     }
   }))
 
@@ -47,8 +47,11 @@ test.describe('Preview is a main toolbar button', () => {
       await expect(preview).toHaveAccessibleName('Preview')
 
       const boxes = await rowBoxes(page)
-      const tops = boxes.map((b) => b.top)
-      expect(Math.max(...tops) - Math.min(...tops), `${width}px: every item on the row shares one line (${boxes.map((b) => b.id).join(', ')})`).toBeLessThanOrEqual(2)
+      // Centre lines, not tops: the seed chip is 37px tall, the buttons 36px and the divider 24px,
+      // and the row centres them, so their tops differ by up to 7px on one line. A wrapped item
+      // would sit a whole row (36px or more) off the centre.
+      const mids = boxes.map((b) => b.mid)
+      expect(Math.max(...mids) - Math.min(...mids), `${width}px: every item on the row shares one line (${boxes.map((b) => b.id).join(', ')})`).toBeLessThanOrEqual(2)
       expect(await bar.evaluate((el) => el.scrollWidth > el.clientWidth + 1), `${width}px: the toolbar does not scroll`).toBe(false)
 
       // Left to right: Preview comes after every other action and before the primary.
