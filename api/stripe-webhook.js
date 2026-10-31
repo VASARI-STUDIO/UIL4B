@@ -577,9 +577,13 @@ async function oldFailureSettled(stripe, existing, invoice, uid) {
 
 /**
  * Flag a failed invoice payment on the customer's account, unless the invoice
- * has been paid since. Returns 'no_account', 'already_paid' or 'flagged'.
+ * has been paid since. Returns 'no_account', 'already_paid', 'flagged' or
+ * 'kept_newer_failure' (a failure created after this event is already recorded).
+ *
+ * `eventCreated` is the Stripe event's `created` (seconds). It orders failures
+ * against each other and against a late healthy customer.subscription.updated.
  */
-export async function flagPaymentFailed(stripe, invoice, db = null) {
+export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated = null) {
   const database = db || adminDb()
   const uid = await uidForCustomer(invoice.customer, database)
   if (!uid) return 'no_account'
@@ -598,12 +602,14 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   // each time, which is the same as having no window at all. The exception is a
   // failure whose invoice has since been paid or voided (oldFailureSettled): the
   // next failing invoice is a new failure and starts a fresh window.
-  let failedAt = Date.now()
+  let decidedAt = Date.now()
+  let priorFailure = null
   try {
     const existing = (await ref.get()).data()?.subscription
+    if (existing?.paymentFailed === true) priorFailure = existing
     if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)
       && !(await oldFailureSettled(stripe, existing, invoice, uid))) {
-      failedAt = existing.paymentFailedAt
+      decidedAt = existing.paymentFailedAt
     }
   } catch (err) {
     // A read failure must not swallow the failure flag. Stamping "now" can only
@@ -611,20 +617,62 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
     console.error('stripe-webhook: could not read existing payment state', { uid, error: err?.message })
   }
 
-  await ref.set({
-    subscription: {
-      paymentFailed: true,
-      paymentFailedAt: failedAt,
-      // Hosted invoice page the customer can use to retry payment.
-      hostedInvoiceUrl: invoice.hosted_invoice_url || null,
-      // Which invoice the failure belongs to, so a later invoice.paid only clears
-      // the failure it actually settles (clearPaymentFailure). Unlike
-      // paymentFailedAt this follows the NEWEST failing invoice.
-      failedInvoiceId: invoice.id || null,
-      updatedAt: Date.now(),
-    },
-  }, { merge: true })
-  return 'flagged'
+  // The decisions above rest on a read taken before the Stripe lookups, so the
+  // write re-reads the record inside a transaction (as clearPaymentFailure
+  // does). A failure flagged or cleared in the meantime is taken into account
+  // instead of being overwritten with a stale clock.
+  const basis = priorFailure
+    ? { failedInvoiceId: storedFailedInvoiceId(priorFailure), paymentFailedAt: priorFailure.paymentFailedAt ?? null }
+    : null
+  const planWrite = (current) => {
+    const failure = current?.paymentFailed === true ? current : null
+    // A failure event created BEFORE the failure on record is older news: it
+    // must not move the record back to an older invoice or event time.
+    if (failure && Number.isFinite(eventCreated) && Number.isFinite(failure.paymentFailedEventCreated)
+      && eventCreated < failure.paymentFailedEventCreated) {
+      console.warn('stripe-webhook: payment failure skipped — a newer failure is already recorded', {
+        uid, invoiceId: invoice.id, eventCreated, recordedEventCreated: failure.paymentFailedEventCreated,
+      })
+      return null
+    }
+    // The clock decided above holds only while the failure on record is still the
+    // one it was decided about; otherwise the record as it is now decides.
+    let failedAt = Date.now()
+    if (failure && basis && sameFailureOnRecord(failure, basis)) failedAt = decidedAt
+    else if (failure && Number.isFinite(failure.paymentFailedAt)) failedAt = failure.paymentFailedAt
+    return {
+      subscription: {
+        paymentFailed: true,
+        paymentFailedAt: failedAt,
+        // Hosted invoice page the customer can use to retry payment.
+        hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+        // Which invoice the failure belongs to, so a later invoice.paid only clears
+        // the failure it actually settles (clearPaymentFailure). Unlike
+        // paymentFailedAt this follows the NEWEST failing invoice.
+        failedInvoiceId: invoice.id || null,
+        // When Stripe created the failure event, so a healthy
+        // customer.subscription.updated created before it cannot clear the
+        // failure (subscriptionWriteDecision).
+        ...(Number.isFinite(eventCreated) ? { paymentFailedEventCreated: eventCreated } : {}),
+        updatedAt: Date.now(),
+      },
+    }
+  }
+
+  // Only a Firestore handle without runTransaction (an older test double) falls
+  // back to a plain re-read, which narrows the window but does not close it.
+  if (typeof database.runTransaction !== 'function') {
+    const write = planWrite((await ref.get()).data()?.subscription)
+    if (!write) return 'kept_newer_failure'
+    await ref.set(write, { merge: true })
+    return 'flagged'
+  }
+  return database.runTransaction(async (tx) => {
+    const write = planWrite((await tx.get(ref)).data()?.subscription)
+    if (!write) return 'kept_newer_failure'
+    tx.set(ref, write, { merge: true })
+    return 'flagged'
+  })
 }
 
 const RETRYABLE_STRIPE_ERRORS = new Set([
@@ -743,6 +791,7 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
     // settled invoice.
     subscription: {
       paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null,
+      paymentFailedEventCreated: null,
       updatedAt: Date.now(),
     },
   }
@@ -937,7 +986,7 @@ async function dispatchStripeEvent(stripe, event, { db = null } = {}) {
       break
     }
     case 'invoice.payment_failed': {
-      await flagPaymentFailed(stripe, event.data.object, db)
+      await flagPaymentFailed(stripe, event.data.object, db, event.created)
       break
     }
     case 'invoice.paid': {

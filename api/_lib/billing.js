@@ -257,7 +257,7 @@ export function subscriptionStatusGrantsAccess(sub) {
 export function subscriptionDocFields(sub, now = Date.now()) {
   const healthy = subscriptionStatusGrantsAccess(sub)
   const recovery = healthy
-    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null }
+    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null, paymentFailedEventCreated: null }
     : {}
   return {
     id: sub?.id,
@@ -351,6 +351,17 @@ export function subscriptionWriteDecision(stored, sub, eventCreated) {
   if (Number.isFinite(eventCreated) && Number.isFinite(stored.stripeEventCreated)
     && eventCreated < stored.stripeEventCreated) {
     return { write: false, reason: 'older_than_stored_event' }
+  }
+  // A healthy status clears the payment-failure flags (subscriptionDocFields),
+  // so a healthy delivery created BEFORE the failure on record is older news
+  // and must not clear it. The failure's own event time is kept in
+  // `paymentFailedEventCreated` (flagPaymentFailed) rather than in
+  // `stripeEventCreated`: stamping the shared field would also hold back an
+  // older cancellation or past_due delivery, which still has to land.
+  if (subscriptionStatusGrantsAccess(sub) && stored.paymentFailed === true
+    && Number.isFinite(eventCreated) && Number.isFinite(stored.paymentFailedEventCreated)
+    && eventCreated < stored.paymentFailedEventCreated) {
+    return { write: false, reason: 'older_than_payment_failure' }
   }
   return { write: true, reason: 'current' }
 }
