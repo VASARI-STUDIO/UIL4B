@@ -60,14 +60,14 @@ test.describe('/checkout before the prices settle', () => {
 })
 
 test.describe('a 200 answer made only of fallback prices is an outage', () => {
-  test('/checkout says pricing is unreachable, offers Retry, and recovers when a live price lands', async ({ page }) => {
+  test('/checkout says Stripe didn’t answer, offers Retry, and recovers when a live price lands', async ({ page }) => {
     watch(page, 'a free account at checkout while Stripe has no live prices')
     await stub(page, FALLBACK_ONLY)
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
 
     const note = page.locator('.checkout-plan-note')
-    await expect(note).toContainText('Live pricing is unreachable')
+    await expect(note).toContainText('Stripe didn’t answer')
     await expect(note).not.toContainText('null')
     await expect(page.locator('.checkout-plan-amount')).not.toHaveText(/\d/)
     const retry = page.getByRole('button', { name: 'Retry live pricing' })
@@ -80,7 +80,7 @@ test.describe('a 200 answer made only of fallback prices is an outage', () => {
     await expect(retry).toHaveCount(0)
   })
 
-  test('Settings says pricing is unreachable, offers Retry, and recovers when a live price lands', async ({ page }) => {
+  test('Settings says Stripe didn’t answer, offers Retry, and recovers when a live price lands', async ({ page }) => {
     watch(page, 'a free account comparing plans while Stripe has no live prices')
     await stub(page, FALLBACK_ONLY)
     await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
@@ -88,7 +88,7 @@ test.describe('a 200 answer made only of fallback prices is an outage', () => {
     await go(page, '/settings')
 
     const pro = page.locator('.sub-tier-pro')
-    await expect(pro.locator('.sub-tier-sub')).toContainText('Live pricing is unreachable')
+    await expect(pro.locator('.sub-tier-sub')).toContainText('Stripe didn’t answer')
     await expect(pro.locator('.sub-tier-amount')).toHaveText('Unavailable')
     const retry = pro.getByRole('button', { name: 'Retry live pricing' })
     await expect(retry).toBeVisible()
@@ -166,13 +166,13 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
       await choose('Yearly')
       await expect(pro.locator('.pr-amt')).toHaveText('Unavailable')
       const note = pro.locator('#pricing-noprice')
-      await expect(note.locator('span')).toHaveText(['No USD price for Yearly right now.', 'Monthly can be bought in USD.'])
+      await expect(note.locator('span')).toHaveText(['No USD price for Yearly yet.', 'Monthly can be bought in USD.'])
       await expect(pro.locator('.pr-stack button'), 'the recovery action sits in the Pro button slot, not the note stack').toHaveCount(0)
       const lines = await note.locator('span').evaluateAll((nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)))
       expect(Math.max(...lines), 'an unavailable line wrapped').toBeLessThan(Math.min(...lines) * 1.5)
       const sw = pro.getByRole('button', { name: 'Switch to Monthly' })
       await expect(sw).toBeVisible()
-      await expect(pro.locator('.pr-under').filter({ hasText: 'Everything on Free keeps working.' })).toBeVisible()
+      await expect(pro.locator('.pr-under:not(.is-ghost)').filter({ hasText: 'Everything on Free keeps working.' })).toBeVisible()
       expect(await topOf(page), 'the Pro button moved when the cadence landed unavailable').toBe(live)
 
       // The switch buys the live cadence, and focus stays on the Pro button.
@@ -193,7 +193,7 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
     })
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
-    await expect(page.locator('.checkout-plan-note')).toContainText('Live pricing is unreachable')
+    await expect(page.locator('.checkout-plan-note')).toContainText('Stripe didn’t answer')
     expect(calls).toBe(1)
 
     // A client-side move to /plans: the page mounts with the cache already filled.
@@ -203,10 +203,10 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
     })
     const pro = page.locator('.pr-head--pro')
     await expect(pro.locator('.pr-amt')).toHaveText('Unavailable')
-    await expect(pro.locator('#pricing-noprice')).toContainText('Live prices didn’t load,')
+    await expect(pro.locator('#pricing-noprice')).toContainText('Stripe didn’t answer')
     expect(calls, 'opening /plans refetched cached prices').toBe(1)
     const retry = pro.getByRole('button', { name: 'Retry live pricing' })
-    await expect(retry).toHaveClass(/pr-cta--free/)
+    await expect(retry).toHaveClass(/pr-cta--pro/)
     await retry.click()
 
     await expect(pro.locator('.pr-amt')).toHaveText('$4')

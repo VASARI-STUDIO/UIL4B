@@ -108,7 +108,7 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
-    await expect(note).toContainText('Live pricing is unreachable')
+    await expect(note).toContainText('Stripe didn’t answer')
   })
 
   test('checkout for a cadence with no live price says so while another cadence is live', async ({ page }) => {
@@ -121,8 +121,8 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
-    await expect(note).toContainText('price for this billing period')
-    await expect(note).not.toContainText('unreachable')
+    await expect(note).toContainText(/price for \w+ yet\./)
+    await expect(note).not.toContainText('Stripe didn’t answer')
   })
 
   test('a quarterly-or-monthly subscription is never called "Billed monthly" on a guess', async ({ page }) => {

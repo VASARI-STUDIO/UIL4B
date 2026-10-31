@@ -5,7 +5,7 @@ import { processAvatarImage } from '../utils/imageProcessing'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { useProPrice, usePrices, refreshPrices } from '../hooks/usePrices'
+import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
@@ -18,6 +18,7 @@ import useVerificationRecheck from '../hooks/useVerificationRecheck'
 // module /plans reads. See src/config/planFacts.js for why.
 import {
   FREE_POINTS, FREE_EXCLUSION, PRO_POINTS, DEFAULT_BILLING, resolveOffers,
+  canCheckout, priceState, priceStateCopy,
   subscriptionCadence, CADENCE_LABEL,
 } from '../config/planFacts'
 import { LOCATIONS } from '../data/locations'
@@ -844,8 +845,13 @@ export default function Settings({ toast }) {
   const billingTabs = useRef([])
   const proPrice = useProPrice()
   const { prices } = usePrices()
-  const { offers, priceServiceDown } = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
+  const { offers } = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
   const offer = offers.find((o) => o.id === billing) || offers[0]
+  // The same state and the same words /plans and /checkout use (planFacts.js).
+  const { retrying, retry } = usePriceRetry()
+  const priceStatus = priceState({ price: proPrice, offers, selectedId: billing, retrying })
+  const otherOffer = offers.find((o) => o.id !== offer?.id)
+  const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: offer?.label, otherLabel: otherOffer?.label })
   const onBillingKey = (event, index) => {
     const moves = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: offers.length - 1 }
     if (!(event.key in moves)) return
@@ -1170,32 +1176,32 @@ export default function Settings({ toast }) {
       <div className="sub-tier-head">
         <div className="sub-tier-name">Pro</div>
         <div className="sub-tier-price">
-          {/* `loaded` means the fetch SETTLED, not that a price is
-              known — so every state is checked, and a missing
-              amount says so rather than printing a blank. */}
-          <span className={`sub-tier-amount${proPrice.loaded && !offer?.amountLabel ? ' is-word' : ''}`}>
-            {!proPrice.loaded ? '—' : offer?.amountLabel || 'Unavailable'}
+          <span className={`sub-tier-amount${priceStatus === 'live' || priceStatus === 'loading' || priceStatus === 'retrying' ? '' : ' is-word'}`}>
+            {canCheckout(priceStatus) ? offer.amountLabel : priceCopy.word}
           </span>
-          {offer?.amountLabel && <span className="sub-tier-per">per month</span>}
+          {canCheckout(priceStatus) && <span className="sub-tier-per">per month</span>}
         </div>
         <div className="sub-tier-sub">
-          {!proPrice.loaded ? 'Checking live price…'
-            : priceServiceDown ? 'Live pricing is unreachable · no price can be shown right now'
-              : !offer?.amountLabel ? `No ${proPrice.currencyLabel} price for this billing period right now`
-                : offer.billedNote}
+          {canCheckout(priceStatus) ? offer.billedNote : [priceCopy.line1, priceCopy.line2].filter(Boolean).join(' ')}
         </div>
-        {priceServiceDown && (
-          <button type="button" className="btn btn-s sub-price-retry" onClick={() => refreshPrices()}>Retry live pricing</button>
-        )}
       </div>
       <ul className="sub-tier-list">
         {PRO_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
       </ul>
-      {offer?.amountLabel && !subLoading ? (
+      {/* One slot, one button. Only a live price links to checkout. */}
+      {priceStatus === 'live' && !subLoading ? (
         <Link className="btn btn-accent sub-tier-btn" to={`/checkout?plan=${offer.checkoutPlan}`}>Upgrade to Pro</Link>
+      ) : priceStatus === 'cadence-missing' ? (
+        <button type="button" className="btn btn-accent sub-tier-btn" onClick={() => setBilling(otherOffer.id)}>{priceCopy.button}</button>
       ) : (
-        <button type="button" className="btn btn-accent sub-tier-btn" disabled>
-          {proPrice.loaded && !offer?.amountLabel ? 'Pricing unavailable right now' : 'Upgrade to Pro'}
+        <button
+          type="button"
+          className="btn btn-accent sub-tier-btn"
+          aria-disabled={priceStatus === 'live' || priceStatus === 'loading' || priceStatus === 'retrying' ? 'true' : undefined}
+          aria-busy={priceStatus === 'retrying' ? 'true' : undefined}
+          onClick={() => { if (priceStatus === 'unreachable' || priceStatus === 'no-currency') retry() }}
+        >
+          {priceCopy.button || 'Upgrade to Pro'}
         </button>
       )}
     </div>
