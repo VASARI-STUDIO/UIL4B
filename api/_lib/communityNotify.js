@@ -335,7 +335,7 @@ export async function handleCommunityNotify(req, res, {
     }
     let decoded
     try {
-      decoded = await verifyToken(header.slice(7), type === 'admin-settings')
+      decoded = await verifyToken(header.slice(7), true)
     } catch {
       return res.status(401).json({ error: 'Sign in first.' })
     }

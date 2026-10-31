@@ -2,7 +2,8 @@
 // queue, so it can count the post towards the admin's "email me" setting
 // (api/_lib/communityNotify.js). The server checks the document itself; this
 // sends only which one.
-import { auth } from './firebase'
+// The Firebase SDK is loaded on first use, so importing this file adds nothing to
+// the chunks that publish.
 
 /**
  * Fire and forget. The post is already saved by the time this runs, so nothing
@@ -11,6 +12,7 @@ import { auth } from './firebase'
  */
 export function notifyCommunityPost(collection, id) {
   ;(async () => {
+    const { auth } = await import('./firebase')
     const token = await auth.currentUser?.getIdToken()
     if (!token) return
     await fetch('/api/support', {
