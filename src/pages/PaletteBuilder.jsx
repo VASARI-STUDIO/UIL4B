@@ -1318,6 +1318,25 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (coachOn && coachBeat === 0 && shownSeed !== coachSeedRef.current) setCoachBeat(1)
   }, [coachOn, coachBeat, shownSeed])
 
+  // Beat 1 rings the seed chip. When the toolbar has moved the chip into Extra tools (a phone) it
+  // is not drawn, so the ring goes to the Extra tools button instead, the way to the chip. Decided from
+  // the laid-out toolbar, not the viewport width: the toolbar re-measures itself as the row resizes.
+  const [seedOnRow, setSeedOnRow] = useState(true)
+  useLayoutEffect(() => {
+    if (!coachOn || coachBeat !== 0) return undefined
+    const bar = document.querySelector('[data-tool-toolbar]')
+    if (!bar) return undefined
+    const check = () => {
+      const chip = bar.querySelector(':scope > [data-tl-item="seed"]')
+      setSeedOnRow(!!chip && chip.offsetParent !== null && chip.getBoundingClientRect().width > 0)
+    }
+    check()
+    const observer = new MutationObserver(check)
+    observer.observe(bar, { childList: true })
+    window.addEventListener('resize', check)
+    return () => { observer.disconnect(); window.removeEventListener('resize', check) }
+  }, [coachOn, coachBeat])
+
   // Per-column derivations that are NOT the swatch itself. The strip was six
   // CAM16 solves per colour (60 on a full 10-colour board, three times the cost
   // of the whole adjust lens) redone on every frame of every slider drag; it is
@@ -2853,6 +2872,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       bleed
       overflowLabel="Extra tools"
       overflowIcon="sliders-horizontal"
+      data-coach-ring={coachOn && coachBeat === 0 && !seedOnRow ? 'more' : undefined}
       items={toolbarItems}
       primary={(
         <span className="plb-menuwrap plb-savewrap">

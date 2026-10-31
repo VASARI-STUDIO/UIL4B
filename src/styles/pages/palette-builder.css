@@ -1172,7 +1172,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   z-index: 60;
   isolation: isolate;
   inset-inline: 0;
-  bottom: var(--plb-coach-bottom, 0px);
+  bottom: max(var(--plb-coach-bottom, 0px), var(--plb-coach-floor, 0px));
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1183,6 +1183,11 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   font-family: var(--font);
   color: var(--t1);
   animation: plb-coach-in 240ms var(--ease-entrance);
+}
+/* On a phone the coach never goes below the fixed tab bar and the home-indicator inset, whether it hangs from the
+   adjust bar or, with that bar below the fold, rests on the screen's edge. */
+@media (max-width: 767px) {
+  html.has-tabbar .plb-coach { --plb-coach-floor: calc(var(--tabbar-h, 0px) + env(safe-area-inset-bottom, 0px)); }
 }
 @keyframes plb-coach-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
@@ -1242,4 +1247,4 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
   }
 }
 /* The control the beat points at wears a ring; no motion, so reduced motion needs nothing. */
-.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached { outline: 2px solid var(--accent-fill); outline-offset: 2px; }
+.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--accent-fill); outline-offset: 2px; }

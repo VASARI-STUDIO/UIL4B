@@ -271,20 +271,19 @@ test.describe('the first-palette coach', () => {
     expect(await readSeed(page), 'Next changed the board').toBe(seed)
   })
 
-  // BEAT 1'S RING, per width. PRODUCT BUG at 390 (found by this test): the seed chip is not on the
-  // phone's toolbar row (it lives behind "Extra tools"), so `.is-coached` is applied to a control that is
-  // not drawn and the ring points at nothing (PaletteBuilder.jsx:2752, triggerClassName). `test.fail`
-  // keeps the suite honest: it passes while the bug stands and goes red the day it is fixed, which is the
-  // cue to delete the annotation.
+  // BEAT 1'S RING, per width: on the seed chip where the toolbar draws it, and on the Extra tools button
+  // (the way to the chip) where the toolbar has moved the chip into that sheet, as it does on a phone.
   for (const size of SIZES) {
     test(`${size.width}px: beat 1's ring is on a control the person can see`, async ({ browser }) => {
-      test.fail(size.width === 390, 'product bug: at 390 the seed chip is not drawn on the toolbar row, so the ring points at nothing (PaletteBuilder.jsx:2752)')
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading beat 1 on a ${size.name}`)
       await arriveFromCard(page)
-      const chip = page.locator('.plb .plb-seedchip')
-      await expect(chip, 'the seed chip is not on the toolbar row, so the ring points at nothing').toBeVisible({ timeout: 2000 })
-      await expect(chip).toHaveClass(/is-coached/)
+      const seed = page.locator('.plb .plb-seedchip')
+      const onRow = (await seed.count()) > 0 && await seed.first().isVisible()
+      expect(onRow, 'the seed chip is on the toolbar row from 768px up, and only then').toBe(size.width >= 768)
+      const chip = onRow ? seed.first() : page.locator('.plb .tl-more-btn')
+      await expect(chip, 'the ring points at nothing').toBeVisible({ timeout: 2000 })
+      if (onRow) await expect(chip).toHaveClass(/is-coached/)
       const ring = await chip.evaluate((el) => {
         const cs = getComputedStyle(el)
         const r = el.getBoundingClientRect()
@@ -298,11 +297,9 @@ test.describe('the first-palette coach', () => {
       await context.close()
     })
 
-    // THE COACH AND THE PHONE TAB BAR. PRODUCT BUG on a real phone (isMobile): the adjust bar is below
-    // the fold, so the coach falls back to "the screen's edge" and rests UNDER the fixed tab bar, which
-    // covers Hide tips and Next (PaletteCoach.jsx:44-47, the fallback ignores --tabbar-h).
+    // THE COACH AND THE PHONE TAB BAR. On a real phone (isMobile) the adjust bar is below the fold, so the
+    // coach rests on the screen's edge, which must sit above the fixed tab bar (--tabbar-h) and the safe area.
     test(`${size.width}px: the coach is clear of the phone tab bar and its buttons can be pressed`, async ({ browser }) => {
-      test.fail(size.width === 390, 'product bug: on a phone the coach rests under the tab bar, which covers Hide tips and Next (PaletteCoach.jsx:44-47)')
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading the coach on a ${size.name}`)
       await arriveFromCard(page)

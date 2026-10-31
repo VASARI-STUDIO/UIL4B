@@ -44,7 +44,8 @@ export default function PaletteCoach({ beat, onNext, onSave, onDismiss, anchorSe
     const measure = () => {
       frame = 0
       const top = anchor ? anchor.getBoundingClientRect().top : window.innerHeight
-      // Off the foot of the screen (a page that scrolls the toolbar away), the coach rests on the screen's edge.
+      // Off the foot of the screen (a page that scrolls the toolbar away), the coach rests on the screen's edge;
+      // the stylesheet lifts it clear of the phone tab bar and the safe-area inset (--plb-coach-floor).
       setBottom(Math.max(0, Math.round(window.innerHeight - top)))
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
