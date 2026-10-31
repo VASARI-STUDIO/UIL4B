@@ -438,16 +438,16 @@ test('/settings · at 320 the profile row and the Theme row both stay inside the
     const email = document.querySelector('.settings-profile-email')
     const info = document.querySelector('.settings-profile-info').getBoundingClientRect()
     const avatar = document.querySelector('.settings-profile-avatar').getBoundingClientRect()
-    const signOut = [...document.querySelectorAll('.settings-profile .btn')].find((b) => /sign out/i.test(b.textContent)).getBoundingClientRect()
+    const signOut = [...document.querySelectorAll('#set-account .btn')].find((b) => /^sign out$/i.test(b.textContent.trim())).getBoundingClientRect()
     return {
       emailOverflow: email.scrollWidth - email.clientWidth,
       infoWidth: Math.round(info.width),
-      signOutBelowAvatar: signOut.top >= avatar.bottom - 1,
+      signOutInsideScreen: signOut.right <= window.innerWidth && signOut.left >= 0 && avatar.bottom > 0,
     }
   })
   expect(profile.emailOverflow, 'the email must fit its column').toBeLessThanOrEqual(0)
   expect(profile.infoWidth, 'the name/email column must get the row less the avatar').toBeGreaterThan(150)
-  expect(profile.signOutBelowAvatar, 'Sign out drops to its own row rather than squeezing the column').toBe(true)
+  expect(profile.signOutInsideScreen, 'Sign out (now in Sign-in and security) stays on screen').toBe(true)
 
   // Back to the section list first: on a phone one section shows at a time.
   await page.getByRole('button', { name: 'All settings' }).click()
