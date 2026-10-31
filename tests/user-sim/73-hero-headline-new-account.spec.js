@@ -261,19 +261,20 @@ test.describe('a new account starts empty', () => {
         await expect(page.locator('.uh-card-title')).toHaveCount(0)
         await expect(page.getByText('Default Project')).toHaveCount(0)
 
-        // The starter, in the lead slot where the newest project would be.
+        // The first-palette card, in the lead slot where the newest project would be.
         //
-        // Selected on its test id: the starter is `[data-testid="starter-card"]`,
-        // where the old page's panel was `.uh-empty` ("No projects yet"). The page
-        // no longer tells an account with no projects that it has none; it names
-        // the one action and lists the walkthrough's steps.
-        const empty = page.getByTestId('starter-card')
+        // Selected on its test id: the card is `[data-testid="first-palette-card"]`,
+        // where the old page's panel was `.uh-empty` ("No projects yet") and, after it,
+        // the starter. The page no longer tells an account with no projects that it
+        // has none; it names the one action. The starter is gone for this account.
+        const empty = page.getByTestId('first-palette-card')
         await expect(empty).toBeVisible()
+        await expect(page.getByTestId('starter-card')).toHaveCount(0)
 
-        // IT SAYS WHAT TO DO NEXT: New project walks through the steps. The
-        // first of them is the Palette Builder, the lead tile of "Start something" on the same page.
-        await expect(empty.getByRole('heading', { name: 'Start your first project' })).toBeVisible()
-        await expect(empty).toContainText('New project sets up colour, type, type scale and tints, and saves as you go.')
+        // IT SAYS WHAT TO DO NEXT: one palette, from one colour. The lead tile of
+        // "Start something" on the same page goes to the same tool.
+        await expect(empty.getByRole('heading', { name: 'Turn one colour into a full palette' })).toBeVisible()
+        await expect(empty).toContainText('Pick a colour or paste a hex code. You get the shades, text colours and contrast checks, and you can keep it here.')
         await expect(page.locator('a.uh-tool[data-tool="palette"]')).toHaveAttribute('href', '/create/palette')
 
         // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The design's layout puts
@@ -291,7 +292,7 @@ test.describe('a new account starts empty', () => {
 
         // The card's own control: big enough to hit, and hit-testable once it
         // is on screen (elementFromPoint is viewport-relative, so scroll first).
-        const cta = empty.getByRole('button', { name: 'Start the walkthrough' })
+        const cta = empty.getByRole('link', { name: 'Make your first palette' })
         await cta.scrollIntoViewIfNeeded()
         await expect(cta).toBeVisible()
         const box = await cta.boundingBox()
@@ -332,13 +333,13 @@ test.describe('a new account starts empty', () => {
 
     expect(outline.length, 'the page rendered no headings at all').toBeGreaterThan(1)
     expect(outline[0].level, 'the page must open on its h1').toBe(1)
-    const at = outline.findIndex((h) => h.text === 'Start your first project')
+    const at = outline.findIndex((h) => h.text === 'Turn one colour into a full palette')
     const heading = outline[at]
-    expect(heading, 'the starter’s heading is not in the outline').toBeTruthy()
-    // The starter is the page's lead section, so its heading is an h2 directly under the h1
+    expect(heading, 'the first-palette card’s heading is not in the outline').toBeTruthy()
+    // The card is the page's lead section, so its heading is an h2 directly under the h1
     // (the old page set an h3 under a "Recent projects" h2; that section is gone, the lead
-    // card and the starter carry their own h2).
-    expect(heading.level, 'the starter’s heading must be an h2, one level under the page title').toBe(2)
+    // card and this one carry their own h2).
+    expect(heading.level, 'the card’s heading must be an h2, one level under the page title').toBe(2)
     expect(outline[at - 1], 'and what comes before it must be the page title').toEqual({ level: 1, text: 'Your workspace' })
 
     // No level may jump by more than one from the one before it.
@@ -361,13 +362,17 @@ test.describe('a new account starts empty', () => {
     // so a selector that stops matching cannot report it clean by reading
     // nothing.
     const marks = await page.evaluate(() => {
-      const panel = document.querySelector('.uh [data-testid="starter-card"]')
+      const panel = document.querySelector('.uh [data-testid="first-palette-card"]')
       if (!panel) return null
+      // The card's ramp is the one graphic that says something (a single labelled image of the
+      // palette, its swatches plain spans); every other graphic stays hidden.
       const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
-      return { found: graphics.length, announced: graphics.filter((g) => !g.closest('[aria-hidden="true"]')).length }
+      const announced = graphics.filter((g) => !g.closest('[aria-hidden="true"]'))
+      return { found: graphics.length, announced: announced.length, labelled: announced.filter((g) => g.matches('.uh-first-ramp[role="img"]') && g.getAttribute('aria-label')).length }
     })
     expect(marks, 'the empty state panel itself is not on the page').not.toBeNull()
-    expect(marks.announced, `${marks.announced} of the empty state’s ${marks.found} graphic(s) are announced`).toBe(0)
+    expect(marks.announced - marks.labelled, `${marks.announced - marks.labelled} of the empty state’s ${marks.found} graphic(s) are announced without being the ramp`).toBe(0)
+    expect(marks.labelled, 'the ramp is one labelled image').toBe(1)
 
     await context.close()
   })
@@ -379,7 +384,7 @@ test.describe('a new account starts empty', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    const cta = page.getByRole('button', { name: 'Start the walkthrough' })
+    const cta = page.getByRole('link', { name: 'Make your first palette' })
     await expect(cta).toBeVisible()
 
     // TAB FROM THE TOP OF THE DOCUMENT rather than calling .focus(): the
@@ -392,7 +397,7 @@ test.describe('a new account starts empty', () => {
       await page.keyboard.press('Tab')
       reached = await page.evaluate(() => {
         const el = document.activeElement
-        return !!el && el.tagName === 'BUTTON' && el.innerText.trim() === 'Start the walkthrough'
+        return !!el && el.tagName === 'A' && el.innerText.trim() === 'Make your first palette'
       })
     }
     expect(reached, 'the empty state’s only control cannot be reached by Tab').toBe(true)
@@ -415,11 +420,13 @@ test.describe('a new account starts empty', () => {
 
     // And through: the first project of this account's life, named as it is
     // kept.
+    // (The card opened the first-palette coach, so the save is the coach's: its own toast.)
     await saveFromBuilder(page, 'Brand v1')
-    await expect(page.locator('.toast.show')).toContainText('Project saved')
+    await expect(page.locator('.toast.show')).toContainText('Saved to your projects.')
     await go(page, '/projects')
     await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
-    // The starter is gone now that it is not true any more.
+    // The card is gone now that it is not true any more.
+    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
     await expect(page.getByTestId('starter-card')).toHaveCount(0)
 
     await context.close()
@@ -442,7 +449,8 @@ test.describe('a new account starts empty', () => {
     const slots = page.locator('[data-testid="project-quota-note"]')
     await expect(slots).toContainText(`0 of ${CAP}`)
 
-    await page.getByRole('button', { name: 'Start the walkthrough' }).click()
+    // New project (not the card): that route opens the builder without the coach, so the save toast is the plain one.
+    await page.getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await saveFromBuilder(page, 'Brand v1')
     await expect(page.locator('.toast.show')).toContainText('Project saved')
@@ -554,7 +562,7 @@ test.describe(`a new account gets all ${CAP} free slots`, () => {
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
-      await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toBeVisible()
 
       // ALL THREE, not two. This is the arithmetic the seed was costing: with
       // it, the third of these was the fourth save and was refused. Saved the

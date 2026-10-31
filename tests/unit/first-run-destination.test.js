@@ -47,7 +47,7 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // whole rather than truncated at the inner bracket.
   const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
   assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
-  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$|^navigate\(isCheckoutTarget\(resume\) \? resume : win\.route\)$/
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$|^navigate\(resume\)$|^navigate\(win\.route, win\.id === 'palette' \? \{ state: FIRST_PALETTE_STATE \} : undefined\)$/
   for (const nav of navigations) {
     assert.match(nav, allowed,
       `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
@@ -57,7 +57,9 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // owns that guarantee and tests/unit/first-win.test.js checks it against
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
-  assert.match(src, /navigate\((?:isCheckoutTarget\(resume\) \? resume : )?win\.route\)/)
+  assert.match(src, /navigate\(win\.route[,)]/)
+  // A bare navigate(resume) is only ever the stashed checkout, never any other stashed page.
+  assert.match(src, /if \(isCheckoutTarget\(resume\)\) \{ navigate\(resume\); return \}/)
   assert.match(src, /FIRST_WINS\.map/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),

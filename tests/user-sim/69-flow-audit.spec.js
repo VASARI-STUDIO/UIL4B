@@ -150,7 +150,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
       await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(1)
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
