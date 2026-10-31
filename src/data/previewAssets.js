@@ -32,7 +32,7 @@ export const PREVIEW_ASSETS = {
       author: 'OpenStreetMap contributors',
       licence: 'Open Database Licence (ODbL) 1.0',
       url: 'https://www.openstreetmap.org/copyright',
-      changes: 'Streets, tracks, bushland, parks and water for the Mt Coot-tha area, simplified and redrawn as four single-colour layers. The route drawn over it was found on the same tracks, with ground heights from the Copernicus DEM GLO-90 elevation model read through Open-Meteo (CC BY 4.0).',
+      changes: 'Streets, tracks, bushland, parks and water for the Mt Coot-tha area, simplified and redrawn as four single-colour layers. The route drawn over it was found on the same tracks, with ground heights from NASA SRTM (public domain), read through OpenTopoData.',
     },
   },
   'card-front': {
