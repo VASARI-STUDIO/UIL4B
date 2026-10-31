@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import FeedbackModal from './FeedbackModal'
 import FeedbackContextMenu from './FeedbackContextMenu'
+import ContentReportDialog from './ContentReportDialog'
 import { chromelessRoutes } from '../data/toolTree'
 import { TOOL_VOTES_ON } from '../data/toolVotes'
 import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
@@ -124,6 +125,8 @@ export default function FeedbackButton() {
           reaches the browser's own menu, where Paste lives. */}
       <FeedbackContextMenu onReport={openFromMenu} suppressed={open} />
       <FeedbackModal open={open} onClose={close} seed={seed} />
+      {/* The content-report form, opened by any Report control on a community item. */}
+      <ContentReportDialog />
     </>
   )
 }

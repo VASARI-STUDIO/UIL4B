@@ -23,7 +23,8 @@ import { waitUntil } from '@vercel/functions'
 // report reached anyone only if the optional Resend email happened to be
 // configured. One bootstrap, one set of encodings, one project id.
 
-const VALID_TYPES = ['bug', 'feature', 'general', 'help']
+// 'report' is a content report from a community item (src/utils/contentReport.js).
+const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
 const VALID_SOURCES = ['feedback-form', 'inline', 'email']
 
 export const MESSAGE_MAX = 5000
