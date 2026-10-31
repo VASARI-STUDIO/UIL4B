@@ -337,16 +337,24 @@ export function initAnalytics() {
 // path passes the id it also sends to the server, so one message is one local
 // record however many times it is sent, and the admin queue (which merges local
 // and server records by id) lists it once.
+//
+// The sender's address is never written here. This copy stays in the browser
+// for whoever uses it next, and the server already holds the address; the
+// readers of this store (the admin queue and the data export) do not need it
+// from here. Older entries lose any stored email on the next save.
 export function saveFeedback(entry) {
-  const feedback = load(FEEDBACK_KEY, [])
+  const stored = load(FEEDBACK_KEY, [])
+  const feedback = Array.isArray(stored) ? stored.filter(f => f && typeof f === 'object') : []
+  feedback.forEach(f => { delete f.email })
+  const { email: _email, ...kept } = entry || {}
   const now = new Date().toISOString()
-  const existing = entry?.id ? feedback.find(f => f.id === entry.id) : null
+  const existing = kept.id ? feedback.find(f => f.id === kept.id) : null
   if (existing) {
-    Object.assign(existing, entry, { updatedAt: now })
+    Object.assign(existing, kept, { updatedAt: now })
   } else {
     feedback.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      ...entry,
+      ...kept,
       status: 'new',
       adminNotes: '',
       createdAt: now,

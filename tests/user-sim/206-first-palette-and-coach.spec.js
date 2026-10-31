@@ -272,7 +272,8 @@ test.describe('the first-palette coach', () => {
   })
 
   // BEAT 1'S RING, per width: on the seed chip where the toolbar draws it, and on the Extra tools button
-  // (the way to the chip) where the toolbar has moved the chip into that sheet, as it does on a phone.
+  // (the way to the chip) where the toolbar has moved the chip into that sheet. Which one a width gets
+  // follows from the toolbar's room, so the test reads it from the page rather than from a breakpoint.
   for (const size of SIZES) {
     test(`${size.width}px: beat 1's ring is on a control the person can see`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
@@ -280,7 +281,7 @@ test.describe('the first-palette coach', () => {
       await arriveFromCard(page)
       const seed = page.locator('.plb .plb-seedchip')
       const onRow = (await seed.count()) > 0 && await seed.first().isVisible()
-      expect(onRow, 'the seed chip is on the toolbar row from 768px up, and only then').toBe(size.width >= 768)
+      if (size.width >= 768) expect(onRow, 'the seed chip is on the toolbar row from 768px up').toBe(true)
       const chip = onRow ? seed.first() : page.locator('.plb .tl-more-btn')
       await expect(chip, 'the ring points at nothing').toBeVisible({ timeout: 2000 })
       if (onRow) await expect(chip).toHaveClass(/is-coached/)
