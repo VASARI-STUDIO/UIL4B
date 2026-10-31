@@ -20,10 +20,10 @@
 //
 // TWO THINGS THAT LOOK LIKE DETAILS AND ARE NOT.
 //
-// 1. THE PREVIEW'S THEME IS NOT THE APP'S THEME. The preview dialog carries its
-//    own Light/Dark control and derives its roles from it; the app's data-theme
-//    does not reach them. Seeding localStorage 'vs-t' would measure the light
-//    preview twice and prove nothing about dark. This spec clicks the dialog's
+// 1. THE PREVIEW'S THEME IS ITS OWN CONTROL'S. The dialog opens in the theme the
+//    site is showing, then carries its own Light/Dark control and derives its
+//    roles from that. Seeding localStorage 'vs-t' once would measure the opening
+//    theme twice and prove nothing about the other. This spec clicks the dialog's
 //    own control and asserts the canvas colour actually changed.
 //
 // 2. color-mix() computes to `color(srgb r g b / a)` in Chromium, never to
@@ -35,7 +35,7 @@
 //    just stops being measured.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { clickPaletteAction } from './palette-helpers.js'
+import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
 
 // A DETERMINISTIC palette, not a reroll, so a failure is the same failure on
 // every run. It is the worst case the contrast backlog recorded for the old
@@ -44,6 +44,10 @@ import { clickPaletteAction } from './palette-helpers.js'
 const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 
 const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
+
+// A scene with a State menu is swept once per state: the disabled Overseas fees label
+// is only on the Limits form.
+const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'] }
 
 // The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
 // user's own hex when it clears the floor on every ground it sits on (and walks it a
@@ -125,7 +129,7 @@ const SWEEP = `((inkVars, fillVars) => {
     const role = inkRole ? inkRole.slice(5) : fillRole ? 'fill:' + fillRole.slice(5) : 'other'
     const size = parseFloat(cs.fontSize)
     out.push({
-      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'), off: !!el.closest('.is-off'),
+      cls, role, size, weight: cs.fontWeight, inactive: !!el.closest('.is-disabled, [aria-disabled="true"]'), off: !!el.closest('.is-off'), onRender: !!el.closest('.rc'),
       ink: hex, ground: hexOf(g), ratio: ratio(ink, g),
       floor: (size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700)) ? 3 : 4.5,
     })
@@ -172,6 +176,8 @@ test.describe('Palette Builder preview ink', () => {
     let measured = 0
     let onSurface = 0
     let disabledSeen = 0
+    let cardText = 0
+    let cardRated = 0
 
     for (const name of SCENES) {
       await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
@@ -194,38 +200,54 @@ test.describe('Palette Builder preview ink', () => {
         for (const [k, hex] of Object.entries(roles)) expect(hex, `${name}/${theme}: --pv-${k} is not a colour`).toMatch(/^#[0-9a-f]{6}$/)
         canvases.add(roles.canvas)
 
-        const samples = await page.evaluate(`${SWEEP}(${JSON.stringify(INK_VARS)}, ${JSON.stringify(FILL_VARS)})`)
-        expect(samples.filter((s) => s.gradient), `${name}/${theme}: a preview ink landed on a gradient, which this walk cannot measure`).toEqual([])
-        // The sparest scene has only a handful of text nodes. The bar is
-        // that, so content edits do not trip it, but a sweep that has stopped
-        // FINDING the text still does.
-        expect(samples.length, `${name}/${theme}: too few text nodes were found`).toBeGreaterThanOrEqual(3)
+        for (const state of STATES[name] || [null]) {
+          if (state) await pickPreviewState(dialog, state)
+          // The live card's controls ease their colours; measure them at rest, not part-way through a transition.
+          await page.evaluate(() => { for (const a of document.getAnimations()) { try { a.finish() } catch { /* an endless one */ } } })
+          const samples = await page.evaluate(`${SWEEP}(${JSON.stringify(INK_VARS)}, ${JSON.stringify(FILL_VARS)})`)
+          expect(samples.filter((s) => s.gradient), `${name}/${theme}: a preview ink landed on a gradient, which this walk cannot measure`).toEqual([])
+          // The sparest scene has only a handful of text nodes. The bar is
+          // that, so content edits do not trip it, but a sweep that has stopped
+          // FINDING the text still does.
+          expect(samples.length, `${name}/${theme}: too few text nodes were found`).toBeGreaterThanOrEqual(3)
 
-        for (const s of samples) {
-          measured++
-          roleCounts[s.role] = (roleCounts[s.role] || 0) + 1
-          const brandText = (BRAND_AS_TEXT[name] || []).some((c) => s.cls.split(' ').includes(c))
-          if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillRoles.add(s.role)
-          if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillWhere.push(`${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground} = ${s.ratio}:1`)
-          if (s.ground === roles.surface) onSurface++
-          const where = `${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground}`
-            + ` = ${s.ratio}:1 at ${s.size}px/${s.weight} (floor ${s.floor})`
-          // The one exemption: the disabled Overseas fees label in the Spending card's Limits form. WCAG
-          // 1.4.3 exempts the text of an inactive control, and the scene shows
-          // the disabled state on purpose. Anything else in the disabled
-          // colour, or the same colour on a control that is not disabled, is
-          // still held to the floor.
-          // The second is the sold-out size in the Product page (Orra Workroom): a
-          // struck-through size chip in the disabled ink, shown on purpose beside
-          // the sizes that can be picked. It is named by scene, class and ink role, and
-          // it must be marked aria-disabled, so any other node in the Product page is
-          // still held to the floor, and so is a sold-out look that is not announced.
-          const inactive = (name === 'Spending card' && s.inactive && s.role === 'disabled')
-            || (name === 'Product page' && s.inactive && s.off && s.role === 'disabled')
-          if (inactive) disabledSeen++
-          else if (s.ratio < s.floor) failures.push('  ' + where)
-          // The type floor for every scene.
-          if (s.size < 12) failures.push(`  ${name}/${theme} .${s.cls.split(' ')[0]} is ${s.size}px, under the 12px floor`)
+          for (const s of samples) {
+            // Text printed on the card render has a picture for a ground, which this walk cannot read:
+            // cardInkRatios rates it from the screen after the loop.
+            if (s.onRender) { cardText++; continue }
+            measured++
+            roleCounts[s.role] = (roleCounts[s.role] || 0) + 1
+            const brandText = (BRAND_AS_TEXT[name] || []).some((c) => s.cls.split(' ').includes(c))
+            if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillRoles.add(s.role)
+            if (s.role.startsWith('fill:') && s.role !== 'fill:primary' && !brandText) rawFillWhere.push(`${name}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground} = ${s.ratio}:1`)
+            if (s.ground === roles.surface) onSurface++
+            const where = `${name}${state ? "/" + state : ""}/${theme} [${s.cls}] ${s.role} ${s.ink} on ${s.ground}`
+              + ` = ${s.ratio}:1 at ${s.size}px/${s.weight} (floor ${s.floor})`
+            // The one exemption: the disabled Overseas fees label in the Spending card's Limits form. WCAG
+            // 1.4.3 exempts the text of an inactive control, and the scene shows
+            // the disabled state on purpose. Anything else in the disabled
+            // colour, or the same colour on a control that is not disabled, is
+            // still held to the floor.
+            // The second is the sold-out size in the Product page (Orra Workroom): a
+            // struck-through size chip in the disabled ink, shown on purpose beside
+            // the sizes that can be picked. It is named by scene, class and ink role, and
+            // it must be marked aria-disabled, so any other node in the Product page is
+            // still held to the floor, and so is a sold-out look that is not announced.
+            const inactive = (name === 'Spending card' && s.inactive && s.role === 'disabled')
+              || (name === 'Product page' && s.inactive && s.off && s.role === 'disabled')
+            if (inactive) disabledSeen++
+            else if (s.ratio < s.floor) failures.push('  ' + where)
+            // The type floor for every scene.
+            if (s.size < 12) failures.push(`  ${name}/${theme} .${s.cls.split(' ')[0]} is ${s.size}px, under the 12px floor`)
+          }
+          if (samples.some((x) => x.onRender)) {
+            const inks = await cardInkRatios(page)
+            expect(inks.length, `${name}/${state}/${theme}: the card's printed text was not found`).toBe(2)
+            for (const k of inks) {
+              cardRated++
+              if (k.ratio < 4.5) failures.push(`  ${name}/${state}/${theme} ${k.sel} on the card render = ${k.ratio}:1 (floor 4.5, least-contrast pixel)`)
+            }
+          }
         }
       }
     }
@@ -237,6 +259,11 @@ test.describe('Palette Builder preview ink', () => {
     expect(onSurface, 'no ink was measured on --pv-surface, which is the ground this spec exists for').toBeGreaterThan(20)
 
     expect(disabledSeen, 'the disabled Overseas fees label (Spending card) and the sold-out size (Product page) were not both found, in both themes').toBe(4)
+
+    // The card's wordmark and number were set aside by the walk and rated from pixels instead,
+    // in every state and both themes (two texts, four states, two themes).
+    expect(cardText, 'the text on the card render was not found by the walk').toBeGreaterThanOrEqual(16)
+    expect(cardRated, 'the card render text was not rated from pixels').toBe(16)
 
     // Anti-vacuity for the roles the rules must be reading. If any reaches
     // zero the stylesheet has stopped painting that role as text, and every

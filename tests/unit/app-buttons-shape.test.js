@@ -49,6 +49,8 @@ const KEEP = {
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
     'xd-type', 'xd-cat',
+    // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
+    'pvd-state',
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
     'grd-stop-select', 'grd-tintmenu-item',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
