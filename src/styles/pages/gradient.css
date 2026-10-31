@@ -51,9 +51,8 @@
 .grd .grd-stage {
   position: relative;
   isolation: isolate;
-  /* 9px under the clamp: the rail below it holds 9px more, so a stop's mark clears the
-     code box and the page keeps the height it had. */
-  min-height: calc(clamp(240px, 42vh, 440px) - 9px);
+  min-height: 0;
+  aspect-ratio: 16 / 9;
 }
 .grd .grd-canvas {
   position: absolute;
@@ -62,16 +61,75 @@
   border: 1px solid var(--tl-line);
 }
 
-/* Side by side, the 336px panel is taller than the preview column, which left a
-   blank block under the code box before the presets. The preview grows into that
-   height instead (capped, so a twelve-stop panel does not make a tower). The cap sits
-   above the panel's height with the starter stops (976px: stage 750 + rail + code box
-   + gaps), so the palette row's held rows never strand the code box.
-   Stacked at 900px and under, the column is its own height and nothing changes. */
+/* ── THE FRAME (901px and up) ───────────────────────────────────────────────
+   The editor fits one viewport: the grid is the room under the nav and the toolbar
+   (--tl-bar-h, tool-layout.css) less the body's padding top and bottom, and nothing
+   in it grows the page. The left column is a flex column: the stage takes what the
+   rail and code well leave, is never taller than 0.62 of its own width (so it cannot
+   go portrait), and the group is centred when that cap leaves room over. The panel
+   scrolls inside itself; only extras (More options, the shades) ever reach that. */
+.grd { --grd-body-pad: clamp(12px, 2vw, 20px); }
+.grd .tl-body { padding: var(--grd-body-pad); }
 @media (min-width: 901px) {
-  .grd .tl-main { display: flex; flex-direction: column; align-self: stretch; }
-  .grd .tl-main > * { flex-shrink: 0; }
-  .grd .tl-main > .grd-stage { flex: 1 0 auto; max-height: 900px; }
+  .grd {
+    --grd-frame: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 2 * var(--grd-body-pad));
+    --grd-sec-pad: 12px;
+    --grd-sec-gap: 8px;
+  }
+  .grd .tl-grid {
+    height: var(--grd-frame);
+    min-height: 560px;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .grd .tl-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+    container-type: inline-size;
+  }
+  .grd .tl-main > * { flex: 0 0 auto; }
+  .grd .tl-main > .grd-stage { flex: 1 1 0; max-height: 62cqi; aspect-ratio: auto; }
+  .grd .tl-panel { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  .grd .tl-panel .tl-sec { gap: var(--grd-sec-gap); padding: var(--grd-sec-pad) 16px; }
+  /* The head rows are 20px; the 26px buttons in them overhang by 3px each side. */
+  .grd .tl-panel .tl-sec-head { min-height: 20px; }
+  .grd .tl-panel .tl-sec-head :is(.grd-iconbtn, .grd-gen-more, .grd-sel-clear) { margin-block: -3px; }
+  .grd .grd-hex { height: 32px; }
+  .grd .grd-col { display: contents; }
+  .grd .grd-col:not(:last-child) > .tl-sec:last-child { border-bottom: 1px solid var(--tl-hair); }
+}
+/* Short screens (1280x720, 1366x768): the wheel goes (its number field and lock stay,
+   and the field takes the arrow keys), the hint goes to screen readers, and the gaps
+   close up. Interpolation may sit in the panel's own scroll; it is the least used. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .grd { --grd-body-pad: 12px; --grd-sec-gap: 6px; }
+  .grd .grd-wheel { display: none; }
+  .grd .grd-row--angle { height: 32px; }
+  .grd .grd-angle { justify-content: flex-end; }
+  .grd .grd-interp-hints { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+
+/* ── STACKED (900px and under) ──────────────────────────────────────────────
+   The main column dissolves into the grid so the code well can follow the panel:
+   preview, rail, panel, code. The first screen holds the preview, the rail and the
+   whole Random section; the rest scrolls. */
+@media (max-width: 900px) {
+  .grd .tl-grid { gap: 12px; }
+  .grd .tl-main { display: contents; }
+  .grd .grd-panel { order: 2; }
+  .grd .grd-code { order: 3; }
+  .grd .grd-col { display: contents; }
+  .grd .grd-col:not(:last-child) > .tl-sec:last-child { border-bottom: 1px solid var(--tl-hair); }
+}
+/* Tablet: the preview is 2:1 and at most 360 tall; the panel is two columns. */
+@media (min-width: 768px) and (max-width: 900px) {
+  .grd .grd-stage { aspect-ratio: 2 / 1; max-height: 360px; }
+  .grd .grd-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .grd .grd-col { display: block; min-width: 0; }
+  .grd .grd-col + .grd-col { border-left: 1px solid var(--tl-hair); }
+  .grd .grd-col > .tl-sec:last-child { border-bottom: 0; }
 }
 
 /* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
@@ -166,7 +224,7 @@
 .grd .grd-code {
   display: flex;
   flex-direction: column;
-  height: 152px;
+  height: 120px;
   border-radius: 12px;
   border: 1px solid var(--tl-line);
   background: var(--tl-card);
@@ -517,7 +575,7 @@
 .grd .grd-row > .grd-angle { flex: 1; min-width: 0; }
 /* The angle row is the wheel's height whether the wheel is there or a radial
    gradient has said it has no angle. */
-.grd .grd-row--angle { height: 64px; }
+.grd .grd-row--angle { height: 48px; }
 .grd .grd-angle-none { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); }
 /* The position lock is 26px beside a 24px slider: a 1px overhang each side keeps
    the row the height it had, so adding it moves nothing (44px on touch matches). */
@@ -537,8 +595,8 @@
   position: relative;
   isolation: isolate;
   flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid var(--tl-line-2);
   background: var(--tl-wash-2);
@@ -572,7 +630,7 @@
 .grd .grd-wheel-hand::before {
   content: '';
   position: absolute;
-  top: 14px;
+  top: 12px;
   bottom: 50%;
   left: 50%;
   width: 2px;
@@ -593,7 +651,7 @@
 }
 .grd .grd-wheel-knob {
   position: absolute;
-  top: 8px;
+  top: 6px;
   left: 50%;
   width: 12px;
   height: 12px;
@@ -840,7 +898,7 @@
   @media (max-width: 360px) {
     .grd .grd-stop { gap: 6px; padding: 4px; }
   }
-  .grd .grd-row--angle { height: 76px; }
+  .grd .grd-row--angle { height: 64px; }
   .grd .grd-iconbtn { width: 44px; height: 44px; }
   .grd .grd-sel-clear { height: 44px; min-width: 44px; }
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
@@ -851,7 +909,7 @@
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; --lm-drop: 23px; }
   .grd .grd-stop-select { min-height: 44px; }
-  .grd .grd-wheel { width: 76px; height: 76px; }
+  .grd .grd-wheel { width: 64px; height: 64px; }
   .grd .grd-angle-input { width: 72px; height: 44px; font-size: 16px; }
 }
 

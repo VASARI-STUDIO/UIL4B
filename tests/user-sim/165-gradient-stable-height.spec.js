@@ -11,7 +11,7 @@
 //
 // The expected sizes are hand-checked from the design, not read back from the
 // code: a stop window 3 rows tall (40px rows, 56px on touch) with a 2px gap is
-// 124px (172px on touch), and the code well is 152px at every format.
+// 124px (172px on touch), and the code well is 120px at every format.
 //
 // MUTATIONS (each turns the tests named red):
 //   .grd .grd-stops { height: auto }              -> the add/remove, window and rail tests
@@ -540,7 +540,7 @@ test.describe('the stop list is a fixed window', () => {
         reducedMotion: 'reduce',
       })
 
-      test('the window is three rows tall (hand-checked sizes) and the code well is 152px', async ({ page }) => {
+      test('the window is three rows tall (hand-checked sizes) and the code well is 120px', async ({ page }) => {
         watch(page, 'a designer reading the panel')
         await open(page)
         const rowH = screen.touch ? 56 : 40
@@ -561,7 +561,7 @@ test.describe('the stop list is a fixed window', () => {
           })
           expect(g.inner, `window at ${n} stops`).toBe(windowH)
           expect(g.row, `row at ${n} stops`).toBe(rowH)
-          expect(g.code, `code well at ${n} stops`).toBe(152)
+          expect(g.code, `code well at ${n} stops`).toBe(120)
           expect(g.overflowY).toBe('auto')
         }
       })
@@ -970,6 +970,69 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
       })
     })
   }
+})
+
+// THE FRAME (spec gradient-overhaul 7.3): at desktop sizes the editor fits one viewport
+// with the page at scrollY 0. The stage is never portrait, adding a stop moves nothing,
+// and --tl-bar-h is the toolbar's real height (the frame is built from it).
+//
+// MUTATIONS: `.grd .tl-grid { height: auto }` -> every bottom test; `max-height: 62cqi`
+// dropped from the stage -> the 901/1000/1100 ratio test; `--tl-bar-h` changed -> the token test.
+test.describe('the editor fits one frame at desktop sizes', () => {
+  test.use({ reducedMotion: 'reduce' })
+  const FRAMES = [[1280, 720], [1440, 900], [1920, 1080]]
+  const bottomOf = (page, sel) => page.locator(sel).first().evaluate((el) => el.getBoundingClientRect().bottom)
+
+  for (const [w, h] of FRAMES) {
+    test(`at ${w}x${h} the rail, Copy, Random, the stop list and the type pills end inside the viewport`, async ({ page }) => {
+      watch(page, 'a designer on a laptop')
+      await page.setViewportSize({ width: w, height: h })
+      await open(page)
+      expect(await page.evaluate(() => window.scrollY)).toBe(0)
+      for (const sel of ['.grd-rail', '.grd-copy', '.grd-gen', '.grd-stops', '.grd-paint', '[aria-label="Gradient type"]']) {
+        const bottom = await bottomOf(page, sel)
+        expect(bottom, `${sel} ends at ${Math.round(bottom)}px in a ${h}px viewport`).toBeLessThanOrEqual(h)
+      }
+      // Only the presets and the library lie below the frame.
+      const gridBottom = await bottomOf(page, '.tl-grid')
+      expect(gridBottom, 'the grid ends inside the viewport').toBeLessThanOrEqual(h)
+    })
+
+    test(`at ${w}x${h} adding a stop moves the rail by 0px`, async ({ page }) => {
+      watch(page, 'a designer adding a stop')
+      await page.setViewportSize({ width: w, height: h })
+      await open(page)
+      await reduceTo(page, 2)
+      const top = () => page.locator('.grd-rail').evaluate((el) => el.getBoundingClientRect().top)
+      const before = await top()
+      for (let n = 3; n <= MAX_STOPS; n++) {
+        await addButton(panelOf(page)).click()
+        await expect(stopRows(page)).toHaveCount(n)
+        expect(await top(), `the rail moved at ${n} stops`).toBe(before)
+      }
+    })
+  }
+
+  for (const w of [901, 1000, 1100]) {
+    test(`at ${w}px wide the stage is never portrait`, async ({ page }) => {
+      watch(page, 'a designer on a narrow desktop window')
+      await page.setViewportSize({ width: w, height: 1100 })
+      await open(page)
+      const box = await page.locator('.grd-stage').evaluate((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height } })
+      expect(box.h, `${Math.round(box.w)}x${Math.round(box.h)}`).toBeLessThanOrEqual(box.w * 0.62 + 1)
+    })
+  }
+
+  test('--tl-bar-h is the toolbar height', async ({ page }) => {
+    watch(page, 'the frame arithmetic')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page)
+    const m = await page.evaluate(() => ({
+      token: parseFloat(getComputedStyle(document.querySelector('.tl')).getPropertyValue('--tl-bar-h')),
+      bar: document.querySelector('.tl-toolbar').getBoundingClientRect().height,
+    }))
+    expect(m.bar).toBe(m.token)
+  })
 })
 
 // A pixel radius at or past half the side, or a percentage of 50 or more, draws a circle.

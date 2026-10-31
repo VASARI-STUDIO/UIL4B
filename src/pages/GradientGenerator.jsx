@@ -1934,6 +1934,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolMain>
 
         <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
+          {/* Two columns at tablet width (Random and Stops, then Stop N and Shape);
+              everywhere else the wrappers dissolve and the sections stack. */}
+          <div className="grd-col">
           <GenSection
             filters={filters}
             setFilters={setFilters}
@@ -2113,7 +2116,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               )}
             </div>
           </ToolSection>
+          </div>
 
+          <div className="grd-col">
           <ToolSection label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={LOCK_CAPTION}>
             {selected && (
               <div className="grd-pick">
@@ -2211,6 +2216,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </div>
             </div>
           </ToolSection>
+          </div>
         </ToolPanel>
       </ToolGrid>
 
