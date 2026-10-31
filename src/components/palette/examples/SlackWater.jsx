@@ -8,7 +8,8 @@
 // hands it `onState`: Subscribe opens the sheet, the nav swaps the panel under
 // the story, the slider moves the ferry, Save flips. Nothing submits, fetches or
 // is kept after the preview closes. Without `onState` the same markup is a still picture.
-import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useSceneEscape } from '../escapeLayer.js'
 import PreviewImage from '../PreviewImage.jsx'
 import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
 import { BODY, CROSSING, HERO, MAP, MAST, PANELS, SUBSCRIBE, clockAt, emailProblem, slackVars, whereAt } from './SlackWater.data.js'
@@ -23,7 +24,15 @@ function Ctl({ className, children, ...rest }) {
   return <button type="button" className={className} {...rest}>{children}</button>
 }
 
-const pct = (v, of) => `${(v / of) * 100}%`
+// Where a label's top-left sits, given the place's point (px, py) in the box and the label's size.
+// 'right' hangs below and after the point, clear of the coastline the Manly wharf sits on.
+const LABEL_AT = {
+  below: (px, py, lw) => [px - lw / 2, py + 10],
+  above: (px, py, lw, lh) => [px - lw / 2, py - lh - 8],
+  land: (px, py, lw, lh) => [px - lw / 2, py - lh / 2],
+  right: (px, py) => [px + 12, py + 4],
+}
+const LABEL_EDGE = 4
 
 function Masthead({ nav, setNav, onSubscribe }) {
   const live = useContext(Live)
@@ -80,8 +89,40 @@ function CrossingMap({ p }) {
     if (path?.getTotalLength) setPt(path.getPointAtLength(path.getTotalLength() * p))
   }, [p])
   const { w, h } = MAP.box
+  const mapRef = useRef(null)
+  const labelRefs = useRef([])
+  const [spots, setSpots] = useState(null)
+  // The drawing is cropped to cover its box, so a label (true pixel size, so it stays readable) is placed
+  // from the same crop: scale and offset as `slice` works them out, then kept inside the box.
+  useLayoutEffect(() => {
+    const box = mapRef.current
+    if (!box) return undefined
+    const place = () => {
+      const bw = box.clientWidth
+      const bh = box.clientHeight
+      if (!bw || !bh) return
+      const k = Math.max(bw / w, bh / h)
+      const ox = (bw - w * k) / 2
+      const oy = (bh - h * k) / 2
+      setSpots(MAP.places.map((pl, i) => {
+        const el = labelRefs.current[i]
+        const lw = el ? el.offsetWidth : 0
+        const lh = el ? el.offsetHeight : 16
+        const [x, y] = LABEL_AT[pl.side](ox + pl.x * k, oy + pl.y * k, lw, lh)
+        return {
+          left: Math.round(Math.min(Math.max(x, LABEL_EDGE), Math.max(LABEL_EDGE, bw - lw - LABEL_EDGE))),
+          top: Math.round(Math.min(Math.max(y, LABEL_EDGE), Math.max(LABEL_EDGE, bh - lh - LABEL_EDGE))),
+        }
+      }))
+    }
+    place()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(place)
+    ro.observe(box)
+    return () => ro.disconnect()
+  }, [w, h])
   return (
-    <div className="sw-map" role="img" aria-label="A drawn map of the ferry's crossing from Circular Quay to Manly" data-role="neutral">
+    <div className="sw-map" ref={mapRef} role="img" aria-label="A drawn map of the ferry's crossing from Circular Quay to Manly" data-role="neutral">
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <path className="sw-land" d={MAP.north} />
         <path className="sw-land" d={MAP.south} />
@@ -92,8 +133,8 @@ function CrossingMap({ p }) {
         {MAP.places.filter((pl) => pl.wharf).map((pl) => <circle key={pl.name} className="sw-wharf" data-role="deep" cx={pl.x} cy={pl.y} r="5" />)}
         <circle className="sw-ferry" data-role="accent" cx={pt.x} cy={pt.y} r="7" />
       </svg>
-      {MAP.places.map((pl) => (
-        <span key={pl.name} className={`sw-pl is-${pl.side}`} style={{ left: pct(pl.x, w), top: pct(pl.y, h) }}>{pl.name}</span>
+      {MAP.places.map((pl, i) => (
+        <span key={pl.name} ref={(el) => { labelRefs.current[i] = el }} className="sw-pl" style={spots ? spots[i] : { visibility: 'hidden' }}>{pl.name}</span>
       ))}
     </div>
   )
@@ -128,7 +169,7 @@ function Panel({ nav }) {
       <h3 className="sw-kicker">{panel.kicker}</h3>
       <ol>
         {panel.rows.map((r) => (
-          <li key={r.a} className={r.on ? 'sw-row is-on' : 'sw-row'} data-role={r.on ? 'subtle' : undefined}>
+          <li key={r.a} className={r.on ? 'sw-row is-on' : 'sw-row'} data-role={r.role}>
             <span className="sw-a">{r.a}</span><span className="sw-b">{r.b}</span><span className="sw-c">{r.c}</span>
           </li>
         ))}
@@ -146,6 +187,8 @@ function Sheet({ view, onClose }) {
   const [done, setDone] = useState(false)
   const field = useRef(null)
   useEffect(() => { if (live) field.current?.focus() }, [live])
+  // Escape closes just the sheet; the dialog's own Escape waits for the next press.
+  useSceneEscape(Boolean(live), onClose)
   const shown = email || (view === 'error' ? SUBSCRIBE.sample : '')
   const err = (view === 'error' || tried) && emailProblem(shown)
   const submit = (e) => {
@@ -203,12 +246,17 @@ function SlackWater({ roles, state, onState }) {
     setNavName(n)
     rootRef.current?.querySelector('#sw-panel')?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
   }
+  // Closing the sheet hands focus back to the masthead's Subscribe button.
+  const closeSheet = useCallback(() => {
+    onState?.('article')
+    rootRef.current?.querySelector('.sw-cta')?.focus()
+  }, [onState])
   const live = isLive ? { nav } : null
   return (
     <Live.Provider value={live}>
       <div className={isLive ? 'sw is-live' : 'sw'} style={vars} data-state={view} ref={rootRef}>
         <Masthead nav={nav} setNav={setNav} onSubscribe={() => onState(view === 'article' ? 'subscribe' : 'article')} />
-        {view !== 'article' && <Sheet key={view} view={view} onClose={() => onState?.('article')} />}
+        {view !== 'article' && <Sheet key={view} view={view} onClose={closeSheet} />}
         <Photo narrow={narrow} />
         <Lede saved={saved} setSaved={setSaved} />
         <article className="sw-story">

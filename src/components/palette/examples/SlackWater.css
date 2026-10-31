@@ -64,10 +64,7 @@
 .sw-line{fill:none;stroke:var(--pv-primary);stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .sw-wharf{fill:var(--pv-deep);stroke:var(--pv-raised);stroke-width:2;vector-effect:non-scaling-stroke}
 .sw-ferry{fill:var(--pv-accent);stroke:var(--sw-acc-edge);stroke-width:1;vector-effect:non-scaling-stroke;paint-order:stroke}
-.sw-pl{position:absolute;font-size:12px;line-height:16px;white-space:nowrap;color:var(--pv-muted);transform:translate(-50%,-50%)}
-.sw-pl.is-below{transform:translate(-50%,10px)}
-.sw-pl.is-above{transform:translate(-50%,calc(-100% - 8px))}
-.sw-pl.is-right{transform:translate(12px,-50%)}
+.sw-pl{position:absolute;left:0;top:0;font-size:12px;line-height:16px;white-space:nowrap;color:var(--pv-muted)}
 .sw-readout{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s-2) var(--s-4);padding:var(--s-3) var(--s-7) 0;font-size:13px;color:var(--pv-muted)}
 .sw-time{font-size:15px;font-weight:600;color:var(--pv-text);font-variant-numeric:tabular-nums}
 .sw-range{flex:1 1 220px;min-width:0;height:24px;margin:0;background:none;appearance:none;cursor:pointer}

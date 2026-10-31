@@ -74,7 +74,7 @@ export const PANELS = {
   Issues: {
     kicker: 'In this issue',
     rows: [
-      { a: '14', b: 'Eleven wharves, one tide table', c: 'Tides desk', on: true },
+      { a: '14', b: 'Eleven wharves, one tide table', c: 'Tides desk', on: true, role: 'subtle' },
       { a: '26', b: 'Coffee on the lower deck', c: 'Ferries desk' },
       { a: '41', b: 'Drawing a harbour from memory', c: 'Chart desk' },
     ],
@@ -83,7 +83,7 @@ export const PANELS = {
   Ferries: {
     kicker: 'Leaving Circular Quay, Wharf 3',
     rows: [
-      { a: '7:12', b: 'Manly, direct', c: '30 min', on: true },
+      { a: '7:12', b: 'Manly, direct', c: '30 min', on: true, role: 'subtle' },
       { a: '7:27', b: 'Manly, direct', c: '30 min' },
       { a: '7:42', b: 'Manly, direct', c: '30 min' },
     ],
@@ -93,7 +93,7 @@ export const PANELS = {
     kicker: 'Sydney Heads today',
     rows: [
       { a: '5:48 am', b: 'High tide', c: '1.7 m' },
-      { a: '12:02 pm', b: 'Low tide', c: '0.4 m', on: true },
+      { a: '12:02 pm', b: 'Low tide', c: '0.4 m', on: true, role: 'subtle' },
       { a: '6:11 pm', b: 'High tide', c: '1.6 m' },
     ],
     note: 'Slack water lasts about twenty minutes either side of each tide',
@@ -104,7 +104,7 @@ export const SUBSCRIBE = {
   title: 'Subscribe to Slack Water',
   lead: '$48 a year. Four issues, and the tide table for your wharf.',
   label: 'Email address',
-  error: 'Enter an email address like name@domain.com.au',
+  error: 'Enter an email address like name@example.com',
   done: 'You are on the list. Nothing was sent: this is a preview.',
   sample: 'ana.whitlock@',
 }
