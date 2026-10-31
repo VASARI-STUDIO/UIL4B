@@ -32,7 +32,7 @@
 //  10  in SlackWater.jsx Photo, point it at an asset with a 1600px width, or load the portrait as well
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { clickPaletteAction, pickPreviewState } from './palette-helpers.js'
+import { clickPaletteAction, openCompareFromSuggest, pickPreviewState } from './palette-helpers.js'
 
 test.use({ viewport: { width: 1440, height: 900 } })
 
@@ -370,10 +370,7 @@ test.describe('the compare view', () => {
     await seed(page, MID)
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/palette')
-    await clickPaletteAction(page, 'Suggest variations')
-    const compare = page.getByRole('button', { name: /^Compare .* with your palette$/ }).first()
-    await expect(compare).toBeVisible()
-    await compare.click()
+    await openCompareFromSuggest(page)
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     await expect(dialog.getByText('Compare palettes')).toBeVisible()
     await dialog.getByRole('option', { name: /^Editorial hero/ }).click()

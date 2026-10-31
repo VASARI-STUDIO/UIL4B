@@ -413,3 +413,21 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
   .stg .settings-avatar-edit { inset: auto 0 0 0; height: 36%; border-radius: 0; opacity: 1; }
   .stg .settings-avatar-edit svg { width: 12px; height: 12px; }
 }
+
+/* ── Truth and safety: acknowledgement, sign-out notice, plan check ─────── */
+.stg .danger-confirm-ack { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; min-height: 24px; }
+.stg .danger-confirm-ack input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--err-strong); }
+.stg .danger-confirm-ack label { font-size: 13px; line-height: 1.5; color: var(--t0); cursor: pointer; }
+.stg .danger-confirm-link { padding: 0; border: 0; background: none; font: inherit; color: var(--t0); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.stg .danger-confirm-link:disabled { color: var(--t2); cursor: default; }
+.stg .settings-sync-alert-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; flex-shrink: 0; }
+.stg .settings-sync-alert-actions button { margin-left: 0; }
+.stg .settings-sync-alert button:disabled { color: var(--t2); cursor: default; }
+.stg .settings-clear-warn { color: var(--t0); font-weight: 500; }
+.stg .settings-export-gap { color: var(--warn-strong); }
+.stg .sub-checking .settings-row-value { color: var(--t1); }
+.stg .settings-avatar-btn[data-busy] .settings-avatar-edit { opacity: 1; }
+.stg .settings-avatar-btn:disabled { cursor: progress; }
+@media (pointer: coarse) {
+  .stg .danger-confirm-ack { min-height: 44px; align-items: center; }
+}

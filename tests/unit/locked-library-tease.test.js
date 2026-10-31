@@ -168,8 +168,12 @@ test('the builder brand list renders the split output, never the raw library', (
   const src = stripComments(read('src/pages/PaletteBuilder.jsx'))
   // The bug this pins: reverting to BRAND_PALETTES.map(...) in the brands panel
   // puts every paid brand's colours back into barRef and back into the DOM.
-  assert.ok(src.includes('openBrands.map('), 'the brands panel must map the split output')
-  assert.ok(!src.includes('BRAND_PALETTES.map('), 'the brands panel must not map the raw library')
+  // The panel searches the split output (`openBrands.filter(...)` -> shownBrands) and
+  // renders only that; locked brands render as static rows from `lockedBrands`.
+  assert.ok(/shownBrands\s*=\s*openBrands\.filter\(/.test(src), 'the brands panel must build its rows from the split output')
+  assert.ok(src.includes('shownBrands.map('), 'the brands panel must map the filtered split output')
+  assert.ok(/shownLocked\s*=\s*lockedBrands\.filter\(/.test(src), 'the locked brand rows must come from the stub list')
+  assert.ok(!src.includes('BRAND_PALETTES.map(') && !src.includes('brandRows.map('), 'the brands panel must not map the raw library')
 })
 
 test('the gallery filters and searches the split output, closing the hex oracle', () => {

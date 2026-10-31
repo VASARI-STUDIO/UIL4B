@@ -918,8 +918,8 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .tl-toolbar .tl-item[data-tl-item="redo"] { margin-left: -6px; }
 }
 @media (max-width: 340px) {
-  .plb .plb-save { width: 44px; padding-inline: 0; justify-content: center; }
-  .plb .plb-save .tl-btn-label { display: none; }
+  .plb .tl-toolbar .plb-save { width: 44px; padding-inline: 0; justify-content: center; }
+  .plb .tl-toolbar .plb-save .tl-btn-label { display: none; }
 }
 
 /* ── Preview: a main action, quiet (hairline) but in full ink so it reads
@@ -927,241 +927,203 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    labelled: on a phone it is not on the row at all (an Extra tools row). ──── */
 .plb .tl-btn.plb-preview-btn { font-weight: 600; color: var(--t0); }
 
-/* ── Suggest panel: Variations. A pick paints the board and the panel stays
-   open; the user's own palette is pinned at the top. The Brands cards below
-   share these card styles and live in the Explore panel. ──────────────── */
-.plb .plb-galpopup--suggest { width: min(640px, calc(100vw - 32px)); }
-.plb .plb-galpopup-head .tl-pills { flex-wrap: nowrap; }
-/* Back to my palette sits in the head, between the title and Close, so the tab
-   order is the visual order. The text shows wherever it fits (see the 430px
-   rule below, where it becomes an icon with the same accessible name). */
-.plb .plb-sg-back { margin-left: auto; }
-.plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { margin-left: 0; }
-.plb .plb-sg-back-icon { display: none; }
+/* ── Suggest and Explore: one docked panel beside the board ────────────────────
+   Rows, not cards: a name line over a strip of equal chips, so chip n of every
+   row sits under chip n of "Your palette". Design:
+   memory/designs/design-2026-10-31-suggest-explore.md. At 1024 and up it is a
+   flex sibling of the board (it pushes it, never covers it); 641-1023 a bottom
+   dock on top of the adjust bar; 640 and under a sheet with Peek and Full. ──── */
+.plb .plb-sx {
+  position: relative;
+  flex: 0 0 clamp(320px, 25vw, 380px);
+  min-width: 0;
+  min-height: 0;
+  contain: size;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  background: var(--tl-card);
+  border-left: 1px solid var(--tl-hair);
+  animation: plb-sx-in 240ms var(--tl-ease) both;
+}
+@keyframes plb-sx-in { from { opacity: 0; transform: translateX(12px); } }
+@keyframes plb-sx-up { from { transform: translateY(100%); } }
+.plb .plb-sx-handle { display: none; }
+.plb .plb-sx-head { flex: 0 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; height: 56px; padding: 0 var(--s-4); border-bottom: 1px solid var(--tl-hair); }
+.plb .plb-sx-head .plb-menu-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--tl-ink); }
+.plb .plb-sx-head .plb-pop-x { margin-left: auto; }
+.plb .plb-sg-tabs { flex-wrap: nowrap; }
 .plb .plb-sg-tabs .tl-pill { flex: 0 0 auto; white-space: nowrap; }
-.plb .plb-sg-pin { flex: 0 0 auto; display: grid; gap: var(--s-2); padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--tl-hair); }
-.plb .plb-sg-pin-label { font-size: 12px; font-weight: 560; line-height: 20px; color: var(--tl-dim); }
-.plb .plb-sg-pin-strip { display: flex; height: 40px; border-radius: var(--radius-xs); overflow: hidden; }
-.plb .plb-sg-pin-strip .plb-sg-cell { background: var(--plb-rc); }
-.plb .plb-sg-intro { margin: 0 0 var(--s-4); font-size: 12px; color: var(--tl-dim); }
-.plb .plb-sg-group + .plb-sg-group { margin-top: var(--s-5); }
-.plb .plb-sg-group-label { margin: 0 0 var(--s-2); font-size: 12px; font-weight: 560; color: var(--tl-dim); }
-.plb .plb-sg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
-.plb .plb-sg-grid--brands { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.plb .plb-sg-card { position: relative; border: 1px solid var(--tl-hair); border-radius: var(--radius-xl); }
-.plb .plb-sg-main {
-  display: grid;
-  gap: var(--s-2);
+.plb .plb-sx-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-padding-block-end: 40px; padding-bottom: var(--s-4); }
+/* --plb-sx-hide is how much of the sheet sits below the screen (0 except at Peek
+   on a phone); the fade belongs at the edge people can see. */
+.plb .plb-sx-body[data-more="true"] {
+  -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px - var(--plb-sx-hide, 0px)), transparent calc(100% - var(--plb-sx-hide, 0px)));
+  mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px - var(--plb-sx-hide, 0px)), transparent calc(100% - var(--plb-sx-hide, 0px)));
+}
+.plb .plb-sx-intro { margin: 0; padding: 12px var(--s-4) 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.plb .plb-sx-group { margin: 0; padding: var(--s-4) var(--s-4) 4px; font-size: 12px; font-weight: 560; line-height: 16px; color: var(--tl-dim); }
+.plb .plb-sx-note, .plb .plb-sx-foot { margin: 0; padding: var(--s-4); font-size: 12px; color: var(--tl-dim); }
+.plb .plb-sx-link { padding: 0; border: 0; background: none; color: var(--tl-ink); font: inherit; font-weight: 560; text-decoration: underline; cursor: pointer; }
+.plb .plb-sx-search { position: relative; display: flex; align-items: center; margin: var(--s-3) var(--s-4) var(--s-2); color: var(--tl-dim); }
+.plb .plb-sx-search svg { position: absolute; left: 12px; pointer-events: none; }
+.plb .plb-sx-search input { width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid var(--tl-line-2); border-radius: var(--radius-s); background: none; color: var(--tl-ink); font: inherit; font-size: 13px; }
+
+/* The list and its rows. */
+.plb .plb-sw-list { margin: 0; padding: 0; list-style: none; }
+.plb .plb-sw-row {
+  display: block;
   width: 100%;
-  padding: var(--s-2);
+  min-height: 72px;
+  padding: var(--s-2) var(--s-4);
   border: 0;
-  border-radius: inherit;
+  border-radius: var(--radius-s);
   background: none;
   color: var(--tl-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color var(--dur-1) var(--tl-ease), transform var(--dur-1) var(--tl-ease);
+  transition: background-color 120ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.plb .plb-sg-card--static .plb-sg-main { cursor: default; }
-.plb .plb-sg-strip { position: relative; display: block; height: 64px; border-radius: var(--radius-xs); overflow: hidden; }
-.plb .plb-sg-card--brand .plb-sg-strip { height: 48px; }
-.plb .plb-sg-cells { position: absolute; inset: 0; display: flex; }
-.plb .plb-sg-cell { flex: 1 1 0; min-width: 0; }
-.plb .plb-sg-cell:not(.lockt-rowcell) { background: var(--plb-rc); }
-.plb .plb-sg-name { min-height: 32px; padding-right: 40px; font-size: 13px; font-weight: 560; line-height: 32px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plb .plb-sg-name + .plb-sg-desc { margin-top: calc(var(--s-2) * -1); }
-.plb .plb-sg-desc { font-size: 12px; line-height: 1.4; color: var(--tl-dim); }
-.plb .plb-sg-cmp {
-  position: absolute;
-  right: var(--s-2);
-  top: calc(var(--s-2) + 64px + var(--s-2));
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--btn-radius);
-  background: none;
-  color: var(--tl-dim);
-  cursor: pointer;
-}
-.plb .plb-sg-card--brand .plb-sg-cmp { top: calc(var(--s-2) + 48px + var(--s-2)); }
-.plb .plb-sg-card--on { box-shadow: inset 0 0 0 2px var(--tl-ink); }
-.plb .plb-sg-tick {
-  position: absolute;
-  top: var(--s-1);
-  right: var(--s-1);
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--tl-card);
-  color: var(--tl-ink);
-}
-.plb .plb-sg-lock {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  padding: 2px var(--s-2);
-  border-radius: 999px;
-  background: var(--tl-card);
-  color: var(--tl-ink);
-  font-size: 12px;
-  font-weight: 560;
-  transform: translate(-50%, -50%);
-}
-/* The blur is on the cells only, so the lock label stays sharp. Scaled up so
-   the blurred edges do not fade to the card. */
-.plb .plb-sg-card--locked .plb-sg-cells { filter: blur(6px); transform: scale(1.2); }
-.plb .plb-sg-card--brand.plb-sg-card--locked .plb-sg-cells { filter: blur(4px); }
-.plb .plb-sg-card--ph .plb-sg-strip,
-.plb .plb-sg-card--ph .plb-sg-name { background: var(--tl-wash); border-radius: var(--radius-xs); }
-.plb .plb-sg-card--ph .plb-sg-name { display: block; min-height: 16px; margin: 8px 0; }
-.plb .plb-sg-pro { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-top: var(--s-5); font-size: 12px; color: var(--tl-dim); }
-.plb .plb-sg-foot {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-4);
-  border-top: 1px solid var(--tl-hair);
-  font-size: 12px;
-  color: var(--tl-dim);
-  font-variant-numeric: tabular-nums;
-}
-.plb .plb-sg-foot b { color: var(--tl-ink); font-weight: 560; }
-.plb .plb-sg-info { width: 20px; height: 20px; padding: 0; border: 1px solid var(--tl-line-2); border-radius: 999px; background: none; color: var(--tl-dim); font: inherit; font-size: 11px; cursor: pointer; }
-.plb .plb-sg-info[aria-expanded="true"] { background: var(--tl-wash); color: var(--tl-ink); }
-/* The one-line explanation opens on its own line under the score. */
-.plb .plb-sg-foot-help { flex: 1 0 100%; margin: 0; line-height: 1.4; }
-.plb .plb-sg-foot-help[hidden] { display: none; }
-.plb .plb-sg-main:focus-visible,
-.plb .plb-sg-cmp:focus-visible,
-.plb .plb-sg-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* A locked brand (static) and a loading placeholder cannot be pressed, so they
-   get no hover wash that would say they can. */
+.plb .plb-sw-row--pin, .plb .plb-sw-row.is-static { cursor: default; }
+.plb .plb-sw-line { display: flex; align-items: baseline; gap: var(--s-2); height: 20px; margin-bottom: 4px; font-size: 12px; line-height: 20px; }
+.plb .plb-sw-name { flex: none; font-size: 13px; font-weight: 560; color: var(--tl-ink); white-space: nowrap; }
+.plb .plb-sw-detail { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tl-dim); }
+.plb .plb-sw-meta { flex: none; min-width: 32px; text-align: right; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.plb .plb-sw-strip { position: relative; display: block; height: 32px; }
+.plb .plb-sw-chips { position: absolute; inset: 0; display: flex; gap: 2px; border-radius: var(--radius-xs); overflow: hidden; }
+.plb .plb-sw-chip { position: relative; flex: 1 1 0; min-width: 0; container-type: inline-size; }
+.plb .plb-sw-chip:not(.lockt-rowcell) { background: var(--plb-rc); }
+.plb .plb-sw-hex { position: absolute; left: 4px; bottom: 2px; font-family: var(--mono); font-size: 11px; line-height: 14px; opacity: 0; transition: opacity 120ms var(--tl-ease); pointer-events: none; }
+@container (max-width: 47px) { .plb .plb-sw-hex { display: none; } }
+.plb .plb-sw-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.plb .plb-sw-row:focus-visible .plb-sw-hex { opacity: 1; }
+
+/* Applied: wash, a 2px gap ring round the chips, "On your board" in words. */
+.plb .plb-sw-row.is-on { background: var(--tl-wash); }
+.plb .plb-sw-row.is-on .plb-sw-chips { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--tl-ink); }
+.plb .plb-sw-d-on { color: var(--tl-ink); font-weight: 560; }
+.plb .plb-sw-d-back, .plb .plb-sw-d-tap { display: none; }
+.plb .plb-sw-row .plb-sw-chips--mine { opacity: 0; transition: opacity 150ms var(--tl-ease); box-shadow: none; }
 @media (hover: hover) and (pointer: fine) {
-  .plb .plb-sg-card:not(.plb-sg-card--static, .plb-sg-card--ph) .plb-sg-main:hover { background: var(--tl-wash); }
-  .plb .plb-sg-cmp:hover, .plb .plb-sg-info:hover { background: var(--tl-wash); color: var(--tl-ink); }
+  .plb .plb-sw-row:not(.is-static, .plb-sw-row--pin):hover { background: var(--tl-wash); }
+  .plb .plb-sw-row:hover .plb-sw-hex { opacity: 1; }
+  .plb .plb-sw-row.is-on:hover .plb-sw-d-on { display: none; }
+  .plb .plb-sw-row.is-on:hover .plb-sw-d-back { display: inline; color: var(--tl-ink); font-weight: 560; }
+  .plb .plb-sw-row.is-on:hover .plb-sw-chips--mine { opacity: 1; }
 }
-.plb .plb-sg-card:not(.plb-sg-card--locked) .plb-sg-main:active { transform: scale(.97); }
+@media (hover: none) {
+  .plb .plb-sw-row.is-on .plb-sw-d-on { display: none; }
+  .plb .plb-sw-row.is-on .plb-sw-d-tap { display: inline; color: var(--tl-ink); font-weight: 560; }
+}
+.plb button.plb-sw-row:not(.is-locked):active { transform: scale(.98); }
+
+/* Locked: blurred chips inside the clip, "Pro" in the meta column. */
+.plb .plb-sw-row.is-locked .plb-sw-chip { filter: blur(6px); transform: scale(1.15); }
+.plb .plb-sw-row.is-static .plb-sw-chip { filter: blur(4px); }
+.plb .plb-sw-pro { display: inline-flex; align-items: center; gap: 4px; color: var(--tl-ink); font-weight: 560; }
+
+/* Your palette: pinned under the head, never scrolls. */
+.plb .plb-sw-pin { flex: 0 0 auto; border-bottom: 1px solid var(--tl-hair); }
+.plb .plb-sw-info { width: 20px; height: 20px; margin-left: var(--s-2); padding: 0; border: 1px solid var(--tl-line-2); border-radius: 999px; background: none; color: var(--tl-dim); font: inherit; font-size: 11px; cursor: pointer; }
+.plb .plb-sw-info[aria-expanded="true"] { background: var(--tl-wash); color: var(--tl-ink); }
+.plb .plb-sw-help { margin: 0; padding: 0 var(--s-4) var(--s-2); font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.plb .plb-sw-help[hidden] { display: none; }
+.plb .plb-sw-compare { height: 32px; padding: 0 var(--s-2); border: 0; border-radius: var(--btn-radius); background: none; color: var(--tl-ink); font: inherit; font-size: 12px; font-weight: 560; cursor: pointer; }
+.plb .plb-sw-info:focus-visible, .plb .plb-sw-compare:focus-visible, .plb .plb-sx-search input:focus-visible, .plb .plb-sx-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .plb .plb-sw-info:hover, .plb .plb-sw-compare:hover { background: var(--tl-wash); color: var(--tl-ink); } }
+
+/* End of the list: flat, hairline above, no card. */
+.plb .plb-sw-problock { margin-top: var(--s-4); padding: var(--s-4); border-top: 1px solid var(--tl-hair); }
+.plb .plb-sw-pro-head { margin: 0; font-size: 13px; font-weight: 560; color: var(--tl-ink); }
+.plb .plb-sw-pro-body { margin: 4px 0 var(--s-3); font-size: 12px; color: var(--tl-dim); }
+.plb .plb-sw-skel-name, .plb .plb-sw-skel-strip { display: block; background: var(--tl-wash); border-radius: var(--radius-xs); }
+.plb .plb-sw-skel-name { width: 96px; height: 12px; margin-top: 4px; }
+.plb .plb-sw-skel-strip { height: 32px; }
+
 @media (pointer: coarse) {
-  /* Compare stays level with the name row: the top is the same as on a fine
-     pointer (card padding + strip + the gap under it); only the size grows. */
-  .plb .plb-sg-cmp { width: 44px; height: 44px; }
-  .plb .plb-sg-name { min-height: 44px; line-height: 44px; padding-right: 48px; }
-  .plb .plb-sg-info { width: 44px; height: 44px; }
+  /* 44px targets inside the 20px label line: centred, with negative block margin
+     so they do not push the label down into the strip, and lifted above the
+     strip so the whole target takes the press. The ? circle stays 20px. */
+  .plb .plb-sw-line { align-items: center; position: relative; z-index: 1; }
+  .plb .plb-sw-info, .plb .plb-sw-compare { min-width: 44px; height: 44px; margin-block: -12px; }
+  /* The ? sits inside .plb-sw-detail, which clips (overflow: hidden, for the
+     ellipsis). A negative margin shrinks that box to the 20px line and clips the
+     button to 20px of press; with none, the box grows to 44px and the flex line
+     (fixed 20px, centred) is unchanged. */
+  .plb .plb-sw-info { margin-block: 0; margin-left: 0; border: 0; background: none; }
+  .plb .plb-sw-info > span { display: grid; place-items: center; width: 20px; height: 20px; margin: auto; border: 1px solid var(--tl-line-2); border-radius: 999px; }
+  .plb .plb-sw-info[aria-expanded="true"] { background: none; }
+  .plb .plb-sw-info[aria-expanded="true"] > span { background: var(--tl-wash); color: var(--tl-ink); }
+  .plb .plb-sx-search input { height: 44px; }
 }
+
+/* 641-1023: a bottom dock on top of the adjust bar (--plb-dock-b is its measured
+   height), no scrim. */
+@media (max-width: 1023px) {
+  .plb .plb-sx {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--plb-dock-b, 0px);
+    z-index: 125;
+    flex: none;
+    contain: none;
+    height: min(400px, 46dvh);
+    border-left: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -12px 32px -12px oklch(0 0 0 / .28);
+    animation: plb-sx-up 240ms var(--tl-ease) both;
+  }
+}
+/* 640 and under: a sheet drawn at Full height and translated down for Peek, so
+   the height never animates. */
+@media (max-width: 640px) {
+  .plb .plb-sx {
+    bottom: 0;
+    height: 88dvh;
+    border-radius: 22px 22px 0 0;
+    --plb-sx-peek: min(360px, 48dvh);
+    --plb-sx-hide: 0px;
+    transform: translateY(calc(88dvh - var(--plb-sx-peek)));
+    transition: transform 240ms var(--tl-ease);
+  }
+  .plb .plb-sx[data-snap="full"] { transform: none; }
+  .plb .plb-sx[data-snap="peek"] { --plb-sx-hide: calc(88dvh - var(--plb-sx-peek)); }
+  /* The safe-area padding lives on the list, not the sheet, so a row at the top of
+     the list can use the sheet's last pixels. At Peek the list also gets the
+     hidden part of the sheet as bottom padding and scroll padding, so its last row
+     scrolls up into view and scrollIntoView lands inside the visible sheet. */
+  .plb .plb-sx-body {
+    padding-bottom: calc(var(--s-4) + 14px + env(safe-area-inset-bottom, 0px) + var(--plb-sx-hide));
+    scroll-padding-block-end: calc(var(--plb-sx-hide) + 14px + env(safe-area-inset-bottom, 0px) + 8px);
+  }
+  /* Three rows must show at Peek: 360 - 20 (handle) - 52 (head) - 65 (Your palette)
+     leaves 223px, which holds three 64px rows (192px) only without the intro line
+     (32px) and the group labels (36px each). Both come back at Full; the groups
+     stay in the accessibility tree, and an applied row says "Tap again to go back". */
+  .plb .plb-sx-intro--sg { display: none; }
+  .plb .plb-sx[data-snap="peek"] .plb-sx-group {
+    position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .plb .plb-sx[data-snap="full"] .plb-sx-intro--sg { display: block; }
+  .plb .plb-sx-handle { display: grid; place-items: center; flex: 0 0 auto; width: 100%; height: 20px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .plb .plb-sx-handle span { width: 36px; height: 4px; border-radius: 999px; background: var(--tl-line-2); }
+  .plb .plb-sx-head { height: 52px; gap: var(--s-2); }
+  .plb .plb-sw-row { min-height: 64px; padding: 6px var(--s-4); }
+  .plb .plb-sw-strip { height: 28px; }
+  .plb .plb-sx-search input { font-size: 16px; }
+}
+@media (max-width: 640px) and (pointer: coarse) { .plb .plb-sx-head .plb-pop-x { width: 44px; height: 44px; } }
+@media (max-width: 340px) { .plb .plb-sx-head .plb-menu-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }
+
 @media (forced-colors: active) {
-  .plb .plb-sg-card--on { outline: 2px solid Highlight; }
-  .plb .plb-sg-cell, .plb .plb-sg-pin-strip .plb-sg-cell { forced-color-adjust: none; }
+  .plb .plb-sw-row.is-on { outline: 2px solid Highlight; }
+  .plb .plb-sw-chip, .plb .plb-sw-chips { forced-color-adjust: none; }
 }
-:where(html[data-reduced-motion="true"]) .plb .plb-sg-main { transition: none !important; transform: none !important; }
+:where(html[data-reduced-motion="true"]) .plb .plb-sx,
+:where(html[data-reduced-motion="true"]) .plb .plb-sw-row { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .plb .plb-sg-main { transition: none !important; transform: none !important; }
-}
-
-/* Phone: a short sheet with one row of cards, so the board stays in view above
-   it. Groups, intro, pinned strip, Compare and the score line stay on wider
-   screens. */
-@media (max-width: 640px) {
-  .plb .plb-galpopup--suggest { width: 100%; }
-  .plb .plb-galpopup--suggest .plb-sg-pin,
-  .plb .plb-galpopup--suggest .plb-sg-group-label,
-  .plb .plb-galpopup--suggest .plb-sg-intro,
-  .plb .plb-galpopup--suggest .plb-sg-cmp,
-  .plb .plb-galpopup--suggest .plb-sg-foot,
-  .plb .plb-galpopup--suggest .plb-sg-desc { display: none; }
-  /* One head row. Suggest: title left, Back to my palette and Close right.
-     Explore: tabs left, Close right; its title stays in the DOM for the dialog
-     (which also has an aria-label) but is not drawn, so the row never wraps at
-     390, 360 or 320. */
-  .plb .plb-galpopup .plb-galpopup-head { flex-wrap: nowrap; gap: var(--s-2); }
-  .plb .plb-galpopup--explore .plb-galpopup-head .plb-menu-title {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .plb .plb-galpopup--suggest .plb-galpopup-body {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--s-2);
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    /* A snapped card stops at the 16px gutter, not flush with the edge. */
-    scroll-padding-inline: var(--s-4);
-    padding: var(--s-3) var(--s-4);
-  }
-  .plb .plb-galpopup--suggest .plb-sg-groups { display: flex; gap: var(--s-2); }
-  .plb .plb-galpopup--suggest .plb-sg-group, .plb .plb-galpopup--suggest .plb-sg-grid { display: contents; }
-  /* 28vw is 109px at 390, so the first card keeps the 16px gutter and the next
-     one shows about 23px: the row reads as scrollable. */
-  .plb .plb-galpopup--suggest .plb-sg-card { flex: 0 0 clamp(104px, 28vw, 120px); scroll-snap-align: start; }
-  .plb .plb-galpopup--suggest .plb-sg-strip { height: 56px; }
-  /* The card is the target, not its name, so the name row is one text line (the
-     Compare button it made room for is hidden here). */
-  .plb .plb-galpopup--suggest .plb-sg-name { min-height: 20px; line-height: 20px; padding-right: 0; }
-  .plb .plb-galpopup--suggest .lockt-cta, .plb .plb-sg-pro { flex: 0 0 auto; margin-top: 0; }
-  /* Explore's Brands tab keeps its vertical grid in the sheet, two to a row. */
-  .plb .plb-galpopup--explore .plb-sg-grid--brands { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-/* "Back to my palette" does not fit beside the tabs and Close on a phone, so it
-   reads "Back", which is still inside the button's name (the label-in-name
-   rule). Only at 360px and below, where even that crowds Close, is it the icon
-   alone; title then names it for a mouse or stylus. */
-.plb .plb-sg-back-short { display: none; }
-@media (max-width: 430px) {
-  .plb .plb-sg-back-text { display: none; }
-  .plb .plb-sg-back-short { display: inline; }
-}
-@media (max-width: 360px) {
-  .plb .plb-sg-back { width: 44px; min-width: 44px; padding-inline: 0; justify-content: center; }
-  .plb .plb-sg-back-short { display: none; }
-  .plb .plb-sg-back-icon { display: inline-flex; }
-}
-@media (max-width: 640px) and (pointer: coarse) {
-  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x,
-  .plb .plb-galpopup--explore .plb-galpopup-head .plb-pop-x { width: 44px; height: 44px; }
-}
-
-/* The grab handle belongs to the bottom sheet. Above 640px this panel floats
-   under its button, so it has no handle to drag. */
-@media (min-width: 641px) {
-  .plb .plb-galpopup::before { display: none; }
-}
-
-/* Tablet: the panel stays under its button with its right edge on the button's,
-   but narrow and short enough that the board it is repainting stays in view to
-   its left and below. */
-@media (min-width: 641px) and (max-width: 1023px) {
-  .plb .plb-galpopup--suggest { width: min(400px, calc(100vw - 32px)); }
-  .plb .plb-float > .plb-galpopup--suggest { max-height: min(78dvh, 640px); }
-}
-
-/* A scrolling body that has more below it fades out at its bottom edge, so a
-   cut-off row reads as "scroll for more" rather than as the end. The fade comes
-   off once the end is reached (scrollCue sets data-more). It is a scroll-edge
-   mask, not a decoration; the phone sheet scrolls sideways and has no cue. */
-.plb .plb-galpopup-body[data-more="true"] {
-  -webkit-mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
-  mask-image: linear-gradient(to bottom, Canvas calc(100% - 32px), transparent);
-}
-/* A card reached by Tab stops above the fade, so it and its focus ring stay clear. */
-.plb .plb-galpopup-body { scroll-padding-block-end: 40px; }
-@media (max-width: 640px) {
-  .plb .plb-galpopup--suggest .plb-galpopup-body[data-more="true"] { -webkit-mask-image: none; mask-image: none; }
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-sx { animation: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .plb .plb-sw-row { transition: none !important; transform: none !important; }
 }

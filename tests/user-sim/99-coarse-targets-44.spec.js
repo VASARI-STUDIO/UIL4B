@@ -36,7 +36,7 @@ async function hitArea(page, selector) {
 const CASES = [
   { route: '/community', sels: ['.ch-filter', '.ch-sort-btn', '.ch-heart'] },
   { route: '/settings', signin: true, sels: ['.settings-nav-item'] },
-  { route: '/create/alt-text', sels: ['[data-tool-toolbar] .tl-btn--accent', '.alt-field', '.alt-length .tl-pill'] },
+  { route: '/create/alt-text', sels: ['[data-tl-dock] button', '.alt-field', '.alt-length .tl-pill'] },
   { route: '/create/auto-builder', sels: ['.bs-btn--primary'] },
   // The output-format choices: the radio itself is the whole tile, so the
   // control a finger lands on is 44px tall, not a 20px box inside a label.

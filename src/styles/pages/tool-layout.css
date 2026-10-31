@@ -514,6 +514,65 @@
   :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
 }
 
+/* ── The phone dock (ToolLayout's `.tl-dock`) ────────────────────────────────
+   Below 768px the toolbar's primary sits in a bar fixed to the foot of the
+   screen. Its height is one token, --tool-dock-h: hairline 1px + 12px + the
+   44px control + the bottom padding, which clears the home indicator. Over the
+   phone tab bar that bar has already cleared it, so the padding drops to 12px
+   and the dock rides --tool-dock-bottom above it.
+
+   --tl-dock-h is the same height on the layout root, and 0 unless the dock is
+   showing (`tl--docked`), so the body's padding follows the bar exactly.
+   Layers: above the toolbar (30), under every sheet, menu and tab bar (70+). */
+:root {
+  --tool-dock-pad: max(12px, env(safe-area-inset-bottom, 0px));
+  --tool-dock-h: calc(57px + var(--tool-dock-pad));
+  --tool-dock-bottom: 0px;
+}
+.tl { --tl-dock-h: 0px; }
+.tl .tl-dock { display: none; }
+@media (max-width: 767px) {
+  html.has-tabbar {
+    --tool-dock-pad: 12px;
+    --tool-dock-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+  .tl .tl-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: var(--tool-dock-bottom);
+    z-index: 50;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    height: var(--tool-dock-h);
+    padding: 12px max(var(--tl-pad), env(safe-area-inset-right, 0px)) var(--tool-dock-pad) max(var(--tl-pad), env(safe-area-inset-left, 0px));
+    background: var(--tl-page);
+    border-top: 1px solid var(--tl-hair);
+  }
+  /* The keyboard is up: the bar stays mounted (the primary keeps its state) but is not drawn. */
+  .tl .tl-dock.is-away { display: none; }
+  /* The primary fills the bar, whether it is a button or a wrapper around one. */
+  .tl .tl-dock > * { flex: 1 1 auto; min-width: 0; }
+  .tl .tl-dock .tl-btn--accent { flex: 1 1 auto; height: 44px; min-height: 44px; }
+  .tl.tl--docked { --tl-dock-h: var(--tool-dock-h); }
+  .tl.tl--docked .tl-body { padding-bottom: calc(clamp(12px, 2vw, 20px) + var(--tl-dock-h)); }
+  .tl.tl--docked .tl-body--bleed { padding-bottom: var(--tl-dock-h); }
+
+  /* Everything else that floats at the foot of the screen rides above the dock. */
+  html.has-tool-dock:not(.bkit-on) { scroll-padding-bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 8px); }
+  html.has-tool-dock:not(.bkit-on) body .toast { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 12px + var(--toast-lift)); }
+  html.has-tool-dock:not(.bkit-on) body .global-feedback-btn { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 14px); }
+  html.has-tool-dock:not(.bkit-on) body .bill-banner { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 20px); }
+}
+@media (max-width: 520px) {
+  html.has-tool-dock:not(.bkit-on) body .bill-banner { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 74px); }
+}
+/* The brand kit walkthrough's bar owns the foot of the screen; the primary is
+   back in the toolbar, and this covers the frame before the layout notices. */
+html.bkit-on .tl .tl-dock { display: none; }
+html.bkit-on .tl { --tl-dock-h: 0px; }
+
 /* Coarse pointers: every control reaches the 44px floor the touch specs hold
    (57-create-tool-target-size, 99-coarse-targets-44). The design draws 36px
    for a mouse; on a finger the same control grows, nothing else moves. */
