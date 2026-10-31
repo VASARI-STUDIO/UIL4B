@@ -80,6 +80,14 @@ function walk(dir) {
 // so both routes count. A local trap is recognised by it intercepting Tab.
 const TRAPS_FOCUS = /useModalDialog|key !== 'Tab'|key === 'Tab'/
 
+// A sheet inside a dialog that already traps focus (the Orra bag sheet in a
+// preview scene) cannot use the hook again: a second hook would lock the scroll
+// twice, steal focus from the dialog and add a second Escape handler. It keeps
+// focus in by making the page behind it `inert`, which removes that page from
+// Tab order and from the pointer. The test is a JSX `inert={...}` attribute with
+// a real expression, read from comment-stripped source.
+const INERT_BEHIND = /\binert=\{(?!\s*(?:false|undefined|null)\s*\})[^}]+\}/
+
 // `[aria-modal="true"]` also appears inside querySelector strings — PaletteBuilder
 // uses one to suppress its spacebar shortcut while any dialog is open. That is a
 // READ, not a declaration, and must not be counted as one.
@@ -400,6 +408,7 @@ test('every dialog that claims aria-modal actually traps focus', () => {
     const src = fs.readFileSync(file, 'utf8')
     if (!DECLARES_MODAL.test(src)) continue
     if (TRAPS_FOCUS.test(src)) continue
+    if (INERT_BEHIND.test(stripJs(src))) continue
     offenders.push(path.relative(process.cwd(), file))
   }
   assert.deepEqual(offenders, [],

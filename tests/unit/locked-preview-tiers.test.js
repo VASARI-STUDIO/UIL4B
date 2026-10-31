@@ -33,12 +33,15 @@ import {
   accountTierGain,
   galleryLimit,
   galleryTier,
+  freeOpens,
+  tierSentence,
   GALLERY_TIER_LIMITS,
 } from '../../src/utils/lockedPreview.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
@@ -389,12 +392,70 @@ test('the signed-out wall offers the free account, and the paid wall offers Pro'
   }
 })
 
-test('the Community tab counts what it will show', () => {
+test('the Community tab counts what it will show, and only when nothing is withheld', () => {
   // A badge reading 20 over a grid of three is the one number on the page that
-  // disagrees with the page. Its sibling tab counts the prompts you have.
+  // disagrees with the page. Its sibling tab counts the prompts you have. While
+  // anything is locked neither number is right, so the badge stands down.
   const src = stripComments(read(PAGES.prompts))
-  assert.ok(/pl-tab-count">\{browsableCommunity\.length\}/.test(src),
-    'the Community tab count must be the browsable set, not the whole library')
+  assert.ok(/lockedCount === 0 && <span className="pl-tab-count">\{browsableCommunity\.length\}/.test(src),
+    'the Community tab count must be the browsable set, and only drawn when no row is locked')
+})
+
+test('freeOpens is the free cap, or fewer when the library holds fewer open rows', () => {
+  assert.equal(freeOpens({ eligible: 71 }), GALLERY_TIER_LIMITS.free)
+  assert.equal(freeOpens({ eligible: 4 }), 4)
+  assert.equal(freeOpens({ eligible: 0 }), 0)
+  assert.equal(freeOpens(), 0)
+  assert.equal(freeOpens({ eligible: 'x' }), 0)
+})
+
+test('the tier sentence states the true numbers, taken from the helpers and the totals', () => {
+  const total = LIBRARY_TOTALS.gradients
+  const shown = GALLERY_TIER_LIMITS.anonymous
+  const anon = tierSentence({ tier: 'anonymous', shown, total, eligible: total, noun: 'gradients' })
+  assert.equal(anon,
+    `Signed out, you see ${shown} of the ${total} gradients. A free account opens ${GALLERY_TIER_LIMITS.free}; Pro opens all ${total}.`)
+  // A library with only four open rows promises four, not ten.
+  assert.match(tierSentence({ tier: 'anonymous', shown, total: 9, eligible: 4, noun: 'palettes' }), /A free account opens 4;/)
+  const free = tierSentence({ tier: 'free', shown: GALLERY_TIER_LIMITS.free, total, eligible: total, noun: 'gradients' })
+  assert.equal(free, `Free covers ${GALLERY_TIER_LIMITS.free} of the ${total} gradients. Pro opens all of them.`)
+  assert.equal(tierSentence({ tier: 'pro', shown: total, total, eligible: total, noun: 'gradients' }), '')
+  assert.equal(tierSentence(), '')
+})
+
+test('the real libraries agree with LIBRARY_TOTALS, so the sentence is true for each', () => {
+  assert.equal(LIBRARY_TOTALS.palettes, LIBRARY_PALETTES.length)
+  assert.equal(LIBRARY_TOTALS.gradients, GALLERY_GRADIENTS.length)
+  assert.equal(LIBRARY_TOTALS.prompts, COMMUNITY_PROMPTS.length)
+  for (const { items, isOpen } of LIBRARIES) {
+    const eligible = items.filter(isOpen).length
+    const sentence = tierSentence({ tier: 'anonymous', shown: GALLERY_TIER_LIMITS.anonymous, total: items.length, eligible, noun: 'rows' })
+    assert.ok(sentence.includes(`opens ${Math.min(GALLERY_TIER_LIMITS.free, eligible)};`), sentence)
+    assert.ok(sentence.includes(`all ${items.length}.`), sentence)
+  }
+})
+
+test('the pages build the closing lines and the walls from the helper, with no second set of numbers', () => {
+  for (const [name, file] of Object.entries(PAGES)) {
+    const src = stripComments(read(file))
+    assert.ok(/tierSentence\(\{/.test(src), `${name} does not use the shared tier sentence`)
+    assert.ok(!/A free account opens \$\{(browsable|openCommunity)/.test(src), `${name} still writes its own free-account arithmetic`)
+    assert.ok(!/Free covers \$\{(browsable|openCommunity)\.length\} of the \$\{(rows|communityRows)\.length\}\. Pro opens all/.test(src),
+      `${name} still writes its own closing-line arithmetic`)
+    // The closing line offers the free account to a signed-out visitor.
+    assert.ok(/action="Create your free account"/.test(src), `${name}'s closing line has no free-account action`)
+    // No tier number is typed into the page: the caps live in lockedPreview.js.
+    assert.ok(!/\b(of the|opens|shown) (3|10|20|100|101)\b/.test(src), `${name} writes a tier number as a literal`)
+  }
+})
+
+test('the gallery heading shows the full total beside what is shown, never a bare partial count', () => {
+  for (const name of ['palettes', 'gradients']) {
+    const src = stripComments(read(PAGES[name]))
+    assert.ok(/<DiscoverResultHead[\s\S]*?total=\{/.test(src), `${name}'s heading does not pass the library total`)
+  }
+  const head = stripComments(read('src/components/discover/DiscoverResultHead.jsx'))
+  assert.ok(/\$\{total\}[\s\S]*?· \$\{count\} shown/.test(head), 'the head must read "<total> <noun> · <count> shown"')
 })
 
 test('no placeholder is stamped with a price the row does not carry', () => {

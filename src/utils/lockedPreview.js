@@ -73,7 +73,7 @@ const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 //     count, so the tease reads as "the next row", which is what it is.
 //   - More than three buries the call to action under a scroll of grey
 //     placeholders. The brand panel has 30 locked rows and the prompt library
-//     8; rendering them all is the "tease that annoys" failure — a wall, not an
+//     ten; rendering them all is the "tease that annoys" failure — a wall, not an
 //     invitation.
 // The quantity on the other side of the wall is communicated as a NUMBER in the
 // CTA, the way Mobbin says "Access all 511,089 screens" rather than rendering
@@ -146,6 +146,30 @@ export function accountTierGain({ tier, eligible, shown } = {}) {
   if (tier !== 'anonymous') return 0
   const reach = Math.min(GALLERY_TIER_LIMITS.free, Math.max(0, Number(eligible) || 0))
   return Math.max(0, reach - Math.max(0, Number(shown) || 0))
+}
+
+// How many rows a free account opens in all: the free cap, or fewer when the
+// library holds fewer open rows than that. The one place the figure is worked
+// out, so the walls and the closing lines cannot disagree about it.
+export function freeOpens({ eligible } = {}) {
+  return Math.min(GALLERY_TIER_LIMITS.free, Math.max(0, Number(eligible) || 0))
+}
+
+// The sentence that states where this viewer stands on the ladder, for the
+// closing lines and the walls. `noun` is the plural ("palettes"), `shown` is
+// what the viewer has now and `total` is the size of the library.
+//
+//   anonymous  both next steps, with their true numbers;
+//   free       Pro is the next step;
+//   pro        nothing to say.
+export function tierSentence({ tier, shown, total, eligible, noun } = {}) {
+  if (tier === 'anonymous') {
+    return `Signed out, you see ${shown} of the ${total} ${noun}. A free account opens ${freeOpens({ eligible })}; Pro opens all ${total}.`
+  }
+  if (tier === 'free') {
+    return `Free covers ${shown} of the ${total} ${noun}. Pro opens all of them.`
+  }
+  return ''
 }
 
 // Strip a preview down to the whitelist. Undefined values are dropped so a
