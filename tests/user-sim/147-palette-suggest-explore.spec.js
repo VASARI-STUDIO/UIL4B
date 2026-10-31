@@ -213,7 +213,9 @@ test.describe('the panel docks beside the board', () => {
     // Chip n of every row sits under chip n of Your palette.
     const pin = await chipHexes(mineRow(panel))
     expect(pin, 'Your palette shows the board in order').toEqual(['#14224A', '#249EAF', '#F2C14E', '#2563EB', '#C0392B'])
-    const lefts = await panel.locator('.plb-sw-strip').evaluateAll((strips) => strips.map((s) => [...s.querySelectorAll(':scope > .plb-sw-chips:not(.plb-sw-chips--mine) > .plb-sw-chip')].map((c) => Math.round(c.getBoundingClientRect().left))).filter((l) => l.length))
+    // The strip's left edge plus each chip's layout offset: a locked row's chips are drawn at
+    // scale(1.15), which moves getBoundingClientRect().left by about 5px without moving the chip.
+    const lefts = await panel.locator('.plb-sw-strip').evaluateAll((strips) => strips.map((s) => [...s.querySelectorAll(':scope > .plb-sw-chips:not(.plb-sw-chips--mine) > .plb-sw-chip')].map((c) => Math.round(s.getBoundingClientRect().left + c.offsetLeft))).filter((l) => l.length))
     for (const l of lefts) expect(l, 'chip n is not under chip n of Your palette').toEqual(lefts[0])
   })
 
@@ -641,9 +643,16 @@ test.describe('a locked brand puts no hex in the page', () => {
     await expect(panel.locator('.plb-sw-row.is-static')).toHaveCount(3)
     expect(TELLTALE.length, 'the check has colours to look for').toBeGreaterThan(10)
 
-    const leak = async () => {
-      const html = (await panel.evaluate((el) => el.outerHTML)).toUpperCase()
-      const aria = (await panel.ariaSnapshot()).toUpperCase()
+    // `typed` is the text the test itself put in the search field. The page quotes it back
+    // (the input's value, the accessibility tree's name for the field and "No brands match
+    // “…”"), and that is the user's own text, not a leak. It is taken out of the text checks
+    // so every OTHER withheld colour is still looked for; the painted-colour check still
+    // covers the typed one.
+    const leak = async (typed = '') => {
+      const own = typed ? new RegExp(typed.replace('#', '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi') : null
+      const strip = (t) => (own ? t.replace(own, '') : t)
+      const html = strip(await panel.evaluate((el) => el.outerHTML)).toUpperCase()
+      const aria = strip(await panel.ariaSnapshot()).toUpperCase()
       const paint = await panel.locator('*').evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
       const painted = new Set(paint.map(toHex))
       return TELLTALE.filter((hex) => html.includes(hex) || html.includes(hex.slice(1)) || aria.includes(hex.slice(1)) || painted.has(hex))
@@ -658,7 +667,7 @@ test.describe('a locked brand puts no hex in the page', () => {
     // Searching for a withheld hex finds nothing, and still leaks nothing.
     await panel.getByRole('searchbox', { name: 'Search brands' }).fill(TELLTALE[0].replace('#', ''))
     await expect(panel.getByText(/^No brands match/)).toBeVisible()
-    expect(await leak(), 'the search echoed a withheld colour').toEqual([])
+    expect(await leak(TELLTALE[0]), 'the search echoed a withheld colour').toEqual([])
     // Positive control: a FREE brand's hex is in the page (the brand rows paint), so the check can see.
     await panel.getByRole('button', { name: 'Clear search' }).click()
     const control = [...FREE_HEXES].find((h) => !achromatic(h))
@@ -901,7 +910,10 @@ test.describe('Suggest at 768', () => {
     expect(box.y + box.height, `the dock ends at ${box.y + box.height}, below the adjust bar's top ${bar.y}`).toBeLessThanOrEqual(bar.y + 1)
     expect(box.height, 'the dock is at most 400px tall').toBeLessThanOrEqual(401)
     expect(box.width, 'full width').toBeGreaterThanOrEqual(766)
-    expect(box.y - col.y, `only ${box.y - col.y}px of the board is visible above the dock`).toBeGreaterThanOrEqual(400)
+    // The layout invariant at 768: the dock rests on the adjust bar's top edge (the bar is 138px
+    // tall here, so the board is not a fixed 400px) and the board shows above it.
+    expect(Math.abs(box.y + box.height - bar.y), `the dock ends at ${box.y + box.height}, the adjust bar starts at ${bar.y}: not on its top edge`).toBeLessThanOrEqual(1)
+    expect(box.y - col.y, `only ${box.y - col.y}px of the board is visible above the dock`).toBeGreaterThanOrEqual(300)
     // The dock does not cover the adjust bar.
     const covered = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.plb-sx') != null, { x: bar.x + 20, y: bar.y + 10 })
     expect(covered, 'the dock covers the adjust bar').toBe(false)
@@ -966,6 +978,119 @@ test.describe('Suggest on a phone', () => {
     await collapse.click()
     await expect(panel).toHaveAttribute('data-snap', 'peek')
     await expect(panel.getByRole('button', { name: 'Expand' })).toBeVisible()
+  })
+
+  // Where the list can be seen at Peek: below the pinned "Your palette" row, above the screen's
+  // bottom edge. The sheet is drawn at Full height and slid down, so a row can be inside its
+  // scroll box and still be off the screen.
+  const visibleBand = async (panel, vh = 844) => {
+    const pin = await mineRow(panel).boundingBox()
+    return { top: pin.y + pin.height - 1, bottom: vh }
+  }
+  const fullyVisible = (panel, band) => rowsOf(panel).evaluateAll((els, b) => els.filter((el) => { const r = el.getBoundingClientRect(); return r.top >= b.top && r.bottom <= b.bottom }).length, band)
+
+  test('Peek at 390x844 shows three whole rows under Your palette, and no intro line', async ({ page }) => {
+    watch(page, 'someone reading the Suggest sheet at its resting height')
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await expect(panel).toHaveAttribute('data-snap', 'peek')
+    await settled(panel)
+    await expect(mineRow(panel), 'Your palette is showing').toBeInViewport({ ratio: 1 })
+    await expect(panel.locator('.plb-sx-intro--sg'), 'the intro line is dropped on a phone').toBeHidden()
+    const band = await visibleBand(panel)
+    expect(await fullyVisible(panel, band), 'whole rows between Your palette and the bottom of the screen').toBeGreaterThanOrEqual(3)
+  })
+
+  test('the group labels are hidden to the eye at Peek but stay in the accessibility tree', async ({ page }) => {
+    watch(page, 'a screen-reader user on the Suggest sheet')
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await expect(panel).toHaveAttribute('data-snap', 'peek')
+    await settled(panel)
+    const names = ['Temperature', 'Strength', 'Light and dark', 'Hue']
+    const heads = panel.getByRole('heading', { level: 3 })
+    await expect(heads, 'the four labels are headings the tree still has').toHaveText(names)
+    const tree = await panel.ariaSnapshot()
+    for (const n of names) {
+      expect(tree, `${n} is a heading in the accessibility tree at Peek`).toContain(`heading "${n}" [level=3]`)
+      await expect(panel.getByRole('region', { name: n }), `${n} still names its group of rows`).toHaveCount(1)
+    }
+    const peekBoxes = await heads.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return [r.width, r.height] }))
+    for (const [w, h] of peekBoxes) expect(Math.max(w, h), 'a label at Peek takes no room').toBeLessThanOrEqual(1)
+    // Positive control: at Full the same labels are drawn.
+    await panel.getByRole('button', { name: 'Expand' }).click()
+    await expect(panel).toHaveAttribute('data-snap', 'full')
+    await settled(panel)
+    await expect(heads.first(), 'at Full the group label is visible').toBeVisible()
+    expect(await heads.first().evaluate((el) => el.getBoundingClientRect().height), 'and has its own line').toBeGreaterThanOrEqual(12)
+    await expect(panel.locator('.plb-sx-intro--sg'), 'the intro line comes back at Full').toBeVisible()
+  })
+
+  test('applying a Suggest row from Full drops the sheet to Peek and keeps the applied row on screen', async ({ page }) => {
+    watch(page, 'a Pro designer applying a variation from the bottom of the list')
+    await signIn(page, { plan: 'pro' })
+    const panel = await openPanel(page, 'suggest', { role: 'dialog' })
+    await panel.getByRole('button', { name: 'Expand' }).click()
+    await expect(panel).toHaveAttribute('data-snap', 'full')
+    await settled(panel)
+    // The last row is well below the first Peek screen: the worst case for "still in view".
+    const last = rowsOf(panel).last()
+    await last.scrollIntoViewIfNeeded()
+    await expect(last).toBeInViewport()
+    const before = await joined(page)
+    await last.click()
+    await expect(last).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel, 'applying drops the sheet to Peek so the board shows').toHaveAttribute('data-snap', 'peek')
+    await settled(panel)
+    await expect.poll(() => joined(page), { message: 'the board took the variation' }).not.toBe(before)
+    // The applied row is scrolled into the part of the sheet that is on screen.
+    await expect.poll(async () => {
+      const band = await visibleBand(panel)
+      const r = await last.boundingBox()
+      return r.y >= band.top && r.y + r.height <= band.bottom
+    }, { message: 'the applied row is under Your palette and above the bottom of the screen' }).toBe(true)
+    await expect(last).toBeInViewport({ ratio: 1 })
+    await expect(last).toContainText('Tap again to go back')
+    // Tapping it again goes back and the sheet stays at Peek.
+    await last.click()
+    await expect(last).toHaveAttribute('aria-pressed', 'false')
+    await expect(panel).toHaveAttribute('data-snap', 'peek')
+  })
+
+  test('Explore opens from Extra tools on a phone, and applying a palette or a brand drops it to Peek', async ({ page }) => {
+    watch(page, 'someone finding Explore on a phone')
+    await go(page, BOARD)
+    await expect(page.locator('.plb-col')).toHaveCount(5)
+    // At 390 the toolbar row holds Suggest but not Explore: Explore is in the Extra tools sheet.
+    await expect(page.locator('.plb [data-tool-toolbar]').getByRole('button', { name: EXPLORE_BTN, exact: true }), 'Explore is not on the 390 toolbar row').toHaveCount(0)
+    await page.locator('.plb [data-tool-toolbar]').getByRole('button', { name: /^Extra tools/ }).click()
+    await page.getByRole('button', { name: EXPLORE_BTN, exact: true }).click()
+    const panel = explorePanel(page, 'dialog')
+    await expect(panel, 'Explore opened from Extra tools').toBeVisible()
+    await expect(panel).toHaveAttribute('data-snap', 'full')
+    await settled(panel)
+    const original = await joined(page)
+
+    // A palette from well down the list.
+    const palette = rowsOf(panel).nth(8)
+    await palette.scrollIntoViewIfNeeded()
+    await palette.click()
+    await expect(palette).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel, 'a palette drops the sheet to Peek').toHaveAttribute('data-snap', 'peek')
+    await settled(panel)
+    await expect.poll(() => joined(page)).not.toBe(original)
+    await expect(palette).toBeInViewport({ ratio: 1 })
+    const band = await visibleBand(panel)
+    const box = await palette.boundingBox()
+    expect(box.y, 'the applied palette is under Your palette, not behind it').toBeGreaterThanOrEqual(band.top)
+
+    // A brand: the other tab applies through the same drop.
+    await panel.getByRole('button', { name: 'Expand' }).click()
+    await expect(panel).toHaveAttribute('data-snap', 'full')
+    await panel.getByRole('tab', { name: 'Brands' }).click()
+    const brand = rowsOf(panel).first()
+    await brand.click()
+    await expect(brand).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel, 'a brand drops the sheet to Peek').toHaveAttribute('data-snap', 'peek')
+    await expect(brand).toBeInViewport({ ratio: 1 })
   })
 
   test('Explore Palettes opens at Full, and applying a row drops the sheet to Peek so the board shows', async ({ page }) => {

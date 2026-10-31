@@ -187,7 +187,8 @@ test.describe('Brand kit walkthrough', () => {
     const node = await guide.elementHandle()
     const seen = await page.evaluate(key => localStorage.getItem(key), SEEN_KEY)
     await page.getByRole('button', { name: 'Suggest variations', exact: true }).click()
-    await expect(page.getByRole('dialog', { name: 'Suggest', exact: true })).toBeVisible()
+    // At 1440 Suggest is a docked region beside the board (a dialog only below 1024).
+    await expect(page.getByRole('complementary', { name: 'Suggest', exact: true })).toBeVisible()
     await expect(guide).toBeHidden()
     await expect(guide).toHaveAttribute('aria-hidden', 'true')
     await expect(guide).toHaveAttribute('inert', '')

@@ -471,25 +471,27 @@ test('the colour picker’s hue slider is a 24px target on /create/contrast and 
   expect(failures, `hue sliders under 24px:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/palette · “Use →” on a community card in the Explore popup is a 24px target', async ({ browser }) => {
-  // The popup's cards are 110px tall, so the five stripes are ~20px each; they
-  // all do what "Use →" does, which makes the labelled control the one that
-  // has to clear the floor — and it measured 285x20 in the sweep.
+test('/create/palette · every row in the Explore panel is a 24px target', async ({ browser }) => {
+  // The popup, its cards and the "Use →" control went with the Suggest/Explore
+  // redesign: a community palette is now one pressable swatch row in a docked
+  // panel. The row itself is the control, so it is the thing that has to clear
+  // the 24px floor (it measured 285x20 as a "Use" arrow on the old cards).
   //
-  // MUTATION: drop `.plb-galpopup-body .pgal-use{min-height:24px…}` — every
-  // card fails at ~20px.
+  // MUTATION: set `.plb-sw-row` to `height: 20px` (or `min-height: 0` with the
+  // strip at 12px) — every row fails.
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
   await clickPaletteAction(page, 'Explore palettes and brands')
-  const use = page.locator('.plb-galpopup-body .pgal-use')
-  await expect(use.first()).toBeVisible()
-  await settled(page, '.plb-galpopup')
-  const boxes = await use.evaluateAll((els) => els.map((el) => +el.getBoundingClientRect().height.toFixed(1)))
+  const panel = page.getByRole('complementary', { name: 'Explore palettes and brands', exact: true })
+  const rows = panel.locator('button.plb-sw-row')
+  await expect(rows.nth(3)).toBeVisible()
+  await settled(page, '.plb-sx')
+  const boxes = await rows.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { h: +r.height.toFixed(1), w: +r.width.toFixed(1) } }))
   await ctx.close()
-  expect(boxes.length, 'the community tab rendered cards').toBeGreaterThan(3)
-  const short = boxes.filter((h) => h < 24)
-  expect(short, `${short.length} of ${boxes.length} "Use" controls under 24px: ${short.slice(0, 5).join(', ')}`).toEqual([])
+  expect(boxes.length, 'the community tab rendered rows').toBeGreaterThan(3)
+  const short = boxes.filter((b) => b.h < 24 || b.w < 24)
+  expect(short, `${short.length} of ${boxes.length} rows under 24px: ${short.slice(0, 5).map((b) => `${b.w}x${b.h}`).join(', ')}`).toEqual([])
 })
 
 // Not tested: '/create/tint · the endpoints checkbox row is a 24px
