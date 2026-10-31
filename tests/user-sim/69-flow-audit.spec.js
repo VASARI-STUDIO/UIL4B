@@ -498,6 +498,9 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     jpeg: /-style-guide\.jpg$/,
     css: /\.tokens\.css$/,
     json: /\.tokens\.json$/,
+    tailwind: /-tailwind\.css$/,
+    contrast: /-contrast-pairs\.csv$/,
+    'contrast-json': /-contrast-pairs\.json$/,
   }
 
   test('every free format produces a file named for the format', async ({ browser }) => {
