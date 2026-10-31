@@ -13,14 +13,30 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
+// The false-failure chance at this cap is below 1e-9; the arithmetic is on the test.
+const MAX_PRESSES = 600
+
 // ── 1 · the gradient randomiser ──────────────────────────────────────────────
 
 test.describe('gradient randomiser weighting', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer hitting Random') })
 
-  // 60 presses is enough to be decisive about "excludes nothing" without being
-  // a coin-flip test: at the shipped 25% per non-linear type, the chance of
-  // never seeing one of them in 60 draws is about 1 in 5 million.
+  // PRESS UNTIL EVERY TYPE HAS COME UP, WITH A CAP. A fixed 60 presses was a coin
+  // the build gate depended on: the shipped weights are Linear 80 / Radial 15 /
+  // Conic 5 (GRAD_TYPE_WEIGHTS, asserted exactly in tests/unit/gradient-random.test.js),
+  // so Conic is missing from 60 presses with probability 0.95^60 = 4.6%, about one
+  // CI run in twenty. (The old comment here worked that out at 25% per type, which
+  // is not what ships.) Measured over 100,000 rolls of the real randomiser,
+  // including the radial gate that sometimes turns a Radial into a Linear, Conic is
+  // 4.9% and Radial 14.9%.
+  //
+  // Now the loop stops the moment all three have been seen, which takes about 20
+  // presses (mean 1 / 0.05 for Conic) and a second or two. The cap only matters
+  // when a type really is unreachable. At a cap of 600, the chance a healthy build
+  // misses Conic is 0.95^600 = 4e-14 (2e-11 even if Conic's real share were as low
+  // as 4%) and Radial's is 0.85^600 = 1e-43, so the false-failure rate is well
+  // under 1e-9. No seed, no test hook, no change to the page: it is still the real
+  // Random button and the real Math.random.
   //
   // THIS TEST USED TO ALSO ASSERT "AND LINEAR MOST OFTEN". That was a mistake,
   // and CI caught it: 60 draws at 50/25/25 produced linear 24, radial 24, and
@@ -34,25 +50,34 @@ test.describe('gradient randomiser weighting', () => {
   // is left here is the one claim a browser is needed for and that no draw can
   // flip: every type is still reachable.
   test('Random reaches every type', async ({ page }) => {
+    // Only a build where a type is unreachable runs all 600 presses; a healthy one
+    // is done in about 20.
+    test.setTimeout(150_000)
     await go(page, '/create/gradient')
     const random = page.getByRole('button', { name: 'Random', exact: true })
     await expect(random).toBeVisible()
 
     const seen = { Linear: 0, Radial: 0, Conic: 0 }
-    for (let i = 0; i < 60; i++) {
+    let presses = 0
+    let readable = 0
+    while (presses < MAX_PRESSES && Object.values(seen).some((n) => n === 0)) {
       await random.click()
+      presses++
       const type = await page.evaluate(() => {
         const on = document.querySelector('[aria-label="Gradient type"] .tl-pill.is-on')
         return on?.textContent?.trim() || null
       })
-      if (type && type in seen) seen[type]++
+      if (type && type in seen) { seen[type]++; readable++ }
+      // Checked early so a selector that stopped matching fails in seconds with
+      // its own message, not after 600 presses with a misleading one.
+      if (presses === 10) expect(readable, 'no type could be read from the toggle').toBeGreaterThan(8)
     }
 
     // The toggle was actually readable — without this, a selector that stopped
     // matching would make the exclusion check below vacuously true.
-    expect(Object.values(seen).reduce((a, b) => a + b, 0), 'no type could be read from the toggle').toBeGreaterThan(50)
+    expect(readable, 'no type could be read from the toggle').toBeGreaterThan(presses * 0.9)
     for (const [type, n] of Object.entries(seen)) {
-      expect(n, `${type} never came up in 60 presses — that is an exclusion, not a weighting`).toBeGreaterThan(0)
+      expect(n, `${type} never came up in ${presses} presses — that is an exclusion, not a weighting`).toBeGreaterThan(0)
     }
   })
 })
