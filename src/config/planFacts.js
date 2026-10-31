@@ -1,6 +1,6 @@
 // THE PLAN FACTS — one module every surface that describes Free and Pro reads.
 //
-// /plans, Settings → Subscription, the Pro upgrade modal and the checkout
+// /plans, Settings → Plan and billing, the Pro upgrade modal and the checkout
 // summary all describe what Free and Pro include. The lines live HERE, and
 // every surface imports them — so a fact can only change in one place, and
 // tests/unit/plan-facts.test.js fails if a surface grows its own list again.

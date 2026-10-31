@@ -102,6 +102,7 @@ export const KEY_PURPOSES = Object.freeze({
   // stemOf() would fall through to the undescribed path only if a browser still
   // held the value, and the export's `vs-mystery` case already covers that.
   'vs-info-intro': { purpose: 'Info page intro dismissal state', pii: 'no' },
+  'vs-palette-coach': { purpose: 'Whether you have dismissed the first-palette tips on the Palette Builder, synced to your account', pii: 'no' },
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },
   'vs-chunk-reload': { purpose: 'Guard against a reload loop after a deploy', pii: 'no' },
   'vs-gradient-shuffle-filters': { purpose: 'Gradient Shuffle settings for this tab session', pii: 'no' },
@@ -167,12 +168,41 @@ export function keysToClear(storage) {
   return Object.keys(collectStorage(storage)).filter((k) => !CLEAR_EXCEPTIONS.includes(k))
 }
 
+// Browser keys that hold OTHER accounts' details are not part of this
+// account's file. `vs-accounts` is the device's list of remembered accounts
+// (email, name, photo for each, including this one, whose details are already
+// in `account`). `vs-profile-cache` is the profile cache keyed by uid, so only
+// the entry for the signed-in uid is kept; signed out, there is no account to
+// keep an entry for. Clearing and counting still use collectStorage, which sees
+// every owned key.
+export const OTHER_ACCOUNT_KEYS = Object.freeze(['vs-accounts', 'vs-profile-cache'])
+
+export function withoutOtherAccounts(store, uid) {
+  const out = { ...store }
+  const withheld = []
+  for (const key of OTHER_ACCOUNT_KEYS) {
+    if (!(key in out)) continue
+    const mine = key === 'vs-profile-cache' && uid && out[key] && typeof out[key] === 'object'
+      ? out[key][uid]
+      : undefined
+    if (mine !== undefined) out[key] = { [uid]: mine }
+    else { delete out[key]; withheld.push(key) }
+  }
+  return { store: out, withheld }
+}
+
 // The finished export object.
 //
 // `firestore` and `account` are null for a signed-out user, and the file says
 // so explicitly rather than omitting the section — "no server data" and "we
 // didn't look" must not be indistinguishable in something someone may rely on.
-export function buildExport({ local = {}, session = {}, firestore = null, account = null, now = new Date() } = {}) {
+// Keys left out because they hold other accounts' details are listed in
+// `about.withheldKeys`, for the same reason.
+export function buildExport({ local: rawLocal = {}, session: rawSession = {}, firestore = null, account = null, now = new Date() } = {}) {
+  const uid = account?.uid || null
+  const { store: local, withheld: withheldLocal } = withoutOtherAccounts(rawLocal, uid)
+  const { store: session, withheld: withheldSession } = withoutOtherAccounts(rawSession, uid)
+  const withheldKeys = [...new Set([...withheldLocal, ...withheldSession])].sort()
   const keys = [...new Set([...Object.keys(local), ...Object.keys(session)])].sort()
   return {
     exportedAt: now.toISOString(),
@@ -181,6 +211,7 @@ export function buildExport({ local = {}, session = {}, firestore = null, accoun
       description: 'Everything UIL4B holds about you, from this browser and from our server.',
       browserKeys: keys.length,
       includesServerData: !!firestore || !!account,
+      withheldKeys,
     },
     // The what-and-why table, generated from the keys actually present rather
     // than from a list someone has to remember to update.

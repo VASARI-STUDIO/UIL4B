@@ -244,10 +244,14 @@ test('the dialog no longer claims something the code does not do', () => {
   // Settings said "Permanently delete your account and all associated data",
   // which was false while the sync subcollection survived. Now that the
   // endpoint really does delete it, the copy has to say what else happens —
-  // specifically that the subscription ends.
+  // specifically that the subscription ends and billing stops. Whether the
+  // current period is refunded is decided server-side, so the copy promises no
+  // refund. The rendered sentence is checked in 213-settings-hierarchy.spec.js.
   const src = read('src/pages/Settings.jsx')
-  assert.ok(/subscription is cancelled immediately/.test(src),
-    'a Pro user must be told their subscription ends, since that is now true')
+  assert.ok(/Pro is cancelled straight away, and you won(&rsquo;|’|')t be billed again/.test(src),
+    'a Pro user must be told billing stops, since that is now true')
+  const line = src.split('\n').find((l) => l.includes('Pro is cancelled straight away')) || ''
+  assert.ok(!/refund/i.test(line), 'the delete copy must not promise a refund')
 })
 
 // ── The function budget ────────────────────────────────────────────────────

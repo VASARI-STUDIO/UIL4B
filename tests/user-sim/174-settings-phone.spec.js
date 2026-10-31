@@ -144,7 +144,7 @@ test.describe('settings on a phone: history and focus', () => {
     await expect(page.locator('#set-accessibility')).toBeVisible()
     // The title is not drawn beside the back control, but it is still there.
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toHaveCount(1)
-    await expect(page.getByRole('heading', { level: 2, name: 'Accessibility' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Appearance' })).toBeVisible()
   })
 
   test('a deep link: the bar leaves the section, and Back still goes to Plans', async ({ page }) => {
@@ -157,7 +157,7 @@ test.describe('settings on a phone: history and focus', () => {
     await go(page, '/plans')
     await page.getByRole('link', { name: 'View account details' }).click()
     await expect(page).toHaveURL(SETTINGS)
-    await expect(page.locator('#set-support'), 'the deep link did not open Subscription').toBeVisible()
+    await expect(page.locator('#set-support'), 'the deep link did not open Plan and billing').toBeVisible()
     await expect(page.locator('.settings-nav')).toBeHidden()
 
     await page.getByRole('button', { name: 'All settings' }).click()
@@ -209,7 +209,7 @@ test.describe('settings on a phone: history and focus', () => {
 
     await page.getByRole('button', { name: 'Account and settings' }).click()
     await page.locator('#pnav-account-pop').getByRole('link', { name: 'Manage plan' }).click()
-    await expect(page.locator('#set-support'), 'the menu link did not open Subscription').toBeVisible()
+    await expect(page.locator('#set-support'), 'the menu link did not open Plan and billing').toBeVisible()
     expect(await page.evaluate(() => history.length), 'the deep link stacked another entry').toBe(lengthInSection)
 
     await page.getByRole('button', { name: 'All settings' }).click()
@@ -282,7 +282,7 @@ test.describe('settings on a phone: Subscription order', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
     if (width <= 720) await page.locator('#settab-support').click()
-    else await page.getByRole('tab', { name: /Subscription/ }).click()
+    else await page.getByRole('tab', { name: 'Plan and billing' }).click()
     await expect(page.locator('#set-support .sub-tier-pro')).toBeVisible()
     // A live price, so the button is the real link and not the disabled stand-in.
     await expect(page.locator('#set-support').getByRole('link', { name: 'Upgrade to Pro' })).toBeVisible()
@@ -363,7 +363,7 @@ const textLines = (page, selector) => page.evaluate((sel) => [...document.queryS
 
 test.describe('settings: Data buttons stay on one line', () => {
   for (const width of [768, 390]) {
-    test(`at ${width} Export JSON, Clear data, Full disclosure and the Confirm pair are one line each`, async ({ page }) => {
+    test(`at ${width} Export JSON, Clear data, Read the privacy policy and the Confirm pair are one line each`, async ({ page }) => {
       watch(page, `a person on a ${width}px screen opening Your data`)
       await page.setViewportSize({ width, height: 900 })
       await signIn(page, { plan: 'free' })
@@ -374,7 +374,7 @@ test.describe('settings: Data buttons stay on one line', () => {
 
       const rest = await textLines(page, '#set-data .settings-row > .btn, #set-data .settings-card-h > .btn')
       // POSITIVE CONTROL: the three buttons were found, so "all one line" is not vacuous.
-      expect(rest.map((b) => b.text).sort()).toEqual(['Clear data', 'Export JSON', 'Full disclosure'])
+      expect(rest.map((b) => b.text).sort()).toEqual(['Clear data', 'Export JSON', 'Read the privacy policy'])
       for (const b of rest) expect(b.lines, `"${b.text}" broke onto ${b.lines} lines at ${width}`).toBe(1)
 
       await page.getByRole('button', { name: 'Clear data', exact: true }).click()

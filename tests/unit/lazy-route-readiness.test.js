@@ -199,13 +199,15 @@ test('the suite really does navigate, and does it through go()', () => {
     + 'control - if go() were renamed or the navigations removed, both would go quiet.')
 })
 
-test('goRaw() has exactly the three callers that must read a page before its route arrives', () => {
+test('goRaw() has exactly the four callers that must read a page before its route arrives', () => {
   // goRaw is the deliberate hole in the door. If it acquires other callers it
   // stops being a documented exception and becomes a second way in.
   const callers = SPECS.filter((f) => /\bgoRaw\s*\(/.test(readStripped(path.join('tests', 'user-sim', f))))
-  assert.deepEqual(callers, ['04-premium-home.spec.js', '128-soon-pages-hidden.spec.js', '47-lazy-route-readiness.spec.js'],
-    'goRaw() skips the readiness wait on purpose, and only three specs may do that, the third being 128-soon-pages-hidden (a soon URL redirects, so its route never arrives):\n'
+  assert.deepEqual(callers, ['04-premium-home.spec.js', '128-soon-pages-hidden.spec.js', '224-error-recovery-cards.spec.js', '47-lazy-route-readiness.spec.js'],
+    'goRaw() skips the readiness wait on purpose, and only four specs may do that, the third being 128-soon-pages-hidden (a soon URL redirects, so its route never arrives):\n'
     + '47-lazy-route-readiness reads a route while its chunk is still in flight, and\n'
+    + '224-error-recovery-cards reads the slow-loading line of a chunk that never arrives,\n'
+    + 'and opens the 404 with a Referer header, which go() cannot pass, and\n'
     + '04-premium-home reads #boot-shell before React replaces it. Any other caller is\n'
     + 'opting out of the fix:\n  ' + callers.join('\n  '))
 })

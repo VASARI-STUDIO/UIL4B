@@ -1454,7 +1454,16 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* Page-level loading fallback (Suspense) */
 /* A5: the fallback reserves the whole first screen, so nothing below it paints
    and then jumps when the page arrives (CLS .2-.28 on /create/icons at 60vh). */
-.page-loading{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - var(--chrome-h));width:100%;opacity:.6}
+.page-loading{position:relative;display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - var(--chrome-h));width:100%}
+/* The dimming sits on the spinner alone, so the slow-load text and button below
+   it keep full contrast. */
+.page-loading>.fg-loader{opacity:.6}
+/* After a long wait RouteLoading adds a line and a button under the spinner.
+   They are positioned, not in the flow, so the spinner never moves when they
+   appear. */
+.page-loading-slow{position:absolute;top:calc(50% + var(--s-6));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:var(--s-3);padding-inline:var(--s-4);text-align:center}
+.page-loading-slow p{margin:0;font-size:14px;line-height:1.6;color:var(--t1)}
+.page-loading-slow .btn{min-height:44px;padding-inline:20px;font-size:14px;justify-content:center}
 
 /* Error Boundary */
 .coming-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:70vh;max-width:520px;margin:0 auto;padding:24px}
@@ -1467,10 +1476,18 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .coming-actions .coming-act{min-height:44px;padding:0 20px;font-size:14px;justify-content:center}
 .error-boundary{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;padding:24px}
 .error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
-.error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
-.error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin-bottom:24px}
-.error-boundary-card button{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;background:var(--accent);color:#fff;font-family:var(--font);font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--t)}
-.error-boundary-card button:hover{opacity:.85}
+.error-boundary-title{font-family:var(--font);font-size:20px;font-weight:600;line-height:1.3;color:var(--t0);margin:0 0 var(--s-2)}
+.error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin:0 0 var(--s-5);text-align:left}
+/* Live region: empty most of the time, so it takes no room until it speaks. */
+.error-boundary-card .error-boundary-status{margin:0}
+.error-boundary-card .error-boundary-status:not(:empty){margin:calc(-1 * var(--s-3)) 0 var(--s-5);color:var(--t0)}
+.error-boundary-actions{display:flex;gap:var(--s-3);justify-content:center;flex-wrap:wrap}
+.error-boundary-actions .btn{min-height:44px;padding-inline:20px;font-size:14px;justify-content:center}
+.error-boundary-actions .btn:disabled{opacity:.4;cursor:not-allowed}
+/* The quietest of the three: a text button, so it never weighs the same as the fix. */
+.error-boundary-report{display:inline-flex;align-items:center;justify-content:center;min-height:24px;margin-top:var(--s-3);padding:0 var(--s-2);background:none;border:0;border-radius:var(--btn-radius);color:var(--accent-text);font-family:var(--font);font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(pointer:coarse){.error-boundary-report{min-height:44px}}
+@media(hover:hover){.error-boundary-report:hover{text-decoration-thickness:2px}}
 
 /* ─── Alt Text Generator ─── */
 .alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
@@ -2890,6 +2907,8 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-avatar-btn{position:relative;display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;padding:0;border:0;border-radius:var(--radius-pill);background:transparent;cursor:pointer}
 .pnav-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:var(--radius-pill);border:1px solid rgba(var(--ink-rgb),.13);background:var(--avatar-grad);color:var(--avatar-ink);font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0;object-fit:cover}
 .pnav-avatar-btn[aria-expanded="true"] .pnav-avatar{box-shadow:0 0 0 3px rgba(var(--ink-rgb),.1)}
+/* Held in the avatar's place while the account loads: its box, nothing drawn. */
+.pnav-avatar-slot{display:block;flex:0 0 auto;width:34px;height:34px}
 .pnav-more{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;padding:0;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-pill);background:transparent;color:rgba(var(--ink-rgb),.82);cursor:pointer}
 @media(hover:hover){.pnav-more:hover{background:rgba(var(--ink-rgb),.07)}}
 .pnav-more[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
@@ -2939,6 +2958,18 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acct-list{list-style:none;margin:0 0 2px;padding:0;display:grid;gap:1px}
 .pnav-sheet .pnav-acct .pnav-pop-item,.pnav-sheet #pnav-sheet-account > .pnav-pop-item{min-height:48px;font-size:15px}
 .pnav-switch-status{margin:7px 10px 3px;padding:8px 10px;border-radius:var(--radius);background:rgba(var(--ink-rgb),.05);color:rgba(var(--ink-rgb),var(--ink-dim));font-size:12.5px;line-height:1.45}
+/* A row that cannot act right now (offline sign-in, a sign-out in flight) stays
+   focusable and announced; it is only dimmed and stops reacting to hover. */
+.pnav-pop-item[aria-disabled="true"],.pnav-sheet-row[aria-disabled="true"],.pnav-sheet-login[aria-disabled="true"]{opacity:.55;cursor:default}
+.pnav-pop-item[aria-disabled="true"]:hover,.pnav-sheet-row[aria-disabled="true"]:hover{background:none}
+/* Sign-out could not finish: this takes the rows' place, in the same panel. */
+.pnav-signout-alert{margin:2px 0;padding:10px;border:1px solid color-mix(in srgb,var(--warn) 35%,rgba(var(--ink-rgb),.13));border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 9%,var(--card));color:rgba(var(--ink-rgb),.86);font-size:12.5px;line-height:1.45}
+.pnav-signout-alert p{margin:0 0 6px}
+.pnav-signout-alert-actions{display:flex;flex-wrap:wrap;gap:0 16px}
+.pnav-signout-alert button{min-height:36px;padding:0;border:0;background:none;color:rgb(var(--ink-rgb));font-family:var(--font);font-size:12.5px;font-weight:560;text-decoration:underline;text-underline-offset:3px;border-radius:var(--radius-xs);cursor:pointer}
+.pnav-signout-alert button:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.pnav-sheet .pnav-signout-alert{padding:12px;font-size:14px}
+.pnav-sheet .pnav-signout-alert button{min-height:44px;font-size:14px}
 
 /* THEME SEGMENT — Light / Dark / System. Shared with /settings (ThemeChoice). */
 .theme-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:2px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
@@ -3292,7 +3323,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-act.pnav-export{width:36px;height:36px;border:1px solid var(--border);background:var(--inp);color:rgb(var(--ink-rgb))}
   .pnav-act.pnav-export[aria-disabled="true"]{color:rgba(var(--ink-rgb),.5)}
-  .pnav-avatar-btn,.pnav-avatar{width:36px;height:36px}
+  .pnav-avatar-btn,.pnav-avatar,.pnav-avatar-slot{width:36px;height:36px}
   .pnav-avatar{font-size:12px}
   .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--inp);color:rgb(var(--ink-rgb));cursor:pointer}
   .pnav-mobile[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
@@ -3364,6 +3395,8 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   .pnav-tabs{position:fixed;left:0;right:0;bottom:0;z-index:118;display:flex;justify-content:space-around;padding:6px max(12px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:rgba(var(--page-rgb),.94);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(var(--ink-rgb),.08)}
   .pnav-tab{flex:1 1 0;display:grid;justify-items:center;align-content:center;gap:3px;min-height:48px;padding:0;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:12px;font-weight:400;line-height:1.2;text-decoration:none;cursor:pointer}
   .pnav-tab:hover{text-decoration:none;color:rgb(var(--ink-rgb))}
+  .pnav-tab[aria-disabled="true"]{opacity:.55;cursor:default}
+  .pnav-tab[aria-disabled="true"]:hover{color:rgba(var(--ink-rgb),var(--ink-dim))}
   .pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{color:rgb(var(--ink-rgb));font-weight:560}
   .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
   html.has-tabbar body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}

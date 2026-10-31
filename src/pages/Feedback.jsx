@@ -35,10 +35,20 @@ const TYPES = [
   { id: 'help', label: 'Help Request' },
 ]
 
+// The 404's "Report a broken link" opens `?type=bug&page=<path>`, with
+// `&referrer=<path>` when the browser named the page that linked there. Only
+// same-site paths are taken: anything else is ignored, so a crafted link can
+// not put an address of its own into the form.
+const sitePath = (value) => (/^\/(?!\/)\S{0,199}$/.test(value || '') ? value : '')
+
 export default function Feedback({ toast }) {
   const { t } = useI18n()
   const [params] = useSearchParams()
   const reason = params.get('reason') || params.get('ref') || ''
+  const typeParam = TYPES.some((x) => x.id === params.get('type')) ? params.get('type') : ''
+  // A payment reason keeps priority over a broken-link report.
+  const brokenPage = reason ? '' : sitePath(params.get('page'))
+  const brokenFrom = brokenPage ? sitePath(params.get('referrer')) : ''
   const paymentFailed = params.get('reason') === PAYMENT_FAILED || params.get('ref') === PAYMENT_FAILED
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
@@ -56,10 +66,13 @@ export default function Feedback({ toast }) {
   // user's after that.
   const restored = delivery.status === 'sent' ? null : delivery.draft
   const [type, setType] = useState(
-    () => restored?.type ?? (params.get('from') === 'support' || reason ? 'help' : 'feature'),
+    () => restored?.type ?? (params.get('from') === 'support' || reason ? 'help' : typeParam || 'feature'),
   )
-  const [message, setMessage] = useState(() => restored?.message ?? '')
-  const [subject, setSubject] = useState(() => restored?.subject ?? (paymentFailed ? PAYMENT_SUBJECT : ''))
+  const [message, setMessage] = useState(() => restored?.message ?? (brokenPage
+    ? `The link to ${brokenPage}${brokenFrom ? ` on ${brokenFrom}` : ''} doesn't work.`
+    : ''))
+  const [subject, setSubject] = useState(() => restored?.subject
+    ?? (paymentFailed ? PAYMENT_SUBJECT : brokenPage ? `Broken link: ${brokenPage}` : ''))
   const [contact, setContact] = useState(() => restored?.contact ?? '')
   const [contactError, setContactError] = useState('')
   const submitted = delivery.status === 'sending' || delivery.status === 'sent'

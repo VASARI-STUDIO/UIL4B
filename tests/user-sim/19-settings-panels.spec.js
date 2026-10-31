@@ -11,6 +11,29 @@ import { go, restingScrollY, signIn, watch } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 
 test.describe('settings panels', () => {
+  test('signed in, the sections run Account, Plan and billing, Appearance, Language, Your data, Privacy', async ({ page }) => {
+    watch(page, 'a free account reading the settings sections in order')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const tabs = page.getByRole('tab')
+    await expect(tabs).toHaveCount(6)
+    const ids = await tabs.evaluateAll((els) => els.map((el) => el.id.replace('settab-', '')))
+    expect(ids).toEqual(['account', 'support', 'accessibility', 'language', 'data', 'privacy'])
+    const names = await tabs.evaluateAll((els) => els.map((el) => el.textContent.trim()))
+    expect(names).toEqual(['Account', 'Plan and billing', 'Appearance', 'Language', 'Your data', 'Privacy'])
+  })
+
+  test('signed out with nothing remembered, the selected tab is Appearance', async ({ page }) => {
+    watch(page, 'a signed-out visitor with no remembered section')
+    await go(page, '/settings')
+
+    await expect(page.getByRole('tab')).toHaveCount(5)
+    await expect(page.getByRole('tab', { selected: true })).toHaveAttribute('id', 'settab-accessibility')
+    await expect(page.locator('#set-accessibility')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Appearance', level: 2 })).toBeVisible()
+  })
+
   test('opens on a real panel, never blank', async ({ page }) => {
     watch(page, 'a visitor opening settings')
     await go(page, '/settings')
@@ -61,6 +84,7 @@ test.describe('settings panels', () => {
     // note. A trial CTA you cannot use, beneath a line telling you that.
     watch(page, 'a signed-out visitor landing on settings')
     await go(page, '/settings')
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
 
     await expect(page.getByRole('button', { name: /free trial/i })).toHaveCount(0)
     await expect(page.locator('.sub-billing-toggle')).toHaveCount(0)
@@ -140,7 +164,7 @@ test.describe('settings panels', () => {
   })
 })
 
-// Every section tab carries its icon. The Subscription tab's section id is
+// Every section tab carries its icon. The Plan and billing tab's section id is
 // 'support' (Plans.jsx deep-links to it), but NavIcon matched 'subscription',
 // so that one tab alone rendered without a glyph.
 test('every Settings section tab has its icon', async ({ page }) => {
@@ -148,8 +172,8 @@ test('every Settings section tab has its icon', async ({ page }) => {
   await signIn(page, { plan: 'free' })
   await go(page, '/settings')
   const tabs = page.locator('.settings-nav-item')
-  // POSITIVE CONTROL: the tab list rendered, Subscription among it.
-  await expect(tabs.filter({ hasText: 'Subscription' })).toHaveCount(1)
+  // POSITIVE CONTROL: the tab list rendered, Plan and billing among it.
+  await expect(tabs.filter({ hasText: 'Plan and billing' })).toHaveCount(1)
   const bare = await tabs.evaluateAll((els) => els.filter((el) => !el.querySelector('svg')).map((el) => el.textContent.trim()))
   expect(bare, 'these section tabs have no icon').toEqual([])
 })

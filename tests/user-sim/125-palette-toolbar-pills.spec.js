@@ -2,9 +2,10 @@
 //
 // 1. Undo and redo are the toolbar's own round icon buttons, the same shape as
 //    the back button, with no boxed tray around them.
-// 2. Suggest and Explore each open their own dialog under the button that was
-//    pressed, its right edge on the button's and inside the viewport. On a phone
-//    it stays a bottom sheet.
+// 2. Suggest and Explore each open their own panel. At 1440 it is a docked
+//    region at the right of the board (beside it, below the toolbar, inside the
+//    viewport, not a popup under the button). On a phone it stays a bottom sheet.
+//    The full geometry is pinned by 147-palette-suggest-explore.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -35,28 +36,23 @@ test.describe('palette toolbar pills and anchored gallery', () => {
   }
 
   for (const [name, dialog] of [['Explore palettes and brands', 'Explore palettes and brands'], ['Suggest variations', 'Suggest']]) {
-    test(`1440px: ${name} opens its dialog under its button, right edges aligned`, async ({ page }) => {
+    test(`1440px: ${name} opens as a docked panel beside the board, below the toolbar`, async ({ page }) => {
       watch(page, 'someone opening the palette gallery')
       await page.setViewportSize({ width: 1440, height: 900 })
       await go(page, ROUTE)
       const btn = page.getByRole('button', { name })
       await btn.click()
-      const panel = page.getByRole('dialog', { name: dialog, exact: true })
+      const panel = page.getByRole('complementary', { name: dialog, exact: true })
       await expect(panel).toBeVisible()
-      await expect(panel.getByText(dialog, { exact: true })).toBeVisible()
+      await expect(panel.getByText(dialog.replace(/ palettes and brands$/, ''), { exact: true })).toBeVisible()
       const b = await btn.boundingBox()
-      // Measured once the opening animation has settled. The popup is
-      // right-aligned: its right edge sits on the button's right edge.
-      await expect.poll(async () => {
-        const p = await panel.boundingBox()
-        return Math.round(Math.abs((p.x + p.width) - (b.x + b.width)))
-      }, { message: 'the dialog does not end under its button' }).toBeLessThanOrEqual(1)
+      // Measured once the opening animation has settled.
+      await expect.poll(async () => Math.round((await panel.boundingBox()).x), { message: 'the panel has not settled at the right of the board' }).toBeGreaterThan(900)
       const p = await panel.boundingBox()
-      expect(p.x, 'the dialog grows leftwards from the button, not rightwards').toBeLessThan(b.x)
-      expect(p.y - (b.y + b.height), 'the dialog is not just below its button').toBeGreaterThanOrEqual(4)
-      expect(p.y - (b.y + b.height)).toBeLessThanOrEqual(16)
-      expect(p.x).toBeGreaterThanOrEqual(16 - 1)
-      expect(p.x + p.width).toBeLessThanOrEqual(1440 - 16 + 1)
+      expect(p.y, 'the panel starts below the toolbar button, not over it').toBeGreaterThanOrEqual(b.y + b.height)
+      expect(p.x + p.width, 'the panel runs off the right edge').toBeLessThanOrEqual(1440 + 1)
+      expect(p.width, 'the panel is 360px wide').toBeGreaterThanOrEqual(358)
+      expect(p.width).toBeLessThanOrEqual(362)
       await page.keyboard.press('Escape')
       await expect(panel).toBeHidden()
     })

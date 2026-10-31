@@ -157,22 +157,26 @@ test('/create/aspect-ratio · the number fields do not zoom a touch phone', asyn
   }
 })
 
-test('/create/aspect-ratio · Swap run from the phone sheet swaps the ratio', async ({ page }) => {
+test('/create/aspect-ratio · Swap run on the narrowest phone swaps the ratio', async ({ page }) => {
   watch(page, 'someone flipping a size to portrait on a phone')
-  // At 390 every action fits on the row; the narrowest phone sends Swap to the sheet.
+  // With Copy size in the dock the row holds only the icon-only Swap, so it
+  // stays inline even at 320 and there is no sheet. (The phone-sheet route is
+  // covered by 100-tool-toolbar-one-row: Gradient Reset and Palette Reset, where
+  // items still overflow.) Swap must be a real, clickable button on the row,
+  // not left behind a sheet that no longer exists or covered by the dock.
   await page.setViewportSize({ width: 320, height: 640 })
   await go(page, '/create/aspect-ratio')
   const w = page.getByRole('spinbutton', { name: 'Ratio width' })
   const h = page.getByRole('spinbutton', { name: 'Ratio height' })
   await expect(w).toHaveValue('1920')
   await expect(h).toHaveValue('1080')
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  const sheet = page.getByRole('dialog', { name: 'More' })
-  await sheet.getByRole('button', { name: 'Swap width and height' }).click()
-  await expect(sheet).toBeHidden()
+  const swap = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Swap width and height' })
+  await expect(swap).toBeVisible()
+  await swap.click()
   await expect(w).toHaveValue('1080')
   await expect(h).toHaveValue('1920')
   await expect(page.locator('.arc-page .rc-vis-tag')).toHaveText('Portrait')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('/create/font-gallery · a category chosen in the phone sheet filters the list', async ({ page }) => {
