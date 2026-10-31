@@ -27,7 +27,8 @@ import '../../styles/deferred/save-share-menu.css'
 //   onClose        close the menu: ('button' | 'escape' | 'outside') => void
 //   share          rows under "Share"
 //   exports        rows under "Export"
-//   after          anything below the export rows (a section with its own heading)
+//   after          anything below the export rows (a section with its own heading,
+//                  e.g. "Community" with a SaveShareItem icon="users" row)
 //   dismiss        true: this component closes itself on Escape and on a press
 //                  outside it (a tool that has its own dismiss layer leaves it false)
 //   triggerRef     the button that opened it; a press on it is not "outside"
@@ -160,7 +161,7 @@ export default function SaveShareMenu({
 // One row of the menu. `disabled` is aria-disabled, not the attribute, so the
 // row stays reachable by keyboard and its reason is read with it: the reason is
 // shown as text under the row, never a tooltip alone.
-export function SaveShareItem({ icon, onClick, disabled = false, reason, hint, children }) {
+export function SaveShareItem({ icon, onClick, disabled = false, reason, hint, busy = false, title, children }) {
   const reasonId = reason ? `ssm-reason-${String(children).replace(/\W+/g, '-').toLowerCase()}` : undefined
   return (
     <>
@@ -169,9 +170,11 @@ export function SaveShareItem({ icon, onClick, disabled = false, reason, hint, c
         className="plb-menu-item"
         aria-disabled={disabled || undefined}
         aria-describedby={disabled ? reasonId : undefined}
+        aria-busy={busy || undefined}
+        title={title}
         onClick={disabled ? undefined : onClick}
       >
-        {icon === 'download' ? <DownloadIcon /> : <CopyIcon />} {children}
+        {icon === 'download' ? <DownloadIcon /> : icon === 'users' ? <UsersIcon /> : <CopyIcon />} {children}
         {hint && <span className="plb-menu-hint">{hint}</span>}
       </button>
       {disabled && reason && <p className="plb-menu-reason" id={reasonId}>{reason}</p>}
@@ -190,4 +193,5 @@ function Glyph({ size = 15, children }) {
 }
 const CloseIcon = () => <Glyph><path d="M18 6 6 18" /><path d="m6 6 12 12" /></Glyph>
 const CopyIcon = () => <Glyph><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></Glyph>
+const UsersIcon = () => <Glyph size={13}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.9" /><path d="M16 3.1a4 4 0 0 1 0 7.8" /></Glyph>
 const DownloadIcon = () => <Glyph size={13}><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></Glyph>

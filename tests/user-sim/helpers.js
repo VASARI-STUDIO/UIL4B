@@ -360,6 +360,13 @@ function seedProject(i, design) {
  *              silent until window.__UIL4B_TEST_HOLD__.release() is called,
  *              for as long as a spec needs to look at the plan-still-loading
  *              state.
+ *   holdWrites path substrings whose setDoc never settles (the offline state: the
+ *              SDK queues the write and neither resolves nor rejects) until the
+ *              page calls window.__UIL4B_TEST_HOLD__.releaseWrites(), which lets
+ *              every held write land and resolve. Every setDoc attempt, held or
+ *              not, is logged in window.__UIL4B_TEST_WRITES__ (paths, in order),
+ *              so a spec can tell a retry that reuses a document id from one
+ *              that makes a second.
  *   slowWrites [{ path, ms }] — every setDoc whose path contains `path` lands in
  *              the store at once but answers `ms` late, so a spec can change the
  *              account (window.__UIL4B_TEST_AUTH__.switchTo) while a save waits.
@@ -395,6 +402,7 @@ export async function signIn(page, opts = {}) {
     claims = {},
     deny = [],
     slowReads = [],
+    holdWrites = [],
     slowWrites = [],
     authFail = null,
     provider = 'password',
@@ -439,6 +447,7 @@ export async function signIn(page, opts = {}) {
     claims,
     deny,
     slowReads,
+    holdWrites,
     slowWrites,
     authFail,
     docs: {

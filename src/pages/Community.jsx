@@ -11,6 +11,7 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import { isPostLimit } from '../utils/communityLimits'
+import { handleProblem, readStoredHandle } from '../utils/communityHandle'
 import {
   ICON_ACCEPT_ATTR, ICON_ACCEPT_LABEL, ICON_MAX_LABEL,
   appendIconSubmission, buildIconPayload, normaliseIconSvg,
@@ -297,9 +298,20 @@ const SUBMIT_SURFACE = 'community'
 const ICON_SUBMIT_SURFACE = 'community-icon'
 
 export default function Community({ toast }) {
-  const { user, userProfile, loading: authLoading } = useAuth()
+  const { user, profileName, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const owner = getOwnerHandle(user?.email)
+  const ownerPublicHandle = owner?.publicHandle
+  // The name a queued record is credited to: the fixed public handle, else the
+  // community handle chosen on this device, else the name given on the profile.
+  // `user` carries only an email and uid, so buildQueueRecord cannot find one
+  // itself; the email is never used. A stored handle is checked again, because
+  // storage can be edited outside the dialog that validated it.
+  const queueAuthorName = useCallback(() => {
+    if (ownerPublicHandle) return ownerPublicHandle
+    const handle = readStoredHandle()
+    return handle && !handleProblem(handle) ? '@' + handle : profileName
+  }, [ownerPublicHandle, profileName])
   // A stable primitive, so the gate effects below don't re-run on every render
   // of AuthContext (which rebuilds the `user` object each time).
   const uid = user?.uid || null
@@ -443,6 +455,7 @@ export default function Community({ toast }) {
 
     const queued = buildQueueRecord({
       kind: 'design',
+      authorName: queueAuthorName(),
       name: item.name,
       user,
       payload: {
@@ -490,7 +503,7 @@ export default function Community({ toast }) {
   // and there is now a test.
   const publishIcon = useCallback(async (item) => {
     const payload = buildIconPayload({ svg: item.svg, author: item.author })
-    const queued = payload && buildQueueRecord({ kind: 'icon', name: item.name, user, payload })
+    const queued = payload && buildQueueRecord({ kind: 'icon', name: item.name, user, authorName: queueAuthorName(), payload })
     if (!queued) {
       toast?.('Saved to this browser. Sign in to submit it for review.')
       return null
@@ -508,7 +521,7 @@ export default function Community({ toast }) {
         : 'Saved locally — we could not reach the review queue. Try again later.')
       return null
     }
-  }, [user, toast])
+  }, [user, toast, queueAuthorName])
 
   /** One place the freshly published entry is recorded, so both callers agree. */
   const recordPublished = useCallback((item, docId) => {
@@ -849,7 +862,7 @@ export default function Community({ toast }) {
         <SubmitModal
           onClose={() => setSubmitOpen(false)}
           onSubmit={handleSubmit}
-          authorName={owner?.publicHandle || userProfile?.displayName || user?.displayName || ''}
+          authorName={queueAuthorName()}
           ownerId={owner ? PUBLIC_OWNER_ID : undefined}
         />
       )}
@@ -861,7 +874,7 @@ export default function Community({ toast }) {
         <IconSubmitModal
           onClose={() => setIconOpen(false)}
           onSubmit={handleIconSubmit}
-          authorName={owner?.publicHandle || userProfile?.displayName || user?.displayName || ''}
+          authorName={queueAuthorName()}
         />
       )}
     </div>

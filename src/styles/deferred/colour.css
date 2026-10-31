@@ -313,7 +313,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-mode{padding:5px 13px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .plb-mode:hover{color:var(--t0)}
 .plb-mode--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
-.plb-modal-actions{display:flex;justify-content:flex-end}
+.plb-modal-actions{display:flex;justify-content:flex-end;gap:8px}
 /* Submit-to-community popup (Wave 5) */
 .plb-submitcard{width:min(440px,100%)}
 .plb-submit-strip{display:flex;height:56px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
@@ -324,6 +324,14 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-submit-as strong{color:var(--t0);font-weight:700}
 .plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-text);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .plb-linkbtn:hover{opacity:.8}
+/* Touch targets in the submit dialog only: .plb-pop-x and .plb-menu-row are shared with other menus, so the 44px floor is scoped to the card. */
+@media (max-width:767.98px),(pointer:coarse){
+  .plb-submitcard .plb-pop-x{width:44px;height:44px}
+  .plb-submitcard .plb-menu-row input{min-height:44px;font-size:16px}
+  .plb-submitcard .btn,.plb-submitcard .plb-dice{min-height:44px}
+  .plb-submitcard .plb-dice{min-width:44px}
+  .plb-submitcard .plb-linkbtn{min-height:44px;padding:0 8px}
+}
 .plb-dsbcard{width:min(420px,100%)}
 .plb-dsb-body{text-align:center;padding:6px 4px 2px}
 .plb-dsb-emoji{font-size:34px;line-height:1;margin-bottom:12px}
