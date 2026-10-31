@@ -106,12 +106,15 @@ test.describe('palette toolbar fits the row it is given', () => {
     }
     // Toolbar priorities: Undo, Randomise and Suggest 5; Seed and Redo 4; Preview and
     // From image 3; Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
-    // Extra tools row only; Explore (2) and Back to projects (2) have left too.
+    // Extra tools row only, and Explore (2) has left the row. Back to projects (2)
+    // is a link on the row from 640 to 767 (the icon-only buttons leave it room) and
+    // an Extra tools row at 390 and at 768 and up.
     await expect(page.locator(BAR).getByRole('button', { name: 'Preview', exact: true }), 'Preview is not on the row at 662px').toHaveCount(0)
     await expect(panel.getByRole('button', { name: 'Preview', exact: true }), 'Preview is in Extra tools').toBeVisible()
     await expect(page.locator(BAR).getByRole('button', { name: 'Explore palettes and brands', exact: true }), 'Explore left the row at 662px').toHaveCount(0)
     await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }), 'Explore is in Extra tools').toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Back to projects', exact: true }), 'Back to projects is in Extra tools').toBeVisible()
+    await expect(page.locator(BAR).getByRole('link', { name: 'Back to projects', exact: true }), 'Back to projects is on the row at 662px').toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Back to projects', exact: true }), 'and not doubled in Extra tools').toHaveCount(0)
     // And at 662 the row has handed over its lowest-priority controls too: the
     // System and Vision selects (priority 0) are here, not on the row.
     const bar = page.locator(BAR)
@@ -126,9 +129,10 @@ test.describe('palette toolbar fits the row it is given', () => {
 
   test('Explore and Preview are on the row where it has room, and in Extra tools where it has not', async ({ page }) => {
     // Explore (2) and Preview (3) are among the first to leave, so Undo, Redo,
-    // Randomise and Suggest stay. At 768 and 1024 Explore lives in Extra tools
-    // (and opens from there); Preview is on the row or in Extra tools, never
-    // both. At 1280 both are buttons on the row and Extra tools no longer lists them.
+    // Randomise and Suggest stay. Measured: Preview joins the row from about
+    // 1050px and Explore from about 1240px. At 768 and 1024 both live in Extra
+    // tools (Explore opens from there). At 1280 and 1440 both are buttons on the
+    // row and Extra tools no longer lists them.
     const bar = page.locator(BAR)
     const onRow = (name) => bar.getByRole('button', { name, exact: true })
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
@@ -141,10 +145,10 @@ test.describe('palette toolbar fits the row it is given', () => {
       await expect(onRow('Explore palettes and brands'), `${width}px: Explore left the row`).toHaveCount(0)
       // What does not leave first is still there.
       for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) await expect(onRow(name), `${width}px: ${name} stays on the row`).toBeVisible()
-      const previewOnRow = (await onRow('Preview').count()) > 0
+      await expect(onRow('Preview'), `${width}px: Preview left the row`).toHaveCount(0)
       await bar.getByRole('button', { name: 'Extra tools' }).click()
       await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }), `${width}px: Explore is in Extra tools`).toBeVisible()
-      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in one place only`).toHaveCount(previewOnRow ? 0 : 1)
+      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in Extra tools`).toBeVisible()
       if (width === 768) {
         await panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
         await expect(page.getByRole('dialog', { name: 'Explore palettes and brands' })).toBeVisible()
@@ -152,12 +156,16 @@ test.describe('palette toolbar fits the row it is given', () => {
       await page.keyboard.press('Escape')
     }
 
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await settle(page)
-    for (const name of names) await expect(onRow(name), `1280px: ${name} is a button on the row`).toBeVisible()
-    await bar.getByRole('button', { name: 'Extra tools' }).click()
-    for (const name of names) await expect(panel.getByRole('button', { name, exact: true }), `1280px: ${name} is not doubled in Extra tools`).toHaveCount(0)
-    await page.keyboard.press('Escape')
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await settle(page)
+      for (const name of names) await expect(onRow(name), `${width}px: ${name} is a button on the row`).toBeVisible()
+      for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) await expect(onRow(name), `${width}px: ${name} stays on the row`).toBeVisible()
+      await bar.getByRole('button', { name: 'Extra tools' }).click()
+      for (const name of names) await expect(panel.getByRole('button', { name, exact: true }), `${width}px: ${name} is not doubled in Extra tools`).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(panel).toHaveCount(0)
+    }
     await onRow('Preview').click()
     await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
   })

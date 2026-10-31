@@ -4,20 +4,25 @@
 // It has priority 3, under Redo (4), Undo, Randomise and Suggest (5), so it
 // leaves the row before any of them. Under 768px it is overflow-only
 // (`inline: false`), so a phone's row is Undo, Randomise, Suggest and Save as
-// it was. Whether it fits at 768 and 1024 depends on the fonts, so those widths
-// only pin the rule that matters: it is never on the row without all four of
-// those, and never in both places.
+// it was.
+//
+// Measured with the Switzer build at 900px tall: Preview joins the row from about
+// 1050px and Explore from about 1240px, so Preview is in Extra tools at 768 and
+// 1024, and a labelled button on the row at 1280 and 1440. Undo, Redo, Randomise
+// and Suggest variations are on the row at every width from 768 up, and Preview
+// is in exactly one place at every width.
 //
 // To make it fail: set `priority: 3` on the `preview` item in
 // src/pages/PaletteBuilder.jsx to 6 (Redo, Undo or Randomise leave the row
 // before it at 768 and 390); drop `inline: !phone` from it (Preview is on the
-// phone row, or the row spills).
+// phone row, or the row spills); set it to priority 0 (it is off the row at 1280).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { paletteToolbar } from './palette-helpers.js'
 
 const PHONES = [320, 390, 640, 767]
 const TABLETS = [768, 1024]
+const LAPTOPS = [1280, 1440]
 const LAPTOP = 1440
 
 const settle = async (page) => {
@@ -39,7 +44,7 @@ const rowBoxes = (page) => paletteToolbar(page).evaluate((bar) => [...bar.childr
 test.describe('Preview is a main toolbar button', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a designer who wants to see the palette on a real design') })
 
-  for (const width of [...PHONES, ...TABLETS, LAPTOP]) {
+  for (const width of [...PHONES, ...TABLETS, ...LAPTOPS]) {
     test(`${width}px: one row, and Preview is in one place only`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
@@ -48,8 +53,7 @@ test.describe('Preview is a main toolbar button', () => {
       const bar = paletteToolbar(page)
       const preview = bar.locator('.plb-preview-btn')
       const onRow = (await preview.count()) > 0
-      if (PHONES.includes(width)) expect(onRow, `${width}px: Preview is not on a phone's row`).toBe(false)
-      if (width === LAPTOP) expect(onRow, `${width}px: Preview is on the laptop row`).toBe(true)
+      expect(onRow, `${width}px: Preview ${LAPTOPS.includes(width) ? 'is' : 'is not'} on the row`).toBe(LAPTOPS.includes(width))
 
       // Never doubled: on the row, or in Extra tools.
       await bar.getByRole('button', { name: 'Extra tools' }).click()
@@ -59,15 +63,17 @@ test.describe('Preview is a main toolbar button', () => {
       await expect(panel).toHaveCount(0)
       await settle(page)
 
+      // Preview leaves the row before these four do, so from 768 up they are all here.
+      if (!PHONES.includes(width)) {
+        for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) {
+          await expect(bar.getByRole('button', { name, exact: true }), `${width}px: ${name} stays on the row`).toBeVisible()
+        }
+      }
       if (onRow) {
         await expect(preview).toBeVisible()
         await expect(preview).toHaveAccessibleName('Preview')
         // The word shows: it is never an icon on its own.
         await expect(preview.locator('.tl-btn-label')).toBeVisible()
-        // It leaves the row before these four do, so they are all still here.
-        for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) {
-          await expect(bar.getByRole('button', { name, exact: true }), `${width}px: ${name} is on the row beside Preview`).toBeVisible()
-        }
       }
 
       const boxes = await rowBoxes(page)

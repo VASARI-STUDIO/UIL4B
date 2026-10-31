@@ -1,51 +1,64 @@
 // PALETTE BUILDER: SUGGEST AND EXPLORE ARE TWO DIALOGS, AND THE COLOUR SYSTEM
 // OPTIONS EXPLAIN THEMSELVES.
 //
-// The old "Colour gallery" popup is split in two:
-//   · Suggest (button "Suggest variations"): a dialog named "Suggest"
-//     with a Variations tab and a Brands tab.
-//   · Explore (button "Explore palettes"): a dialog named "Explore palettes" with
-//     community palettes only, and no tabs.
+// Suggest and Explore are two dialogs:
+//   · Suggest (button "Suggest variations"): a dialog named "Suggest" that holds
+//     variations only. It has no tabs and no brand cards.
+//   · Explore (button "Explore palettes and brands"): a dialog of that name with a
+//     "Palettes | Brands" tablist (ids plb-ex-tab-*, panels plb-ex-panel-*).
+//     Brands apply through Explore with a `brand:` tick id.
 //
 // What this pins:
-//   1. Suggest opens on Variations; the arrow keys move to Brands and back.
+//   1. Suggest has no tablist and no brand cards; its first card is not pressed.
 //   2. Applying a variation keeps the panel open and marks the card pressed;
 //      "Back to my palette" puts the original hexes back.
-//   3. Explore has no tabs.
+//   3. Explore has a Palettes tab and a Brands tab, one tabpanel, and no Suggest cards.
 //   4. Every colour system option carries a description, linked by
 //      aria-describedby to text that is not empty.
-//   5. At 390 on a touch screen the Suggest sheet's head is one row: the close
-//      button sits on the same row as the tabs.
+//   5. At 390 on a touch screen both sheet heads are one row: Explore's tabs and
+//      Close are level, and so are Suggest's title and Close.
 //   6. An Explore import after an apply ends the Suggest session: Back is off,
 //      nothing is ticked, and unticking the Explore card returns to the user's
-//      own palette (and own colour system), not to the variation or brand.
-//   7. A real colour edit after an apply turns Back off and rebuilds the
+//      own palette (and own colour system), not to the variation.
+//   7. A brand from Explore's Brands tab ticks, and pressing it again restores the
+//      user's hexes and colour system. A brand, then a community palette, then
+//      unticking that one still lands on the user's board. A brand after a
+//      variation ends the Suggest session too.
+//   8. A real colour edit after an apply turns Back off and rebuilds the
 //      variations from the edited board; Undo does the same and restores the
 //      pre-apply hexes.
-//   8. Focus goes to the selected tab after Back; the "?" is a toggle with a
-//      visible explanation; Tab order is tabs, Back, Close; aria-controls is on
-//      the selected tab only.
-//   9. Toolbar: Undo and Redo share the row at 768 with no keycap; the divider is
-//      on the row at 1440.
-//  10. At 390 on touch the first card sits 16px in and the next one peeks. At 1440
-//      the body carries data-more until it is scrolled to the end.
+//   9. Pressing the applied variation card again restores the palette from before,
+//      announces "Back to your palette" and keeps focus on the card. "Back to my
+//      palette" moves focus to the card too; the "?" is a toggle with a visible
+//      explanation; Tab goes Back, then Close.
+//  10. Explore's tabs: Palettes is selected and focused on open, aria-controls is
+//      on the selected tab only, and the arrow keys, Home and End move between them.
+//  11. Toolbar: Undo and Redo share the row at 768 with no keycap; the divider and
+//      the keycap are on the row at 1440.
+//  12. At 390 on touch the first Suggest card sits 16px in and the next one peeks.
+//      At 1440 the Suggest body carries data-more until it is scrolled to the end.
 //
 // MUTATIONS (what to break to see each go red):
-//   1. In PaletteBuilder.jsx openGallery('variations'), open on 'brands'; or drop onSuggestTabKey.
+//   1. Render a tablist in the Suggest dialog; or let brand cards into the Suggest list.
 //   2. Close the panel in pickVariation; or drop aria-pressed from the .plb-sg-main button;
 //      or make backToMine skip setColors.
-//   3. Render the tablist for the exploring panel too.
+//   3. Drop the tablist from the Explore dialog; or render the Suggest cards in it.
 //   4. Drop aria-describedby from the option row in MenuSelect.jsx, or render the desc empty.
 //   5. Let the head wrap (flex-wrap: wrap on .plb-galpopup--suggest .plb-galpopup-head).
 //   6. In importGalleryPalette take `original` from the live board instead of the
-//      Suggest snapshot; or drop `harmony: mine.harmony` from it (brand case).
-//   7. Remove setPanelApplied(null) from the [colors, adjust] invalidation effect
+//      Suggest snapshot; or drop `suggestSnapRef.current = null` from it.
+//   7. In importGalleryPalette drop `harmony` from the `original` snapshot or the
+//      `if (snap.harmony) setHarmony(...)` line (the brand case).
+//   8. Remove setPanelApplied(null) from the [colors, adjust] invalidation effect
 //      (Back stays on, Undo test too); or remove setVarBase(null) (stale list).
-//   8. Remove the focus() call at the end of backToMine; hidden={!open} to
-//      hidden={false} on #plb-sg-score-help; aria-controls on every tab.
-//   9. Delete the `.tl-kbd { display: none }` rule below 1024; give the divider
+//   9. Delete the `backToMine(); return` line in pickVariation (the applied card no
+//      longer toggles); remove setLiveMsg('Back to your palette'); remove the
+//      focus() call at the end of backToMine; hidden={!open} to hidden={false} on
+//      #plb-sg-score-help.
+//  10. Drop onExploreTabKey; put aria-controls on every tab; change either tabpanel id.
+//  11. Delete the `.tl-kbd { display: none }` rule below 1024; give the divider
 //      priority 0.
-//  10. Set the phone card width to 100%; drop ref={scrollCue} from a body.
+//  12. Set the phone card width to 100%; drop ref={scrollCue} from a body.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
 
@@ -235,6 +248,9 @@ test.describe('The Suggest session, on a laptop', () => {
 
   test('an Explore import after a brand: unticking returns to the user\'s own hexes and colour system', async ({ page }) => {
     watch(page, 'a designer on a free system trying a brand, then a community palette, then backing out of it')
+    // Monochromatic makes the Colour system select 219px wide, which fills the row at
+    // 1440: opening Explore then moves the select into Extra tools. 1680 leaves room.
+    await page.setViewportSize({ width: 1680, height: 900 })
     await go(page, BOARD)
     await expect(page.locator('.plb-col')).toHaveCount(5)
     // Start on a free system that is not the one a brand collapses to for a free
@@ -483,8 +499,10 @@ test.describe('The Suggest session, on a laptop', () => {
     watch(page, 'someone scrolling the Suggest list')
     const dialog = await openSuggest(page)
     const body = dialog.locator('.plb-galpopup-body')
+    // The list fills in a moment after the dialog opens, so wait for its cards before measuring.
+    await expect(dialog.locator('.plb-sg-card').nth(3), 'the list has cards').toBeVisible()
     const room = () => body.evaluate((el) => el.scrollHeight - el.clientHeight)
-    expect(await room(), 'positive control: the list is taller than its box').toBeGreaterThan(40)
+    await expect.poll(room, { message: 'positive control: the list is taller than its box' }).toBeGreaterThan(40)
     await expect(body).toHaveAttribute('data-more', 'true')
 
     await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
@@ -525,8 +543,11 @@ test.describe('Suggest on a phone', () => {
     const top = (loc) => loc.evaluate((el) => el.getBoundingClientRect().top)
     await expect.poll(async () => { const a = await top(close); await page.waitForTimeout(120); return a === await top(close) }, { message: 'the sheet has settled' }).toBe(true)
     const [t, c, h] = [await tabs.boundingBox(), await close.boundingBox(), await dialog.locator('.plb-galpopup-head').boundingBox()]
-    expect(Math.abs(c.y - t.y), `close top ${c.y} vs tabs top ${t.y}: the head is two rows`).toBeLessThanOrEqual(4)
-    expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(c.height + 24)
+    // Centre lines, not tops: the tabs (44px) and Close (26px) differ in height and the row centres them.
+    const mid = (b) => b.y + b.height / 2
+    expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs tabs centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
+    // One row: the head is no taller than its tallest control plus its padding (20px).
+    expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(Math.max(c.height, t.height) + 24)
   })
   test('the Suggest sheet head is one row: the close button is level with the title', async ({ page }) => {
     watch(page, 'someone opening Suggest on a phone')
@@ -542,7 +563,8 @@ test.describe('Suggest on a phone', () => {
     await expect.poll(async () => { const a = await top(close); await page.waitForTimeout(120); return a === await top(close) }, { message: 'the sheet has settled' }).toBe(true)
 
     const [t, c, h] = [await tabs.boundingBox(), await close.boundingBox(), await head.boundingBox()]
-    expect(Math.abs(c.y - t.y), `close top ${c.y} vs tabs top ${t.y}: the head is two rows`).toBeLessThanOrEqual(4)
+    const mid = (b) => b.y + b.height / 2
+    expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs title centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
     // One row: the head is no taller than the close button plus its padding.
     expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(c.height + 24)
     // And nothing runs past the screen.
