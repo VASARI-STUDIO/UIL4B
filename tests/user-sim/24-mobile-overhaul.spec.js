@@ -743,12 +743,12 @@ test('S9 · opening a panel gives its links back to the keyboard', async ({ brow
     const b = document.getElementById(pid)
     return {
       open: b.classList.contains('is-open'),
-      inert: b.hasAttribute('inert'),
+      hidden: b.hasAttribute('hidden'),
       height: Math.round(b.querySelector('.ic-acc-body-inner').getBoundingClientRect().height),
     }
   }, id)
   expect(state.open).toBe(true)
-  expect(state.inert, 'inert must lift when the panel opens').toBe(false)
+  expect(state.hidden, 'hidden must lift when the panel opens').toBe(false)
   expect(state.height, 'an open panel should have real height').toBeGreaterThan(0)
 
   await page.evaluate((pid) => {

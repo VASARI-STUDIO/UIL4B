@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import { Link } from 'react-router-dom'
 // THIS PAGE NO LONGER IMPORTS styles/deferred/reading.css. Its `.ic-*` rules
 // are replaced wholesale by info.css, and loading both would leave two sets of
@@ -17,6 +18,10 @@ import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
 // Read published guides and topics from the registry.
 import { LEARN_ARTICLES, TOPICS } from '../data/learnIndex'
 import { toolRoute } from '../data/toolTree'
+import { infoToolGroup } from '../data/infoTools'
+// Where an image goes in an AI tool, and where the Terms say what the
+// providers may do with it. One copy of each, shared with the tool itself.
+import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -38,8 +43,8 @@ const INTRO_KEY = 'vs-info-intro'
 // measurably worse than nothing here: an emoji cannot be themed, cannot be
 // measured for contrast, renders as a different picture on every platform,
 // and five of these fourteen were the same phone glyph standing for five
-// different things. The rhythm they were pretending to give is a numeral now,
-// drawn from a CSS counter, which cannot fall out of step with the list.
+// different things. The sections are a reference to look things up in, not a
+// sequence, so they carry no numerals either.
 function classifyWidth(w) {
   if (w >= 1280) return { label: 'Large desktop' }
   if (w >= 1024) return { label: 'Desktop' }
@@ -65,6 +70,25 @@ const LEARN_TOPICS = (() => {
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('')
 })()
 
+// A tool section's title and tool list, read from the Create tree.
+const GROUP = {
+  colour: infoToolGroup('colour'),
+  type: infoToolGroup('type'),
+  imagery: infoToolGroup('imagery'),
+  icons: infoToolGroup('icons'),
+  ai: infoToolGroup('ai'),
+}
+
+function ToolLinks({ group }) {
+  return (
+    <ul>
+      {group.tools.map((t) => (
+        <li key={t.id}><Link to={t.route}>{t.label}</Link></li>
+      ))}
+    </ul>
+  )
+}
+
 const SECTIONS = [
   {
     id: 'getting-started',
@@ -89,7 +113,7 @@ const SECTIONS = [
               (src/hooks/useExportGate.js), so saving and syncing are no
               longer the only things sign-in is for. Opening and using a tool,
               and copying a value, still need nothing. */}
-          <li><strong>No account needed</strong> — open any tool and start working. Sign in with Google if you want saved projects and synced settings.</li>
+          <li><strong>No account needed:</strong> open any tool and start working. Sign in with Google if you want saved projects and synced settings.</li>
           {/* THE PIN BULLET IS GONE, NOT REWORDED. It read "drag any tool from
               the sidebar onto the dashboard, or right-click it to pin", and the
               product has no sidebar, no dashboard and no pin control:
@@ -97,14 +121,14 @@ const SECTIONS = [
               reorderPinned and nothing under src/pages or src/components calls
               any of them. Three instructions in one sentence, none performable.
               Rewording it would need a feature to describe. */}
-          <li><strong>Command palette</strong> — press <kbd>{SEARCH_KEY}</kbd> to jump to any tool instantly.</li>
+          <li><strong>Command palette:</strong> press <kbd>{SEARCH_KEY}</kbd> to jump to any tool instantly.</li>
         </ul>
       </>
     ),
   },
   {
     id: 'colour',
-    title: 'Colour Studio',
+    title: GROUP.colour.label,
     body: (
       <>
         {/* "— then export to CSS, Tailwind, PNG, or SVG" is deleted from the
@@ -123,25 +147,51 @@ const SECTIONS = [
             Space shortcut the sentence opens with. The route is read from
             the tool tree, as the shortcut's file is read from shortcuts.js. */}
         <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to={toolRoute('palette')}>Preview</Link> to see your colours on real UI.</p>
+        <ToolLinks group={GROUP.colour} />
       </>
     ),
   },
   {
     id: 'typography',
-    title: 'Typography',
+    title: GROUP.type.label,
     body: (
       <>
         <p>Pair fonts for headings and body, browse 1,200+ Google Fonts in the gallery, and build a modular type scale with copy-ready CSS custom properties.</p>
+        <ToolLinks group={GROUP.type} />
       </>
     ),
   },
   {
     id: 'imagery',
-    title: 'Imagery, Icons & Emoji',
+    title: GROUP.imagery.label,
     body: (
       <>
-        <p><strong>Imagery</strong> covers image conversion/compression, video-frame extraction, and an aspect-ratio calculator. <strong>Icons &amp; Emoji</strong> lets you search icons and copy any emoji by category.</p>
+        <p>Convert and compress images, pull frames out of video, and work out aspect ratios.</p>
         <p>Everything is processed in your browser — no uploads, no waiting.</p>
+        <ToolLinks group={GROUP.imagery} />
+      </>
+    ),
+  },
+  {
+    id: 'icons',
+    title: GROUP.icons.label,
+    body: (
+      <>
+        <p>Search icons and copy any emoji by category.</p>
+        <ToolLinks group={GROUP.icons} />
+      </>
+    ),
+  },
+  {
+    id: 'ai',
+    title: GROUP.ai.label,
+    body: (
+      <>
+        <p>AI tools need you to be signed in.</p>
+        <ToolLinks group={GROUP.ai} />
+        {/* The one group that sends an image to a server, so the page that
+            explains the tools says where it goes. */}
+        <p>{AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link></p>
       </>
     ),
   },
@@ -170,7 +220,7 @@ const SECTIONS = [
   },
   {
     id: 'accounts',
-    title: 'Accounts & sign-in',
+    title: 'Accounts and sign-in',
     body: (
       <>
         {/* "is optional —" is deleted: the same e2309608 export gate as the
@@ -183,7 +233,7 @@ const SECTIONS = [
   },
   {
     id: 'saving',
-    title: 'Saving & syncing your work',
+    title: 'Saving and syncing your work',
     body: (
       <>
         <p>Your active palette, fonts and type scale are kept in your browser automatically — close the tab and they&rsquo;ll be waiting. Sign in to save named projects and have them follow you to any device.</p>
@@ -193,7 +243,7 @@ const SECTIONS = [
   },
   {
     id: 'pro',
-    title: 'Free vs Pro',
+    title: 'Free and Pro',
     body: (
       <>
         {/* ", and advanced previews" is deleted from the end of the first
@@ -213,7 +263,7 @@ const SECTIONS = [
             nothing to cancel in it. The guard test reads that row's status,
             so finishing the dashboard work retires the check. */}
         <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
-        <p>Compare the plans and upgrade whenever you&rsquo;re ready from <Link to="/settings">Settings → Subscription</Link>; manage from the same place.</p>
+        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>.</p>
       </>
     ),
   },
@@ -222,7 +272,7 @@ const SECTIONS = [
     title: 'Troubleshooting',
     body: (
       <ul>
-        <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy — give it a moment and try again.</li>
+        <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy. Give it a moment and try again.</li>
         <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
         <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
         <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
@@ -247,7 +297,7 @@ const SECTIONS = [
       <ul className="ic-kbd-list">
         {DOCUMENTED_SHORTCUTS.map(({ keys, what }) => (
           <li key={what}>
-            {keys.map((k) => <kbd key={k}>{k}</kbd>)} — {what}
+            {keys.map((k) => <kbd key={k}>{k}</kbd>)}: {what}
           </li>
         ))}
       </ul>
@@ -255,7 +305,7 @@ const SECTIONS = [
   },
   {
     id: 'privacy',
-    title: 'Privacy & your data',
+    title: 'Privacy and your data',
     body: (
       <>
         <p>UIL4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
@@ -312,8 +362,29 @@ function ScreenStats() {
   )
 }
 
+const SECTION_IDS = SECTIONS.map((s) => s.id)
+
+// The section a URL fragment names, or null.
+const hashSection = () => {
+  if (typeof window === 'undefined') return null
+  const id = decodeURIComponent(window.location.hash.slice(1))
+  return SECTION_IDS.includes(id) ? id : null
+}
+
+// `hidden="until-found"` keeps a collapsed panel out of the tab order and the
+// accessibility tree while leaving its text searchable: the browser opens the
+// panel when find-in-page lands inside it. React renders `hidden` as a plain
+// boolean attribute and drops the string, so it is set on the element
+// directly. A browser without the feature gets plain `hidden` (the
+// `onbeforematch` event is how the feature is detected), which still removes
+// the panel from the tab order.
+const supportsUntilFound = () => typeof document !== 'undefined' && 'onbeforematch' in document.body
+
 export default function InfoCentre() {
-  const [open, setOpen] = useState(() => ({ 'getting-started': true }))
+  const [open, setOpen] = useState(() => {
+    const named = hashSection()
+    return { 'getting-started': true, ...(named ? { [named]: true } : {}) }
+  })
   const [introDismissed, setIntroDismissed] = useState(() => {
     try { return localStorage.getItem(INTRO_KEY) === '1' } catch { return false }
   })
@@ -326,6 +397,42 @@ export default function InfoCentre() {
   // nothing closes, and the anchor still does its own jump — so a deep
   // link, the back button and a mid-page refresh all behave as before.
   const openSection = (id) => setOpen(prev => (prev[id] ? prev : { ...prev, [id]: true }))
+
+  // A fragment that names a section opens it, on arrival and when the fragment
+  // changes under a mounted page. The browser's own jump to the anchor follows
+  // once the panel has height.
+  useEffect(() => {
+    const onHash = () => {
+      const named = hashSection()
+      if (!named) return
+      openSection(named)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // Collapsed panels carry `hidden`; open ones do not.
+  useLayoutEffect(() => {
+    const untilFound = supportsUntilFound()
+    for (const id of SECTION_IDS) {
+      const panel = document.getElementById(`ic-body-${id}`)
+      if (!panel) continue
+      if (open[id]) panel.removeAttribute('hidden')
+      else panel.setAttribute('hidden', untilFound ? 'until-found' : '')
+    }
+  }, [open])
+
+  // Find-in-page, or a link to text inside a collapsed panel, fires
+  // `beforematch` on it: open the section before the browser reveals the match.
+  useEffect(() => {
+    const panels = SECTION_IDS.map((id) => [id, document.getElementById(`ic-body-${id}`)])
+    const handlers = panels.map(([id, el]) => {
+      const onMatch = () => flushSync(() => openSection(id))
+      el?.addEventListener('beforematch', onMatch)
+      return () => el?.removeEventListener('beforematch', onMatch)
+    })
+    return () => handlers.forEach((off) => off())
+  }, [])
 
   const dismissIntro = () => {
     setIntroDismissed(true)
@@ -343,13 +450,13 @@ export default function InfoCentre() {
             the Tint tool (#382, #386) and /privacy. Hierarchy is a control, not
             a label. */}
         <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
-        <p className="ic-head-sub">One page, fully searchable. Learn what each tool does, pick up shortcuts, and check how your screen measures up.</p>
+        <p className="ic-head-sub">What each tool does, the keyboard shortcuts, and how your screen measures up, all on one page.</p>
       </header>
 
       {!introDismissed && (
         <div className="ic-intro" role="note">
           <div className="ic-intro-body">
-            <strong>New here?</strong> Start with “Getting started” below, then explore the tools. You can open any section by clicking its header.
+            <strong>New here?</strong> Start with Getting started below. Select a heading to open its section.
           </div>
           {/* The dismissal and its localStorage key are untouched. It is a
               control a visitor has already used on some devices, and a note
@@ -412,34 +519,21 @@ export default function InfoCentre() {
                     aria-expanded={!!open[s.id]}
                     aria-controls={`ic-body-${s.id}`}
                   >
-                    {/* The numeral replaces the section emoji, and it is drawn
-                        by a CSS counter rather than typed, so a section added
-                        to or removed from SECTIONS cannot leave a hole in the
-                        sequence. `aria-hidden`, so the button's accessible name
-                        is still exactly the section title — which is what
-                        tests/user-sim/25-layout-target-sweep.spec.js matches the
-                        panel's own region name against. */}
-                    <span className="ic-acc-no" aria-hidden="true" />
+                    {/* The button's accessible name is exactly the section
+                        title, which is what the panel's own region name is
+                        matched against. */}
                     <span className="ic-acc-title">{s.title}</span>
                     <span className="ic-acc-chevron" aria-hidden="true">
                       <SpectrumIcon name="caret" size={16} />
                     </span>
                   </button>
                 </h2>
-                {/* `inert` on the collapsed panel, and it has to be an attribute
-                    rather than CSS. The panel collapses with grid-template-rows
-                    0fr -> 1fr, which animates cleanly and is why it was chosen, but
-                    unlike display:none it leaves every descendant focusable: tabbing
-                    /info landed on 8 links inside collapsed panels, each in a box
-                    measured at ZERO height with overflow:hidden, so the focus ring
-                    was invisible (S9, mobile-audit-2026-08). visibility:hidden would
-                    also fix the tab order, but it would have to flip the instant the
-                    panel starts closing - the content would vanish and then an empty
-                    box would animate shut - and putting `visibility` in the
-                    transition to delay it is the exact discrete-property trap S13
-                    records. `inert` removes the subtree from the tab order AND the
-                    accessibility tree with no paint of its own, so the collapse
-                    animation is untouched. */}
+                {/* A collapsed panel carries `hidden="until-found"` (set on the
+                    element by the layout effect above, since React does not
+                    pass the string through). Unlike a zero-height grid row, it
+                    takes the panel's links out of the tab order and the
+                    accessibility tree, and unlike `inert` it leaves the text
+                    findable. */}
                 {/* aria-labelledby points at the HEADER BUTTON, not at this panel.
                     It used to name the panel's own id — so the region was labelled
                     by itself and had no accessible name at all. A screen-reader
@@ -447,7 +541,7 @@ export default function InfoCentre() {
                     say which of the eleven it was. The button is what carries the
                     section title, which is what an accordion region is supposed to
                     be named by. */}
-                <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-head-${s.id}`} inert={!open[s.id]}>
+                <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-head-${s.id}`}>
                   <div className="ic-acc-body-inner">{s.body}</div>
                 </div>
               </section>
