@@ -320,11 +320,12 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')
-    // Eight previews: six made-up products (Slack Water, Sundial, Orra Workroom,
-    // Ridgeline, Hale & Okoro, Tally) and two views of Fernway (Invoices,
-    // Settings). Four are open to a free account and four are marked Pro in the list.
-    await expect(options).toHaveCount(8)
-    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(4)
+    // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
+    // Ridgeline, Hale & Okoro, Tally). Four are open to a free account and two
+    // are marked Pro in the list. The Poster and Social previews raise this to
+    // eight, with four Pro, when they are built.
+    await expect(options).toHaveCount(6)
+    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(2)
     // The preview opens on the editorial example, which is its own lazy chunk.
     await expect(rail.getByRole('option', { name: /^Editorial hero/ })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('[data-preview-scene="Editorial hero"]')).toBeVisible()
@@ -347,8 +348,6 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const LOCKED = [
       ['Spending card', 'Corner Grocer, Newtown'],
       ['Architect portfolio', 'Gully House'],
-      ['Invoices', 'Harbour Physio'],
-      ['Settings', 'Business name'],
     ]
     for (const [name, text] of LOCKED) {
       await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()

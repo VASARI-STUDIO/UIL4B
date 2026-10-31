@@ -1,14 +1,12 @@
 // The Palette Builder's previews, painted with the palette the user is about to
-// export. Two older scenes, Invoices and Settings, show one small product
-// (Fernway) in its table and form states; the examples
-// (src/components/palette/examples/) are each their own product built around
-// one drawn artefact, and load as their own chunks.
+// export. Each scene is an example (src/components/palette/examples/): its own
+// product built around one drawn artefact, loaded as its own chunk.
 //
-// Every component below is pure. It takes nothing but what it draws, holds no
-// state and reads no context. The colours arrive as --pv-* custom properties on
-// the scene root (palettePreviewRoles.js `pvVars`), the layout is a container
-// query on that root, and nothing is scaled: text is its true pixel size at
-// every width.
+// This component only wraps the example and marks its roles. The example is
+// pure: it takes nothing but what it draws, holds no state and reads no context.
+// The colours arrive as --pv-* custom properties on the scene root
+// (palettePreviewRoles.js `pvVars`), the layout is a container query on that
+// root, and nothing is scaled: text is its true pixel size at every width.
 //
 // `data-role` marks the elements a colour role paints. The legend under the
 // stage reads it to outline "where this colour lands", and a role that fails
@@ -17,128 +15,8 @@
 import { useEffect, useRef } from 'react'
 import { pvVars } from '../../utils/palettePreviewRoles'
 import { EXAMPLES } from './examples/registry'
-import { FERNWAY, sceneById } from '../../data/palettePreviewScenes'
+import { sceneById } from '../../data/palettePreviewScenes'
 import '../../styles/pages/palette-preview.css'
-
-const Svg = ({ size = 16, children, ...rest }) => (
-  <svg className="pvs-ico" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...rest}>
-    {children}
-  </svg>
-)
-const Chevron = () => <Svg size={14}><path d="m6 9 6 6 6-6" /></Svg>
-const Check = () => <Svg size={14} strokeWidth="3"><path d="m5 12 5 5 9-10" /></Svg>
-
-// ── Shared pieces ───────────────────────────────────────────────────────────
-
-function Toggle() {
-  return <span className="pvs-toggle" data-role="primary"><i /></span>
-}
-
-// ── Invoices ─────────────────────────────────────────────────────────────
-
-function Invoices() {
-  return (
-    <div className="pvs-inv">
-      <header className="pvs-head">
-        <h2 className="pvs-h1">Invoices</h2>
-        <span className="pvs-btn pvs-btn--primary" data-role="primary">New invoice</span>
-      </header>
-      <div className="pvs-tabs">
-        {FERNWAY.tabs.map((tab, i) => (
-          <span key={tab} className={i === 0 ? 'is-on' : ''}>
-            {tab}
-            {i === 0 && <b className="pvs-underline" data-role="primary" />}
-          </span>
-        ))}
-      </div>
-      <div className="pvs-filters">
-        <span className="pvs-input pvs-search">Search clients or numbers</span>
-        <span className="pvs-select" data-role="neutral">Status: Any <Chevron /></span>
-        <span className="pvs-select" data-role="neutral">Due: Next 30 days <Chevron /></span>
-      </div>
-      <div className="pvs-table">
-        <div className="pvs-row pvs-row--head">
-          <span /><span>Client</span><span>Invoice</span><span>Issued</span><span>Due</span><span>Status</span><span className="pvs-amount">Amount</span>
-        </div>
-        {FERNWAY.invoices.map((r, i) => {
-          const s = FERNWAY.status[r.status]
-          return (
-            <div key={r.no} className={`pvs-row${i === 1 ? ' is-selected' : ''}${i === 3 ? ' is-hover' : ''}`}>
-              <span className="pvs-check" data-role={i === 1 ? 'primary' : undefined}>{i === 1 && <Check />}</span>
-              <span className="pvs-client">{r.client}</span>
-              <span className="pvs-no">{r.no}</span>
-              <span className="pvs-issued">{r.issued}</span>
-              <span className="pvs-due">{r.due}</span>
-              <span className="pvs-status">
-                <span className="pvs-chip" data-tone={s.role} data-role={s.role}>
-                  <i className="pvs-mark" data-shape={s.shape} />{s.label}
-                </span>
-              </span>
-              <span className="pvs-amount">{r.amount}</span>
-            </div>
-          )
-        })}
-      </div>
-      <footer className="pvs-pager">
-        <span>5 of 38 invoices</span>
-        <span className="pvs-pages"><span className="pvs-select" data-role="neutral">Previous</span><span className="pvs-select" data-role="neutral">Next</span></span>
-      </footer>
-    </div>
-  )
-}
-
-// ── Settings ─────────────────────────────────────────────────────────────
-
-function Field({ label, help, children }) {
-  return (
-    <div className="pvs-field">
-      <div className="pvs-field-l"><p className="pvs-field-name">{label}</p>{help && <p className="pvs-muted">{help}</p>}</div>
-      <div className="pvs-field-c">{children}</div>
-    </div>
-  )
-}
-
-function Settings() {
-  return (
-    <div className="pvs-set">
-      <header className="pvs-head">
-        <h2 className="pvs-h1">Settings</h2>
-        <div className="pvs-toast" data-role="success"><Check /> Payment terms updated</div>
-      </header>
-      <div className="pvs-tabs">
-        {FERNWAY.settingsTabs.map((tab) => (
-          <span key={tab} className={tab === 'Business' ? 'is-on' : ''}>
-            {tab}
-            {tab === 'Business' && <b className="pvs-underline" data-role="primary" />}
-          </span>
-        ))}
-      </div>
-      <div className="pvs-form">
-        <Field label="Business name"><span className="pvs-input">Fernway Studio</span></Field>
-        <Field label="ABN"><span className="pvs-input is-focus" data-role="primary">51 824 753 556</span></Field>
-        <Field label="GST registered" help="Adds 10% GST to new invoices."><Toggle /></Field>
-        <Field label="Payment terms"><span className="pvs-input pvs-input--select">14 days <Chevron /></span></Field>
-        <Field label="Invoice email">
-          <span className="pvs-input is-error" data-role="error">accounts@fernway</span>
-          <p className="pvs-err pvs-msg" data-role="error">Enter a full email address, like name@example.com</p>
-        </Field>
-        <Field label="Logo" help="Available on the Studio plan."><span className="pvs-btn is-disabled">Upload</span></Field>
-      </div>
-      <footer className="pvs-savebar" data-role="neutral">
-        <span className="pvs-muted">You have unsaved changes</span>
-        <span className="pvs-actions">
-          <span className="pvs-btn pvs-btn--outline">Cancel</span>
-          <span className="pvs-btn pvs-btn--primary" data-role="primary">Save changes</span>
-        </span>
-      </footer>
-    </div>
-  )
-}
-
-const SCENES = {
-  invoices: Invoices,
-  settings: Settings,
-}
 
 /**
  * @param {object} props
@@ -151,7 +29,7 @@ const SCENES = {
  */
 export default function PreviewScene({ roles, labels, sceneId, highlight = null, onRoles }) {
   const scene = sceneById(sceneId)
-  const Body = scene.example ? EXAMPLES[scene.id] : SCENES[scene.id]
+  const Body = EXAMPLES[scene.id]
   const rootRef = useRef(null)
   const failKey = roles.fails.map((f) => f.role).join(',')
 
