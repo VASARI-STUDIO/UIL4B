@@ -240,6 +240,85 @@ test.describe('the content-report form', () => {
     expect(posts[0]).toMatchObject({ type: 'report', email: me.email })
   })
 
+  test('the sent screen thanks the reporter, names the item, and offers to write only to the address given', async ({ page }) => {
+    watch(page, 'a visitor reading the thank-you')
+    await interceptSupport(page)
+    await gotoCommunity(page)
+    const { design, button } = await firstDesign(page)
+    const sent = page.getByRole('dialog', { name: 'Report sent' })
+
+    // With an address: the whole sentence, word for word.
+    await button.click()
+    await reasonRadio(page, 'Spam or a scam').check()
+    await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
+    await formDialog(page).getByRole('checkbox').check()
+    await sendButton(page).click()
+    await expect(sent.locator('.fb-success-text')).toHaveText(
+      `Thanks. We’ll review your report of “${design.name}”. If we need more, we may write to ${EMAIL}.`,
+    )
+    await expect(sent, 'the thank-you promises a decision email').not.toContainText(/decision|decide/i)
+    await sent.getByRole('button', { name: 'Close', exact: true }).click()
+
+    // Illegal content may be sent with no address: then there is nobody to write to, and it says so by saying nothing.
+    await button.click()
+    await reasonRadio(page, 'Illegal content').check()
+    await formDialog(page).getByLabel(/^Details/).fill(DETAILS)
+    await formDialog(page).getByRole('checkbox').check()
+    await sendButton(page).click()
+    await expect(sent.locator('.fb-success-text')).toHaveText(`Thanks. We’ll review your report of “${design.name}”.`)
+    await expect(sent).not.toContainText(/write to|decision|decide/i)
+  })
+
+  test('the form never promises a decision, for any reason, signed out or signed in', async ({ page }) => {
+    watch(page, 'a visitor reading the form copy')
+    await gotoCommunity(page)
+    const { button } = await firstDesign(page)
+    await button.click()
+    for (const reason of ['Illegal content', 'Spam or a scam']) {
+      await reasonRadio(page, reason).check()
+      await expect(formDialog(page)).toContainText(/write to you/)
+      await expect(formDialog(page), `signed out, ${reason}`).not.toContainText(/decision|decide/i)
+    }
+    // An empty send raises the email error: that sentence is part of the form too.
+    await reasonRadio(page, 'Harassment or hate').check()
+    await formDialog(page).getByRole('checkbox').check()
+    await sendButton(page).click()
+    await expect(formDialog(page).getByRole('alert')).toHaveText('Add your email so we can write to you if we need more.')
+    await expect(formDialog(page)).not.toContainText(/decision|decide/i)
+    await page.keyboard.press('Escape')
+
+    await signIn(page)
+    await gotoCommunity(page)
+    await (await firstDesign(page)).button.click()
+    await expect(formDialog(page).locator('.fb-sending-as')).toContainText('If we need more, we may write to')
+    await expect(formDialog(page), 'signed in').not.toContainText(/decision|decide/i)
+  })
+
+  test('the message tells the queue whether the reporter was signed in', async ({ page }) => {
+    watch(page, 'a visitor, then a member, reporting')
+    const posts = await interceptSupport(page)
+    await gotoCommunity(page)
+    const { button } = await firstDesign(page)
+    await button.click()
+    await reasonRadio(page, 'Spam or a scam').check()
+    await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
+    await formDialog(page).getByRole('checkbox').check()
+    await sendButton(page).click()
+    await expect.poll(() => posts.length).toBe(1)
+    expect(posts[0].message).toMatch(/^Reporter: signed out$/m)
+    expect(posts[0].message).not.toMatch(/^Reporter: signed in$/m)
+
+    await signIn(page)
+    await gotoCommunity(page)
+    await (await firstDesign(page)).button.click()
+    await reasonRadio(page, 'Spam or a scam').check()
+    await formDialog(page).getByRole('checkbox').check()
+    await sendButton(page).click()
+    await expect.poll(() => posts.length).toBe(2)
+    expect(posts[1].message).toMatch(/^Reporter: signed in$/m)
+    expect(posts[1].message).not.toMatch(/^Reporter: signed out$/m)
+  })
+
   test('Escape closes the form and focus returns to the Report button', async ({ page }) => {
     watch(page, 'a keyboard user backing out of a report')
     const posts = await interceptSupport(page)

@@ -451,3 +451,52 @@ test('an unstored message is still emailed past the cap, because the email is it
   assert.equal(res.code, 200)
   assert.equal(mail.emails(), 31)
 })
+
+// ── Content reports: their own 30-an-hour allowance, checked against fixed numbers ─
+// The tests above compare against REPORT_MAIL_CAP itself, so a wrong constant would
+// agree with them. These pin the intended figures: 30 an hour, and one
+// notice an hour, for reports.
+
+test('the report allowance is 30 emails an hour and its notice is one an hour', () => {
+  assert.equal(REPORT_MAIL_CAP.limit, 30)
+  assert.equal(REPORT_MAIL_CAP.windowMs, 60 * 60 * 1000)
+  assert.equal(REPORT_MAIL_CAP_NOTICE.limit, 1)
+  assert.equal(REPORT_MAIL_CAP_NOTICE.windowMs, 60 * 60 * 1000)
+})
+
+test('with both allowances spent, the founder gets one notice for each, and each names its own figure', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+
+  for (let n = 1; n <= 32; n += 1) await send(db, n)
+  for (let n = 1; n <= 32; n += 1) await send(db, 100 + n, { type: 'report' })
+
+  const subjects = mail.notices().map((m) => m.subject).sort()
+  assert.deepEqual(subjects, ['[UIL4B] Report email cap reached', '[UIL4B] Support email cap reached'])
+  const bodies = Object.fromEntries(mail.notices().map((m) => [m.subject, m.html]))
+  assert.match(bodies['[UIL4B] Report email cap reached'], /hourly cap of 30 report notification emails/)
+  assert.match(bodies['[UIL4B] Support email cap reached'], /hourly cap of 30 support notification emails/)
+  assert.equal(mail.emails(), 60, 'each allowance sends its own 30')
+})
+
+test('a report is emailed again once its hour is up, and the notice can go out again', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const mail = withEmail(t)
+  const db = supportDb()
+  const start = Date.parse('2026-10-31T00:00:00Z')
+  const clock = t.mock.method(Date, 'now', () => start)
+
+  for (let n = 1; n <= 31; n += 1) await send(db, n, { type: 'report' })
+  assert.equal(mail.emails(), 30)
+  assert.equal(mail.notices().length, 1)
+
+  clock.mock.mockImplementation(() => start + 59 * 60 * 1000)
+  await send(db, 200, { type: 'report' })
+  assert.equal(mail.emails(), 30, 'a report was emailed before its hour was up')
+  assert.equal(mail.notices().length, 1, 'a second notice went out inside the hour')
+
+  clock.mock.mockImplementation(() => start + 61 * 60 * 1000)
+  await send(db, 201, { type: 'report' })
+  assert.equal(mail.emails(), 31, 'a report was still held back after its hour was up')
+})

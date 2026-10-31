@@ -124,3 +124,18 @@ test('the handler validates through the pure function and boots through the shar
   assert.doesNotMatch(src, /'uil4b'\s*\)?\s*$/m,
     'a hard-coded projectId is back')
 })
+
+// A subject becomes an email subject line, so every kind of line break has to go.
+// Each separator is checked on its own: a character class that misses one of the
+// four passes any test that uses two of them together.
+for (const [name, ch] of [['CR', '\r'], ['LF', '\n'], ['U+2028 line separator', '\u2028'], ['U+2029 paragraph separator', '\u2029']]) {
+  test(`a ${name} in the subject is replaced by a space, so the subject stays on one line`, () => {
+    const { entry } = validateSupportBody({ message: 'hi', subject: `before${ch}after` }, NOW)
+    assert.equal(entry.subject, 'before after')
+  })
+}
+
+test('a run of line breaks in the subject becomes one space, and a subject of only breaks is labelled by type', () => {
+  assert.equal(validateSupportBody({ message: 'hi', subject: 'a\r\n\r\n\u2028\u2029b' }, NOW).entry.subject, 'a b')
+  assert.equal(validateSupportBody({ message: 'hi', type: 'report', subject: '\r\n\u2028\u2029' }, NOW).entry.subject, '[report] Submission')
+})
