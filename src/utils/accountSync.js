@@ -88,6 +88,7 @@ export const ACCOUNT_KEYS = Object.freeze([
   { key: 'vs-community-handle', doc: 'data', firstBind: 'account' },
   { key: 'vs-info-intro', doc: 'data', firstBind: 'account' },
   { key: 'vs-uikit-guide-seen', doc: 'data', firstBind: 'account' },
+  { key: 'vs-palette-coach', doc: 'data', firstBind: 'account' },
   // The working design
   { key: 'vs-current-design', doc: 'data', firstBind: 'local' },
   // Saved items and history
@@ -138,6 +139,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-community-handle': { scope: 'account', why: 'Their public community handle' },
   'vs-info-intro': { scope: 'account', why: 'Dismissed the /info intro — the person learned it, not the browser' },
   'vs-uikit-guide-seen': { scope: 'account', why: 'Has seen the brand-kit walkthrough' },
+  'vs-palette-coach': { scope: 'account', why: 'Dismissed the first-palette coach on the Palette Builder — the person learned it, not the browser' },
   'vs-current-design': { scope: 'account', why: 'The working design every Create tool edits' },
   'vs-prompts': { scope: 'account', why: 'Their prompt library' },
   'vs-saved-prompt-ids': { scope: 'account', why: 'Community prompts they saved' },
