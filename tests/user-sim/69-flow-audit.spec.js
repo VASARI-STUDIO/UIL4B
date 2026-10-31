@@ -603,6 +603,9 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
       const go_ = page.getByRole('button', { name: /Permanently delete/i })
       await expect(go_, 'no password, no delete').toBeDisabled()
       await page.keyboard.type('hunter22')
+      // The password alone is not enough: the "I understand" box is the second step.
+      await expect(go_, 'a password without the box').toBeDisabled()
+      await page.getByLabel(/I understand/).check()
       await expect(go_).toBeEnabled()
       // The way back is as plain as the way through.
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()
