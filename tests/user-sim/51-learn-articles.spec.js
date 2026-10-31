@@ -66,7 +66,7 @@ test.describe('Learn articles', () => {
       await expectRendered(page, `/learn/${article.slug}`)
 
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(article.title)
-      await expect(page.locator('.lart-topic')).toHaveText(article.topic)
+      await expect(page.locator('.lart-crumb a').last()).toHaveText(article.topic)
 
       // The contents list every section, and every anchor lands on a real one.
       const links = page.locator('.lart-toc a')

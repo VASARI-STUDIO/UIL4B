@@ -15,12 +15,12 @@
  *     9.17:1 dark), the ring is --accent like every other ring.
  *   · Metadata is not given a control's shape: the topic and the conformance
  *     level were 999px pills; they are mono labels now.
- *   · The next step was the retired `.ui-pill`; it is the app's rectangle
- *     (`.lart-next-go`), the one control at the end of the article.
+ *   · The next step was the retired `.ui-pill`; it is the app's filled
+ *     rectangle (`.lart-next-go`), the one filled control on the page.
  *   · Small mono labels on a tinted ground (table heads, section captions)
  *     take --t2: --t3 is under 4.5:1 once the ground is anything but --bg-0.
  *   · Headings take the Spectrum weights (600 display, 560 UI) and tracking.
- *   · The "read next" card is the app file's 18px panel on --card.
+ *   · "Keep reading" is two hairline rows in the Learn index's row style.
  * The measure, the rail, the scroll cue and every contrast/target fix below
  * are measured results and are unchanged. The three `#000` in the scroll-cue
  * masks are alpha stops for a mask image, not colours. */
@@ -36,57 +36,90 @@
 
 .lart{--lart-measure:56ch;--lart-rail:200px;--lart-gap:var(--s-8);font-size:17px;max-width:1180px}
 
-.lart .lart-crumb{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--t3);margin-bottom:var(--s-4)}
+/* The meta style: the one voice for everything that is a label rather than a
+   value. Mono is kept for literal values (code, formulas, hex, numeric cells). */
+.lart .lart-crumb{display:flex;align-items:center;gap:var(--s-2);font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2);margin-bottom:var(--s-4)}
+.lart .lart-crumb>span{color:var(--t3)}
 
 /* SC 2.5.8 (2026-09-13). The 2026-09-11 pass lifted this page's Sources and
    spec citations to 24px and missed the one control above them: the crumb's
    "Learn" link, 36.3x18.1px on all seven guides at every width. .lart-crumb is
    display:flex, so this anchor is a blockified flex item sitting on its own -
    the Inline exception does not reach it, and it is the only way back to the
-   index from the top of the page. inline-flex + min-height, type unchanged. */
-.lart .lart-crumb a{color:var(--t3);display:inline-flex;align-items:center;min-height:24px}
-
-.lart .lart-crumb a:hover{color:var(--t0)}
-
-.lart .lart-crumb span[aria-current]{color:var(--t1)}
+   index from the top of the page. inline-flex + min-height, type unchanged.
+   Touch gets the full 44px. */
+.lart .lart-crumb a{color:var(--t2);display:inline-flex;align-items:center;min-height:24px}
+@media(pointer:coarse){
+  .lart .lart-crumb a{min-height:44px}
+}
+@media(hover:hover){
+  .lart .lart-crumb a:hover{color:var(--t0)}
+}
 
 .lart .lart-head{max-width:var(--lart-measure);margin-bottom:var(--s-6)}
 /* Capped at 38px, not the site's 52px. In a 581px column a 44px title took
    three lines and half the first screen; 38px lands the same title in two. */
 .lart .lart-head h1{font-family:var(--display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.015em;line-height:1.12;color:var(--t0);text-wrap:balance}
 .lart .lart-dek{margin-top:var(--s-3);font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:var(--t1);max-width:56ch}
-.lart .lart-meta{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-5);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--t2)}
-/* A classification, so a word and not a pill. */
-.lart .lart-topic{display:inline-flex;align-items:center;color:var(--t1);text-transform:uppercase;letter-spacing:.14em;font-size:10.5px;font-weight:500}
-.lart .lart-meta-sep{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.55}
-
-/* ── Layout ── */
-.lart .lart-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-6)}
-@media(min-width:1080px){
-  .lart .lart-layout{grid-template-columns:var(--lart-rail) minmax(0,var(--lart-measure));justify-content:center;gap:var(--lart-gap);align-items:start}
-  /* Same centred block as the layout below, with the rail's width as padding —
-     so the crumb, the h1 and the first paragraph share one left edge. */
-  /* max-width:none is load-bearing. .lart-head carries max-width:56ch from the
-     narrow layout, which clamped this 845px block back to 581px; the padding
-     below then consumed 264px of it and left the h1 a 317px column, indented
-     132px PAST the prose it introduces. Measured at 1440 before: crumb 667.2,
-     h1 693.6, first paragraph 561.6 — three edges where this comment promises
-     one. */
-  .lart .lart-crumb,.lart .lart-head{width:min(100%,calc(var(--lart-rail) + var(--lart-gap) + var(--lart-measure)));max-width:none;margin-inline:auto;padding-left:calc(var(--lart-rail) + var(--lart-gap))}
+/* Each item is its own no-wrap span and the dot is drawn on items 2 and 3, so a
+   wrapped line can start on a dot but never end on one. */
+.lart .lart-meta{display:flex;align-items:center;flex-wrap:wrap;column-gap:var(--s-2);row-gap:var(--s-1);margin-top:var(--s-5);font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2)}
+.lart .lart-meta>span{white-space:nowrap}
+.lart .lart-meta>span+span::before{content:'·';margin-inline:0 var(--s-2);color:var(--t3)}
+.lart .lart-meta a{display:inline-flex;align-items:center;min-height:24px;color:var(--accent-mid);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--accent-mid) 45%,transparent)}
+@media(pointer:coarse){
+  .lart .lart-meta a{min-height:44px}
+}
+/* On a phone the tool link takes its own line, so the wrap is a decision and not
+   a dot stranded at the start of a line. */
+@media(max-width:640px){
+  .lart .lart-meta>span:last-child{flex-basis:100%}
+  .lart .lart-meta>span:last-child::before{content:none}
+}
+@media(hover:hover){
+  .lart .lart-meta a:hover{text-decoration-color:currentColor}
 }
 
-/* ── Contents ── */
-.lart .lart-toc{border-top:1px solid var(--border);padding-top:var(--s-4)}
-.lart .lart-toc-h{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:var(--s-3)}
-.lart .lart-toc ol{list-style:none;display:flex;flex-direction:column;gap:2px;counter-reset:lart-toc}
-.lart .lart-toc li{counter-increment:lart-toc}
-.lart .lart-toc a{display:flex;gap:10px;padding:6px 0;font-size:13px;line-height:1.45;color:var(--t1);text-decoration:none;border-bottom:1px solid transparent}
-.lart .lart-toc a::before{content:counter(lart-toc,decimal-leading-zero);font-family:var(--mono);font-size:10px;font-weight:500;color:var(--t2);padding-top:3px;flex:none}
-.lart .lart-toc a:hover{color:var(--t0);text-decoration:none}
-.lart .lart-toc a[data-active]{color:var(--t0);font-weight:560}
-.lart .lart-toc a[data-active]::before{color:var(--accent-mid)}
+/* ── Layout ──
+   One column below 1080: .lart-main holds the crumb, header, contents, prose
+   and end of the guide, capped at the measure and centred so a tablet's spare
+   width is split evenly. From 1080 the rail is the first grid column and spans
+   the whole layout, so its top lines up with the crumb. */
+.lart .lart-layout{display:block}
+.lart .lart-main{max-width:var(--lart-measure);margin-inline:auto}
 @media(min-width:1080px){
-  .lart .lart-toc{position:sticky;top:calc(var(--nav-clear) + var(--s-4));max-height:calc(100dvh - var(--nav-clear) - var(--s-8));overflow-y:auto}
+  .lart .lart-layout{display:grid;grid-template-columns:var(--lart-rail) minmax(0,var(--lart-measure));justify-content:center;gap:var(--lart-gap);align-items:start}
+  .lart .lart-main{margin-inline:0}
+}
+
+/* ── Contents: the rail from 1080, a disclosure below ── */
+.lart .lart-toc{display:none}
+.lart .lart-toc-h{font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;line-height:24px;color:var(--t2);margin-bottom:var(--s-3)}
+.lart .lart-toc ol{list-style:none;display:flex;flex-direction:column}
+.lart .lart-toc a{display:block;padding:6px 0 6px var(--s-3);font-family:var(--font);font-size:14px;line-height:1.45;color:var(--t2);text-decoration:none;border-left:2px solid transparent;transition:color var(--dur-1) ease}
+.lart .lart-toc a[data-active]{color:var(--t0);font-weight:560;border-left-color:var(--t0)}
+@media(hover:hover){
+  .lart .lart-toc a:hover{color:var(--t0);text-decoration:none}
+}
+@media(min-width:1080px){
+  .lart .lart-toc{display:block;position:sticky;top:calc(var(--nav-clear) + var(--s-4));max-height:calc(100dvh - var(--nav-clear) - var(--s-8));overflow-y:auto}
+  .lart .lart-toc-nav{display:none}
+}
+
+/* The disclosure below 1080. Closed it is one 44px row between two hairlines,
+   so the first screen reaches the body; open it pushes the page down in place
+   and never overlays it. */
+.lart .lart-toc-m{border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:var(--s-6)}
+.lart .lart-toc-m summary,.lart .lart-sources summary{display:flex;align-items:center;gap:var(--s-2);min-height:44px;cursor:pointer;list-style:none}
+.lart .lart-toc-m summary::-webkit-details-marker,.lart .lart-sources summary::-webkit-details-marker{display:none}
+.lart .lart-toc-m-name{font-size:14px;font-weight:560;color:var(--t0)}
+.lart .lart-toc-m-count{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t2)}
+.lart .lart-chev{flex:none;margin-left:auto;color:var(--t2);transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1)}
+.lart details[open]>summary .lart-chev{transform:rotate(180deg)}
+.lart .lart-toc-m ol{list-style:none;display:flex;flex-direction:column;gap:var(--s-2);padding:0 0 var(--s-3)}
+.lart .lart-toc-m a{display:flex;align-items:center;min-height:44px;padding-left:var(--s-3);font-size:15px;line-height:1.4;color:var(--t1);text-decoration:none;border-left:2px solid var(--border)}
+@media(hover:hover){
+  .lart .lart-toc-m a:hover{color:var(--t0);border-left-color:var(--t0)}
 }
 
 /* ── Prose ── */
@@ -244,39 +277,58 @@
    ride along for assistive tech, in the site's existing .sr-only, where the
    colour carries nothing at all. */
 
-/* ── Sources, next step, read next ── */
-.lart .lart-sources{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
-.lart .lart-sources h2{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:var(--s-3)}
-.lart .lart-sources ul{list-style:none;margin:0;display:flex;flex-direction:column;gap:var(--s-2)}
-.lart .lart-sources li{padding-left:0;font-size:14px;line-height:1.5}
-/* WCAG 2.2 SC 2.5.8: one link per <li>, so the Inline exception does not apply
-   and 19.0px was a genuine miss on all seven articles at every width. Same for
-   .lart-spec-cite's link at 19.7px. The type size is unchanged; only the box
-   grows. */
-.lart .lart-sources li a{display:inline-flex;align-items:center;min-height:24px}
-.lart .lart-spec-cite a{display:inline-flex;align-items:center;min-height:24px}
-
-.lart .lart-next{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
+/* ── End of the guide: the tool, further reading, then the citations ──
+   These sit after the prose column, not inside it, so none of the prose's link
+   or line-height rules reach them. */
+.lart .lart-next{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
 
 /* The same 36.5em as .lart-aside, for the same reason and to the same number:
    60ch at 15px was 597px = 79 characters a line; 36.5em is 548px = 72. One cap
    in em keeps both blocks at one measure whatever size each is set at, which is
    what `60ch` on both was reaching for and what a `ch` cannot hold. */
 .lart .lart-next-lede{max-width:36.5em;font-size:15px;line-height:1.6;color:var(--t1);margin:0}
-/* The one control at the end of an article: the app's secondary rectangle
-   over a hairline, 44px, the arrow nudging on hover. Not the retired
-   `.ui-pill`, and not filled — the article is reference, not a sales page. */
-.lart .lart-next-go{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,var(--t0) 13%,transparent);border-radius:var(--radius);color:var(--t0);font-size:14px;font-weight:560;text-decoration:none;transition:background var(--dur-1) ease,border-color var(--dur-1) ease}
-.lart .lart-next-go:hover{background:color-mix(in srgb,var(--t0) 4%,transparent);border-color:var(--bh);text-decoration:none}
-.lart .lart-next-arrow{color:var(--accent-mid);transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1)}
-.lart .lart-next-go:hover .lart-next-arrow,.lart .lart-next-go:focus-visible .lart-next-arrow{transform:translateX(3px)}
+/* The page's one filled action: ink on the ground colour, 44px, the arrow
+   nudging on hover. Everything else on the page is a link or a row. */
+.lart .lart-next-go{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 var(--s-5);border:0;border-radius:var(--radius);background:var(--t0);color:var(--bg-0);font-size:14px;font-weight:560;text-decoration:none;transition:opacity var(--dur-1) ease}
+.lart .lart-next-arrow{color:inherit;transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1)}
+@media(hover:hover){
+  .lart .lart-next-go:hover{opacity:.9;color:var(--bg-0);text-decoration:none}
+  .lart .lart-next-go:hover .lart-next-arrow{transform:translateX(3px)}
+}
+.lart .lart-next-go:focus-visible .lart-next-arrow{transform:translateX(3px)}
 
-.lart .lart-onward{margin-top:var(--s-6)}
-.lart .lart-onward-label{display:block;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:var(--s-3)}
-.lart .lart-onward a{display:flex;flex-direction:column;gap:4px;padding:18px;border:1px solid color-mix(in srgb,var(--t0) 9%,transparent);border-radius:var(--radius-2xl);background:var(--card);text-decoration:none;transition:border-color var(--dur-1) ease}
-.lart .lart-onward a:hover{border-color:var(--bh);text-decoration:none}
-.lart .lart-onward-title{font-size:16.5px;font-weight:560;color:var(--t0);letter-spacing:-.01em}
+/* Keep reading: two hairline rows in the index's row style, no card. */
+.lart .lart-onward{margin-top:var(--s-7)}
+.lart .lart-onward-label{font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2);margin-bottom:var(--s-2)}
+.lart .lart-onward ul{list-style:none;margin:0;padding:0}
+.lart .lart-onward-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);min-height:44px;padding:var(--s-3) 0;border-top:1px solid var(--border);color:var(--t0);text-decoration:none}
+.lart .lart-onward li:last-child .lart-onward-row{border-bottom:1px solid var(--border)}
+.lart .lart-onward-text{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.lart .lart-onward-kicker{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t2)}
+.lart .lart-onward-title{font-size:16.5px;font-weight:560;line-height:1.35;color:var(--t0);letter-spacing:-.01em}
 .lart .lart-onward-dek{font-size:13.5px;line-height:1.55;color:var(--t1)}
+.lart .lart-onward-go{flex:none;color:var(--t2);transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1),color var(--dur-1) ease}
+@media(hover:hover){
+  .lart .lart-onward-row:hover .lart-onward-go{color:var(--accent-mid);transform:translateX(3px)}
+}
+.lart .lart-onward-row:focus-visible .lart-onward-go{color:var(--accent-mid);transform:translateX(3px)}
+
+/* Sources: folded under one 44px row. Opened, the list is the same one that
+   always sat here. */
+.lart .lart-sources{margin-top:var(--s-6)}
+.lart .lart-sources summary{border-top:1px solid var(--border);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t2)}
+.lart .lart-sources ul{list-style:none;margin:0;padding:var(--s-1) 0 var(--s-3);display:flex;flex-direction:column;gap:var(--s-2)}
+.lart .lart-sources li{padding-left:0;font-size:14px;line-height:1.5}
+.lart .lart-sources a{color:var(--accent-mid);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--accent-mid) 45%,transparent)}
+@media(hover:hover){
+  .lart .lart-sources a:hover{text-decoration-color:currentColor}
+}
+/* WCAG 2.2 SC 2.5.8: one link per <li>, so the Inline exception does not apply
+   and 19.0px was a genuine miss on all seven articles at every width. Same for
+   .lart-spec-cite's link at 19.7px. The type size is unchanged; only the box
+   grows. */
+.lart .lart-sources li a{display:inline-flex;align-items:center;min-height:24px}
+.lart .lart-spec-cite a{display:inline-flex;align-items:center;min-height:24px}
 
 @media(max-width:640px){
   .lart{font-size:16.5px}
@@ -299,9 +351,28 @@
 
 .lart :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-/* Reduced motion: the next-step arrow's nudge is the only movement the
-   article owns. Both spellings; not prefixed, <html> is an ancestor. */
-html[data-reduced-motion="true"] .lart .lart-next-arrow{transition:none;transform:none!important}
+/* Reduced motion: the arrow nudges (end of guide, keep reading) and the
+   disclosure chevron's turn are the only movement the article owns. Both
+   spellings; not prefixed, <html> is an ancestor. */
+html[data-reduced-motion="true"] .lart .lart-next-arrow,
+html[data-reduced-motion="true"] .lart .lart-onward-go,
+html[data-reduced-motion="true"] .lart .lart-chev{transition:none;transform:none!important}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .lart .lart-next-arrow{transition:none;transform:none!important}
+  html:not([data-reduced-motion="false"]) .lart .lart-next-arrow,
+  html:not([data-reduced-motion="false"]) .lart .lart-onward-go,
+  html:not([data-reduced-motion="false"]) .lart .lart-chev{transition:none;transform:none!important}
+}
+/* The chevron is the only cue that a summary opens, so reduced motion keeps its
+   state: it still points up while open, it just does not turn there. */
+html[data-reduced-motion="true"] .lart details[open]>summary .lart-chev{transform:rotate(180deg)!important}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lart details[open]>summary .lart-chev{transform:rotate(180deg)!important}
+}
+
+/* Forced colours drop background and border colours: the current-section marker
+   and the disclosure rule are drawn in system colours so they survive. */
+@media(forced-colors:active){
+  .lart .lart-toc a[data-active]{border-left-color:CanvasText}
+  .lart .lart-toc-m,.lart .lart-sources summary{border-color:CanvasText}
+  .lart .lart-next-go{border:1px solid ButtonText;background:ButtonFace;color:ButtonText}
 }
