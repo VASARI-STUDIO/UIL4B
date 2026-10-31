@@ -94,3 +94,44 @@ test('the UI kit specimen sets its wordmark in a pair at 4.5:1 or above', () => 
     else assert.equal(art, 'var(--on-citron)')
   }
 })
+
+// renderAll() builds each document's default layout only. The alphabet guard has to hold
+// for every layout a person can choose, or putting it back into Monograph, Atlas, Poster,
+// Grid or a kit layout would pass unseen.
+function everyLayout() {
+  const design = SAMPLES.northbeam.design
+  const out = {}
+  for (const template of ['specification', 'monograph', 'atlas']) {
+    out[`book/${template}`] = buildDesignSystemBook(design, { projectName: 'Northbeam', date: FIXED_DATE, template })
+  }
+  for (const template of ['presentation', 'poster', 'grid']) {
+    out[`guidelines/${template}`] = buildBrandGuidelines(design, { projectName: 'Northbeam', date: FIXED_DATE, template })
+  }
+  for (const layout of ['studio', 'manual', 'showcase']) {
+    out[`kit/${layout}`] = renderUiKit(design, { tier: 'free', template: readKitTemplate(`src/templates/kit/${layout}.html`), date: FIXED_DATE }).html
+  }
+  return out
+}
+
+test('no layout of any document holds the alphabet outside a glyph strip', () => {
+  const docs = everyLayout()
+  assert.equal(Object.keys(docs).length, 9)
+  for (const [key, html] of Object.entries(docs)) {
+    const rest = html.replace(STRIP, '')
+    assert.ok(!rest.includes(UPPER), `${key} sets the alphabet outside a glyph strip`)
+    assert.ok(!rest.includes('abcdefghijklmnopqrstuvwxyz'), `${key} sets the lowercase alphabet outside a glyph strip`)
+  }
+})
+
+test('every layout that sets a face prints its glyph strip, and each strip is 9pt or smaller', () => {
+  for (const [key, html] of Object.entries(everyLayout())) {
+    // The manual kit layout has no strip slot at all (src/templates/kit/manual.html): it prints no alphabet either, which the test above proves.
+    if (key === 'kit/manual') continue
+    const strips = html.match(STRIP) || []
+    assert.ok(strips.length >= 1, `${key} has no glyph strip`)
+    for (const strip of strips) {
+      const pt = Number(/font-size:([\d.]+)pt/.exec(strip)?.[1])
+      assert.ok(pt > 0 && pt <= 9, `${key} has a strip at ${pt}pt`)
+    }
+  }
+})
