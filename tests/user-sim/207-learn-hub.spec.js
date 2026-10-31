@@ -26,7 +26,6 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
-import { CHUNK_RELOAD_KEY } from '../../src/utils/lazyRoute.js'
 
 const USING_ID = 'learn-topic-using-uil4b'
 const HEADING = 'Why colour and type behave the way they do on screen.'
@@ -35,8 +34,10 @@ const PLACEHOLDER = 'Search guides, e.g. clamp()'
 const USING = ['help', 'principles'].map((id) => LEARN_GROUPS.find((g) => g.id === id))
 const USING_HREFS = USING.map((g) => g.route)
 
-// The full-text chunk Vite emits for `virtual:learn-search-text`.
-const SEARCH_TEXT_CHUNK = /\/assets\/_virtual_learn-search-text-[^/]+\.js$/
+// The hashed JSON asset the page fetches at runtime for the full text. It is a
+// fetch(), not an import(), so a failure is an ordinary rejection the component
+// answers itself, with no vite:preloadError and no page reload.
+const SEARCH_TEXT_CHUNK = /\/assets\/learn-search-text-[0-9a-f]+\.json$/
 
 const field = (page) => page.getByRole('searchbox', { name: 'Search the guides' })
 
@@ -216,17 +217,16 @@ test.describe('when the full text will not load', () => {
       await page.setViewportSize({ width, height: 900 })
       let aborted = 0
       await page.route(SEARCH_TEXT_CHUNK, (route) => { aborted++; return route.abort() })
-      // The FIRST failed lazy chunk in a session is answered by main.jsx with one
-      // guarded hard reload (a stale deploy is the usual cause), which would wipe
-      // the field mid-test. This is the second failure: the guard says a reload
-      // just happened, so the error goes through to the component. Without this the
-      // notice appears only on the reader's second attempt; see the report.
-      await page.addInitScript((key) => sessionStorage.setItem(key, String(Date.now())), CHUNK_RELOAD_KEY)
       await go(page, '/learn')
+      // A marker on window: a hard reload (the old preloadError path) wipes it.
+      await page.evaluate(() => { window.__noReloadMarker = 'kept' })
 
       const status = page.locator('.lidx-status[role="status"]')
       await field(page).fill('luminance')
       await expect(status).toContainText(/titles only/i)
+      // The notice did not cost the reader their query, and the page never reloaded.
+      await expect(field(page)).toHaveValue('luminance')
+      expect(await page.evaluate(() => window.__noReloadMarker), 'the page reloaded when the full text failed').toBe('kept')
       await expect(status).toBeVisible()
       // Visible to a sighted reader, not the screen-reader-only variant, which is
       // a one-pixel clipped box.
@@ -242,6 +242,8 @@ test.describe('when the full text will not load', () => {
       await field(page).fill('contrast')
       await expect(page.locator('.lidx-card').first()).toHaveAttribute('href', /^\/learn\/.+/)
       await expect(status).toContainText(/titles only/i)
+      await expect(field(page)).toHaveValue('contrast')
+      expect(await page.evaluate(() => window.__noReloadMarker)).toBe('kept')
     })
   }
 
@@ -363,12 +365,11 @@ test.describe('Discover shares the hint component and keeps its own look', () =>
 })
 
 // A row with no read time. At 561px and over the grid is "title time go", so the
-// empty `time` column still costs a 20px column gap; at 560px and under it is
-// "title go / dek / time / hit", so an empty `time` row and an empty `hit` row each
-// cost a 4px row gap. This measures the space a Using row gets above its title and
-// below its dek, against a guide row with no search snippet, and holds the
-// difference to what two empty tracks explain, so a third one cannot arrive
-// unnoticed. The numbers are in the failure message.
+// empty `time` column still costs a 20px column gap; at 560px and under the grid
+// is "title go / dek / time / hit", and a `:not(:has(.lidx-time))` rule in
+// surface.css drops the empty time and hit rows. This measures the space a Using
+// row gets above its title and below its dek: at 560px and under they must match
+// (within 2px). The numbers are in the failure message.
 test.describe('the rows with no read time', () => {
   for (const width of [390, 560, 768]) {
     test(`spacing inside a Using row against a guide row at ${width}px`, async ({ page }) => {
@@ -399,9 +400,9 @@ test.describe('the rows with no read time', () => {
       // Above the title: the card's own 16px padding, the same in both.
       expect(using.above, note).toBeCloseTo(guide.above, 0)
       if (width <= 560) {
-        // Under the dek, two empty tracks (time, hit) add two 4px row gaps to the 16px
-        // padding: 24px at most. More than that is a third thing in the way.
-        expect(using.below, note).toBeLessThanOrEqual(16 + 2 * 4 + 1)
+        // surface.css drops the empty time and hit rows from a card with no read
+        // time, so the space under the dek is the card's own padding, as above.
+        expect(Math.abs(using.below - using.above), note).toBeLessThanOrEqual(2)
       } else {
         expect(using.below, note).toBeLessThanOrEqual(16 + 4 + 1)
       }
