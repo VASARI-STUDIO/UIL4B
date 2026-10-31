@@ -318,4 +318,36 @@ test.describe('Show N more icons', () => {
     await expect(page.locator('.ig-more'), 'the whole list is in; no button left').toHaveCount(0)
     await expect(page.getByRole('contentinfo')).toHaveCount(1)
   })
+
+  // A browser queues one entry per frame for an observer and hands them over together, oldest first, when
+  // its main thread was busy: a slow phone, or a CI machine running four browsers. The grid's observer used
+  // to act on the first entry only, so a stale "not on screen" ahead of the current "on screen" left the
+  // sentinel in view with nothing loading, and nothing to move it on (an observer reports a change, and the
+  // sentinel was not going to change). This hands the grid's observer exactly that: a stale entry first.
+  // HOW TO SEE IT FAIL: IconLibrary.jsx reads `([e])` in the sentinel's IntersectionObserver again -> the grid stays at 120.
+  test('a stale "not on screen" entry ahead of the current one does not stop the grid loading its next page', async ({ page }) => {
+    watch(page, 'a Pro designer on a slow phone, scrolling the icon list')
+    await page.addInitScript(() => {
+      const Real = window.IntersectionObserver
+      window.IntersectionObserver = class extends Real {
+        constructor(callback, options) {
+          // Only the grid's sentinel observer (the one with the 600px margin); everything else is left alone.
+          if (!options || options.rootMargin !== '600px') { super(callback, options); return }
+          super((entries, observer) => {
+            const stale = entries.map((e) => ({ target: e.target, isIntersecting: false, intersectionRatio: 0, time: e.time - 1 }))
+            callback([...stale, ...entries], observer)
+          }, options)
+        }
+      }
+    })
+    await serveLucide(page)
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await choosePack(page, 'lucide')
+    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
+    await expect.poll(async () => {
+      await page.evaluate(() => document.querySelector('.ig-sentinel, .ig-more')?.scrollIntoView({ block: 'end' }))
+      return page.locator('.ig .ic').count()
+    }, { timeout: 20_000, message: 'the grid never loaded a second page' }).toBeGreaterThan(120)
+  })
 })
