@@ -18,8 +18,15 @@ import { useEffect, useState } from 'react'
  *                     an anchor lands on is the one marked. The extra 2px keeps
  *                     the section above it, whose bottom edge touches that line,
  *                     outside the window.
+ *   pinLastAtBottom   a short last section can never reach the top of the
+ *                     window, so at the very bottom of the page the last one is
+ *                     reported. Scrolling back up re-derives the section from
+ *                     where the headings sit.
  */
-export default function useActiveSection(sections, { enabled = true, fromScrollMargin = false } = {}) {
+export default function useActiveSection(
+  sections,
+  { enabled = true, fromScrollMargin = false, pinLastAtBottom = false } = {},
+) {
   const [active, setActive] = useState('')
   // Keyed on the ids so a caller passing a fresh array each render does not
   // tear the observer down every time.
@@ -34,8 +41,10 @@ export default function useActiveSection(sections, { enabled = true, fromScrollM
     if (!nodes.length || typeof IntersectionObserver === 'undefined') return undefined
     const measured = fromScrollMargin ? parseFloat(getComputedStyle(nodes[0]).scrollMarginTop) : 0
     const top = measured > 0 ? Math.round(measured) + 2 : 88
+    let pinned = false
     const observer = new IntersectionObserver(
       (entries) => {
+        if (pinned) return
         const seen = entries.filter((e) => e.isIntersecting)
         if (!seen.length) return
         seen.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
@@ -44,9 +53,27 @@ export default function useActiveSection(sections, { enabled = true, fromScrollM
       { rootMargin: `-${top}px 0px -60% 0px`, threshold: 0 },
     )
     nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
+
+    const onScroll = () => {
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+      if (atBottom) {
+        pinned = true
+        setActive(nodes[nodes.length - 1].id)
+      } else if (pinned) {
+        pinned = false
+        let current = nodes[0].id
+        for (const n of nodes) if (n.getBoundingClientRect().top <= top) current = n.id
+        setActive(current)
+      }
+    }
+    if (pinLastAtBottom) window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', onScroll)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- idKey stands in for sections
-  }, [idKey, enabled, fromScrollMargin])
+  }, [idKey, enabled, fromScrollMargin, pinLastAtBottom])
 
   return active
 }

@@ -29,7 +29,7 @@ function keepRowVisible(col, row) {
    page's language, on both the rail entry and (set by the page) the clause. */
 export default function LegalContents({ items }) {
   const narrow = useMediaQuery('(max-width: 1000px)')
-  const active = useActiveSection(items, { enabled: !narrow, fromScrollMargin: true })
+  const active = useActiveSection(items, { enabled: !narrow, fromScrollMargin: true, pinLastAtBottom: true })
   const colRef = useRef(null)
   const detailsRef = useRef(null)
 
@@ -40,9 +40,11 @@ export default function LegalContents({ items }) {
 
   const choose = (id) => {
     if (detailsRef.current) detailsRef.current.open = false
-    // The browser performs the jump after this handler returns; focusing first
-    // without scrolling just puts the caret in the clause the jump lands on.
-    document.getElementById(id)?.querySelector('h2')?.focus({ preventScroll: true })
+    // The browser performs the jump after this handler returns, and a jump to
+    // a non-focusable target clears focus. Focus the heading once it has run.
+    setTimeout(() => {
+      document.getElementById(id)?.querySelector('h2')?.focus({ preventScroll: true })
+    }, 0)
   }
 
   if (narrow) {
