@@ -124,7 +124,7 @@ function Sizes({ sel, focused }) {
   const at = PRODUCT.sizes.indexOf(sel)
   return (
     <div className="or-sizes" data-role="neutral" role={live ? 'radiogroup' : undefined} aria-label={live ? 'Size' : undefined} onKeyDown={live ? (e) => arrows(e, PRODUCT.sizes.length, at, (i) => live.pickSize(PRODUCT.sizes[i])) : undefined}>
-      {PRODUCT.sizes.map((s, i) => {
+      {PRODUCT.sizes.map((s) => {
         const cls = ['or-size', s === sel && 'is-on', s === SOLD && 'is-sold', s === sel && focused && 'is-focus'].filter(Boolean).join(' ')
         return (
           <Ctl key={s} className={cls} role="radio" aria-checked={s === sel} aria-label={s === SOLD ? `${s}, sold out` : s} tabIndex={s === sel ? 0 : -1} onClick={() => live.pickSize(s)}>{s}</Ctl>
