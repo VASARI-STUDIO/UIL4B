@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -57,8 +58,36 @@ const SUGGESTIONS = [
   { to: '/discover', label: 'Discover', desc: `${DISCOVER_LIVE} libraries open` },
 ]
 
+// The page that linked here, when the browser can say so: a same-site path only
+// (never a query string, and never another site), and only on a fresh load.
+// After in-app navigation document.referrer still names the page the visit
+// started from, which would blame the wrong link.
+function linkingPath(pathname) {
+  if (typeof document === 'undefined' || !document.referrer) return ''
+  try {
+    const from = new URL(document.referrer)
+    return from.origin === window.location.origin && from.pathname !== pathname ? from.pathname : ''
+  } catch {
+    return ''
+  }
+}
+
 export default function NotFound() {
   const { pathname } = useLocation()
+  const navigationType = useNavigationType()
+  const headingRef = useRef(null)
+
+  // Arriving here from a link or a redirect leaves focus on a control that is
+  // no longer on screen, so move it to the heading. A fresh load or a
+  // back/forward step keeps the browser's own focus handling.
+  useEffect(() => {
+    if (navigationType !== 'POP') headingRef.current?.focus()
+  }, [navigationType, pathname])
+
+  // The report form opens as a bug report with the broken path filled in.
+  const report = new URLSearchParams({ type: 'bug', page: pathname })
+  const from = navigationType === 'POP' ? linkingPath(pathname) : ''
+  if (from) report.set('referrer', from)
 
   return (
     <div className="sec nf">
@@ -71,7 +100,7 @@ export default function NotFound() {
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
-        <h1>That page doesn&rsquo;t exist</h1>
+        <h1 ref={headingRef} tabIndex={-1}>That page doesn&rsquo;t exist</h1>
         <p>
           Nothing lives at <code className="nf-path">{pathname}</code>. It may have moved,
           or the link may have been mistyped.
@@ -94,7 +123,7 @@ export default function NotFound() {
         {' · '}
         {/* The audit found four surfaces pointing here as the way to report a
             problem, so a dead link is exactly the moment to offer it again. */}
-        <NavLink to="/feedback">Report a broken link</NavLink>
+        <NavLink to={`/feedback?${report}`}>Report a broken link</NavLink>
       </p>
     </div>
   )

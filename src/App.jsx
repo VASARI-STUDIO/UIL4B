@@ -30,6 +30,7 @@ import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
+import RouteLoading from './components/RouteLoading'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
 // download waits for the recovery reload instead of crashing the route.
@@ -369,7 +370,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/mobile') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SpectrumMobile />
         </Suspense>
         <GoogleOneTap />
@@ -381,7 +382,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/tools') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SpectrumTools />
         </Suspense>
         <GoogleOneTap />
@@ -393,7 +394,7 @@ function AppInner({ toast }) {
   if (TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <Roadmap />
         </Suspense>
         <GoogleOneTap />
@@ -405,7 +406,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/sitemap') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SiteMap />
         </Suspense>
         <GoogleOneTap />
@@ -421,7 +422,7 @@ function AppInner({ toast }) {
   if (location.pathname === '/plans' || location.pathname.toLowerCase().replace(/\/+$/, '') === '/plans') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <Pricing />
         </Suspense>
         <GoogleOneTap />
@@ -437,7 +438,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/login') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <LoginPage />
         </Suspense>
         <GoogleOneTap />
@@ -513,7 +514,7 @@ function AppInner({ toast }) {
           // Its own Suspense boundary: this branch returns ABOVE the app shell,
           // and the shell's <Suspense> is what every other lazy page leans on.
           ? (
-            <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+            <Suspense fallback={<RouteLoading />}>
               <SurfaceIndex key={surface} surface={surface} />
               <AppFooter />
             </Suspense>
@@ -530,7 +531,7 @@ function AppInner({ toast }) {
 
       <main className="app-page" id="main" tabIndex={-1} key={location.pathname}>
         <RouteErrorBoundary resetKey={location.pathname}>
-          <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <Suspense fallback={<RouteLoading />}>
             <Routes location={location}>
               {/* Every retired URL → its live replacement, rendered from the one
                   table in src/data/legacyRoutes.js that also generates
@@ -656,7 +657,7 @@ export default function App() {
             (the Create tools, `/`, /home, /onboarding, /discover, /learn), so
             a crash is a recovery screen rather than a blank page. The shell
             keeps its own boundary inside <main> so the nav survives there. */}
-        <RouteErrorBoundary resetKey={pathname}>
+        <RouteErrorBoundary resetKey={pathname} outer>
           <AppInner toast={toast} />
         </RouteErrorBoundary>
         <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />

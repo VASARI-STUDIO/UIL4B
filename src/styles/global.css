@@ -1454,7 +1454,16 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* Page-level loading fallback (Suspense) */
 /* A5: the fallback reserves the whole first screen, so nothing below it paints
    and then jumps when the page arrives (CLS .2-.28 on /create/icons at 60vh). */
-.page-loading{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - var(--chrome-h));width:100%;opacity:.6}
+.page-loading{position:relative;display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - var(--chrome-h));width:100%}
+/* The dimming sits on the spinner alone, so the slow-load text and button below
+   it keep full contrast. */
+.page-loading>.fg-loader{opacity:.6}
+/* After a long wait RouteLoading adds a line and a button under the spinner.
+   They are positioned, not in the flow, so the spinner never moves when they
+   appear. */
+.page-loading-slow{position:absolute;top:calc(50% + var(--s-6));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:var(--s-3);padding-inline:var(--s-4);text-align:center}
+.page-loading-slow p{margin:0;font-size:14px;line-height:1.6;color:var(--t1)}
+.page-loading-slow .btn{min-height:44px;padding-inline:20px;font-size:14px;justify-content:center}
 
 /* Error Boundary */
 .coming-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:70vh;max-width:520px;margin:0 auto;padding:24px}
@@ -1467,10 +1476,18 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .coming-actions .coming-act{min-height:44px;padding:0 20px;font-size:14px;justify-content:center}
 .error-boundary{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;padding:24px}
 .error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
-.error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
-.error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin-bottom:24px}
-.error-boundary-card button{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;background:var(--accent);color:#fff;font-family:var(--font);font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--t)}
-.error-boundary-card button:hover{opacity:.85}
+.error-boundary-title{font-family:var(--font);font-size:20px;font-weight:600;line-height:1.3;color:var(--t0);margin:0 0 var(--s-2)}
+.error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin:0 0 var(--s-5);text-align:left}
+/* Live region: empty most of the time, so it takes no room until it speaks. */
+.error-boundary-card .error-boundary-status{margin:0}
+.error-boundary-card .error-boundary-status:not(:empty){margin:calc(-1 * var(--s-3)) 0 var(--s-5);color:var(--t0)}
+.error-boundary-actions{display:flex;gap:var(--s-3);justify-content:center;flex-wrap:wrap}
+.error-boundary-actions .btn{min-height:44px;padding-inline:20px;font-size:14px;justify-content:center}
+.error-boundary-actions .btn:disabled{opacity:.4;cursor:not-allowed}
+/* The quietest of the three: a text button, so it never weighs the same as the fix. */
+.error-boundary-report{display:inline-flex;align-items:center;justify-content:center;min-height:24px;margin-top:var(--s-3);padding:0 var(--s-2);background:none;border:0;border-radius:var(--radius-s);color:var(--accent-text);font-family:var(--font);font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(pointer:coarse){.error-boundary-report{min-height:44px}}
+@media(hover:hover){.error-boundary-report:hover{text-decoration-thickness:2px}}
 
 /* ─── Alt Text Generator ─── */
 .alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
