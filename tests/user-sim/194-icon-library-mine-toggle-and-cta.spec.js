@@ -14,6 +14,7 @@
 //   the toggle goes back to a pack-menu entry ('custom')            -> "pressing My icons again returns to the app packs"
 //   <LibraryToolbar> gets the Add icon button back as its action    -> "Add icon is not on the toolbar"
 //   IconEmojiLibrary.jsx renders a SpectrumClose again              -> "the page has one call to action"
+//   .ig-end-band loses its 48px top margin (free block, no tease)   -> "a free account ... sees the Pro block"
 //   .lbry-toolbar-pinned loses margin-left:auto                     -> "My icons holds the row's right end"
 //   the pack menu leaves the right of the row for its old place     -> "the pack menu sits left of My icons"
 // Each of these was also run against the build from before the change: every test below that names a
@@ -202,7 +203,12 @@ test.describe('the page has one call to action before the footer, centred on the
       const filters = page.getByRole('button', { name: /^Filters\b/ })
       const sheet = page.getByRole('dialog', { name: 'Filters' })
       // The pack menu is on the row until the toolbar folds it into the Filters sheet (a phone).
-      const inPanel = !(await page.getByRole('button', { name: 'Icon pack' }).isVisible()) && await filters.isVisible()
+      // Wait for the toolbar to settle (the pack menu on the row, or Filters once it folds) before choosing a path.
+      const packOnRow = page.getByRole('button', { name: 'Icon pack' })
+      const where = async () => (await packOnRow.isVisible()) ? 'row' : (await filters.isVisible()) ? 'panel' : 'none'
+      let last = 'none'
+      await expect.poll(async () => { const prev = last; last = await where(); await page.waitForTimeout(150); return last !== 'none' && last === prev && last === await where() }, { message: 'the toolbar has settled' }).toBe(true)
+      const inPanel = last === 'panel'
       const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
       if (inPanel) {
         await filters.click()
@@ -228,6 +234,12 @@ test.describe('the page has one call to action before the footer, centred on the
       expect(Math.abs((b.cta.l + b.cta.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the action row is centred on the grid').toBeLessThanOrEqual(2)
       expect(Math.abs((b.h.l + b.h.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the heading is centred on the grid').toBeLessThanOrEqual(2)
       expect(b.gate.b, 'the block ends before the footer starts').toBeLessThanOrEqual(b.footer.t + 1)
+      // No blurred row sits above this block, so it must not ride up over the last result.
+      const lastCellBottom = await page.evaluate(() => {
+        const cells = document.querySelectorAll('.ig .ic')
+        return cells[cells.length - 1].getBoundingClientRect().bottom + window.scrollY
+      })
+      expect(b.h.t, 'the heading starts below the last result').toBeGreaterThanOrEqual(lastCellBottom)
     })
 
     test(`${width}: a Pro account has no call to action between the grid and the footer`, async ({ page }) => {
