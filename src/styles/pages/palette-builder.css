@@ -1134,7 +1134,8 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   .plb .plb-sg-back-icon { display: inline-flex; }
 }
 @media (max-width: 640px) and (pointer: coarse) {
-  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x { width: 44px; height: 44px; }
+  .plb .plb-galpopup--suggest .plb-galpopup-head .plb-pop-x,
+  .plb .plb-galpopup--explore .plb-galpopup-head .plb-pop-x { width: 44px; height: 44px; }
 }
 
 /* The grab handle belongs to the bottom sheet. Above 640px this panel floats

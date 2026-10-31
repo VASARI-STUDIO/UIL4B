@@ -543,11 +543,14 @@ test.describe('Suggest on a phone', () => {
     const top = (loc) => loc.evaluate((el) => el.getBoundingClientRect().top)
     await expect.poll(async () => { const a = await top(close); await page.waitForTimeout(120); return a === await top(close) }, { message: 'the sheet has settled' }).toBe(true)
     const [t, c, h] = [await tabs.boundingBox(), await close.boundingBox(), await dialog.locator('.plb-galpopup-head').boundingBox()]
-    // Centre lines, not tops: the tabs (44px) and Close (26px) differ in height and the row centres them.
+    // Centre lines, not tops: the row centres the tabs and Close.
     const mid = (b) => b.y + b.height / 2
     expect(Math.abs(mid(c) - mid(t)), `close centre ${mid(c)} vs tabs centre ${mid(t)}: the head is two rows`).toBeLessThanOrEqual(4)
     // One row: the head is no taller than its tallest control plus its padding (20px).
     expect(h.height, `the head is ${h.height}px tall: it wrapped onto a second row`).toBeLessThan(Math.max(c.height, t.height) + 24)
+    // A thumb can hit Close: it keeps the 44px touch target the Suggest sheet has.
+    expect(Math.round(c.height), 'the Explore Close button is a 44px touch target').toBeGreaterThanOrEqual(44)
+    expect(Math.round(c.width), 'the Explore Close button is a 44px touch target').toBeGreaterThanOrEqual(44)
   })
   test('the Suggest sheet head is one row: the close button is level with the title', async ({ page }) => {
     watch(page, 'someone opening Suggest on a phone')
