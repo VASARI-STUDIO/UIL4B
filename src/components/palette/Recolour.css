@@ -1,0 +1,10 @@
+/* Recolour (Recolour.jsx): a neutral render tinted by a mask. The wrapper is a
+ * stacking context, so the multiply and screen blends see only its own layers. */
+
+.rc{position:relative;display:block;isolation:isolate;overflow:hidden}
+.rc picture{display:contents}
+.rc-base,.rc-shine{display:block;width:100%;height:100%;object-fit:fill}
+.rc-tint,.rc-shine{position:absolute;inset:0;-webkit-mask-image:var(--rc-mask);mask-image:var(--rc-mask);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.rc-tint{display:block;background:var(--rc-color);mix-blend-mode:multiply}
+.rc-shine{mix-blend-mode:screen;opacity:.25}
+.rc[data-light="true"] .rc-tint{opacity:.85}

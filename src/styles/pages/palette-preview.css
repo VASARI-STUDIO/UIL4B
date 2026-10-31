@@ -1,15 +1,14 @@
 /* The Palette Builder's previews (src/components/palette/PalettePreview.jsx).
  * The examples (src/components/palette/examples/) carry their own stylesheets;
- * this one holds the two Fernway scenes (Invoices, Settings) and the legend's
- * highlight rules.
+ * this one holds the scene root and the legend's highlight rules.
  *
  * Colour comes only from the --pv-* custom properties that pvVars() sets on the
  * scene root; spacing comes from --s-*. Nothing here reads the app theme, so a
  * scene is light or dark by its own data-mode, whatever the page is.
  *
- * The root is a size container: every layout change below is a container query
- * on the width the scene is given, never on the viewport, and nothing is scaled,
- * so text stays at its real pixel size. Type scale: 12 / 13 / 15 / 20 / 28px.
+ * The root is a size container: the examples' layout changes are container
+ * queries on the width the scene is given, never on the viewport, and nothing
+ * is scaled, so text stays at its real pixel size.
  */
 
 .pvs{
@@ -34,103 +33,6 @@
 .pvs :where(ul){list-style:none}
 .pvs :where(*,*::before,*::after){box-sizing:border-box}
 
-.pvs-ico{flex:none;display:inline-block}
-
-/* ── Type and small parts ─────────────────────────────────────────────────── */
-.pvs-h1{font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.02em;color:var(--pv-text)}
-.pvs-muted{font-size:13px;color:var(--pv-muted)}
-.pvs-err{font-weight:600;color:var(--pv-error-ink)}
-.pvs-msg{font-size:13px}
-
-.pvs-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3)}
-.pvs-actions{display:flex;align-items:center;gap:var(--s-2)}
-
-.pvs-btn,
-.pvs-select,
-.pvs-input{
-  display:inline-flex;align-items:center;height:36px;border-radius:8px;
-  font-size:13px;white-space:nowrap;
-}
-.pvs-btn{
-  justify-content:center;padding:0 var(--s-4);font-weight:600;
-  border:1px solid var(--pv-border-strong);background:var(--pv-surface);color:var(--pv-text);
-}
-.pvs-btn--primary{background:var(--pv-primary);color:var(--pv-on-primary);border-color:var(--pv-pborder)}
-.pvs-btn--outline{background:var(--pv-surface);color:var(--pv-text)}
-.pvs-btn.is-disabled{background:transparent;border-color:var(--pv-border);color:var(--pv-disabled)}
-
-.pvs-select{
-  gap:var(--s-1);padding:0 var(--s-3);
-  border:1px solid var(--pv-border-strong);background:var(--pv-surface);color:var(--pv-text);
-}
-.pvs-input{
-  justify-content:space-between;gap:var(--s-2);min-width:0;padding:0 var(--s-3);
-  border:1px solid var(--pv-border-strong);background:var(--pv-raised);color:var(--pv-text);
-}
-.pvs-search{color:var(--pv-muted)}
-.pvs-input.is-focus{border-color:var(--pv-primary);box-shadow:0 0 0 2px var(--pv-canvas),0 0 0 4px var(--pv-primary)}
-.pvs-input.is-error{border-color:var(--pv-error)}
-
-.pvs-tabs{display:flex;gap:var(--s-4);border-bottom:1px solid var(--pv-border)}
-.pvs-tabs>span{position:relative;padding:var(--s-2) 0;font-size:13px;color:var(--pv-muted)}
-.pvs-tabs>span.is-on{font-weight:600;color:var(--pv-text)}
-.pvs-underline{position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;background:var(--pv-primary)}
-
-.pvs-toggle{position:relative;flex:none;width:40px;height:24px;border-radius:999px;background:var(--pv-primary);border:1px solid var(--pv-pborder)}
-.pvs-toggle>i{position:absolute;top:1px;right:1px;width:20px;height:20px;border-radius:50%;background:var(--pv-on-primary)}
-
-/* Status marks are shapes, so a chip never relies on colour alone. */
-.pvs-mark{display:inline-block;flex:none;width:8px;height:8px}
-.pvs-mark[data-shape="circle"]{border-radius:50%;background:currentColor}
-.pvs-mark[data-shape="square"]{background:currentColor}
-.pvs-mark[data-shape="diamond"]{background:currentColor;transform:rotate(45deg) scale(.85)}
-.pvs-mark[data-shape="ring"]{border:1.5px solid currentColor;border-radius:50%}
-.pvs-mark[data-shape="triangle"]{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid currentColor}
-
-/* ── Invoices ──────────────────────────────────────────────────────────── */
-.pvs-inv,.pvs-set{display:flex;flex-direction:column;gap:var(--s-4);padding:var(--s-5)}
-.pvs-filters{display:flex;gap:var(--s-2)}
-.pvs-search{flex:1}
-.pvs-table{overflow:hidden;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:12px}
-.pvs-row{
-  display:grid;align-items:center;gap:var(--s-3);padding:var(--s-3);
-  grid-template-columns:18px minmax(0,1.6fr) 80px 64px 64px 148px 88px;
-  border-bottom:1px solid var(--pv-border);font-size:13px;
-}
-.pvs-row:last-child{border-bottom:0}
-.pvs-row--head{padding-block:var(--s-2);font-size:12px;font-weight:600;color:var(--pv-muted)}
-.pvs-row.is-selected{background:var(--pv-raised)}
-.pvs-row.is-hover{background:color-mix(in srgb,var(--pv-raised) 60%,transparent)}
-.pvs-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pvs-client{font-weight:600}
-.pvs-no,.pvs-issued,.pvs-due{color:var(--pv-muted)}
-.pvs-amount{text-align:right;font-weight:600}
-.pvs-row--head .pvs-amount{font-weight:600}
-.pvs-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.5px solid var(--pv-border-strong);border-radius:4px}
-.pvs-check[data-role]{background:var(--pv-primary);border-color:var(--pv-primary);color:var(--pv-on-primary)}
-.pvs-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 var(--s-2);border-radius:999px;font-size:12px;font-weight:600;background:var(--pv-raised);color:var(--pv-muted)}
-.pvs-chip[data-tone="success"]{background:var(--pv-success-tint);color:var(--pv-success-ink)}
-.pvs-chip[data-tone="warning"]{background:var(--pv-warning-tint);color:var(--pv-warning-ink)}
-.pvs-chip[data-tone="error"]{background:var(--pv-error-tint);color:var(--pv-error-ink)}
-.pvs-chip[data-tone="info"]{background:var(--pv-info-tint);color:var(--pv-info-ink)}
-.pvs-pager{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--pv-muted)}
-.pvs-pages{display:flex;gap:var(--s-2)}
-
-/* ── Settings ──────────────────────────────────────────────────────────── */
-.pvs-toast{
-  display:inline-flex;align-items:center;gap:var(--s-2);height:40px;padding:0 var(--s-4);
-  background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:8px;
-  font-size:13px;color:var(--pv-text);
-}
-.pvs-toast .pvs-ico{color:var(--pv-success-ink)}
-.pvs[data-mode="light"] .pvs-toast{box-shadow:0 4px 12px -2px rgba(16,24,40,.12)}
-.pvs-form{display:flex;flex-direction:column}
-.pvs-field{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:var(--s-5);padding:var(--s-4) 0;border-bottom:1px solid var(--pv-border)}
-.pvs-field-name{font-size:13px;font-weight:600;color:var(--pv-text)}
-.pvs-field-c{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-2);min-width:0}
-.pvs-field-c>.pvs-input{width:100%;max-width:320px}
-.pvs-savebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-3) var(--s-4);background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:12px}
-
 /* ── Where each colour lands ───────────────────────────────────────────────
  * The legend sets data-hit="on" on every element of the chosen role and "off"
  * on the leaves of every other role; data-fail marks a role under its floor.
@@ -139,7 +41,10 @@
  * The Contrast Checker marks by data-size (body, large, ui) the same way: a
  * hit is a size class chosen in its legend, a fail a test the pair misses. */
 .pvs :is([data-role],[data-size]){outline:2px dashed transparent;outline-offset:2px;transition:outline-color 150ms ease-out,opacity 150ms ease-out}
-.pvs [data-fail="on"]{outline:2px solid var(--pv-error)}
+/* A role under its floor is flagged on the legend chip at all times; in the scene its element is outlined only under the pointer or focus, so a brand colour never reads as an error at rest. */
+.pvs [data-fail="on"]:not([data-size]):is(:hover,:focus-visible,:focus-within){outline:2px solid var(--pv-error)}
+/* The Contrast Checker's parts are the test itself, so a failing one stays marked. */
+.pvs [data-size][data-fail="on"]{outline:2px solid var(--pv-error)}
 .pvs [data-hit="on"]{outline:2px dashed var(--pv-hit,var(--pv-text))}
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
@@ -156,44 +61,12 @@
  * solid for a role under its floor. Hit comes last, as in the outline rules
  * above, so a hover on a failing role still shows the dashes. */
 .pvs svg :is([data-role],[data-size]){outline:none}
-.pvs svg [data-fail="on"]:not([data-size]){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
+.pvs svg [data-fail="on"]:not([data-size]):is(:hover,:focus-visible){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
 .pvs svg [data-hit="on"]:not([data-size]){stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 /* A Contrast Checker part is judged by its own colour, so its stroke and fill stay as drawn
  * and the mark is a crisp sleeve round it, made of four zero-blur shadows. */
 .pvs svg [data-size][data-fail="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-error)) drop-shadow(-1.5px 0 0 var(--pv-error)) drop-shadow(0 1.5px 0 var(--pv-error)) drop-shadow(0 -1.5px 0 var(--pv-error))}
 .pvs svg [data-size][data-hit="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(-1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 1.5px 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 -1.5px 0 var(--pv-hit,var(--pv-text)))}
-
-/* ── Medium scenes: container width under 800px ───────────────────────────── */
-@container pvs (max-width:799px){
-  /* Invoices drop the Issued column here so the client name keeps its room. */
-  .pvs-row{grid-template-columns:18px minmax(0,1.6fr) 80px 64px 148px 88px}
-  .pvs-issued,.pvs-row--head>span:nth-child(4){display:none}
-}
-
-/* ── Narrow scenes: container width under 640px ───────────────────────────── */
-@container pvs (max-width:639px){
-  .pvs-inv,.pvs-set{padding:var(--s-4)}
-  .pvs-filters>.pvs-select:last-child{display:none}
-  .pvs-row--head{display:none}
-  .pvs-row{
-    grid-template-columns:minmax(0,1fr) 72px 120px;
-    grid-template-areas:"client client amount" "no due status";
-    row-gap:var(--s-1);
-  }
-  .pvs-check,.pvs-issued{display:none}
-  .pvs-client{grid-area:client}
-  .pvs-amount{grid-area:amount}
-  .pvs-no{grid-area:no}
-  .pvs-due{grid-area:due}
-  .pvs-status{grid-area:status;justify-self:end}
-  .pvs-row>.pvs-status{overflow:visible}
-
-  .pvs-set .pvs-head{flex-direction:column;align-items:flex-start}
-  .pvs-field{grid-template-columns:1fr;gap:var(--s-2)}
-  .pvs-field-c>.pvs-input{max-width:none}
-  .pvs-savebar{flex-direction:column;align-items:stretch}
-  .pvs-savebar>.pvs-actions{justify-content:flex-end}
-}
 
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .pvs{animation:none}

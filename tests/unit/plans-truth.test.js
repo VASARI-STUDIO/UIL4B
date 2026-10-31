@@ -199,10 +199,14 @@ test('the specific claim that shipped — "design JSON" — is gone from every p
 test('Pricing.jsx derives its figures instead of typing them', () => {
   // The page's own rule, enforced. Each of these must be IMPORTED, because each
   // one has a module that also drives the behaviour it describes.
-  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS', 'LIBRARY_TOTALS']) {
+  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS']) {
     assert.match(PLANS, new RegExp(`import[^\\n]*\\b${symbol}\\b`),
       `Pricing.jsx no longer imports ${symbol} — a typed figure has replaced a derived one`)
   }
+  // The comparison rows live in planFacts' PRO_VALUE, so the library totals are read there.
+  assert.match(PLAN_FACTS_SRC, /import \{ LIBRARY_TOTALS \} from '\.\.\/data\/libraryTotals\.js'/,
+    'planFacts.js no longer imports the generated library totals')
+  assert.match(PLANS, /\bPRO_VALUE\b/, 'the comparison no longer reads PRO_VALUE')
   assert.match(PLANS, /from '\.\.\/config\/exportFormats'/,
     'Pricing.jsx no longer reads the export table, so its export claims are prose again')
 
@@ -218,7 +222,7 @@ test('Pricing.jsx derives its figures instead of typing them', () => {
   // someone hard-codes "7 of 37" and the arrays change, the page lies silently.
   assert.ok(!/\b7 of 37\b/.test(code), 'Pricing.jsx hard-codes the brand palette split')
   assert.ok(!/\b2 of 8\b/.test(code), 'Pricing.jsx hard-codes the colour system split')
-  assert.match(code, /BRANDS_TOTAL = LIBRARY_TOTALS\.brandPalettes/, 'the brand total is not derived from the generated totals')
+  assert.match(stripComments(PLAN_FACTS_SRC), /LIBRARY_TOTALS\.brandPalettes/, 'the brand total is not derived from the generated totals')
   assert.match(code, /SYSTEMS_TOTAL|COLOUR_SYSTEMS\.length/, 'the colour system total is not derived')
 })
 
@@ -355,4 +359,63 @@ test('Tailwind and the contrast pairs files are built and free, so they are not 
     assert.ok(!unbuiltFormats().some((x) => x.id === id), `${id} is not named as on the way`)
   }
   assert.deepEqual(unbuiltFormats().map((f) => f.id), ['assets'], 'only the asset bundle is still unbuilt')
+})
+
+
+// ── PRO_VALUE: every row is quoted from the module that enforces it ─────────────
+import { PRO_VALUE, PRO_POINTS, PAID_PACK_GROUPS } from '../../src/config/planFacts.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+import { LIBRARY_RULES } from '../../src/utils/libraryRules.js'
+import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
+import { ICON_SIZE_PRESETS, CUSTOM_SIZE_MIN, CUSTOM_SIZE_MAX } from '../../src/utils/iconSize.js'
+import { LINE_STYLES } from '../../src/utils/iconLineStyle.js'
+import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
+import { buildCodeFile, CODE_FILES } from '../../src/utils/codeFiles.js'
+import { COMMUNITY_PROMPT_ROWS } from '../../src/data/communityPrompts.js'
+import { LIBRARY_PALETTE_ROWS } from '../../src/data/paletteLibrary.js'
+import { LIBRARY_GRADIENT_ROWS } from '../../src/data/gradientLibrary.js'
+
+const valueRow = (label) => PRO_VALUE.flatMap((g) => g.rows).find((r) => r.label === label)
+
+test('PRO_VALUE rows quote the limits the product enforces', () => {
+  const { AI_LIMITS } = PLAN_CONFIG
+  assert.equal(valueRow('AI generations').free, `${AI_LIMITS.free.daily} a day, ${AI_LIMITS.free.monthly} a month`)
+  assert.equal(valueRow('AI generations').pro, `${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month`)
+  assert.equal(valueRow('Colour systems').free, `${COLOUR_SYSTEMS.filter((s) => s.free).length} of ${COLOUR_SYSTEMS.length}`)
+  assert.equal(valueRow('Brand palettes').free, `${LIBRARY_TOTALS.freeBrandPalettes} of ${LIBRARY_TOTALS.brandPalettes}`)
+  assert.equal(valueRow('Icon export size').free, `${ICON_SIZE_PRESETS.slice(0, -1).join(', ')} and ${ICON_SIZE_PRESETS.at(-1)}px`)
+  assert.equal(valueRow('Icon export size').pro, `Any size from ${CUSTOM_SIZE_MIN} to ${CUSTOM_SIZE_MAX}px`)
+  assert.equal(valueRow('Saved projects').free, String(FREE_SAVE_LIMITS.projects))
+  assert.equal(valueRow('Icon line styles').pro, `Plus ${LINE_STYLES.filter((s) => s.pro).map((s) => s.name).join(' and ')}`)
+  const libs = valueRow('Palette, gradient and prompt libraries')
+  assert.match(libs.free, new RegExp(`First ${GALLERY_TIER_LIMITS.free} of each, ${GALLERY_TIER_LIMITS.anonymous} when signed out`))
+  assert.match(libs.pro, new RegExp(`${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`))
+})
+
+test('"first N of each" is true: every library has at least N rows a Free account may open', () => {
+  const cap = GALLERY_TIER_LIMITS.free
+  const open = (rows, isOpen) => rows.filter(isOpen).length
+  assert.ok(open(LIBRARY_PALETTE_ROWS, LIBRARY_RULES.palettes.isOpen) >= cap, 'fewer open palettes than the Free cap')
+  assert.ok(open(LIBRARY_GRADIENT_ROWS, LIBRARY_RULES.gradients.isOpen) >= cap, 'fewer open gradients than the Free cap')
+  assert.ok(open(COMMUNITY_PROMPT_ROWS, LIBRARY_RULES.prompts.isOpen) >= cap, 'fewer free prompts than the Free cap')
+  assert.ok(GALLERY_TIER_LIMITS.anonymous < cap && cap < LIBRARY_TOTALS.prompts, 'the tier caps no longer widen up to Pro')
+})
+
+test('every paid icon pack has a group the plan lines name', () => {
+  const paid = Object.entries(ICON_PACK_TIERS).filter(([, t]) => t.tier === 'paid')
+  assert.ok(paid.length > 0)
+  for (const [prefix, t] of paid) assert.ok(PAID_PACK_GROUPS.includes(t.group), `${prefix} has no paid-pack group`)
+  const line = PRO_POINTS.find((l) => /icons, at any size/.test(l))
+  assert.ok(line, 'the icon tick is gone')
+  for (const g of PAID_PACK_GROUPS) assert.ok(paid.some(([, t]) => t.group === g), `no paid pack in the "${g}" group`)
+})
+
+test('the "Made with UIL4B" line is claimed only for the free files that carry one', async () => {
+  const design = { palette: { colors: ['#1F4B8E', '#F4F1EA', '#1B2433'] } }
+  for (const id of Object.keys(CODE_FILES)) {
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    const text = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
+    assert.equal(text.includes('Made with UIL4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
+  }
 })

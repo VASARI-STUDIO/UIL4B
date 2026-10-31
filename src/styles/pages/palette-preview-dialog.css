@@ -49,7 +49,7 @@
 
 /* Body: rail and main. */
 .pvd-body{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0}
-.plb-modal--preview[data-layout="rail"] .pvd-body{grid-template-columns:220px minmax(0,1fr)}
+.plb-modal--preview[data-layout="rail"] .pvd-body{grid-template-columns:200px minmax(0,1fr)}
 .pvd-rail{display:flex;flex-direction:column;gap:var(--s-4);min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4);border-right:1px solid var(--border)}
 .pvd-main{display:flex;flex-direction:column;min-width:0;min-height:0}
 .pvd-note{font-size:12px;line-height:1.5;color:var(--t2)}
@@ -82,8 +82,11 @@
 /* Stage. */
 /* The stage is a size container so a fixed-aspect scene (poster, social tile,
  * phone) can fit the height it is given: cqh in palette-preview.css. */
-.pvd-stage{container:pvstage / size;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:var(--s-5);touch-action:pan-y pinch-zoom}
-.plb-modal--preview[data-layout="strip"] .pvd-stage{padding:var(--s-4)}
+.pvd-stage{container:pvstage / size;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0;touch-action:pan-y pinch-zoom}
+/* One preview fills the stage edge to edge, as a page: no border, no radius. Compare mode keeps both, so two palettes read as two panes. `clip` rather than `hidden` so a sticky element inside scrolls with the stage. */
+.pvd-stage:not(.is-compare) .pvs{border:0;border-radius:0;overflow:clip}
+.pvd-stage.is-compare{padding:var(--s-5)}
+.plb-modal--preview[data-layout="strip"] .pvd-stage.is-compare{padding:var(--s-4)}
 .pvd-stage.is-compare{--stage-room:calc(100cqh - 32px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--s-5)}
 .plb-modal--preview[data-layout="strip"] .pvd-stage.is-compare{grid-template-columns:1fr}
 .pvd-pane{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
@@ -97,7 +100,8 @@
 .pvd-scene.is-locked .pvd-scene-in{filter:blur(6px);pointer-events:none;user-select:none}
 /* While a scene's file loads: the scene's own canvas colour at the stage's size,
  * so the first frame is the right ground and not a hole. */
-.pvd-scene-wait{min-height:calc(100cqh - 32px)}
+.pvd-scene-wait{min-height:100cqh}
+.pvd-stage.is-compare .pvd-scene-wait{min-height:calc(100cqh - 32px)}
 /* The card has its own solid ground and ink: the scene behind it follows its own
  * Light/Dark, so nothing here may read off it. It sticks near the top of the
  * stage, so on a tall scene it is in view at any scroll. */
@@ -134,6 +138,40 @@
 /* Under the chips, one line, in the column the chips are in. */
 .pvd-legend-adj{grid-column:2;margin:0;font-size:12px;line-height:1.5;color:var(--t1)}
 .pvd-legend.is-sheet .pvd-legend-adj{grid-column:auto}
+
+/* The one-row legend (768 and up): the label, the slot chips, a hairline, the
+ * suggested chips, then "+N more". The row never wraps; the chips that do not
+ * fit are measured out into the popover. The ghost is a hidden copy of every
+ * chip, measured once, so the count that fits never depends on what is showing. */
+.pvd-legend.is-row{position:relative;display:flex;align-items:center;gap:var(--s-2);height:48px;max-height:none;overflow:visible;padding:0 var(--s-5)}
+.pvd-legend.is-row .pvd-legend-t{flex:none;min-height:0;margin-right:var(--s-2);white-space:nowrap}
+.pvd-legend.is-row .pvd-chips{flex:none;flex-wrap:nowrap}
+.pvd-legend.is-row .pvd-chip{flex-wrap:nowrap;white-space:nowrap}
+.pvd-legend-rule{flex:none;width:1px;height:20px;background:var(--border)}
+.pvd-legend-ghost{position:absolute;left:0;top:0;display:flex;align-items:center;gap:var(--s-2);height:0;overflow:hidden;visibility:hidden;white-space:nowrap;pointer-events:none}
+.pvd-more{flex:none;display:inline-flex;align-items:center;min-height:32px;margin-left:auto;padding:0 var(--s-3);font-size:13px;font-weight:600;color:var(--t1);background:none;border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease-standard)}
+@media (hover:hover){.pvd-more:hover{background:var(--hvr)}}
+.pvd-more:focus-visible,.pvd-state-btn:focus-visible,.pvd-state:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pvd-more-pop{position:absolute;right:var(--s-5);bottom:calc(100% + var(--s-1));z-index:5;display:flex;flex-direction:column;gap:var(--s-2);width:min(440px,calc(100% - 2 * var(--s-5)));max-height:min(50dvh,320px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-3);
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.pvd-more-pop .pvd-chips{flex-wrap:wrap}
+.pvd-more-pop .pvd-legend-adj,.pvd-more-pop .pvd-legend-note{grid-column:auto}
+
+/* The State menu: "State  Overview" in the header, the list in a popover under it. */
+.pvd-statemenu{position:relative}
+.pvd-state-btn{display:inline-flex;align-items:center;gap:var(--s-2);height:36px;padding:0 var(--s-3);font-size:13px;font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer}
+.pvd-state-k{font-weight:400;color:var(--t2)}
+.pvd-state-pop{left:auto;right:0;width:220px}
+.pvd-states{display:flex;flex-direction:column;gap:2px}
+.pvd-state{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pvd-state.is-on{background:var(--bg-2);color:var(--t0);font-weight:600}
+@media (hover:hover){.pvd-state:hover{background:var(--hvr);color:var(--t0)}.pvd-state.is-on:hover{background:var(--bg-2)}}
+/* 390: the same list in a bottom sheet behind the header's "More" button. */
+.pvd-state-sheet .pvd-states{padding:0 var(--s-2)}
+.pvd-state-sheet .pvd-state{height:44px}
+.pvd-sheet-t{margin:0 0 var(--s-2);padding:0 var(--s-4);font-size:15px;font-weight:600;color:var(--t0)}
 
 /* Compare actions. */
 .pvd-actions{flex:none;padding:var(--s-3) var(--s-5);border-top:1px solid var(--border)}

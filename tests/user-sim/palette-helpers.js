@@ -53,3 +53,63 @@ export async function clickPaletteAction(page, inlineName, menuLabel = inlineNam
   const panel = await openPaletteTools(page)
   await panel.getByRole('button', { name: startsWith(menuLabel) }).click()
 }
+
+/**
+ * Pick a state in the preview dialog's State menu, wherever the width puts it:
+ * "State" in the header from 768, the "More" sheet on a phone. The menu closes
+ * on a pick, so the next call opens it again.
+ */
+export async function pickPreviewState(dialog, label) {
+  const trigger = dialog.getByRole('button', { name: /^State\b/ })
+  if (await trigger.count()) {
+    await trigger.click()
+    await dialog.getByRole('menuitemradio', { name: label, exact: true }).click()
+    await expect(dialog.getByRole('button', { name: new RegExp(`^State\\s*${label}`) })).toBeVisible()
+    return
+  }
+  await dialog.getByRole('button', { name: 'More', exact: true }).click()
+  await dialog.getByRole('dialog', { name: 'State' }).getByRole('menuitemradio', { name: label, exact: true }).click()
+  await expect(dialog.getByRole('dialog', { name: 'State' })).toHaveCount(0)
+}
+
+/**
+ * The card's wordmark and number are printed on a render, so their ground is pixels. This hides each
+ * one, screenshots the box it occupied, and rates its ink against the pixel with the LEAST contrast
+ * behind it. Returns one ratio per printed text.
+ */
+export async function cardInkRatios(page) {
+  await page.waitForFunction(() => [...document.querySelectorAll('.rc-base')].every((i) => i.complete && i.naturalWidth > 0))
+  const out = []
+  for (const sel of ['.ty-card-mark', '.ty-card-num']) {
+    const el = page.locator(sel)
+    await el.scrollIntoViewIfNeeded()
+    const box = await el.boundingBox()
+    const ink = await el.evaluate((e) => getComputedStyle(e).color)
+    await el.evaluate((e) => { e.style.visibility = 'hidden' })
+    const png = (await page.screenshot({ clip: box })).toString('base64')
+    await el.evaluate((e) => { e.style.visibility = '' })
+    const ratio = await page.evaluate(async ([b64, color]) => {
+      const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+      const lum = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+      const [ir, ig, ib] = color.match(/[\d.]+/g).map(Number)
+      const li = lum(ir, ig, ib)
+      const img = new Image()
+      img.src = `data:image/png;base64,${b64}`
+      await img.decode()
+      const cv = document.createElement('canvas')
+      cv.width = img.width
+      cv.height = img.height
+      const cx = cv.getContext('2d')
+      cx.drawImage(img, 0, 0)
+      const px = cx.getImageData(0, 0, cv.width, cv.height).data
+      let worst = Infinity
+      for (let i = 0; i < px.length; i += 4) {
+        const lg = lum(px[i], px[i + 1], px[i + 2])
+        worst = Math.min(worst, (Math.max(li, lg) + 0.05) / (Math.min(li, lg) + 0.05))
+      }
+      return worst
+    }, [png, ink])
+    out.push({ sel, ratio: Math.round(ratio * 100) / 100 })
+  }
+  return out
+}

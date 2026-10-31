@@ -12,8 +12,8 @@
 //
 // The dialog owns its modal contract (useModalDialog). That hook closes on
 // Escape in the capture phase, before any handler in the tree, so an open
-// popover or sheet registers itself as an Escape layer and requestClose closes
-// that first.
+// popover or sheet registers itself as an Escape layer (useEscapeLayer) that
+// consumes the key and closes just itself.
 //
 // An example (src/components/palette/examples/) is its own chunk. Picking one
 // is a transition, so the picture on screen stays until the next has loaded,
@@ -22,13 +22,15 @@
 // picture. Only the chosen option shows a small spinner, and only if the load
 // is slow. The neighbours of the open example are fetched when the browser is
 // idle, so the next click is usually instant.
-import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
+import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import PreviewScene from './PalettePreview'
 import { preloadExample } from './examples/registry'
 import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
+import useBackClosesDialog from '../../hooks/useBackClosesDialog'
 import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById } from '../../data/palettePreviewScenes'
+import { statesOf } from '../../data/previewStates'
 import { BRAND_ROLES, derivePaletteRoles } from '../../utils/palettePreviewRoles'
 import { roleLabel } from '../../utils/paletteRoles'
 import { simCvd } from '../../utils/colors'
@@ -65,11 +67,27 @@ const IcoX = () => (
 )
 
 // Registers `close` as the layer Escape closes first while `open`.
+// useModalDialog stands aside while a menu trigger is expanded, so the layer takes
+// the key itself, as usePopover does: a capture listener that closes the layer,
+// returns focus to its trigger (inside `close`) and consumes the key. Consumed
+// means stopPropagation and preventDefault, so the dialog's own close and the
+// Palette Builder's window handler both leave the dialog open; a second Escape
+// finds no layer and closes it.
 function useEscapeLayer(layerRef, open, close) {
   useEffect(() => {
     if (!open) return undefined
     layerRef.current = close
-    return () => { if (layerRef.current === close) layerRef.current = null }
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      e.stopPropagation()
+      close()
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('keydown', onKey, true)
+      if (layerRef.current === close) layerRef.current = null
+    }
   }, [layerRef, open, close])
 }
 
@@ -230,18 +248,116 @@ function SceneStrip({ sceneId, pendingId, onPick, isLocked }) {
   )
 }
 
+// ── The State menu ──────────────────────────────────────────────────────────
+
+// One list of states, as radio items: arrows move and select, Enter or Space
+// picks. Shared by the header popover (768 and up) and the phone sheet.
+function StateList({ states, value, onPick, listRef }) {
+  const onKeyDown = (e) => {
+    const i = states.findIndex((s) => s.id === value)
+    let next = i
+    if (e.key === 'ArrowDown') next = Math.min(i + 1, states.length - 1)
+    else if (e.key === 'ArrowUp') next = Math.max(i - 1, 0)
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = states.length - 1
+    else return
+    e.preventDefault()
+    onPick(states[next].id, false)
+    listRef.current?.querySelector(`[data-state-id="${states[next].id}"]`)?.focus()
+  }
+  return (
+    <div ref={listRef} role="menu" aria-label="State" className="pvd-states" onKeyDown={onKeyDown}>
+      {states.map((s) => {
+        const on = s.id === value
+        return (
+          <button
+            key={s.id}
+            type="button"
+            role="menuitemradio"
+            aria-checked={on}
+            tabIndex={on ? 0 : -1}
+            data-state-id={s.id}
+            className={on ? 'pvd-state is-on' : 'pvd-state'}
+            onClick={() => onPick(s.id, true)}
+          >
+            <span>{s.label}</span>
+            {on && <ToolIcon name="check" size={14} />}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// 768 and up: "State: Overview" in the header, the list in a popover under it.
+function StateMenu({ states, value, onPick, layerRef }) {
+  const [open, setOpen] = useState(false)
+  const trigRef = useRef(null)
+  const popRef = useRef(null)
+  const listRef = useRef(null)
+  const popId = useId()
+  const current = states.find((s) => s.id === value) || states[0]
+
+  const close = useCallback(() => {
+    setOpen(false)
+    trigRef.current?.focus()
+  }, [])
+  useEscapeLayer(layerRef, open, close)
+
+  useEffect(() => {
+    if (!open) return undefined
+    listRef.current?.querySelector('[aria-checked="true"]')?.focus()
+    const onDown = (e) => {
+      if (popRef.current?.contains(e.target) || trigRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [open])
+
+  return (
+    <div className="pvd-statemenu">
+      <button
+        ref={trigRef}
+        type="button"
+        className="pvd-state-btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? popId : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="pvd-state-k">State</span>
+        <span>{current.label}</span>
+        <ToolIcon name="caret-down" size={14} />
+      </button>
+      {open && (
+        <div id={popId} ref={popRef} className="pvd-pop pvd-state-pop">
+          <StateList states={states} value={value} listRef={listRef} onPick={(id, choose) => { onPick(id); if (choose) close() }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── The legend ──────────────────────────────────────────────────────────────
 
-function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet }) {
+// The width the "+N more" button keeps free at the end of the one-row legend.
+const MORE_W = 96
+const ROW_GAP = 8
+
+function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet, layerRef }) {
   const failFor = (role) => roles.fails.find((f) => f.role === role)
   const unset = new Set(roles.unset)
   const adjId = useId()
 
-  const chip = (role, label, i) => {
+  // `compact` is the chip as the one-row legend prints it: swatch, name and a
+  // short warning. The hex and the long notes live in the "+N more" popover.
+  const chip = (role, label, i, compact = false) => {
     const off = Boolean(used) && !used.includes(role)
     const fail = failFor(role)
     const on = pinned === role
     const mouse = (fn) => (e) => { if (e.pointerType === 'mouse') fn() }
+    const hex = swatchOf(roles, role).toUpperCase()
     return (
       <button
         key={role}
@@ -249,7 +365,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
         className={`pvd-chip${on ? ' is-on' : ''}${off ? ' is-off' : ''}${fail ? ' is-fail' : ''}`}
         aria-pressed={on}
         aria-disabled={off || undefined}
-        title={off ? 'Not in this preview' : undefined}
+        title={off ? 'Not in this preview' : compact ? `${label} ${hex}${fail ? `, ${fail.ratio.toFixed(1)}:1 on surface` : ''}` : undefined}
         onPointerEnter={off ? undefined : mouse(() => onHover(role))}
         onPointerLeave={mouse(() => onHover(null))}
         onFocus={off ? undefined : () => onHover(role)}
@@ -260,15 +376,15 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
         <i className="pvd-sw" style={{ background: swatchOf(roles, role) }} aria-hidden="true" />
         <span className="pvd-chip-t">
           <span className="pvd-chip-l">{label}</span>
-          <span className="pvd-chip-hex">{swatchOf(roles, role).toUpperCase()}</span>
+          {!compact && <span className="pvd-chip-hex">{hex}</span>}
         </span>
         {fail && (
           <span className="pvd-chip-fail">
             <ToolIcon name="warning-circle" size={14} />
-            {fail.ratio.toFixed(1)}:1 on surface
+            {compact ? <>{fail.ratio.toFixed(1)}:1<span className="sr-only"> on surface</span></> : `${fail.ratio.toFixed(1)}:1 on surface`}
           </span>
         )}
-        {i != null && unset.has(role) && <span className="pvd-chip-note">Not set, using Primary</span>}
+        {!compact && i != null && unset.has(role) && <span className="pvd-chip-note">Not set, using Primary</span>}
         {off && <span className="sr-only">Not in this preview</span>}
         {hover === role && <span className="sr-only">Outlined in the preview</span>}
       </button>
@@ -283,6 +399,124 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
   let note = null
   if (roles.empty) note = 'Add colours to see your own roles'
   else if (roles.lowChroma) note = 'Your palette has no strong colour, so buttons use a neutral'
+
+  // ── The one-row legend (desktop and tablet) ──
+  // Every chip is measured once in a hidden copy, so the count that fits never
+  // depends on what is already showing. Whatever does not fit moves, in order
+  // from the end, into the "+N more" popover; the row itself never wraps.
+  const items = [
+    ...BRAND_ROLES.map((role, i) => ({ role, label: sentence(roleLabel(harmony, i)), i })),
+    ...SUGGESTED.map(([role, label]) => ({ role, label, i: null })),
+  ]
+  const rowRef = useRef(null)
+  const ghostRef = useRef(null)
+  const moreRef = useRef(null)
+  const popRef = useRef(null)
+  const popId = useId()
+  const [fit, setFit] = useState(items.length)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const failKey = roles.fails.map((f) => `${f.role}${f.ratio}`).join()
+
+  useLayoutEffect(() => {
+    if (sheet) return undefined
+    const measure = () => {
+      const row = rowRef.current
+      const ghost = ghostRef.current
+      if (!row || !ghost) return
+      const widths = [...ghost.querySelectorAll('.pvd-chip')].map((c) => c.getBoundingClientRect().width)
+      const head = ghost.querySelector('.pvd-legend-t').getBoundingClientRect().width
+      const room = row.clientWidth - head - ROW_GAP
+      // The hairline between the groups takes a gap on each side.
+      const total = widths.reduce((t, w) => t + w + ROW_GAP, 0)
+      const hasNotes = Boolean(note) || adjusted.length > 0 || roles.errorShifted
+      if (total <= room && !hasNotes) { setFit(widths.length); return }
+      let left = room - MORE_W
+      let n = 0
+      for (const w of widths) {
+        if (w + ROW_GAP > left) break
+        left -= w + ROW_GAP
+        n += 1
+      }
+      setFit(n)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(measure)
+    ro.observe(rowRef.current)
+    return () => ro.disconnect()
+  }, [sheet, harmony, failKey, note, adjusted.length, roles.errorShifted]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const closeMore = useCallback(() => {
+    setMoreOpen(false)
+    moreRef.current?.focus()
+  }, [])
+  useEscapeLayer(layerRef, moreOpen, closeMore)
+  useEffect(() => {
+    if (!moreOpen) return undefined
+    const onDown = (e) => {
+      if (popRef.current?.contains(e.target) || moreRef.current?.contains(e.target)) return
+      setMoreOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [moreOpen])
+
+  if (!sheet) {
+    const shown = items.slice(0, fit)
+    const rest = items.slice(fit)
+    const brand = shown.filter((it) => BRAND_ROLES.includes(it.role))
+    const sugg = shown.filter((it) => !BRAND_ROLES.includes(it.role))
+    const hasNotes = Boolean(note) || adjusted.length > 0 || roles.errorShifted
+    const moreCount = rest.length
+    return (
+      <div className="pvd-legend is-row" ref={rowRef}>
+        <p className="pvd-legend-t">Where each colour lands</p>
+        <div className="pvd-chips" role="group" aria-label="Your colours">
+          {brand.map((it) => chip(it.role, it.label, it.i, true))}
+        </div>
+        {sugg.length > 0 && <span className="pvd-legend-rule" aria-hidden="true" />}
+        <div className="pvd-chips" role="group" aria-label="Suggested colours">
+          {sugg.map((it) => chip(it.role, it.label, it.i, true))}
+        </div>
+        {(moreCount > 0 || hasNotes) && (
+          <button
+            ref={moreRef}
+            type="button"
+            className="pvd-more"
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            aria-controls={moreOpen ? popId : undefined}
+            onClick={() => setMoreOpen((o) => !o)}
+          >
+            {moreCount > 0 ? `+${moreCount} more` : 'Notes'}
+          </button>
+        )}
+        {moreOpen && (
+          <div id={popId} ref={popRef} className="pvd-more-pop" role="dialog" aria-label="More colours">
+            {moreCount > 0 && (
+              <div className="pvd-chips" role="group" aria-label="More colours">
+                {rest.map((it) => chip(it.role, it.label, it.i))}
+              </div>
+            )}
+            {adjusted.length > 0 && (
+              <p className="pvd-legend-adj">{adjusted.map(adjustedName).join(', ')}: {roles.mode === 'dark' ? 'lighter' : 'darker'} as text, so it reads</p>
+            )}
+            {note && <p className="pvd-legend-note">{note}</p>}
+            {roles.errorShifted && <p className="pvd-legend-note">Error shifted to stay distinct from your primary</p>}
+          </div>
+        )}
+        {adjusted.length > 0 && (
+          <p className="sr-only" id={adjId}>
+            {adjusted.map(adjustedName).join(', ')}: {roles.mode === 'dark' ? 'lighter' : 'darker'} as text, so it reads
+          </p>
+        )}
+        <div className="pvd-legend-ghost" ref={ghostRef} aria-hidden="true" inert>
+          <p className="pvd-legend-t">Where each colour lands</p>
+          {items.map((it) => chip(it.role, it.label, it.i, true))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={sheet ? 'pvd-legend is-sheet' : 'pvd-legend'}>
@@ -307,13 +541,13 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
 
 // ── One scene, gated ────────────────────────────────────────────────────────
 
-function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock }) {
+function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state, onState }) {
   const locked = gate !== 'open'
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
       <div className="pvd-scene-in" inert={locked}>
         <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
-          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} />
+          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} state={state} onState={onState} />
         </Suspense>
       </div>
       {locked && (
@@ -361,6 +595,8 @@ export default function PalettePreviewDialog({
   const mid = useMediaQuery('(min-width: 768px)')
   const tall = useMediaQuery('(min-height: 500px)')
   const layout = !tall ? 'strip' : wide ? 'rail' : mid ? 'menu' : 'strip'
+  // The full-screen phone sheet: the system Back button closes it.
+  useBackClosesDialog(layout === 'strip', onClose)
 
   const layerRef = useRef(null)
   const requestClose = useCallback(() => {
@@ -371,6 +607,25 @@ export default function PalettePreviewDialog({
 
   const { mode, compare } = preview
   const scene = sceneById(preview.scene)
+
+  // The State menu: one state of the open preview at a time, resting first.
+  // A choice is kept per preview, so coming back to one finds it as it was left.
+  const states = statesOf(scene.id)
+  const [stateBy, setStateBy] = useState({})
+  const stateId = (states.find((s) => s.id === stateBy[scene.id]) || states[0])?.id
+  const pickState = (id) => setStateBy((prev) => ({ ...prev, [scene.id]: id }))
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreBtnRef = useRef(null)
+  const moreSheetRef = useRef(null)
+  const moreListRef = useRef(null)
+  const closeMoreSheet = useCallback(() => {
+    setMoreOpen(false)
+    moreBtnRef.current?.focus()
+  }, [])
+  useEscapeLayer(layerRef, moreOpen, closeMoreSheet)
+  useEffect(() => {
+    if (moreOpen) moreListRef.current?.querySelector('[aria-checked="true"]')?.focus()
+  }, [moreOpen])
 
   // Picking is a transition: `preview.scene` (and with it the picture) changes
   // when the chosen example has loaded. `target` is what was picked, so the list
@@ -527,6 +782,7 @@ export default function PalettePreviewDialog({
       onHover={setHover}
       onPin={pin}
       sheet={layout === 'strip'}
+      layerRef={layerRef}
     />
   )
 
@@ -544,6 +800,21 @@ export default function PalettePreviewDialog({
       <div className="plb-modal-card plb-modal-card--preview">
         <div className="plb-modal-head pvd-head">
           <span className="plb-pop-title">{compare ? 'Compare palettes' : 'Preview'}</span>
+          {!compare && states.length > 1 && layout !== 'strip' && (
+            <StateMenu states={states} value={stateId} onPick={pickState} layerRef={layerRef} />
+          )}
+          {!compare && states.length > 1 && layout === 'strip' && (
+            <button
+              ref={moreBtnRef}
+              type="button"
+              className="pvd-state-btn pvd-more-btn"
+              aria-haspopup="dialog"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen(true)}
+            >
+              More
+            </button>
+          )}
           <div className="plb-modal-modes" role="group" aria-label="Preview theme">
             {['light', 'dark'].map((m) => (
               <button
@@ -599,6 +870,7 @@ export default function PalettePreviewDialog({
             <div
               ref={stageRef}
               className={compare ? 'pvd-stage is-compare' : 'pvd-stage'}
+              style={{ colorScheme: mode }}
               onTouchStart={layout === 'strip' ? onTouchStart : undefined}
               onTouchEnd={layout === 'strip' ? onTouchEnd : undefined}
             >
@@ -614,7 +886,7 @@ export default function PalettePreviewDialog({
                   </section>
                 </>
               ) : (
-                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} />
+                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} state={stateId} onState={pickState} />
               )}
             </div>
 
@@ -643,6 +915,14 @@ export default function PalettePreviewDialog({
                 Colours
               </button>
             )}
+          </div>
+        )}
+
+        {layout === 'strip' && moreOpen && states.length > 1 && (
+          <div ref={moreSheetRef} className="pvd-sheet pvd-state-sheet" role="dialog" aria-label="State">
+            <button type="button" className="plb-pop-x pvd-close pvd-sheet-x" aria-label="Close state menu" onClick={closeMoreSheet}><IcoX /></button>
+            <p className="pvd-sheet-t">State</p>
+            <StateList states={states} value={stateId} listRef={moreListRef} onPick={(id, choose) => { pickState(id); if (choose) closeMoreSheet() }} />
           </div>
         )}
 

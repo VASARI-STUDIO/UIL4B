@@ -75,6 +75,8 @@
 .ho-year{font-family:'Geist Mono',ui-monospace,monospace;font-size:13px}
 .ho-row.is-on{background:var(--pv-raised)}
 .ho-row.is-on .ho-name{font-weight:600}
+/* The second row drawn as if the pointer were on it, beside the selected first row. */
+.ho-row.is-hover{background:color-mix(in srgb,var(--pv-raised) 60%,transparent)}
 .ho-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pv-primary)}
 .ho-foot{padding-top:var(--s-4);font-size:13px;color:var(--pv-muted)}
 
