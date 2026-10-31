@@ -1783,6 +1783,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-select,.fb-input,.fb-textarea{width:100%}
 .fb-textarea{min-height:110px;resize:vertical;line-height:1.6}
 .fb-sending-as{font-size:11px;color:var(--t3)}
+.fb-body .fb-hint{margin:0;font-size:12px;line-height:1.5;color:var(--t2)}
+.fb-success-reply{margin-top:-8px}
 .fb-error{font-size:12px;color:var(--err-strong);background:color-mix(in srgb,var(--err) 10%,transparent);border:1px solid color-mix(in srgb,var(--err) 30%,transparent);border-radius:var(--radius-s);padding:10px 12px}
 .fb-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
 
