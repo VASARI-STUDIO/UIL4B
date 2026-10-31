@@ -567,12 +567,18 @@ test('the windows\' depth is a view timeline, and the lit rail follows the windo
     await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.sp-rail-row')].map((r, k) => (r.classList.contains('is-on') ? k : -1)).filter((k) => k > -1)),
       { message: `window ${i} is centred but the rail does not light it` }).toEqual([i])
     const ink = () => page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => +getComputedStyle(p).opacity))
+    const size = () => page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => {
+      const t = getComputedStyle(p).transform
+      return t === 'none' ? 1 : parseFloat(t.slice(t.indexOf('(') + 1))
+    }))
     // A view timeline takes its new position on the next frame; window 0 is already lit
-    // at load, so the rail poll above can pass before that frame. Wait for the ink, not a pause.
-    await expect.poll(async () => (await ink())[i], { message: `the centred window ${i} is not at full ink` }).toBeGreaterThan(0.97)
-    const o = await ink()
-    const others = o.filter((_, k) => k !== i)
-    expect(Math.min(...others), 'a window away from the middle is not dimmer than the centred one').toBeLessThan(o[i] - 0.02)
+    // at load, so the rail poll above can pass before that frame. Wait for the size, not a pause.
+    await expect.poll(async () => (await size())[i], { message: `the centred window ${i} is not at full size` }).toBeGreaterThan(0.997)
+    const s = await size()
+    const others = s.filter((_, k) => k !== i)
+    expect(Math.min(...others), 'a window away from the middle is not smaller than the centred one').toBeLessThan(s[i] - 0.005)
+    // Depth is scale only: a faded window drops its secondary text under 4.5:1.
+    expect(Math.min(...await ink()), 'a window is faded, which takes its text under contrast').toBeGreaterThanOrEqual(0.999)
   }
   await ctx.close()
 })
