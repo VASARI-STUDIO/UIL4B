@@ -3261,7 +3261,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         <div className="plb-menuwrap plb-float" ref={galleryRef}>
           <div className={exploring ? 'plb-menu plb-galpopup plb-galpopup--explore' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'} data-lenis-prevent>
             <div className="plb-galpopup-head">
-              <div className="plb-menu-title">{exploring ? 'Explore' : 'Suggest'}</div>
+              <div className="plb-menu-title">{exploring ? 'Explore palettes and brands' : 'Suggest'}</div>
               {exploring && (
                 <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
                   {['community', 'brands'].map(tab => (

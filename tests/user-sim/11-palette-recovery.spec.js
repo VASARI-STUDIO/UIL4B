@@ -242,7 +242,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     // trigger is pressed with Space too (the overflow's own rows).
     const swatchHexes = page.locator('.plb-col .plb-hex')
     const liveMessage = page.locator('.plb > .tl-body > p[aria-live="polite"]')
-    for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 768 }]) {
+    for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 390 }]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
       await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
@@ -256,9 +256,11 @@ test.describe('Palette Builder recovery and tool continuity', () => {
         await expect(liveMessage).toHaveText('')
       }
 
+      // On a laptop Preview is a button on the row; on a phone it is an Extra tools row.
       const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview', exact: true })
-      const preview = onRow
-      await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
+      let preview = onRow
+      if (where === 'row') await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
+      else await expect(onRow, `${width}px: Preview is not on the row`).toHaveCount(0)
       if (where === 'overflow') {
         // Space on the Extra tools trigger opens its panel and leaves the palette alone.
         const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
@@ -269,6 +271,9 @@ test.describe('Palette Builder recovery and tool continuity', () => {
         await expect(page.getByRole('dialog', { name: 'Extra tools' }).locator(':focus')).toHaveCount(1)
         await page.keyboard.press('Escape')
         await expect(tools).toHaveAttribute('aria-expanded', 'false')
+        // Open the panel again by keyboard and use Preview from there.
+        await page.keyboard.press('Space')
+        preview = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview', exact: true })
       }
       await expectUnchangedPalette()
       await preview.focus()

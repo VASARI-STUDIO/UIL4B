@@ -1,20 +1,24 @@
-// The Palette Builder's Preview button is a main toolbar action.
+// The Palette Builder's Preview is a labelled toolbar button where there is
+// room, just left of Save or share, and an Extra tools row on a phone.
 //
-// It is the highest-priority item on the row, just left of Save or share, so it
-// is the last action to leave for Extra tools. Its word shows from 360px; under
-// that it keeps only its icon (and its name). The row never wraps.
+// It has priority 3, under Redo (4), Undo, Randomise and Suggest (5), so it
+// leaves the row before any of them. Under 768px it is overflow-only
+// (`inline: false`), so a phone's row is Undo, Randomise, Suggest and Save as
+// it was. Whether it fits at 768 and 1024 depends on the fonts, so those widths
+// only pin the rule that matters: it is never on the row without all four of
+// those, and never in both places.
 //
-// To make it fail: set `priority: 6` on the `preview` item in
-// src/pages/PaletteBuilder.jsx back to 3 (the one-tap-away widths go red: the
-// button leaves the row at 320 or 390); delete the
-// `@media (max-width: 359.98px)` block for `.plb-preview-btn` in
-// src/styles/pages/palette-builder.css (the label is visible at 320 and the
-// row spills); put `collapse` back on the button (no word at 390).
+// To make it fail: set `priority: 3` on the `preview` item in
+// src/pages/PaletteBuilder.jsx to 6 (Redo, Undo or Randomise leave the row
+// before it at 768 and 390); drop `inline: !phone` from it (Preview is on the
+// phone row, or the row spills).
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { paletteToolbar } from './palette-helpers.js'
 
-const WIDTHS = [320, 390, 768, 1440]
+const PHONES = [320, 390, 640, 767]
+const TABLETS = [768, 1024]
+const LAPTOP = 1440
 
 const settle = async (page) => {
   await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
@@ -35,16 +39,36 @@ const rowBoxes = (page) => paletteToolbar(page).evaluate((bar) => [...bar.childr
 test.describe('Preview is a main toolbar button', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a designer who wants to see the palette on a real design') })
 
-  for (const width of WIDTHS) {
-    test(`${width}px: one row, Preview on it, just left of Save or share`, async ({ page }) => {
+  for (const width of [...PHONES, ...TABLETS, LAPTOP]) {
+    test(`${width}px: one row, and Preview is in one place only`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
       await settle(page)
 
       const bar = paletteToolbar(page)
       const preview = bar.locator('.plb-preview-btn')
-      await expect(preview, `${width}px: Preview is on the row`).toBeVisible()
-      await expect(preview).toHaveAccessibleName('Preview')
+      const onRow = (await preview.count()) > 0
+      if (PHONES.includes(width)) expect(onRow, `${width}px: Preview is not on a phone's row`).toBe(false)
+      if (width === LAPTOP) expect(onRow, `${width}px: Preview is on the laptop row`).toBe(true)
+
+      // Never doubled: on the row, or in Extra tools.
+      await bar.getByRole('button', { name: 'Extra tools' }).click()
+      const panel = page.getByRole('dialog', { name: 'Extra tools' })
+      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in Extra tools exactly when it is off the row`).toHaveCount(onRow ? 0 : 1)
+      await page.keyboard.press('Escape')
+      await expect(panel).toHaveCount(0)
+      await settle(page)
+
+      if (onRow) {
+        await expect(preview).toBeVisible()
+        await expect(preview).toHaveAccessibleName('Preview')
+        // The word shows: it is never an icon on its own.
+        await expect(preview.locator('.tl-btn-label')).toBeVisible()
+        // It leaves the row before these four do, so they are all still here.
+        for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) {
+          await expect(bar.getByRole('button', { name, exact: true }), `${width}px: ${name} is on the row beside Preview`).toBeVisible()
+        }
+      }
 
       const boxes = await rowBoxes(page)
       // Centre lines, not tops: the seed chip is 37px tall, the buttons 36px and the divider 24px,
@@ -55,29 +79,33 @@ test.describe('Preview is a main toolbar button', () => {
       expect(await bar.evaluate((el) => el.scrollWidth > el.clientWidth + 1), `${width}px: the toolbar does not scroll`).toBe(false)
 
       // Left to right: Preview comes after every other action and before the primary.
-      const ids = boxes.map((b) => b.id)
-      const at = ids.indexOf('preview')
-      expect(at, `${width}px: order on the row is ${ids.join(' > ')}`).toBeGreaterThan(-1)
-      expect(ids.at(-1), 'the primary ends the row').toBe('primary')
-      expect(ids.slice(at + 1).filter((id) => id !== 'more' && id !== 'primary'), 'nothing but More and Save sits to the right of Preview').toEqual([])
+      if (onRow) {
+        const ids = boxes.map((b) => b.id)
+        const at = ids.indexOf('preview')
+        expect(at, `${width}px: order on the row is ${ids.join(' > ')}`).toBeGreaterThan(-1)
+        expect(ids.at(-1), 'the primary ends the row').toBe('primary')
+        expect(ids.slice(at + 1).filter((id) => id !== 'more' && id !== 'primary'), 'nothing but More and Save sits to the right of Preview').toEqual([])
+      }
     })
   }
 
-  test('the word "Preview" shows from 360px and is gone at 320', async ({ page }) => {
+  test('on a phone Preview is an Extra tools row and opens the dialog', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/palette')
-    const label = paletteToolbar(page).locator('.plb-preview-btn .tl-btn-label')
-    for (const [width, shown] of [[320, false], [359, false], [360, true], [390, true], [768, true], [1440, true]]) {
-      await page.setViewportSize({ width, height: 900 })
-      await settle(page)
-      await expect(paletteToolbar(page).locator('.plb-preview-btn'), `${width}px: Preview is on the row`).toBeVisible()
-      if (shown) await expect(label, `${width}px: the word shows`).toBeVisible()
-      else await expect(label, `${width}px: the icon stands alone`).toBeHidden()
-      await expect(paletteToolbar(page).locator('.plb-preview-btn')).toHaveAccessibleName('Preview')
-    }
+    await settle(page)
+    const bar = paletteToolbar(page)
+    await expect(bar.locator('.plb-preview-btn')).toHaveCount(0)
+    await bar.getByRole('button', { name: 'Extra tools' }).click()
+    const panel = page.getByRole('dialog', { name: 'Extra tools' })
+    await expect(panel).toBeVisible()
+    // Explore and From image have left the row too, and Preview is named like its row.
+    await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true })).toBeVisible()
+    await panel.getByRole('button', { name: 'Preview', exact: true }).click()
+    await expect(page.locator('[role=dialog][aria-label="Palette preview"]')).toBeVisible()
   })
 
-  test('a click opens the preview dialog', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
+  test('on a laptop a click on the row button opens the dialog and the button says so', async ({ page }) => {
+    await page.setViewportSize({ width: LAPTOP, height: 900 })
     await go(page, '/create/palette')
     await settle(page)
     const preview = paletteToolbar(page).locator('.plb-preview-btn')
@@ -85,20 +113,6 @@ test.describe('Preview is a main toolbar button', () => {
     await expect(preview).toHaveAttribute('aria-expanded', 'false')
     await preview.click()
     await expect(page.locator('[role=dialog][aria-label="Palette preview"]')).toBeVisible()
-  })
-
-  test('it is the last action to leave: still on the row when its neighbours have gone to Extra tools', async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 700 })
-    await go(page, '/create/palette')
-    await settle(page)
-    const bar = paletteToolbar(page)
-    await expect(bar.locator('.plb-preview-btn')).toBeVisible()
-    await bar.getByRole('button', { name: 'Extra tools' }).click()
-    const panel = page.getByRole('dialog', { name: 'Extra tools' })
-    await expect(panel).toBeVisible()
-    // Explore (2), From image (3) and Back (2) have left; Preview (6) has not.
-    await expect(panel.getByRole('button', { name: 'Explore palettes', exact: true })).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Preview', exact: true }), 'Preview is not doubled in Extra tools').toHaveCount(0)
   })
 
   test('reopens on the last preview viewed, and never on a locked one for a free account', async ({ page }) => {
@@ -129,7 +143,12 @@ test.describe('Preview is a main toolbar button', () => {
     await go(page, '/create/palette')
     await settle(page)
     const before = page.url()
-    await paletteToolbar(page).locator('.plb-preview-btn').click()
+    // On a phone Preview is an Extra tools row.
+    const openPreview = async () => {
+      await paletteToolbar(page).getByRole('button', { name: 'Extra tools' }).click()
+      await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview', exact: true }).click()
+    }
+    await openPreview()
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     await expect(dialog).toBeVisible()
     await page.goBack()
@@ -137,7 +156,7 @@ test.describe('Preview is a main toolbar button', () => {
     expect(page.url()).toBe(before)
 
     // Closing with the X takes its history entry off again: Back then leaves the builder, not a dead entry.
-    await paletteToolbar(page).locator('.plb-preview-btn').click()
+    await openPreview()
     await expect(dialog).toBeVisible()
     await page.getByRole('button', { name: 'Close preview' }).click()
     await expect(dialog).toHaveCount(0)
