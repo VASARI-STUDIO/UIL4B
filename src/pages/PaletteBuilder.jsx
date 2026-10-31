@@ -1338,6 +1338,25 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row') || wrap?.querySelector('.plb-pop-x')
     target?.focus({ preventScroll: true })
   }, [galleryOpen, exploring, hasRows])
+  // On a phone, applying a row (a variation, a palette or a brand) drops the sheet
+  // from Full to Peek so the board shows the change, then brings the applied row
+  // into view. The scroll waits for the Peek layout: at Peek most of the sheet is
+  // below the screen and the list's bottom padding makes up for it, so scrolling
+  // before the snap changes would measure against the Full layout.
+  const scrollAppliedRef = useRef(false)
+  useEffect(() => {
+    if (!panelApplied || !galleryOpen || wideDock) return
+    scrollAppliedRef.current = true
+    setSheetFull(false)
+  // Keyed on the apply alone: reopening a panel with a row already applied must
+  // keep that panel's own opening height (Explore Palettes opens at Full).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelApplied])
+  useEffect(() => {
+    if (!scrollAppliedRef.current || sheetFull) return
+    scrollAppliedRef.current = false
+    galleryRef.current?.querySelector('.plb-sw-row[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [panelApplied, sheetFull])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
   // brand pick) invalidates the frozen variation snapshot so the list rebuilds.
@@ -3205,7 +3224,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <p className="plb-sx-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
                 ) : (
                   <>
-                    <p className="plb-sx-intro">Each one reworks the colours on your board. Click one to try it, and click it again to go back.</p>
+                    <p className="plb-sx-intro plb-sx-intro--sg">Each one reworks the colours on your board. Click one to try it, and click it again to go back.</p>
                     <RovingRows>
                       {variationGroups.map(group => (
                         <section key={group.label} aria-label={group.label}>
