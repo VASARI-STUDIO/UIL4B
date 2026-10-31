@@ -279,20 +279,20 @@ test.describe('the same gate in the Palette Builder Explore Brands tab', () => {
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Explore palettes and brands')
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
-    await expect(page.locator('.plb-galpopup-body .plb-sg-card--brand').first()).toBeVisible()
+    await expect(page.locator('.plb-sx-body .plb-sw-row').first()).toBeVisible()
   })
 
   test('the panel lists the free brands, three placeholders and one wall', async ({ page }) => {
-    const body = page.locator('.plb-galpopup-body')
+    const body = page.locator('.plb-sx')
     // Free brands are real, loadable rows; the locked tail is placeholders.
-    await expect(body.locator('.plb-sg-card--locked')).toHaveCount(3)
-    await expect(body.locator('.lockt-cta-btn')).toHaveCount(1)
-    expect(await body.locator('.plb-sg-card--brand:not(.plb-sg-card--locked)').count(),
+    await expect(body.locator('.plb-sw-row.is-static')).toHaveCount(3)
+    await expect(body.locator('.plb-sw-problock a.tl-btn')).toHaveCount(1)
+    expect(await body.locator('button.plb-sw-row:not(.is-locked)').count(),
       'the free brand rows are missing — the panel did not render').toBe(FREE.length)
   })
 
   test('no locked brand colour is painted into the panel', async ({ page }) => {
-    const painted = new Set(await page.locator('.plb-galpopup-body *').evaluateAll(
+    const painted = new Set(await page.locator('.plb-sx-body *').evaluateAll(
       (els) => els.map((el) => getComputedStyle(el).backgroundColor)))
     const inPaint = TELLTALE.filter((hex) => painted.has(rgbOf(hex)))
     expect(inPaint, 'a locked brand colour is painted in the builder panel').toEqual([])
@@ -302,16 +302,18 @@ test.describe('the same gate in the Palette Builder Explore Brands tab', () => {
   })
 
   test('a locked placeholder row cannot be activated', async ({ page }) => {
-    const rows = page.locator('.plb-galpopup-body .plb-sg-card--locked')
+    const rows = page.locator('.plb-sx .plb-sw-row.is-static')
     // Positive control: the locked rows are really there, so "no controls" means something.
     await expect(rows).toHaveCount(3)
-    expect(await rows.locator('button, a, [tabindex]').count(),
+    // The row itself counts too: the placeholder is the element a click or Tab would land on.
+    const CONTROL_SEL = 'button, a, [tabindex]'
+    expect(await rows.evaluateAll((els, sel) => els.filter((el) => el.matches(sel) || el.querySelector(sel)).length, CONTROL_SEL),
       'a locked row carries a control that would load a brand').toBe(0)
   })
 
   test('the panel wall goes to /plans', async ({ page }) => {
-    // The shared LockedTeaseCta links to /plans; it raises no modal here.
-    await page.locator('.plb-galpopup-body .lockt-cta-btn').click()
+    // The panel's Pro block is a link to /plans; it raises no modal here.
+    await page.locator('.plb-sw-problock a.tl-btn').click()
     await expect(page).toHaveURL(/\/plans$/)
   })
 })
