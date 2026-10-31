@@ -175,7 +175,11 @@ test('every variable the document names is in the CSS and JSON it hands over', (
   // The JSON is the app's DTCG token file, not a second format.
   const json = JSON.parse(data.json)
   assert.equal(json.color.primary.$root.$type, 'color')
-  assert.equal(json.color.background.$value.hex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex)
+  // The canvas role is an alias when a palette or tint token holds its value, else a literal colour.
+  const background = json.color.background.$value
+  const target = typeof background === 'string' ? background.slice(1, -1).split('.').reduce((n, k) => n[k], json) : null
+  const canvasHex = (target ? (target.$root || target).$value.hex : background.hex)
+  assert.equal(canvasHex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex.toLowerCase())
   assert.deepEqual(json.space['4'].$value, { value: 4, unit: 'px' })
 })
 

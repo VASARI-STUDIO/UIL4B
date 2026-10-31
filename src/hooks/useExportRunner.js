@@ -17,6 +17,7 @@ import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
+import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
@@ -166,7 +167,7 @@ const showDocument = (html, filename, win) => {
 /**
  * The export engine behind the dialog.
  *   run(formatId, { projectId })  make the file; see the statuses above
- *   copy(formatId)                put the CSS or JSON on the clipboard: { ok, count } (count is the
+ *   copy(formatId)                put a Code file on the clipboard: { ok, count } (count is the
  *                                 number of tokens). Never asks for an account. Raises no toast.
  *   upgradeTarget(formatId, projectId)  where a Pro pick goes for this account: { to, checkout, pick, gate }
  *   reset()                       clear the notice, the error and the success line (a new pick)
@@ -302,7 +303,7 @@ export default function useExportRunner() {
     // Producing a FILE needs a free account; copying a value never does
     // (sign-in only for saving, exporting and account actions). See
     // src/hooks/useExportGate.js for the map that puts the line here.
-    const tokenFile = format === 'css' || format === 'json'
+    const tokenFile = isCodeFile(format)
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : 'export this style guide'
     const signedOut = !user
     if (!(await requireExportAccount(reason))) { closePrintWin(); return { status: 'cancelled' } }
@@ -418,19 +419,12 @@ export default function useExportRunner() {
           }
         }
       } else if (tokenFile) {
-        // Both token files come from one token list (utils/designTokens.js), so
-        // they always carry the same names and values. Loaded on demand like the
-        // other generators.
-        const { buildTokensCss, buildTokensJson } = await import('../utils/designTokens')
+        // The token, Tailwind and contrast files all read one token list
+        // (utils/designTokens.js), so they carry the same names and values. Built by
+        // utils/codeFiles.js, which loads each generator on demand.
         activation = 'design-tokens'
-        const css = format === 'css'
-        const body = css
-          ? buildTokensCss(design, { projectName, watermark: !proNow })
-          : buildTokensJson(design, { projectName, watermark: !proNow })
-        savedFile = download(
-          new Blob([body], { type: css ? 'text/css;charset=utf-8' : 'application/json;charset=utf-8' }),
-          `${slug}.tokens.${css ? 'css' : 'json'}`,
-        )
+        const body = await buildCodeFile(format, design, { projectName, watermark: !proNow })
+        savedFile = download(new Blob([body], { type: CODE_FILES[format].mime }), codeFileName(format, slug))
       } else if (format === 'png' || format === 'jpeg') {
         // Drawn on a canvas rather than rasterised from the HTML — see the note
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
@@ -490,22 +484,21 @@ export default function useExportRunner() {
     try { return await runExport(formatId, projectId) } finally { exporting.current = false }
   }
 
-  // Copy the CSS or the JSON: the same text the download carries (with the credit
+  // Copy a Code file: the same text the download carries (with the credit
   // comment on a free account), straight to the clipboard. A copy is free forever and
   // needs no account (useExportGate.js), so none of the gates above run. It waits for
   // the plan like the file does, so a Pro account is never handed the credit.
   const copy = async (formatId) => {
     const none = { ok: false, count: 0 }
-    if ((formatId !== 'css' && formatId !== 'json') || !design || live.current.planKnown === false) return none
+    if (!isCodeFile(formatId) || !design || live.current.planKnown === false) return none
     try {
-      const { buildTokensCss, buildTokensJson, designTokens } = await import('../utils/designTokens')
       const projectName = design.name || 'Design System'
       const watermark = !live.current.isPro
-      const text = formatId === 'css'
-        ? buildTokensCss(design, { projectName, watermark })
-        : buildTokensJson(design, { projectName, watermark })
+      const text = await buildCodeFile(formatId, design, { projectName, watermark })
       await navigator.clipboard.writeText(text)
-      return { ok: true, count: designTokens(design).length }
+      // The token count is only true of the two token files.
+      const count = formatId === 'css' || formatId === 'json' ? (await import('../utils/designTokens')).designTokens(design).length : 0
+      return { ok: true, count }
     } catch { return none }
   }
 

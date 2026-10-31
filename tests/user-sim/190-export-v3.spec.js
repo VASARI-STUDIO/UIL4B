@@ -290,7 +290,7 @@ test.describe('the sizes the spec names', () => {
         expect(Math.round(button.height), `${category.name}: primary height`).toBe(48)
         if (category.name === 'Code') {
           // Copy sits beside the primary, half and half.
-          const copy = await panel.getByRole('button', { name: /^Copy (CSS|JSON)$/ }).boundingBox()
+          const copy = await panel.getByRole('button', { name: /^Copy file$/ }).boundingBox()
           expect(Math.abs(copy.width - button.width), 'Copy and the primary share the dock evenly').toBeLessThanOrEqual(2)
           expect(copy.width + button.width, 'together they span the dock').toBeGreaterThan(dock.width - 48)
         } else {
@@ -424,7 +424,7 @@ test.describe('what a free account can take', () => {
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
     await typeRadio(panel, 'Code').click()
-    await panel.getByRole('button', { name: 'Copy CSS', exact: true }).click()
+    await panel.getByRole('button', { name: 'Copy file', exact: true }).click()
     await expect(page.getByText(/^Copied/).first()).toBeVisible()
     await expect(page.locator('#ui-login-title'), 'Copy never asks for an account').toHaveCount(0)
     await expect(panel).toBeVisible()
@@ -433,16 +433,16 @@ test.describe('what a free account can take', () => {
     expect(copied, 'the copy carries the same credit comment').toMatch(/\/\* Made with UIL4B[^*]*\*\/\s*$/)
   })
 
-  test('Copy JSON is offered beside the JSON file and copies JSON', async ({ page }) => {
+  test('Copy file is offered beside the JSON file and copies JSON', async ({ page }) => {
     watch(page, 'a visitor copying JSON')
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
     await typeRadio(panel, 'Code').click()
-    await expect(panel.getByRole('button', { name: 'Copy JSON' })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Copy file' })).toHaveCount(1)
     await fileGroup(panel, 'Code').getByRole('radio', { name: 'JSON', exact: true }).click()
     await expect(panel.getByRole('button', { name: 'Copy CSS' })).toHaveCount(0)
-    await panel.getByRole('button', { name: 'Copy JSON', exact: true }).click()
+    await panel.getByRole('button', { name: 'Copy file', exact: true }).click()
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\s*\{/)
     const copied = await page.evaluate(() => navigator.clipboard.readText())
     expect(() => JSON.parse(copied)).not.toThrow()

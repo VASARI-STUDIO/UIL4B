@@ -326,6 +326,6 @@ export const FAQS = [
   },
   {
     q: 'Which export formats can I actually get?',
-    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are listed in the export panel as Soon: they are not built, so nobody has them and Pro does not sell them.`,
+    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length === 1 ? `One more format (${EXPORTS.unbuiltNames}) is` : `${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are`} listed in the export panel as Soon: not built, so nobody has it and Pro does not sell it.`,
   },
 ]

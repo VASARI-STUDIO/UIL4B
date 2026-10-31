@@ -99,7 +99,8 @@ test('the token files name each colour\'s 11-step ramp 50 to 950', () => {
   for (const step of EXPECTED[11]) assert.match(css, new RegExp(`--color-primary-${step}:`))
   assert.ok(!/--color-primary-1000:/.test(css))
   const json = JSON.parse(buildTokensJson(design, { watermark: false }))
-  assert.deepEqual(Object.keys(json.color.primary).filter((k) => !k.startsWith('$')), EXPECTED[11])
+  // The group also holds the `hover` role (--color-primary-hover) beside the ramp.
+  assert.deepEqual(Object.keys(json.color.primary).filter((k) => /^\d+$/.test(k)), EXPECTED[11])
 })
 
 test('the exported label tables cannot be changed by a caller', () => {

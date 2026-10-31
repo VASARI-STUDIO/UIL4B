@@ -173,7 +173,7 @@ test('the page sells no export the panel cannot build', () => {
   // (`['export', 'Export'] … ['brackets-curly', 'JSON']`) read as a claim —
   // two neighbouring labels, not a sentence.
   const exportOf = (word) => new RegExp(`\\bexport(?:s|ed|ing)?\\b[^.'"\`]*\\b${word}\\b`, 'i')
-  const WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON' }
+  const WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON', assets: 'asset bundle' }
   for (const f of unbuilt) {
     if (!WORD[f.id]) continue
     assert.ok(!exportOf(WORD[f.id]).test(PROSE),
