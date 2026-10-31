@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 // `lazy` in this file is lazyRoute, not React's: if the dialog's file failed to
@@ -49,6 +49,10 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
+import PaletteCoach from '../components/PaletteCoach'
+import { isGuideActive } from '../utils/brandKitGuide'
+import { FIRST_PALETTE_NAME, coachDismissed, coachRequested, dismissCoach, COACH_KEY } from '../utils/paletteCoach'
+import { onAccountApplied } from '../utils/accountEvents'
 import SaveShareMenu from '../components/tool/SaveShareMenu'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
@@ -1119,6 +1123,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closeCssSheet = useCallback(() => setCssSheetOpen(false), [])
   const [preview, setPreview] = useState(null)     // { mode, scene, compare } dialog
   const [saveName, setSaveName] = useState('')
+  // ── The first-palette coach (components/PaletteCoach.jsx) ───────────────
+  // Asked for by router state, once per arrival; not shown to someone who has
+  // dismissed it (on any device: the flag syncs with the account) or who is
+  // part-way through the brand-kit walkthrough, which has its own panel.
+  const location = useLocation()
+  const [coachAsked] = useState(() => coachRequested(location.state) && !isGuideActive())
+  const [coachGone, setCoachGone] = useState(() => coachDismissed())
+  const [coachBeat, setCoachBeat] = useState(0)
+  // The Save menu opened from the coach's Save palette: its name is prefilled, and the field takes focus with the name selected.
+  const [saveFromCoach, setSaveFromCoach] = useState(false)
+  const coachOn = coachAsked && !coachGone
+  // The account can bring a dismissal made on another device after this page mounted.
+  useEffect(() => onAccountApplied([COACH_KEY], () => setCoachGone(coachDismissed())), [])
   // The save runs here, not in doSave: right after the sign-in resolves, doSave's
   // closure still holds the signed-out `saveProject`, which throws "Sign in to
   // save projects". This effect re-runs with the fresh one once the account has
@@ -1130,8 +1147,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     clearPendingSave()
     try {
       saveProject(pendingSave)
-      setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false)
-      toast?.('Project saved')
+      setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false); setSaveFromCoach(false)
+      if (coachOn) {
+        // The coach's job is done: it closes for good, and the one next step is offered.
+        dismissCoach()
+        setCoachGone(true)
+        toast?.('Saved to your projects.', 'success', { action: { label: 'Pair fonts with it', onAction: () => navigate('/create/font-pair') } })
+      } else {
+        toast?.('Project saved')
+      }
     } catch (err) {
       // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
       // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
@@ -1139,7 +1163,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // as a link — the treatment /projects already gives the same refusal.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, toast])
+  }, [pendingSave, canSaveProjects, saveProject, toast, coachOn, navigate])
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
@@ -1286,6 +1310,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // simply has no business being presented as the palette's colour when it is
   // not a colour the palette contains.
   const shownSeed = normaliseHex(adjusted[0]) || seed
+
+  // The coach's first beat waits for the edit: the first colour changing (by hand, by
+  // Randomise, by any route) moves it on to Save.
+  const coachSeedRef = useRef(shownSeed)
+  useEffect(() => {
+    if (coachOn && coachBeat === 0 && shownSeed !== coachSeedRef.current) setCoachBeat(1)
+  }, [coachOn, coachBeat, shownSeed])
 
   // Per-column derivations that are NOT the swatch itself. The strip was six
   // CAM16 solves per colour (60 on a full 10-colour board, three times the cost
@@ -1526,15 +1557,37 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setSaveFromCoach(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
     // A closed menu has no save waiting on the account and nothing to reopen on a remount.
     setPendingSave(null); clearPendingSave()
   }, [])
   // A row in the Save or share menu closing it: the refusal under the field goes too.
   const closeSaveMenu = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
+    setSaveOpen(false); setSaveFromCoach(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
     setPendingSave(null); clearPendingSave()
   }, [])
+
+  // Close the coach for good. A press inside it lands on a control that is about to unmount,
+  // so focus goes back to the control the beat pointed at; an Escape pressed elsewhere leaves focus where it is.
+  const closeCoach = useCallback(() => {
+    const inside = document.activeElement?.closest?.('.plb-coach')
+    dismissCoach()
+    setCoachGone(true)
+    if (inside) {
+      requestAnimationFrame(() => {
+        const bar = document.querySelector('[data-tool-toolbar]')
+        const target = (coachBeat === 0 ? bar?.querySelector('.plb-seedchip') : bar?.querySelector('.plb-save')) || bar?.querySelector('.tl-more-btn')
+        target?.focus({ preventScroll: true })
+      })
+    }
+  }, [coachBeat])
+  // Save palette: the Save menu opens with a name already in the field.
+  const coachSave = useCallback(() => {
+    closeAllMenus()
+    setSaveName((n) => (n.trim() ? n : FIRST_PALETTE_NAME))
+    setSaveFromCoach(true)
+    setSaveOpen(true)
+  }, [closeAllMenus])
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
   // (components/tool/ToolLayout.jsx) measures its own row and moves what does
@@ -2696,7 +2749,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         value={shownSeed}
         onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
         ariaLabel="Pick seed colour"
-        triggerClassName="tl-btn plb-seedchip"
+        triggerClassName={`tl-btn plb-seedchip${coachOn && coachBeat === 0 ? ' is-coached' : ''}`}
         triggerChildren={(
           <>
             <span className="plb-seedchip-sw" ref={barRef(shownSeed)} aria-hidden="true" />
@@ -2806,7 +2859,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <ToolButton
             variant="accent"
             icon="bookmark-simple"
-            className="plb-save"
+            className={`plb-save${coachOn && coachBeat === 1 ? ' is-coached' : ''}`}
             aria-label="Save or share"
             aria-haspopup="dialog"
             aria-expanded={saveOpen}
@@ -3492,6 +3545,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           note={saveNote}
           saveError={saveError}
           refusalTestId="palette-save-refusal"
+          focusOnOpen={saveFromCoach}
+          selectOnFocus={saveFromCoach}
           projects={projects}
           onOverwrite={(p) => {
             try { overwriteProject(p.id); closeSaveMenu(); toast?.('Updated: ' + p.name) }
@@ -3821,6 +3876,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the
           visitor is in the flow. */}
       <UIKitGuide step="color" />
+
+      {coachOn && (
+        <PaletteCoach
+          beat={coachBeat}
+          onNext={() => setCoachBeat(1)}
+          onSave={coachSave}
+          onDismiss={closeCoach}
+          anchorSelector=".plb-adjust"
+        />
+      )}
     </ToolLayout>
   )
 }
