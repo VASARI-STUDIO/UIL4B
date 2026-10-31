@@ -318,6 +318,9 @@ test.describe('the content-report form', () => {
     await sendButton(page).click()
     await expect.poll(() => posts.length).toBe(2)
     expect(posts[1].message).not.toMatch(/^Reporter:/m)
+    // The session double's getIdToken answers `uil4b-test-session.<uid>`; the server is the one that verifies it.
+    expect(auth, 'one request per send').toHaveLength(2)
+    expect(auth[1], 'a member sends their ID token as a Bearer header').toBe('Bearer uil4b-test-session.test-uid-free')
   })
 
   test('Escape closes the form and focus returns to the Report button', async ({ page }) => {

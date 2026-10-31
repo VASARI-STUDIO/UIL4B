@@ -77,3 +77,23 @@ test('postSupportWithRetry sends the ID token as a Bearer header only when it is
   assert.equal(seen[1].Authorization, 'Bearer tok-123')
   assert.equal(seen[1]['Content-Type'], 'application/json')
 })
+
+test('the retry after a server error sends the same ID token as the first attempt', { timeout: 5000 }, async () => {
+  const realFetch = globalThis.fetch
+  const realSetTimeout = globalThis.setTimeout
+  const seen = []
+  try {
+    globalThis.fetch = async (_url, init) => {
+      seen.push(init.headers.Authorization)
+      return seen.length === 1 ? { ok: false, status: 503 } : { ok: true, status: 200 }
+    }
+    // Skip the 1.5 s pause before the retry.
+    globalThis.setTimeout = (fn) => realSetTimeout(fn, 0)
+    const result = await postSupportWithRetry({ a: 1 }, { idToken: 'tok-123' })
+    assert.equal(result.ok, true)
+  } finally {
+    globalThis.fetch = realFetch
+    globalThis.setTimeout = realSetTimeout
+  }
+  assert.deepEqual(seen, ['Bearer tok-123', 'Bearer tok-123'], 'a retry that drops the token would store a signed-in report as signed out')
+})

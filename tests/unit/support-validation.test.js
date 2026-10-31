@@ -117,7 +117,7 @@ test('the handler validates through the pure function and boots through the shar
     .replace(/^\s*\/\/.*$/gm, '')
   assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source \}\)/,
     'the handler no longer validates through validateSupportBody')
-  assert.match(src, /import \{ adminDb \} from '\.\/_lib\/firebase-admin\.js'/,
+  assert.match(src, /import \{[^}]*\badminDb\b[^}]*\} from '\.\/_lib\/firebase-admin\.js'/,
     'support.js must use the shared Firebase Admin bootstrap')
   assert.doesNotMatch(src, /initializeApp\(/,
     'support.js has grown its own initializeApp() again — that is the divergence this test exists to stop')
