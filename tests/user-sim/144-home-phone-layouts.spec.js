@@ -224,8 +224,10 @@ test('1440px: the nav CTA stays in the bar while the hero CTA is in view', async
 
 // ── the footer's link columns ──────────────────────────────────────────────────
 
-/** How many columns the footer's link groups sit in: the distinct left edges of its groups. */
-const footerColumns = (page) => page.locator('.sp-footer .sp-footer-col').evaluateAll((cols) => {
+/** How many columns the footer's link groups sit in: the distinct left edges of the groups that are drawn.
+ *  The LEGAL group is always in the page and display:none up to 760px, so it is not counted there. */
+const footerColumns = (page) => page.locator('.sp-footer .sp-footer-col').evaluateAll((all) => {
+  const cols = all.filter((c) => c.getClientRects().length > 0)
   const lefts = new Set(cols.map((c) => Math.round(c.getBoundingClientRect().left)))
   return { columns: lefts.size, groups: cols.length }
 })

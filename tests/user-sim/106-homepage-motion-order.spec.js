@@ -160,7 +160,9 @@ for (const theme of ['light', 'dark']) {
       // AT THE END: the whole footer is on screen and every link in it is the
       // thing under its own centre.
       await scrollToY(page, endY)
-      const covered = await footer.locator('a, button').evaluateAll((els) => els.filter((el) => {
+      // Links CSS hides at this width (the phone-only legal row) are not drawn, so
+      // they cannot be covered; only drawn controls are checked.
+      const covered = await footer.locator('a, button').evaluateAll((els) => els.filter((el) => el.getClientRects().length > 0).filter((el) => {
         const r = el.getBoundingClientRect()
         const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
         return !(hit && (hit === el || el.contains(hit)))

@@ -199,7 +199,7 @@ test.describe('settings on a phone: history and focus', () => {
     await stubPrices(page)
     await go(page, '/projects')
     await page.getByRole('button', { name: 'Account and settings' }).click()
-    await page.locator('#pnav-account-pop').getByRole('link', { name: 'Account & settings' }).click()
+    await page.locator('#pnav-account-pop').getByRole('link', { name: 'Account and settings', exact: true }).click()
     await expect(page).toHaveURL(SETTINGS)
     await expect(page.locator('.settings-nav')).toBeVisible()
 
