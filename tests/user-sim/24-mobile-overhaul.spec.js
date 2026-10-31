@@ -582,7 +582,7 @@ test('S8 · all five Settings sections are reachable without swiping', async ({ 
 
 test('S8 · no Settings section label spills outside its own card', async ({ browser }) => {
   // Range over the rendered glyphs, not innerText — innerText reads
-  // "Data Management" whether or not the final t is on screen.
+  // "Your data" whether or not the final t is on screen.
   const damage = []
   for (const [w, h] of SETTINGS_VIEWPORTS) {
     const { ctx, page } = await openTouch(browser, w, h, '/settings', w >= 700, '.settings-nav')

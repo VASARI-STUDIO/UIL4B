@@ -71,10 +71,14 @@ test.describe('Learn articles', () => {
       await expectRendered(page, `/learn/${article.slug}`)
 
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(article.title)
-      await expect(page.locator('.lart-topic')).toHaveText(article.topic)
+      await expect(page.locator('.lart-crumb a').last()).toHaveText(article.topic)
 
       // The contents list every section, and every anchor lands on a real one.
+      // Wide screens show the rail and phones show the disclosure; the list that
+      // is on screen is the one under test, so the rail is asserted visible
+      // first and a hidden copy can never satisfy these counts.
       const links = page.locator('.lart-toc a')
+      await expect(page.locator('nav.lart-toc')).toBeVisible()
       await expect(links).toHaveCount(article.sections.length)
       for (const section of article.sections) {
         const link = page.locator(`.lart-toc a[href="#${section.id}"]`)
@@ -84,6 +88,18 @@ test.describe('Learn articles', () => {
           `the contents link for #${section.id} points at an anchor that is not in the document`,
         ).toBeAttached()
       }
+
+      // On a phone the same sections sit behind the "On this page" row.
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expect(page.locator('nav.lart-toc')).toBeHidden()
+      const phone = page.locator('details.lart-toc-m')
+      await phone.locator('summary').click()
+      await expect(phone.locator('a')).toHaveCount(article.sections.length)
+      for (const section of article.sections) {
+        await expect(phone.locator(`a[href="#${section.id}"]`), `no phone contents link for #${section.id}`)
+          .toHaveText(section.title)
+      }
+      await page.setViewportSize({ width: 1440, height: 900 })
 
       // Every source is a real outbound link, and the article ends at its tool.
       const sources = page.locator('.lart-sources a')

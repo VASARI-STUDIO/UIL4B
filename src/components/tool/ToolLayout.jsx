@@ -7,6 +7,10 @@
 //      of hairline-separated sections on the right (never a card
 //      inside a card), collapsing to one column at 900px.
 //
+// On a phone (below 768px) the primary leaves the toolbar for a bar fixed to the
+// foot of the screen (ToolLayout renders it as `.tl-dock`), where a thumb
+// reaches it. The toolbar keeps the back button, the name and the actions.
+//
 // THE TOOLBAR NEVER WRAPS, AT ANY WIDTH. ToolToolbar measures
 // the row and moves the actions that do not fit into an overflow ("More", or
 // whatever the tool calls it): a popover under the button from 768px, a bottom
@@ -27,6 +31,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
+import { requestFeedbackDialog } from '../../utils/errorReport'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -49,6 +54,75 @@ function useMedia(query) {
   return match
 }
 
+// The root's class list as state: the brand kit walkthrough sets `bkit-on`
+// on <html> from outside React.
+function useRootClass(name) {
+  const read = () => typeof document !== 'undefined' && document.documentElement.classList.contains(name)
+  const [on, setOn] = useState(read)
+  useEffect(() => {
+    const root = document.documentElement
+    const sync = () => setOn(root.classList.contains(name))
+    sync()
+    if (typeof MutationObserver === 'undefined') return undefined
+    const observer = new MutationObserver(sync)
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [name])
+  return on
+}
+
+// Whether a control that opens the on-screen keyboard has focus.
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number'])
+function isTextEntry(el) {
+  if (!el || el.nodeType !== 1) return false
+  if (el.isContentEditable) return true
+  if (el.tagName === 'TEXTAREA') return !el.readOnly
+  if (el.tagName !== 'INPUT') return false
+  return TEXT_INPUT_TYPES.has((el.getAttribute('type') || 'text').toLowerCase()) && !el.readOnly
+}
+
+// How much shorter the visual viewport must get, against the tallest it has
+// been at this width, before it counts as a keyboard rather than browser chrome
+// sliding away (the URL bar is under 100px).
+const KEYBOARD_MIN_PX = 120
+
+// True while the phone keyboard is up. The visual viewport shrinks for it, and
+// pinch-zoom shrinks it too, so heights are compared in layout pixels
+// (height x scale). A browser without visualViewport falls back to focus in a
+// text field. Does nothing unless `active`.
+function useKeyboardOpen(active) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!active) return undefined
+    const vv = window.visualViewport
+    if (vv) {
+      let base = 0
+      let baseW = 0
+      const update = () => {
+        const w = vv.width * vv.scale
+        const h = vv.height * vv.scale
+        // A different width is a rotation or a window resize: start the baseline over.
+        if (Math.abs(w - baseW) > 1) { baseW = w; base = 0 }
+        base = Math.max(base, h, window.innerHeight)
+        setOpen(base - h > KEYBOARD_MIN_PX)
+      }
+      update()
+      vv.addEventListener('resize', update)
+      return () => vv.removeEventListener('resize', update)
+    }
+    const onIn = (e) => setOpen(isTextEntry(e.target))
+    const onOut = () => setOpen(false)
+    onIn({ target: document.activeElement })
+    document.addEventListener('focusin', onIn)
+    document.addEventListener('focusout', onOut)
+    return () => {
+      document.removeEventListener('focusin', onIn)
+      document.removeEventListener('focusout', onOut)
+    }
+  }, [active])
+  return active && open
+}
+
 // ── ToolLayout ────────────────────────────────────────────────────────────
 // props:
 //   className  page root class; the page sheet scopes every rule under it
@@ -57,17 +131,37 @@ function useMedia(query) {
 //   bleed      true → the body has no padding (a board that runs edge to edge)
 //   children   the body
 //   ...rest    spread onto the root (data-* instrumentation, etc.)
+//
+// Below 768px the `primary` moves from the toolbar into `.tl-dock`, a bar fixed
+// to the foot of the screen (above the phone tab bar when there is one). While
+// it shows, the root carries `tl--docked` and <html> carries `has-tool-dock`, so
+// the body, toasts and floating buttons all clear it. It steps aside, still
+// mounted, while the keyboard is up, and the primary stays in the toolbar while
+// the brand kit walkthrough owns the foot of the screen.
 export function ToolLayout({
   className, title, titleId, showTitle = true, back, items, primary, overflowLabel, overflowIcon,
-  bleed = false, children, ...rest
+  feedback, bleed = false, children, ...rest
 }) {
+  const phone = useMedia(PHONE)
+  const walkthrough = useRootClass('bkit-on')
+  const docked = phone && !walkthrough && !!primary
+  const keyboard = useKeyboardOpen(docked)
+  const dockShown = docked && !keyboard
+  useEffect(() => {
+    if (!dockShown) return undefined
+    const root = document.documentElement
+    root.classList.add('has-tool-dock')
+    return () => root.classList.remove('has-tool-dock')
+  }, [dockShown])
   return (
-    <div className={cx('tl', className)} {...rest}>
+    <div className={cx('tl', dockShown && 'tl--docked', className)} {...rest}>
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
-        items={items} primary={primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
+        items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
+        feedback={feedback}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
+      {docked && <div className={cx('tl-dock', keyboard && 'is-away')} data-tl-dock="">{primary}</div>}
     </div>
   )
 }
@@ -100,9 +194,16 @@ export function ToolLayout({
 //                             Explore / Preview / History / Reset)
 // primary      node — the one primary action; always on the row
 // overflowLabel 'More' by default (the palette says 'Extra tools')
+// feedback     true by default: the overflow ends with "Send feedback", which
+//              opens the app's feedback dialog for this page. It keeps the
+//              More button on the row even when every action fits, so a
+//              phone has a way to the dialog from inside any tool. Pass
+//              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
+  feedback = true,
 }) {
+  const navigate = useNavigate()
   const backProps = back === false ? null : { to: '/projects', label: 'Back to workspace', ...(back || {}) }
   const rowRef = useRef(null)
   const widths = useRef(new Map())
@@ -115,7 +216,8 @@ export function ToolToolbar({
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
 
   // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
-  const itemKey = items.map((it) => (it.measure == null ? it.id : `${it.id}:${it.measure}`)).join('|')
+  // The primary is measured with the row, so gaining or losing one is a new set too.
+  const itemKey = items.map((it) => (it.measure == null ? it.id : `${it.id}:${it.measure}`)).join('|') + (primary ? '|primary' : '')
   // A new set of items needs a fresh measurement. Derived rather than set from
   // an effect: an effect that set `measuring` back to true in the same commit
   // the measurement set it false batched to "true → true", React bailed out of
@@ -144,7 +246,7 @@ export function ToolToolbar({
     const more = row.querySelector(':scope > [data-tl-more]')
     const moreW = w(more)
     // Overflow-only items keep the More button on the row whatever fits.
-    const alwaysMore = items.some((it) => it.inline === false)
+    const alwaysMore = feedback || items.some((it) => it.inline === false)
     const list = items.filter((it) => it.inline !== false).map((it, idx) => {
       const el = row.querySelector(`:scope > [data-tl-item="${CSS.escape(String(it.id))}"]`)
       const width = el ? w(el) : (widths.current.get(it.id) || 0)
@@ -178,7 +280,7 @@ export function ToolToolbar({
     setHidden(next)
     setMeasuring(false)
     setMeasuredKey(itemKey)
-  }, [needsMeasure, itemKey, items])
+  }, [needsMeasure, itemKey, items, feedback])
 
   // Re-measure when the row's width changes (viewport, sidebar, zoom) and
   // when the set of items changes.
@@ -218,7 +320,7 @@ export function ToolToolbar({
   }, [])
 
   const overflow = needsMeasure ? [] : items.filter((it) => (it.inline === false || hidden.has(it.id)) && !it.divider && it.menu !== false)
-  const showMore = needsMeasure || overflow.length > 0
+  const showMore = needsMeasure || overflow.length > 0 || feedback
   // The menu cannot stay open once its button has left the row.
   if (!showMore && open) setOpen(false)
 
@@ -237,6 +339,13 @@ export function ToolToolbar({
       </div>
     )
   })
+
+  // The app-wide feedback dialog (FeedbackButton) answers this event and fills in
+  // the route and tool name itself. Nothing answering means no dialog is mounted,
+  // so the feedback page takes over.
+  const openFeedback = () => {
+    if (requestFeedbackDialog()) navigate('/feedback')
+  }
 
   const panelBody = (
     <div className="tl-menu-list">
@@ -264,10 +373,17 @@ export function ToolToolbar({
           </button>
         )
       })}
+      {feedback && overflow.length > 0 && <div className="tl-menu-sep" role="separator" />}
+      {feedback && (
+        <button type="button" className="tl-menu-row" data-tl-menu-item="feedback" onClick={() => { closeToTrigger(); openFeedback() }}>
+          <ToolIcon name="chat-text" size={16} />
+          <span className="tl-menu-row-label">Send feedback</span>
+        </button>
+      )}
     </div>
   )
 
-  const panel = open && overflow.length > 0 && (phone
+  const panel = open && (overflow.length > 0 || feedback) && (phone
     ? createPortal(
       <div className="tl-sheet-layer">
         <div className="tl-sheet-scrim" aria-hidden="true" onClick={close} />

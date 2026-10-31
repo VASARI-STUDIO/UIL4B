@@ -54,7 +54,7 @@ import {
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
-import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor, heldWatch, holdWrite } from './test-session.js'
+import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor, readDelayFor, writeDelayFor, heldWatch, holdWrite } from './test-session.js'
 
 export * from 'firebase/firestore'
 
@@ -140,7 +140,15 @@ export function setDoc(reference, data, options) {
   const held = holdWrite(reference.path, land)
   if (held) return held
   land()
-  return Promise.resolve()
+  const late = writeDelayFor(reference.path)
+  // A spec waits on `__UIL4B_TEST_LATE_WRITES__` instead of sleeping: it counts
+  // the held writes that have been answered.
+  return late
+    ? new Promise((resolve) => setTimeout(() => {
+      try { window.__UIL4B_TEST_LATE_WRITES__ = (window.__UIL4B_TEST_LATE_WRITES__ || 0) + 1 } catch { /* no window */ }
+      resolve()
+    }, late))
+    : Promise.resolve()
 }
 
 export function updateDoc(reference, data) {

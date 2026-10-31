@@ -304,7 +304,9 @@ for (const [width, status, body] of [
     await expect(page.locator('.alt-dropzone')).toBeVisible({ timeout: 15000 })
     await page.locator('.alt-dropzone input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
     await expect(page.locator('.alt-card-ready')).toBeVisible({ timeout: 10000 })
-    await page.locator('[data-tool-toolbar] .tl-btn--accent').click()
+    // The primary is in the toolbar from 768px and in the dock below it.
+    const primary = page.locator(width < 768 ? '[data-tl-dock] .tl-btn--accent' : '[data-tool-toolbar] .tl-btn--accent')
+    await primary.click()
 
     const card = page.locator('.alt-card.alt-card-error')
     await expect(card).toBeVisible({ timeout: 15000 })
@@ -322,9 +324,9 @@ for (const [width, status, body] of [
     expect(m.fontSize, 'the card did not inherit the message\'s 12px').not.toBe('12px')
     expect(m.msgPad, 'the message keeps its own padding').toBe('8px')
 
-    // The batch is over when the toolbar's primary is pressable again. If the
+    // The batch is over when the primary is pressable again. If the
     // old toast fired it is on screen right now — toasts stay for seconds.
-    await expect(page.locator('[data-tool-toolbar] .tl-btn--accent')).toBeEnabled({ timeout: 10000 })
+    await expect(primary).toBeEnabled({ timeout: 10000 })
     await expect(page.locator('.toast'), 'nothing was generated, so nothing says it was').not.toContainText(/Generated \d+ alt text/)
     await ctx.close()
   })

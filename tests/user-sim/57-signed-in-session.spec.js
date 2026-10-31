@@ -146,25 +146,25 @@ test.describe('a signed-in Pro account', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/settings')
     // /settings opens on Account (#436 follow-up 5); the plan is said on the
-    // Subscription panel.
-    await page.getByRole('tab', { name: 'Subscription' }).click()
+    // Plan and billing panel.
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
 
     // /settings is a signed-in surface that had no rendered coverage at all.
     // This sentence is rendered from `subscription.status` on users/{uid},
     // read over a Firestore snapshot — so it is also the positive control for
     // the no-network test below: nothing else in the app could produce it.
-    await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
-    await expect(page.getByText(/Billed monthly/i)).toBeVisible()
+    await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
+    await expect(page.locator('#set-support .settings-row--fact', { hasText: 'Billing cycle' })).toContainText('Monthly')
   })
 
   test('a free account sees the free subscription panel at the same URL — the control', async ({ page }) => {
     watch(page, 'a free account checking their subscription')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
-    await page.getByRole('tab', { name: 'Subscription' }).click()
-    await expect(page.getByText(/You're on UIL4B Pro/i)).toHaveCount(0)
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
+    await expect(page.getByText(/You.re on UIL4B Pro/i)).toHaveCount(0)
     // Something must be there, or the assertion above is about a blank page.
-    await expect(page.getByRole('heading', { name: /Subscription/i }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Plan and billing/i }).first()).toBeVisible()
   })
 })
 
@@ -362,8 +362,8 @@ test('a signed-in session makes no request to any Firebase host', async ({ page 
   await signIn(page, { plan: 'pro', projects: 2 })
 
   await go(page, '/settings')
-  await page.getByRole('tab', { name: 'Subscription' }).click()
-  await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
+  await page.getByRole('tab', { name: 'Plan and billing' }).click()
+  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
 
   await go(page, '/projects')
   await expect(page.getByText('Seeded Project 1').first()).toBeVisible()
@@ -388,8 +388,8 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
   watch(page, 'a designer signing out from their account settings')
   await signIn(page, { plan: 'pro' })
   await go(page, '/settings')
-  await page.getByRole('tab', { name: 'Subscription' }).click()
-  await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
+  await page.getByRole('tab', { name: 'Plan and billing' }).click()
+  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
 
   await page.getByRole('tab', { name: 'Account' }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -402,7 +402,7 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
     'the Account section only exists for a signed-in visitor, so it must go',
   ).toHaveCount(0)
   await expect(
-    page.getByText(/You're on UIL4B Pro/i),
+    page.getByText(/You.re on UIL4B Pro/i),
     'and the Pro entitlement must go with the session that carried it',
   ).toHaveCount(0)
   await expect
