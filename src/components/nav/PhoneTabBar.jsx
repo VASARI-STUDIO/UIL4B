@@ -77,6 +77,7 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
       <button
         type="button"
         className={'pnav-tab' + (current === 'create' ? ' is-current' : '')}
+        aria-current={current === 'create' ? 'page' : undefined}
         aria-haspopup="dialog"
         aria-expanded={!!createOpen}
         onClick={onCreate}
@@ -95,6 +96,7 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
         <button
           type="button"
           className={'pnav-tab' + (current === 'you' ? ' is-current' : '')}
+          aria-current={current === 'you' ? 'page' : undefined}
           aria-haspopup="dialog"
           aria-expanded={!!accountOpen}
           onClick={onAccount}

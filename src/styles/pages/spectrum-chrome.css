@@ -61,6 +61,13 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
    less navigation. Both companions below say so. */
 .spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:max(clamp(14px,2vw,26px),env(safe-area-inset-top,0px)) max(clamp(14px,3vw,40px),env(safe-area-inset-right,0px)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left,0px));pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
 .spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
+/* Keyboard focus inside the bar always shows it. :focus-visible rather than
+   :focus-within, so a mouse click on a control does not pin the bar open. Same
+   specificity as the hidden rule and later, so it wins. */
+.spnav:has(:focus-visible){transform:none;opacity:1}
+/* A section the menu jumps to takes focus by script, so the stylesheet's
+   keyboard ring is not drawn on a whole section. */
+.spectrum [data-menu-jump]:focus-visible{outline:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav{transition:none}
   html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
