@@ -47,7 +47,7 @@ const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial
 
 // A scene with a State menu is swept once per state: the disabled Overseas fees label
 // is only on the Limits form.
-const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'] }
+const STATES = { 'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'], 'Editorial hero': ['Article', 'Subscribe sheet', 'Subscribe, email error'] }
 
 // The ONLY elements allowed to print in a raw brand colour. brandAsText() keeps the
 // user's own hex when it clears the floor on every ground it sits on (and walks it a

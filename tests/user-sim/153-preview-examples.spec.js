@@ -4,7 +4,7 @@
 // card, Pro), each its own lazy chunk behind src/components/palette/examples/registry.js.
 //
 // WHAT IS HELD HERE, AND WHY IN A BROWSER
-// The unit tests (preview-field-helpers, preview-role-tags, slack-water-chart,
+// The unit tests (preview-field-helpers, preview-role-tags, slack-water-data,
 // palette-preview-copy) hold the arithmetic and the source. They cannot see that
 // an example reaches the screen, that the legend finds its elements, that a slow
 // download leaves the old picture up, or that a label sits on a ground its own
@@ -43,7 +43,7 @@
 // five points. A background IMAGE under text is reported, not guessed at. A point
 // that another element covers is reported as covered.
 //
-// To make it fail: in src/components/palette/examples/SlackWater.css set .sw-stand
+// To make it fail: in src/components/palette/examples/SlackWater.css set .sw-dek
 // to `color:var(--pv-disabled)` (7 goes red); set one example font-size to 10px
 // (6); set PIN_MS in PalettePreviewDialog.jsx to 30000 (4); make Stage drop its
 // old scene by calling onChange without startTransition (5); delete the .catch in
@@ -53,7 +53,7 @@
 // Sundial Solar tag as plain `sd-tag` (7b, 3 red); delete `.pvs svg [data-role]{outline:none}`
 // in palette-preview.css (7c, 3 red); put `.or-sw` back to its old width and
 // `.or-sw-t` back to ellipsis; `aria-describedby` off the chips (7f), chips min-width 330px (7f, 3),
-// the headline clamp back to 6.4cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
+// the .sw-head clamp up to 14cqi (7g), Orra swatches back to flex-wrap and a 60px width (7d); put previewLoader back to Promise.all, or
 // React lazy back in PaletteBuilder (9).
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -515,10 +515,8 @@ function sweepContrast() {
         if (!worst || rr < worst.ratio) worst = { ratio: rr, ink, ground }
       }
     }
-    // Slack Water's narrow layout crops the chart on purpose (the wharves past the crop
-    // are not on screen); slack-water-chart.test.js holds that no label is cut by the crop.
-    // Anything else that cannot be reached is a finding.
-    if (!reached) { if (!el.closest('.sw-label')) problems.push(`${label}: no point of it could be reached (all covered or off screen)`); continue }
+    // Anything that cannot be reached (all covered or off screen) is a finding.
+    if (!reached) { problems.push(`${label}: no point of it could be reached (all covered or off screen)`); continue }
 
     // Every point sat on a background image, which is already in `problems`: nothing to rate.
     if (!worst) continue
