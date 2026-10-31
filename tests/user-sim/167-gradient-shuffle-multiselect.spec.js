@@ -1,5 +1,6 @@
-// /create/gradient, slice S3: Shuffle settings, selecting several stops, and
-// chip picks as the Shuffle pool.
+// /create/gradient: what Random is told to make (Type and Stops under More options, the
+// Colours row and its Pick… checklist), selecting several stops, and chip presses on a
+// selection.
 //
 // Expected values are hand-checked from the spec (handover/specs/
 // gradient-tool-overhaul-spec-2026-10-28.md §4, §5, §16), not read back from the
@@ -17,16 +18,23 @@
 // give Radial 15% (0.15^20 is nothing). Nothing here relies on a draw landing
 // on a particular value, only on a filter letting through what it must not.
 //
+// The Random section sits in the panel at every width. Hue, Tone and Colours are
+// radio groups (one Tab stop on the chosen radio, arrows move and choose). Type and
+// Stops are toggle groups inside More options (#grd-gen-more). Colours: Palette and
+// Colours: Pick… make Random draw from the palette or from the ticked colours.
+//
 // No screenshot is taken in this file, except one on purpose: in a touch context
 // a full-page or element screenshot turns pointer: coarse off for the page, and
 // "selection-mode taps still add and remove ..." uses that to read a fine pointer.
 //
 // MUTATIONS (each turns the tests named red):
-//   engineFilters returns no types                    -> "Type = Radial only ..." and the 360 More-menu test
+//   engineFilters returns no types                    -> "Type = Radial only ..." and the 390 / 360 tap test
 //   engineFilters returns no counts                   -> "Stops = 4 or 5 ..."
-//   randomise sets the angle even with the angle lock -> "the angle lock in Geometry holds the angle ..."
+//   randomise sets the angle even with the angle lock -> "the angle lock in Shape holds the angle ..."
 //   FilterGroup tabIndex always 0                     -> "roving tabindex"
 //   FilterGroup arrow keys not handled                -> "roving tabindex"
+//   RadioRow tabIndex always 0                        -> the Hue and Tone "one Tab stop" tests
+//   RadioRow arrow keys not handled                   -> the Hue and Tone "arrows move and choose" tests
 //   Shift/Ctrl no longer adds in a filter group       -> "Shift-click adds ..." and the touch tap test
 //   pressStop Shift selects the list run, not rail    -> "Shift selects the run along the rail"
 //   pressStop Ctrl/Cmd replaces instead of toggles    -> "Ctrl-click adds one and takes one out"
@@ -36,37 +44,19 @@
 //   removeStops stops announcing the reason           -> "... announced reason"
 //   shiftGroup not clamped as a group                 -> "arrows move the selection together"
 //   Escape no longer clears                           -> "Escape clears"
-//   the Available colours head-row min-height removed -> "the page does not move" (1440 and 390)
-//   .grd-sel-clear made 60px tall (head row grows)    -> "the page does not move" (1440 and 390)
-//   the shuffle-settings More-menu item dropped       -> the 390 and 360 "More menu" and tap tests
 //   toggleStopLock acts on one stop                   -> "the lock on a selected row"
 //   Ctrl+A selects two stops only                     -> "Ctrl+A selects every stop"
-// (Four lines about the Shuffle pool on the chips - Clear picks, the picks driving Shuffle, the chip
-// long-press - were removed in G1: the pool moved to Shuffle settings, and those tests went with it.)
-// G1: openPoolSettings' focus call `row.focus()` -> `row.blur()` turns all six "Choose colours for Shuffle"
-// tests red (1440, 768 and 390, opening and already open). Throwaway src edit on its own build, undone.
-// All 22 were run on a throwaway build (a copy of src under .claude/scratch/grads3/mut, patched,
-// built, served on 4960); every one turned the named tests red and the lane's src was not touched.
-//
-// Added with the logic-review fixes (same throwaway-build method):
-//   rollStops does not close a conic seam round a locked stop     -> the three "a locked stop and a conic roll" tests
-//   (G2) those tests read the PAINTED ramp (the canvas CSS, sorted by position), not the list order: the seed puts
-//   stop 5 last in the list but fourth on the ramp, so a seam closed on list index 0 and n-1 fails them.
-//   (G3) RANDOM_DRAWS_SPACE = false (interpolation lock hidden) -> "the locks sit beside the controls ..."
-//   (G2) the angle lock label drops the value                     -> "the angle lock in Geometry holds ...", the 390 and 360 44px tests,
-//                                                                    "a filters entry saved before the pool existed", "the page does not move" (1440)
-//   the controls panel has no Escape handler                      -> "Escape in the hex input", "Escape on a palette chip",
-//                                                                    "Escape inside the open colour picker ..."
-//   the hex input swallows Escape (stopPropagation)               -> "Escape in the hex input ..."
-//   removeStops leaves the Shift-click anchor where it was        -> the two "delete ..., then Shift-click" tests
-//   pressStop / dragStop need coarse && selMode, not selMode      -> "selection-mode taps still add and remove ..."
-//   the panel's Escape guards AND the popover's stopPropagation   -> "Escape with the picker button focused ...",
-//     both gone                                                      "Escape on the row swatch picker ..."
-// The panel's own guard (the "something is open in front" check) alone is an equivalent mutant: usePopover and
+//   rollStops does not close a conic seam round a locked stop -> the three "a locked stop and a conic roll" tests
+//   (those tests read the PAINTED ramp (the canvas CSS, sorted by position), not the list order: the seed puts
+//   stop 5 last in the list but fourth on the ramp, so a seam closed on list index 0 and n-1 fails them.)
+//   the controls panel has no Escape handler          -> "Escape in the hex input", "Escape on a palette chip",
+//                                                         "Escape inside the open colour picker ..."
+//   the hex input swallows Escape (stopPropagation)   -> "Escape in the hex input ..."
+//   removeStops leaves the Shift-click anchor where it was -> the two "delete ..., then Shift-click" tests
+//   pressStop / dragStop need coarse && selMode, not selMode -> "selection-mode taps still add and remove ..."
+// The panel's own "something is open in front" Escape guard alone is an equivalent mutant: usePopover and
 // StopTintMenu stop Escape at the document's capture phase, so the panel never sees it. The tests hold the
 // behaviour (picker first, then the selection), not that guard.
-// Unit mutations for pickPaletteLook and the Radial fallback (tests/unit/gradient-random.test.js) are in the commit message:
-// all 7 turn at least one test red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -95,9 +85,9 @@ const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimation
 const stopSelect = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #`) })
 const stopRows = (page) => page.locator('.grd-stop')
 const handle = (page, n) => page.getByRole('button', { name: new RegExp(`^Gradient stop ${n} at `) })
-const chips = (page) => page.locator('.grd-avail .grd-chips:not(.grd-chips--shades) .grd-chip')
+const chips = (page) => page.locator('.grd-paint .grd-chips:not(.grd-chips--shades) .grd-chip')
 const selCount = (page) => page.locator('.grd-sel-count')
-const shuffleBtn = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle from palette$/ })
+const randomBtn = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Random$/ })
 
 async function open(page) {
   await go(page, ROUTE)
@@ -117,38 +107,42 @@ const hexes = (page) => page.evaluate(() => [...document.querySelectorAll('.grd-
 const said = (page) => page.evaluate(() => [...document.querySelectorAll('[role="status"]')].map((e) => e.textContent.trim()).filter(Boolean).join(' | '))
 const typeOf = (page) => page.evaluate(() => document.querySelector('[aria-label="Gradient type"] .tl-pill.is-on')?.textContent?.trim() || null)
 
-// ── the toolbar, wherever the page puts Shuffle settings and Random ──────────
+// ── the Random section ───────────────────────────────────────────────────────
+
+const genOf = (page) => panelOf(page).locator('.grd-gen')
 
 const moreButton = (page) => page.locator('[data-tl-more] button').first()
 const menuOpen = (page) => page.locator('.tl-menu-row').first().isVisible().catch(() => false)
 
-/** A toolbar action by name: the direct button when drawn, otherwise its More-menu row. */
-async function toolbarAction(page, name) {
-  const direct = page.locator('[data-tool-toolbar]').getByRole('button', { name }).first()
+/** Presses Random: the toolbar button when it is drawn, otherwise its row in the More menu (360px). */
+async function pressRandom(page) {
+  const direct = randomBtn(page).first()
   if ((await direct.count()) && (await direct.isVisible())) { await direct.click(); return }
   if (!(await menuOpen(page))) await moreButton(page).click()
-  await page.locator('.tl-menu-row').filter({ hasText: name }).first().click()
+  await page.locator('.tl-menu-row').filter({ hasText: /^Random$/ }).first().click()
 }
 
+/** Sets the Colours row to Palette, so Random draws from the palette. */
+async function randomFromPalette(page) {
+  const palette = radio(page, 'Colours', 'Palette')
+  if ((await palette.getAttribute('aria-checked')) !== 'true') await palette.click()
+  await expect(palette).toHaveAttribute('aria-checked', 'true')
+}
+
+/** The radio group named `name` (Hue, Tone, Colours) in the Random section. */
+const radios = (page, name) => genOf(page).getByRole('radiogroup', { name, exact: true })
+const radio = (page, groupName, name) => radios(page, groupName).getByRole('radio', { name, exact: true })
+
 /**
- * Opens Shuffle settings and returns where its controls are: the popover (a
- * button in the toolbar) or the inline copy in the More menu when the toolbar
- * has no room for the button.
+ * Opens More options (once) and returns where Type and Stops are: the region
+ * #grd-gen-more under the Random section. Opening it twice leaves it open.
  */
 async function openSettings(page) {
-  const trigger = page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })
-  if ((await trigger.count()) && (await trigger.first().isVisible())) {
-    await trigger.first().click()
-    const dialog = page.getByRole('dialog', { name: 'Shuffle settings' })
-    await expect(dialog).toBeVisible()
-    // The popover moves focus in on the next frame; a key sent before that lands on the wrong control.
-    await expect.poll(() => dialog.evaluate((el) => el.contains(document.activeElement))).toBe(true)
-    return dialog
-  }
-  if (!(await menuOpen(page))) await moreButton(page).click()
-  const inline = page.locator('.grd-shuf-inline')
-  await expect(inline).toBeVisible()
-  return inline
+  const toggle = genOf(page).getByRole('button', { name: /^(More|Fewer) options$/ })
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  const extra = genOf(page).locator('#grd-gen-more')
+  await expect(extra).toBeVisible()
+  return extra
 }
 const group = (scope, name) => scope.getByRole('group', { name, exact: true })
 const option = (scope, groupName, name) => group(scope, groupName).getByRole('button', { name: String(name), exact: true })
@@ -166,9 +160,12 @@ async function longPress(page, locator, ms = 520) {
   await cdp.detach()
 }
 
-// ── 1 · the settings constrain what Random and Shuffle make ─────────────────
+// ── 1 · More options constrain what Random makes ────────────────────────────
 
-test.describe('Shuffle settings at 1440px', () => {
+// The canvas names the type it draws ("Radial gradient preview").
+const typeNow = (page) => page.evaluate(() => document.querySelector('.grd-canvas').getAttribute('aria-label').replace(' gradient preview', ''))
+
+test.describe('Random filters at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test.beforeEach(async ({ page }) => { watch(page, 'a designer narrowing what Random makes') })
 
@@ -180,8 +177,8 @@ test.describe('Shuffle settings at 1440px', () => {
     await on(option(scope, 'Type', 'Radial'))
     await off(option(scope, 'Type', 'Any'))
     for (let i = 0; i < 20; i++) {
-      await toolbarAction(page, /^Random$/)
-      expect(await typeOf(page), `Random ${i + 1}`).toBe('Radial')
+      await pressRandom(page)
+      expect(await typeNow(page), `Random ${i + 1}`).toBe('Radial')
     }
   })
 
@@ -196,8 +193,8 @@ test.describe('Shuffle settings at 1440px', () => {
     // The control: Radial is 15% by default, so 40 presses without one only
     // happen when the filter is working.
     for (let i = 0; i < 40; i++) {
-      await toolbarAction(page, /^Random$/)
-      expect(await typeOf(page), `Random ${i + 1}`).not.toBe('Radial')
+      await pressRandom(page)
+      expect(await typeNow(page), `Random ${i + 1}`).not.toBe('Radial')
     }
   })
 
@@ -208,26 +205,28 @@ test.describe('Shuffle settings at 1440px', () => {
     await option(scope, 'Stops', 4).click()
     await option(scope, 'Stops', 5).click({ modifiers: ['Shift'] })
     for (let i = 0; i < 20; i++) {
-      await toolbarAction(page, /^Random$/)
+      await pressRandom(page)
       const n = await stopRows(page).count()
       expect([4, 5], `Random ${i + 1} made ${n} stops`).toContain(n)
     }
   })
 
-  test('Stops = 3 narrows Shuffle from palette too, and Type = Conic with it', async ({ page }) => {
+  test('Stops = 3 and Type = Conic hold when Colours is Palette too', async ({ page }) => {
     await seed(page, { gradient: null })
     await open(page)
     const scope = await openSettings(page)
     await option(scope, 'Stops', 3).click()
     await option(scope, 'Type', 'Conic').click()
+    await randomFromPalette(page)
     for (let i = 0; i < 12; i++) {
-      await toolbarAction(page, /^Shuffle from palette$/)
-      expect(await stopRows(page).count(), `Shuffle ${i + 1}`).toBe(3)
-      expect(await typeOf(page)).toBe('Conic')
+      await pressRandom(page)
+      expect(await stopRows(page).count(), `Random ${i + 1}`).toBe(3)
+      expect(await typeNow(page)).toBe('Conic')
+      for (const h of await hexes(page)) expect(THIRTEEN, `Random ${i + 1}: a palette colour`).toContain(h)
     }
   })
 
-  test('the angle lock in Geometry holds the angle through Random and Shuffle; off, Random moves it', async ({ page }) => {
+  test('the angle lock in Shape holds the angle through Random and Random from the palette; off, Random moves it', async ({ page }) => {
     await seed(page, { gradient: null })
     await open(page)
     const field = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
@@ -237,33 +236,34 @@ test.describe('Shuffle settings at 1440px', () => {
     // Linear only, so the angle field is always drawn and always read.
     const scope = await openSettings(page)
     await option(scope, 'Type', 'Linear').click()
-    await page.keyboard.press('Escape')
     // The label carries the value: "Keep the angle (77°) when you press Random".
     const keep = page.getByRole('button', { name: 'Keep the angle (77°) when you press Random' })
     await off(keep)
     await keep.click()
     const kept = page.getByRole('button', { name: /^The angle \(77°\) is kept/ })
     await on(kept)
-    for (let i = 0; i < 8; i++) {
-      await toolbarAction(page, /^Random$/)
-      await expect(field, `Random ${i + 1}`).toHaveValue('77')
-      await toolbarAction(page, /^Shuffle from palette$/)
-      await expect(field, `Shuffle ${i + 1}`).toHaveValue('77')
+    for (const fromPalette of [false, true]) {
+      if (fromPalette) await randomFromPalette(page)
+      for (let i = 0; i < 8; i++) {
+        await pressRandom(page)
+        await expect(field, `Random ${i + 1}${fromPalette ? ' from the palette' : ''}`).toHaveValue('77')
+      }
     }
     await kept.click()
     await off(page.getByRole('button', { name: 'Keep the angle (77°) when you press Random' }))
     let moved = false
     for (let i = 0; i < 20 && !moved; i++) {
-      await toolbarAction(page, /^Random$/)
+      await pressRandom(page)
       moved = (await field.inputValue()) !== '77'
     }
     expect(moved, 'with the angle lock off, twenty Randoms never moved the angle').toBe(true)
   })
-  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for the selected stop colour and position, type, angle and interpolation', async ({ page }) => {
+
+  test('the locks sit beside the controls they keep: a colour lock per stop row, plus one each for the selected stop position, type, angle and interpolation', async ({ page }) => {
     await open(page)
     await expect(page.locator('.grd-row--angle .grd-lock')).toHaveCount(1)
-    // + Selected stop's colour and position, Type, Angle, Interpolation (Random draws it, so it can be kept).
-    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 5)
+    // + the selected stop's position, Type, Angle, Interpolation (Random draws it, so it can be kept).
+    await expect(page.locator('.grd-lock')).toHaveCount((await stopRows(page).count()) + 4)
     await expect(page.getByRole('button', { name: /the interpolation/i }), 'one interpolation lock').toHaveCount(1)
   })
 })
@@ -301,10 +301,11 @@ test.describe('a locked stop and a conic roll at 1440px', () => {
     const locked = SEED.stops[lockIdx].color
     await page.locator('.grd-stop-lock').nth(lockIdx).click()
     await expect(page.locator('.grd-stop-lock').nth(lockIdx)).toHaveAttribute('aria-pressed', 'true')
-    for (const [label, action] of [['Random', /^Random$/], ['Shuffle', /^Shuffle from palette$/]]) {
+    for (const [label, fromPalette] of [['Random', false], ['Random from the palette', true]]) {
+      if (fromPalette) await randomFromPalette(page)
       for (let i = 0; i < 10; i++) {
-        await toolbarAction(page, action)
-        expect(await typeOf(page), `${label} ${i + 1}`).toBe('Conic')
+        await pressRandom(page)
+        expect(await typeNow(page), `${label} ${i + 1}`).toBe('Conic')
         const h = await hexes(page)
         expect(h.length, 'the lock keeps all five stops').toBe(5)
         expect(h[lockIdx], `${label} ${i + 1}: the locked stop keeps its colour`).toBe(locked)
@@ -318,11 +319,11 @@ test.describe('a locked stop and a conic roll at 1440px', () => {
     }
   }
 
-  test('the first stop locked (lowest position): Random and Shuffle end on the locked colour', async ({ page }) => {
+  test('the first stop locked (lowest position): Random ends on the locked colour', async ({ page }) => {
     await rollsKeepSeam(page, 0, 0)
   })
 
-  test('the last stop locked (highest position): Random and Shuffle start on the locked colour', async ({ page }) => {
+  test('the last stop locked (highest position): Random starts on the locked colour', async ({ page }) => {
     await rollsKeepSeam(page, 2, 4)
   })
 
@@ -335,9 +336,9 @@ test.describe('a locked stop and a conic roll at 1440px', () => {
 
 // ── 2 · keys and Shift-click inside a filter group ──────────────────────────
 
-test.describe('Shuffle settings groups', () => {
+test.describe('Type and Stops groups in More options', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
-  test.beforeEach(async ({ page }) => { watch(page, 'a keyboard user in Shuffle settings') })
+  test.beforeEach(async ({ page }) => { watch(page, 'a keyboard user in More options') })
 
   test('roving tabindex: one Tab stop per group, arrows and Home/End move it, Tab leaves the group', async ({ page }) => {
     await open(page)
@@ -406,40 +407,119 @@ test.describe('Shuffle settings groups', () => {
   })
 })
 
-// ── 3 · reachable at 360 and 390, through the More menu ─────────────────────
+// Hue and Tone are radio groups: the chosen radio is the group's one Tab stop, and the
+// arrows move focus and choose in one step (a radio group's own contract).
+test.describe('Hue and Tone radio groups at 1440px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  test.beforeEach(async ({ page }) => { watch(page, 'a keyboard user choosing Hue and Tone') })
+
+  const GROUPS = [
+    ['Hue', ['Any', 'Warm', 'Cool', 'Mono'], 'Tone'],
+    ['Tone', ['Any', 'Light', 'Pastel', 'Vivid', 'Dark'], 'Colours'],
+  ]
+  /** [tabIndex, aria-checked] for each radio in the group. */
+  const state = (page, name) => radios(page, name).evaluate((el) => [...el.querySelectorAll('[role="radio"]')]
+    .map((r) => [r.tabIndex, r.getAttribute('aria-checked')]))
+  const chosen = (page, name) => radios(page, name).evaluate((el) => [...el.querySelectorAll('[role="radio"]')]
+    .filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent.trim()))
+
+  for (const [name, labels, next] of GROUPS) {
+    test(`${name}: the chosen radio is the one Tab stop, and arrows, Home and End move and choose`, async ({ page }) => {
+      await seed(page, { gradient: null })
+      await open(page)
+      await expect(radios(page, name).getByRole('radio')).toHaveText(labels)
+      const at = (n) => labels.map((_, i) => [i === n ? 0 : -1, i === n ? 'true' : 'false'])
+      expect(await state(page, name), 'Any is chosen and the only Tab stop').toEqual(at(0))
+
+      await radio(page, name, 'Any').focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(radio(page, name, labels[1])).toBeFocused()
+      expect(await state(page, name), 'the arrow chose the next radio and the Tab stop followed').toEqual(at(1))
+      await page.keyboard.press('End')
+      await expect(radio(page, name, labels[labels.length - 1])).toBeFocused()
+      expect(await state(page, name)).toEqual(at(labels.length - 1))
+      await page.keyboard.press('ArrowRight')
+      await expect(radio(page, name, 'Any'), 'the arrows wrap').toBeFocused()
+      expect(await chosen(page, name)).toEqual(['Any'])
+      await page.keyboard.press('ArrowLeft')
+      await expect(radio(page, name, labels[labels.length - 1])).toBeFocused()
+      await page.keyboard.press('Home')
+      await expect(radio(page, name, 'Any')).toBeFocused()
+      await page.keyboard.press('ArrowDown')
+      await expect(radio(page, name, labels[1])).toBeFocused()
+      await page.keyboard.press('ArrowUp')
+      await expect(radio(page, name, 'Any')).toBeFocused()
+      expect(await chosen(page, name), 'always exactly one chosen').toEqual(['Any'])
+    })
+
+    test(`${name}: Tab enters on the chosen radio and leaves for the next group`, async ({ page }) => {
+      await seed(page, { gradient: null })
+      await open(page)
+      await radio(page, name, labels[2]).click()
+      await expect(radio(page, name, labels[2])).toHaveAttribute('aria-checked', 'true')
+      // The Tab stop before Hue is the More options button in the section head; before Tone it is Hue's chosen radio (Any).
+      const before = name === 'Hue' ? genOf(page).getByRole('button', { name: /^(More|Fewer) options$/ }) : radio(page, 'Hue', 'Any')
+      await before.focus()
+      await page.keyboard.press('Tab')
+      await expect(radio(page, name, labels[2]), 'Tab lands on the chosen radio, not the first').toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(radio(page, next, 'Any'), `Tab leaves ${name} for ${next}`).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(radio(page, name, labels[2]), 'and Shift+Tab comes back to the chosen radio').toBeFocused()
+    })
+
+    test(`${name}: Space and Enter choose the focused radio`, async ({ page }) => {
+      await seed(page, { gradient: null })
+      await open(page)
+      await radio(page, name, labels[1]).focus()
+      await expect(radio(page, name, labels[1]), 'focus alone chooses nothing').toHaveAttribute('aria-checked', 'false')
+      await page.keyboard.press('Space')
+      await expect(radio(page, name, labels[1])).toHaveAttribute('aria-checked', 'true')
+      await radio(page, name, labels[2]).focus()
+      await page.keyboard.press('Enter')
+      await expect(radio(page, name, labels[2])).toHaveAttribute('aria-checked', 'true')
+      expect(await chosen(page, name)).toEqual([labels[2]])
+    })
+  }
+})
+
+// ── 3 · reachable at 360 and 390, in the panel ──────────────────────────────
 
 for (const w of [390, 360]) {
-  test.describe(`Shuffle settings at ${w}px (touch)`, () => {
+  test.describe(`Random filters at ${w}px (touch)`, () => {
     test.use({ viewport: { width: w, height: 800 }, hasTouch: true, isMobile: true })
     test.beforeEach(async ({ page }) => { watch(page, 'a phone user narrowing what Random makes') })
 
-    test('the toolbar has no room for the button, so the settings sit in the More menu', async ({ page }) => {
+    test('the Random section is in the panel, and More options holds Type and Stops with the tap hint', async ({ page }) => {
       await open(page)
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings(, narrowed)?$/ })).toHaveCount(0)
+      await expect(genOf(page)).toBeVisible()
+      for (const g of ['Hue', 'Tone', 'Colours']) await expect(radios(page, g)).toBeVisible()
+      await expect(genOf(page).locator('#grd-gen-more'), 'closed until asked').toHaveCount(0)
       const scope = await openSettings(page)
-      await expect(scope.locator('.grd-shuf-title')).toHaveText('What Random and Shuffle make')
       for (const g of ['Type', 'Stops']) await expect(group(scope, g)).toBeVisible()
       await expect(scope.getByRole('button', { name: 'Keep the angle' })).toHaveCount(0)
       await expect(scope.getByText('Tap to add or remove.')).toBeVisible()
     })
 
-    test('the angle lock in Geometry is a 44px touch target', async ({ page }) => {
+    test('the angle lock in Shape is a 44px touch target', async ({ page }) => {
       await open(page)
       const box = await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).boundingBox()
       expect(box.height, 'the angle lock is 44px tall').toBeGreaterThanOrEqual(44)
       expect(box.width, 'the angle lock is 44px wide').toBeGreaterThanOrEqual(44)
     })
 
-    test('the Type and Stops options are 44px tall targets in the More menu', async ({ page }) => {
+    test('the Hue, Tone, Colours, Type and Stops options are 44px tall targets', async ({ page }) => {
       await open(page)
-      const scope = await openSettings(page)
-      for (const b of await scope.locator('.tl-pill').all()) {
-        // rounded: the sheet's transform leaves sub-pixel heights such as 43.99997
+      await openSettings(page)
+      const pills = await genOf(page).locator('.tl-pill').all()
+      expect(pills.length, 'Hue 4 + Tone 5 + Colours 3 + Use 5 + Type 4 + Stops 5').toBe(26)
+      for (const b of pills) {
+        // rounded: a transform leaves sub-pixel heights such as 43.99997
         expect(Math.round((await b.boundingBox()).height), await b.textContent()).toBeGreaterThanOrEqual(44)
       }
     })
 
-    test('a tap adds or removes (no Shift on a phone), and Type = Radial then governs Random from the menu', async ({ page }) => {
+    test('a tap adds or removes (no Shift on a phone), and Type = Radial then governs Random', async ({ page }) => {
       await seed(page, { gradient: null })
       await open(page)
       const scope = await openSettings(page)
@@ -454,13 +534,12 @@ for (const w of [390, 360]) {
       await on(o('Any')) // the last one out falls back to Any
       await o('Radial').tap()
       for (let i = 0; i < 12; i++) {
-        await toolbarAction(page, /^Random$/)
-        expect(await typeOf(page), `Random ${i + 1}`).toBe('Radial')
+        await pressRandom(page)
+        expect(await typeNow(page), `Random ${i + 1}`).toBe('Radial')
       }
     })
   })
 }
-
 // ── 4 · selecting several stops ──────────────────────────────────────────────
 
 test.describe('selecting several stops at 1440px', () => {
@@ -550,8 +629,8 @@ test.describe('selecting several stops at 1440px', () => {
     const after = await hexes(page)
     for (const n of [1, 2, 4]) expect(after[n - 1], `stop ${n}`).toBe(THIRTEEN[1])
     for (const n of [3, 5]) expect(after[n - 1], `stop ${n} left alone`).toBe(before[n - 1])
-    // The sentence is Available colours' own status line now; the Stops region does not repeat it.
-    await expect(page.locator('#grd-avail-status')).toHaveText(/^3 selected stops set to Secondary 500\.\u200B?$/)
+    // The sentence is the palette row's own status line; the Stops region does not repeat it.
+    await expect(page.locator('#grd-paint-status')).toHaveText(/^3 selected stops set to Secondary 500\.\u200B?$/)
     await expect(page.locator('[role="status"]').filter({ hasText: 'set to Secondary 500' })).toHaveCount(1)
     // A selection stays a selection: no advance.
     await expect(selCount(page)).toHaveText('3 selected')
@@ -659,8 +738,8 @@ test.describe('selecting several stops at 1440px', () => {
 
   test('Escape inside the open colour picker closes the picker first and keeps the selection', async ({ page }) => {
     await selectThree(page)
-    const trigger = page.getByRole('button', { name: 'Colour of the 3 selected stops' })
-    const picker = page.getByRole('dialog', { name: 'Colour of the 3 selected stops' })
+    const trigger = page.getByRole('button', { name: 'Pick stop 1 colour' })
+    const picker = page.getByRole('dialog', { name: 'Pick stop 1 colour' })
     await trigger.click()
     await expect(picker).toBeVisible()
     // The picker takes focus onto its pad; the key is pressed from inside it.
@@ -677,7 +756,7 @@ test.describe('selecting several stops at 1440px', () => {
 
   test('Escape with the picker button focused and the picker open keeps the selection too', async ({ page }) => {
     await selectThree(page)
-    const trigger = page.getByRole('button', { name: 'Colour of the 3 selected stops' })
+    const trigger = page.getByRole('button', { name: 'Pick stop 1 colour' })
     await trigger.click()
     await expect(trigger).toHaveAttribute('aria-expanded', 'true')
     await trigger.focus()
@@ -792,29 +871,33 @@ test.describe('selecting several stops by touch at 390px', () => {
   })
 })
 
-// ── 6 · the Shuffle pool lives in Shuffle settings → Colours ────────────────
-// It used to be a Shift-click or press-and-hold on a chip. The chips now only
-// paint (spec gradient-generation-v2 §2.2, T-A6); the pool is a Colours row in
-// Shuffle settings: "All palette colours" or "Pick colours…", a checklist, and
-// two or more ticks make the pool. It is kept in sessionStorage, in
-// filters.pool, as upper-case hexes in the order they were ticked.
+// ── 6 · Colours: Palette and Pick… ──────────────────────────────────────────
+// The Colours row of the Random section says where Random's colours come from: Any
+// (fresh colours), Palette (the whole palette) or Pick… (the ticked colours). Pick…
+// opens a checklist inside the section; two or more ticks make the pool, and the row
+// then reads "N picked". The ticks are kept in sessionStorage, in filters.pool, as
+// upper-case hexes in the order they were ticked.
 
 const A = THIRTEEN[3] // Neutral 500
 const B = THIRTEEN[7] // Colour 8 500
 const C = THIRTEEN[10] // Colour 11 500
 const FILTER_KEY = 'vs-gradient-shuffle-filters'
-const poolRow = (scope) => group(scope, 'Colours')
-const allPill = (scope) => poolRow(scope).getByRole('button', { name: 'All palette colours' })
-const pickPill = (scope) => poolRow(scope).getByRole('button', { name: /^(Pick colours…|\d+ colours)$/ })
-const checklist = (scope) => scope.getByRole('group', { name: 'Colours to shuffle from' })
-const tick = (scope, name) => scope.getByRole('checkbox', { name })
-const storedPool = (page) => page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) || 'null')?.pool, FILTER_KEY)
-const settingsButton = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Shuffle settings/ })
+const NEEDS = 'Needs a palette with two or more colours'
+const anyRadio = (page) => radio(page, 'Colours', 'Any')
+const paletteRadio = (page) => radio(page, 'Colours', 'Palette')
+const pickRadio = (page) => radios(page, 'Colours').getByRole('radio', { name: /^(Pick…|\d+ picked)$/ })
+const checklist = (page) => genOf(page).getByRole('group', { name: 'Colours to shuffle from' })
+const tick = (page, name) => checklist(page).getByRole('checkbox', { name })
+const ticked = (page) => checklist(page).getByRole('checkbox').evaluateAll((els) => els.filter((e) => e.checked).length)
+const storedPool = (page) => page.evaluate((k) => JSON.parse(sessionStorage.getItem(k) || 'null')?.pool ?? [], FILTER_KEY)
+const checked = (loc) => expect(loc).toHaveAttribute('aria-checked', 'true')
+const unchecked = (loc) => expect(loc).toHaveAttribute('aria-checked', 'false')
+const isNarrowed = (page) => randomBtn(page).evaluate((el) => el.classList.contains('is-narrowed'))
 
-test.describe('the chips no longer carry the Shuffle pool', () => {
+test.describe('chips and the Colours row at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('no tip, no ring, no "picked for shuffle", and Shift-click on a chip only paints', async ({ page }) => {
+  test('a Shift-click on a chip only paints: no pick, no pool, and Random is still plain Random', async ({ page }) => {
     watch(page, 'someone who remembers picking Shuffle colours on the chips')
     await seed(page, { gradient: null })
     await open(page)
@@ -823,302 +906,294 @@ test.describe('the chips no longer carry the Shuffle pool', () => {
     await chips(page).nth(3).click({ modifiers: ['Shift'] })
     await expect(chips(page).nth(3)).not.toHaveAttribute('aria-label', /picked for shuffle/)
     expect((await hexes(page))[0], 'a Shift-click is just a press').toBe(A)
-    expect(await storedPool(page), 'and picks nothing for Shuffle').toEqual([])
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+    expect(await storedPool(page), 'and picks nothing for Random').toEqual([])
+    await expect(randomBtn(page)).toHaveAttribute('title', 'Random gradient')
   })
 })
 
-test.describe('Shuffle settings → Colours at 1440px', () => {
+test.describe('Colours: Pick… at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test.beforeEach(async ({ page }) => {
-    watch(page, 'a designer shuffling from a few chosen colours')
+    watch(page, 'a designer rolling from a few chosen colours')
     await seed(page, { gradient: null })
     await open(page)
   })
 
-  test('the row offers "All palette colours" (on) and "Pick colours…", and no checklist until asked', async ({ page }) => {
-    const scope = await openSettings(page)
-    await on(allPill(scope))
-    await off(pickPill(scope))
-    await expect(pickPill(scope)).toHaveText('Pick colours…')
-    await expect(checklist(scope)).toHaveCount(0)
-    await pickPill(scope).click()
-    await expect(checklist(scope)).toBeVisible()
-    await expect(checklist(scope).getByRole('checkbox')).toHaveCount(13)
-    expect(await checklist(scope).getByRole('checkbox').evaluateAll((els) => els.filter((e) => e.checked).length), 'nothing is ticked yet').toBe(0)
-    await expect(checklist(scope)).toContainText('Tick two or more colours.')
+  test('the row offers Any (chosen), Palette and Pick…, and no checklist until Pick… is pressed', async ({ page }) => {
+    await expect(radios(page, 'Colours').getByRole('radio')).toHaveText(['Any', 'Palette', 'Pick…'])
+    await checked(anyRadio(page))
+    await unchecked(paletteRadio(page))
+    await unchecked(pickRadio(page))
+    await expect(checklist(page)).toHaveCount(0)
+    await pickRadio(page).click()
+    await checked(pickRadio(page))
+    await expect(checklist(page)).toBeVisible()
+    await expect(checklist(page).getByRole('checkbox')).toHaveCount(13)
+    expect(await ticked(page), 'nothing is ticked yet').toBe(0)
+    await expect(checklist(page)).toContainText('Tick two or more colours.')
   })
 
-  test('ticking three colours makes Shuffle from palette use only those, and says so', async ({ page }) => {
-    const button = shuffleBtn(page)
-    await expect(button).toHaveAttribute('title', 'Build a random gradient from your current palette')
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await tick(scope, 'Neutral 500').check()
-    await expect(checklist(scope)).toContainText('Tick two or more colours.')
-    await expect(button, 'one tick is a mark, not yet a pool').toHaveAttribute('title', 'Build a random gradient from your current palette')
-    await tick(scope, 'Colour 8 500').check()
-    await tick(scope, 'Colour 11 500').check()
-    await expect(checklist(scope)).toContainText('Shuffle from 3 colours.')
-    await expect(pickPill(scope)).toHaveText('3 colours')
-    await expect(button).toHaveAttribute('title', 'Shuffle from 3 picked colours')
+  test('ticking three colours makes Random use only those, and says so', async ({ page }) => {
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await expect(checklist(page)).toContainText('Tick two or more colours.')
+    await expect(pickRadio(page), 'one tick is a mark, not yet a pool').toHaveText('Pick…')
+    await tick(page, 'Colour 8 500').check()
+    await tick(page, 'Colour 11 500').check()
+    await expect(checklist(page)).toContainText('Random uses 3 colours.')
+    await expect(pickRadio(page)).toHaveText('3 picked')
     expect(await storedPool(page)).toEqual([A, B, C])
     // A tick is not a press: no stop took a colour.
     expect(await hexes(page)).not.toContain(A)
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog', { name: 'Shuffle settings' })).toBeHidden()
 
     const seen = new Set()
     for (let i = 0; i < 15; i++) {
-      await button.click()
-      for (const h of await hexes(page)) { seen.add(h); expect([A, B, C], `Shuffle ${i + 1}`).toContain(h) }
+      await pressRandom(page)
+      for (const h of await hexes(page)) { seen.add(h); expect([A, B, C], `Random ${i + 1}`).toContain(h) }
     }
     expect(seen.size, 'it really draws from the three, not one of them').toBeGreaterThan(1)
     await expect(page.locator('.toast.show')).toContainText('Random gradient from 3 picked colours')
   })
 
-  test('Shuffle settings reads "narrowed" from two ticks, and not before', async ({ page }) => {
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await tick(scope, 'Neutral 500').check()
-    await expect(settingsButton(page), 'one tick').toHaveAccessibleName('Shuffle settings')
-    await expect(settingsButton(page)).not.toHaveClass(/is-narrowed/)
-    await tick(scope, 'Colour 8 500').check()
-    await expect(settingsButton(page), 'two ticks').toHaveAccessibleName('Shuffle settings, narrowed')
-    await expect(settingsButton(page)).toHaveClass(/is-narrowed/)
-    await tick(scope, 'Colour 8 500').uncheck()
-    await expect(settingsButton(page), 'back to one').toHaveAccessibleName('Shuffle settings')
+  test('Random reads narrowed once a colour source is chosen, and not while Colours is Any', async ({ page }) => {
+    expect(await isNarrowed(page), 'Any').toBe(false)
+    await paletteRadio(page).click()
+    expect(await isNarrowed(page), 'Palette').toBe(true)
+    await anyRadio(page).click()
+    expect(await isNarrowed(page), 'back to Any').toBe(false)
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
+    expect(await isNarrowed(page), 'two ticks').toBe(true)
   })
 
-  test('"All palette colours" clears the pool, and Shuffle goes back to the whole palette', async ({ page }) => {
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await tick(scope, 'Neutral 500').check()
-    await tick(scope, 'Colour 8 500').check()
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed')
-    await allPill(scope).click()
-    await on(allPill(scope))
-    await expect(checklist(scope)).toHaveCount(0)
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
-    expect(await storedPool(page)).toEqual([])
-    await page.keyboard.press('Escape')
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
-    // The control: 25 shuffles from the whole palette use more than the two.
+  test('Colours: Palette draws every colour from the palette', async ({ page }) => {
+    await paletteRadio(page).click()
+    await checked(paletteRadio(page))
+    await expect(checklist(page)).toHaveCount(0)
     const seen = new Set()
-    for (let i = 0; i < 25; i++) {
-      await shuffleBtn(page).click()
-      for (const h of await hexes(page)) seen.add(h)
+    for (let i = 0; i < 15; i++) {
+      await pressRandom(page)
+      for (const h of await hexes(page)) { seen.add(h); expect(THIRTEEN, `Random ${i + 1}`).toContain(h) }
     }
-    expect([...seen].some((h) => h !== A && h !== B)).toBe(true)
-    // And the checklist starts empty again.
-    const again = await openSettings(page)
-    await pickPill(again).click()
-    expect(await checklist(again).getByRole('checkbox').evaluateAll((els) => els.filter((e) => e.checked).length)).toBe(0)
+    expect(seen.size, 'it uses more than a couple of the thirteen').toBeGreaterThan(3)
+    await expect(page.locator('.toast.show')).toContainText('Random gradient from your palette')
   })
 
-  test('unticking down to one colour stops the narrowing, and Shuffle uses the whole palette again', async ({ page }) => {
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await tick(scope, 'Neutral 500').check()
-    await tick(scope, 'Colour 8 500').check()
-    await tick(scope, 'Colour 8 500').uncheck()
-    await expect(checklist(scope)).toContainText('Tick two or more colours.')
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+  test('Colours: Any rolls fresh colours again, and closes the checklist', async ({ page }) => {
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
+    await anyRadio(page).click()
+    await checked(anyRadio(page))
+    await expect(checklist(page)).toHaveCount(0)
+    // The control: fresh colours are not the palette's, so across ten presses some hex is outside it.
+    const outside = []
+    for (let i = 0; i < 10; i++) {
+      await pressRandom(page)
+      outside.push(...(await hexes(page)).filter((h) => !THIRTEEN.includes(h)))
+    }
+    expect(outside.length, 'Random with Colours: Any makes colours outside the palette').toBeGreaterThan(0)
+  })
+
+  test('unticking down to one colour stops the narrowing: Random rolls fresh colours again', async ({ page }) => {
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
+    await tick(page, 'Colour 8 500').uncheck()
+    await expect(checklist(page)).toContainText('Tick two or more colours.')
+    await expect(pickRadio(page)).toHaveText('Pick…')
     expect(await storedPool(page)).toEqual([A])
+    const outside = []
+    for (let i = 0; i < 10; i++) {
+      await pressRandom(page)
+      outside.push(...(await hexes(page)).filter((h) => !THIRTEEN.includes(h)))
+    }
+    expect(outside.length, 'one tick is not a pool').toBeGreaterThan(0)
+  })
+
+  test('pressing the "N picked" radio again closes the checklist, and pressing it once more opens it with the ticks kept', async ({ page }) => {
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
+    await pickRadio(page).click()
+    await expect(checklist(page)).toHaveCount(0)
+    await pickRadio(page).click()
+    await expect(checklist(page)).toBeVisible()
+    await expect(tick(page, 'Neutral 500')).toBeChecked()
+    await expect(tick(page, 'Colour 8 500')).toBeChecked()
   })
 
   test('the pool survives a reload', async ({ page }) => {
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await tick(scope, 'Neutral 500').check()
-    await tick(scope, 'Colour 8 500').check()
+    await pickRadio(page).click()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
     await page.reload()
     await expect(panelOf(page)).toBeVisible()
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed')
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Shuffle from 2 picked colours')
-    const after = await openSettings(page)
-    await expect(pickPill(after)).toHaveText('2 colours')
-    await off(allPill(after))
-    await pickPill(after).click()
-    await expect(tick(after, 'Neutral 500')).toBeChecked()
-    await expect(tick(after, 'Colour 8 500')).toBeChecked()
-    await expect(tick(after, 'Primary 500')).not.toBeChecked()
+    await expect(pickRadio(page)).toHaveText('2 picked')
+    await checked(pickRadio(page))
+    expect(await isNarrowed(page)).toBe(true)
+    await pickRadio(page).click()
+    await expect(tick(page, 'Neutral 500')).toBeChecked()
+    await expect(tick(page, 'Colour 8 500')).toBeChecked()
+    await expect(tick(page, 'Primary 500')).not.toBeChecked()
     expect(await storedPool(page)).toEqual([A, B])
   })
 })
 
-// ── "Choose colours for Shuffle": the way from the colours to the pool ───────
-// The link under Available colours opens Shuffle settings (the toolbar button's
-// popover, or the More menu where the toolbar has no room) and puts focus on the
-// first pill of the Colours row. It does not toggle an already-open menu shut.
-const poolLink = (page) => page.getByRole('button', { name: 'Choose colours for Shuffle' })
-const focusedIsFirstPoolPill = (page) => page.evaluate(() => {
-  const a = document.activeElement
-  return !!a && a.hasAttribute('data-pool-first') && a.textContent === 'All palette colours'
-})
-/** Where the settings are showing: the popover dialog, or the More menu's inline copy. */
-const settingsShown = async (page) => {
-  const dialog = page.getByRole('dialog', { name: 'Shuffle settings' })
-  if (await dialog.isVisible().catch(() => false)) return 'popover'
-  if (await page.locator('.grd-shuf-inline').isVisible().catch(() => false)) return 'more'
-  return null
-}
-
-for (const [label, use, expected] of [
-  ['1440px', { viewport: { width: 1440, height: 900 } }, 'popover'],
-  ['768px touch', { viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true }, null],
-  ['390px touch', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, 'more'],
+for (const [label, use] of [
+  ['1440px', { viewport: { width: 1440, height: 900 } }],
+  ['768px touch', { viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true }],
+  ['390px touch', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }],
 ]) {
-  test.describe(`Choose colours for Shuffle at ${label}`, () => {
+  test.describe(`Pick… opens the checklist at ${label}`, () => {
     test.use(use)
-    test.beforeEach(async ({ page }) => {
-      watch(page, 'someone choosing the colours Shuffle draws from')
+    test('the checklist sits inside the Random section, in view, with every palette colour on offer', async ({ page }) => {
+      watch(page, 'someone choosing the colours Random draws from')
       await seed(page, { gradient: null })
       await open(page)
-    })
-
-    test('opens Shuffle settings and puts focus on the first Colours pill', async ({ page }) => {
-      expect(await settingsShown(page), 'POSITIVE CONTROL: nothing is open yet').toBeNull()
-      await poolLink(page).scrollIntoViewIfNeeded()
-      await poolLink(page).click()
-      await expect.poll(() => settingsShown(page), 'the settings opened').not.toBeNull()
-      if (expected) expect(await settingsShown(page)).toBe(expected)
-      await expect.poll(() => focusedIsFirstPoolPill(page), 'and focus is on All palette colours').toBe(true)
-      // Not on the link it came from, and the pool row it names is the one in view.
-      await expect(poolLink(page)).not.toBeFocused()
-    })
-
-    test('with the settings already open it keeps them open and still moves focus', async ({ page }) => {
-      const scope = await openSettings(page)
-      const shown = await settingsShown(page)
-      expect(shown, 'POSITIVE CONTROL: the settings are open before the link is used').not.toBeNull()
-      await expect(poolRow(scope)).toBeVisible()
-      // A click made by assistive tech, with the menu in front of the link: no pointer needed.
-      await poolLink(page).evaluate((el) => el.click())
-      await expect.poll(() => focusedIsFirstPoolPill(page)).toBe(true)
-      expect(await settingsShown(page), 'it did not toggle the open settings shut').toBe(shown)
-      await expect(poolRow(scope)).toBeVisible()
+      await expect(checklist(page)).toHaveCount(0)
+      await pickRadio(page).click()
+      await expect(checklist(page)).toBeVisible()
+      await expect(genOf(page).locator('.grd-pool'), 'the checklist is part of the Random section').toBeVisible()
+      await expect(checklist(page).getByRole('checkbox')).toHaveCount(13)
     })
   })
 }
 
-test.describe('Shuffle settings → Colours · picks the palette no longer holds', () => {
+test.describe('Colours: Pick… · picks the palette no longer holds', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   const GONE = '#123456' // a valid colour that is not in the palette
 
   test('ticking a colour keeps a stored pick the palette lacks, and unticking removes only that colour', async ({ page }) => {
     watch(page, 'someone whose saved pool names a colour that has left the palette')
     await page.addInitScript(([k, gone, a]) => {
-      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], keepAngle: false, pool: [a, gone] }))
+      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], source: 'picked', pool: [a, gone] }))
     }, [FILTER_KEY, GONE, A])
     await seed(page, { gradient: null })
     await open(page)
-    const scope = await openSettings(page)
     // POSITIVE CONTROL: the stored pool still has both before anything is touched.
     expect(await storedPool(page)).toEqual([A, GONE])
-    await expect(pickPill(scope), 'one live pick is not yet a pool').toHaveText('Pick colours…')
-    await pickPill(scope).click()
-    await tick(scope, 'Colour 8 500').check()
+    await expect(pickRadio(page), 'one live pick is not yet a pool').toHaveText('Pick…')
+    await pickRadio(page).click()
+    await expect(checklist(page)).toBeVisible()
+    await tick(page, 'Colour 8 500').check()
     expect(await storedPool(page), 'the stale pick is still stored beside the new one').toEqual([A, GONE, B])
-    await expect(pickPill(scope)).toHaveText('2 colours')
-    await tick(scope, 'Colour 8 500').uncheck()
+    await expect(pickRadio(page)).toHaveText('2 picked')
+    await tick(page, 'Colour 8 500').uncheck()
     expect(await storedPool(page), 'unticking takes out only the colour unticked').toEqual([A, GONE])
   })
 })
 
-test.describe('a filters entry saved before the pool existed', () => {
+test.describe('a filters entry saved by an earlier version', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('loads with an empty pool and keeps what it did hold', async ({ page }) => {
+  test('loads with Colours: Any and an empty pool, and keeps what it did hold', async ({ page }) => {
     watch(page, 'someone whose session was saved by the previous version')
     await page.addInitScript((k) => {
       if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Radial'], counts: ['Any'], keepAngle: true }))
     }, FILTER_KEY)
     await seed(page, { gradient: null })
     await open(page)
-    const scope = await openSettings(page)
-    await on(allPill(scope))
-    await expect(pickPill(scope)).toHaveText('Pick colours…')
+    await checked(anyRadio(page))
+    await expect(pickRadio(page)).toHaveText('Pick…')
     await expect(page.getByRole('button', { name: /^The angle \(\d+°\) is kept/ }), 'keepAngle: true became the angle lock').toHaveAttribute('aria-pressed', 'true')
+    const scope = await openSettings(page)
     await on(option(scope, 'Type', 'Radial'))
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings, narrowed') // by its type, not by a pool
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+    expect(await isNarrowed(page), 'narrowed by its type, not by a pool').toBe(true)
+    expect(await storedPool(page)).toEqual([])
   })
 
   test('a pool holding junk or colours the palette does not have is ignored, not trusted', async ({ page }) => {
     watch(page, 'someone whose saved pool names a colour that is gone')
     await page.addInitScript((k) => {
-      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], keepAngle: false, pool: ['#123456', 'red', 42, '#2f6bff'] }))
+      if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify({ types: ['Any'], counts: ['Any'], pool: ['#123456', 'red', 42, '#2f6bff'] }))
     }, FILTER_KEY)
     await seed(page, { gradient: null })
     await open(page)
-    // One valid hex (#2F6BFF is lower case here, so it is dropped as unusable) and one
-    // the palette lacks: nothing narrows.
-    await expect(settingsButton(page)).toHaveAccessibleName('Shuffle settings')
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Build a random gradient from your current palette')
+    // '#2f6bff' is lower case, so it is dropped as unusable; '#123456' is valid but not in the palette.
+    // Nothing narrows, and nothing is ticked when the checklist opens.
+    expect(await isNarrowed(page)).toBe(false)
+    await expect(randomBtn(page)).toHaveAttribute('title', 'Random gradient')
+    await pickRadio(page).click()
+    await expect(checklist(page)).toBeVisible()
+    expect(await ticked(page), 'no junk is shown as a tick').toBe(0)
+    expect(await storedPool(page), 'only the usable hex is kept').toEqual(['#123456'])
   })
 })
 
-test.describe('Shuffle settings → Colours without a palette', () => {
+test.describe('Colours without a full palette', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('the ten starter colours stand in, and two ticks make Shuffle from palette live', async ({ page }) => {
-    watch(page, 'someone with no palette shuffling from starter colours')
+  test('with no palette the ten starter colours stand in, Palette is unavailable, and two ticks make Random use them', async ({ page }) => {
+    watch(page, 'someone with no palette rolling from starter colours')
     await seed(page, { palette: [], gradient: null })
     await open(page)
-    await expect(shuffleBtn(page)).toHaveAttribute('aria-disabled', 'true')
-    const scope = await openSettings(page)
-    await pickPill(scope).click()
-    await expect(checklist(scope).getByRole('checkbox')).toHaveCount(10)
-    await tick(scope, 'Starter blue').check()
-    await tick(scope, 'Starter paper').check()
-    await expect(shuffleBtn(page)).not.toHaveAttribute('aria-disabled', /.*/)
-    await expect(shuffleBtn(page)).toHaveAttribute('title', 'Shuffle from 2 picked colours')
+    await expect(paletteRadio(page)).toHaveAttribute('aria-disabled', 'true')
+    await expect(paletteRadio(page)).toHaveAccessibleDescription(NEEDS)
+    await pickRadio(page).click()
+    await expect(checklist(page).getByRole('checkbox')).toHaveCount(10)
+    await tick(page, 'Starter blue').check()
+    await tick(page, 'Starter paper').check()
+    await expect(checklist(page)).toContainText('Random uses 2 colours.')
+    await expect(pickRadio(page)).toHaveText('2 picked')
+    const STARTERS = ['#2F6BFF', '#F7F7F4']
+    for (let i = 0; i < 8; i++) {
+      await pressRandom(page)
+      for (const h of await hexes(page)) expect(STARTERS, `Random ${i + 1}`).toContain(h)
+    }
   })
 
-  test('with one palette colour the row has nothing to choose, so it is not drawn', async ({ page }) => {
+  test('with one palette colour, Palette is unavailable and says why', async ({ page }) => {
     watch(page, 'someone with a one-colour palette')
     await seed(page, { palette: [THIRTEEN[0]], gradient: null })
     await open(page)
-    const scope = await openSettings(page)
-    await expect(scope.getByText('Keep the angle')).toHaveCount(0) // the angle lock moved to Geometry
-    await expect(poolRow(scope)).toHaveCount(0)
+    await expect(paletteRadio(page)).toHaveAttribute('aria-disabled', 'true')
+    await expect(paletteRadio(page)).toHaveAccessibleDescription(NEEDS)
+    // Playwright will not click an aria-disabled control, so the press is made in the page.
+    await paletteRadio(page).evaluate((el) => el.click())
+    await expect(page.locator('.toast.show')).toContainText(NEEDS)
+    await unchecked(paletteRadio(page))
+    await checked(anyRadio(page))
+    expect(await isNarrowed(page)).toBe(false)
   })
 })
 
-test.describe('Shuffle settings → Colours by touch at 390px', () => {
+test.describe('Colours: Pick… by touch at 390px', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  test('ticks in the More menu make the pool; rows are 44px; the chips only paint', async ({ page }) => {
-    watch(page, 'a phone user picking shuffle colours')
+  test('ticks make the pool; rows are 44px; the chips only paint', async ({ page }) => {
+    watch(page, 'a phone user picking colours for Random')
     await seed(page, { gradient: null })
     await open(page)
-    const scope = await openSettings(page)
-    await pickPill(scope).tap()
-    await tick(scope, 'Neutral 500').check()
-    await tick(scope, 'Colour 8 500').check()
-    await expect(checklist(scope)).toContainText('Shuffle from 2 colours.')
-    const rows = await checklist(scope).locator('.grd-pool-opt').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
+    await pickRadio(page).tap()
+    await tick(page, 'Neutral 500').check()
+    await tick(page, 'Colour 8 500').check()
+    await expect(checklist(page)).toContainText('Random uses 2 colours.')
+    const rows = await checklist(page).locator('.grd-pool-opt').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
     expect(Math.min(...rows), 'tick rows are at least 44px').toBeGreaterThanOrEqual(44)
     expect(await storedPool(page)).toEqual([A, B])
-    await page.keyboard.press('Escape')
-    // A long press on a chip is nothing now; a tap still sets the stop.
-    await longPress(page, chips(page).nth(5))
-    await expect(chips(page).nth(5)).not.toHaveAttribute('aria-label', /picked for shuffle/)
-    await chips(page).nth(5).tap()
-    expect((await hexes(page))[0], 'a tap sets the colour').toBe(THIRTEEN[5])
+    // A long press on a chip marks nothing for Random; a tap sets the stop.
+    // Touch draws five of the thirteen as chips, with a "+8 more" link after them.
+    await expect(chips(page)).toHaveCount(5)
+    await longPress(page, chips(page).nth(4))
+    await expect(chips(page).nth(4)).not.toHaveAttribute('aria-label', /picked for shuffle/)
+    await chips(page).nth(4).tap()
+    expect((await hexes(page))[0], 'a tap sets the colour').toBe(THIRTEEN[4])
     expect(await storedPool(page), 'and the pool is as the checklist left it').toEqual([A, B])
   })
 })
 
 // ── 7 · none of it moves the page ───────────────────────────────────────────
+// More options and the Pick… checklist are opened before the first mark: opening
+// them is the person asking the section to grow, and everything after that must
+// leave every height where it was.
 
-const SHAPE = ['page', 'panel', 'main', 'avail', 'window']
+const SHAPE = ['page', 'panel', 'main', 'gen', 'paint', 'window']
 async function shapeOf(page) {
   return page.evaluate(() => {
     const h = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().height * 100) / 100 : null }
-    return { page: document.documentElement.scrollHeight, panel: h('.tl-panel'), main: h('.tl-main'), avail: h('.grd-avail'), window: h('.grd-stops') }
+    return { page: document.documentElement.scrollHeight, panel: h('.tl-panel'), main: h('.tl-main'), gen: h('.grd-gen'), paint: h('.grd-paint'), window: h('.grd-stops') }
   })
 }
 function ledger(page) {
@@ -1136,40 +1211,40 @@ function ledger(page) {
 test.describe('the page does not move at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
 
-  test('settings, selecting, bulk edits and picks change the page height by 0px', async ({ page }) => {
+  test('filters, selecting, bulk edits, picks and Random change every height by 0px', async ({ page }) => {
     watch(page, 'a designer using every new control')
     await seed(page)
     await open(page)
-    const l = ledger(page)
-    await l.mark('at rest')
-
     const scope = await openSettings(page)
-    await l.mark('settings open')
+    await pickRadio(page).click()
+    await expect(checklist(page)).toBeVisible()
+    const l = ledger(page)
+    await l.mark('at rest, More options and the checklist open')
+
     await option(scope, 'Type', 'Radial').click(); await l.mark('Type = Radial')
     await option(scope, 'Stops', 4).click({ modifiers: ['Shift'] }); await l.mark('Stops = 4')
+    await radio(page, 'Hue', 'Warm').click(); await l.mark('Hue = Warm')
+    await radio(page, 'Tone', 'Vivid').click(); await l.mark('Tone = Vivid')
+    await radio(page, 'Hue', 'Any').click(); await radio(page, 'Tone', 'Any').click(); await l.mark('Hue and Tone back to Any')
     await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).evaluate((el) => el.click()); await l.mark('angle lock on')
-    await page.keyboard.press('Escape'); await l.mark('settings closed')
 
     await stopSelect(page, 1).click()
     await stopSelect(page, 2).click({ modifiers: ['Shift'] }); await l.mark('3 stops selected (head row shows N selected)')
     await chips(page).nth(1).click(); await l.mark('bulk colour')
-    await page.locator('.grd-stop-lock').first().click(); await l.mark('bulk lock')
+    // A stop lock adds a line to the Stops filter ("Locked stops keep the count at 5.") while it is on, so the
+    // section is measured again once the lock is off: the lock and the unlock together leave every height as it was.
+    await page.locator('.grd-stop-lock').first().click()
+    await expect(page.locator('.grd-stop-lock').first()).toHaveAttribute('aria-pressed', 'true')
+    await page.locator('.grd-stop-lock').first().click(); await l.mark('bulk lock, then unlock')
     await page.keyboard.press('Control+A'); await l.mark('all selected')
     await page.keyboard.press('Escape'); await l.mark('selection cleared')
 
-    const pool = await openSettings(page)
-    await pickPill(pool).click(); await l.mark('Pick colours… (the checklist opens)')
-    await tick(pool, 'Neutral 500').check(); await l.mark('one tick')
-    await tick(pool, 'Colour 8 500').check(); await l.mark('two ticks (Shuffle settings reads narrowed)')
-    await page.keyboard.press('Escape'); await l.mark('settings closed')
-    await shuffleBtn(page).click(); await l.mark('Shuffle from 2 picks')
-    const again = await openSettings(page)
-    await allPill(again).click(); await l.mark('All palette colours')
-    await page.keyboard.press('Escape'); await l.mark('settings closed again')
-
+    await tick(page, 'Neutral 500').check(); await l.mark('one tick')
+    await tick(page, 'Colour 8 500').check(); await l.mark('two ticks (the row reads 2 picked)')
+    await pressRandom(page); await l.mark('Random from 2 picks')
     await stopSelect(page, 1).click(); await page.keyboard.press('Control+A')
     await page.getByRole('button', { name: /^Remove the \d selected stops$/ }).first().click(); await l.mark('bulk delete down to the floor')
-    expect(l.count).toBe(19)
+    expect(l.count).toBe(16)
     expect(l.drift(), l.drift().join('\n')).toEqual([])
   })
 })
@@ -1177,31 +1252,29 @@ test.describe('the page does not move at 1440px', () => {
 test.describe('the page does not move at 390px (touch)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
 
-  test('the More-menu settings, a long-press selection and chip picks change the page height by 0px', async ({ page }) => {
+  test('filters, a long-press selection, chip picks and ticks change every height by 0px', async ({ page }) => {
     watch(page, 'a phone user using every new control')
     await seed(page)
     await open(page)
-    const l = ledger(page)
-    await l.mark('at rest')
-
     const scope = await openSettings(page)
-    await l.mark('More menu open with the settings')
+    await pickRadio(page).tap()
+    await expect(checklist(page)).toBeVisible()
+    const l = ledger(page)
+    await l.mark('at rest, More options and the checklist open')
+
     await option(scope, 'Type', 'Radial').tap(); await l.mark('Type = Radial')
     await option(scope, 'Stops', 4).tap(); await l.mark('Stops = 4')
-    await page.keyboard.press('Escape'); await l.mark('menu closed')
+    await radio(page, 'Hue', 'Warm').tap(); await l.mark('Hue = Warm')
+    await radio(page, 'Tone', 'Vivid').tap(); await l.mark('Tone = Vivid')
 
     await longPress(page, stopSelect(page, 2)); await l.mark('selection mode (Done in the head row)')
     await stopSelect(page, 4).tap(); await l.mark('two selected')
     await chips(page).nth(1).tap(); await l.mark('bulk colour')
     await page.locator('.grd-sel-clear').tap(); await l.mark('Done')
 
-    const pool = await openSettings(page)
-    await pickPill(pool).tap(); await l.mark('Pick colours… (the checklist opens in the More menu)')
-    await tick(pool, 'Neutral 500').check(); await l.mark('one tick')
-    await tick(pool, 'Colour 8 500').check(); await l.mark('two ticks')
-    await allPill(pool).tap(); await l.mark('All palette colours')
-    await page.keyboard.press('Escape'); await l.mark('menu closed')
-    expect(l.count).toBe(14)
+    await tick(page, 'Neutral 500').check(); await l.mark('one tick')
+    await tick(page, 'Colour 8 500').check(); await l.mark('two ticks')
+    expect(l.count).toBe(11)
     expect(l.drift(), l.drift().join('\n')).toEqual([])
   })
 })
