@@ -39,10 +39,10 @@ const TOOLS = [
     overflow: 'Extra tools',
     actions: [
       { row: 'Pull colours from an image', menu: 'From image' },
-      { row: 'Suggest variations and brands', menu: 'Suggest' },
+      { row: 'Suggest variations', menu: 'Suggest' },
       // Lower-priority buttons (icon-only below 768px): on the row where there is room, else in Extra tools.
-      'Explore palettes',
-      'Preview on a UI',
+      'Explore palettes and brands',
+      'Preview',
       'Undo',
       'Redo',
       'Randomise',

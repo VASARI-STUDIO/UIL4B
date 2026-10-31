@@ -484,7 +484,7 @@ test('/create/palette · “Use →” on a community card in the Explore popup 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
-  await clickPaletteAction(page, 'Explore palettes')
+  await clickPaletteAction(page, 'Explore palettes and brands')
   const use = page.locator('.plb-galpopup-body .pgal-use')
   await expect(use.first()).toBeVisible()
   await settled(page, '.plb-galpopup')

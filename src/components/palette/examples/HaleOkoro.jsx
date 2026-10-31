@@ -72,7 +72,7 @@ export default function HaleOkoro({ roles }) {
         </div>
         <ul>
           {COPY.projects.map((p, i) => (
-            <li key={p[0]} className={`ho-row${i === 0 ? ' is-on' : ''}`} style={{ '--i': i }}>
+            <li key={p[0]} className={`ho-row${i === 0 ? ' is-on' : ''}${i === 1 ? ' is-hover' : ''}`} style={{ '--i': i }}>
               {i === 0 && <i className="ho-bar" data-role="primary" />}
               <span className="ho-name">{p[0]}</span>
               <span className="ho-sub">{p[1]}</span>
