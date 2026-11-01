@@ -25,10 +25,17 @@
 //
 // `saves` is display data and no longer decides entitlement. Editing a saves
 // count re-orders the gallery; it can no longer move a prompt across the gate.
+//
+// `category` is the prompt's ONE main category (a slug from
+// src/data/promptCategories.js). The gallery overview shows each prompt once,
+// under it. Lists, chips and counts still match on every tag, so a prompt can
+// be listed under several categories but is placed on the overview once. It is
+// a public fact like the tags, so stubs carry it too.
 export const COMMUNITY_PROMPTS = [
   {
     id: 'c-1',
     free: true,
+    category: 'website',
     title: 'Plumbing business website',
     text: `Design a one-page site for FlowFix Plumbing & Gas, licensed plumbers and gasfitters in Newcastle and Lake Macquarie, NSW (licence 312487C, since 2009). Invent the specifics and commit to them: a depot address, a (02) 5550 number, real starting prices, opening hours, a named team. The idea: the price comes before the spanner, so the hero lets people point at their problem and see what it costs.
 
@@ -55,6 +62,7 @@ Motion: on load the pipes draw in by stroke-dashoffset (waste, then cold, hot an
   {
     id: 'c-2',
     free: true,
+    category: 'website',
     title: 'Restaurant website with menu',
     text: `Build a one-page, scroll-driven site for Osteria Luna, a forty-seat Italian restaurant at 114 Gertrude Street, Fitzroy, Melbourne. Invent the rest and commit to it: a chef with a dated history, a co-owner who runs the floor, opening hours with Monday closed, and a spring menu of four dishes per course with prices in AUD. The idea: the site is one night at the restaurant, and the moon keeps time.
 
@@ -84,6 +92,7 @@ Under prefers-reduced-motion nothing pins or travels sideways, the moon stays in
   {
     id: 'c-3',
     free: true,
+    category: 'ui-components',
     title: 'Dark mode analytics dashboard',
     text: `Design a dark analytics dashboard for Keel, an analytics product, measuring one named business: Fernway Supply Co., an outdoor-gear Shopify store selling in Australia and New Zealand. Every label follows from that.
 
@@ -108,6 +117,7 @@ Under prefers-reduced-motion nothing moves: the chart is drawn, the feed is full
   {
     id: 'c-4',
     free: false,
+    category: 'branding',
     title: 'Freelancer portfolio',
     text: `Build a scroll-driven portfolio for Ruth Amankwah, an independent brand and type designer with a studio in Príncipe Real, Lisbon. She has been independent since 2018 and takes about six projects a year. The work is the page: eight projects for named clients, each drawn as the actual artefact in CSS and inline SVG, never a photograph or a grey placeholder.
 
@@ -137,6 +147,7 @@ No testimonials, client logos, awards or invented quotes. The copy says what she
   {
     id: 'c-5',
     free: false,
+    category: 'website',
     title: 'Fitness trainer landing page',
     text: `Design a landing page for Dev Aranda, a one-to-one strength coach in Brunswick East, Melbourne, who takes fourteen clients at a time. Goal: book a free 45-minute consult. The page should sound like one person, and its big idea is honesty about the plan: the hero shows the twelve weeks on a barbell.
 
@@ -163,6 +174,7 @@ Motion: on load the plan plays once, week 1 to 12 at about three weeks a second,
   {
     id: 'c-6',
     free: false,
+    category: 'ui-components',
     title: 'SaaS pricing page',
     text: `Build the pricing page for Cronwright, which pages you when a scheduled job runs late, exits non-zero or stops checking in. The unit of pricing is the monitored job, never alerts or runs, and the page is built around it: the reader says how many jobs they run and the page shows what each plan would cost them.
 
@@ -189,6 +201,7 @@ Motion: on load the slider travels once from one job to 120; prices roll over 50
   {
     id: 'c-7',
     free: false,
+    category: 'website',
     title: 'Real estate property listing',
     text: `Design the listing page for 14 Rosella Street, Coburg (Melbourne), sold by Northline Property: a 1926 Californian bungalow on 562 m² with a 2019 rear extension, price guide $1,380,000 to $1,480,000, auction Saturday 4 October at 11 am. The idea: instead of photographs, the listing is an architect's drawing set, and the drawings are good enough to make a decision from.
 
@@ -221,6 +234,7 @@ No photographs, stock illustrations, invented reviews or "just listed" urgency. 
   {
     id: 'c-8',
     free: false,
+    category: 'branding',
     title: 'Coffee shop brand identity',
     text: `Design a one-page brand manual sheet for Grounded, a neighbourhood roastery at 148 Rose Street, Fitzroy. It reads like edition 2 of a real brand manual, not a website.
 
@@ -245,6 +259,7 @@ Under prefers-reduced-motion everything is drawn and in place: no draw-on, no lo
   {
     id: 'c-9',
     free: true,
+    category: 'branding',
     title: 'E-commerce product page',
     text: `Design a product page for the Filey Gansey from Cammish & Daughter, a small knitwear maker in Filey, North Yorkshire. The gansey is a fisherman's jumper hand-knitted to order in 5-ply worsted: £285, plus £20 to have your initials knitted into the hem, which is the signature feature of the page.
 
@@ -276,6 +291,7 @@ No reviews, ratings, sale prices or urgency. Every control has a visible label, 
   {
     id: 'c-10',
     free: false,
+    category: 'ui-components',
     title: 'Mobile app onboarding flow',
     text: `Design the four-screen first run of Swell, a surf forecast app for the east coast of Australia (buoy, wind and tide for 340 breaks between Noosa and Bermagui, read as one line), and present it as a case study: a clickable prototype first, then the whole flow, then the notes.
 
@@ -306,6 +322,7 @@ Under prefers-reduced-motion there is no autoplay, and the push becomes a 200 ms
   {
     id: 'c-11',
     free: false,
+    category: 'website',
     title: 'Construction company website',
     text: `Design a scroll-driven website for Apex Build Co., a Victorian commercial builder since 2001. Invent the company and keep every detail consistent: ABN, builder registration, head office, site hours, final contract sums. Industrial and exact, like a site sign.
 
@@ -331,6 +348,7 @@ Under prefers-reduced-motion the crane is still, nothing pins, the tower shows i
   {
     id: 'c-12',
     free: false,
+    category: 'branding',
     title: 'Blog article layout',
     text: `Design and write a long-form article for Ligature, a quarterly on typography: "The measure is the decision you make first" by Nadia Ferris, type director, about 1,100 words in six sections (what the measure is, where 45 to 75 comes from, setting it in CSS, leading moves with it, what breaks on a phone, a checklist). Real prose, real sources, no lorem. The page should practise what the article argues, and let the reader test the argument.
 
@@ -355,6 +373,7 @@ Under prefers-reduced-motion the lab changes without transitions. Nothing on the
   {
     id: 'c-13',
     free: true,
+    category: '3d-motion',
     title: '3D hero — floating product reveal',
     text: `Build a scroll-driven 3D product hero for the Stilte TT-2, a belt-drive turntable made in Eindhoven and sold for €1,190. The product is a real three.js model, not a picture, and scrolling plays one small story: the camera orbits a quarter turn while the tonearm lifts, swings across and lowers onto the record.
 
@@ -391,6 +410,7 @@ Under prefers-reduced-motion the section is not pinned, the deck is still in a t
   {
     id: 'c-14',
     free: true,
+    category: '3d-motion',
     title: '3D hero — morphing blob background',
     text: `Build a hero for No. 7 Fig Smoke, an eau de parfum by Hollis & Vane, a small perfumer in Frome, Somerset. The centrepiece is a large morphing form rendered in WebGL, and it is not decoration: it is the fragrance. Its colour, surface and pace change as the scent moves from top notes to heart to base.
 
@@ -422,6 +442,7 @@ Under prefers-reduced-motion render one composed frame of the heart note, keep t
   {
     id: 'c-15',
     free: true,
+    category: '3d-motion',
     title: '3D hero — scroll-driven text extrusion',
     text: `Build a scroll-driven 3D wordmark for Halliday Wood Type, a small foundry that digitised a 19th-century wood-type gothic (Halliday Gothic No. 3, cut by Halliday & Sons of Ipswich in 1874, rebuilt from 212 surviving sorts). The word HALLIDAY extrudes into physical letterpress sorts: inked black faces on maple blocks. Scrolling lifts the type, tips the camera over the press bed, then scatters the sorts as if they were being distributed back into the case, and the page lands on the type specimen.
 
@@ -447,6 +468,7 @@ Under prefers-reduced-motion nothing pins or scatters: freeze at p = 0.42, the d
   {
     id: 'c-16',
     free: true,
+    category: '3d-motion',
     title: '3D hero — interactive particle wave',
     text: `Create a hero for Tidewatch, a data service that publishes forty-three years of sea surface temperature (September 1982 to now) as NetCDF, Zarr or JSON. The hero is a real-time WebGL field of points that reads as a sea surface, with the copy set on it.
 
@@ -472,6 +494,7 @@ Under prefers-reduced-motion render exactly one composed frame with a ring mid-f
   {
     id: 'c-17',
     free: true,
+    category: 'css-visual',
     title: '3D hero — glass card carousel',
     text: `Design the hero for "Light Before Film", an exhibition of 212 hand-painted magic lantern slides (1850 to 1920) at a museum of optics in Bath. The centrepiece is a 3D carousel of six glass slides on a slowly turning ring, and the glass is literal: painted scenes behind glass in card mounts, lit as if by a projector.
 
@@ -502,6 +525,7 @@ Under prefers-reduced-motion there is no auto-turn, no easing and no chromatrope
   {
     id: 'c-18',
     free: true,
+    category: 'ui-components',
     title: 'Lottie animation — loading states',
     text: `Design a set of five looping micro-animations for loading states, and present them as the "Loading states" page of a design system's motion docs: a specimen sheet a developer could build from, with a transport bar that lets you stop time and scrub through every loader frame by frame.
 
@@ -545,6 +569,7 @@ The rule that decides whether this set is any good: author every specimen at its
   {
     id: 'c-19',
     free: false,
+    category: '3d-motion',
     title: 'Scroll-triggered section transitions',
     text: `Build a scroll-driven long read, "How a frame gets made", for Aldermoor Cycles, a one-person steel frame builder on Kelham Island, Sheffield. The page is scrollytelling: a drawing of the bike sticks beside the text and builds itself chapter by chapter as the reader scrolls, and each chapter's text arrives with a different transition, labelled with its name in a small mono chip so the page doubles as documentation for the set.
 
@@ -577,6 +602,7 @@ Phones: the drawing sticks to the top of the screen above the chapters, which sc
   {
     id: 'c-20',
     free: false,
+    category: 'css-visual',
     title: 'CSS-only image hover gallery',
     text: `Build the work index for Offcut Press, a two-drum risograph studio in Footscray: "Selected prints, 2024–26", six prints in an asymmetric 12-column gallery, where each print answers the pointer and the Tab key with a different hover effect. No JavaScript at all, and no image files: every print is inline SVG in flat riso inks.
 

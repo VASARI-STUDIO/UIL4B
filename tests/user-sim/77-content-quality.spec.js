@@ -217,7 +217,7 @@ test.describe('the Prompt Library empty state', () => {
   // present and rendered the empty string — and there was no way back out.
   test('a search that matches nothing announces itself and offers a way out', async ({ page }) => {
     watch(page, PERSONA)
-    await go(page, '/discover/prompts')
+    await go(page, '/discover/prompts#all')
     await expectRendered(page)
 
     const field = page.getByLabel('Search community prompts')
@@ -232,7 +232,7 @@ test.describe('the Prompt Library empty state', () => {
     // about a correctly gated gallery. Read from the table rather than retyped,
     // and asserted EXACTLY: a count that drifts either way is a change to the
     // gate and should be seen here rather than absorbed by an inequality.
-    const before = await page.locator('.pl-gallery .pl-card, .pl-gallery article').count()
+    const before = await page.locator('.pl-gallery .pl-card:not(.pl-locked-card)').count()
     expect(
       before,
       `the library handed a signed-out visitor ${before} cards; the anonymous tier is`
@@ -258,7 +258,7 @@ test.describe('the Prompt Library empty state', () => {
 
     await clear.click()
     await expect(field).toHaveValue('')
-    const after = await page.locator('.pl-gallery .pl-card, .pl-gallery article').count()
+    const after = await page.locator('.pl-gallery .pl-card:not(.pl-locked-card)').count()
     expect(after, 'clearing the filters did not bring the prompts back').toBe(before)
   })
 
@@ -342,7 +342,7 @@ test.describe('route metadata', () => {
 // landmark sweep structurally cannot ask for.
 test.describe('the two library grids name themselves and announce their size', () => {
   const CASES = [
-    { route: '/discover/prompts', noun: 'prompt', cards: '.pl-gallery > *' },
+    { route: '/discover/prompts#all', noun: 'prompt', cards: '.pl-gallery > *' },
     { route: '/community', noun: 'design', cards: '.ch-grid > *' },
   ]
   for (const { route, noun, cards } of CASES) {
