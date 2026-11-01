@@ -1,28 +1,16 @@
-// NOTHING ON THE ADMIN DASHBOARD IS A READING OF THE FOUNDER'S OWN BROWSER.
+// NOTHING ON THE ADMIN DASHBOARD IS A READING OF THE VIEWER'S OWN BROWSER.
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// THE INSTRUCTION AND WHAT IT WAS ABOUT
-// ═══════════════════════════════════════════════════════════════════════════
-// 2026-09-16, verbatim: "this admin dashboard get remove alot of shit it does
-// not need such as data from my specific browser window".
-//
-// The dashboard's largest figures — "Page Views", "Sessions", "Bounce Rate",
-// "Avg Duration", across a Today / 7 days / 30 days / All time selector — were
-// `localStorage.getItem('vs-analytics')` on the machine the dashboard happened
-// to be open on. They were badged "This device only · not site-wide" and the
-// badge did not fix it: a four-figure "Page views" reads as traffic, and a grey
-// caption under it reads as a footnote.
-//
-// Two more tabs were the same thing without the badge:
+// A figure read from `localStorage` describes whichever machine the dashboard
+// happens to be open on, not the site. Badging it "This device only" does not
+// fix that: a four-figure "Page views" reads as traffic, and a grey caption
+// under it reads as a footnote. So the dashboard shows site-wide figures only,
+// and the tabs that were readings of one browser (Pages, Design) are gone:
 //
 //   Pages   Most Visited Pages, Bounce Rate by Entry Page, Top Exit Pages,
-//           Top Entry Pages — every one from getAnalyticsSummary(), which is
-//           the same localStorage blob.
-//   Design  Most Copied Fonts, Most Picked Colours, Tool Usage — from
-//           getDesignAnalytics(), a second localStorage blob. Its two icon
-//           cards preferred the cross-user aggregate and fell back to that
-//           blob, so the SAME card was site-wide or one-browser depending on
-//           whether the server had answered.
+//           Top Entry Pages, all from getAnalyticsSummary(), which is the
+//           localStorage blob.
+//   Design  Most Copied Fonts, Most Picked Colours, Tool Usage, from
+//           getDesignAnalytics(), a second localStorage blob.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHAT THIS FILE GUARDS, AND WHY IT IS AN IMPORT CHECK
@@ -111,8 +99,8 @@ test('no headline on the dashboard is read out of this browser', () => {
   ))
   assert.deepEqual(offenders, [],
     'src/pages/Admin.jsx imports a reader that returns THIS BROWSER\'S localStorage: '
-    + `${offenders.join(', ')}. The founder asked for "data from my specific browser window" to come `
-    + 'off this dashboard on 2026-09-16. If a new reader genuinely belongs here, it has to be a '
+    + `${offenders.join(', ')}. Data from one browser window does not belong on this dashboard. `
+    + 'If a new reader genuinely belongs here, it has to be a '
     + 'cross-user one — or be rendered as a labelled fallback the way getAnalyticsSummary is, and '
     + 'added to ALLOWED_LOCAL with the reason.')
   // And it is not reached around the import either.
@@ -138,7 +126,7 @@ test('the one local reader that is allowed is only ever the Users fallback', () 
     + 'drop the import instead')
 })
 
-test('the four tabs the founder had removed are gone, and stay gone', () => {
+test('the four removed tabs are gone, and stay gone', () => {
   const m = CODE.match(/const TABS = \[([\s\S]*?)\n\]/)
   assert.ok(m, 'the TABS array is gone or reshaped — this test is reading nothing')
   const ids = [...m[1].matchAll(/id:\s*'([^']+)'/g)].map(x => x[1])
@@ -146,8 +134,7 @@ test('the four tabs the founder had removed are gone, and stay gone', () => {
   for (const dead of ['pipeline', 'board', 'design', 'pages']) {
     assert.ok(!ids.includes(dead),
       `the "${dead}" tab is back. Pipeline and Board render nothing in any deployment — their data has `
-      + 'been local-only since 2026-09-16 — and Design and Pages were both readings of one browser. '
-      + 'The founder asked for the pipeline to go and for the browser-local data to go with it.')
+      + 'are not deployed — and Design and Pages were both readings of one browser.')
   }
   // The positive half: the tabs that stayed are the ones that had a source
   // capable of answering them, and Overview is still first because the route

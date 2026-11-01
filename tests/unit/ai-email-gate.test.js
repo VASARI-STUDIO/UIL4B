@@ -99,6 +99,11 @@ function loadAi({ decoded, user = {} }) {
       return { ok: true, result, counts: meters.map(() => 0) }
     },
     altTextGenerationConfig, altTextOutcome, altTextCutoffReply, ALT_TEXT_CUTOFF_REFUND_CAP,
+    // The attempt limits and image check sit after this gate and are covered by
+    // ai-attempt-limits.test.js; here they let everything through.
+    aiAccountRefusal: async () => null,
+    aiSharedRefusal: async () => null,
+    imagePayloadProblem: () => null,
   }
   const api = vm.runInNewContext(`(function(){\n${out}\n;return { handler, TASKS };\n})()`, sandbox, { filename: AI_PATH })
 
@@ -106,6 +111,7 @@ function loadAi({ decoded, user = {} }) {
   // auth, the plan lookup and the gate are the real code.
   for (const [name, task] of Object.entries(api.TASKS)) {
     task.configured = () => true
+    task.validate = undefined
     task.run = async () => { ledger.ran.push(name); return { ok: true, task: name } }
   }
 

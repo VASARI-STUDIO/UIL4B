@@ -1,62 +1,22 @@
 // NO INTERNAL BOARD MAY BE IN ANYTHING THIS APP SERVES.
 //
-// Two modules under src/data/ describe the PROJECT rather than the product:
+// Two modules under src/data/ describe the project rather than the product:
 //
-//   src/data/pipeline.js     the engineering backlog — 185 rows whose `note`
-//                            fields are long, candid prose written for us.
-//   src/data/moduleBoard.js  the module status board — 20 entries carrying
-//                            `summary`, `recentChanges`, `nextSteps`, `health`
-//                            and dated owner actions per module.
+//   src/data/pipeline.js     the engineering backlog, with long free-text `note`
+//                            fields.
+//   src/data/moduleBoard.js  the module status board: per module, `summary`,
+//                            `recentChanges`, `nextSteps`, `health` and owner
+//                            actions.
 //
-// Both were client modules, so both were served to anyone who asked.
+// A static asset is served to everybody, so a board imported by client code is
+// readable without logging in. Whether the import is static or dynamic decides
+// WHEN a browser fetches the bytes and says nothing about WHO may fetch them, so
+// this file looks at what is in the build output, not at how it got there. It
+// also never names a board as its subject: a guard that names one file can only
+// ever find that file, so "internal board" is DERIVED from src/data/ rather
+// than listed.
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// WHAT THIS FILE USED TO CHECK, AND WHY THAT WAS THE WRONG PROPERTY — TWICE
-// ═══════════════════════════════════════════════════════════════════════════
-//
-// ── THE FIRST WRONG AXIS: WHEN, NOT WHO ────────────────────────────────────
-// #405 and #406 filed the backlog as a WEIGHT problem: a static import from
-// Admin.jsx put all of it inside Admin-*.js, 776,482 bytes raw / 287,073 gzip,
-// fetched and parsed before the Admin route could render. #420 answered with
-// `import('../data/pipeline')`, and this file was written to hold that down. It
-// walked the chunk graph and asserted:
-//
-//     the Admin chunk reaches src/data/pipeline.js by NO STATIC EDGE,
-//     and (as its control) reaches it by SOME DYNAMIC EDGE.
-//
-// Both halves were true, the four tests were green, and the following was
-// simultaneously true of the exact build they passed on — anonymous, no login,
-// no cookie, no Authorization header:
-//
-//     GET /admin                  200   the HTML names the entry chunk
-//     GET /assets/index-*.js      200   names Admin-rjGyizH8.js
-//     GET /assets/Admin-*.js      200   names pipeline-DUbq1XL3.js
-//     GET /assets/pipeline-*.js   200   824,007 bytes / 319,711 gzip
-//
-// The last file contained the literal string `allow create: if true` — the
-// feedback rule that #472 has since closed in firestore.rules. The guard's own
-// CONTROL was asserting the leak was present. Static
-// edge or dynamic edge decides WHEN a browser fetches the bytes and has nothing
-// to say about WHO may fetch them; a static asset is served to everybody.
-//
-// ── THE SECOND WRONG AXIS: ONE FILE, NOT A CLASS ───────────────────────────
-// The rewrite scanned every emitted file for text taken from pipeline.js, and
-// it was green on a build whose dist/assets/Admin-*.js carried this, verbatim
-// and fetchable with no auth:
-//
-//     nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
-//     the published Firestore rules", "Do not assume the admin custom claim
-//     exists; resolve any permission-denied result explicitly", ...]
-//
-// src/data/moduleBoard.js — a SECOND internal board, a plain static import, so
-// its 20,332 bytes were inlined into the Admin chunk rather than given one of
-// their own. A guard that names its subject can only ever find its subject, and
-// naming `pipeline.js` was itself the bug. A third board will be written one
-// day.
-//
-// ═══════════════════════════════════════════════════════════════════════════
-// WHAT IT CHECKS NOW
-// ═══════════════════════════════════════════════════════════════════════════
+// WHAT IT CHECKS
 //
 //     NO FILE IN THE BUILD OUTPUT CONTAINS ANY TEXT FROM ANY INTERNAL BOARD,
 //     AND "INTERNAL BOARD" IS DERIVED FROM src/data/ RATHER THAN LISTED.
@@ -67,7 +27,7 @@
 // board, and every row of every array it exports becomes a needle.
 //
 // THE THRESHOLD IS A MEASURED GAP, NOT A GUESS. Scored across all 30 importable
-// modules in src/data/ on 2026-09-11:
+// modules in src/data/:
 //
 //     moduleBoard.js  MODULE_BOARD        7   nextSteps recentChanges health
 //                                             status area summary updated
@@ -78,48 +38,34 @@
 //     everything else                     0
 //
 // Nothing scores 2, 3 or 4. The band is empty, and a test below ASSERTS it is
-// still empty — so product data drifting towards the threshold is a loud
+// still empty, so product data drifting towards the threshold is a loud
 // failure rather than a near miss nobody sees.
 //
 // A module the detector finds that is not declared below FAILS THE BUILD with
-// instructions, rather than being covered silently or missed silently. That is
-// the property the second miss cost: coverage that extends itself, or says it
-// cannot.
+// instructions, rather than being covered silently or missed silently:
+// coverage that extends itself, or says it cannot.
 //
-// ── src/data/fontRealWorldUses.js, RECORDED SO IT IS NOT REDISCOVERED ──────
-// It matches a "data module reaching the client" grep and it is NOT an internal
-// board. It is product content: the per-family slot for photographs of real
-// work, rendered by components/FontDossier.jsx on the public Font Gallery. It
-// ships DELIBERATELY EMPTY — the founder's own call, 2026-09-05 — and what it
-// contains is the SHAPE of an entry plus `isShowable`, the rule that refuses a
-// row which cannot name its image, credit, source and licence. It scores 0: no
-// status, no owner action, nothing about this project's condition. The general
-// distinction, which is the thing worth keeping: A MODULE THAT DESCRIBES THE
-// PRODUCT SHIPS; A MODULE THAT DESCRIBES THE PROJECT DOES NOT.
+// ── src/data/fontRealWorldUses.js IS NOT AN INTERNAL BOARD ─────────────────
+// It matches a "data module reaching the client" grep, but it is product
+// content: the per-family slot for photographs of real work, rendered by
+// components/FontDossier.jsx on the public Font Gallery. It ships empty, and
+// what it contains is the SHAPE of an entry plus `isShowable`, the rule that
+// refuses a row which cannot name its image, credit, source and licence. It
+// scores 0: no status, no owner action, nothing about the project's condition.
+// The general distinction: A MODULE THAT DESCRIBES THE PRODUCT SHIPS; A MODULE
+// THAT DESCRIBES THE PROJECT DOES NOT.
 //
-// ── 2026-09-16: THE BOARDS LEFT THE PRODUCT, AND THE CONTROL CHANGED SIDES ─
+// ── THE DASHBOARD HAS NO PATH TO THE BOARDS ────────────────────────────────
 //
-// Until this date the control below asserted that the founder STILL HAD both
-// boards — that Admin.jsx asked GET /api/ai?backlog=1 and rendered what came
-// back. It had to: "no board data in the build" is also exactly what deleting
-// the Pipeline tab looks like, and a guard that a deletion satisfies is not a
-// guard.
+// "No board data in the build" is also exactly what deleting the Pipeline tab
+// looks like, so the Admin page is checked directly: it must not request
+// GET /api/ai?backlog=1, read a board's exports, or import a board module. No
+// code path from that page reaches the boards, so the absence measured in the
+// build output is structural.
 //
-// The founder then deleted the Pipeline tab. "the pipeline probably can be
-// removed too", 2026-09-16, the same instruction that took the browser-local
-// analytics off the dashboard. Board went with it: same endpoint, same 501,
-// same paragraph where a board used to be.
-//
-// So the control is inverted rather than dropped, and the property it now
-// holds is STRICTLY STRONGER than the one it held before. It used to say: the
-// boards reach the browser only through an admin-gated fetch. It now says: no
-// code path from this page reaches them at all. The absence the rest of this
-// file measures in the build output is, from here, structural.
-//
-// The SERVER half is unchanged and still asserted. api/ai.js still answers
-// ?backlog=1 behind requireAdmin(), because the founder's own checkout has the
-// modules and that is where he reads them; what must never happen is that
-// endpoint losing its gate while nothing in the browser is watching it.
+// The SERVER half is asserted too. api/ai.js still answers ?backlog=1 behind
+// requireAdmin(), and nothing in the browser calls it, so nothing in the
+// browser would notice that route losing its gate.
 //
 // ── THE POSITIVE CONTROLS ──────────────────────────────────────────────────
 //
@@ -128,63 +74,44 @@
 // any absence is asserted:
 //
 //   1. THE CLASSIFIER IS PROVEN TO SEE BOTH KNOWN BOARDS, and to see nothing
-//      else — in both directions, so it can neither go blind nor swallow the
+//      else, in both directions, so it can neither go blind nor swallow the
 //      whole of src/data/.
 //   2. THE SCANNER IS PROVEN TO WORK, by pointing it at each board's own source
 //      and requiring it to find every needle from that board. A needle that no
-//      longer matches anything — because minification escaped a character, say
-//      — would otherwise make every assertion below pass for free.
+//      longer matches anything (minification escaped a character, say) would
+//      otherwise make every assertion below pass for free.
 //   3. THE BUILD IS PROVEN REAL: more than ten chunks, an Admin-*.js that
 //      contains the dashboard's own marker.
 //   4. THE ROUTE IS PROVEN TO STILL BE GATED, and the dashboard is proven to
-//      have no path to it — the two halves that together mean the absence
-//      measured below cannot be reintroduced quietly from either side.
+//      have no path to it.
 //
 // ── WHERE IT BUILDS ────────────────────────────────────────────────────────
 //
 // Not dist/: `vite build` empties it while `vite preview` serves it, so a build
 // from a unit test would delete the bundle a concurrent `npm run test:users` is
-// being served from. Not anywhere else in the checkout either — see
-// tests/unit/test-session-not-in-production.test.js for the 538 lint errors a
-// build left in tmp/. The OS temp directory, process-unique so two agents
-// running the suite at once cannot collide, removed afterwards.
+// being served from. Not anywhere else in the checkout either; see
+// tests/unit/test-session-not-in-production.test.js for the lint errors a
+// build left in tmp/. The OS temp directory, process-unique so two runs of the
+// suite at once cannot collide, removed afterwards.
 //
-// MUTATION-VERIFIED at the call site, each restored byte-exact:
-//   · `import('../data/pipeline')` restored in Admin.jsx  -> red, naming
-//     assets/pipeline-*.js and the rows it carries; all controls green.
-//   · `import { MODULE_BOARD } from '../data/moduleBoard'` restored -> red,
-//     naming assets/Admin-*.js — the leak the previous version of this file was
-//     green on; all controls green.
-//   · MODULE_BOARD dropped from the /api/ai?backlog=1 payload -> the
-//     still-has-a-source control red, which is the half that stops this file
-//     being satisfied by deleting the design's board.
+// ── THE BOARDS ARE NOT IN EVERY CHECKOUT ───────────────────────────────────
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// SINCE 2026-09-16 THE BOARDS ARE NOT IN EVERY CHECKOUT, AND THAT IS HANDLED
-// EXPLICITLY RATHER THAN QUIETLY
-// ═══════════════════════════════════════════════════════════════════════════
-//
-// The repository went public for free GitHub Actions minutes, so the founder
-// took both modules out of it and kept them on his own machine; .gitignore
-// carries the decision, its date and its cost.
+// Both modules are kept out of the public repository (.gitignore says so), so
+// a clone does not have them.
 //
 // EVERY NEEDLE IN THIS FILE IS DERIVED FROM THOSE MODULES. With them absent the
 // classifier finds no internal boards, the extractor produces no needles, and
 // "no file in the build output carries any internal board text" becomes true of
-// a search for nothing — a green line asserting the absence of an empty set.
-// That is the precise failure this file was rewritten twice to stop, so where a
-// test cannot be run it is SKIPPED WITH A REASON and says so in the output.
+// a search for nothing. So where a test cannot be run it is SKIPPED WITH A
+// REASON, and says so in the output.
 //
-// WHAT STILL RUNS WITH THEM ABSENT, and it is not nothing: the threshold band,
-// the "every module is classified or declared unreadable" sweep, the build
-// being real, the Admin chunk's size ceiling, and — the load-bearing one — the
-// control that the founder still HAS both boards, which reads Admin.jsx and
-// api/ai.js as source and needs no data at all. A src/ module importing an
-// absent board would also fail `vite build` outright in the build control
-// below, so the graph-level statement is not lost either, only relocated.
+// What still runs with them absent: the threshold band, the "every module is
+// classified or declared unreadable" sweep, the build being real, the Admin
+// chunk's size ceiling, and the controls that read Admin.jsx and api/ai.js as
+// source, which need no data. A src/ module importing an absent board would
+// also fail `vite build` outright in the build control below.
 //
-// ON THE FOUNDER'S OWN CHECKOUT NOTHING ABOUT THIS FILE CHANGES: the files are
-// there, every skip is off, and the guarantee is exactly the one it was.
+// On a checkout that has the files every skip is off and the full check runs.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -218,14 +145,14 @@ const INTERNAL_THRESHOLD = 3
 // The boards this change knows about. The detector must find exactly these.
 const DECLARED_INTERNAL = ['moduleBoard.js', 'pipeline.js']
 
-// ...unless they are not in this checkout at all. Local-only since 2026-09-16 —
-// see the block at the top of this file. Any of them missing is enough: a run
+// ...unless they are not in this checkout at all (see the block at the top of
+// this file). Any of them missing is enough: a run
 // that could see one board and not the other would report partial coverage as
 // full, so the skip is all-or-nothing and names what it could not find.
 const ABSENT_BOARDS = DECLARED_INTERNAL.filter((rel) => !fs.existsSync(path.join(DATA_DIR, rel)))
 const NO_BOARDS = ABSENT_BOARDS.length > 0
   && `the internal boards are not in this checkout (missing: ${ABSENT_BOARDS.map((r) => `src/data/${r}`).join(', ')}). `
-  + 'They are local-only, by the founder decision of 2026-09-16 recorded in .gitignore. Every needle '
+  + 'They are kept out of the public repository (see .gitignore). Every needle '
   + 'in this test is derived from their rows, so with them gone this would search the build output '
   + 'for nothing and pass — which is the exact shape of the two misses this file was rewritten for. '
   + 'Run it on a checkout that has them to get the guarantee.'
@@ -303,9 +230,9 @@ async function classify() {
 // ` (0x60). Written as ranges rather than a negated class because a negated one
 // has to name the control characters, and `no-control-regex` fails the lint.
 // Those five are excluded because they are ESCAPED inside a JavaScript string
-// literal, so a needle spanning "the founder's request" would match the runtime
-// value and neither the source nor the emitted chunk — the CONTROL below caught
-// exactly that, twice, and it is the difference between a scan and the
+// literal, so a needle spanning "the user's request" would match the runtime
+// value and neither the source nor the emitted chunk; the CONTROL below catches
+// exactly that, and it is the difference between a scan and the
 // appearance of one. Long, because a short phrase would collide with ordinary
 // UI copy and fail for the wrong reason.
 const ASCII_RUN = /[\x20-\x21\x23\x25-\x26\x28-\x5B\x5D-\x5F\x61-\x7E]{48,}/
@@ -462,14 +389,10 @@ test('CONTROL: the build is real, and the Admin dashboard is in it', async () =>
 })
 
 test('CONTROL: the dashboard asks for no internal board, by any route', () => {
-  // ── THE HALF THAT USED TO SAY THE OPPOSITE ──────────────────────────────
-  // See the note at the top of this file. Until 2026-09-16 this asserted that
-  // Admin.jsx still FETCHED the boards, because a deletion would otherwise
-  // satisfy every absence below. The founder then made the deletion, so the
-  // same worry is served by proving there is no path left rather than by
-  // proving the path is gated: a fetch that does not exist cannot be
-  // reintroduced by accident, and if somebody reintroduces it on purpose this
-  // goes red and they have to say why here.
+  // See the note at the top of this file. The dashboard is proven to have no
+  // path to the boards, rather than a gated one: a fetch that does not exist
+  // cannot be reintroduced by accident, and if somebody reintroduces it on
+  // purpose this goes red and they have to say why here.
   //
   // COMMENTS ARE STRIPPED FIRST, and that is load-bearing rather than tidy.
   // Admin.jsx carries a paragraph explaining that the boards are gone, and it
@@ -487,9 +410,9 @@ test('CONTROL: the dashboard asks for no internal board, by any route', () => {
 
   assert.ok(!/backlog=1/.test(admin),
     'src/pages/Admin.jsx asks GET /api/ai?backlog=1 again. That endpoint answers the two internal '
-    + 'boards, whose notes are candid prose written for us, and the founder removed both tabs on '
-    + '2026-09-16. Bringing the request back puts the rows in the browser again — behind the admin '
-    + 'gate, but in the browser.')
+    + 'boards, whose notes are free text written for the team, and the dashboard no longer shows '
+    + 'either. Bringing the request back puts the rows in the browser again, behind the admin '
+    + 'gate but in the browser.')
 
   for (const symbol of ['MODULE_BOARD', 'NEXT_TODO', 'PIPELINE_STAGES', 'PIPELINE_PROCESSES', 'APP_CONDITION']) {
     assert.ok(!admin.includes(symbol),
@@ -501,20 +424,18 @@ test('CONTROL: the dashboard asks for no internal board, by any route', () => {
       + 'whole file exists to keep out of the bundle.')
   }
   // And neither tab is back in the bar. The components could be gone while a
-  // tab that renders nothing stays in the nav, which is two of the ten tabs
-  // doing what the founder asked to have removed.
+  // tab that renders nothing stays in the nav.
   const tabs = admin.match(/const TABS = \[([\s\S]*?)\n\]/)
   assert.ok(tabs, 'the TABS array is unreadable, so this assertion is checking nothing')
   for (const dead of ['pipeline', 'board']) {
     assert.ok(!new RegExp(`id:\\s*'${dead}'`).test(tabs[1]), `the "${dead}" tab is back in the admin nav`)
   }
 
-  // ── THE SERVER HALF IS UNCHANGED, AND IT IS THE HALF NOBODY IS WATCHING ──
-  // Nothing in the browser calls this route now, so nothing in the browser
-  // would notice it losing its gate. On the founder's own checkout the two
-  // modules are present and serveBacklog() reads them, so the route is live
-  // there and an ungated version of it would serve the backlog to anyone who
-  // found the query string.
+  // ── THE SERVER HALF ──────────────────────────────────────────────────────
+  // Nothing in the browser calls this route, so nothing in the browser would
+  // notice it losing its gate. On a checkout that has the two modules,
+  // serveBacklog() reads them, so an ungated version of the route would serve
+  // the backlog to anyone who found the query string.
   const route = fs.readFileSync(path.join(ROOT, 'api/ai.js'), 'utf8')
   assert.match(route, /'backlog' in \(req\.query \|\| \{\}\)/,
     'api/ai.js no longer answers ?backlog=1 — which may be correct now that no client calls it, but '
@@ -526,9 +447,9 @@ test('CONTROL: the dashboard asks for no internal board, by any route', () => {
     + 'from a static asset to an endpoint.')
   assert.match(route, /ERR_MODULE_NOT_FOUND/,
     'api/ai.js no longer tells "the boards are not in this deployment" apart from a real failure. '
-    + 'Since 2026-09-16 the two modules are local-only, so in production the imports throw — and '
-    + 'the only two honest answers are the one it gives (501 + localOnly) or a 500. An empty '
-    + 'backlog is not one of them.')
+    + 'The two modules are not deployed, so in production the imports throw, and the only two '
+    + 'honest answers are the one it gives (501 + localOnly) or a 500. An empty backlog is not '
+    + 'one of them.')
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -574,9 +495,8 @@ test('and the bundler was never even told about them', { skip: NO_BOARDS }, asyn
   }
   assert.deepEqual(carriers, [],
     'an internal board is in the client module graph. Something under src/ imports it — statically '
-    + 'or with import(). Either edge ships it to every visitor; #420 removed only the static edge '
-    + 'from pipeline.js and the notes stayed public for it, and moduleBoard.js was a static import '
-    + 'nobody had looked at. Find the importer and route it through GET /api/ai?backlog=1 instead.')
+    + 'or with import(). Either edge ships it to every visitor: a dynamic import still emits a '
+    + 'public chunk. Find the importer and route it through GET /api/ai?backlog=1 instead.')
 })
 
 test('the Admin chunk is back to a size a dashboard justifies', async () => {

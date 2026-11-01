@@ -202,6 +202,9 @@ function loadAi({
     altTextOutcome: () => { throw new Error('not modelled here') },
     altTextCutoffReply: () => { throw new Error('not modelled here') },
     ALT_TEXT_CUTOFF_REFUND_CAP,
+    aiAccountRefusal: () => { throw new Error('not modelled here') },
+    aiSharedRefusal: () => { throw new Error('not modelled here') },
+    imagePayloadProblem: () => null,
     // Per-test replacements for the stubs above, for the paths a test drives.
     ...stubs,
   }

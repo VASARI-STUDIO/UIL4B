@@ -4,24 +4,11 @@ import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
 import { waitUntil } from '@vercel/functions'
 
-// THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
-// initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
-// catch that fell back to no credential, and a hard-coded projectId of 'uil4b'.
-// Both diverged from api/_lib/firebase-admin.js, which every other route uses,
-// and both were MEASURED before this was changed (2026-09-06 engineering
-// review, probe against the real module with a generated service account):
-//
-//   • A base64-encoded key — the form _lib documents as the SAFER one to store,
-//     because a raw paste mangles the PEM line breaks — failed JSON.parse here,
-//     fell into the catch, and this route booted on ApplicationDefaultCredential
-//     with no service account at all, while _lib read the same value fine.
-//   • The explicit projectId overrode the service account's own project_id, so
-//     with VITE_FIREBASE_PROJECT_ID unset in the function environment this
-//     route addressed project 'uil4b' while _lib addressed 'uil4b-357c5'.
-//
-// Either way the Firestore write failed, `stored` stayed false, and a bug
-// report reached anyone only if the optional Resend email happened to be
-// configured. One bootstrap, one set of encodings, one project id.
+// The Admin SDK is initialised by api/_lib/firebase-admin.js, shared with every
+// other route, so this file has one set of accepted key encodings (including
+// the base64 form) and takes its project id from the service account. A second
+// bootstrap here would fail the Firestore write, leave `stored` false, and let
+// a report reach anyone only through the optional Resend email.
 
 // 'report' is a content report from a community item (src/utils/contentReport.js).
 // A report is only ever read by a person: nothing here acts on it automatically.
@@ -178,14 +165,14 @@ export function stampReporter(entry, verifiedEmail) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
-// A site-wide ceiling on notification emails to the founder, on top of the
+// A site-wide ceiling on notification emails to the support inbox, on top of the
 // per-address limits above: many addresses together can still send a flood, and
 // every email spends Resend quota and sending reputation. Over the ceiling the
 // message is still stored and the sender still sees success, but no email goes.
 export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
 
 // One "the cap was reached" email an hour, so a spent cap is visible to the
-// founder instead of silent. Counted separately and never against MAIL_CAP.
+// support inbox instead of silent. Counted separately and never against MAIL_CAP.
 export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
 
 // Content reports have their own email allowance and their own notice, so a
@@ -348,12 +335,12 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
       if (verdict.contended) {
         // The counter could not be read or updated (an outage, contention, or a
         // missing salt in production): the allowance is not known to be spent,
-        // so this is neither logged as the cap nor announced to the founder.
-        console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
+        // so this is neither logged as the cap nor announced by email.
+        console.warn('support: notification email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
-        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
+        console.warn('support: notification email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
-        // founder gets one notice an hour per allowance. It is exempt from the
+        // support inbox gets one notice an hour per allowance. It is exempt from the
         // caps and holds no user content.
         const notice = await consume(db, noticeCap)
         if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail, cap, label })
