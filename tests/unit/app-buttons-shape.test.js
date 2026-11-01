@@ -67,7 +67,9 @@ const KEEP = {
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
     'grd-preset',
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
-    'cc-lg-chip'],
+    'cc-lg-chip',
+    // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
+    'pl-card'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
