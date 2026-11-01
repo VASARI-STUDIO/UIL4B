@@ -95,7 +95,7 @@
 .lib-surface.pgl-page .pgal-chip{
   padding:5px 9px;border-radius:8px;
   background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:color-mix(in srgb,var(--t0) 78%,transparent);
-  font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;
+  font-family:var(--mono);font-size:10.5px;
 }
 
 /* On a phone the CTA keeps its circled arrow and gives its words to the

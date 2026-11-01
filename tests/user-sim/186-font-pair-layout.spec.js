@@ -1,7 +1,8 @@
 // Font Pair, layout A "Specimen and panel": acceptance criteria 6, 7 and 8 of
 // the fonts build spec, at 1440, 768 and 390.
-//   6  Auto is never inside a weight-pill group; it sits in the body family row
-//      directly before Browse.
+//   6  Best match (the one-press body suggestion) is never inside a weight-pill
+//      group or the buttons row; it sits on the Body family label line, at its
+//      right.
 //   7  At 390 and 768 the family rows come before the specimen, in the DOM and
 //      on screen.
 //   8  At 1440 no family card text is cut (scrollWidth equals clientWidth).
@@ -19,27 +20,34 @@ for (const width of WIDTHS) {
       await expect(page.locator('.fpr-fam')).toHaveCount(2)
     })
 
-    test('Auto is not in a weight row, and sits before Browse on the body family row', async ({ page }) => {
+    test('Best match is not in a weight row, and sits at the right of the body family label line', async ({ page }) => {
       const read = await page.evaluate(() => {
         const wand = document.querySelector('.fpr-wand')
         const body = [...document.querySelectorAll('.fpr-fam')].find((el) => el.querySelector('.fpr-wand'))
+        const head = wand?.closest('.fpr-fam-head')
         return {
           wandCount: document.querySelectorAll('.fpr-wand').length,
-          inWeights: !!wand?.closest('.fpr-weights, .tl-pills'),
-          autoInAnyPills: [...document.querySelectorAll('.tl-pills')].some((g) => /\bAuto\b/.test(g.textContent || '')),
+          inWeights: !!wand?.closest('.fpr-weights, .tl-pills, .fpr-fam-acts, .fpr-fam-row'),
+          wordInAnyPills: [...document.querySelectorAll('.tl-pills, .fpr-weights, .fpr-fam-acts')].some((g) => /\b(Auto|Best match)\b/.test(g.textContent || '')),
           inBodyCard: !!body && /Body family/.test(body.textContent || ''),
-          onFamilyRow: !!wand?.closest('.fpr-fam-row'),
-          nextIsBrowse: !!wand?.nextElementSibling?.classList.contains('fpr-browse'),
+          onHead: !!head,
+          labelFirst: !!head && head.firstElementChild?.classList.contains('fpr-label') && /Body family/.test(head.firstElementChild.textContent || ''),
+          wandLast: !!head && head.lastElementChild === wand,
+          wandRightOfLabel: !!head && wand.getBoundingClientRect().left >= head.firstElementChild.getBoundingClientRect().right - 1,
+          text: (wand?.textContent || '').trim(),
           label: wand?.getAttribute('aria-label'),
         }
       })
-      expect(read.wandCount, 'exactly one Auto').toBe(1)
-      expect(read.inWeights, 'Auto is inside a weight group').toBe(false)
-      expect(read.autoInAnyPills, 'a pill group carries the word Auto').toBe(false)
-      expect(read.inBodyCard, 'Auto is not on the body family').toBe(true)
-      expect(read.onFamilyRow, 'Auto is not on the family line').toBe(true)
-      expect(read.nextIsBrowse, 'Browse does not follow Auto').toBe(true)
-      expect(read.label).toBe('Auto: use the top suggested body face')
+      expect(read.wandCount, 'exactly one Best match').toBe(1)
+      expect(read.inWeights, 'Best match is inside a weight group or the buttons row').toBe(false)
+      expect(read.wordInAnyPills, 'a pill group or the buttons row carries Auto or Best match').toBe(false)
+      expect(read.inBodyCard, 'Best match is not on the body family').toBe(true)
+      expect(read.onHead, 'Best match is not on the label line').toBe(true)
+      expect(read.labelFirst, 'the Body family label is not first on its line').toBe(true)
+      expect(read.wandLast, 'Best match is not last on the label line').toBe(true)
+      expect(read.wandRightOfLabel, 'Best match is not to the right of the label').toBe(true)
+      expect(read.text).toBe('Best match')
+      expect(read.label).toMatch(/^Use the best match for .+: .+$/)
     })
 
     test('the weight row holds weights only', async ({ page }) => {
@@ -280,7 +288,8 @@ test.describe('Font Pair · the two family rows line up', () => {
 
 // The score figure ("N match") was dropped: a number the person cannot act on.
 // Nothing on the page, in its text or in the labels read aloud, may carry the
-// word "match" next to a figure, or the word at all as a score.
+// word "match" next to a figure, or the word at all as a score. The Best match
+// button is the one place the word belongs, so that phrase alone is set aside.
 for (const width of [1440, 390]) {
   test(`no "match" figure renders anywhere on the page at ${width}px`, async ({ page }) => {
     watch(page, `a designer reading the suggestions at ${width}px`)
@@ -292,11 +301,15 @@ for (const width of [1440, 390]) {
       const root = document.querySelector('.fpr-page') || document.body
       // textContent also reads the closed "Why this pairs" and handoff disclosures.
       const text = root.textContent || ''
-      for (const m of text.matchAll(/.{0,30}match.{0,30}/gi)) out.push(`text: ${m[0]}`)
+      const outsideButton = (v) => v.replace(/best match/gi, '')
+      const scored = (v) => /\d\s*%?\s*(best )?match/i.test(v)
+      for (const m of text.matchAll(/.{0,30}match.{0,30}/gi)) {
+        if (/match/i.test(outsideButton(m[0])) || scored(m[0])) out.push(`text: ${m[0]}`)
+      }
       for (const el of root.querySelectorAll('*')) {
         for (const attr of ['aria-label', 'title', 'aria-valuetext', 'alt']) {
           const v = el.getAttribute(attr)
-          if (v && /match/i.test(v)) out.push(`${attr}: ${v}`)
+          if (v && (/match/i.test(outsideButton(v)) || scored(v))) out.push(`${attr}: ${v}`)
         }
       }
       return out

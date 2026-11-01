@@ -80,8 +80,8 @@ const TOOLS = [
   },
   {
     route: '/create/type-scale',
-    // Save to a project is in the docked bar at every width, never the toolbar;
-    // under 768 Copy CSS is there too.
+    // From 768 Save to a project sits right against Copy CSS at the end of the
+    // toolbar; under 768 both are in the docked bar.
     actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,

@@ -94,10 +94,15 @@ test.describe('Type Scale Generator', () => {
     // the four controls that moved behind the "Fine tuning" disclosure, so
     // reaching it is now a step the test has to take, exactly as a user does.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
+    // The ladder prints each size to one decimal, so the top step (61.04) reads
+    // 61px either way. The second step is the one that shows the difference:
+    // 16 × 1.25^5 = 48.83, which whole rounding makes 49 and "none" leaves at 48.8.
+    const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
     await expect(largest).toContainText('61px')
+    await expect(second).toContainText('49px')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(largest).toContainText('61.04px')
+    await expect(second).toContainText('48.8px')
 
     // At 1440 the work column is wide enough to show the ladder and the page
     // side by side, so there is no audience switch to press: the page preview is
@@ -277,7 +282,12 @@ test.describe('Font Pair', () => {
     await wand.click()
     await expect(page.locator('.fpr-pair span').last()).toHaveText(top)
     // …and the panel agrees: exactly one card reads "In use".
-    await expect(page.getByRole('button', { name: 'In use' })).toHaveCount(1)
+    // The cards are counted by their own apply buttons: the Best match button
+    // also says the face is in use once it has nothing left to do, and it is
+    // not a card.
+    await expect(page.locator('.fpr-card-apply', { hasText: 'In use' })).toHaveCount(1)
+    await expect(wand).toBeDisabled()
+    await expect(wand).toContainText('Best match')
   })
 
   test('a designer gets reasoned body suggestions and a live specimen', async ({ page }) => {
