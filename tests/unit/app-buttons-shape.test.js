@@ -54,7 +54,9 @@ const KEEP = {
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
     'grd-stop-select', 'grd-tintmenu-item',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
-    'plb-match-btn'],
+    'plb-match-btn',
+    // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
+    'fpr-card-apply'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',

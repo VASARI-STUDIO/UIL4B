@@ -64,7 +64,24 @@ for (const width of WIDTHS) {
       }
     })
 
-    if (width < 1024) {
+    if (width === 390) {
+      test('on a phone the specimen comes before the family rows, in the DOM and on screen', async ({ page }) => {
+        const order = await page.evaluate(() => {
+          const panel = document.querySelector('.fpr-config')
+          const specimen = document.querySelector('.fpr-specimen')
+          return {
+            domFirst: !!(specimen.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING),
+            specimenTop: specimen.getBoundingClientRect().top,
+            famTop: document.querySelector('.fpr-fam').getBoundingClientRect().top,
+          }
+        })
+        expect(order.domFirst, 'the specimen is not first in the DOM').toBe(true)
+        expect(order.specimenTop, 'the specimen starts below the first screen').toBeLessThan(844)
+        expect(order.specimenTop).toBeLessThan(order.famTop)
+      })
+    }
+
+    if (width === 768) {
       test('the family rows come before the specimen, in the DOM and on screen', async ({ page }) => {
         const order = await page.evaluate(() => {
           const panel = document.querySelector('.fpr-config')
