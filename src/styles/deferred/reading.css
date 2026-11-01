@@ -106,7 +106,7 @@
    this line, 8px after — the same figure the grid produced. */
 .smap-link-note{flex:0 0 100%;margin-top:6px;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
 .smap-soon--inline{vertical-align:middle;margin:0 1px}
-.smap-stage{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
+.smap-stage{display:inline-flex;align-items:center;font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
 
 /* Reduced motion: content must never be stuck hidden. Belt-and-suspenders on top
    of the global kill-switch, which only zeroes durations. */
@@ -140,7 +140,7 @@ html[data-reduced-motion="true"] [data-reveal]{animation:none!important;opacity:
 .nf .nf-card:hover::after,.nf .nf-card:focus-visible::after{color:var(--accent-mid);transform:translate(3px,-50%)}
 .nf .nf-card-label{font-size:16px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
 .nf .nf-card:hover .nf-card-label{color:var(--accent-mid)}
-.nf .nf-card-desc{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;line-height:1.5;color:var(--t2);text-align:right}
+.nf .nf-card-desc{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;line-height:1.5;color:var(--t2);text-align:right}
 .nf .nf-more{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:14px;color:var(--t2)}
 .nf .nf-more a{display:inline-flex;align-items:center;min-height:24px;color:var(--accent-mid);font-weight:500;text-decoration:none}
 .nf .nf-more a:hover{text-decoration:underline;text-underline-offset:3px}

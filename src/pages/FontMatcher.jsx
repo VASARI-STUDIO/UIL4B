@@ -82,9 +82,10 @@ function useMedia(query) {
 
 // One family of the pair: its name in its own face, the category and weight
 // count on a second line so nothing is cut, then the actions on the name's row.
-// `auto` is the body family's Auto button, placed before Browse. Weights are a
-// pill row (a menu pill on a phone) and never hold anything but weights.
-function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, phone, auto }) {
+// `headAction` is the body family's Best match button, drawn on the label line
+// so it never reads as one of the weights. Weights are a pill row (a menu pill
+// on a phone) and never hold anything but weights.
+function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, phone, headAction }) {
   const uid = useId()
   const [browsing, setBrowsing] = useState(false)
   const slot = label.split(' ')[0]
@@ -92,7 +93,10 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
   const weights = font.variants.map((w) => ({ value: w, label: String(w) }))
   return (
     <div className="fpr-fam" role="group" aria-labelledby={`${uid}-label`}>
-      <span className="fpr-label" id={`${uid}-label`}>{label}</span>
+      <div className="fpr-fam-head">
+        <span className="fpr-label" id={`${uid}-label`}>{label}</span>
+        {headAction}
+      </div>
       <div className="fpr-fam-row">
         <div
           className="fpr-fam-id"
@@ -109,7 +113,6 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           {phone && (
             <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
           )}
-          {auto}
           <ToolButton className="fpr-browse" aria-haspopup="dialog" aria-label={`Browse ${label.toLowerCase()}`} onClick={() => setBrowsing(true)}>
             Browse
           </ToolButton>
@@ -389,6 +392,10 @@ export default function FontMatcher({ onCopy, toast }) {
     )
   }
 
+  // A body already set to the top suggestion leaves Best match nothing to do.
+  const bestMatch = suggestions[0] || null
+  const bodyIsBestMatch = !!bestMatch && bestMatch.font.family === bodyFont.family
+
   const sample = previewText.trim()
   const headline = sample || 'Typography that carries the whole page'
   const bodyText = sample ? `${sample} ${sample}` : BODY_COPY
@@ -477,17 +484,24 @@ export default function FontMatcher({ onCopy, toast }) {
                 setBodyW(w)
                 setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
               }}
-              auto={(
+              headAction={(
                 <ToolButton
+                  variant="quiet"
+                  icon={bodyIsBestMatch ? undefined : 'magic-wand'}
+                  iconSize={14}
                   className="fpr-wand"
-                  onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
-                  disabled={!suggestions.length}
-                  title={suggestions.length
-                    ? `Use ${suggestions[0].font.family}, the top suggestion for ${headingFont.family}`
+                  onClick={() => { if (bestMatch) applyPair(bestMatch.font) }}
+                  disabled={!bestMatch || bodyIsBestMatch}
+                  title={bestMatch
+                    ? `Use ${bestMatch.font.family}, the top suggestion for ${headingFont.family}`
                     : 'No suggestions yet'}
-                  aria-label="Auto: use the top suggested body face"
+                  aria-label={bestMatch
+                    ? (bodyIsBestMatch
+                      ? `Best match for ${headingFont.family} is in use: ${bestMatch.font.family}`
+                      : `Use the best match for ${headingFont.family}: ${bestMatch.font.family}`)
+                    : undefined}
                 >
-                  Auto
+                  {bodyIsBestMatch ? <><span aria-hidden="true">✓ </span>Best match</> : 'Best match'}
                 </ToolButton>
               )}
             />
@@ -499,13 +513,13 @@ export default function FontMatcher({ onCopy, toast }) {
               className="fpr-input"
               type="text"
               value={previewText}
-              placeholder="Your own words…"
+              placeholder="Type your own words"
               maxLength={90}
               spellCheck="false"
               onChange={e => setPreviewText(e.target.value)}
             />
             <p className="fpr-hint">
-              Brand words behave differently from a pangram — try the real headline
+              Brand words behave differently from a pangram. Try your real headline
               before you commit to a face.
             </p>
           </div>
@@ -549,14 +563,6 @@ export default function FontMatcher({ onCopy, toast }) {
                   <div className="fpr-product-actions">
                     <span className="fpr-product-primary">Get started</span>
                     <span className="fpr-product-secondary">See how it works</span>
-                  </div>
-                  <div className="fpr-product-stats">
-                    {[['—', 'Teams'], ['—', 'Rating'], ['—', 'Uptime']].map(([n, l]) => (
-                      <div key={l}>
-                        <strong className="fpr-h2">{n}</strong>
-                        <span className="fpr-body">{l}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}

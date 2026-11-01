@@ -183,7 +183,16 @@ test.describe('the full-screen menu carries what the pill drops', () => {
       { label: 'On mobile', href: '/mobile' },
       { label: 'Open the toolkit ↗', href: '/projects' },
     ])
-    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    await expect(menu.locator('.spnav-mi-note')).toHaveText('Every core tool is free, forever')
+    // The note takes the house voice: UI sans, 13px, no capitals, no tracking.
+    const note = await menu.locator('.spnav-mi-note').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { mono: /mono|consolas|courier/i.test(cs.fontFamily), size: parseFloat(cs.fontSize), tracking: cs.letterSpacing, transform: cs.textTransform }
+    })
+    expect(note.mono, 'the menu note is back in mono').toBe(false)
+    expect(note.size).toBeGreaterThanOrEqual(13)
+    expect(note.tracking).toBe('normal')
+    expect(note.transform).toBe('none')
     // Nothing else that can take focus: the Close pill plus the four items.
     const focusables = await menu.locator('a[href], button').count()
     expect(focusables, 'the menu carries more than the design\'s items again').toBe(5)

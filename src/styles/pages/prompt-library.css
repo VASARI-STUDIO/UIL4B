@@ -100,7 +100,7 @@
 .plib-page .pl-modal-header .pl-tag{
   padding:4px 8px;border-radius:var(--radius-xs);
   background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t1);
-  font-size:11px;font-weight:560;letter-spacing:0;text-transform:none;
+  font-size:var(--fs-caption);font-weight:560;letter-spacing:0;text-transform:none;
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .plib-page .pl-card-copy-hint{color:var(--t1)}
@@ -473,7 +473,7 @@
 .plib-page .pl-filters-btn{display:none;min-height:48px;padding:0 16px;gap:8px;white-space:nowrap;font-size:14px;font-weight:600}
 .plib-page .pl-filters-n{
   min-width:20px;padding:1px 6px;border-radius:var(--radius-pill);
-  background:var(--t0);color:var(--card);font-size:12px;line-height:1.4;font-variant-numeric:tabular-nums;text-align:center;
+  background:var(--t0);color:var(--card);font-size:var(--fs-caption);line-height:1.4;font-variant-numeric:tabular-nums;text-align:center;
 }
 
 .plib-page .pl-filters-done{display:none;min-height:44px;width:100%;border-radius:var(--btn-radius)}

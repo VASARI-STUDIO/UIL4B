@@ -223,7 +223,7 @@ test.describe('the 404', () => {
 
     const tools = createTools()
     const groupLabel = Object.fromEntries(CREATE_GROUPS.map((g) => [g.id, g.label]))
-    const expected = ['palette', 'type-scale', 'icons'].map((id) => {
+    const expected = ['palette', 'font-pair', 'type-scale', 'icons'].map((id) => {
       const t = tools.find((x) => x.id === id)
       return { label: t.label, desc: groupLabel[t.group], href: t.route }
     })
@@ -240,6 +240,8 @@ test.describe('the 404', () => {
       await expect(cards.nth(i).locator('.nf-card-desc')).toHaveText(expected[i].desc)
       await expect(cards.nth(i)).toHaveAttribute('href', expected[i].href)
     }
+    // Font Pair is one of the suggestions, and it opens the real tool.
+    await expect(page.locator('.nf-card[href="/create/font-pair"] .nf-card-label')).toHaveText('Font Pair')
     const text = (await page.locator('.nf-grid').textContent()).toLowerCase()
     expect(text).not.toContain('palette generator')
     expect(text).not.toContain('community palettes')

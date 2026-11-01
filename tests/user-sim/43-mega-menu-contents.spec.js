@@ -323,7 +323,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   // Mono stays only for a code value, and the menus show none. The export
   // preview in the Create pane is a picture of a printed page (aria-hidden, its
   // own hex chips), so it is the one place left out.
-  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 11px', async ({ page }) => {
+  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 13px', async ({ page }) => {
     watch(page, 'a visitor reading all three menus')
     await go(page, MENU_ROUTE)
     for (const name of TRIGGERS) {
@@ -335,7 +335,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
         return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
       }))
       for (const b of badges) {
-        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.size, `${b.text} badge is not 13px`).toBe('13px')
         expect(b.transform).toBe('none')
         expect(['normal', '0px']).toContain(b.spacing)
       }
@@ -931,7 +931,7 @@ test.describe('layout: the phone sheet is three segments over a 2-column grid', 
         return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
       }))
       for (const b of badges) {
-        expect(b.size, `${b.text} badge is not 11px`).toBe('11px')
+        expect(b.size, `${b.text} badge is not 13px`).toBe('13px')
         expect(b.transform).toBe('none')
         expect(['normal', '0px']).toContain(b.spacing)
       }
