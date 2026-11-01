@@ -34,7 +34,7 @@
 // cool-down and Try again) take the site's lists away first with
 // withholdSnapshots, which is a pack with no usable snapshot.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, ready, signIn, watch } from './helpers.js'
+import { go, ready, signIn, watch } from './helpers.js'
 import { iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify, withholdSnapshots } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
@@ -104,10 +104,38 @@ const SWITCHES = ['tabler', 'mdi', 'lucide', 'tabler', 'all']
 async function switchPacks(page) {
   const select = page.locator('.lbry-select')
   for (const pack of SWITCHES) {
-    await chooseMenuOption(page, select, pack)
+    await pickPack(page, select, pack)
     await page.waitForTimeout(1000)
     await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 15000 }).toBeGreaterThan(0)
   }
+}
+
+/** The cells the grid reveals on its own: four pages of 120, then it shows a "Show more icons" button. */
+const REVEAL_DEPTH = 480
+
+/**
+ * Bring the default grid to the same depth on every load. A tranche is a fixed
+ * slice of its pack, but WHICH slices a load asks for follows how many cells
+ * the grid has revealed (it looks one page ahead of them). That depth is not
+ * the same on every load: when a pack's list lands while the first page is
+ * still being revealed, the reveal stops at 160 or 200 cells and waits for a
+ * scroll, and the packs land in a different order on the network load than on
+ * a cached one. So each load scrolls the sentinel in until the grid is at the
+ * automatic limit; the tranches asked for then depend on the catalogue and not
+ * on the timing of the load. The pointer is parked in the page's corner first:
+ * scrolling slides cells under a resting pointer, and each one it passes over
+ * would be warmed with a single-icon request (see pickPack).
+ */
+async function revealToDepth(page) {
+  await page.mouse.move(0, 0)
+  await expect.poll(async () => {
+    const count = await page.locator('.ig .ic').count()
+    if (count < REVEAL_DEPTH) {
+      await page.locator('.ig-sentinel').scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {})
+    }
+    return count
+  }, { timeout: 20000, intervals: [250] }).toBeGreaterThanOrEqual(REVEAL_DEPTH)
+  await page.evaluate(() => window.scrollTo(0, 0))
 }
 
 test('reloading /create/icons twice and switching packs sends the catalogue once', async ({ browser }) => {
@@ -115,13 +143,13 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
   test.setTimeout(120_000)
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
   const page = await ctx.newPage()
-  watch(page, 'designer reloading the icon library')
-  // Pro, so "All packs" is the full twenty-five-pack listing that rate-limited the page.
+  watch(page, 'designer reloading the icon library')  // Pro, so "All packs" is the full twenty-five-pack listing that rate-limited the page.
   await signIn(page, { plan: 'pro' })
   const urls = iconifyUrlLog(page)
 
   await go(page, '/create/icons')
   await paint(page)
+  await revealToDepth(page)
   await settle(page)
   await switchPacks(page)
   await settle(page)
@@ -143,6 +171,7 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
     const seen = urls.length
     await reload(page, '/create/icons')
     await paint(page)
+    await revealToDepth(page)
     await settle(page)
     await switchPacks(page)
     await settle(page)
