@@ -577,7 +577,7 @@ test.describe('Font Gallery', () => {
 
     const empty = dialog.locator('.fdx-empty')
     await expect(empty).toBeVisible()
-    await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
+    await expect(dialog.locator('.fdx-empty-head')).toHaveText('We have not added any documented uses of Lora yet')
     await expect(empty).toContainText('not a statement about the typeface')
     // The pop-up has sections, not tabs, and the copy says so.
     await expect(empty).toContainText('Plenty of families with nothing in this section are in wide use')
@@ -1323,7 +1323,7 @@ test.describe('the font picker is browsable', () => {
     const tabs = await dialog.locator('[role="tab"]').allTextContents()
     expect(tabs.map((s) => s.trim())).toEqual(['Specimen', 'About', 'Examples', 'In use'])
     await dialog.getByRole('tab', { name: 'In use' }).click()
-    await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
+    await expect(dialog.locator('.fdx-empty-head')).toHaveText('We have not added any documented uses of Lora yet')
     expect(await dialog.locator('.fdx-panel img').count(),
       'the picker dialog drew a placeholder image').toBe(0)
   })
