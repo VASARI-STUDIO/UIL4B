@@ -231,7 +231,7 @@
      Dropping them leaves the card's own 16px padding above and below. */
   .srf .lidx-card:not(:has(.lidx-time)) { grid-template-areas: "title go" "dek dek"; }
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 767px) {
   .srf .lidx-topics a { min-height: 44px; }
   .srf .lidx-reset { min-height: 44px; }
 }

@@ -74,42 +74,6 @@
   text-wrap: balance;
 }
 
-/* THE HIGHLIGHTER IS NOW AN ACCENT RUN, and this is the one visual decision on
- * the page that is worth arguing for rather than just recording.
- *
- * `.home-mark` paints `--hi` (#E9FF64) as a BACKGROUND behind the phrase, with
- * `padding-block:.06em` and `box-decoration-break:clone`. Two things follow
- * from that and both are now wrong here:
- *
- *   1. It needs loose leading. A painted box on an inline run collides with
- *      the line above it at anything under ~1.15 line-height, which is why the
- *      rule it replaces set `.prn-h1{line-height:1.16}` and added padding to
- *      compensate. Spectrum's display setting is .96–1.02. The highlighter and
- *      the new type scale cannot both be had.
- *   2. Spectrum has no highlighter. The front door marks its headline run with
- *      `.sp-w--mark{color:var(--accent-mid)}` — a colour, not a box. Two
- *      different mark treatments on adjacent pages is exactly the disjointedness
- *      the 2026-09-16 audit measured and this redesign exists to end.
- *
- * The class name STAYS. 57-help-and-principles.spec.js asserts exactly one
- * `.home-mark` inside `.prn-hero`, and that assertion is about the page having
- * one emphasised phrase, which is still true. Only its appearance moves, and
- * only on this page — global.css is untouched, so the homepage device and
- * scripts/og-cards.mjs are unaffected.
- *
- * FLAGGED FOR THE FOUNDER: the acid highlighter is his and this is an agent
- * changing it. Reverting is one rule.
- * Contrast: --accent-mid on --bg-0 is 5.18:1 light / 9.17:1 dark, measured at
- * a size whose floor is 3:1. */
-.prn .home-mark {
-  background: none;
-  color: var(--accent-mid);
-  padding: 0;
-  margin: 0;
-  border-radius: 0;
-  line-height: inherit;
-}
-
 .prn-lede {
   margin: 0;
   max-width: 54ch;
@@ -129,11 +93,6 @@
   display: flex;
   flex-direction: column;
   gap: clamp(48px, 6vw, 88px);
-  /* The list is `<ol>`, so the numeral beside each rule is a counter rather
-     than a typed digit: a principle deleted from src/data/designPrinciples.js
-     cannot leave a gap in the sequence, and a principle added cannot arrive
-     unnumbered. */
-  counter-reset: prn;
 }
 .prn-item {
   display: grid;
@@ -141,7 +100,6 @@
   gap: var(--s-5) clamp(28px, 4vw, 64px);
   align-items: center;
   min-width: 0;
-  counter-increment: prn;
 }
 .prn-item[data-side="left"] .prn-proof { grid-column: 1; grid-row: 1; }
 .prn-item[data-side="left"] .prn-say { grid-column: 2; grid-row: 1; }
@@ -159,13 +117,7 @@
 
 .prn-say { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); min-width: 0; }
 
-/* The numeral. `::before` on the heading rather than an extra element, so the
- * count of elements inside `.prn-item` is unchanged — 57-help-and-principles
- * asserts exactly one `.prn-rule`, `.prn-body`, `.prn-go`, `figure` and
- * `figcaption` per row, and a sixth child is a change nobody asked for.
- * `aria-hidden` is not available on a pseudo-element, but a CSS-generated
- * counter is decorative content that assistive tech is free to ignore and the
- * heading's own text is complete without it. */
+/* No numeral: the five rules are separate, not steps in a sequence. */
 .prn-rule {
   margin: 0;
   max-width: 20ch;
@@ -177,20 +129,6 @@
   color: var(--cpg-ink);
   text-wrap: balance;
 }
-.prn-rule::before {
-  content: counter(prn, decimal-leading-zero);
-  display: block;
-  margin-bottom: var(--s-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .16em;
-  /* --cpg-faint, not --cpg-quiet. This sits on the page ground where --t3 is
-     4.59:1 — passing with nothing in hand — and the numeral is 10.5px, which
-     has no large-text relief. --t2 is 5.62:1 on the same ground. */
-  color: var(--cpg-faint);
-}
-
 .prn-body { margin: 0; max-width: 56ch; font-size: 15px; line-height: 1.7; color: var(--cpg-dim); }
 
 /* min-height AND min-width, and neither is optional. WCAG 2.2 AA 2.5.8:
@@ -282,6 +220,11 @@
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
+  /* A sample, not a control: as wide as its words at every width, left-aligned
+     when the row stacks, and with no pointer cursor. */
+  inline-size: fit-content;
+  justify-self: start;
+  cursor: default;
 }
 .prn-cx-sample[data-boundary="true"] { font-weight: 500; }
 .prn-cx-read { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -384,6 +327,10 @@
   .prn-item[data-side="right"] .prn-say { grid-column: 1; grid-row: 2; }
   .prn-item[data-lead="true"] .prn-rule { font-size: clamp(26px, 4vw, 40px); }
   .prn-ex-cols { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+}
+@media (max-width: 767px) {
+  /* A standalone link on its own line, not an inline one: 44px target. */
+  .prn-go { min-height: 44px; min-width: 44px; }
 }
 @media (max-width: 560px) {
   .prn-h1, .prn-lede, .prn-rule, .prn-body { max-width: none; }

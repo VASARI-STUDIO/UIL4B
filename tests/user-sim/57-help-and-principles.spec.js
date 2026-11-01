@@ -98,10 +98,8 @@ test.describe('Help & Getting Started', () => {
     await expect(h1).toBeVisible()
     await expect(h1).toContainText('Open any tool')
 
-    // The marker pen, and only one of it — the budget in design-language-v2.md
-    // is at most one --hi element per viewport, and the hero headline mark is
-    // one of the four sanctioned appearances.
-    await expect(page.locator('.hlp-hero .home-mark')).toHaveCount(1)
+    // A plain headline: no coloured word in it.
+    await expect(page.locator('.hlp-hero .home-mark, .hlp-hero h1 mark')).toHaveCount(0)
 
     // THE WIRING. The count comes from CREATE_GROUPS above, not from the module
     // the page imports, so a page that stopped deriving it fails here. The
@@ -199,7 +197,19 @@ test.describe('Design Principles', () => {
     const h1 = page.getByRole('heading', { level: 1 })
     await expect(h1).toBeVisible()
     await expect(h1).toContainText('enforced')
-    await expect(page.locator('.prn-hero .home-mark')).toHaveCount(1)
+    await expect(page.locator('.prn-hero .home-mark, .prn-hero h1 mark')).toHaveCount(0)
+    // The five rules are not a sequence: no generated numerals on the headings.
+    const numeral = await page.locator('.prn-rule').first().evaluate((el) => getComputedStyle(el, '::before').content)
+    expect(numeral, 'a rule heading carries a generated numeral').toMatch(/^(none|normal)$/)
+    // The samples sit left in their row and carry no pointer cursor.
+    const samples = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => {
+      const row = el.closest('.prn-cx-row').getBoundingClientRect()
+      return { cursor: getComputedStyle(el).cursor, left: Math.round(el.getBoundingClientRect().left - row.left) }
+    }))
+    for (const s of samples) {
+      expect(s.cursor, 'a sample shows a pointer cursor').not.toBe('pointer')
+      expect(s.left, 'a sample is not left-aligned in its row').toBeLessThanOrEqual(1)
+    }
 
     await revealAll(page)
 
