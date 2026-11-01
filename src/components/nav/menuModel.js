@@ -5,7 +5,7 @@
 // are not typed: each is counted here from the data the menus list, so the
 // sentence cannot be wrong on the day a tool ships.
 import { createTools, DISCOVER_GROUPS } from '../../data/toolTree'
-import { LEARN_ARTICLES, readingMinutes } from '../../data/learnIndex'
+import { LEARN_ARTICLES } from '../../data/learnIndex'
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
   'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
@@ -71,6 +71,7 @@ export function menuFootNote(section) {
 
 /** "View all create tools" — the file builds it the same way (line 2082). */
 export function menuViewAll(section) {
+  if (section.id === 'learn') return 'See all guides'
   return `View all ${section.label.toLowerCase()} tools`
 }
 
@@ -97,13 +98,4 @@ export function menuPromo(section) {
     cta: 'Read the guides',
     href: '/learn',
   }
-}
-
-/** The Learn pane: every published guide, its route and its reading time. */
-export function menuGuides() {
-  return LEARN_ARTICLES.map((a) => ({
-    label: a.title,
-    to: `/learn/${a.slug}`,
-    mins: `${readingMinutes(a.words)} MIN`,
-  }))
 }

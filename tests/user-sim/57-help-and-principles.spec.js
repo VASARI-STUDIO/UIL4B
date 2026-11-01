@@ -63,26 +63,6 @@ async function revealAll(page) {
   ).toBe(0)
 }
 
-/** Every computed opacity on the reveal nodes, right now. */
-const revealOpacities = (page) => page.evaluate(() => (
-  [...document.querySelectorAll('[data-reveal]')]
-    .map((el) => Number(getComputedStyle(el).opacity))
-))
-
-/**
- * Wait for the reveal TRANSITION to finish, not merely for `.is-in` to land.
- *
- * The class arrives the moment the observer fires; the opacity takes --dur-5
- * (600ms) to get there. Reading in between returns a real, honest 0.92 — which
- * is why this settles on the value rather than on a stopwatch or on the class.
- */
-async function settledOpacity(page) {
-  await expect.poll(
-    async () => Math.min(...await revealOpacities(page)),
-    { message: 'a [data-reveal] node never finished its transition to opacity 1' },
-  ).toBeGreaterThan(0.999)
-  return revealOpacities(page)
-}
 
 test.describe('Help & Getting Started', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a first-time visitor looking for where to start') })
@@ -98,10 +78,8 @@ test.describe('Help & Getting Started', () => {
     await expect(h1).toBeVisible()
     await expect(h1).toContainText('Open any tool')
 
-    // The marker pen, and only one of it — the budget in design-language-v2.md
-    // is at most one --hi element per viewport, and the hero headline mark is
-    // one of the four sanctioned appearances.
-    await expect(page.locator('.hlp-hero .home-mark')).toHaveCount(1)
+    // A plain headline: no coloured word in it.
+    await expect(page.locator('.hlp-hero .home-mark, .hlp-hero h1 mark')).toHaveCount(0)
 
     // THE WIRING. The count comes from CREATE_GROUPS above, not from the module
     // the page imports, so a page that stopped deriving it fails here. The
@@ -116,13 +94,13 @@ test.describe('Help & Getting Started', () => {
     expect(body, 'the false analytics claim is back').not.toMatch(/no third-party analytics/i)
   })
 
-  test('the opening visual paints the ramp the Colour Studio would generate', async ({ page }) => {
+  test('the Colour answer paints the ramp the Colour Studio would generate', async ({ page }) => {
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
-    await revealAll(page)
 
+    // The first job is open on load, so its strip is on screen with no click.
     const ramp = generateTintScale(tintConfigFor(DEFAULT_DESIGN))
-    const bars = page.locator('.hlp-run-bar')
+    const bars = page.locator('.hlr-stop-sw')
     await expect(bars).toHaveCount(T_LABELS.length)
 
     // Read the painted colour of every stop and compare it to what the
@@ -132,41 +110,37 @@ test.describe('Help & Getting Started', () => {
     expect(painted).toEqual(ramp.map(toRgb))
 
     // The seed shown is the one a new project really starts from.
-    await expect(page.locator('.hlp-run-hex'))
-      .toHaveText(DEFAULT_DESIGN.palette.base.toUpperCase())
+    await expect(page.locator('.hlr-seed-hex'))
+      .toHaveValue(DEFAULT_DESIGN.palette.base.toUpperCase())
 
     // And the files named are the built, ungated ones — the exportFormats.js
     // contract applied to this surface. An unbuilt format appearing here is the
     // defect that let /plans sell a $48 file the product cannot make.
-    const files = await page.locator('.hlp-run-files li').allInnerTexts()
+    const files = await page.locator('.hlr-leaves li').allInnerTexts()
     expect(files.map((s) => s.trim())).toEqual(FREE_FORMATS.map((f) => f.name))
     for (const dead of UNBUILT_FORMATS) {
       expect(files, `${dead.name} is advertised but is not built`).not.toContain(dead.name)
     }
   })
 
-  test('the revealed content is actually painted, not merely present', async ({ page }) => {
+  test('the open answer is painted, not merely present', async ({ page }) => {
+    // The router has no scroll reveal, so the open answer has to be at full
+    // opacity the moment the page lands.
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
-
-    // Before: at least one reveal node is genuinely transparent. This is the
-    // control that stops the assertion below passing on a page where the
-    // reveal was never wired at all.
-    const before = await revealOpacities(page)
-    expect(before.length, '/help renders no [data-reveal] nodes at all').toBeGreaterThan(2)
-
-    await revealAll(page)
-    const after = await settledOpacity(page)
-    expect(after.length, 'the reveal nodes vanished between the two reads').toBe(before.length)
-    for (const o of after) expect(o, 'a revealed section is still transparent').toBeGreaterThan(0.999)
+    const open = page.locator('.hlr-ans:not([hidden])')
+    await expect(open).toHaveCount(1)
+    await expect(open).toBeVisible()
+    expect(await open.evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.999)
   })
 
   test('every destination the page offers is a page a visitor can open', async ({ page }) => {
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
-    await revealAll(page)
 
-    const hrefs = await page.locator('.hlp-starts a, .hlp-answers a, .hlp-close a')
+    // Every answer is in the DOM (the closed ones are hidden), so the whole
+    // set of promised destinations is readable without opening each job.
+    const hrefs = await page.locator('.hlr-ans a')
       .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('href')))])
     expect(hrefs.length, 'the page offers no destinations').toBeGreaterThanOrEqual(6)
 
@@ -199,7 +173,19 @@ test.describe('Design Principles', () => {
     const h1 = page.getByRole('heading', { level: 1 })
     await expect(h1).toBeVisible()
     await expect(h1).toContainText('enforced')
-    await expect(page.locator('.prn-hero .home-mark')).toHaveCount(1)
+    await expect(page.locator('.prn-hero .home-mark, .prn-hero h1 mark')).toHaveCount(0)
+    // The five rules are not a sequence: no generated numerals on the headings.
+    const numeral = await page.locator('.prn-rule').first().evaluate((el) => getComputedStyle(el, '::before').content)
+    expect(numeral, 'a rule heading carries a generated numeral').toMatch(/^(none|normal)$/)
+    // The samples sit left in their row and carry no pointer cursor.
+    const samples = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => {
+      const row = el.closest('.prn-cx-row').getBoundingClientRect()
+      return { cursor: getComputedStyle(el).cursor, left: Math.round(el.getBoundingClientRect().left - row.left) }
+    }))
+    for (const s of samples) {
+      expect(s.cursor, 'a sample shows a pointer cursor').not.toBe('pointer')
+      expect(s.left, 'a sample is not left-aligned in its row').toBeLessThanOrEqual(1)
+    }
 
     await revealAll(page)
 
@@ -347,33 +333,26 @@ for (const theme of ['light', 'dark']) {
         ))
         expect(overflow, `${route} at ${size.w}px pushes the page sideways`).toBeLessThanOrEqual(1)
 
-        // The ramp is eleven columns of type. Below the desktop band the stops wrap
-        // onto more rows: the BOX must not overflow, and every stop's hex label
-        // must sit whole inside the ramp's box, not be cut at its edge.
+        // The Colour answer is open on load. Its eleven stops must fit the
+        // answer's own box at this width: the strip must not scroll sideways
+        // and every stop must sit inside it.
         if (route === '/learn/help') {
-          const labels = await page.locator('.hlp-run-stop-hex').evaluateAll((els) => {
-            const ramp = els[0].closest('.hlp-run-ramp').getBoundingClientRect()
+          const strip = await page.locator('.hlr-strip').evaluate((el) => {
+            const box = el.getBoundingClientRect()
             return {
-              scrolls: els[0].closest('.hlp-run-ramp').scrollWidth > els[0].closest('.hlp-run-ramp').clientWidth + 1,
-              cut: els.filter((el) => {
-                if (getComputedStyle(el).display === 'none') return false
-                const r = el.getBoundingClientRect()
-                // The text's own width, not its box's: a box can be wider than its glyphs.
-                const range = document.createRange()
-                range.selectNodeContents(el)
-                const t = range.getBoundingClientRect()
-                return t.right > ramp.right + 0.5 || t.left < ramp.left - 0.5 || el.scrollWidth > el.clientWidth + 1 || r.width === 0
-              }).map((el) => el.textContent),
+              scrolls: el.scrollWidth > el.clientWidth + 1,
+              outside: [...el.querySelectorAll('.hlr-stop')].filter((s) => {
+                const r = s.getBoundingClientRect()
+                return r.right > box.right + 0.5 || r.left < box.left - 0.5 || r.width === 0
+              }).length,
+              parent: el.parentElement.getBoundingClientRect().width,
+              width: box.width,
             }
           })
-          expect(labels.cut, `${route} at ${size.w}px cuts hex labels at the ramp's edge`).toEqual([])
-          expect(labels.scrolls, `${route} at ${size.w}px scrolls its ramp sideways`).toBe(false)
-          const wide = await page.locator('.hlp-run').evaluate((el) => ({
-            box: el.getBoundingClientRect().width,
-            parent: el.parentElement.getBoundingClientRect().width,
-          }))
-          expect(wide.box, 'the run strip is wider than the column it sits in')
-            .toBeLessThanOrEqual(Math.ceil(wide.parent) + 1)
+          expect(strip.outside, `${route} at ${size.w}px puts a stop outside the strip`).toBe(0)
+          expect(strip.scrolls, `${route} at ${size.w}px scrolls its strip sideways`).toBe(false)
+          expect(strip.width, 'the strip is wider than the answer it sits in')
+            .toBeLessThanOrEqual(Math.ceil(strip.parent) + 1)
         }
       }
       await ctx.close()
@@ -404,8 +383,8 @@ test.describe('Soon counts', () => {
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
     await expect(page.locator('.hlp-hint')).toHaveText(`${LIVE} tools open now`)
-    await expect(page.locator('.hlp-answer-q', { hasText: 'What is not built yet?' })).toHaveCount(0)
-    await expect(page.locator('.hlp-answers')).not.toContainText(/Soon badge/i)
+    await expect(page.locator('.hlr-job', { hasText: 'built yet' })).toHaveCount(0)
+    await expect(page.locator('.hlr')).not.toContainText(/Soon badge/i)
 
     await go(page, '/learn/principles')
     await expectRendered(page, '/learn/principles')
@@ -419,7 +398,7 @@ test.describe('Soon counts', () => {
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
     await expect(page.locator('.hlp-hint')).toHaveText(`${LIVE} tools open now · ${SOON} still being built`)
-    await expect(page.locator('.hlp-answer-q', { hasText: 'What is not built yet?' })).toHaveCount(1)
+    await expect(page.locator('.hlr-job', { hasText: 'built yet' })).toHaveCount(1)
 
     await go(page, '/learn/principles')
     await expectRendered(page, '/learn/principles')

@@ -326,7 +326,7 @@ test('global.css defines the classes both pages render', () => {
     (CSS.match(/\{/g) || []).length, (CSS.match(/\}/g) || []).length,
     'global.css braces are unbalanced',
   )
-  for (const cls of ['.hlp-run', '.hlp-starts', '.hlp-answers', '.prn-list', '.prn-item', '.prn-cx-rows', '.prn-th-grid', '.prn-ty-rows', '.prn-ex-cols', '.prn-sn-figures']) {
+  for (const cls of ['.hlr-jobs', '.hlr-stage', '.hlr-strip', '.prn-list', '.prn-item', '.prn-cx-rows', '.prn-th-grid', '.prn-ty-rows', '.prn-ex-cols', '.prn-sn-figures']) {
     assert.ok(CSS.includes(`${cls}{`) || CSS.includes(`${cls},`) || CSS.includes(`${cls} `),
       `${cls} is rendered but has no rule`)
   }

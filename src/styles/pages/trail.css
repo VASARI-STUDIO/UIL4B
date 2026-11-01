@@ -1,0 +1,55 @@
+/* A row of short items with a dot between them that can never end a line, and
+ * never starts one either.
+ *
+ * Each item carries its own dot in a left gutter. The inner row is pulled left
+ * by exactly that gutter and the outer box clips it, so an item that starts a
+ * line has its dot clipped away, and an item mid-line shows the dot between
+ * itself and the item before. No dot is ever drawn after an item. Items do not
+ * break inside themselves.
+ *
+ * <p class="trail"><span class="trail-in"><span class="trail-item">…</span>…</span></p>
+ */
+.trail {
+  --trail-w: 16px;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--t2);
+}
+/* The 404's own rule makes .nf-more a flex row; the clip needs a block. */
+.nf .nf-more.trail { display: block; gap: 0; }
+.trail-in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--s-1);
+  margin-left: calc(var(--trail-w) * -1);
+}
+.trail-item {
+  position: relative;
+  padding-left: var(--trail-w);
+  white-space: nowrap;
+}
+.trail-item::before {
+  content: '·';
+  content: '·' / '';
+  position: absolute;
+  left: 0;
+  width: var(--trail-w);
+  text-align: center;
+  color: var(--t3);
+}
+.trail a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--accent-mid);
+  font-weight: 500;
+  text-decoration: none;
+}
+.trail a:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* The outer box clips at its edge, so the ring sits inside the link. */
+.trail a:focus-visible { outline-offset: -2px; }
+@media (pointer: coarse) {
+  .trail a { min-height: 44px; }
+}
