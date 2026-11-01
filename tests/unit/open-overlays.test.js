@@ -170,3 +170,12 @@ test('a removed card control never receives restored focus', () => {
   assert.equal(f.document.activeElement, f.document.body)
   stop()
 })
+
+test('the overlay selector keeps every surface that must hide the guide card', () => {
+  // Dropping an entry leaves the card on top of that surface; the browser spec
+  // opens a listbox and the Create menu to prove the card hides and returns.
+  assert.deepEqual(
+    OPEN_OVERLAY_SELECTOR.split(',').map(s => s.trim()).sort(),
+    ['.plb-sx', '.pnav-menu', '[data-pop-side]', '[role="dialog"]', '[role="listbox"]', '[role="menu"]'],
+  )
+})
