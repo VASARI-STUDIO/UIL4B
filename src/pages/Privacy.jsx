@@ -31,6 +31,7 @@
 // the nine other locales this app ships.
 import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
+import LegalContents from '../components/legal/LegalContents'
 import { KEY_PURPOSES } from '../utils/dataExport'
 import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
@@ -146,7 +147,12 @@ const SECTIONS = [
 ]
 
 export default function Privacy() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
+  // The four clauses written straight into this page have no translation, so
+  // under any non-English locale they are English text inside a page whose
+  // `lang` is something else. Marking them lets a screen reader pick the right
+  // voice; the text itself is unchanged.
+  const clauseLang = (s) => (s.render && !lang.startsWith('en') ? 'en' : undefined)
 
   return (
     <div className="sec cpg lgl">
@@ -164,27 +170,15 @@ export default function Privacy() {
       </header>
 
       <div className="cpg-split">
-        <div className="cpg-rail-col">
-          <nav className="cpg-rail lgl-toc" aria-label="On this page">
-            <ol>
-              {SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <a className="cpg-rail-row" href={`#${s.id}`}>
-                    <span className="cpg-rail-label">{s.heading || t(s.title)}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        </div>
+        <LegalContents items={SECTIONS.map((s) => ({ id: s.id, label: s.heading || t(s.title), lang: clauseLang(s) }))} />
 
         <div className="legal-card lgl-doc">
           {SECTIONS.map((s) => {
             const items = s.items ? t(s.items) : null
             const Body = s.render
             return (
-              <section className="lgl-sec" id={s.id} key={s.id}>
-                <h2 className="legal-h lgl-h">{s.heading || t(s.title)}</h2>
+              <section className="lgl-sec" id={s.id} key={s.id} lang={clauseLang(s)}>
+                <h2 className="legal-h lgl-h" tabIndex={-1}>{s.heading || t(s.title)}</h2>
                 {Body && <Body />}
                 {s.text && <p className="lgl-p">{t(s.text)}</p>}
                 {s.intro && <p className="lgl-p">{t(s.intro)}</p>}

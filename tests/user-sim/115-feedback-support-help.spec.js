@@ -6,7 +6,7 @@
 // contract; this file renders it, because a regex over source cannot see a form
 // that read the wrong parameter, or a link that shows to the wrong visitor.
 //
-//   signed out  Help Request selected, a "Get help" heading, the payment
+//   signed out  Help request selected, a "Get help" heading, the payment
 //               subject, and an email that is required: submitting without one
 //               puts an alert beside the field, moves focus to it and sends
 //               nothing.
@@ -33,7 +33,7 @@ async function countSupportPosts(page) {
   return seen
 }
 
-const helpRadio = (page) => page.getByRole('radio', { name: 'Help Request' })
+const helpRadio = (page) => page.getByRole('radio', { name: 'Help request' })
 
 test.describe('the feedback form for a failed payment', () => {
   for (const url of PAYMENT_URLS) {
@@ -65,7 +65,7 @@ test.describe('the feedback form for a failed payment', () => {
     await go(page, '/feedback?from=support&ref=payment_failed')
 
     await page.getByLabel('Message').fill('My card was declined twice.')
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send' }).click()
 
     const email = page.getByLabel('Email')
     const alert = page.getByRole('alert')
@@ -82,7 +82,7 @@ test.describe('the feedback form for a failed payment', () => {
     // A real address clears the alert and the submit goes through.
     await email.fill('shopper@example.com')
     await expect(alert).toHaveCount(0)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send' }).click()
     await expect(page.locator('.fb-done')).toContainText('A reply can reach you at shopper@example.com')
     // The send runs in the background, after the confirmation is up.
     await expect.poll(() => posts.length).toBe(1)
@@ -126,7 +126,7 @@ test.describe('the feedback form for a failed payment', () => {
 })
 
 test.describe('the other ways into the feedback form', () => {
-  test('a ref that is not a payment failure preselects Help Request without the payment copy', async ({ page }) => {
+  test('a ref that is not a payment failure preselects Help request without the payment copy', async ({ page }) => {
     watch(page, 'a visitor following a link with some other reason')
     await go(page, '/feedback?ref=billing_question')
 
@@ -136,7 +136,7 @@ test.describe('the other ways into the feedback form', () => {
     await expect(page.getByLabel('Email')).not.toHaveAttribute('required', '')
   })
 
-  test('a bare /support arrival preselects Help Request with the ordinary heading', async ({ page }) => {
+  test('a bare /support arrival preselects Help request with the ordinary heading', async ({ page }) => {
     watch(page, 'a visitor from the /support link')
     await go(page, '/feedback?from=support')
 

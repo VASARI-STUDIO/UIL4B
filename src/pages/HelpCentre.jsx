@@ -163,7 +163,7 @@ export default function HelpCentre() {
             <li className="hlp-start" key={step.id}>
               <Link className="hlp-start-link" to={step.to}>
                 <span className="hlp-start-label">{step.label}</span>
-                <span className="hlp-start-opens">opens with {step.opensWith}</span>
+                <span className="hlp-start-opens">Opens with {step.opensWith}</span>
                 <span className="hlp-start-go" aria-hidden="true"><SpectrumIcon name="arrow-right" size={15} /></span>
               </Link>
               <p className="hlp-start-body">{step.body}</p>

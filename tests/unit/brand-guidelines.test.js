@@ -321,7 +321,7 @@ test('the paywall names the document the user clicked, not the other one', () =>
   const table = /export const PRO_GATE = \{([\s\S]*?)\r?\n\}/.exec(code)?.[1] || ''
   assert.ok(table, 'PRO_GATE is no longer a table the engine exports')
   for (const f of proOnlyFormats().filter(x => !x.variantOf)) {
-    assert.match(table, new RegExp(`\\n\\s{2}${f.id}: \\{`),
+    assert.match(table, new RegExp(`\\n\\s{2}'?${f.id}'?: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)
   }
   // Distinct analytics ids, or the funnel cannot say which wall converted.

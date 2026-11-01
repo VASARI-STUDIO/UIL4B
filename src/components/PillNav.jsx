@@ -148,6 +148,14 @@ function GearIcon() {
   )
 }
 
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6L12 3Z" />
+    </svg>
+  )
+}
+
 function TagIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -850,7 +858,7 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
                       <GearIcon />
-                      <span>Account &amp; settings</span>
+                      <span>Account and settings</span>
                     </Link>
                     {/* Which plan row is right is not known until the plan is. */}
                     {planKnown && (
@@ -869,7 +877,8 @@ function AppHeader() {
                     </Link>
                     {isAdmin && (
                       <Link className="pnav-pop-item" to="/admin" onClick={closeAll}>
-                        Admin dashboard
+                        <ShieldIcon />
+                        <span>Admin dashboard</span>
                       </Link>
                     )}
                     <div className="pnav-pop-sep" />
@@ -916,7 +925,7 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
                       <TagIcon />
-                      <span>Pricing &amp; plans</span>
+                      <span>Pricing</span>
                     </Link>
                     <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startLogin() }} {...menuOffline.gate}>
                       <LoginArrowIcon />
@@ -1026,7 +1035,7 @@ function AppHeader() {
           <div className="pnav-sheet-group">
             {!user && !accountPending && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
-                <TagIcon /><span>Pricing &amp; plans</span>
+                <TagIcon /><span>Pricing</span>
               </Link>
             )}
             <Link className="pnav-sheet-row" to="/learn/help" onClick={closeAll}>
@@ -1055,7 +1064,7 @@ function AppHeader() {
                 <div id="pnav-sheet-account">
                   <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
                   <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
-                    <GearIcon /><span>Account &amp; settings</span>
+                    <GearIcon /><span>Account and settings</span>
                   </Link>
                   {isPro ? (
                     planKnown && (

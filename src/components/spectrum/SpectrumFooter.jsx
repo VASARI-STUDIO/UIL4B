@@ -62,7 +62,7 @@ const EXPLORE = [
   ['/learn', 'Learn'],
   ['/community', 'Community'],
   ['/learn/principles', 'Design principles'],
-  ['/plans', 'Plans'],
+  ['/plans', 'Pricing'],
   ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
   ['/sitemap', 'Sitemap'],
   ['/learn/help', 'Help centre'],
@@ -141,9 +141,9 @@ function uncoverFooter(event) {
   if (covered > 0) window.scrollBy({ top: covered, behavior: 'instant' })
 }
 
-function Column({ heading, children }) {
+function Column({ heading, className = '', children }) {
   return (
-    <div className="sp-footer-col">
+    <div className={className ? `sp-footer-col ${className}` : 'sp-footer-col'}>
       <h2 className="sp-footer-col-h">{heading}</h2>
       <ul>{children}</ul>
     </div>
@@ -160,10 +160,6 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   // A phone's toolbar resizes the window as it scrolls, which would switch the
   // curtain on and off mid-scroll, so a coarse pointer gets a plain footer.
   const coarse = useMediaQuery('(pointer: coarse)')
-  // On a phone the three legal links leave their column and sit in the baseline
-  // row; from 761px up they are the fourth column, as drawn. One tree, chosen
-  // here, so no link exists twice in the DOM.
-  const phone = useMediaQuery('(max-width: 760px)')
   const curtain = useCurtain(footerRef, reveal && !reducedMotion && !coarse)
 
   return (
@@ -209,13 +205,16 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}
             </Column>
-            {!phone && (
-              <Column heading="LEGAL">
-                {LEGAL.map(([to, label]) => (
-                  <li key={to}><NavLink to={to}>{label}</NavLink></li>
-                ))}
-              </Column>
-            )}
+            {/* The three legal links are in the page twice: here as the fourth
+                column from 761px up, and in the baseline row below on a phone.
+                CSS shows one and hides the other (display:none also drops it from
+                the accessibility tree), so the prerendered tree is right at
+                every width and nothing reflows after hydration. */}
+            <Column heading="LEGAL" className="sp-footer-col--legal">
+              {LEGAL.map(([to, label]) => (
+                <li key={to}><NavLink to={to}>{label}</NavLink></li>
+              ))}
+            </Column>
           </nav>
         </div>
 
@@ -224,13 +223,11 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
         <div className="sp-footer-legal">
           <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>
           <FounderNote />
-          {phone && (
-            <nav className="sp-footer-legal-links" aria-label="Legal">
-              {LEGAL.map(([to, label]) => (
-                <NavLink key={to} to={to}>{label}</NavLink>
-              ))}
-            </nav>
-          )}
+          <nav className="sp-footer-legal-links" aria-label="Legal">
+            {LEGAL.map(([to, label]) => (
+              <NavLink key={to} to={to}>{label}</NavLink>
+            ))}
+          </nav>
           <span className="sp-footer-place">
             Built in Brisbane by{' '}
             <a

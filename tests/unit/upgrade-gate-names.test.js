@@ -152,9 +152,10 @@ test('every entry of a spread gate table names a gate', () => {
   assert.match(runner, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/, 'the export engine no longer reports a gate from PRO_GATE')
   const table = runner.slice(runner.indexOf('const PRO_GATE = {'))
   const body = table.slice(0, table.indexOf('\n}\n') + 1)
-  const entries = [...body.matchAll(/^ {2}([a-z][\w]*):\s*\{/gm)].map(m => m[1])
+  // A key is bare (`book:`) or quoted when it has a hyphen (`'app-bundle':`).
+  const entries = [...body.matchAll(/^ {2}'?([a-z][\w-]*)'?:\s*\{/gm)].map(m => m[1])
   assert.ok(entries.length >= 2, `expected PRO_GATE entries, found ${entries.length}`)
-  const blocks = body.split(/^ {2}[a-z][\w]*:\s*\{/m).slice(1)
+  const blocks = body.split(/^ {2}'?[a-z][\w-]*'?:\s*\{/m).slice(1)
   entries.forEach((name, i) => {
     assert.match(blocks[i], /gate:\s*'[a-z0-9-]+'/, `PRO_GATE.${name} must name a gate`)
   })
