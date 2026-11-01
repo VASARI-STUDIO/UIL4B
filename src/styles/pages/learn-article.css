@@ -206,6 +206,10 @@
    container, so this buys uniform row height at the cost of scroll distance —
    which is the right trade for a column the reader scans downwards. */
 .lart .lart-table [data-nowrap]{white-space:nowrap}
+/* A table whose column headings may wrap, so five columns fit the 56ch measure
+   without scrolling at desktop widths. The figures stay on one line; only the
+   headings give way. The wrapper still scrolls where even that is too tight. */
+.lart .lart-table--fit thead th,.lart .lart-table--fit thead th[data-num]{font-family:var(--font);white-space:normal;line-height:1.35;vertical-align:bottom}
 .lart .lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 .lart .lart-table-cap code{font-family:var(--mono);font-size:.92em}
 

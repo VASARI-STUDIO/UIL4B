@@ -245,9 +245,15 @@ test.describe('Type Scale · where Save to a project lives', () => {
       const boxes = await page.evaluate(() => {
         const rect = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
         const named = (t) => [...document.querySelectorAll('[data-tool-toolbar] button')].find(el => el.textContent.trim() === t)
-        return { save: rect(named('Save to a project')), copy: rect(named('Copy CSS')) }
+        const more = document.querySelector('[data-tool-toolbar] .tl-more-btn')
+        return { save: rect(named('Save to a project')), copy: rect(named('Copy CSS')), more: more ? rect(more) : null }
       })
       expect(boxes.save.right, `${w}px: Save sits to the left of Copy CSS`).toBeLessThanOrEqual(boxes.copy.left)
+      // Save is right against Copy CSS: one toolbar gap, nothing between them.
+      expect(boxes.copy.left - boxes.save.right, `${w}px: Save sits right against Copy CSS`).toBeLessThanOrEqual(12)
+      // The More button goes at the far end of the other actions, left of Save, never between Save and Copy CSS.
+      expect(boxes.more, `${w}px: the More button is on the row`).not.toBeNull()
+      expect(boxes.more.right, `${w}px: More is left of Save`).toBeLessThanOrEqual(boxes.save.left)
       expect(Math.abs(boxes.save.top - boxes.copy.top), `${w}px: on one row`).toBeLessThanOrEqual(2)
 
       // A bar at the foot would be an empty bar: there is none between a phone and the split.

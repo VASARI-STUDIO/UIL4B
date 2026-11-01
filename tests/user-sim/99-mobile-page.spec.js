@@ -105,7 +105,7 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const menu = page.locator('.spnav-menu')
     await expect(menu).toHaveAttribute('data-menu', 'in')
     await expect(menu.locator('.spnav-rail .spnav-mi')).toHaveText(['Tools', 'Pricing', 'On mobile', 'Open the toolkit ↗'])
-    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    await expect(menu.locator('.spnav-mi-note')).toHaveText('Every core tool is free, forever')
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
     await expect(page.locator('.spnav-menu')).toHaveCount(0)

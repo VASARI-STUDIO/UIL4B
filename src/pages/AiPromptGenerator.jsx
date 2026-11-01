@@ -8,6 +8,7 @@ import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
 import { RULE_CATEGORIES, PRESETS, buildPromptJson, buildPromptText } from '../data/promptRules'
@@ -489,6 +490,7 @@ export default function AiPromptGenerator({ toast }) {
           {results.map(r => (
             <div key={r.id} className="aipg-result card">
               <div className="aipg-result-meta">
+                <AiLabel what="prompt" />
                 <span className="pl-tag">{platformLabel(r.platform)}</span>
                 {r.style && <span className="pl-tag">{r.style}</span>}
                 {r.json && <span className="pl-tag">JSON</span>}

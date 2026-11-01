@@ -207,6 +207,41 @@ test.describe('Brand kit walkthrough', () => {
     await expect(guide).toHaveCount(0)
   })
 
+  test('a listbox and the Create menu each hide the orientation card, and it returns when they close', async ({ page }) => {
+    watch(page, 'designer opening a dropdown and the nav menu over the walkthrough card')
+    await go(page, MENU_ROUTE)
+    await pressBrandKit(page)
+    const guide = page.locator('.bkit-card')
+    await expect(guide).toBeVisible()
+    await settle(guide)
+
+    // A listbox (the colour system picker).
+    await page.getByRole('button', { name: /^Colour system/ }).click()
+    const list = page.locator('.menu-select-list[role="listbox"]')
+    await expect(list).toBeVisible()
+    await expect(guide).toBeHidden()
+    await expect(guide).toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).toHaveAttribute('inert', '')
+    await page.keyboard.press('Escape')
+    await expect(list).toBeHidden()
+    await expect(guide).toBeVisible()
+    await expect(guide).not.toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).not.toHaveAttribute('inert', '')
+
+    // The Create mega menu in the header.
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+    const menu = page.locator('.pnav-menu')
+    await expect(menu.first()).toBeVisible()
+    await expect(guide).toBeHidden()
+    await expect(guide).toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).toHaveAttribute('inert', '')
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(guide).toBeVisible()
+    await expect(guide).not.toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).not.toHaveAttribute('inert', '')
+  })
+
   test('the orientation card is offered over step one and does NOT block it', async ({ page }) => {
     watch(page, 'designer reading the explanation while the tool stays live')
     await fresh(page)
@@ -247,8 +282,10 @@ test.describe('Brand kit walkthrough', () => {
     await pressBrandKit(page)
 
     await expect(card(page)).toBeVisible()
-    // It takes focus when it opens, which is what makes Escape work at once.
-    await expect(card(page)).toBeFocused()
+    // Focus lands on the card's own button (a ring on a control, never round the
+    // whole card), which is what makes Escape work at once.
+    await expect(card(page).getByRole('button', { name: /^Start with/ })).toBeFocused()
+    await expect(card(page)).not.toBeFocused()
 
     await page.keyboard.press('Escape')
     await expect(card(page)).toBeHidden()

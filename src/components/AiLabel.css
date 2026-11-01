@@ -1,0 +1,18 @@
+/* The "AI-generated" marker (AiLabel.jsx). A hairline pill in the quiet text
+ * colour: it informs without competing with the result it sits on. Colours are
+ * tokens, so it follows both themes and forced-colours mode. */
+
+.ai-label {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: var(--fs-caption, 13px);
+  font-weight: 560;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--t1);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}

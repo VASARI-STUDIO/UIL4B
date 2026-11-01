@@ -262,9 +262,12 @@
 
 .alt-page .alt-card-text:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
 
+/* The label and the length sit above the text they describe. */
+.alt-page .alt-card-result-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
 .alt-page .alt-card-actions { display: flex; align-items: center; gap: 8px; }
 
-.alt-page .alt-card-count { flex: 1; font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
+.alt-page .alt-card-count { font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .alt-page .alt-card-count.over { color: var(--warn-strong); }
 

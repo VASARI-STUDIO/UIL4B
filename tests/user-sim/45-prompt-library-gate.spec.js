@@ -92,8 +92,8 @@ function rungSets(cap) {
 // The two rungs a gate has to hold at. Pro has nothing withheld, so it is not
 // one of them — 44 and the unit suite cover the open end.
 const RUNGS = [
-  { name: 'signed out', plan: null, cap: GALLERY_TIER_LIMITS.anonymous, placeholders: 0, wall: 'account' },
-  { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, placeholders: 3, wall: 'pro' },
+  { name: 'signed out', plan: null, cap: GALLERY_TIER_LIMITS.anonymous, wall: 'account' },
+  { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, wall: 'pro' },
 ]
 
 // A prompt that is open at EVERY rung, and one of its own distinctive words, to
@@ -113,37 +113,77 @@ async function surfaces(page) {
   }))
 }
 
+// ── THE PAGE HAS TWO STATES NOW, AND THE GATE HAS TO HOLD IN BOTH ─────────────
+//
+// The Community tab opens on an OVERVIEW (a section per category: a lead card,
+// compact cards, and cover tiles) and the flat grid is the LIST (`#all`, or one
+// category's `#website` and so on), entered by View more, "Browse all", or by
+// typing a search. Both draw open prompts as `.pl-card` and locked ones as
+// `.pl-locked-card`, and BOTH match `.pl-card`, so every count and every read of
+// "the open cards" goes through OPEN_CARDS. A locked card never shows a title
+// or a text; its heading is the prompt's tags.
+const OPEN_CARDS = '.pl-card:not(.pl-locked-card)'
+const LOCKED_CARDS = '.pl-locked-card'
+
+// The list state, reached the way a visitor reaches it: the overview's closing
+// "Browse all N with filters" button.
+async function openList(page) {
+  await page.locator('#pl-browse-all').click()
+  await expect(page.locator('.pl-gallery')).toBeVisible()
+}
+
+// A radio group's option by its visible label. The category chips carry a count
+// ("Website 5 prompts"), Sort and Access do not.
+const chip = (page, label) => page.getByRole('radio', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( \\d+ prompts?)?$`) })
+
 /**
- * Every card on screen, paired with the text its preview window is showing.
+ * Every card on screen, paired with what it is showing.
  *
- * `[data-preview]` is the stable hook rather than the class: PromptCard's
- * comment says so, and a class is something CSS is free to rename. What this
- * gate needs to know is WHICH PROMPT'S TEXT IS ON THE PAGE, and that is the
- * element the attribute marks.
+ * `[data-preview]` is the stable hook rather than a class: what this gate needs
+ * to know is WHICH PROMPT'S TEXT OR OUTPUT IS ON THE PAGE, and that is the
+ * element the attribute marks. A locked card has none, by construction.
+ *
+ * An open card shows one of two artefacts: a poster of the prompt's built
+ * output (data-preview-kind="output"), or its own text. Both are read, so a
+ * leak through either surface shows up, and a card that went empty cannot make
+ * a leak assertion pass for want of anything to leak.
  */
-// WHAT A CARD IS SHOWING, in both of the forms it can take.
-//
-// Until 2026-09-15 there was one: the prompt's own text, scrolling. A card
-// whose output has been BUILT now shows a poster of that output instead
-// (PromptCard, data-preview-kind="output"), so a gate test that only read
-// textContent would come back empty for those cards — and every leak assertion
-// below would pass because there was nothing in them to leak. That is the
-// vacuity the positive control exists to catch, and it is why this returns the
-// poster too rather than being taught to ignore the new cards.
-//
-// THE LEAK SURFACE MOVED WITH IT. A locked prompt reaching the grid used to
-// arrive carrying its entire text; it would now arrive carrying a poster named
-// for its id. Both are read, and both are checked.
-async function previews(page) {
+async function cards(page) {
   return page.evaluate(() => [...document.querySelectorAll('.pl-card')].map((card) => {
     const shot = card.querySelector('[data-preview-kind="output"] img')
+    const poster = card.querySelector('img.pl-card-poster')
     return {
+      locked: card.classList.contains('pl-locked-card'),
       title: (card.querySelector('.pl-card-title')?.textContent || '').trim(),
+      all: (card.textContent || '').trim(),
+      label: card.getAttribute('aria-label') || '',
       preview: card.querySelector('[data-preview]')?.textContent || '',
       poster: shot ? (shot.getAttribute('src') || '') : '',
+      hasPreviewWindow: !!card.querySelector('[data-preview]'),
       kind: card.querySelector('[data-preview]')?.getAttribute('data-preview-kind') || 'none',
+      // A locked card may show the output's picture, but only blurred past reading.
+      lockedPicture: poster ? { src: poster.getAttribute('src') || '', filter: getComputedStyle(poster).filter } : null,
     }
   }))
+}
+
+// Anything on a locked card that names or quotes a withheld prompt.
+const lockedLeaks = (shown, WITHHELD, where) => {
+  const found = []
+  for (const card of shown.filter((c) => c.locked)) {
+    for (const p of WITHHELD) {
+      const title = p.title.toLowerCase()
+      const phrase = (p.text || '').split('\n')[0].slice(0, 40).toLowerCase()
+      const said = `${card.all} ${card.label}`.toLowerCase()
+      if (said.includes(title)) found.push(`${p.id} titled on a locked card ${where}`)
+      if (phrase.length > 20 && said.includes(phrase)) found.push(`${p.id} quoted on a locked card ${where}`)
+    }
+    if (card.hasPreviewWindow) found.push(`a locked card grew a preview window ${where}`)
+    if (card.lockedPicture && !/blur\(/.test(card.lockedPicture.filter)) {
+      found.push(`a locked card's picture is not blurred ${where}`)
+    }
+  }
+  return found
 }
 
 // ONE BODY, BOTH RUNGS. The open set, the withheld set and the words that
@@ -157,7 +197,8 @@ for (const rung of RUNGS) {
       watch(page, `a ${rung.name} visitor browsing the community prompt library`)
       if (rung.plan) await signIn(page, { plan: rung.plan })
       await go(page, ROUTE)
-      await expect(page.locator('.pl-card').first()).toBeVisible()
+      await expect(page.locator('.pl-overview')).toBeVisible()
+      await expect(page.locator(OPEN_CARDS).first()).toBeVisible()
     })
 
     test('the fixture discriminates and the page rendered — controls first', async ({ page }) => {
@@ -170,32 +211,40 @@ for (const rung of RUNGS) {
       expect(text, 'the free control prompt is missing — the gallery did not render')
         .toContain(CONTROL.title.toLowerCase())
       expect(text.length, 'the page rendered no text').toBeGreaterThan(500)
+      // The overview teases locked prompts too, so the locked side of every
+      // assertion below has something on the page to be wrong about.
+      expect(await page.locator(LOCKED_CARDS).count(), 'the overview shows no locked card').toBeGreaterThan(0)
     })
 
-    test('a locked prompt title or body is in no text, markup or accessible name', async ({ page }) => {
-      const { text, html, names } = await surfaces(page)
-      const leaks = []
-      for (const p of WITHHELD) {
-        const title = p.title.toLowerCase()
-        if (text.includes(title)) leaks.push(`${p.id} title in text`)
-        if (html.includes(title)) leaks.push(`${p.id} title in markup`)
-        if (names.includes(title)) leaks.push(`${p.id} title in an accessible name`)
-        // A distinctive sentence from the body, not the whole thing — the body
-        // contains formatting a markup check would trip over on its own.
-        const phrase = (p.text || '').toLowerCase().split('\n')[0].slice(0, 40)
-        if (phrase.length > 20 && html.includes(phrase)) leaks.push(`${p.id} body in markup`)
-      }
-      expect(leaks, 'a locked prompt reached the page').toEqual([])
-    })
+    for (const state of ['overview', 'list']) {
+      test(`a locked prompt title or body is in no text, markup or accessible name — ${state}`, async ({ page }) => {
+        if (state === 'list') await openList(page)
+        const { text, html, names } = await surfaces(page)
+        const leaks = []
+        for (const p of WITHHELD) {
+          const title = p.title.toLowerCase()
+          if (text.includes(title)) leaks.push(`${p.id} title in text`)
+          if (html.includes(title)) leaks.push(`${p.id} title in markup`)
+          if (names.includes(title)) leaks.push(`${p.id} title in an accessible name`)
+          // A distinctive sentence from the body, not the whole thing — the body
+          // contains formatting a markup check would trip over on its own.
+          const phrase = (p.text || '').toLowerCase().split('\n')[0].slice(0, 40)
+          if (phrase.length > 20 && html.includes(phrase)) leaks.push(`${p.id} body in markup`)
+        }
+        expect(leaks, 'a locked prompt reached the page').toEqual([])
+      })
+    }
 
     test('the search box cannot pull a locked prompt into a free position', async ({ page }) => {
       // THE regression. Each of these words appears in exactly one locked prompt
       // and in no free one, so any card coming back is a card from behind the
-      // gate — the old build returned it at index 0, unlocked.
+      // gate — the old build returned it at index 0, unlocked. Typing from the
+      // overview enters the list, so this also covers that route in.
       const search = page.getByLabel('Search community prompts')
       for (const p of TELLTALE) {
         for (const word of p.words) {
           await search.fill(word)
+          await expect(page.getByText('No prompts match'), `"${word}" should match nothing`).toBeVisible()
           await expect(page.locator('.pl-card')).toHaveCount(0)
           const { text } = await surfaces(page)
           expect(text, `searching "${word}" surfaced locked prompt ${p.id}`)
@@ -204,150 +253,211 @@ for (const rung of RUNGS) {
       }
       // Positive control: the search box is not simply broken.
       await search.fill(CONTROL_WORD)
-      await expect(page.locator('.pl-card')).toHaveCount(1)
-      await expect(page.locator('.pl-card-title')).toHaveText(CONTROL.title)
+      await expect(page.locator(OPEN_CARDS)).toHaveCount(1)
+      await expect(page.locator(`${OPEN_CARDS} .pl-card-title`)).toHaveText(CONTROL.title)
     })
 
     test('the sort control cannot change which prompts are free', async ({ page }) => {
       // `free` used to mean a POSITION, and Newest reversed the list — so the
       // eight prompts at the bottom under Popular became free under Newest.
+      await openList(page)
       for (const order of ['Newest', 'Popular']) {
-        await page.getByRole('button', { name: order, exact: true }).click()
-        await expect(page.locator('.pl-card')).toHaveCount(OPEN.length)
-        const titles = await page.locator('.pl-card-title').allTextContents()
+        await chip(page, order).check()
+        await expect(chip(page, order)).toBeChecked()
+        await expect(page.locator(OPEN_CARDS)).toHaveCount(OPEN.length)
+        const titles = await page.locator(`${OPEN_CARDS} .pl-card-title`).allTextContents()
         const leaked = titles.filter((t) => WITHHELD.some((p) => p.title === t.trim()))
         expect(leaked, `sorting by ${order} surfaced a locked prompt`).toEqual([])
+        // And the locked cards stay the same size of set.
+        await expect(page.locator(LOCKED_CARDS)).toHaveCount(WITHHELD.length)
       }
+    })
+
+    test('the Access control cannot open a locked prompt', async ({ page }) => {
+      // Free and Pro narrow the list; neither may move a card across the gate.
+      // The set that is open is the rung's, whatever Access says.
+      await openList(page)
+      for (const access of ['Pro', 'Free', 'Any']) {
+        await chip(page, access).check()
+        await expect(chip(page, access)).toBeChecked()
+        const titles = await page.locator(`${OPEN_CARDS} .pl-card-title`).allTextContents()
+        const leaked = titles.filter((t) => WITHHELD.some((p) => p.title === t.trim()))
+        expect(leaked, `Access "${access}" surfaced a locked prompt`).toEqual([])
+        expect(titles.every((t) => OPEN.some((p) => p.title === t.trim())), `Access "${access}" showed a card that is not open`).toBe(true)
+      }
+      await expect(page.locator(OPEN_CARDS)).toHaveCount(OPEN.length)
     })
 
     test('no category filter surfaces a locked prompt', async ({ page }) => {
       // The third route into the same defect: a category whose members are mostly
       // locked used to return them at low indices, and therefore free.
+      await openList(page)
       for (const label of ['Website', '3D & Motion', 'UI Components', 'CSS & Visual', 'Branding']) {
-        await page.getByRole('button', { name: label, exact: true }).click()
-        const titles = await page.locator('.pl-card-title').allTextContents()
+        await chip(page, label).click() // a category is a route change, so check()'s instant read-back would see the old state
+        await expect(chip(page, label)).toBeChecked()
+        await expect(page.locator('#pl-results-h')).toHaveText(label)
+        const titles = await page.locator(`${OPEN_CARDS} .pl-card-title`).allTextContents()
         const leaked = titles.filter((t) => WITHHELD.some((p) => p.title === t.trim()))
         expect(leaked, `the ${label} category surfaced a locked prompt`).toEqual([])
       }
     })
 
-    test('the teased placeholders carry no payload and no control', async ({ page }) => {
-      const cards = page.locator('.lockt-card')
-      // THE COUNT IS THE ASSERTION AT THE BOTTOM RUNG. LockedPromptCard stamps
-      // each placeholder "Pro"; for a signed-out visitor the next prompts are
-      // not Pro's — they arrive with a free account — so the page renders the
-      // wall alone and this must be zero. At the free rung the pill is true and
-      // the three placeholders are back.
-      await expect(cards).toHaveCount(rung.placeholders)
-      // Nothing focusable: there is nothing to open, copy or hand off, so a
-      // control would be a control that does nothing and a keyboard user would
-      // still have to walk past it.
-      // Each placeholder carries ONE
-      // control: an "Upgrade to Pro" link to /plans, shown on hover/focus. It
-      // opens nothing and copies nothing of the item it stands for.
-      const controls = cards.locator('button, a, [tabindex]')
-      expect(await controls.count(), 'each placeholder carries exactly one control').toBe(rung.placeholders)
-      for (let i = 0; i < rung.placeholders; i++) {
-        await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
-      }
-      // No name either. The palette placeholders carry the brand's name because
-      // the name is the tease; a prompt's title is the product, so it does not.
-      const placeholderText = (await cards.allTextContents()).join(' ').toLowerCase()
-      const named = WITHHELD.filter((p) => placeholderText.includes(p.title.toLowerCase()))
-      expect(named, 'a placeholder named the prompt it stands for').toEqual([])
-    })
+    for (const state of ['overview', 'list']) {
+      test(`the locked cards carry no payload, one control each, and no name — ${state}`, async ({ page }) => {
+        if (state === 'list') await openList(page)
+        const locked = page.locator(LOCKED_CARDS)
+        // The overview shows only a sample of the locked prompts; the list shows
+        // every one of them, so its count IS the assertion.
+        if (state === 'list') await expect(locked).toHaveCount(WITHHELD.length)
+        else expect(await locked.count(), 'the overview shows no locked card').toBeGreaterThan(0)
 
-    test('the wall is keyboard reachable, states the true count, and offers this rung its own next step', async ({ page }) => {
-      // WHICH NEXT STEP IS THE POINT. From the bottom rung the next step is a
-      // free account and the honest number is how many more THAT opens; from
-      // the free rung it is Pro and the number is everything still withheld.
-      // Offering Pro to somebody whose next seven prompts are free would be
-      // selling a purchase that is not needed yet.
-      const heading = page.locator('.lockt-cta-head')
-      const gain = rung.wall === 'account'
-        ? rungSets(GALLERY_TIER_LIMITS.free).open.length - OPEN.length
-        : WITHHELD.length
-      await expect(heading).toHaveText(new RegExp(`Another ${gain} community prompts?`))
-      const cta = page.locator('.lockt-cta-btn')
-      await expect(cta).toHaveText(rung.wall === 'account' ? /Create your free account/ : /See what Pro includes/)
-      await cta.focus()
-      await expect(cta).toBeFocused()
-      await page.keyboard.press('Enter')
-      // The canonical dialog for that step, not a second one built for this
-      // surface: the app's own sign-in prompt, or the upgrade modal.
-      // The Pro step goes to /plans.
-      if (rung.wall === 'account') await expect(page.locator('[role="dialog"]')).toBeVisible()
-      else await expect(page).toHaveURL(/\/plans$/)
-    })
+        // Each locked card is ONE control and has nothing focusable inside it.
+        // For a signed-out visitor, the prompts a free account opens are a
+        // sign-up button; every other locked card links to /plans.
+        expect(await locked.locator('button, a, [tabindex]').count(), 'a locked card holds a control of its own').toBe(0)
+        const kinds = await locked.evaluateAll((els) => els.map((el) => ({ tag: el.tagName, href: el.getAttribute('href') })))
+        for (const k of kinds) {
+          if (k.tag === 'A') expect(k.href, 'a locked card links somewhere other than the plans page').toBe('/plans')
+          else expect(k.tag, 'a locked card is neither a link nor a button').toBe('BUTTON')
+        }
+        if (state === 'list') {
+          const viaAccount = rung.wall === 'account' ? GALLERY_TIER_LIMITS.free - GALLERY_TIER_LIMITS.anonymous : 0
+          expect(kinds.filter((k) => k.tag === 'BUTTON').length, 'cards that open with a free account').toBe(viaAccount)
+          expect(kinds.filter((k) => k.tag === 'A').length, 'cards that open with Pro').toBe(WITHHELD.length - viaAccount)
+        }
 
-    test('every rendered card carries a free prompt\'s own artefact — the positive control', async ({ page }) => {
+        // No name either. A prompt's title is the product, so a locked card's
+        // heading is its tags and nothing more.
+        expect(lockedLeaks(await cards(page), WITHHELD, `in the ${state}`)).toEqual([])
+      })
+    }
+
+    for (const state of ['overview', 'list']) {
+      test(`the access wall states the true count, is keyboard reachable, and offers this rung its own next step — ${state}`, async ({ page }) => {
+        // WHICH NEXT STEP IS THE POINT. From the bottom rung the next step is a
+        // free account and the honest number is how many more THAT opens; from
+        // the free rung it is Pro. Offering Pro to somebody whose next seven
+        // prompts are free would be selling a purchase that is not needed yet.
+        if (state === 'list') await openList(page)
+        const wall = page.locator('.pl-close')
+        await expect(wall).toBeVisible()
+        const total = COMMUNITY_PROMPTS.length
+        const gain = rung.wall === 'account'
+          ? rungSets(GALLERY_TIER_LIMITS.free).open.length - OPEN.length
+          : WITHHELD.length
+        if (state === 'overview') {
+          await expect(wall.getByRole('heading', { level: 2 })).toHaveText(
+            rung.wall === 'account'
+              ? `Signed out, you can open ${OPEN.length} of the ${total} community prompts.`
+              : `Free covers ${OPEN.length} of the ${total} community prompts.`,
+          )
+        } else {
+          await expect(wall.getByRole('heading', { level: 2 })).toHaveText(
+            rung.wall === 'account'
+              ? `${gain} more prompts open with a free account`
+              : `${gain} more prompts open with Pro`,
+          )
+        }
+        const cta = rung.wall === 'account'
+          ? wall.getByRole('button', { name: /Create your free account/ })
+          : wall.getByRole('link', { name: /See what Pro includes/ })
+        await cta.focus()
+        await expect(cta).toBeFocused()
+        await page.keyboard.press('Enter')
+        // The canonical dialog for that step, not a second one built for this
+        // surface: the app's own sign-in prompt, or the plans page.
+        if (rung.wall === 'account') await expect(page.locator('[role="dialog"]')).toBeVisible()
+        else await expect(page).toHaveURL(/\/plans$/)
+      })
+    }
+
+    test('every open card carries a free prompt\'s own artefact — the positive control', async ({ page }) => {
       // THE CONTROL FOR EVERYTHING BELOW IT. If the cards were empty, stubs, or
       // truncated summaries, every leak assertion in this file would pass by
-      // accident. So each card must be shown to be carrying the real artefact of
-      // the prompt it claims to be.
+      // accident. So each open card must be shown to be carrying the real
+      // artefact of the prompt it claims to be, on the overview AND in the list.
       //
-      // There are two artefacts now. A prompt whose output has been built shows a
-      // POSTER of that output; every other prompt still shows its own TEXT,
-      // verbatim. Both are checked against the prompt the card is titled for, so
-      // neither kind can go quietly empty.
-      const shown = await previews(page)
-      expect(shown.length, 'the gallery rendered no cards').toBe(OPEN.length)
-
-      let withText = 0
-      let withPoster = 0
-      for (const card of shown) {
-        const match = OPEN.find((p) => p.title === card.title)
-        expect(match, `a card titled "${card.title}" is not a free prompt`).toBeTruthy()
-
-        if (card.kind === 'output') {
-          withPoster++
-          // The poster must be THIS prompt's. A card showing another prompt's
-          // output is the same defect as a card showing another prompt's text.
-          expect(card.poster, `the poster on "${card.title}" is not ${match.id}'s`)
-            .toBe(`/previews/prompts/poster/${match.id}.webp`)
-        } else {
-          withText++
-          expect(card.preview, `the preview for "${card.title}" is not the prompt itself`)
-            .toBe(match.text)
+      // There are two artefacts. A prompt whose output has been built shows a
+      // POSTER of that output; every other prompt shows its own TEXT, verbatim.
+      // Both are checked against the prompt the card is titled for.
+      const check = (shown, where) => {
+        let withPoster = 0
+        for (const card of shown) {
+          const match = OPEN.find((p) => p.title === card.title)
+          expect(match, `a card titled "${card.title}" is not a free prompt (${where})`).toBeTruthy()
+          if (card.kind === 'output') {
+            withPoster++
+            // The poster must be THIS prompt's. A card showing another prompt's
+            // output is the same defect as a card showing another prompt's text.
+            expect(card.poster, `the poster on "${card.title}" is not ${match.id}'s (${where})`)
+              .toBe(`/previews/prompts/poster/${match.id}.webp`)
+          } else {
+            expect(card.preview, `the preview for "${card.title}" is not the prompt itself (${where})`)
+              .toBe(match.text)
+          }
         }
+        return withPoster
       }
 
-      // And the split is real in at least one direction, so this test cannot be
+      const overview = (await cards(page)).filter((c) => !c.locked)
+      expect(overview.length, 'the overview rendered no open cards').toBeGreaterThan(0)
+      expect(check(overview, 'overview'), 'no overview card showed a built output — has the manifest emptied?').toBeGreaterThan(0)
+
+      await openList(page)
+      const list = (await cards(page)).filter((c) => !c.locked)
+      expect(list.length, 'the list rendered the wrong number of open cards').toBe(OPEN.length)
+      // And the split is real in at least one direction, so this cannot be
       // satisfied by a page that rendered nothing of either kind.
-      expect(withText + withPoster, 'no card carried an artefact of any kind').toBe(shown.length)
-      expect(withPoster, 'no card showed a built output — has the manifest emptied?').toBeGreaterThan(0)
+      expect(check(list, 'list'), 'no list card showed a built output — has the manifest emptied?').toBeGreaterThan(0)
     })
 
-    test('no preview carries a locked prompt, under search, sort or any category', async ({ page }) => {
-      // THE regression, aimed at the surface that now holds the payload. A locked
+    test('no preview carries a locked prompt, under search, sort, access or any category', async ({ page }) => {
+      // THE regression, aimed at the surface that holds the payload. A locked
       // prompt reaching the grid would arrive with its ENTIRE TEXT in a preview,
       // so this reads the previews rather than the titles.
       const leaks = async (where) => {
-        const shown = await previews(page)
-        const found = []
-        for (const card of shown) {
+        const shown = await cards(page)
+        const found = lockedLeaks(shown, WITHHELD, where)
+        for (const card of shown.filter((c) => !c.locked)) {
           for (const p of WITHHELD) {
             const phrase = (p.text || '').split('\n')[0].slice(0, 40).toLowerCase()
             if (card.preview.toLowerCase().includes(phrase)) found.push(`${p.id} previewed under ${where}`)
             if (card.title === p.title) found.push(`${p.id} titled under ${where}`)
-            // The second leak surface, since 2026-09-15: a locked prompt arriving
-            // with a poster of its output. The image is as much the product as
-            // the text — arguably more, for the prompts that are being sold on
-            // what they produce.
-            if (card.poster && card.poster.includes(`/${p.id}.webp`)) {
-              found.push(`${p.id} POSTERED under ${where}`)
-            }
+            // A locked prompt arriving on an OPEN card with a poster of its
+            // output is as much the product as the text.
+            if (card.poster && card.poster.includes(`/${p.id}.webp`)) found.push(`${p.id} POSTERED under ${where}`)
           }
         }
-        // Every card on screen must still be one of the twelve.
+        // Every open card on screen must still be one of the rung's.
         const strangers = shown
-          .filter((c) => !OPEN.some((p) => p.title === c.title))
+          .filter((c) => !c.locked && !OPEN.some((p) => p.title === c.title))
           .map((c) => `unknown card "${c.title}" under ${where}`)
         return [...found, ...strangers]
       }
 
-      expect(await leaks('the default view'), 'a locked prompt reached the grid').toEqual([])
+      expect(await leaks('the overview'), 'a locked prompt reached the overview').toEqual([])
+      await openList(page)
+      expect(await leaks('the default list'), 'a locked prompt reached the list').toEqual([])
 
+      for (const order of ['Newest', 'Popular']) {
+        await chip(page, order).check()
+        await expect(page.locator(OPEN_CARDS)).toHaveCount(OPEN.length)
+        expect(await leaks(`sort ${order}`), `sorting by ${order} leaked a locked prompt`).toEqual([])
+      }
+      for (const access of ['Pro', 'Free', 'Any']) {
+        await chip(page, access).check()
+        await expect(chip(page, access)).toBeChecked()
+        expect(await leaks(`access ${access}`), `Access "${access}" leaked a locked prompt`).toEqual([])
+      }
+      for (const label of ['Website', '3D & Motion', 'UI Components', 'CSS & Visual', 'Branding']) {
+        await chip(page, label).click() // a category is a route change, so check()'s instant read-back would see the old state
+        await expect(chip(page, label)).toBeChecked()
+        expect(await leaks(`category ${label}`), `the ${label} category leaked a locked prompt`).toEqual([])
+      }
+
+      // A search narrows the category that is chosen, so go back to All first.
+      await chip(page, 'All').click()
+      await expect(chip(page, 'All')).toBeChecked()
       const search = page.getByLabel('Search community prompts')
       for (const p of TELLTALE) {
         for (const word of p.words) {
@@ -357,50 +467,42 @@ for (const rung of RUNGS) {
         }
       }
       await search.fill(CONTROL_WORD)
-      await expect(page.locator('.pl-card')).toHaveCount(1)
+      await expect(page.locator(OPEN_CARDS)).toHaveCount(1)
       expect(await leaks(`search "${CONTROL_WORD}"`)).toEqual([])
-      await search.fill('')
-
-      for (const order of ['Newest', 'Popular']) {
-        await page.getByRole('button', { name: order, exact: true }).click()
-        await expect(page.locator('.pl-card')).toHaveCount(OPEN.length)
-        expect(await leaks(`sort ${order}`), `sorting by ${order} leaked a locked prompt`).toEqual([])
-      }
-
-      for (const label of ['Website', '3D & Motion', 'UI Components', 'CSS & Visual', 'Branding']) {
-        await page.getByRole('button', { name: label, exact: true }).click()
-        expect(await leaks(`category ${label}`), `the ${label} category leaked a locked prompt`).toEqual([])
-      }
     })
 
-    test('a locked placeholder has no preview element to put a prompt in', async ({ page }) => {
-      // Structural, not cosmetic. The free card's window is `[data-preview]`; the
-      // placeholder is a different component with no such element, so there is
+    test('a locked card has no preview element to put a prompt in', async ({ page }) => {
+      // Structural, not cosmetic. The open card's window is `[data-preview]`; the
+      // locked card is a different component with no such element, so there is
       // nowhere for a payload to land even if a future mapper handed one over.
-      const locked = page.locator('.lockt-card')
-      await expect(locked).toHaveCount(rung.placeholders)
+      await openList(page)
+      const locked = page.locator(LOCKED_CARDS)
+      await expect(locked).toHaveCount(WITHHELD.length)
       expect(await locked.locator('[data-preview]').count(),
-        'a locked placeholder grew a preview window').toBe(0)
-      expect(await page.locator('.lockt-card .pl-card-preview-text').count(),
-        'a locked placeholder is drawing prompt text').toBe(0)
-      // Positive control: the free cards DO have one, so the count above is not
+        'a locked card grew a preview window').toBe(0)
+      expect(await page.locator(`${LOCKED_CARDS} .pl-card-preview-text`).count(),
+        'a locked card is drawing prompt text').toBe(0)
+      // Positive control: the open cards DO have one, so the count above is not
       // zero because the selector is wrong.
-      expect(await page.locator('.pl-card [data-preview]').count(),
-        'the free cards have no preview either — this assertion is vacuous').toBe(OPEN.length)
+      expect(await page.locator(`${OPEN_CARDS} [data-preview]`).count(),
+        'the open cards have no preview either — this assertion is vacuous').toBe(OPEN.length)
     })
 
-    test('the wall steps aside while the visitor is searching or filtering', async ({ page }) => {
+    test('the wall steps aside while the visitor is searching', async ({ page }) => {
       // Under a narrower question the user has already said what they want, and
       // answering it with a paywall is an interruption rather than an offer.
       //
       // It is also why the empty state does not say how many locked prompts DID
       // match: that sentence is the search oracle rebuilt in words.
-      await expect(page.locator('.lockt-cta')).toBeVisible()
+      await openList(page)
+      await expect(page.locator('.pl-close')).toBeVisible()
+      await expect(page.locator(LOCKED_CARDS).first()).toBeVisible()
       await page.getByLabel('Search community prompts').fill(CONTROL_WORD)
-      await expect(page.locator('.lockt-cta')).toHaveCount(0)
-      await expect(page.locator('.lockt-card')).toHaveCount(0)
+      await expect(page.locator('.pl-close')).toHaveCount(0)
+      await expect(page.locator(LOCKED_CARDS)).toHaveCount(0)
       await page.getByLabel('Search community prompts').fill('')
-      await expect(page.locator('.lockt-cta')).toBeVisible()
+      await expect(page.locator('.pl-close')).toBeVisible()
+      await expect(page.locator(LOCKED_CARDS).first()).toBeVisible()
     })
 
     /* THE GATE HELD AND THE PRODUCT DID NOT.
@@ -424,12 +526,12 @@ for (const rung of RUNGS) {
       const SENTINEL = 'SENTINEL-CLIPBOARD-NOT-WRITTEN'
       await page.evaluate((s) => navigator.clipboard.writeText(s), SENTINEL)
 
-      // `.pl-card` renders only the rows this rung may read, so the first one
-      // is open by construction. Which one it is depends on the sort, so the
+      // An open card renders only for the rows this rung may read, so the first
+      // one is open by construction. Which one it is depends on the sort, so the
       // expectation is read OFF THE OPEN MODAL rather than assumed to be
       // OPEN[0] — pinning it to a source index made this fail against a working
       // build, which is the wrong kind of red.
-      const card = page.locator('.pl-card').first()
+      const card = page.locator(OPEN_CARDS).first()
       await expect(card, 'no open prompt card rendered — this assertion is vacuous').toBeVisible()
       await card.click()
       // A prompt with a demo opens on the running demo; its text is the other tab.

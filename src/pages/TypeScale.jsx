@@ -674,40 +674,36 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
     },
-    // From 768 Save to a project sits in the toolbar, left of Copy CSS; on a
-    // phone it stays in the docked bar. The highest priority keeps it on the
-    // row last, and its menu is drawn with it, so it has no overflow row.
-    ...(phone ? [] : [
-      { id: 'div', divider: true },
-      {
-        id: 'save',
-        priority: 4,
-        menu: false,
-        render: () => (
-          <div className="tsc-save-wrap">
-            <ToolButton
-              ref={save.triggerRef}
-              icon="bookmark-simple"
-              className="tsc-save"
-              aria-expanded={save.open}
-              aria-haspopup="dialog"
-              onClick={save.trigger}
-            >
-              Save to a project
-            </ToolButton>
-            <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
-          </div>
-        ),
-      },
-    ]),
   ]
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={exportCode}>
       {`Copy ${formatLabel}`}
     </ToolButton>
   )
+  // From 768 Save to a project sits right against Copy CSS, as one group at the
+  // end of the row, so the More button always lands to the left of both. The
+  // group never leaves the row, and the save menu is drawn with it. On a phone
+  // Save stays in the docked bar.
+  const toolbarPrimary = (
+    <div className="tsc-primary-group">
+      <div className="tsc-save-wrap">
+        <ToolButton
+          ref={save.triggerRef}
+          icon="bookmark-simple"
+          className="tsc-save"
+          aria-expanded={save.open}
+          aria-haspopup="dialog"
+          onClick={save.trigger}
+        >
+          Save to a project
+        </ToolButton>
+        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+      </div>
+      {primary}
+    </div>
+  )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : primary}>
+    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : toolbarPrimary}>
       {body}
     </ToolLayout>
   )

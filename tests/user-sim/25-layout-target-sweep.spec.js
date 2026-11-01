@@ -116,7 +116,7 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
   // Landed on the route it asked for, not on a redirect's destination. This is
   // the guard for the staleness above: without it a retired path in the table
   // keeps passing, silently, on whatever the 301 sends it to.
-  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path)
+  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path.split('#')[0])
   return { ctx, page }
 }
 
@@ -341,10 +341,12 @@ const FILTER_TRAYS = [
   // groups step past the trigger form into the one Filters control — the
   // no-wrap S4 test above asserts that form.
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7, null, 0],
-  // The Prompt Library uses the shared toolbar. It mounts TWO trays
-  // — sort (2 options) and category (All + 5) — which is why the totals column
-  // exists rather than a per-row count.
-  ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],
+  // /discover/prompts is not in this table any more. Its list state has its own
+  // toolbar (`.pl-toolbar`: category chips, then Sort and Access as segmented
+  // radios, behind a Filters button on a phone), not the shared Library tray, so
+  // these selectors would match nothing. The same questions — one line, nothing
+  // outside its box, nothing lost behind the collapse — are asked of it by the
+  // Prompt Library toolbar tests below, with its own selectors.
 ]
 
 // chipRowDamage() lived here: it measured trays that were ALLOWED to wrap,
@@ -367,7 +369,8 @@ const FILTER_TRAYS = [
 //   · and whatever left the row is still reachable: a phone has a Filters
 //     control whenever it has a group that is not on the quick row.
 // Font Gallery is on the shared tool toolbar now; 100-tool-toolbar-one-row holds it.
-const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons', '/discover/prompts']
+// /discover/prompts has its own toolbar and its own test, right after this one.
+const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons']
 const NO_WRAP_WIDTHS = [320, 390, 1024, 1180, 1440]
 
 test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost', async ({ browser }) => {
@@ -416,6 +419,93 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
       }
       if (r.overflowX > 1) damage.push(`${path} @${w}px: the page scrolls sideways by ${r.overflowX}px`)
       if (w < 641 && r.stage !== '2' && r.stage !== '3') damage.push(`${path} @${w}px: a phone toolbar at stage ${r.stage} — its groups should be behind Filters`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// THE PROMPT LIBRARY'S OWN TOOLBAR (`.pl-toolbar`), the same questions.
+//
+// It has two states. On the overview it is the search field alone. In the list
+// (`#all`) it adds Category chips, then Sort and Access as segmented radios; at
+// 640px and below those three groups sit behind a "Filters" button that opens
+// them inline. Asked of it at a phone, a tablet and two desktops:
+//
+//   · the toolbar's main row is ONE line (the search field and, on a phone,
+//     the Filters button share a top);
+//   · on a phone the groups are CLOSED until Filters is pressed, and pressing
+//     it makes every option reachable: nothing the collapse hides is lost;
+//   · the options on screen all sit inside the toolbar's box;
+//   · on a desktop the Category chips share one line, and Sort and Access share
+//     one;
+//   · the page never scrolls sideways.
+//
+// 11 options is the count the page renders today: All + 5 categories, Popular /
+// Newest, Any / Free / Pro. The number is asserted so a selector that matches
+// nothing cannot pass.
+const PROMPT_WIDTHS = [320, 390, 1024, 1440]
+const PROMPT_OPTIONS = 11
+
+async function promptToolbar(page) {
+  return page.evaluate(() => {
+    const vis = (e) => e && e.offsetParent !== null && e.getBoundingClientRect().width > 0
+    const bar = document.querySelector('.pl-toolbar')
+    const bb = bar.getBoundingClientRect()
+    const mainRow = [...bar.querySelectorAll('.pl-tb-search input[type="search"], .pl-filters-btn')].filter(vis)
+      .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+    const opts = [...bar.querySelectorAll('.pl-tb-body input[type="radio"]')].filter(vis)
+    const lines = (sel) => new Set([...bar.querySelectorAll(sel)].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top))).size
+    return {
+      mainLines: new Set(mainRow).size,
+      filtersBtn: vis(bar.querySelector('.pl-filters-btn')),
+      expanded: bar.querySelector('.pl-filters-btn')?.getAttribute('aria-expanded') ?? null,
+      bodyShown: vis(bar.querySelector('.pl-tb-body')),
+      options: opts.length,
+      outside: opts.filter((o) => { const b = o.getBoundingClientRect(); return b.right > bb.right + 0.5 || b.left < bb.left - 0.5 }).length,
+      catLines: lines('.pl-tb-cat input[type="radio"]'),
+      sortAccessLines: lines('.pl-tb-sortacc input[type="radio"]'),
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }
+  })
+}
+
+test('S4 · the Prompt Library toolbar is one line at any width, and the Filters button loses nothing', async ({ browser }) => {
+  budget(PROMPT_WIDTHS.length * 2)
+  const damage = []
+  for (const w of PROMPT_WIDTHS) {
+    const phone = w <= 640
+    // The overview: the search field alone, one line, no groups yet.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts', '.pl-toolbar', { touch: phone })
+      const r = await promptToolbar(page)
+      await ctx.close()
+      if (r.mainLines !== 1) damage.push(`overview @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (r.options || r.filtersBtn) damage.push(`overview @${w}px: the overview shows filter controls (${r.options} options, Filters button ${r.filtersBtn})`)
+      if (r.overflowX > 1) damage.push(`overview @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+    }
+    // The list: the three groups.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts#all', '.pl-toolbar', { touch: phone })
+      let r = await promptToolbar(page)
+      if (r.mainLines !== 1) damage.push(`list @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (phone) {
+        if (!r.filtersBtn) damage.push(`list @${w}px: a phone has no Filters button`)
+        if (r.expanded !== 'false') damage.push(`list @${w}px: Filters starts ${r.expanded === 'true' ? 'open' : 'without aria-expanded'}`)
+        if (r.bodyShown || r.options) damage.push(`list @${w}px: the groups are on screen before Filters is pressed (${r.options} options)`)
+        await page.locator('.pl-filters-btn').click()
+        r = await promptToolbar(page)
+        if (r.expanded !== 'true') damage.push(`list @${w}px: Filters did not report that it opened`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: opening Filters shows ${r.options} of ${PROMPT_OPTIONS} options — something was lost behind the collapse`)
+        if (r.mainLines !== 1) damage.push(`list @${w}px: opening Filters broke the toolbar row onto ${r.mainLines} lines`)
+      } else {
+        if (r.filtersBtn) damage.push(`list @${w}px: a ${w}px screen shows a Filters button it does not need`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: ${r.options} of ${PROMPT_OPTIONS} options are on screen`)
+        if (r.catLines !== 1) damage.push(`list @${w}px: the Category chips wrap onto ${r.catLines} lines`)
+        if (r.sortAccessLines !== 1) damage.push(`list @${w}px: Sort and Access are on ${r.sortAccessLines} lines`)
+      }
+      if (r.outside) damage.push(`list @${w}px: ${r.outside} option(s) outside the toolbar`)
+      if (r.overflowX > 1) damage.push(`list @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+      await ctx.close()
     }
   }
   expect(damage, damage.join('\n')).toEqual([])
@@ -651,7 +741,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   // On a touch screen the FAB is not drawn at all (feedback lives in the menus),
   // so the compact form is a mouse-and-short-window case.
   for (const [w, h] of FAB_SHORT) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
@@ -660,13 +750,13 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
     if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
   }
   for (const [w, h] of FAB_ROOMY) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
   }
   {
-    const { ctx, page } = await open(browser, 844, 390, '/discover/prompts', '.lbry-toolbar')
+    const { ctx, page } = await open(browser, 844, 390, '/discover/prompts', '.pl-toolbar')
     const f = await fabState(page)
     await ctx.close()
     if (f && (f.w || f.h)) damage.push(`844x390 touch: the FAB is drawn (${f.w}x${f.h}) where the menus carry feedback`)
@@ -677,7 +767,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
 const FAB_COVER = [
   // Waits on the toolbar, not a chip: in the 641–980 band the trays collapse
   // to triggers, so no `.lbry-filter` is rendered at some of these shapes.
-  ['/discover/prompts', '.lbry-toolbar', [...FAB_SHORT, [390, 844]]],
+  ['/discover/prompts', '.pl-toolbar', [...FAB_SHORT, [390, 844]]],
 ]
 
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {

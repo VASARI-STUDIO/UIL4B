@@ -102,26 +102,34 @@ async function expectHitArea(locator, what) {
   expect.soft(misses, `${what}: a tap within 22px of its centre misses it`).toEqual([])
 }
 
-async function railControlsAllLand(page) {
+// `nameOpen`: on a phone the name sheet has its own Close and Save, so the bar
+// hides its Next and its X while the sheet is up (one X on screen).
+async function railControlsAllLand(page, { nameOpen = false } = {}) {
   const r = rail(page)
   const chips = r.locator('.bkit-step')
   // Waited for, not counted once: a navigation swaps the page, and the rail of
   // the page being left is still in the DOM until the new page has rendered its own.
   await expect(chips).toHaveCount(4)
   for (let i = 0; i < 4; i++) await expectTapsLand(chips.nth(i), `step chip ${i + 1}`)
-  await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
   await expectTapsLand(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
-  await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
   for (let i = 0; i < 4; i++) await expectHitArea(chips.nth(i), `step chip ${i + 1}`)
-  await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
   await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
-  await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+  if (nameOpen) {
+    await expect(r.locator('.bkit-rail-next'), 'the bar keeps no Next under the name sheet').toBeHidden()
+    await expect(r.getByRole('button', { name: 'Leave the walkthrough' }), 'only the sheet has an X').toBeHidden()
+  } else {
+    await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
+    await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+    await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
+    await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+  }
   // The walkthrough hides the tab bar and the rail takes the bottom edge; its
   // action row has not wrapped.
   const geo = await page.evaluate(() => {
     const railBox = document.querySelector('.bkit-rail').getBoundingClientRect()
     const bar = document.querySelector('.pnav-tabs')
-    const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect())
+    // Only what is drawn: the name sheet hides Next and the X, and a hidden node measures 0,0.
+    const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect()).filter((b) => b.width > 0)
     return {
       railBottom: railBox.bottom,
       viewportBottom: window.innerHeight,
@@ -192,7 +200,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Close' }), 'name card Close')
       await expectHitArea(nameCard(page).getByRole('textbox', { name: 'Project name' }), 'Project name')
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Save project' }), 'Save project')
-      await railControlsAllLand(page)
+      await railControlsAllLand(page, { nameOpen: true })
 
       // At the end of the page the card still sits clear of the rail.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -258,7 +266,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect(rail(page).getByRole('button', { name: 'Leave the walkthrough' }).locator('svg')).toHaveAttribute('aria-hidden', 'true')
 
     // Opened by itself on arrival: Escape must not drop focus on <body>.
-    await expect(introCard(page)).toBeFocused()
+    await expect(introCard(page).getByRole('button', { name: /^Start with/ })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(introCard(page)).toBeHidden()
     await expect(help).toBeFocused()
@@ -630,11 +638,21 @@ test.describe('Brand kit walkthrough: Name your project', () => {
       await expect(r.locator('form')).toHaveCount(0)
       await expect(r.getByRole('button', { name: 'Save project' })).toHaveCount(0)
       await expect(r.getByRole('button', { name: 'Back' })).toHaveCount(0)
-      await expect(next).toHaveClass(/is-outline/)
-      await expect(next).not.toHaveClass(/btn-accent/)
-      await expect(next).toHaveAttribute('aria-expanded', 'true')
+      // By class, not by role: under 768px the sheet hides this button, and a
+      // hidden button has no role to find.
+      const nextEl = r.locator('.bkit-rail-next')
+      await expect(nextEl).toHaveClass(/is-outline/)
+      await expect(nextEl).not.toHaveClass(/btn-accent/)
       await expect(r.getByRole('button', { name: /What.s this\?/ })).toBeVisible()
-      await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
+      if (width < 768) {
+        // The sheet has its own Close and Save: one X, and no Next, on the bar.
+        await expect(next).toBeHidden()
+        await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeHidden()
+        await expect(page.getByRole('button', { name: /^(Close|Leave the walkthrough)$/ }), 'exactly one X while naming').toHaveCount(1)
+      } else {
+        await expect(next).toHaveAttribute('aria-expanded', 'true')
+        await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
+      }
 
       // One flat bar on the foot of the viewport at its one height, the spacer
       // that clears the end of the tool matching it, and the panel in place.
@@ -676,4 +694,96 @@ test.describe('Brand kit walkthrough: Name your project', () => {
       await expect(field).toBeFocused()
     })
   }
+})
+
+test.describe('Brand kit walkthrough: rail polish and leaving', () => {
+  test('a later step link keeps what is on screen like Next; a step behind writes nothing', async ({ page }) => {
+    watch(page, 'designer jumping ahead with the bar')
+    await seed(page)
+    await go(page, '/create/palette')
+    await expect(rail(page).locator('.bkit-step.is-done')).toHaveCount(0)
+    await rail(page).getByRole('link', { name: /Fonts/ }).click()
+    await expect(page).toHaveURL(/\/create\/font-pair$/)
+    // Colours was moved past, so it is ticked and recorded in the flag.
+    await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
+    expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY)).toBe('1:color')
+    // Going back to a step behind records nothing for the one left.
+    await rail(page).getByRole('link', { name: /Colours/ }).click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY)).toBe('1:color')
+  })
+
+  test('1440px: the current-step line sits under its label, inside the bar', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const geo = await page.evaluate(() => {
+      const bar = document.querySelector('.bkit-rail').getBoundingClientRect()
+      const chip = document.querySelector('.bkit-step.is-current')
+      const label = chip.querySelector('.bkit-step-label').getBoundingClientRect()
+      const line = getComputedStyle(chip, '::before')
+      return { barTop: bar.top, chipBottom: chip.getBoundingClientRect().bottom, labelBottom: label.bottom, lineBottom: line.bottom, position: line.position, height: line.height }
+    })
+    expect(geo.position).toBe('absolute')
+    expect(geo.height).toBe('2px')
+    expect(geo.lineBottom, 'the line is anchored to the foot of the chip, not the bar edge').toBe('6px')
+  })
+
+  test('768px: Help and Close are 44px with 8px clear of Next', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const boxes = await page.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect()
+      return { close: r('.bkit-rail-close'), help: r('.bkit-rail-help'), next: r('.bkit-rail-next') }
+    })
+    expect(Math.round(boxes.close.width)).toBe(44)
+    expect(Math.round(boxes.help.height)).toBe(44)
+    expect(boxes.next.left - boxes.help.right).toBeGreaterThanOrEqual(8)
+  })
+
+  test('744px: Next keeps a button width instead of stretching across the bar', async ({ page }) => {
+    await page.setViewportSize({ width: 744, height: 1133 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const w = await rail(page).locator('.bkit-rail-next').evaluate((el) => el.getBoundingClientRect().width)
+    expect(w).toBeLessThanOrEqual(288)
+  })
+
+  test('two fast presses on the X end the walkthrough and press nothing behind it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const before = await page.locator('.plb-col').count()
+    const x = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
+    const box = await x.boundingBox()
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(rail(page)).toBeHidden()
+    expect(await page.locator('.plb-col').count(), 'the second press added a colour').toBe(before)
+    await expect(page.locator('.bkit-exit-shield')).toHaveCount(0, { timeout: 3000 })
+  })
+
+  test('Enter on the X leaves no ring round the page', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(rail(page)).toBeHidden()
+    await expect(page.locator('#main')).toBeFocused()
+    expect(await page.locator('#main').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+  })
+
+  test('390px: an open card closes with the X and the tab bar comes back', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seed(page, { seen: false })
+    await go(page, '/create/palette')
+    await expect(introCard(page)).toBeVisible()
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+    await expect(introCard(page)).toBeHidden()
+    await expect(nameCard(page)).toBeHidden()
+    await expect(rail(page)).toBeHidden()
+    await expect(page.locator('.pnav-tabs')).toBeVisible()
+  })
 })

@@ -159,7 +159,7 @@ export default function TypeMetricsTable() {
         role="group"
         aria-label="The x-height and cap height of each face on this page, measured per em"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Face</th>

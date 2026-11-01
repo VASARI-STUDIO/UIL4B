@@ -279,6 +279,9 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
    from 768, and upward from the docked bar on a phone, at the right where Save
    is. Below 561px the menu is already a bottom sheet (global.css .svt-menu). */
 .tsc-page .tsc-save-wrap { position: relative; display: inline-flex; }
+/* Save and Copy CSS are one group at the end of the toolbar; the gap is the
+   toolbar's own, so no other button can sit between them. */
+.tsc-page .tsc-primary-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tsc-page .tl-toolbar .svt-pop {
   display: block;
   position: absolute;

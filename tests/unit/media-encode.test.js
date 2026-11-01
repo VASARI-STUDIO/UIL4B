@@ -16,6 +16,9 @@ import {
   animationSize, fitContain, describeTiming, frameName, FRAME_PATTERN, findFormat,
   cropRect, turnFilters, directionFilter, outputSize, outputFrames, reverseFits, commitNumber,
   REVERSE_MAX_PIXELS, animatedImageSeconds,
+  scaleFilter, clampBox, freeCrop, padRect, cropPlan, resolveFill, padFilters, cutoutFilter,
+  loopSeconds, previewSourceTime, spriteLayout, splitPngStream, findVideoFormat, TRANSPARENT,
+  dragBox, spriteFits,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -97,29 +100,29 @@ test('video → animation keeps the GIF it always made, and trims when asked', (
   // Height is -2 now (even, which MP4 needs); nothing else moved.
   const gif = videoToAnimationArgs({ format: 'gif', input: 'input.mp4', fps: 10, width: 480 })
   assert.deepEqual(gif, ['-i', 'input.mp4', '-vf',
-    'fps=10,scale=trunc(min(480\\,iw*1920/ih)/2)*2:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=bayer:bayer_scale=2',
+    `fps=10,${scaleFilter(480)},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=bayer:bayer_scale=2`,
     '-loop', '0', 'output.gif'])
 
   const trimmed = videoToAnimationArgs({ format: 'mp4', input: 'in.mov', fps: 30, width: 720, start: 1.5, length: 3 })
   // Both trim flags are input options: -t after -i would cap the OUTPUT length,
   // which cuts a slowed-down clip short.
   assert.deepEqual(trimmed.slice(0, 6), ['-ss', '1.5', '-t', '3', '-i', 'in.mov'])
-  assert.equal(after(trimmed, '-vf'), 'fps=30,scale=trunc(min(720\\,iw*1920/ih)/2)*2:-2:flags=lanczos')
+  assert.equal(after(trimmed, '-vf'), `fps=30,${scaleFilter(720)}`)
   assert.ok(trimmed.includes('-an'), 'the video outputs are silent, and say so in the UI')
 
   const clamped = videoToAnimationArgs({ format: 'webp', input: 'a', fps: 999, width: 99999 })
-  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},scale=trunc(min(${MAX_ANIMATION_SIDE}\\,iw*1920/ih)/2)*2:-2:flags=lanczos`)
+  assert.equal(after(clamped, '-vf'), `fps=${FPS_MAX},${scaleFilter(MAX_ANIMATION_SIDE)}`)
 })
 
 test('video → animation: both sides stay within the cap for any source, portrait included', () => {
-  // Evaluate the generated scale filter the way ffmpeg does, for a source size.
+  // Evaluate the generated scale filter the way ffmpeg does, for a source size
+  // with square pixels.
   const run = (iw, ih, width) => {
     const vf = after(videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width }), '-vf')
-    assert.ok(vf.includes('\\,'), `the comma inside min() must be escaped: ${vf}`)
-    const m = /scale=trunc\(min\((\d+)\\,iw\*(\d+)\/ih\)\/2\)\*2:-2:/.exec(vf)
+    const m = /scale=w='max\(2,2\*floor\(min\((\d+),iw\*sar\*(\d+)\/ih\)\/2\)\)':h='min\((\d+),max\(2,2\*round\(ow\*ih\/\(iw\*sar\)\/2\)\)\)'/.exec(vf)
     assert.ok(m, `unexpected scale filter: ${vf}`)
-    const w = Math.trunc(Math.min(Number(m[1]), (iw * Number(m[2])) / ih) / 2) * 2
-    const h = Math.round((w * ih) / iw / 2) * 2
+    const w = Math.max(2, 2 * Math.floor(Math.min(Number(m[1]), (iw * Number(m[2])) / ih) / 2))
+    const h = Math.min(Number(m[3]), Math.max(2, 2 * Math.round((w * ih) / iw / 2)))
     return { w, h }
   }
   for (const [iw, ih] of [[1080, 1920], [1920, 1080], [720, 2560], [4000, 3000]]) {
@@ -143,15 +146,15 @@ test('video encode width is capped at 1920 on every format, matching the other c
   for (const width of [1921, 2000, 5000, 99999]) {
     for (const f of ANIMATION_FORMATS) {
       const args = videoToAnimationArgs({ format: f.id, input: 'in.mp4', fps: 10, width })
-      assert.match(after(args, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:flags=lanczos/, `${f.id} width ${width}`)
+      assert.ok(after(args, '-vf').includes(scaleFilter(1920)), `${f.id} width ${width}`)
       assert.ok(!args.join(' ').includes('scale=2000'), `${f.id} width ${width} let 2000 through`)
     }
   }
   // At and under the cap the width passes through untouched.
   const at = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1920 })
-  assert.match(after(at, '-vf'), /scale=trunc\(min\(1920\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
+  assert.ok(after(at, '-vf').includes(scaleFilter(1920)))
   const under = videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 1900 })
-  assert.match(after(under, '-vf'), /scale=trunc\(min\(1900\\,iw\*1920\/ih\)\/2\)\*2:-2:/)
+  assert.ok(after(under, '-vf').includes(scaleFilter(1900)))
 })
 
 test('fps is clamped to what GIF can actually store', () => {
@@ -254,13 +257,13 @@ test('video → animation with every edit on, in the pinned filter order', () =>
     direction: 'boomerang', colours: 64, dither: 'diffusion',
   })
   assert.deepEqual(args, ['-ss', '2', '-t', '3', '-i', 'input.mp4', '-vf',
-    'setpts=PTS/2,fps=12,crop=1080:1080:420:0,transpose=1,hflip,scale=trunc(min(480\\,iw*1920/ih)/2)*2:-2:flags=lanczos,split[fw][bw];[bw]reverse,trim=start_frame=1,setpts=PTS-STARTPTS[rv];[fw][rv]concat=n=2:v=1:a=0,split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=floyd_steinberg',
+    `setpts=PTS/2,fps=12,crop=1080:1080:420:0,transpose=1,hflip,${scaleFilter(480)},split[fw][bw];[bw]reverse,trim=start_frame=1,setpts=PTS-STARTPTS[rv];[fw][rv]concat=n=2:v=1:a=0,split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=floyd_steinberg`,
     '-loop', '0', 'output.gif'])
 })
 
 test('reverse to MP4 puts speed first and reverse last', () => {
   const args = videoToAnimationArgs({ format: 'mp4', input: 'a.mp4', fps: 30, width: 720, speed: 0.5, direction: 'reverse' })
-  assert.equal(after(args, '-vf'), 'setpts=PTS/0.5,fps=30,scale=trunc(min(720\\,iw*1920/ih)/2)*2:-2:flags=lanczos,reverse')
+  assert.equal(after(args, '-vf'), `setpts=PTS/0.5,fps=30,${scaleFilter(720)},reverse`)
 })
 
 test('GIF Colours and Dither replace Quality for video; defaults match the Quality medium output', () => {
@@ -349,4 +352,107 @@ test('animatedImageSeconds says 0 (cannot tell) for anything else', () => {
 
 test('commitNumber reads a comma as a decimal point', () => {
   assert.equal(commitNumber('1,5', { min: 0, max: 10, fallback: 0, decimals: 1 }), 1.5)
+})
+
+// ── Crop box, fit bars, cut-outs, sheets, frames ─────────────────────────────
+test('scale: a 4 x 4000 source and an anamorphic one both end inside the cap', () => {
+  assert.deepEqual(outputSize(4, 4000, { width: 480 }), { w: 2, h: 1920 })
+  assert.deepEqual(outputSize(4000, 4, { width: 480 }), { w: 480, h: 2 })
+  assert.deepEqual(outputSize(768, 576, { width: 480 }), { w: 480, h: 360 }) // 720x576 at SAR 16:15, as displayed
+  assert.match(scaleFilter(480), /iw\*sar/)
+  assert.match(scaleFilter(480), /setsar=1$/)
+})
+
+test('crop box: clamped to even whole pixels inside the picture; the full picture is no crop', () => {
+  assert.deepEqual(clampBox({ x: -5, y: 3, w: 9999, h: 61 }, 320, 200), { x: 0, y: 2, w: 320, h: 60 })
+  assert.deepEqual(clampBox({ x: 300, y: 0, w: 101, h: 50 }, 320, 200), { x: 220, y: 0, w: 100, h: 50 })
+  assert.equal(freeCrop(320, 200, { x: 0, y: 0, w: 320, h: 200 }), null)
+  assert.deepEqual(freeCrop(320, 200, { x: 10, y: 0, w: 100, h: 200 }), { x: 10, y: 0, w: 100, h: 200, axis: 'x' })
+  assert.deepEqual(cropPlan(320, 200, { shape: 'custom', box: { x: 10, y: 0, w: 100, h: 200 } }).frame, { w: 100, h: 200 })
+})
+
+test('fit: a wide clip gets bars above and below to reach 1:1, none when the ratio already matches', () => {
+  assert.deepEqual(padRect(320, 200, '1:1'), { w: 320, h: 320, x: 0, y: 60, axis: 'y' })
+  assert.deepEqual(padRect(320, 200, '1:1', 'start').y, 0)
+  assert.deepEqual(padRect(200, 320, '1:1'), { w: 320, h: 320, x: 60, y: 0, axis: 'x' })
+  assert.equal(padRect(200, 200, '1:1'), null)
+  const fit = cropPlan(320, 200, { shape: '1:1', fit: 'fit' })
+  assert.equal(fit.crop, null)
+  assert.deepEqual(fit.frame, { w: 320, h: 320 })
+  assert.deepEqual(padFilters(fit.pad, resolveFill(findVideoFormat('gif'), '#ff0000')), ['pad=320:320:0:60:color=0xff0000'])
+  assert.deepEqual(padFilters(fit.pad, resolveFill(findVideoFormat('webp'), TRANSPARENT)), ['format=rgba', 'pad=320:320:0:60:color=black@0'])
+  // MP4 cannot hold alpha, so Transparent becomes black rather than a silent hole.
+  assert.deepEqual(resolveFill(findVideoFormat('mp4'), TRANSPARENT), { transparent: false, colour: '#000000' })
+  const gif = videoToAnimationArgs({ format: 'gif', input: 'i.mp4', fps: 10, width: 320, pad: fit.pad })
+  assert.match(after(gif, '-vf'), /palettegen=reserve_transparent=1/)
+  const red = videoToAnimationArgs({ format: 'gif', input: 'i.mp4', fps: 10, width: 320, pad: fit.pad, fill: '#ff0000' })
+  assert.doesNotMatch(after(red, '-vf'), /reserve_transparent/)
+})
+
+test('cut-out: circle, oval and rounded are one geq each, transparent or blended to a colour', () => {
+  assert.equal(cutoutFilter('none'), '')
+  for (const cut of ['circle', 'oval', 'rounded']) {
+    assert.match(cutoutFilter(cut), /^format=gbrap,geq=r='r\(X,Y\)':g='g\(X,Y\)':b='b\(X,Y\)':a='.*alpha\(X,Y\)\*clip/, cut)
+    assert.match(cutoutFilter(cut, { transparent: false, colour: '#ff0000' }), /r='.*r\(X,Y\)\*ld\(0\)\+255\*\(1-ld\(0\)\)'.*:a=255$/, cut)
+  }
+  assert.match(cutoutFilter('rounded', { radius: 30 }), /st\(1,30\/100\*min\(W,H\)\)/)
+  assert.match(cutoutFilter('rounded', { radius: 999 }), /st\(1,50\//, 'radius is capped at 50 percent')
+  const args = videoToAnimationArgs({ format: 'webp', input: 'i.mp4', fps: 10, width: 320, cut: 'circle' })
+  const vf = after(args, '-vf')
+  assert.ok(vf.indexOf(scaleFilter(320)) < vf.indexOf('geq='), 'the cut-out is drawn on the final-size picture')
+  assert.match(after(videoToAnimationArgs({ format: 'gif', input: 'i.mp4', fps: 10, width: 320, cut: 'oval' }), '-vf'), /palettegen=reserve_transparent=1/)
+})
+
+test('preview time: reverse runs back, a boomerang goes there and back', () => {
+  assert.equal(previewSourceTime(0.25, 4, 'forward'), 1)
+  assert.equal(previewSourceTime(0.25, 4, 'reverse'), 3)
+  assert.equal(previewSourceTime(0.25, 4, 'boomerang'), 2)
+  assert.equal(previewSourceTime(0.75, 4, 'boomerang'), 2)
+  assert.equal(loopSeconds(4, 2, 'boomerang'), 4)
+  assert.equal(loopSeconds(4, 0.5, 'forward'), 8)
+})
+
+test('sprite sheet grid: 24 frames make 6 x 4; a prime count gets a near-square grid', () => {
+  assert.deepEqual(spriteLayout(24, 100, 100), { cols: 6, rows: 4, w: 600, h: 400 })
+  assert.deepEqual(spriteLayout(23, 100, 100), { cols: 5, rows: 5, w: 500, h: 500 })
+  assert.deepEqual(spriteLayout(24, 100, 100, 8), { cols: 8, rows: 3, w: 800, h: 300 })
+  const args = videoToAnimationArgs({ format: 'sprite', input: 'i.mp4', fps: 10, width: 100, sheet: { cols: 6, rows: 4 } })
+  assert.match(after(args, '-vf'), /format=rgba,tile=6x4:padding=0:margin=0:color=black@0$/)
+  assert.deepEqual(args.slice(-5), ['-frames:v', '1', '-c:v', 'png', 'output.png'])
+})
+
+test('frames export is a PNG stream; splitPngStream cuts it into the files it holds', () => {
+  const chunk = (type, data) => [0, 0, 0, data.length, ...type.split('').map((c) => c.charCodeAt(0)), ...data, 0, 0, 0, 0]
+  const png = (extra = []) => [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...chunk('IHDR', new Array(13).fill(1)), ...chunk('IDAT', [0x49, 0x45, 0x4e, 0x44, ...extra]), ...chunk('IEND', [])]
+  const stream = new Uint8Array([...png(), ...png([9, 9]), ...png()])
+  const files = splitPngStream(stream)
+  assert.equal(files.length, 3)
+  assert.equal(files[1].length, png([9, 9]).length)
+  assert.equal(splitPngStream(new Uint8Array([...png(), 1, 2, 3])).length, 1)
+  assert.equal(splitPngStream(new Uint8Array(0)).length, 0)
+  const args = videoToAnimationArgs({ format: 'frames', input: 'i.mp4', fps: 10, width: 100 })
+  assert.deepEqual(args.slice(-7), ['-frames:v', '300', '-c:v', 'png', '-f', 'image2pipe', 'output.pngs'])
+  assert.equal(args[args.length - 1], 'output.pngs')
+  assert.ok(args.includes('image2pipe'))
+})
+
+test('dragBox: moving keeps the size and stops at the edges; pulling an edge stops 2 px short of the other', () => {
+  const box = { x: 100, y: 50, w: 200, h: 100 }
+  assert.deepEqual(dragBox(box, 'move', 20, -10, 640, 360), { x: 120, y: 40, w: 200, h: 100 })
+  assert.deepEqual(dragBox(box, 'move', 9999, 9999, 640, 360), { x: 440, y: 260, w: 200, h: 100 })
+  assert.deepEqual(dragBox(box, 'move', -9999, -9999, 640, 360), { x: 0, y: 0, w: 200, h: 100 })
+  assert.deepEqual(dragBox(box, 'e', 50, 0, 640, 360), { x: 100, y: 50, w: 250, h: 100 })
+  assert.deepEqual(dragBox(box, 'w', 50, 0, 640, 360), { x: 150, y: 50, w: 150, h: 100 })
+  assert.deepEqual(dragBox(box, 'se', 9999, 9999, 640, 360), { x: 100, y: 50, w: 540, h: 310 })
+  assert.deepEqual(dragBox(box, 'e', -9999, 0, 640, 360), { x: 100, y: 50, w: 2, h: 100 })
+  assert.deepEqual(dragBox(box, 'nw', 9999, 9999, 640, 360), { x: 298, y: 148, w: 2, h: 2 })
+  // A drag lands on the same box as typing the same four numbers.
+  assert.deepEqual(dragBox(box, 'move', 20, -10, 640, 360), clampBox({ x: 120, y: 40, w: 200, h: 100 }, 640, 360))
+  assert.equal(dragBox(box, 'move', 1, 1, 1, 1), null)
+})
+
+test('sprite sheets over the size limit are refused before the engine is asked for them', () => {
+  assert.equal(spriteFits(spriteLayout(24, 480, 270)), true)
+  assert.equal(spriteFits(spriteLayout(300, 1920, 1080)), false)
+  assert.equal(spriteFits({ cols: 1, rows: 40, w: 100, h: 20000 }), false)
 })

@@ -101,7 +101,7 @@ html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opac
 .spnav-quiet{display:flex;align-items:center;gap:1px}
 /* No transition: the design writes `transition:none` inline on these three
    (226-228), which outranks its own [data-quiet] colour fade. */
-.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:9px 14px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);text-decoration:none;transition:none}
+.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:8px 14px;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:16px;letter-spacing:normal;text-transform:none;color:var(--t2);text-decoration:none;transition:none}
 @media(hover:hover){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
 /* THE SCREEN YOU ARE ON. The design colours the current screen's link with
    --ink and the others with --ink-faint (`navLanding` / `navMobile`,
@@ -181,8 +181,8 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
 .spnav-mi:hover{text-decoration:none;color:var(--t0)}
 .spnav-mi--accent,.spnav-mi--accent:hover{color:var(--accent-text)}
 .spnav-mi::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .34s cubic-bezier(.23,1,.32,1)}
-/* The note (255): mono 11px, .14em, faint, 30px under the items. */
-.spnav-mi-note{margin:30px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--t2)}
+/* The note (255): faint, 30px under the items, in the interface sans. */
+.spnav-mi-note{margin:30px 0 0;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .spnav-mi-note::after{display:none}
 /* Hovering ANYWHERE on the open menu dims the items to .42, and the one under
    the pointer comes back to full in the link-hover colour with its underline
