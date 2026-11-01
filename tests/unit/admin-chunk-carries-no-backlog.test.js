@@ -88,11 +88,11 @@
 //
 // ── src/data/fontRealWorldUses.js, RECORDED SO IT IS NOT REDISCOVERED ──────
 // It matches a "data module reaching the client" grep and it is NOT an internal
-// board. It is product content: the per-family slot for photographs of real
-// work, rendered by components/FontDossier.jsx on the public Font Gallery. It
-// ships DELIBERATELY EMPTY — the founder's own call, 2026-09-05 — and what it
-// contains is the SHAPE of an entry plus `isShowable`, the rule that refuses a
-// row which cannot name its image, credit, source and licence. It scores 0: no
+// board. It is product content: the per-family list of documented real-world
+// uses, rendered by components/FontDossier.jsx on the public Font Gallery. It
+// holds the entries (each a link to its documenting page) plus `isShowable`,
+// the rule that refuses a row which cannot name its title, credit and https
+// URL, or an image without its author and licence. It scores 0: no
 // status, no owner action, nothing about this project's condition. The general
 // distinction, which is the thing worth keeping: A MODULE THAT DESCRIBES THE
 // PRODUCT SHIPS; A MODULE THAT DESCRIBES THE PROJECT DOES NOT.
