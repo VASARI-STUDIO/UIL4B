@@ -20,9 +20,9 @@
 - [SEO Specialist](https://uil4b.com/seo): Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.
 
 ## Learn
-7 published reference guides. Neutral and factual — design education, not documentation for these tools.
+8 published reference guides. Neutral and factual — design education, not documentation for these tools.
 
-- [Learn](https://uil4b.com/learn): Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.
+- [Learn](https://uil4b.com/learn): Reference guides on colour, typography, accessibility and psychology for people who build interfaces — the thresholds, formulas and standards they come from.
 - [Colour contrast and the WCAG thresholds](https://uil4b.com/learn/colour-contrast): The WCAG contrast thresholds — 4.5:1, 3:1 and 7:1 — the relative-luminance formula behind them, what counts as large text, and what a ratio cannot see.
 - [Modular type scales](https://uil4b.com/learn/type-scales): How a modular type scale works: size = base x ratio^step, which ratio suits which interface, why a ratio compounds, and how clamp() joins two scales.
 - [What a typeface’s metrics decide](https://uil4b.com/learn/typeface-metrics): Why two typefaces at the same font-size are not the same size: the em box, the aspect value, and the formula CSS gives for matching one face to another.
@@ -30,6 +30,7 @@
 - [Colour spaces for interface work](https://uil4b.com/learn/colour-spaces): sRGB, HSL and OKLCH for UI work: why an HSL lightness of 50% is not a lightness, what OKLCH measures instead, and what CSS does between two colours.
 - [Dark and light themes](https://uil4b.com/learn/theme-systems): A dark theme is a second set of values on the same token names, not an inversion: what inversion does to contrast and hue, and what the reader decides.
 - [Choosing a brand colour](https://uil4b.com/learn/brand-colour): A brand colour has to be text, a fill and a border in two themes. Why no ramp stop clears 4.5:1 on both grounds, and how far a neutral can be tinted.
+- [Improving your value proposition](https://uil4b.com/learn/improving-value-proposition): Which behavioural ideas hold up in pricing and UI design: defaults and anchoring do; decoys and countdown timers mostly do not. With ACCC, FTC and EU rules.
 
 ## Browse
 - [Discover](https://uil4b.com/discover): The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.

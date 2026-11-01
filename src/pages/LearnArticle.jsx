@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import useActiveSection from '../hooks/useActiveSection'
 import NotFound from './NotFound'
 import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
+import { getArticleSources } from '../data/learn/sources'
 import ColourContrast from '../data/learn/colourContrast'
 import BrandColour from '../data/learn/brandColour'
 import ColourSpaces from '../data/learn/colourSpaces'
@@ -10,6 +11,7 @@ import FontLoading from '../data/learn/fontLoading'
 import ThemeSystems from '../data/learn/themeSystems'
 import TypefaceMetrics from '../data/learn/typefaceMetrics'
 import TypeScales from '../data/learn/typeScales'
+import ValueProposition from '../data/learn/valueProposition'
 // The `learn-article` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -40,10 +42,11 @@ import '../styles/pages/learn-article.css'
 // runtime and so cannot be checked by anything. The whole set is still a small
 // chunk; a filename the build cannot see is a permanent hazard.
 //
-// Each body exports ONLY its component, which is why the source list lives on
-// the article record in learnIndex.js rather than beside the prose that cites
-// it: an array export alongside a component defeats fast refresh for the whole
-// module, and the sources are a property of the article either way.
+// Each body exports ONLY its component, which is why the source lists live in
+// src/data/learn/sources.js rather than beside the prose that cites them: an
+// array export alongside a component defeats fast refresh for the whole module.
+// They are not on the learnIndex.js records either, because that file is in the
+// entry chunk and this page is not.
 //
 // ── Why the contents are generated from metadata ───────────────────────────
 //
@@ -61,6 +64,7 @@ const BODIES = {
   'colour-spaces': ColourSpaces,
   'theme-systems': ThemeSystems,
   'brand-colour': BrandColour,
+  'improving-value-proposition': ValueProposition,
 }
 
 // One sentence saying what the tool does with what the reader has just read.
@@ -74,6 +78,7 @@ const TOOL_LEDE = {
   'colour-spaces': 'The Tint Scale Generator builds a 50–950 ramp from one colour, and its lightness curve is exactly the choice this article is about: Perceived spaces the stops by HCT tone, Linear by HSL lightness. The two are visibly different on the same seed.',
   'theme-systems': 'The Semantic Colour Generator builds the role layer this article describes: it derives error, success, warning and info from hue arcs that keep each one legible as itself, then picks every shade by measured contrast — 4.5:1 for text, 3:1 for a boundary — separately for a light scene and a dark one.',
   'brand-colour': 'The Palette Generator starts from one seed, builds the harmony and the tonal ramp from it, and rates each colour it produces against black and white ink — so the value that clears a threshold and the value that does not are on screen together rather than checked one at a time afterwards.',
+  'improving-value-proposition': 'The Contrast Checker tests any colour pair against the WCAG thresholds, which is the check to run on an accent colour used to make one action stand out.',
 }
 
 export default function LearnArticle() {
@@ -90,7 +95,7 @@ export default function LearnArticle() {
 
 function Article({ article }) {
   const Body = BODIES[article.slug]
-  const sources = article.sources || []
+  const sources = getArticleSources(article.slug)
   const active = useActiveSection(article.sections)
   const contentsRef = useRef(null)
   useFocusableHeadings(article.sections)

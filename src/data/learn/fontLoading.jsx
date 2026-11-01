@@ -1,5 +1,5 @@
-// Article: What the reader sees before the font arrives. Metadata and sources
-// in src/data/learnIndex.js.
+// Article: What the reader sees before the font arrives. Metadata in
+// src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // Two live tables carry this article's figures and neither of them is typed.
 // FontFaceTable reads the @font-face rules out of the running stylesheet and
