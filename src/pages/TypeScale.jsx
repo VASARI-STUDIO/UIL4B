@@ -349,7 +349,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     }
     return out
   }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
-  const previewIsFitted = typePreviewNeedsFitting(steps)
+  // The ladder draws each step at the previewed width, so that is the size to test.
+  const previewIsFitted = typePreviewNeedsFitting(steps.map(s => ({ px: s.previewPx })))
 
   // Persist from the handlers rather than an effect: an effect that writes on
   // every slider tick both fights the context's own debounce and trips the
@@ -634,8 +635,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // Keeping the scale in a project is the one step here that asks for an
   // account; everything else on the page works signed out. The trigger sits in
-  // the docked bar at the foot of the page, so it stays on screen while the
-  // page scrolls.
+  // the sticky toolbar from 768 and in the fixed docked bar on a phone, so it
+  // stays on screen while the page scrolls.
   const save = useSaveTypeSystemToolbar({
     gate: 'type-save-type-scale',
     label: 'this type scale',
@@ -664,10 +665,10 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Find a pairing for these families', icon: 'caret-right', onSelect: openInFontPair },
     },
-    { id: 'div', divider: true, align: 'end' },
     {
       id: 'import',
       priority: 2,
+      align: 'end',
       render: () => (
         <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
       ),
@@ -679,8 +680,30 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       {`Copy ${formatLabel}`}
     </ToolButton>
   )
+  // From 768 Save to a project sits right against Copy CSS, as one group at the
+  // end of the row, so the More button always lands to the left of both. The
+  // group never leaves the row, and the save menu is drawn with it. On a phone
+  // Save stays in the docked bar.
+  const toolbarPrimary = (
+    <div className="tsc-primary-group">
+      <div className="tsc-save-wrap">
+        <ToolButton
+          ref={save.triggerRef}
+          icon="bookmark-simple"
+          className="tsc-save"
+          aria-expanded={save.open}
+          aria-haspopup="dialog"
+          onClick={save.trigger}
+        >
+          Save to a project
+        </ToolButton>
+        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+      </div>
+      {primary}
+    </div>
+  )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : primary}>
+    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : toolbarPrimary}>
       {body}
     </ToolLayout>
   )
@@ -746,29 +769,35 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
           <span
             className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-            ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.px)}px` })}
+            ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
           >
             {specimen}
           </span>
-          <span className="tsc-row-num">{s.px}px<span className="tsc-row-rem"> · {trim(+(s.px / 16).toFixed(4))}rem</span></span>
+          <span className="tsc-row-num">{trim(s.previewPx, 1)}px<span className="tsc-row-rem"> · {trim(+(s.previewPx / 16).toFixed(4))}rem</span></span>
         </button>
       ))}
     </div>
+  )
+
+  // One width menu, shared by the Scale and Page views. In the split it sits in
+  // the Page half's bar; below the split it joins the Scale / Page / Code switch.
+  const widthMenu = (
+    <MenuSelect
+      label="Preview width"
+      id="tsc-width"
+      className="tsc-select tsc-width-select"
+      value={width}
+      onChange={setWidth}
+    >
+      {WIDTHS.map(w => <option key={w.id} value={w.id}>{`${w.label} · ${w.px}px`}</option>)}
+    </MenuSelect>
   )
 
   const pageView = (
     <div className="tsc-page-view">
       <div className="tsc-page-bar">
         <p className="tsc-page-label">Page set on this scale</p>
-        <MenuSelect
-          label="Preview width"
-          id="tsc-width"
-          className="tsc-select tsc-width-select"
-          value={width}
-          onChange={setWidth}
-        >
-          {WIDTHS.map(w => <option key={w.id} value={w.id}>{`${w.label} · ${w.px}px`}</option>)}
-        </MenuSelect>
+        {split && widthMenu}
       </div>
       {colW > 0 && colW < activeWidth.px - 1 && (
         <p className="tsc-width-note" role="status">
@@ -1158,23 +1187,26 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             Scale / Page / Code switch shows one view at a time. */}
         <ToolMain className="tsc-output" ref={setWorkEl}>
           {!split && (
-            <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
-              {VIEWS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  id={`tsc-tab-${id}`}
-                  aria-selected={view === id}
-                  aria-controls="tsc-view-panel"
-                  tabIndex={view === id ? 0 : -1}
-                  className={view === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
-                  onClick={() => setView(id)}
-                  onKeyDown={handleViewKeyDown}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="tsc-view-bar">
+              <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
+                {VIEWS.map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`tsc-tab-${id}`}
+                    aria-selected={view === id}
+                    aria-controls="tsc-view-panel"
+                    tabIndex={view === id ? 0 : -1}
+                    className={view === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
+                    onClick={() => setView(id)}
+                    onKeyDown={handleViewKeyDown}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {view !== 'code' && widthMenu}
             </div>
           )}
 
@@ -1224,11 +1256,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* The docked bar. Wide split: Code and Save to a project. Tablet and a
-          narrower desktop: Save to a project. Phone: Save and Copy CSS, above
-          the tab bar. The save menu opens from it. */}
-      <div className="tsc-dock" role="group" aria-label={phone ? 'Save and copy' : split ? 'Code and save' : 'Save'}>
-        {split && (
+      {/* The docked bar. Split: Code alone (Save to a project is in the
+          toolbar). Phone: Save and Copy CSS, above the tab bar, and the save
+          menu opens from it. Between the two there is no bar. */}
+      {(phone || split) && (
+      <div className="tsc-dock" role="group" aria-label={phone ? 'Save and copy' : 'Code'}>
+        {split && !phone && (
           <ToolButton
             ref={codeBtnRef}
             icon="code"
@@ -1241,19 +1274,24 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             Code
           </ToolButton>
         )}
-        <ToolButton
-          ref={save.triggerRef}
-          icon="bookmark-simple"
-          className="tsc-save"
-          aria-expanded={save.open}
-          aria-haspopup="dialog"
-          onClick={save.trigger}
-        >
-          {phone ? 'Save' : 'Save to a project'}
-        </ToolButton>
-        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
-        {phone && primary}
+        {phone && (
+          <>
+            <ToolButton
+              ref={save.triggerRef}
+              icon="bookmark-simple"
+              className="tsc-save"
+              aria-expanded={save.open}
+              aria-haspopup="dialog"
+              onClick={save.trigger}
+            >
+              Save
+            </ToolButton>
+            <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+            {primary}
+          </>
+        )}
       </div>
+      )}
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />

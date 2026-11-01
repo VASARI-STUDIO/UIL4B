@@ -24,12 +24,31 @@ import { buildReportTarget } from '../../utils/contentReport'
 // object that has no `text` at all. A blurred or clipped copy of this card
 // would leave the real text in the DOM. Any lock state belongs in LockedTease.
 //
+// ── VARIANTS ────────────────────────────────────────────────────────────────
+// One card, three placements:
+//   list  the gallery list's tile, as it always was: it fills its grid track.
+//   lead  a shelf's opener on the overview: large, with a one-sentence excerpt
+//         from the brief, playing its output while it is on screen.
+//   rest  a compact shelf item: poster, title, saves and Save; no tags or
+//         author. It never plays, so a shelf decodes one animation, not five.
+// `animate` overrides whether a card plays (default: lead and list do, rest
+// does not). The page can pass `animate={false}` to keep list tiles still.
+//
 // ── STRUCTURE ───────────────────────────────────────────────────────────────
 // `.pl-card-cell` is the grid item. It holds the card (one role="button" that
 // opens the prompt) and, for community prompts, the Save toggle as a SIBLING
 // laid over the card's foot, so no interactive element is nested inside
 // another.
-export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSave }) {
+/** The brief's first sentence, for the lead card's excerpt. */
+function firstSentence(text, max = 240) {
+  const flat = String(text || '').replace(/\s+/g, ' ').trim()
+  if (!flat) return ''
+  const hit = flat.match(/^.*?[.!?](?=\s|$)/)
+  const sentence = hit ? hit[0] : flat
+  return sentence.length > max ? `${sentence.slice(0, max - 1).trimEnd()}…` : sentence
+}
+
+export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSave, variant = 'list', animate }) {
   const pTags = parseTags(p.tags)
   const text = p.text || ''
   const name = p.title || text.slice(0, 60)
@@ -47,7 +66,8 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
   // when it leaves, which releases the decoded frames: a gallery of twenty
   // never decodes twenty animations at once. Reduced motion and data saver
   // never mount it, so they keep the still.
-  const canAnimate = showsOutput && hasPromptAnim(p.id) && allowsAnimatedPreview(reducedMotion)
+  const plays = animate ?? variant !== 'rest'
+  const canAnimate = plays && showsOutput && hasPromptAnim(p.id) && allowsAnimatedPreview(reducedMotion)
   const inView = useInViewPlayback(cellRef, canAnimate)
   const [animReady, setAnimReady] = useState(false)
   // A file that fails to load is not retried on this card; the poster stays.
@@ -58,9 +78,13 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
   if (!playing && animReady) setAnimReady(false)
 
   const open = () => onOpen(p)
+  const excerpt = variant === 'lead' ? firstSentence(text) : ''
 
   return (
-    <div className={`pl-card-cell${isCommunity && onToggleSave ? ' has-save' : ''}`} ref={cellRef}>
+    <div
+      className={`pl-card-cell${variant === 'list' ? '' : ` pl-card-cell--${variant}`}${isCommunity && onToggleSave ? ' has-save' : ''}`}
+      ref={cellRef}
+    >
       <div
         className="pl-card no-img"
         onClick={open}
@@ -116,7 +140,8 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
 
         <div className="pl-card-text-hero">
           <div className="pl-card-title">{name}</div>
-          {pTags.length > 0 && (
+          {excerpt && <p className="pl-card-excerpt">{excerpt}</p>}
+          {variant !== 'rest' && pTags.length > 0 && (
             <div className="pl-card-tags">
               {pTags.slice(0, 3).map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
               {pTags.length > 3 && <span className="pl-tag">+{pTags.length - 3}</span>}
@@ -124,7 +149,7 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
           )}
           {isCommunity && (
             <div className="pl-card-author">
-              <UserName name={p.author} ownerId={p.ownerId} bold={!!p.ownerId} />
+              {variant !== 'rest' && <UserName name={p.author} ownerId={p.ownerId} bold={!!p.ownerId} />}
               {p.saves > 0 && <span className="pl-card-saves">{p.saves} saves</span>}
             </div>
           )}

@@ -37,16 +37,16 @@
 }
 .tt .tt-cell:focus-visible { outline-offset: -3px; }
 .tt .tt-cell-step {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .06em;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
   color: var(--tt-ink, currentColor);
 }
 
 /* ── Lightness per step (D:813-822) ─────────────────────────────────────── */
 .tt .tt-chart {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid var(--tl-line);
@@ -281,7 +281,7 @@ html[data-reduced-motion="true"] .tt .tt-tip[data-open="true"] { animation: none
 @media (max-width: 767px) {
   .tt .tt-cols { min-height: 180px; }
   .tt .tt-cell { padding: 10px 2px; align-items: center; }
-  .tt .tt-cell-step { font-size: 10px; letter-spacing: 0; }
+  .tt .tt-cell-step { font-size: var(--fs-caption); }
   .tt .tt-bars { height: 56px; }
 }
 @media (max-width: 640px) {

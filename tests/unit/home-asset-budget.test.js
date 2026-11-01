@@ -237,7 +237,7 @@ test('the deferred stylesheets exist, are substantial, and are imported by lazy 
   // The default floor guards a family being emptied back into global.css. A
   // sheet that is small on purpose (one component's own rules, not a page
   // family) names its own, still real, floor here instead of lowering everyone's.
-  const FLOOR = { 'save-share-menu.css': 2000 }
+  const FLOOR = { 'save-share-menu.css': 2000, 'font-uses.css': 1500 }
   for (const sheet of sheets) {
     const bytes = fs.statSync(path.join(dir, sheet)).size
     const floor = FLOOR[sheet] ?? 5000

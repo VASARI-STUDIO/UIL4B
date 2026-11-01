@@ -191,12 +191,12 @@
 .fc .fc-eyebrow {
   display: block;
   margin: 0;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
   line-height: 1.3;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -571,8 +571,8 @@
 
 .fc .fc-meta {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   color: var(--t2);
@@ -614,11 +614,11 @@
 }
 
 .fc .fc-outsize-k {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -725,6 +725,79 @@
   box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--bg-0) 62%, transparent);
 }
 
+/* The custom crop box. It takes the pointer (the plain keep outline above does
+   not) and turns off touch scrolling, so a finger drags the box and not the page. */
+.fc .fc-crop-box {
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fc .fc-crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+
+.fc .fc-crop-box[data-disabled] { cursor: not-allowed; }
+
+/* Four corner handles. Each is a 44 px hit area sitting inside its corner, so
+   the stage's clipping never cuts one in half; the drawn mark is the bracket. */
+.fc .fc-crop-dot {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  touch-action: none;
+}
+
+.fc .fc-crop-dot::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--t0);
+}
+
+.fc .fc-crop-dot--nw { top: 0; left: 0; cursor: nwse-resize; }
+.fc .fc-crop-dot--ne { top: 0; right: 0; cursor: nesw-resize; }
+.fc .fc-crop-dot--sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.fc .fc-crop-dot--se { bottom: 0; right: 0; cursor: nwse-resize; }
+.fc .fc-crop-dot--nw::after { top: 0; left: 0; border-width: 3px 0 0 3px; }
+.fc .fc-crop-dot--ne::after { top: 0; right: 0; border-width: 3px 3px 0 0; }
+.fc .fc-crop-dot--sw::after { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+.fc .fc-crop-dot--se::after { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+/* Left / Top / Width / Height: two by two at every width. */
+.fc .fc-box-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fc .fc-box-grid > div { display: grid; gap: 8px; min-width: 0; }
+
+.fc .fc-seg--view { max-width: 240px; }
+
+/* The After view: the saved picture on the checkerboard, then play and the scrubber on one row. */
+.fc .fc-preview { display: grid; gap: 10px; min-width: 0; }
+
+.fc .fc-scrub-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.fc .fc-scrub-row .fc-btn { flex: none; min-width: 76px; }
+
+.fc .fc-scrub {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--accent-mid);
+}
+
+.fc .fc-scrub:disabled { opacity: .55; cursor: not-allowed; }
+
 .fc .fc-source-card {
   display: flex;
   flex-wrap: wrap;
@@ -748,10 +821,10 @@
 .fc .fc-facts > div { display: grid; gap: 2px; min-width: 0; }
 
 .fc .fc-facts dt {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -848,8 +921,8 @@
 .fc .fc-transport .fc-btn { min-width: 76px; }
 
 .fc .fc-transport-pos {
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
   color: var(--t1);
 }
@@ -907,8 +980,8 @@
   left: 4px;
   min-width: 20px;
   padding: 2px 5px;
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   line-height: 1.3;
   text-align: center;
   color: var(--t0);
@@ -926,8 +999,8 @@
 
 .fc .fc-frame-sel {
   margin-right: 4px;
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   color: var(--t1);
 }
 

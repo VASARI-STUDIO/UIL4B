@@ -56,7 +56,11 @@ export function stubOf(kind, item) {
     return stub
   }
   if (kind === 'gradients') return { id: item.id, name: item.name, slots: rowSlots(item) }
-  return { id: item.id, free: item.free, tags: item.tags }
+  // `category` places the locked card on the gallery overview; like the tags it
+  // is a public filter facet, not the payload.
+  const stub = { id: item.id, free: item.free, tags: item.tags }
+  if (item.category !== undefined) stub.category = item.category
+  return stub
 }
 
 /** The library in canonical order: full where free, stub elsewhere. */

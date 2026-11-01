@@ -181,10 +181,10 @@
   content: counter(prn, decimal-leading-zero);
   display: block;
   margin-bottom: var(--s-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .16em;
+  letter-spacing: normal;
   /* --cpg-faint, not --cpg-quiet. This sits on the page ground where --t3 is
      4.59:1 — passing with nothing in hand — and the numeral is 10.5px, which
      has no large-text relief. --t2 is 5.62:1 on the same ground. */
@@ -317,7 +317,7 @@
   border-radius: var(--radius-xl);
   min-width: 0;
 }
-.prn-th-theme { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+.prn-th-theme { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; }
 .prn-th-token { font-family: var(--mono); font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
 .prn-th-hex { font-family: var(--mono); font-size: 12.5px; }
 .prn-th-ratio { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.2; margin-top: var(--s-2); font-variant-numeric: tabular-nums; }
@@ -348,11 +348,11 @@
   margin: 0 0 var(--s-3);
   padding-bottom: var(--s-2);
   border-bottom: 1px solid var(--cpg-line);
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cpg-faint);
 }
 

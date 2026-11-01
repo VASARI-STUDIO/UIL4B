@@ -28,10 +28,10 @@
 }
 .arc-page .rc-vis-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 20px; }
 .arc-page .rc-vis-tag {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--tl-faint);
 }
 .arc-page .rc-vis-stage {
@@ -81,7 +81,7 @@
   cursor: pointer;
   transition: color .16s ease;
 }
-.arc-page .rc-dim small { font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: .06em; color: var(--tl-dim); }
+.arc-page .rc-dim small { font-family: var(--font); font-size: var(--fs-caption); font-weight: 400; letter-spacing: normal; color: var(--tl-dim); }
 .arc-page .rc-times { font-size: 20px; color: var(--tl-faint); }
 
 .arc-page .arc-stats {
@@ -111,7 +111,7 @@
   cursor: pointer;
   transition: background-color .16s ease;
 }
-.arc-page .arc-stat-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--tl-faint); }
+.arc-page .arc-stat-k { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 .arc-page .arc-stat-v { font-family: var(--mono); font-size: 14px; color: var(--tl-ink); }
 .arc-page .arc-stat--snap {
   background: color-mix(in srgb, var(--accent) 6%, var(--tl-card));
@@ -119,7 +119,7 @@
 }
 .arc-page .arc-stat--snap .arc-stat-v,
 .arc-page .arc-stat-sub { color: var(--accent-text); }
-.arc-page .arc-stat-sub { font-family: var(--mono); font-size: 10px; }
+.arc-page .arc-stat-sub { font-family: var(--font); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
 
 @media (hover: hover) and (pointer: fine) {
   .arc-page .rc-dim:hover { color: var(--tl-link); }
@@ -208,7 +208,7 @@
 .arc-page .arc-opt-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .arc-page .arc-opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .arc-page .arc-opt-name { font-size: 13px; font-weight: 540; color: var(--tl-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.arc-page .arc-opt-meta { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arc-page .arc-opt-meta { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) {
   .arc-page .arc-select-btn:hover { background: var(--tl-wash-2); }
   .arc-page .arc-opt:hover { background: var(--tl-wash-2); }
@@ -273,7 +273,7 @@
 .arc-page .rc-known { display: grid; gap: 8px; }
 .arc-page .arc-ppi-row { display: flex; align-items: center; gap: 8px; }
 .arc-page .arc-ppi-field { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; }
-.arc-page .arc-ppi-field span { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
+.arc-page .arc-ppi-field span { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); }
 .arc-page .arc-ppi-or { font-size: 12px; color: var(--tl-dim); white-space: nowrap; }
 
 /* ── Press feedback ─────────────────────────────────────────────────────── */

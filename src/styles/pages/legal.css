@@ -263,17 +263,17 @@
  * literal value and stays mono. */
 .lgl .storage-table th {
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: normal;
   text-transform: none;
   color: var(--cpg-faint);
 }
 .lgl .storage-table .storage-pii {
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-caption);
   font-weight: 560;
-  letter-spacing: 0;
+  letter-spacing: normal;
   text-transform: none;
 }
 .lgl .storage-table td { color: var(--cpg-dim); }
