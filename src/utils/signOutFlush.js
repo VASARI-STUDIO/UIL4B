@@ -1,5 +1,6 @@
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from './syncStatus'
+import { anyUnsent } from './unsentTracker'
 
 // SEND WHAT IS PENDING BEFORE SIGNING OUT, AND SAY SO WHEN IT CANNOT BE SENT.
 //
@@ -20,17 +21,18 @@ export const SIGN_OUT_FLUSH_WAIT_MS = 10000
 export const UNSENT_CHANGES_NOTE = 'Some recent changes haven’t reached your account yet. If you sign out now, they stay on this device and are sent the next time you sign in here with this account. Signing in with a different account first discards them.'
 
 /**
- * Resolves 'sent' when nothing is left unsent, 'unsent' when the wait ran out
- * or the sync store reports a failure. Never rejects.
- * `flush` and `readState` are injectable so the rule can be tested without a
+ * Resolves 'sent' when nothing is left unsent, 'unsent' when the wait ran out,
+ * the sync store reports a failure, or a saved project edit is still unsent
+ * (an edit made while the flush was in flight). Never rejects.
+ * `flush`, `readState` and `isUnsent` are injectable so the rule can be tested without a
  * browser.
  */
-export async function flushBeforeSignOut({ waitMs = SIGN_OUT_FLUSH_WAIT_MS, flush = flushAccountSync, readState = getSyncState } = {}) {
+export async function flushBeforeSignOut({ waitMs = SIGN_OUT_FLUSH_WAIT_MS, flush = flushAccountSync, readState = getSyncState, isUnsent = anyUnsent } = {}) {
   let timer
   const held = new Promise((resolve) => { timer = setTimeout(resolve, waitMs, 'held') })
   try {
     const settled = await Promise.race([flush().then(() => 'done', () => 'failed'), held])
-    return settled === 'done' && !readState().errors.length ? 'sent' : 'unsent'
+    return settled === 'done' && !readState().errors.length && !isUnsent() ? 'sent' : 'unsent'
   } finally {
     clearTimeout(timer)
   }

@@ -5,6 +5,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext'
 import { flushAccountSync } from '../../hooks/useFirestoreSync'
 import useOfflineGate from './useOfflineGate'
 import { flushBeforeSignOut, UNSENT_CHANGES_NOTE } from '../../utils/signOutFlush'
+import { requestDiscardOnSignOut, cancelDiscardRequest } from '../../utils/signOutClear'
 import { accountInitials, accountLabel, accountMethod, switcherAccounts, uidsToForget } from '../../utils/accountSwitcher'
 
 // THE ACCOUNT SWITCHER, modelled on Google's account switcher.
@@ -189,22 +190,26 @@ export function SignOutRows({ onDone }) {
     }
   }, [issue])
 
-  const run = async (scope, { anyway = false } = {}) => {
+  const run = async (scope, { anyway = false, discard = false } = {}) => {
     if (lockRef.current) return
     lockRef.current = true
     if (issue) refocusRef.current = scope
     setIssue(null)
     setBusy(scope)
     try {
-      if (!anyway && await flushBeforeSignOut() !== 'sent') {
+      if (!anyway && !discard && await flushBeforeSignOut() !== 'sent') {
         setIssue({ kind: 'unsent', scope })
         return
       }
       const uids = scope === 'all' ? uidsToForget(knownAccounts) : []
+      // "Discard": the unsent changes leave this browser with the rest of the
+      // person's copy (the auth-state change reads this request).
+      if (discard) requestDiscardOnSignOut()
       await logout()
       uids.forEach((uid) => removeKnownAccount(uid))
       onDone?.()
     } catch {
+      cancelDiscardRequest()
       setIssue({ kind: 'failed', scope })
     } finally {
       lockRef.current = false
@@ -235,7 +240,10 @@ export function SignOutRows({ onDone }) {
         <span className="pnav-signout-alert-actions">
           <button type="button" onClick={() => run(issue.scope)}>Try again</button>
           {issue.kind === 'unsent' && (
-            <button type="button" onClick={() => run(issue.scope, { anyway: true })}>Sign out anyway</button>
+            <>
+              <button type="button" onClick={() => run(issue.scope, { anyway: true })}>Sign out anyway</button>
+              <button type="button" onClick={() => run(issue.scope, { discard: true })}>Sign out and discard them</button>
+            </>
           )}
         </span>
       </div>

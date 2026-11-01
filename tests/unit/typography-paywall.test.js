@@ -73,6 +73,7 @@ import { transformWithOxc } from 'vite'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
+import { createUnsentTracker } from '../../src/utils/unsentTracker.js'
 import { stripCss } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css; a test that keeps reading one file after a lift like that does
@@ -219,6 +220,8 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
     DEFAULT_DESIGN,
     // The real snapshot/patch merge saveProject calls; pure, so it runs as-is.
     projectSnapshot,
+    // The real tracker (DOM-free); the provider makes one on its first render.
+    createUnsentTracker,
   }
 
   const body = `(function(){\n${out}\n;return { ProjectProvider };\n})()`
