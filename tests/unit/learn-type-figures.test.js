@@ -35,6 +35,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { getArticleSources } from '../../src/data/learn/sources.js'
 import { proseOf } from '../../scripts/learn-wordcount.mjs'
 
 /* ── the files under test ────────────────────────────────────────────────── */
@@ -453,7 +454,7 @@ test('every CLAUSE either guide quotes is listed as one of its sources', () => {
   for (const slug of ['typeface-metrics', 'font-loading']) {
     const article = LEARN_ARTICLES.find((a) => a.slug === slug)
     const source = slug === 'typeface-metrics' ? metricsSource : loadingSource
-    const listed = new Set(article.sources.map((s) => clause(s.href)))
+    const listed = new Set(getArticleSources(article.slug).map((s) => clause(s.href)))
     const cited = [...source.matchAll(/href=\{`\$\{([A-Z0-9]+)\}([^`]*)`\}/g)]
     assert.ok(cited.length >= 3, `${slug} carries fewer than three linked clauses`)
 

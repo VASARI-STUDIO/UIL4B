@@ -29,15 +29,15 @@
 //   updated     ISO date of the last factual review
 //   toolTo      the tool that does the thing the article explains
 //   toolLabel   the link text for that tool
-//   sources     every specification and document the prose cites, in the order
-//               it cites them. They live here rather than beside the prose so
-//               the article files export nothing but a component (an array
-//               export beside a component trips react-refresh, and the sources
-//               are a property of the article rather than of its markup)
 //   sections    the article's own headings, in order — the table of contents
 //               is generated from this, so a heading cannot exist in the prose
 //               without appearing in the contents and vice versa (the article
 //               component renders each section FROM this list)
+//
+// The source lists are NOT on the record. This file is imported by routeMetaMap,
+// toolTree and menuModel, so it is in the entry chunk of every route, and the
+// lists are read only by the lazy article page. They live in
+// src/data/learn/sources.js, read with getArticleSources(slug).
 //
 // `words` drives the reading estimate rather than a typed "5 min read". 220
 // words per minute is the middle of the range usually reported for adult silent
@@ -49,7 +49,7 @@
  * tests/unit/learn-articles.test.js asserts — a one-off topic string is how an
  * index page ends up with a category that has exactly one thing in it.
  */
-export const TOPICS = Object.freeze(['Colour', 'Typography', 'Accessibility'])
+export const TOPICS = Object.freeze(['Colour', 'Typography', 'Accessibility', 'Psychology'])
 
 /** Words per minute used for the reading estimate. */
 export const READING_WPM = 220
@@ -70,15 +70,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-05',
     toolTo: '/create/contrast',
     toolLabel: 'Contrast Checker',
-    sources: [
-      { label: 'WCAG 2.2 — SC 1.4.3 Contrast (Minimum)', href: 'https://www.w3.org/TR/WCAG22/#contrast-minimum' },
-      { label: 'WCAG 2.2 — SC 1.4.6 Contrast (Enhanced)', href: 'https://www.w3.org/TR/WCAG22/#contrast-enhanced' },
-      { label: 'WCAG 2.2 — SC 1.4.11 Non-text Contrast', href: 'https://www.w3.org/TR/WCAG22/#non-text-contrast' },
-      { label: 'WCAG 2.2 — SC 1.4.1 Use of Color', href: 'https://www.w3.org/TR/WCAG22/#use-of-color' },
-      { label: 'WCAG 2.2 — definitions: relative luminance, contrast ratio, large scale text', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
-      { label: 'Understanding SC 1.4.3 — the rationale for 4.5:1 and the pt/px conversion', href: 'https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html' },
-      { label: 'w3c/wcag#308 — the 0.03928 to 0.04045 correction', href: 'https://github.com/w3c/wcag/issues/308' },
-    ],
     sections: [
       { id: 'thresholds', title: 'The thresholds' },
       { id: 'large-text', title: 'What counts as large text' },
@@ -99,13 +90,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-05',
     toolTo: '/create/type-scale',
     toolLabel: 'Type Scale Generator',
-    sources: [
-      { label: 'WCAG 2.2 — SC 1.4.4 Resize Text', href: 'https://www.w3.org/TR/WCAG22/#resize-text' },
-      { label: 'WCAG 2.2 — SC 1.4.12 Text Spacing', href: 'https://www.w3.org/TR/WCAG22/#text-spacing' },
-      { label: 'Bringhurst, The Elements of Typographic Style — 2.1.2, Choose a comfortable measure', href: 'http://webtypography.net/2.1.2' },
-      { label: 'MDN — CSS length units, including the ch definition and its 0.5em fallback', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/length' },
-      { label: 'MDN — clamp()', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/clamp' },
-    ],
     sections: [
       { id: 'the-formula', title: 'The formula' },
       { id: 'choosing-a-ratio', title: 'Choosing a ratio' },
@@ -126,15 +110,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-06',
     toolTo: '/create/font-gallery',
     toolLabel: 'Font Gallery',
-    sources: [
-      { label: 'CSS Fonts Module Level 4 — the font-size-adjust property and the aspect value', href: 'https://www.w3.org/TR/css-fonts-4/#font-size-adjust-prop' },
-      { label: 'CSS Fonts Module Level 4 — the font-weight property', href: 'https://www.w3.org/TR/css-fonts-4/#font-weight-prop' },
-      { label: 'CSS Fonts Module Level 4 — the font-synthesis-weight property', href: 'https://www.w3.org/TR/css-fonts-4/#font-synthesis-weight' },
-      { label: 'CSS Fonts Module Level 5 — font-size-adjust and the named font metrics', href: 'https://www.w3.org/TR/css-fonts-5/#font-size-adjust-prop' },
-      { label: 'WCAG 2.2 — SC 1.4.4 Resize Text', href: 'https://www.w3.org/TR/WCAG22/#resize-text' },
-      { label: 'WCAG 2.2 — SC 1.4.12 Text Spacing', href: 'https://www.w3.org/TR/WCAG22/#text-spacing' },
-      { label: 'HTML Living Standard — TextMetrics, the canvas ink extents this page measures with', href: 'https://html.spec.whatwg.org/multipage/canvas.html#textmetrics' },
-    ],
     sections: [
       { id: 'em-box', title: 'What font-size sets' },
       { id: 'aspect-value', title: 'The aspect value' },
@@ -155,14 +130,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-06',
     toolTo: '/create/font-pair',
     toolLabel: 'Font Pairing tool',
-    sources: [
-      { label: 'CSS Fonts Module Level 4 — the font display timeline', href: 'https://www.w3.org/TR/css-fonts-4/#font-display-timeline' },
-      { label: 'CSS Fonts Module Level 4 — the font-display descriptor', href: 'https://www.w3.org/TR/css-fonts-4/#font-display-desc' },
-      { label: 'CSS Fonts Module Level 4 — the unicode-range descriptor', href: 'https://www.w3.org/TR/css-fonts-4/#unicode-range-desc' },
-      { label: 'CSS Fonts Module Level 5 — the size-adjust descriptor', href: 'https://www.w3.org/TR/css-fonts-5/#size-adjust-desc' },
-      { label: 'CSS Fonts Module Level 5 — ascent-override, descent-override and line-gap-override', href: 'https://www.w3.org/TR/css-fonts-5/#font-metrics-override-desc' },
-      { label: 'CSS Font Loading Module Level 3 — FontFaceSet, which the status column reads', href: 'https://www.w3.org/TR/css-font-loading-3/#FontFaceSet-interface' },
-    ],
     sections: [
       { id: 'three-periods', title: 'The three periods a webfont has' },
       { id: 'choosing-display', title: 'Which period the page should spend' },
@@ -183,13 +150,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-05',
     toolTo: '/create/tint',
     toolLabel: 'Tint Scale Generator',
-    sources: [
-      { label: 'CSS Color Module Level 4 — oklab() and oklch()', href: 'https://www.w3.org/TR/css-color-4/#ok-lab' },
-      { label: 'CSS Color Module Level 5 — color-mix()', href: 'https://www.w3.org/TR/css-color-5/#color-mix' },
-      { label: 'Björn Ottosson — A perceptual color space for image processing (Oklab, 2020)', href: 'https://bottosson.github.io/posts/oklab/' },
-      { label: 'MDN — the oklch() colour function', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch' },
-      { label: 'WCAG 2.2 — relative luminance, for the contrast figures used here', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
-    ],
     sections: [
       { id: 'one-screen', title: 'One screen, several coordinate systems' },
       { id: 'hsl-lightness', title: 'HSL lightness is not lightness' },
@@ -210,15 +170,6 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-06',
     toolTo: '/create/semantic-color',
     toolLabel: 'Semantic Colour Generator',
-    sources: [
-      { label: 'Media Queries Level 5 — prefers-color-scheme', href: 'https://www.w3.org/TR/mediaqueries-5/#prefers-color-scheme' },
-      { label: 'Media Queries Level 5 — prefers-contrast', href: 'https://www.w3.org/TR/mediaqueries-5/#prefers-contrast' },
-      { label: 'Media Queries Level 5 — forced-colors', href: 'https://www.w3.org/TR/mediaqueries-5/#forced-colors' },
-      { label: 'CSS Color Adjustment Level 1 — the color-scheme property', href: 'https://www.w3.org/TR/css-color-adjust-1/#color-scheme-prop' },
-      { label: 'WCAG 2.2 — SC 1.4.1 Use of Color', href: 'https://www.w3.org/TR/WCAG22/#use-of-color' },
-      { label: 'WCAG 2.2 — SC 1.4.11 Non-text Contrast', href: 'https://www.w3.org/TR/WCAG22/#non-text-contrast' },
-      { label: 'WCAG 2.2 — definition: relative luminance, for the linearisation step', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
-    ],
     sections: [
       { id: 'value-sets', title: 'One set of names, two sets of values' },
       { id: 'inversion', title: 'Inversion is not a theme' },
@@ -239,19 +190,32 @@ export const LEARN_ARTICLES = Object.freeze([
     updated: '2026-09-06',
     toolTo: '/create/palette',
     toolLabel: 'Palette Generator',
-    sources: [
-      { label: 'WCAG 2.2 — SC 1.4.3 Contrast (Minimum)', href: 'https://www.w3.org/TR/WCAG22/#contrast-minimum' },
-      { label: 'WCAG 2.2 — SC 1.4.11 Non-text Contrast', href: 'https://www.w3.org/TR/WCAG22/#non-text-contrast' },
-      { label: 'WCAG 2.2 — SC 1.4.1 Use of Color', href: 'https://www.w3.org/TR/WCAG22/#use-of-color' },
-      { label: 'WCAG 2.2 — definitions: relative luminance and contrast ratio', href: 'https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio' },
-      { label: 'CSS Color Module Level 4 — the HSL notation', href: 'https://www.w3.org/TR/css-color-4/#the-hsl-notation' },
-    ],
     sections: [
       { id: 'jobs', title: 'One value, several jobs' },
       { id: 'the-ramp', title: 'What the ramp is for' },
       { id: 'no-single-stop', title: 'No single stop clears both grounds' },
       { id: 'neutrals', title: 'The neutral carries more of the screen' },
       { id: 'state-collision', title: 'When the brand hue is already spoken for' },
+    ],
+  },
+  {
+    slug: 'improving-value-proposition',
+    title: 'Improving your value proposition',
+    navLabel: 'Value proposition',
+    topic: 'Psychology',
+    dek: 'Fourteen behavioural ideas, graded by how well the evidence holds, with how products use each one and the point where it becomes a dark pattern.',
+    description: 'Which behavioural ideas hold up in pricing and UI design: defaults and anchoring do; decoys and countdown timers mostly do not. With ACCC, FTC and EU rules.',
+    file: 'valueProposition.jsx',
+    words: 4339,
+    updated: '2026-11-01',
+    toolTo: '/create/contrast',
+    toolLabel: 'Contrast Checker',
+    sections: [
+      { id: 'evidence', title: 'What the research supports' },
+      { id: 'value-and-pricing', title: 'Value and pricing' },
+      { id: 'trust-and-defaults', title: 'Trust and defaults' },
+      { id: 'interface-laws', title: 'Choice and interface laws' },
+      { id: 'dark-patterns', title: 'Where each idea becomes a dark pattern' },
     ],
   },
 ])

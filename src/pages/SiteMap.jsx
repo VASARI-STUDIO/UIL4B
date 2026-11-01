@@ -229,8 +229,8 @@ export default function SiteMap() {
               hue="accent"
               label="Learn"
               desc={isAdmin
-                ? 'Reference guides on colour, type and accessibility, plus the topics still to be written.'
-                : 'Reference guides on colour, type and accessibility.'}
+                ? 'Reference guides on colour, type, accessibility and psychology, plus the topics still to be written.'
+                : 'Reference guides on colour, type, accessibility and psychology.'}
             />
             <ul className="spt-rows">
               {LEARN_ARTICLES.map((a) => (

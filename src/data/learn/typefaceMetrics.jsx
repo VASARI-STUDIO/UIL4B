@@ -1,5 +1,5 @@
-// Article: What a typeface's metrics decide. Metadata and sources in
-// src/data/learnIndex.js.
+// Article: What a typeface's metrics decide. Metadata in
+// src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // The table in the middle of this article is measured in the reader's own
 // browser by TypeMetricsTable, off the font stacks in this page's running

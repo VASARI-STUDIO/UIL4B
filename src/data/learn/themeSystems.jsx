@@ -1,4 +1,4 @@
-// Article: Dark and light themes. Metadata and sources in src/data/learnIndex.js.
+// Article: Dark and light themes. Metadata in src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // Every hex in this file is one of this product's own tokens, and every one of
 // them is read back out of src/styles/global.css by

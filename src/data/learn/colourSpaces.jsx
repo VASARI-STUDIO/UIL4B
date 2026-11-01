@@ -1,5 +1,5 @@
-// Article: Colour spaces for interface work. Metadata and sources in
-// src/data/learnIndex.js.
+// Article: Colour spaces for interface work. Metadata in
+// src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // The colour figures here are computed by luminance(), contrastRatio() and
 // hexToOklch() from src/utils/colors.js, and the interpolation table is painted
