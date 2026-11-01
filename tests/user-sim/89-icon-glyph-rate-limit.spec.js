@@ -90,7 +90,11 @@ test.describe('a 429 from Iconify', () => {
     await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'mdi')
     await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Material Design', { timeout: 20_000 })
     await expect.poll(() => batches.length, { timeout: 20_000, message: 'glyph files were not requested after the pack list was refused' }).toBeGreaterThan(before)
-    await expect.poll(() => painted(page), { timeout: 20_000, message: 'the grid drew no glyphs after a pack list was refused' }).toBeGreaterThan(20)
+    // The site's mdi list is the fixture's 21 names; the regular weight leaves out the three "-outline" ones.
+    // Wait for THAT list: until it lands the grid is still the one left behind (hundreds of cells), so a bare
+    // "more than 20 painted" is true of the page being left rather than of the pack picked.
+    await expect(page.locator('#ig-result-count'), 'the pack the site lists was listed').toHaveText('18 icons', { timeout: 20_000 })
+    await expect.poll(() => painted(page), { timeout: 20_000, message: 'the grid drew no glyphs after a pack list was refused' }).toBe(18)
     await expect(page.getByText(NOTICE), 'one refused pack list is not an outage').toHaveCount(0)
     expect(lists, 'a pack the site lists went to /collection').toBe(1)
     expect(iconifyRequests(page.context()).escaped).toEqual([])

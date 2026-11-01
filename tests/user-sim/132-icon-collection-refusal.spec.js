@@ -103,15 +103,27 @@ test('with /collection refused, a picked pack and a group still list in full fro
 
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'tabler')
   await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Tabler')
-  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(20)
+  // The site's tabler list is the fixture's 20 names; the regular weight leaves out the two "-filled" ones.
+  // Wait for THAT list: until it lands the grid is still the "All packs" one, which is hundreds of cells, so
+  // a bare "more than 20 cells" is true of the page being left rather than of the pack picked.
+  await expect(page.locator('#ig-result-count')).toHaveText('18 icons', { timeout: 20_000 })
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000, message: 'every cell of the list is drawn' }).toBe(18)
   await expect(page.locator('.ig-notice')).toHaveCount(0)
 
+  // A group chip with a pack picked only narrows that pack (tabler has no flags, so nothing would move), so
+  // go back to every pack before asking for the group.
+  const listed = async () => Number((await page.locator('#ig-result-count').textContent()).replace(/\D/g, ''))
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
+  await expect.poll(listed, { timeout: 20_000, message: 'every pack is listed again' }).toBeGreaterThan(1000)
   const flags = page.getByRole('button', { name: 'Flags', exact: true })
   const groupMenu = page.getByRole('button', { name: /^Group\b/ })
   await expect(flags.or(groupMenu).first()).toBeVisible()
   if (!await flags.isVisible()) await groupMenu.click()
   await flags.click()
-  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(8)
+  // The "All packs" list is still on screen until the four flag lists land, so wait for the figure to drop.
+  await expect.poll(listed, { timeout: 20_000, message: 'the Flags group replaced the full listing' }).toBeLessThan(1000)
+  expect(await listed(), 'the group lists more than the one pack picked before it').toBeGreaterThan(18)
+  await expect.poll(async () => (await page.locator('.ig .ic :is(img, svg.ig-sym)').count()) - (await listed()), { timeout: 20_000, message: 'every listed flag is drawn' }).toBe(0)
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   await expect(page.getByText(BUILT_IN)).toHaveCount(0)
   expect(asked, 'the lists came from the site, so /collection was never asked').toEqual([])
