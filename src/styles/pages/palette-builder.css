@@ -110,7 +110,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-seedpick .cpk-pop { left: 0; right: auto; }
 :is(.plb, .tl-sheet-layer) .plb-seedchip { width: auto; gap: 9px; padding: 0 13px 0 6px; }
 :is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 50%; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
-:is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; letter-spacing: .02em; color: var(--tl-ink); }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; color: var(--tl-ink); }
 .plb .plb-menuwrap { position: relative; display: flex; }
 .plb .plb-menu-seed { display: flex; }
 .plb .plb-menu-tray { display: flex; justify-content: center; }
@@ -663,9 +663,9 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   min-height: 36px;
 }
 .plb .plb-val-k {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .14em;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
   color: color-mix(in srgb, var(--t0) 68%, var(--card));
 }
 .plb .plb-val-v {

@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo } from 'react'
+import '../styles/deferred/font-uses.css'
 import {
   CATEGORY_LABEL, CATEGORY_NOTE, DOSSIER_TABS, facesThinCatalogue, fontFacts, fontLicence, titleCase,
 } from '../utils/fontDossier'
@@ -7,6 +8,7 @@ import {
 } from '../utils/fontScenes'
 import { usesFor } from '../data/fontRealWorldUses'
 import { useFontLicences } from '../hooks/useFontLicences'
+import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 import { weightName } from '../utils/fontGallery'
 import { fontStack, loadFont } from '../utils/googleFonts'
 
@@ -648,44 +650,36 @@ export function FontExamplesPanel({ font, id, labelledBy, intent, inline = false
   )
 }
 
+// Opens the app's feedback dialog about this family's list. The link still goes
+// to /feedback when nothing answers the event, so it works without the dialog.
+function reportUse(event, family) {
+  const report = new CustomEvent(REPORT_PROBLEM_EVENT, {
+    cancelable: true,
+    detail: {
+      typeId: 'feedback',
+      subject: `Fonts in use: ${family}`,
+      message: 'Which entry is wrong or unwanted, and why?\n\n',
+    },
+  })
+  if (!window.dispatchEvent(report)) event.preventDefault()
+}
+
 // ── THE "IN USE" TAB ────────────────────────────────────────────────────────
 //
-// Photographs of real work set in the family. It ships with NO IMAGES, for
-// every family, and that is the founder's own call rather than an unfinished
-// job: "i can collect images myself later if you cant do it". What is built is
-// the tab, the layout and the per-family slot; what is not built is a single
-// invented example or placeholder photograph.
+// Documented real-world uses of the family, each shown as a link to the page
+// that documents it (a Fonts In Use entry, or the brand's own typography page).
+// No third-party images are hosted or drawn here. data/fontRealWorldUses holds
+// the entries and refuses one that cannot name its documenting page; an entry
+// that carries an image is drawn with the image only when its alt text, author
+// and licence come with it.
 //
-// THE SENTENCE THIS PANEL MUST NOT SAY. An empty tab called "In use" is one
-// careless line away from telling a reader that nobody uses this typeface —
-// which for a real face drawn by a real person is a false and damaging claim,
-// and the exact class of error the About tab was built to avoid. So the empty
-// state is about US, not about the family: we have not cleared an image for it.
-// The distinction is stated outright rather than implied, because a reader who
-// gets it wrong gets it wrong about somebody's work.
+// WHAT THE EMPTY STATE MUST NOT SAY. A family with no entries is one careless
+// line from reading as "nobody uses this typeface", which would be a false claim
+// about someone's work. So the empty state is about OUR LIST: we have not added
+// an entry for it. That is stated outright rather than implied.
 //
-// WHY IT IS EMPTY AND NOT MERELY UNFINISHED. [fonts-in-use-surface] is blocked
-// on imagery rights — who owns the pictures, under what licence they may be
-// shown, who curates them, what provenance is displayed — and that is a founder
-// and licensing question, not a build task. data/fontRealWorldUses refuses to
-// hand over an entry that cannot name its source, its credit and its licence,
-// so the first image to appear here will arrive with its provenance attached or
-// not at all.
-//
-// Mobbin drove the empty state, and specifically drove it AWAY from an
-// illustration:
-//   XERO's "No filed sales tax reports" — mobbin.com/screens/84b0c0bb-d346-41ee-995f-15112dfe85ec
-//     names what is absent and then explains THE CONDITION UNDER WHICH IT WOULD
-//     APPEAR ("once a report has been marked as filed..."). That is what makes
-//     an empty panel read as deliberate instead of broken: not a nicer noun, a
-//     mechanism.
-//   LYSSNA's "No sessions yet" — mobbin.com/screens/04281c5d-4340-450c-a46b-601993d9b6db
-//     is the same shape at the smaller size used here, and ends on a single
-//     outbound link rather than a button that does nothing.
-//   JIRA's and Xero's decorative illustrations were deliberately NOT copied. A
-//   grey box with a picture icon in it, sitting in a panel whose whole subject
-//   is a missing picture, is indistinguishable from an image that failed to
-//   load — the exact failure PRODUCT.md names.
+// Links open in a new tab and say so in their accessible name. The whole row is
+// the link, so the touch target is the row and not just the title text.
 export function FontInUsePanel({ font, id, labelledBy, inline = false }) {
   const uses = useMemo(() => usesFor(font?.family), [font])
   if (!font) return null
@@ -701,57 +695,67 @@ export function FontInUsePanel({ font, id, labelledBy, inline = false }) {
       {uses.length > 0 ? (
         <>
           <p className="fdx-source fdx-source--lead">
-            {uses.length} {uses.length === 1 ? 'photograph' : 'photographs'} of work set in{' '}
-            {font.family}. Each one is credited to whoever made it and shown under the permission
-            named beneath it.
+            {uses.length} documented {uses.length === 1 ? 'use' : 'uses'} of {font.family}. Each
+            one links to the page that documents it.
           </p>
           <ul className="fdx-uses">
             {uses.map(use => (
-              <li className="fdx-use" key={use.image}>
-                <figure>
-                  {/* loading="lazy" because the tab may hold several full-width
-                      photographs and it is not the first tab anyone opens. */}
-                  <img className="fdx-use-img" src={use.image} alt={use.alt} loading="lazy" />
-                  <figcaption className="fdx-use-cap">
-                    <span className="fdx-use-title">{use.title}</span>
-                    <span className="fdx-use-credit">{use.credit}</span>
-                    {/* The provenance is part of the picture, not a footnote:
-                        the licence is the reason the image is allowed to be
-                        here, so it is printed beside it rather than pooled at
-                        the bottom of the panel where it stops attaching to
-                        anything. */}
-                    <span className="fdx-use-licence">{use.licence}</span>
-                    <a
-                      className="fdx-fiu fdx-use-src"
-                      href={use.source}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      Source<span aria-hidden="true"> ↗</span>
-                      <span className="sr-only"> (opens in a new tab)</span>
-                    </a>
-                  </figcaption>
-                </figure>
+              <li className="fdx-use" key={use.url}>
+                <a
+                  className="fdx-use-link"
+                  href={use.url}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <span className="fdx-use-title">
+                    {use.title}
+                    {use.year ? <span className="fdx-use-year"> {use.year}</span> : null}
+                    <span aria-hidden="true"> ↗</span>
+                  </span>
+                  <span className="fdx-use-where">{use.where}</span>
+                  <span className="fdx-use-credit">Source: {use.credit}</span>
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+                {/* A picture is drawn only with all of its provenance: the
+                    data module refuses an image without alt text, author and
+                    licence, so none of these can be missing here. */}
+                {use.image ? (
+                  <figure className="fdx-use-fig">
+                    <img className="fdx-use-img" src={use.image} alt={use.alt} loading="lazy" />
+                    <figcaption className="fdx-use-figcap">
+                      {use.author} · {use.licence}
+                    </figcaption>
+                  </figure>
+                ) : null}
               </li>
             ))}
           </ul>
+          <p className="fdx-uses-note">
+            Uses are listed from Fonts In Use and from brands’ own typography pages. We link to
+            them and host none of their images.{' '}
+            <a
+              className="fdx-uses-report"
+              href="/feedback"
+              onClick={event => reportUse(event, font.family)}
+            >
+              Report a wrong or unwanted entry
+            </a>
+          </p>
         </>
       ) : (
         <div className="fdx-empty">
           {/* THE HEADING IS ABOUT THE LIBRARY, NOT THE TYPEFACE. "No uses of
               {family}" would be a claim about how the world uses somebody's
               work, made from a table this product has never filled in. */}
-          <h4 className="fdx-empty-head">No cleared photographs of {font.family} yet</h4>
+          <h4 className="fdx-empty-head">We have not added any documented uses of {font.family} yet</h4>
           <p className="fdx-empty-body">
-            {here} shows photographs of real work — printed matter, signage, packaging — set in
-            this family, each credited to whoever made it and shown under a named permission. A
-            photograph only appears here once we hold that permission, and none has been cleared
-            for {font.family} so far.
+            {here} links to documented real-world uses of this family — brands and projects —
+            each credited to the page that documents it. We have not added one for {font.family} so far.
           </p>
           <p className="fdx-empty-body">
             {/* Said plainly, because the alternative is that a reader concludes
                 it from an empty panel and is wrong. */}
-            That is a gap in what we have licensed, not a statement about the typeface. Plenty of
+            That is a gap in our list, not a statement about the typeface. Plenty of
             families with nothing {here === 'This section' ? 'in this section' : 'on this tab'} are in wide use.
           </p>
           <p className="fdx-empty-body fdx-empty-body--last">

@@ -55,6 +55,7 @@ const suggestTool = (id) => {
 const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const SUGGESTIONS = [
   suggestTool('palette'),
+  suggestTool('font-pair'),
   suggestTool('type-scale'),
   suggestTool('icons'),
   { to: '/discover', label: 'Discover', desc: `${DISCOVER_LIVE} libraries open` },

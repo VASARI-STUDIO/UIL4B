@@ -195,8 +195,12 @@ test.describe('Type Scale · the overhaul', () => {
     // Opening the disclosure adds buttons, never tabs.
     await expect(page.getByRole('tab')).toHaveCount(0)
 
-    // And it still drives the maths from in there.
+    // And it still drives the maths from in there. The ladder prints each size to
+    // one decimal, so the top step (61.04) reads 61px with or without rounding; the
+    // second step shows it: 16 x 1.25^5 = 48.83 reads 49px rounded and 48.8px not.
+    const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
+    await expect(second).toContainText('49px')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('61.04px')
+    await expect(second).toContainText('48.8px')
   })
 })

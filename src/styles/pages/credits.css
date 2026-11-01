@@ -76,11 +76,11 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s-2);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t0);
   margin: 0 0 6px;
 }
@@ -119,11 +119,11 @@
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  font-size: var(--fs-micro);
+  font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: .08em;
+  letter-spacing: normal;
   color: var(--t2);
-  text-transform: uppercase;
+  text-transform: none;
 }
 .crd-tag--owed { border-color: var(--accent-border-strong, var(--bh)); color: var(--accent-text, var(--accent)); }
 
@@ -154,8 +154,8 @@ a.crd-row-name:hover { text-decoration-color: currentColor; color: var(--accent-
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  font-family: var(--mono);
-  font-size: var(--fs-micro);
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   color: var(--t3);
 }
 .crd-row-meta code { font-family: inherit; color: inherit; background: none; padding: 0; }

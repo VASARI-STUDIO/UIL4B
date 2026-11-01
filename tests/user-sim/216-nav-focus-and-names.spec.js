@@ -299,9 +299,9 @@ for (const size of SIZES) {
       expect(await page.locator('footer').getByRole('heading', { level: 2 }).allTextContents()).toEqual(['Create', 'Explore', 'Support'])
 
       const looks = await heads.evaluateAll((els) => {
-        // The colour and family come from the same tokens the old label used.
+        // The colour and family come from the heading ink and the UI sans.
         const probe = document.createElement('p')
-        probe.style.cssText = 'font-family:var(--mono);color:var(--t2);position:absolute;visibility:hidden'
+        probe.style.cssText = 'font-family:var(--font);color:var(--t0);position:absolute;visibility:hidden'
         document.body.appendChild(probe)
         const want = getComputedStyle(probe)
         const wantFamily = want.fontFamily
@@ -322,11 +322,11 @@ for (const size of SIZES) {
       })
       for (const look of looks) {
         expect(look).toMatchObject({
-          fontSize: '11px', fontWeight: '700', letterSpacing: '1.1px', textTransform: 'uppercase',
-          lineHeight: '18.15px', margin: '0px 0px 3px 0px', padding: '0px 0px 0px 0px', display: 'block',
+          fontSize: '13px', fontWeight: '600', letterSpacing: 'normal', textTransform: 'none',
+          lineHeight: '21.45px', margin: '0px 0px 3px 0px', padding: '0px 0px 0px 0px', display: 'block',
           familyOk: true, colourOk: true,
         })
-        expect(look.height).toBeCloseTo(18.15, 1)
+        expect(look.height).toBeCloseTo(21.45, 1)
       }
       await ctx.close()
     })

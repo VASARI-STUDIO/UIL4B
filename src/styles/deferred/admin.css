@@ -23,10 +23,10 @@
 .adm{max-width:1200px}
 .adm-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
 .adm-header-left h1{font-family:var(--display);font-size:clamp(28px,5vw,36px);font-weight:500;letter-spacing:-.03em;margin-bottom:4px}
-.adm-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong)}
+.adm-status{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--ok-strong)}
 .adm-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:adm-pulse 2s infinite}
 .adm-actions{display:flex;gap:6px;flex-wrap:wrap}
-.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-fill);color:var(--accent-fg)}
+.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:var(--fs-caption);font-weight:560;background:var(--accent-fill);color:var(--accent-fg)}
 
 /* Section header */
 .adm-section{margin-bottom:32px}
@@ -35,7 +35,7 @@
 .adm-section-bar{width:20px;height:2px;border-radius:1px;background:var(--accent)}
 .adm-stat{padding:18px 20px;border-radius:var(--radius);background:var(--card-grad);border:1px solid var(--border);box-shadow:var(--warm-shadow);transition:border-color var(--dur-1) var(--ease-standard)}
 .adm-stat:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
-.adm-stat-label{font-size:11px;font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:.02em}
+.adm-stat-label{font-size:var(--fs-caption);font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:normal}
 .adm-stat-sub{font-size:10px;color:var(--t3);margin-top:3px}
 /* auto-FIT, not auto-fill — the same correction made for the hairline stat
    grid further down this file, applied to the instance it missed. auto-fill
@@ -50,7 +50,7 @@
 /* Card variants */
 .adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow);overflow:hidden}
 .adm-card-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
-.adm-card-title{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+.adm-card-title{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 
 /* Bar chart */
 .adm-bar{display:flex;flex-direction:column;gap:10px}
@@ -82,7 +82,7 @@
 .adm-feed-meta{font-size:10px;color:var(--t3);margin-top:2px}
 
 /* Badge */
-.adm-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.adm-badge{display:inline-flex;align-items:center;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;padding:2px 8px;border-radius:4px;white-space:nowrap}
 
 /* Table */
 .adm-table{width:100%;border-collapse:collapse;min-width:fit-content}
@@ -109,14 +109,14 @@
 .adm-submission-body{padding:0 16px 16px;border-top:1px solid var(--border);padding-top:14px}
 .adm-submission-msg{font-size:13px;line-height:1.7;color:var(--t0);margin-bottom:12px;white-space:pre-wrap}
 .adm-submission-notes{background:var(--bg-2);border-radius:var(--radius-s);padding:12px;margin-bottom:12px}
-.adm-submission-notes-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.adm-submission-notes-title{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);margin-bottom:8px}
 .adm-submission-actions{display:flex;gap:6px;flex-wrap:wrap}
 
 /* Prompt admin cards */
 .adm-prompt{border-left:3px solid var(--border);margin-bottom:8px}
 .adm-prompt-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .adm-prompt-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
-.adm-prompt-tag{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg-2);color:var(--t2);font-weight:600}
+.adm-prompt-tag{font-size:var(--fs-caption);padding:2px 8px;border-radius:4px;background:var(--bg-2);color:var(--t2);font-weight:600}
 .adm-prompt-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;border-top:1px solid var(--border);padding-top:10px}
 
 /* Verify error banner */
@@ -124,7 +124,7 @@
 
 /* Lock screen */
 .adm-lock{max-width:400px;margin:80px auto;text-align:center}
-.adm-lock-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text);margin-bottom:16px;font-family:var(--mono)}
+.adm-lock-eyebrow{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--accent-text);margin-bottom:16px;font-family:var(--font)}
 .adm-lock h1{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:8px}
 .adm-lock p{font-size:14px;color:var(--t1);margin-bottom:24px}
 .adm-lock form{display:flex;gap:8px}
@@ -134,7 +134,7 @@
 .adm-stripe-desc{font-size:13px;color:var(--t1);line-height:1.7;margin-bottom:4px}
 .adm-stripe-tip{font-size:11px;color:var(--t3);margin-bottom:16px}
 .adm-stripe-table{width:100%;border-collapse:collapse;min-width:620px}
-.adm-stripe-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:8px 10px;border-bottom:1px solid var(--border)}
+.adm-stripe-table th{text-align:left;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);padding:8px 10px;border-bottom:1px solid var(--border)}
 .adm-stripe-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
 .adm-stripe-input{display:flex;align-items:center;gap:4px}
 .adm-stripe-input span{font-size:11px;color:var(--t3);min-width:24px}
@@ -183,7 +183,7 @@
 .cq{display:grid;gap:14px}
 .cq-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .cq-filters{display:flex;gap:6px;flex-wrap:wrap}
-.cq-filter-count{font-family:var(--mono);font-size:11px;opacity:.85}
+.cq-filter-count{font-family:var(--font);font-size:var(--fs-caption);opacity:.85}
 .cq-msg{display:grid;gap:8px;justify-items:start;padding:28px;border:1px dashed var(--border);border-radius:var(--radius-l);color:var(--t2);font-size:13px}
 .cq-msg--error{border-style:solid;border-color:color-mix(in srgb,var(--err) 40%,transparent);background:color-mix(in srgb,var(--err) 6%,transparent);color:var(--err-strong)}
 .cq-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -195,7 +195,7 @@
 .cq-item-body{flex:1;min-width:0}
 .cq-item-name{margin:0;font-size:13.5px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cq-item-meta{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cq-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-text);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
+.cq-kind{font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--accent-text);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
 .cq-item-actions{display:flex;gap:6px;flex-shrink:0}
 .cq-approve{border-color:var(--ok);color:var(--ok-strong)}
 .cq-approve:hover:not(:disabled){background:var(--ok);border-color:var(--ok);color:var(--ok-fg)}
@@ -256,12 +256,12 @@
 .adm-plan--err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err-strong)}
 .adm-plan--pending{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
 .adm-plan--neutral{background:var(--bg-2);color:var(--t2)}
-.adm-plan-interval{margin-left:6px;font-size:10px;color:var(--t3);font-family:var(--mono)}
+.adm-plan-interval{margin-left:6px;font-size:var(--fs-caption);color:var(--t3);font-family:var(--mono)}
 
 /* "User" is the ordinary case and gets no badge — a chip on every row for the
  * state most rows are in is noise that hides the two rows that are not. */
 .adm-access{font-size:11px;color:var(--t2)}
-.adm-access--founder,.adm-access--moderator{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-xs,4px);white-space:nowrap}
+.adm-access--founder,.adm-access--moderator{display:inline-flex;align-items:center;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;padding:2px 8px;border-radius:var(--radius-xs,4px);white-space:nowrap}
 .adm-access--founder{background:var(--accent-bg);color:var(--accent-text)}
 .adm-access-off{color:var(--t3);font-style:italic}
 .adm-access--moderator{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok-strong)}
@@ -290,7 +290,7 @@
 .adm-detail-row td{padding:0!important;background:var(--bg-2)}
 .adm-detail{padding:16px 18px 18px;border-left:2px solid var(--accent);display:flex;flex-direction:column;gap:16px}
 .adm-detail-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:18px}
-.adm-detail-sec h4{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:0 0 8px}
+.adm-detail-sec h4{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);margin:0 0 8px}
 .adm-detail-dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:12px;align-items:baseline}
 .adm-detail-dl dt{color:var(--t3);white-space:nowrap}
 .adm-detail-dl dd{margin:0;color:var(--t0);min-width:0;overflow-wrap:anywhere}
@@ -356,7 +356,7 @@
   .adm-users-table .adm-row-flag td:first-child{box-shadow:none}
   .adm-users-table tbody td{border-bottom:none;padding:0;display:flex;align-items:baseline;gap:10px;min-height:22px}
   /* Every cell names itself, since the header it belonged to is gone. */
-  .adm-users-table tbody td[data-label]::before{content:attr(data-label);flex:0 0 74px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+  .adm-users-table tbody td[data-label]::before{content:attr(data-label);flex:0 0 74px;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t3)}
   /* …except the first, which IS the card's heading. */
   .adm-users-table tbody td[data-label="User"]{display:block;margin-bottom:10px}
   .adm-users-table tbody td[data-label="User"]::before{content:none}
@@ -407,12 +407,8 @@
  *    figures matter more here than on the sales page, because this is the one
  *    surface where numbers are stacked in columns and compared down the column.
  *
- * 2. MONO ALSO CARRIES THE MICRO-LABELS. Spectrum's eyebrows and nav items are
- *    Geist Mono at 10.5px / .14em / uppercase. The dashboard already had
- *    uppercase letter-spaced micro-labels everywhere — card titles, column
- *    headers, detail-section headings — in the sans face. Moving them to mono
- *    is a one-line change per rule that makes the whole page read as one
- *    system.
+ * 2. THE MICRO-LABELS ARE SANS. Card titles, column headers and
+ *    detail-section headings read as normal-case text at the label size.
  *
  * 3. PILLS, AND THE HOUSE MOTION. 999px chips, the `cubic-bezier(.23,1,.32,1)`
  *    curve, `.16s` on colour, `scale(.97)` on press — with a
@@ -442,9 +438,9 @@
   --adm-ease: cubic-bezier(.23, 1, .32, 1);
   --adm-t-color: .16s;
   --adm-t-move: .24s;
-  /* Spectrum's micro-label: mono, tiny, widely tracked, uppercase. */
-  --adm-label-size: 10px;
-  --adm-label-track: .12em;
+  /* Size and tracking shared by the dashboard's labels. */
+  --adm-label-size: var(--fs-caption);
+  --adm-label-track: normal;
 }
 
 /* ── 1. THE VALUE/PROSE SPLIT ──────────────────────────────────────────────
@@ -474,9 +470,13 @@
 .adm-plan-interval,
 .adm-flag-cell,
 .adm-stripe-na,
-.adm-stripe-env,
-.cq-filter-count {
+.adm-stripe-env {
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Counts inside filter labels read in the sans, with tabular figures. */
+.cq-filter-count {
   font-variant-numeric: tabular-nums;
 }
 
@@ -529,10 +529,8 @@
 
 /* ── 2. THE MICRO-LABEL ────────────────────────────────────────────────────
  *
- * Spectrum sets its eyebrows and nav in Geist Mono at 10.5px with .14em of
- * tracking, uppercase. These are the dashboard's equivalents and they were all
- * already uppercase and tracked — in the sans face, which is what made the page
- * read as a different product from the one around it. */
+ * Card titles, column headers and detail headings share one label voice: the
+ * sans face, normal case, no tracking. */
 .adm-card-title,
 .adm-detail-sec h4,
 .adm-th-sort,
@@ -545,15 +543,12 @@
 .adm-access--moderator,
 .adm-prompt-tag,
 .cq-kind {
-  font-family: var(--mono);
-  letter-spacing: var(--adm-label-track);
-  text-transform: uppercase;
+  font-family: var(--font);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
-/* Mono runs optically larger than Geist at the same size and its uppercase is
-   wide, so the micro-labels come DOWN a notch rather than staying put — a
-   straight face swap at the old sizes would have made every label louder than
-   the value it labels. */
+/* The label size comes from one token. */
 .adm-card-title,
 .adm-detail-sec h4,
 .adm-th-sort,
@@ -573,9 +568,9 @@
    below 680px. Same micro-label, same face — it IS a column header. */
 @media (max-width: 680px) {
   .adm-users-table tbody td[data-label]::before {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: var(--adm-label-track);
+    font-family: var(--font);
+    font-size: var(--fs-caption);
+    letter-spacing: normal;
   }
 }
 
@@ -675,21 +670,21 @@
 }
 
 .adm-stat-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   color: var(--t2);
   margin-top: 6px;
 }
 
 .adm-stat-sub {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   color: var(--t3);
 }
 
 /* ── 4. PILLS ──────────────────────────────────────────────────────────────
  *
  * The tab bar, the filter chips, the country chips and the queue's status tabs
- * are all the same object in the design source: a 999px pill, mono micro-label,
+ * are all the same object in the design source: a 999px pill, sans label,
  * transparent at rest, and an accent WASH rather than an accent fill when it is
  * the selected one. The wash is what keeps it swappable — it is derived from
  * `--accent`, so a premium theme template moves it without a second edit. */
@@ -718,9 +713,9 @@
 .adm-country-chip,
 .cq-filter {
   border-radius: var(--btn-radius);
-  font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: var(--adm-label-track);
+  font-family: var(--font);
+  text-transform: none;
+  letter-spacing: normal;
   font-weight: 500;
   transition:
     color var(--adm-t-color) var(--adm-ease),
@@ -731,7 +726,7 @@
 
 .adm-tab {
   padding: 7px 14px;
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   border: 1px solid transparent;
   /* ≥24px target: 7+7 padding + ~11px line box clears it, and the tab bar is a
      primary navigation control on a surface that is used on a tablet. */
@@ -755,7 +750,7 @@
 
 .adm-time-btn {
   padding: 5px 11px;
-  font-size: 10px;
+  font-size: var(--fs-caption);
   border: 1px solid var(--border);
   background: transparent;
   border-radius: var(--btn-radius);
@@ -775,7 +770,7 @@
 
 .adm-country-chip {
   padding: 5px 11px;
-  font-size: 10px;
+  font-size: var(--fs-caption);
   border-radius: var(--btn-radius);
 }
 
@@ -804,7 +799,7 @@
    bar, so it takes the same wash. */
 .cq-filter {
   padding: 6px 12px;
-  font-size: 10px;
+  font-size: var(--fs-caption);
   border-radius: var(--btn-radius);
 }
 
@@ -815,7 +810,7 @@
 }
 
 .cq-filter-count {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   letter-spacing: 0;
   opacity: 1;
   color: var(--t3);
@@ -825,11 +820,11 @@
   color: var(--accent-text);
 }
 
-/* The badge on the Submissions tab is a count, so mono — and it keeps the solid
+/* The badge on the Submissions tab is a count, in the sans with tabular figures, and it keeps the solid
    accent because it is the one place on the bar that is genuinely saying
    "there is work here", which is a different statement from "you are here". */
 .adm-tab-badge {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: var(--radius-pill);
@@ -850,10 +845,9 @@
  *
  * That is already the shape `.adm-plan--*` uses, and #484's reasoning for it —
  * colour only when there is something to colour — is not relitigated here. The
- * change is the FACE and the radius: a state name is a value, so it is mono,
- * and the chip takes the system's chip radius. */
+ * change is the radius: a state name takes the system's chip radius. */
 .adm-badge {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--radius-xs);
@@ -865,28 +859,28 @@
 }
 
 .adm-plan-interval {
-  font-size: 9.5px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .adm-access--founder,
 .adm-access--moderator {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   border-radius: var(--radius-xs);
   padding: 3px 8px;
 }
 
 .adm-prompt-tag {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   border-radius: var(--radius-xs);
   color: var(--t2);
 }
 
 .cq-kind {
-  font-size: 9px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   border-radius: var(--radius-xs);
 }
@@ -970,7 +964,7 @@
 }
 
 .adm-user-view-l {
-  font-size: 10.5px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   color: var(--t2);
 }
@@ -1025,15 +1019,15 @@
 }
 
 .adm-status {
-  font-size: 9.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: var(--adm-label-track);
+  letter-spacing: normal;
 }
 
 .adm-lock-eyebrow {
-  font-size: 10px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: var(--adm-label-track);
+  letter-spacing: normal;
 }
 
 .adm-lock {
@@ -1087,7 +1081,7 @@
 }
 
 .adm-bar-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
 }
 
 .adm-top-list .adm-bar-label {

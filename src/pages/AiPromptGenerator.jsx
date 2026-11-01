@@ -314,7 +314,7 @@ export default function AiPromptGenerator({ toast }) {
                           <label key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--radius-s)', background: scanChecked.has(rule.id) ? 'var(--accent-bg)' : 'var(--bg-1)', border: '1px solid ' + (scanChecked.has(rule.id) ? 'var(--accent)' : 'var(--border)'), cursor: 'pointer', transition: 'all .15s' }}>
                             <input type="checkbox" checked={scanChecked.has(rule.id)} onChange={() => setScanChecked(prev => { const n = new Set(prev); n.has(rule.id) ? n.delete(rule.id) : n.add(rule.id); return n })} style={{ accentColor: 'var(--accent)' }} />
                             <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: 'var(--t0)' }}>{rule.label}</span>
-                            <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: rule.confidence === 'high' ? 'rgba(16,185,129,.1)' : rule.confidence === 'medium' ? 'rgba(245,158,11,.1)' : 'rgba(156,163,175,.1)', color: rule.confidence === 'high' ? 'var(--ok)' : rule.confidence === 'medium' ? 'var(--warn)' : 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.04em' }}>{rule.confidence}</span>
+                            <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 6px', borderRadius: 4, background: rule.confidence === 'high' ? 'rgba(16,185,129,.1)' : rule.confidence === 'medium' ? 'rgba(245,158,11,.1)' : 'rgba(156,163,175,.1)', color: rule.confidence === 'high' ? 'var(--ok)' : rule.confidence === 'medium' ? 'var(--warn)' : 'var(--t2)', textTransform: 'capitalize' }}>{rule.confidence}</span>
                           </label>
                         ))}
                       </div>

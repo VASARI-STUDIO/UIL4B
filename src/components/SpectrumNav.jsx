@@ -394,7 +394,7 @@ export default function SpectrumNav() {
             <Link className="spnav-mi spnav-mi--accent" data-mi to={TOOLKIT} replace onClick={() => setOpen(false)}>
               Open the toolkit <span aria-hidden="true">&#8599;</span>
             </Link>
-            <p className="spnav-mi-note" data-mi data-mi-note>EVERY CORE TOOL IS FREE, FOREVER</p>
+            <p className="spnav-mi-note" data-mi data-mi-note>Every core tool is free, forever</p>
           </div>
         </div>
       )}

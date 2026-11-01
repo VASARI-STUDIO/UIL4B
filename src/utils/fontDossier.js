@@ -25,10 +25,10 @@ import { categoryLabel, formatSubsets, weightName } from './fontGallery.js'
 //             of face the family is. Invented by construction and labelled as
 //             such at the top of the panel. Nothing in it is a claim about
 //             anybody's brand.
-//   inuse     PHOTOGRAPHS of real work. Ships EMPTY — see data/fontRealWorldUses
-//             for why, and for what an entry has to carry before it may be
-//             drawn. [fonts-in-use-surface] stays blocked; this is the slot it
-//             will fill, not a claim that it has been filled.
+//   inuse     LINKS to documented real-world uses, from data/fontRealWorldUses.
+//             Each entry points at the page that documents it; a family with
+//             no entry shows an empty state about our list, not about the
+//             typeface.
 //
 // "In use" rather than "Real world": it is the vocabulary fontsinuse.com itself
 // uses, and the panel links there. The two labels have to be legible as
