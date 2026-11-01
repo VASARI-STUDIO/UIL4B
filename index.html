@@ -143,6 +143,17 @@ html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[dat
 html:not([data-hero-prepainted]) #boot-shell .sp-hero{display:none}
 .boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
 .boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
+/* THE PAGE VARIANT. scripts/prerender.mjs writes `.boot-shell-page` for every
+   route but `/`: the skeleton nav, then a real heading and intro where the
+   skeleton's title and subtitle boxes were. `.boot-prose` holds a Learn guide's
+   text for readers that do not run script; it is off-screen and outside the
+   accessibility tree because the guide's own stylesheet arrives with its route
+   chunk, and React replaces the whole shell on mount. */
+.boot-shell-page{font-family:inherit}
+.boot-page{max-width:720px;margin:0 auto;padding:clamp(48px,10vh,96px) 0 48px}
+.boot-h1{margin:0 0 16px;font-size:clamp(28px,6vw,44px);font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
+.boot-intro{margin:0;max-width:62ch;font-size:clamp(16px,2.4vw,18px);line-height:1.55;opacity:.8}
+.boot-prose{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
 @media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}
 html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}

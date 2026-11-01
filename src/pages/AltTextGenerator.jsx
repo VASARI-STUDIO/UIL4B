@@ -15,6 +15,7 @@ import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply, beginVerifyRun, refuseForVerify, verifyRetryTarget } from '../utils/aiEmailGate'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
@@ -515,6 +516,16 @@ export default function AltTextGenerator({ toast }) {
                   {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
                   {it.altText && (
                     <>
+                      {/* The label heads the text it describes, and stays once the
+                          user edits it: the edit starts from the model's wording.
+                          The length rides the same row, so the foot is only the
+                          two actions. */}
+                      <div className="alt-card-result-h">
+                        <AiLabel what="alt text" />
+                        <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
+                          {it.altText.length} chars
+                        </span>
+                      </div>
                       <AutoGrowTextarea
                         className="alt-card-text"
                         aria-label={`Alt text for ${it.name}`}
@@ -522,9 +533,6 @@ export default function AltTextGenerator({ toast }) {
                         onChange={(e) => editAlt(it.id, e.target.value)}
                       />
                       <div className="alt-card-actions">
-                        <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
-                          {it.altText.length} chars
-                        </span>
                         <button type="button" className="alt-btn" onClick={() => copyOne(it)}>Copy</button>
                         <button type="button" className="alt-btn" onClick={() => generateOne(it)} disabled={busy}>Retry</button>
                       </div>

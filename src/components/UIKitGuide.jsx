@@ -22,7 +22,14 @@ import {
   markIntroSeen,
   nextStep,
   savePatch,
+  touchGuide,
 } from '../utils/brandKitGuide'
+
+// How long a press on the foot of the screen is swallowed after the X ends the
+// walkthrough. The bar unmounts under a finger or pointer that is still on the
+// same spot, so a second press of the X would land on whatever the page keeps
+// there (an Add column button, the tab bar's You tab).
+const EXIT_SHIELD_MS = 500
 
 // The Brand kit walkthrough, rendered by each of the four tools it walks.
 //
@@ -101,6 +108,8 @@ export default function UIKitGuide({ step }) {
   const newProject = location.state?.newProject === NEW_PROJECT_STATE.newProject
   const firstStep = step === BRAND_KIT_STEPS[0].id
   const [active, setActive] = useState(() => isGuideActive())
+  // A tool of the flow is on screen: the flow was visited, so it is not left behind.
+  useEffect(() => { touchGuide() }, [])
   // The steps Next was pressed on. A new project arrives on step one with none.
   const [accepted, setAccepted] = useState(() => (newProject && firstStep ? [] : acceptedSteps()))
   useEffect(() => {
@@ -153,6 +162,7 @@ export default function UIKitGuide({ step }) {
     return () => window.removeEventListener(GUIDE_START_EVENT, onStart)
   }, [firstStep, newProject])
   const cardRef = useRef(null)
+  const goRef = useRef(null)
   const introTriggerRef = useRef(null)
   const nameTriggerRef = useRef(null)
   const titleId = useId()
@@ -180,7 +190,10 @@ export default function UIKitGuide({ step }) {
     if (!showIntro) return undefined
     openedByRef.current = introOpenerRef.current || document.activeElement
     introOpenerRef.current = null
-    if (!hasOpenOverlays(document.body)) cardRef.current?.focus()
+    // Focus goes to the card's own button rather than to the card: a ring on a
+    // button reads as "you are here", and the same ring round the whole card read
+    // as an error. The card still names itself to a screen reader as focus enters.
+    if (!hasOpenOverlays(document.body)) (goRef.current || cardRef.current)?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
     // and this is the fallback that has to still BE the trigger.
@@ -212,7 +225,17 @@ export default function UIKitGuide({ step }) {
 
   // The X ends the walkthrough in place: no navigation. The panel closes with it.
   const leftInPlaceRef = useRef(false)
+  // Where the bar stood when the X was pressed, kept as an invisible cover for a
+  // moment so a second press of the X lands on nothing.
+  const [shield, setShield] = useState(null)
+  useEffect(() => {
+    if (!shield) return undefined
+    const timer = window.setTimeout(() => setShield(null), EXIT_SHIELD_MS)
+    return () => window.clearTimeout(timer)
+  }, [shield])
   const exit = useCallback(() => {
+    const box = railRef.current?.getBoundingClientRect()
+    if (box) setShield({ top: box.top, left: box.left, width: box.width, height: box.height })
     leftInPlaceRef.current = true
     endGuide()
     setActive(false)
@@ -231,20 +254,29 @@ export default function UIKitGuide({ step }) {
 
   // Next counts the step as built, defaults and all, then moves on. On the last
   // tool it opens the closing step instead of leaving.
-  const goNext = useCallback(() => {
+  // Moving past a step, by Next or by a later step's link on the bar, keeps what
+  // is on screen: the step counts as built, and the palette board's untouched
+  // random draw (not work until someone chooses it) becomes the saved palette.
+  const commitStep = useCallback(() => {
     setAccepted(acceptStep(step))
-    // The palette board shows an untouched random draw without saving it (it is
-    // not work until someone chooses it). Pressing Next on Colours is that
-    // choice, so the board the person is looking at is what the project keeps.
     const live = exportActions?.path === '/create/palette' ? exportActions.design?.palette : null
     if (step === 'color' && Array.isArray(live?.colors) && live.colors.length > 1) updateDesign({ palette: live })
+  }, [exportActions, step, updateDesign])
+  const goNext = useCallback(() => {
+    commitStep()
     if (next) {
       navigate(next.path)
       return
     }
     setShowIntro(false)
     setShowName((v) => !v)
-  }, [exportActions, navigate, next, step, updateDesign])
+  }, [commitStep, navigate, next])
+  // A plain press on a LATER step's link commits this one first, like Next. A
+  // step behind writes nothing, and a modified press (new tab) stays a plain link.
+  const onStepPress = (e, target) => {
+    const plain = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+    if (plain && current && target.index > current.index) commitStep()
+  }
 
   // ── The closing step: one name for the project and the kit ──────────────
   const [draft, setDraft] = useState(() => (typeof design?.identity?.name === 'string' ? design.identity.name : ''))
@@ -477,7 +509,9 @@ export default function UIKitGuide({ step }) {
     return suspendGuideForOverlays(document, [cardRef.current].filter(Boolean))
   }, [active, panelOpen, showName])
 
-  if (!active || !current) return null
+  if (!active || !current) {
+    return shield ? <div className="bkit-exit-shield" aria-hidden="true" style={shield} /> : null
+  }
 
   const nameMessage = (
     <>
@@ -544,7 +578,7 @@ export default function UIKitGuide({ step }) {
               ))}
             </ol>
           )}
-          <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro}>
+          <button type="button" className="btn btn-accent bkit-card-go" onClick={closeIntro} ref={goRef}>
             {goLabel}
           </button>
         </BkitPanel>
@@ -595,7 +629,7 @@ export default function UIKitGuide({ step }) {
         </BkitPanel>
       )}
 
-      <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
+      <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}${showName ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
         <div className="bkit-rail-head">
           <span className="bkit-rail-eyebrow">Brand kit</span>
           {/* Drawn at every width; the title shows only from 1056px. */}
@@ -615,6 +649,7 @@ export default function UIKitGuide({ step }) {
                 to={s.path}
                 className={`bkit-step${s.id === step ? ' is-current' : ''}${s.done ? ' is-done' : ''}`}
                 aria-current={s.id === step ? 'step' : undefined}
+                onClick={(e) => onStepPress(e, s)}
               >
                 <span className="bkit-step-mark" aria-hidden="true">
                   <span className="bkit-step-num">{s.number}</span>
