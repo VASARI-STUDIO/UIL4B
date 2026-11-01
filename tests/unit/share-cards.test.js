@@ -49,7 +49,8 @@ const REPO = process.cwd()
 const ORIGIN = 'https://uil4b.com'
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
 const previews = (f) => path.join(REPO, 'public', 'previews', f)
-const built = fs.existsSync(path.join(REPO, 'dist', 'index.html'))
+const DIST = process.env.DIST_DIR || 'dist'
+const built = fs.existsSync(path.join(REPO, DIST, 'index.html'))
 
 // Read one meta tag's content out of a served document, by VALUE rather than by
 // matching the whole tag. index.html writes `content="...">` and prerender's
@@ -202,11 +203,11 @@ test('the built shells carry the card dimensions too', {
   skip: !built && 'run `npm run build` first',
 }, () => {
   for (const route of prerenderRoutes()) {
-    const html = read(`dist${route}/index.html`)
+    const html = read(`${DIST}${route}/index.html`)
     assert.equal(meta(html, 'property', 'og:image:width'), '1200',
-      `dist${route}/index.html does not declare its card width`)
+      `${DIST}${route}/index.html does not declare its card width`)
     assert.equal(meta(html, 'property', 'og:image:height'), '630',
-      `dist${route}/index.html does not declare its card height`)
+      `${DIST}${route}/index.html does not declare its card height`)
   }
 })
 
@@ -290,8 +291,8 @@ test('NO INVENTED STRUCTURED DATA: no shell claims a rating, a review or stock',
   // Read out of the BUILT shells, not the source, because that is the document
   // a crawler receives and the only place a claim can actually be made.
   const forbidden = ['aggregateRating', 'ratingValue', 'reviewCount', 'ratingCount', 'availability']
-  const shells = ['dist/index.html', 'dist/404.html',
-    ...prerenderRoutes().map((r) => `dist${r}/index.html`)]
+  const shells = [`${DIST}/index.html`, `${DIST}/404.html`,
+    ...prerenderRoutes().map((r) => `${DIST}${r}/index.html`)]
   let checked = 0
   for (const shell of shells) {
     const html = read(shell)
@@ -315,14 +316,17 @@ test('NO FAQPage on /help, and the built shell proves it', {
   //
   // THE SECOND REASON IS GONE AND THIS TEST CHANGED WITH IT. It used to quote
   // `{tab === 'faq' && <FAQTab />}` to keep "the answers are not in the DOM"
-  // checkable. /help is no longer a tabbed document: HELP_ANSWERS renders
-  // unconditionally. Asserting the old conditional would now be asserting that
-  // a page stays worse so a comment can stay true, so what is pinned instead is
-  // the pair of facts that are actually load-bearing today — the answers ARE
-  // rendered on load, and no shell claims a FAQPage anyway.
+  // checkable. /help is no longer a tabbed document: every job's answer is
+  // rendered on load (the closed ones are only `hidden`). Asserting the old
+  // conditional would now be asserting that a page stays worse so a comment
+  // can stay true, so what is pinned instead is the pair of facts that are
+  // actually load-bearing today — the answers ARE rendered on load, and no
+  // shell claims a FAQPage anyway.
   const help = read('src/pages/HelpCentre.jsx')
-  assert.match(help, /HELP_ANSWERS\.map\(/,
-    'HelpCentre.jsx no longer renders the answers from HELP_ANSWERS')
+  assert.match(help, /jobs\.map\(/,
+    'HelpCentre.jsx no longer renders the answers from HELP_JOBS')
+  assert.match(help, /<Panel key=\{job\.id\}/,
+    'HelpCentre.jsx no longer renders every job\'s answer on load')
   assert.ok(!/tab === 'faq'/.test(help),
     'the FAQ is behind a tab again — reason 2 in route-schema.mjs was retired on the '
     + 'basis that it is not, so restore that reason or restore this render')
@@ -330,8 +334,8 @@ test('NO FAQPage on /help, and the built shell proves it', {
   // Not just /help: no shell anywhere may claim a FAQPage. The old assertion
   // read one file, so a FAQPage emitted onto every route would have passed
   // everywhere except the one page it was written about.
-  const shells = ['dist/index.html', 'dist/404.html',
-    ...prerenderRoutes().map((r) => `dist${r}/index.html`)]
+  const shells = [`${DIST}/index.html`, `${DIST}/404.html`,
+    ...prerenderRoutes().map((r) => `${DIST}${r}/index.html`)]
   let checked = 0
   for (const shell of shells) {
     assert.ok(!read(shell).includes('FAQPage'), `${shell} claims a FAQPage it does not render`)
@@ -347,13 +351,13 @@ test('the built shells carry the images and the breadcrumbs', {
   // functions; this tests that prerender.mjs actually used them.
   const routes = prerenderRoutes()
   for (const route of routes) {
-    const html = read(`dist${route}/index.html`)
+    const html = read(`${DIST}${route}/index.html`)
     const card = cardFor(route)
     const src = cardUrl(ORIGIN, card)
     assert.equal(meta(html, 'property', 'og:image'), src,
-      `dist${route}/index.html does not point og:image at ${card.file}`)
+      `${DIST}${route}/index.html does not point og:image at ${card.file}`)
     assert.equal(meta(html, 'name', 'twitter:image'), twitterCardUrl(ORIGIN, card),
-      `dist${route}/index.html does not point twitter:image at ${card.file}`)
+      `${DIST}${route}/index.html does not point twitter:image at ${card.file}`)
     assert.equal(meta(html, 'property', 'og:image:alt'), card.alt,
       `dist${route}/index.html describes a different card than it shows`)
     const wantsCrumb = !!breadcrumbFor(route, ORIGIN)

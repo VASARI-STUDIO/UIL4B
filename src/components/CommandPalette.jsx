@@ -83,12 +83,14 @@ export default function CommandPalette({ open, onClose }) {
     // One shared query implementation — see queryCommandIndex in data/tools.
     // The homepage command bar calls the same function over the same index.
     const hit = queryCommandIndex(q, { tools: lTools, categories: lCats, actions: quickActions })
-    const tools = hit.tools.map(tl => ({ kind: 'tool', ...tl }))
+    const tools = hit.tools.filter(tl => !tl.guide).map(tl => ({ kind: 'tool', ...tl }))
+    const guides = hit.tools.filter(tl => tl.guide).map(tl => ({ kind: 'tool', ...tl }))
     const cats = hit.categories.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
     const actions = hit.actions.map(a => ({ kind: 'action', ...a }))
 
     const out = []
     if (tools.length) out.push({ label: t('common.tools'), items: tools })
+    if (guides.length) out.push({ label: 'Guides', items: guides })
     if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
     if (actions.length) out.push({ label: t('cmd.actions'), items: actions })
     return out
@@ -176,7 +178,7 @@ export default function CommandPalette({ open, onClose }) {
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
                 // Same rule as the homepage bar - see categoryPillFor.
                 const catLabel = item.kind === 'tool' ? categoryPillFor(item, cat, t) : null
-                const icon = item.kind === 'category' ? getCategory(item.id)?.icon : (cat?.icon || (
+                const icon = item.kind === 'category' ? getCategory(item.id)?.icon : ((item.guide && item.icon) || cat?.icon || (
                   <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></>
                 ))
                 return (

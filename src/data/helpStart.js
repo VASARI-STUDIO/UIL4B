@@ -72,7 +72,7 @@ export const HELP_STARTS = Object.freeze([
     opensWith: 'the whole library',
     // What is free and what is capped is stated the same way /plans states it,
     // from the same constant, so the two surfaces cannot disagree.
-    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that wants an account — ${FREE_SAVE_LIMITS.customIcons} of them on the free plan.`,
+    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
   }),
   Object.freeze({
     id: 'files',
@@ -99,7 +99,7 @@ export const HELP_ANSWERS = Object.freeze([
     q: 'Do I need an account?',
     // Using a tool is never metered; what the free plan caps is how much you
     // can SAVE. /plans makes the same distinction from the same constants.
-    a: `No. Every tool opens and runs signed out, and using one is never metered. An account is what lets you save — ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons on the free plan — and carry settings to another device.`,
+    a: `No. Every tool opens and runs signed out, and using one is never metered. An account lets you save and carry settings to another device. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons.`,
   }),
   Object.freeze({
     id: 'cost',
@@ -137,6 +137,101 @@ export const HELP_ANSWERS = Object.freeze([
   }),
 ])
 
+const startOf = (id) => HELP_STARTS.find((s) => s.id === id)
+const answerOf = (id) => HELP_ANSWERS.find((a) => a.id === id)
+
+/**
+ * The jobs the Help page routes by: one row per thing a visitor came to do,
+ * each opening its own answer. Built from HELP_STARTS and HELP_ANSWERS, so a
+ * route, a limit or a count is still owned by the module that decides it.
+ *
+ *   start    the HELP_STARTS row this job opens with (route, "opens with")
+ *   more     HELP_ANSWERS ids carried under the answer as a question and reply
+ *   to/cta   the one destination the job ends on
+ *
+ * Every figure in `heading` and `lede` is read from FREE_SAVE_LIMITS,
+ * proOnlyFormats() or the tool lists. The money job does not claim that
+ * nothing costs money: the palette tool has paid colour systems and Pro adds
+ * export documents, so the claim that holds is that using the tools costs
+ * nothing.
+ */
+export const HELP_JOBS = Object.freeze([
+  Object.freeze({
+    id: 'colour',
+    label: 'Pick colours for a project',
+    start: startOf('colour'),
+    heading: 'The palette tool opens with a palette already drawn.',
+    lede: 'Change the base and the tints, the gradient and the contrast readings all move with it.',
+    to: startOf('colour').to,
+    cta: 'Open the palette builder',
+  }),
+  Object.freeze({
+    id: 'type',
+    label: 'Set a type scale',
+    start: startOf('type'),
+    heading: 'Two numbers set every size: a base and a ratio.',
+    lede: 'The Type Scale tool opens on the ladder, not a form, and exports the clamp() that carries it between two viewports.',
+    to: startOf('type').to,
+    cta: 'Open Type Scale',
+  }),
+  Object.freeze({
+    id: 'icons',
+    label: 'Find an icon',
+    start: startOf('icons'),
+    heading: 'Search the whole library and copy the SVG, signed out.',
+    lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
+    to: startOf('icons').to,
+    cta: 'Open the Icon Library',
+  }),
+  Object.freeze({
+    id: 'files',
+    label: 'Convert an image or video',
+    start: startOf('files'),
+    heading: 'Drop a file. It converts in your browser.',
+    lede: 'Images change format; videos give up their frames. Conversion and frame extraction run in your browser.',
+    to: startOf('files').to,
+    cta: 'Open the File Converter',
+  }),
+  Object.freeze({
+    id: 'save',
+    label: 'Save my work',
+    heading: 'Your work stays in this browser until you sign in.',
+    lede: answerOf('data').a,
+    more: Object.freeze(['account']),
+    to: answerOf('data').to,
+    cta: answerOf('data').linkLabel,
+  }),
+  Object.freeze({
+    id: 'cost',
+    label: 'Know what costs money',
+    heading: 'Using the tools costs nothing.',
+    lede: `Pro raises the AI allowance and adds ${proOnlyFormats().length} export documents. The plans page has the current price.`,
+    more: Object.freeze(['ai']),
+    to: answerOf('cost').to,
+    cta: answerOf('cost').linkLabel,
+  }),
+  Object.freeze({
+    id: 'soon',
+    label: 'See what isn\'t built yet',
+    adminOnly: true,
+    heading: answerOf('soon').q,
+    lede: answerOf('soon').a,
+    to: answerOf('soon').to,
+    cta: answerOf('soon').linkLabel,
+  }),
+  Object.freeze({
+    id: 'report',
+    label: 'Report something broken',
+    heading: 'One report form, from anywhere.',
+    lede: 'It is the same form the app uses everywhere. It reaches the same place whether you send it from here or from the tool that broke.',
+    to: '/feedback',
+    cta: 'Report it',
+  }),
+])
+
+/** URL hashes that open a job, for links that predate the router. */
+export const HELP_JOB_HASHES = Object.freeze({ contact: 'report' })
+
 /** How many of the first moves put something on screen before you type. */
 export const STARTS_WITH_CONTENT = HELP_STARTS.filter((s) => !s.empty).length
 
@@ -144,4 +239,5 @@ export const STARTS_WITH_CONTENT = HELP_STARTS.filter((s) => !s.empty).length
 export const HELP_ROUTES = Object.freeze([
   ...HELP_STARTS.map((s) => s.to),
   ...HELP_ANSWERS.filter((a) => a.to).map((a) => a.to),
+  ...HELP_JOBS.map((j) => j.to),
 ])

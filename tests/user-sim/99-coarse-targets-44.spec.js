@@ -181,3 +181,32 @@ test('/: Shuffle is drawn 36px, its ring is 44px, and a tap on the ring corner s
   await expect(name, 'a tap on the ring corner did not shuffle the seed').not.toHaveText(before)
   await ctx.close()
 })
+
+// On a phone the links a reader uses to move on are 44px tall, whether or not the
+// pointer reports as coarse: the guide's Sources list, the topic chips on the hub
+// and the "go" link on each principle.
+test('a phone at 390: Learn Sources, hub topic chips and /learn/principles .prn-go are 44px tall', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  const page = await ctx.newPage()
+  watch(page, 'someone on a phone moving on from a guide')
+  const heights = (sel) => page.locator(sel).evaluateAll((els) => els
+    .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
+    .map((e) => Math.round(e.getBoundingClientRect().height)))
+
+  await go(page, '/learn/colour-contrast')
+  await page.locator('.lart-sources summary').click()
+  const sources = await heights('.lart-sources li a')
+  expect(sources.length, 'no Sources link was painted').toBeGreaterThan(0)
+  for (const h of sources) expect(h, 'a Sources link is under 44px').toBeGreaterThanOrEqual(44)
+
+  await go(page, '/learn')
+  const chips = await heights('.lidx-topics a')
+  expect(chips.length, 'no hub topic chip was painted').toBeGreaterThan(0)
+  for (const h of chips) expect(h, 'a hub topic chip is under 44px').toBeGreaterThanOrEqual(44)
+
+  await go(page, '/learn/principles')
+  const gos = await heights('.prn-go')
+  expect(gos.length, 'no .prn-go link was painted').toBeGreaterThan(0)
+  for (const h of gos) expect(h, 'a .prn-go link is under 44px').toBeGreaterThanOrEqual(44)
+  await ctx.close()
+})

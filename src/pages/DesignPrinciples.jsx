@@ -87,12 +87,12 @@ export default function DesignPrinciples() {
     <div className="sec cpg prn">
       <header className="prn-hero">
         <h1 className="prn-h1">
-          Every rule here is <mark className="home-mark">enforced</mark> by a screen.
+          Every rule here is enforced by a screen.
         </h1>
         <p className="prn-lede">
           Nothing on this page is only a statement. Each one names the tool that
           applies it, and the figures beside it were measured when the page
-          loaded — by the same functions that tool runs.
+          loaded. They come from the same functions that tool runs.
         </p>
         <div className="prn-hero-cta">
           {/* The Spectrum pill, replacing `.ui-pill ui-pill-ink ui-pill-lg`.

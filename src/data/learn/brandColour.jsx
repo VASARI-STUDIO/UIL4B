@@ -41,11 +41,11 @@ export default function BrandColour() {
       <section id="jobs">
         <h2>One value, several jobs</h2>
         <p>
-          A brand colour arrives as a single hex, and the interface immediately
-          asks it to do four separate things: be a fill with a label on it, be a
-          link in running text, be the border that identifies a focused input,
-          and be a large flat area behind something else. Only the fourth has no
-          contrast requirement attached.
+          A brand colour arrives as a single hex. The interface at once asks it to
+          do four separate jobs. It is a fill with a label on it. It is a link in
+          running text. It is the border that marks a focused input. It is also a
+          large flat area behind something else. Only the fourth has no contrast
+          requirement.
         </p>
 
         <Spec
@@ -71,20 +71,20 @@ export default function BrandColour() {
         </Spec>
 
         <p>
-          Two numbers, and the pair each applies to is different every time. As a
-          link, the brand colour is measured against the page ground. As a fill,
-          it is measured against its own label — a different pair, and one where
-          the brand colour is the background rather than the ink. As a border, it
-          is measured against whatever is on both sides of it, at 3:1 rather than
+          There are two numbers, and each applies to a different pair of colours.
+          As a link, the brand colour is measured against the page ground. As a
+          fill, it is measured against its own label. That is a different pair,
+          and the brand colour is the background, not the ink. As a border, it is
+          measured against whatever sits on both sides of it, at 3:1 and not
           4.5:1.
         </p>
         <p>
-          Because the ratio is symmetric — the formula takes the lighter and the
-          darker luminance and does not care which is text — the first two look
-          like the same test when the label is white and the ground is white.
-          They stop being the same test the moment either changes, and one of
-          them always does: the ground changes in the dark theme, and the label
-          changes the first time a colour is too light to carry white.
+          The ratio is symmetric. The formula takes the lighter and the darker
+          luminance and does not care which one is text. So the first two look
+          like the same test when the label is white and the ground is white. They
+          stop being the same test as soon as either one changes, and one always
+          does. The ground changes in the dark theme. The label changes the first
+          time a colour is too light to carry white.
         </p>
       </section>
 
@@ -92,19 +92,18 @@ export default function BrandColour() {
         <h2>What the ramp is for</h2>
         <p>
           A ramp is not a set of decorative variants of the brand colour. It is
-          the set of values the brand hue takes so that each of those jobs can be
-          given a colour that passes its own test, while the hue stays constant
-          and the identity survives.
+          the set of values the brand hue takes so that each job gets a colour
+          that passes its own test. The hue stays constant, so the identity
+          survives.
         </p>
 
         <BrandRampTable />
 
         <p>
-          Read the two ratio columns against each other rather than down their
-          own length. On the light ground the first stop that clears 4.5:1 is
-          600; on the dark ground the last one that does is 400. The window for
-          text on light starts below the window for text on dark ends, and the
-          two do not meet.
+          Read the two ratio columns against each other, not down their own
+          length. On the light ground the first stop that clears 4.5:1 is 600. On
+          the dark ground the last one that does is 400. The stops that work for
+          text on light and the stops that work for text on dark do not overlap.
         </p>
       </section>
 
@@ -112,48 +111,46 @@ export default function BrandColour() {
         <h2>No single stop clears both grounds</h2>
         <p>
           Not one of the eleven stops in that ramp measures 4.5:1 against both{' '}
-          <code>#EFEEE9</code> and <code>#060607</code>. Two of them —
-          400 and 500 — clear 3:1 against both, which is why a brand-coloured
-          border can be one value in a theme system while a brand-coloured link
-          cannot.
+          <code>#EFEEE9</code> and <code>#060607</code>. Two of them, 400 and 500,
+          clear 3:1 against both. That is why a brand-coloured border can be one
+          value in a theme system, while a brand-coloured link cannot.
         </p>
         <p>
-          That is the arithmetic behind the rule the previous guide states
-          structurally: a role token has to hold a different value per theme.
-          It is not a stylistic preference for lighter accents on dark
-          backgrounds. It is that the set of values satisfying the light
-          constraint and the set satisfying the dark one have no member in
-          common, so no single value can be chosen.
+          This is the arithmetic behind the rule in the previous guide: a role
+          token has to hold a different value per theme. It is not a style
+          preference for lighter accents on dark backgrounds. The values that
+          pass on light and the values that pass on dark share no member, so no
+          single value can be chosen.
         </p>
         <p>
-          The seed here is worth its own line. <code>#2563EB</code> is the colour
-          this product&rsquo;s own Colour Studio opens on, and it measures 4.45:1
-          against <code>#EFEEE9</code> — five hundredths under the
-          threshold, against an off-white rather than a pure white. A brand
-          colour that fails by that margin fails in a way no reviewer catches by
-          eye, and the number is different again on <code>#FFFFFF</code>. Which
-          ground the check was run against is part of the result.
+          The seed colour needs its own line. <code>#2563EB</code> is the colour
+          this product&rsquo;s own Colour Studio opens on. It measures 4.45:1
+          against <code>#EFEEE9</code>. That is five hundredths under the
+          threshold, against an off-white and not a pure white. A brand colour
+          that fails by that margin is one no reviewer catches by eye. The number
+          is different again on <code>#FFFFFF</code>. The ground you test against
+          is part of the result.
         </p>
         <Aside>
-          The stops here are the generator&rsquo;s <i>perceived</i> curve, which
-          spaces them by perceptual tone rather than by HSL lightness. The linear
-          curve produces a different ramp from the same seed, and therefore
-          different stop numbers for the same jobs.
+          The stops here use the generator&rsquo;s <i>perceived</i> curve. It
+          spaces them by perceptual tone, not by HSL lightness. The linear curve
+          makes a different ramp from the same seed, so the same jobs land on
+          different stop numbers.
         </Aside>
       </section>
 
       <section id="neutrals">
         <h2>The neutral carries more of the screen than the brand colour</h2>
         <p>
-          Most of an interface is neutral: grounds, surfaces, borders, body text,
-          the disabled state of everything. The brand colour appears on a small
-          fraction of the pixels, and it is the neutral ramp that decides whether
-          the product looks like anything.
+          Most of an interface is neutral. That means grounds, surfaces, borders,
+          body text and every disabled state. In most interfaces the brand colour
+          covers far fewer pixels than the neutrals do. This is a design view, not
+          a measured figure. The neutral ramp therefore does much of the work of
+          giving a product its look.
         </p>
         <p>
           A neutral does not have to be grey. Pulling it a few percent towards the
-          brand hue ties the two together, and the cost in contrast is small
-          enough to be spent freely.
+          brand hue ties the two together. The cost in contrast is small.
         </p>
 
         <DataTable
@@ -165,34 +162,32 @@ export default function BrandColour() {
 
         <p>
           Every one of those moves is under four tenths of a ratio point at 8%
-          saturation and under seven tenths at 16% — and every one of them moves{' '}
-          <i>upwards</i>, which is the detail worth keeping.
-          Adding saturation at a fixed HSL lightness makes the colour darker in
-          luminance, because HSL lightness is not luminance. A tinted neutral is
-          therefore not a contrast risk relative to the grey it replaces; it is
-          slightly safer, and any budget that was passing with the grey is still
-          passing.
+          saturation and under seven tenths at 16%, and every one of them moves{' '}
+          <i>upwards</i>, which is the detail to keep. Adding saturation at a
+          fixed HSL lightness makes the colour darker in luminance, because HSL
+          lightness is not luminance. So a tinted neutral is not a contrast risk
+          compared with the grey it replaces. It is slightly safer. Any pair that
+          passed with the grey still passes.
         </p>
       </section>
 
       <section id="state-collision">
         <h2>When the brand hue is already spoken for</h2>
         <p>
-          Error, success and warning occupy three regions of the hue wheel that
-          the reader has learnt elsewhere, and a brand colour that lands in one of
-          them takes the meaning with it. The collision is closer than it looks
-          on a swatch card: a brand red of <code>#E11D48</code> and an error red
-          of <code>#DC2626</code> measure 1.03:1 against each other, which is to
-          say they are the same colour as far as any contrast-based distinction
-          is concerned.
+          Error, success and warning sit in three regions of the hue wheel that
+          readers have learnt elsewhere. A brand colour that lands in one of them
+          takes on that meaning. The clash is closer than it looks on a swatch
+          card. A brand red of <code>#E11D48</code> and an error red of{' '}
+          <code>#DC2626</code> measure 1.03:1 against each other. For any
+          contrast-based test, they are the same colour.
         </p>
         <p>
-          There are two honest resolutions and one that is not. The brand hue can
-          move — a magenta rather than a red — or the state palette can be pushed
-          away from it, which usually costs the state colours their conventional
-          reading. What does not work is keeping both and relying on position to
-          separate them, because that makes colour the only carrier of the
-          difference at exactly the moment the difference matters.
+          There are two sound fixes and one that is not. The brand hue can move,
+          to a magenta instead of a red. Or the state palette can be pushed away
+          from it, which usually costs the state colours their usual meaning. The
+          fix that does not work is to keep both and rely on position to tell them
+          apart. That makes colour the only carrier of the difference at the very
+          moment the difference matters.
         </p>
 
         <Spec
@@ -206,12 +201,11 @@ export default function BrandColour() {
         </Spec>
 
         <p>
-          1.4.1 is the criterion that makes the collision survivable rather than
-          the one that forbids it. An error that carries an icon and a sentence
-          is still an error when its red is the brand red; an error that is a red
-          border on a field is not distinguishable from a brand-coloured focus
-          ring, and was never distinguishable to a reader who does not see the
-          hue at all.
+          1.4.1 does not forbid the clash. It makes the clash survivable. An error
+          with an icon and a sentence is still an error when its red is the brand
+          red. An error shown only as a red border on a field looks the same as a
+          brand-coloured focus ring. It never looked different to a reader who
+          cannot see the hue at all.
         </p>
       </section>
     </>

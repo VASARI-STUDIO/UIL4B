@@ -58,22 +58,6 @@
   color: var(--cpg-ink);
   text-wrap: balance;
 }
-/* The accent run, not the acid highlighter. The full argument is in
- * principles.css beside the same rule; the short version is that a painted
- * inline background needs ~1.15 leading and Spectrum's display setting is .99,
- * and that the front door marks its own headline run with a colour. The class
- * name stays — 57-help-and-principles asserts exactly one `.home-mark` inside
- * `.hlp-hero`, which is about the page having one emphasised phrase and is
- * still true. global.css is untouched. */
-.hlp .home-mark {
-  background: none;
-  color: var(--accent-mid);
-  padding: 0;
-  margin: 0;
-  border-radius: 0;
-  line-height: inherit;
-}
-
 .hlp-lede {
   margin: 0;
   max-width: 54ch;
@@ -231,6 +215,11 @@
   text-underline-offset: 3px;
 }
 .hlp-answer-link:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+/* Touch: vertical padding on an inline box grows the hit area to 44px without
+ * moving any line of the sentence. */
+@media (pointer: coarse) {
+  .hlp-answer-link { padding-block: 14px; }
+}
 
 /* The closing band has no heading column — it is one statement and one
  * destination, so it takes the full width. */
