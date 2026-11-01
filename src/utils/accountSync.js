@@ -156,7 +156,8 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-project-icons': { scope: 'account-other', why: 'Legacy map; each icon now lives ON its project (utils/projectIcons.js) and migrates there' },
   'vs-profile-cache': { scope: 'account-other', why: 'Cache of users/{uid}, which AuthContext owns; keyed by uid' },
   'vs-onboarded': { scope: 'account-mirror', why: 'Mirror of profile.onboarding.completedAt' },
-  'vs-accounts': { scope: 'device', why: 'Accounts remembered on THIS device for the switcher' },
+  'vs-accounts': { scope: 'device', why: 'Accounts remembered on THIS device for the switcher; forgotten at sign-out unless vs-remember-device is on' },
+  'vs-remember-device': { scope: 'device', why: 'Opt-in: keep the accounts list after sign-out. Off by default, so a shared machine forgets the last person' },
   'vs-google-returning': { scope: 'device', why: 'Has this browser used Google sign-in (One Tap hint)' },
   'vs-session': { scope: 'device', why: 'Synchronous "was signed in" hint for first paint' },
   'vs-settings-section': { scope: 'device', why: 'Which Settings tab this browser last showed' },
@@ -555,9 +556,13 @@ export function applyToStorage(storage, meta, apply) {
  * account has not received. After sign-out it can no longer be sent (the rules
  * need the owner's token), so deleting it would lose it; kept, it goes up the
  * next time that same account signs in here.
+ *
+ * `discard` is the person's own answer to that refusal ("sign out and discard
+ * my unsent changes", asked for in utils/signOutClear.js): the copy is removed
+ * even though the account never received it.
  */
-export function releaseCache(storage, meta) {
-  if (pendingKeys(meta).length) return { released: false, keys: [] }
+export function releaseCache(storage, meta, { discard = false } = {}) {
+  if (!discard && pendingKeys(meta).length) return { released: false, keys: [] }
   const keys = [...ACCOUNT_KEY_NAMES, ...ACCOUNT_MIRROR_KEYS]
   for (const key of keys) {
     try { storage?.removeItem(key) } catch { /* nothing to do */ }

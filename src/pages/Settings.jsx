@@ -9,7 +9,7 @@ import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
-import { flushAccountSync } from '../hooks/useFirestoreSync'
+import { flushAccountSync, anyUnsent } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
 import { loadFirestore } from '../utils/firebaseAccess'
 import { AI_TERMS_PATH } from '../config/aiImageConsent'
@@ -31,6 +31,7 @@ import UserName from '../components/UserName'
 import ThemeChoice from '../components/ThemeChoice'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
+import { isRememberDevice, setRememberDevice, requestDiscardOnSignOut, cancelDiscardRequest } from '../utils/signOutClear'
 import { initialOf } from '../utils/initials'
 import { checkWebsite } from '../utils/websiteUrl'
 import { doc, getDoc } from 'firebase/firestore'
@@ -845,6 +846,9 @@ const SECTION_KEY = 'vs-settings-section'
 function rememberedSection() {
   try { return localStorage.getItem(SECTION_KEY) || '' } catch { return '' }
 }
+function browserStorage() {
+  try { return typeof localStorage !== 'undefined' ? localStorage : null } catch { return null }
+}
 function rememberSection(id) {
   try { localStorage.setItem(SECTION_KEY, id) } catch { /* private mode: nothing to remember with */ }
 }
@@ -993,17 +997,20 @@ export default function Settings({ toast }) {
   // different account signing in first discards it.
   const [signingOut, setSigningOut] = useState(false)
   const [signOutIssue, setSignOutIssue] = useState('')
-  const signOut = async ({ anyway = false } = {}) => {
+  const signOut = async ({ anyway = false, discard = false } = {}) => {
     if (signingOut) return
     setSigningOut(true)
     setSignOutIssue('')
     try {
-      if (!anyway) {
+      // "Discard": the unsent changes are removed from this browser with the
+      // rest of the person's copy (the auth-state change reads this request).
+      if (discard) requestDiscardOnSignOut()
+      if (!anyway && !discard) {
         let timer
         const held = new Promise((resolve) => { timer = setTimeout(resolve, SIGN_OUT_FLUSH_WAIT_MS, 'held') })
         const flushed = await Promise.race([flushAccountSync().then(() => 'done'), held])
         clearTimeout(timer)
-        if (flushed === 'held' || getSyncState().errors.length) {
+        if (flushed === 'held' || getSyncState().errors.length || anyUnsent()) {
           setSigningOut(false)
           setSignOutIssue('unsynced')
           return
@@ -1011,9 +1018,19 @@ export default function Settings({ toast }) {
       }
       await logout()
     } catch {
+      cancelDiscardRequest()
       setSigningOut(false)
       setSignOutIssue('failed')
     }
+  }
+
+  // Whether this browser keeps the accounts used here after sign-out. Off by
+  // default, so a shared machine does not show the next person who was here.
+  const [rememberDevice, setRememberDeviceState] = useState(() => isRememberDevice(browserStorage()))
+  const changeRememberDevice = () => {
+    const next = !rememberDevice
+    if (setRememberDevice(browserStorage(), next)) setRememberDeviceState(next)
+    else toast('Could not save that choice on this browser.')
   }
 
   // Custom profile photo: any user can override their avatar. The picked file
@@ -1793,6 +1810,22 @@ export default function Settings({ toast }) {
                     </div>
                     <button type="button" className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                   </div>
+                  <div className="toggle-row toggle-row--long">
+                    <label className="toggle-row-info" htmlFor="set-remember-device">
+                      <span className="toggle-row-label" id="set-remember-label">Remember accounts on this device</span>
+                      <span className="toggle-row-meta" id="set-remember-meta">Keeps the email and photo of accounts you’ve used here after you sign out, so you can switch back. Leave it off on a shared computer.</span>
+                    </label>
+                    <button
+                      id="set-remember-device"
+                      type="button"
+                      role="switch"
+                      aria-checked={rememberDevice}
+                      aria-labelledby="set-remember-label"
+                      aria-describedby="set-remember-meta"
+                      className={`toggle-switch${rememberDevice ? ' on' : ''}`}
+                      onClick={changeRememberDevice}
+                    />
+                  </div>
                   {signOutIssue && (
                     <div className="settings-sync-alert" role="alert">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1806,7 +1839,10 @@ export default function Settings({ toast }) {
                       <span className="settings-sync-alert-actions">
                         <button type="button" onClick={() => signOut()} disabled={signingOut}>Try again</button>
                         {signOutIssue === 'unsynced' && (
-                          <button type="button" onClick={() => signOut({ anyway: true })} disabled={signingOut}>Sign out anyway</button>
+                          <>
+                            <button type="button" onClick={() => signOut({ anyway: true })} disabled={signingOut}>Sign out anyway</button>
+                            <button type="button" onClick={() => signOut({ discard: true })} disabled={signingOut}>Sign out and discard them</button>
+                          </>
                         )}
                       </span>
                     </div>
@@ -1828,7 +1864,12 @@ export default function Settings({ toast }) {
                       {' '}This can&rsquo;t be undone.
                     </p>
                     <DeleteAccount
-                      onDelete={(pw) => deleteAccount(pw)}
+                      onDelete={async (pw) => {
+                        // A deleted account has nowhere to send unsent changes to, so
+                        // its copy goes with it rather than being kept for "next time".
+                        requestDiscardOnSignOut()
+                        try { return await deleteAccount(pw) } catch (error) { cancelDiscardRequest(); throw error }
+                      }}
                       onExportFirst={() => pickSection('data')}
                       planPending={planPending}
                       googleOnly={isGoogleOnlyAccount()}

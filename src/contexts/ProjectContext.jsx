@@ -13,6 +13,8 @@ import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
+import { registerAccountFlush, registerUnsentCheck } from '../hooks/useFirestoreSync'
+import { createUnsentTracker } from '../utils/unsentTracker'
 import { projectSnapshot } from '../utils/designPatch'
 
 const ProjectContext = createContext()
@@ -138,6 +140,9 @@ export function ProjectProvider({ children }) {
   //  - pushTimerRef: debounce handle for the push effect.
   const suppressPushRef = useRef(false)
   const pushTimerRef = useRef(null)
+  // Edits the account has not received yet (see utils/unsentTracker).
+  const unsentRef = useRef(null)
+  if (!unsentRef.current) unsentRef.current = createUnsentTracker()
   // What each per-project document on the account holds, as of the last pull
   // or push. See writeRemoteProjects(): it limits a push to what changed here.
   const storedRef = useRef(new Map())
@@ -155,6 +160,14 @@ export function ProjectProvider({ children }) {
   // account's copy is written into storage — at sign-in on a second device, or
   // back to the blank design at sign-out — every tool shows it now.
   useEffect(() => onAccountApplied([CURRENT_KEY], () => setDesign(loadCurrent())), [])
+
+  // Sign-out removes the saved projects from this browser (utils/signOutClear).
+  // The lists in state are read again, or the next save would write the
+  // previous person's projects straight back into storage.
+  useEffect(() => onAccountApplied([PROJECTS_KEY, TOMBSTONES_KEY], () => {
+    setAllProjects(loadAllProjects())
+    setAllTombstones(loadAllTombstones())
+  }), [])
 
   const projects = useMemo(() => {
     if (!userKey) return []
@@ -508,11 +521,15 @@ export function ProjectProvider({ children }) {
 
   const pushNow = useCallback(async () => {
     if (!uid) return
+    // Ticket taken as the push starts: an edit made while it is in flight is not
+    // in what it sends, so it must leave the mark in place.
+    const ticket = unsentRef.current.begin()
     try {
       const fs = await loadFirestore()
       const result = await writeRemoteProjects(fs, uid, {
         list: projects, tombstones, stored: storedRef.current,
       })
+      unsentRef.current.finish(ticket, !!result.ok)
       if (result.ok) {
         if (result.stored instanceof Map) storedRef.current = result.stored
         reportSyncOk(SYNC_CHANNEL)
@@ -537,6 +554,21 @@ export function ProjectProvider({ children }) {
     pushRef.current = pushNow
   }, [pullNow, pushNow])
 
+  // The sign-out buttons send what is pending before they sign out; the saved
+  // projects are pending too for the moment between an edit and its push.
+  useEffect(() => registerAccountFlush(() => pushRef.current?.()), [])
+
+  // Sign-out clears the saved projects only when none of them is unsent. The
+  // answer stays in the ref after the account is gone; if this provider itself
+  // leaves first, the registry keeps it (utils/unsentTracker).
+  useEffect(() => registerUnsentCheck(() => unsentRef.current.isUnsent()), [])
+
+  // A new sign-in starts with nothing marked unsent. Declared before the pull
+  // and push effects so an edit they see afterwards is marked on top of it.
+  useEffect(() => {
+    if (uid) unsentRef.current.reset()
+  }, [uid])
+
   // PULL on login / uid change.
   useEffect(() => {
     if (!uid || !userKey) return
@@ -553,6 +585,11 @@ export function ProjectProvider({ children }) {
   // all, which is the other half of why deletes never propagated.
   useEffect(() => {
     if (!uid) return
+    // From here until a push of THIS state succeeds, the account is behind.
+    // Marked before the pull suppression check: an edit made in the moments
+    // after sign-in is still unsent, and the push the pull schedules when it
+    // releases clears the mark once it lands.
+    unsentRef.current.markChanged()
     if (suppressPushRef.current) return
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => { pushNow() }, PUSH_DEBOUNCE_MS)

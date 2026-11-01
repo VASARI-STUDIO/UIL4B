@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { isLocalPath } from '../utils/localPath'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
 import { FIRST_PALETTE_STATE } from '../utils/paletteCoach'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
@@ -154,7 +155,8 @@ export default function Onboarding() {
     try {
       const t = sessionStorage.getItem(RESUME_KEY)
       sessionStorage.removeItem(RESUME_KEY)
-      return t || null
+      // Re-checked on read: only a path on this origin is a place to send them.
+      return isLocalPath(t) ? t : null
     } catch { return null }
   }
 

@@ -137,7 +137,9 @@ export default async function handler(req, res) {
     // with a token minted before that.
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7), true)
     uid = decoded.uid
-    email = decoded.email || null
+    // Only a verified address names feedback rows: anyone can sign up unverified
+    // with someone else's address, and must not be able to delete theirs.
+    email = decoded.email_verified === true ? (decoded.email || null) : null
     authTimeMs = (decoded.auth_time || 0) * 1000
   } catch {
     return res.status(401).json({ error: 'Invalid auth token' })

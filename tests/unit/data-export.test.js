@@ -269,7 +269,8 @@ test('clearing removes everything owned except what would sign you out', () => {
     'other-app': 'x',
   })
   const clearing = keysToClear(store)
-  assert.deepEqual(clearing.sort(), ['vs-brand-new', 'vs-lang', 'vs-projects'])
+  // vs-accounts holds other people's emails and photos, so it is cleared too.
+  assert.deepEqual(clearing.sort(), ['vs-accounts', 'vs-brand-new', 'vs-lang', 'vs-projects'])
   for (const kept of CLEAR_EXCEPTIONS) {
     assert.ok(!clearing.includes(kept), `${kept} must survive a preferences clear`)
   }

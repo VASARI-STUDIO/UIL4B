@@ -79,10 +79,12 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-preview-device': { purpose: 'Preview device preference', pii: 'no' },
   'vs-preview-rounding': { purpose: 'Preview corner-rounding preference', pii: 'no' },
   'vs-profile-cache': { purpose: 'Cached copy of your profile', pii: 'yes' },
-  // Was disclosed nowhere, exported nowhere, and left behind by "Clear local
-  // data" — while holding an email address, display name and photo URL for up
-  // to five accounts. The single worst omission the audit found.
-  'vs-accounts': { purpose: 'Email, name and photo for accounts used on this device (up to five)', pii: 'yes' },
+  // Holds an email address, display name and photo URL for up to five accounts,
+  // so it is disclosed, exported for the account it belongs to, removed by
+  // "Clear local data", and forgotten at sign-out unless the person turned on
+  // "Remember accounts on this device".
+  'vs-accounts': { purpose: 'Email, name and photo for accounts used on this device (up to five). Forgotten at sign-out unless you turn on remembering', pii: 'yes' },
+  'vs-remember-device': { purpose: 'Whether to keep the accounts used on this device after you sign out', pii: 'no' },
   'vs-google-returning': { purpose: 'Whether you have signed in with Google before', pii: 'no' },
   'vs-onboarded': { purpose: 'Whether you completed onboarding', pii: 'no' },
   'vs-resume-after-onboarding': { purpose: 'Where to send you after onboarding', pii: 'no' },
@@ -162,8 +164,10 @@ export function collectStorage(storage) {
 
 // Keys to remove for "Clear local data". Everything owned EXCEPT the ones whose
 // removal would log the user out or lose an entitlement — clearing preferences
-// should not sign you out of your own account.
-export const CLEAR_EXCEPTIONS = Object.freeze(['vs-accounts', 'vs-admin-unlocked', 'vs-onboarded'])
+// should not sign you out of your own account. The remembered-accounts list
+// (`vs-accounts`) is NOT an exception: it holds other people's email addresses
+// and photos, and Clear local data is the way to remove them from this browser.
+export const CLEAR_EXCEPTIONS = Object.freeze(['vs-admin-unlocked', 'vs-onboarded'])
 
 export function keysToClear(storage) {
   return Object.keys(collectStorage(storage)).filter((k) => !CLEAR_EXCEPTIONS.includes(k))
