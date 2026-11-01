@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
 
@@ -832,6 +832,9 @@ test.describe('the icon toolbar', () => {
   }
 })
 
+// A one-icon logos catalogue. The page reads a pack list from this site first
+// (/iconify/collections/logos.json) and only then from Iconify, so both are
+// answered with the same body.
 const adobeCatalogue = async (page) => {
   await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname === '/logos/adobe.svg'), route => {
     const url = new URL(route.request().url())
@@ -843,10 +846,12 @@ const adobeCatalogue = async (page) => {
         : JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons: { adobe: { body: coloured } } }),
     })
   })
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
+  const answer = route => route.fulfill({
     contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
     body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: ['adobe'] }),
-  }))
+  })
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', answer)
+  await page.route(u => u.pathname.match(SNAPSHOT_PATH_RE)?.[1] === 'logos', answer)
 }
 
 const openAdobeGrid = async (page) => {

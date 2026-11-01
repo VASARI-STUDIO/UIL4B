@@ -70,6 +70,9 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCredits'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, HELD_HEADER } from '../utils/iconifyFetch'
+import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
+import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -366,7 +369,7 @@ async function fetchWithFallback(path, timeout = 4000) {
   let retryAfter = null
   for (const host of API_HOSTS) {
     try {
-      const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
+      const r = await iconifyFetch(`${host}${path}`, { timeout })
       if (r.ok) return r
       // A 429 says how long to wait, when the browser is allowed to read the header
       // (a refusal sent without CORS headers reaches us as a network error instead).
@@ -402,7 +405,7 @@ function fetchSvgText(pack, name, params = {}) {
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+        const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
         if (r.ok) return await r.text()
       } catch { /* try next host */ }
     }
@@ -470,9 +473,10 @@ const GLYPH_BOX = new Map()
 // that re-renders the same cells never re-asks for them.
 const GLYPH_ASKED = new Map()
 
-// One request carries this many names. 60 measured at ~15KB; 100 keeps the URL
-// well inside every proxy's limit and still lands under 30KB for a stroke pack.
-const GLYPH_BATCH = 100
+// One request carries up to GLYPH_CHUNK names (src/utils/iconGroupGlyphs.js).
+// 60 measured at ~15KB; 100 keeps the URL well inside every proxy's limit and
+// still lands under 30KB for a stroke pack. Which names share a request is
+// fixed by position in the pack's listing, so a reload asks for the same URLs.
 
 const askedFor = (pack) => {
   let s = GLYPH_ASKED.get(pack)
@@ -503,7 +507,9 @@ const GLYPH_STORES = { body: GLYPH_BODY, box: GLYPH_BOX, missing: GLYPH_MISSING 
  * { ok: false, kind } when it was not — the caller turns a failure into the
  * page's existing refused state rather than into 120 silently broken images.
  * `kind` says why (see classifyAnimatedFailure): only an animated set can fail
- * for a reason other than 'transient'.
+ * for a reason other than 'transient'. When a back-off was running and nothing
+ * was sent, `kind` is 'held' and `heldUntil` says when it ends: the name was not
+ * tried, so it is not a failure and must not use up a retry.
  */
 async function loadGlyphBatchOutcome(pack, names) {
   if (!names.length) return { ok: true }
@@ -514,7 +520,8 @@ async function loadGlyphBatchOutcome(pack, names) {
       data = await animatedIcons.glyphs(pack, names)
     } else {
       const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
-      const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      const r = await iconifyFetch(url, { timeout: 8000 })
+      if (r.headers.get(HELD_HEADER)) return { ok: false, kind: 'held', heldUntil: iconifyCooldownUntil(url) }
       // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
       // as a broken image nobody can see.
       if (!r.ok) return { ok: false, kind: 'transient' }
@@ -2686,17 +2693,26 @@ const retryOptions = (retry) => ({ manualRetry: !!retry, chipRetry: retry === 'c
 // flight and the default "All packs" listing never uses it: see src/data/iconHeads.js.
 const collectionGate = createLimiter(2)
 // info=1 includes registry attribution in the same catalogue request.
+// The answer comes from the same-origin snapshot first (public/iconify/collections/,
+// recorded by scripts/snapshot-icon-collections.mjs), so a first visit with an
+// empty cache asks Iconify for no pack lists. A pack with no snapshot falls
+// through to the live request, with iconifyFetch's cache and back-off.
 // When the request fails and nothing is stored, the committed head of the pack
 // stands in (marked `sample`, never cached) so the pack still shows live glyphs.
 const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
-  fetchEntry: (pack, { refused } = {}) => collectionGate(async () => {
-    const stop = refused?.()
-    if (stop) throw stop
-    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-    const d = await r.json()
+  fetchEntry: async (pack, { refused } = {}) => {
+    let d = await fetchCollectionSnapshot(pack)
+    if (!d) {
+      d = await collectionGate(async () => {
+        const stop = refused?.()
+        if (stop) throw stop
+        const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+        return r.json()
+      })
+    }
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
-  }),
+  },
   lastResort: async (pack) => {
     const head = await loadPackHead(pack)
     return { names: head.names, title: head.title, credit: null, sample: true }
@@ -4059,9 +4075,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
   const retryTimerRef = useRef(0)
+  // The wake-up for batches held back by a running back-off; separate from the
+  // failed-batch timer so neither pushes the other later.
+  const heldTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current); clearTimeout(heldTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -4079,7 +4098,21 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // wasted requests for names nobody was looking at any more. One frame's
     // worth of settling is under the network round trip that follows it.
     const t = setTimeout(() => {
-      const wanted = new Map()
+      // Each pack's full listing, in order: the tranches are cut from this, by
+      // position, so an icon always belongs to the same request (see
+      // glyphChunkPlan). Only icons the viewer may see are listed.
+      const lists = new Map()
+      const listed = new Set()
+      for (const icon of icons) {
+        if (!icon.cdn || icon.custom || icon.logo || isAnimatedPack(icon.pack)) continue
+        if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
+        const key = svgKey(icon.pack, icon.name)
+        if (listed.has(key)) continue
+        listed.add(key)
+        if (!lists.has(icon.pack)) lists.set(icon.pack, [])
+        lists.get(icon.pack).push(icon.name)
+      }
+      const refs = []
       // The Recent rail is drawn from a separate list that is never part of
       // `icons`, so it has to be named here or its glyphs would wait forever.
       // One page AHEAD of what is drawn, so the markup for the next page is
@@ -4098,6 +4131,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
         if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
+        // Only a cell that still needs its markup sends a request. The request
+        // that covers it is the whole chunk, though, not just this cell.
         const key = svgKey(icon.pack, icon.name)
         // A name the server would refuse is never sent: one such name fails its whole batch.
         if (isAnimatedPack(icon.pack) && !isAnimatedName(icon.name)) { GLYPH_MISSING.add(key); continue }
@@ -4106,21 +4141,29 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         // failed GLYPH_RETRY_MAX + 1 times is left alone for the session.
         if (Date.now() < (GLYPH_RETRY_AFTER.get(icon.pack) || 0)) continue
         if ((GLYPH_FAILS.get(key) || 0) > GLYPH_RETRY_MAX) continue
-        const asked = askedFor(icon.pack)
-        if (asked.has(icon.name)) continue
-        asked.add(icon.name)
-        if (!wanted.has(icon.pack)) wanted.set(icon.pack, [])
-        wanted.get(icon.pack).push(icon.name)
+        if (askedFor(icon.pack).has(icon.name)) continue
+        refs.push({ pack: icon.pack, name: icon.name })
       }
-      if (!wanted.size) return
-      const jobs = []
-      for (const [pack, names] of wanted) {
-        const batch = isAnimatedPack(pack) ? ANIMATED_BATCH : GLYPH_BATCH
-        for (let i = 0; i < names.length; i += batch) {
-          const slice = names.slice(i, i + batch)
-          jobs.push({ pack, names: slice, done: loadGlyphBatchOutcome(pack, slice) })
-        }
+      // The animated sets are asked in their own batch size, straight from the
+      // cells that need them: the server route is not cached like the public host.
+      const wanted = []
+      const plainRefs = []
+      const animatedNames = new Map()
+      for (const ref of refs) {
+        if (!isAnimatedPack(ref.pack)) { plainRefs.push(ref); continue }
+        if (!animatedNames.has(ref.pack)) animatedNames.set(ref.pack, [])
+        animatedNames.get(ref.pack).push(ref.name)
       }
+      for (const chunk of glyphChunkPlan(lists, plainRefs)) wanted.push(chunk)
+      for (const [pack, names] of animatedNames) {
+        for (let i = 0; i < names.length; i += ANIMATED_BATCH) wanted.push({ pack, names: names.slice(i, i + ANIMATED_BATCH) })
+      }
+      if (!wanted.length) return
+      for (const { pack, names } of wanted) {
+        const asked = askedFor(pack)
+        for (const n of names) asked.add(n)
+      }
+      const jobs = wanted.map((chunk) => ({ pack: chunk.pack, names: chunk.names, done: loadGlyphBatchOutcome(chunk.pack, chunk.names) }))
       Promise.all(jobs.map(j => j.done)).then((results) => {
         if (!mountedRef.current) return
         setGlyphTick(n => n + 1)
@@ -4130,6 +4173,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         // A RETRY run that fails is a partial failure too, however many jobs it
         // held: one flag pack timing out twice must not swap the whole grid for
         // the built-in set, so only a first-time total refusal raises the notice.
+        // A batch held back by a running back-off was never sent, so it counts as
+        // refused for the notice but not as a failed try.
+        const isHeld = (r) => r.kind === 'held'
         const allRefused = results.length > 0 && results.every(r => !r.ok)
         const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
         // An animated set failing says nothing about the icon service the other
@@ -4146,9 +4192,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         const animatedOutage = animatedOnly && allRefused && !isRetryRun && results.every(r => r.kind === 'transient')
         if (results.some(r => !r.ok) && !refusing && !animatedOutage) {
           let retry = false
+          let heldFor = 0
           jobs.forEach((job, i) => {
             if (results[i].ok) return
             if (scoped(i)) { forgetAsked(job); return }
+            if (isHeld(results[i])) {
+              // Ask again when the back-off ends, with no failure recorded:
+              // GLYPH_FAILS only counts requests Iconify actually answered badly.
+              forgetAsked(job)
+              const end = results[i].heldUntil || Date.now() + GLYPH_RETRY_MS
+              GLYPH_RETRY_AFTER.set(job.pack, end)
+              heldFor = Math.max(heldFor, end - Date.now())
+              return
+            }
             const asked = askedFor(job.pack)
             for (const n of job.names) {
               asked.delete(n)
@@ -4164,6 +4220,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             clearTimeout(retryTimerRef.current)
             retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
           }
+          if (heldFor > 0) {
+            clearTimeout(heldTimerRef.current)
+            heldTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, heldFor + 50)
+          }
           // 'forbidden' wins over 'auth': it is the one a retry cannot fix.
           const kinds = results.filter((r, i) => scoped(i) && r.kind !== 'stale').map(r => r.kind)
           if (kinds.length) setAnimatedNotice(kinds.includes('forbidden') ? 'forbidden' : 'auth')
@@ -4174,7 +4234,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           renderLocal('', jobs[0].pack)
         }
         if (refusing) {
-          for (const [pack, names] of wanted) {
+          for (const { pack, names } of wanted) {
             const asked = askedFor(pack)
             for (const n of names) asked.delete(n)
           }
@@ -4803,7 +4863,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               // connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
-                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}
 

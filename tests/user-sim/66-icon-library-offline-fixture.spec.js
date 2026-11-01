@@ -35,7 +35,7 @@
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, withholdSnapshots, ICONIFY_STUB_HEADER, REFUSED_VALUE, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -54,6 +54,10 @@ async function refuseIconify(page) {
     (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
   await page.route((u) => u.hostname === 'api.simplesvg.com' || u.hostname === 'api.unisvg.com',
     (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
+  // The site's own copy of each pack list is part of the catalogue too. Left
+  // answering, the page would draw a healthy grid over a refused service.
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
 }
 
 /** Relative luminance of a computed colour: `rgb(r, g, b)` or `color(srgb r g b)`. */
@@ -380,9 +384,14 @@ const NEEDS_PRO = ['simple-icons', 'logos', 'devicon', 'skill-icons', 'twemoji',
   'openmoji', 'fluent-emoji', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons',
   'vscode-icons', 'token-branded']
 
-/** The pack a request to api.iconify.design is about, or null for /search. */
+/** The pack a request to api.iconify.design (or the site's own copy of a pack list) is about, or null for /search. */
 function packInUrl(raw) {
   const url = new URL(raw)
+  // The pack list is read from this site now, so the gate is measured on that
+  // read as well as on the Iconify requests: a gated pack's list must not be
+  // fetched from anywhere.
+  const snapshot = url.pathname.match(SNAPSHOT_PATH_RE)
+  if (snapshot) return decodeURIComponent(snapshot[1])
   if (url.pathname === '/collection') return url.searchParams.get('prefix')
   const batch = url.pathname.match(/^\/([^/]+)\.json$/)
   if (batch) return batch[1]
@@ -397,11 +406,11 @@ function headPacksAsked(page) {
   return packs
 }
 
-/** Collect every Iconify and Logo.dev URL this page asks for. */
+/** Collect every Iconify and Logo.dev URL this page asks for, and every read of the site's own pack lists. */
 function iconifyUrlLog(page) {
   const urls = []
   page.on('request', (r) => {
-    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url())) urls.push(r.url())
+    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url()) || SNAPSHOT_PATH_RE.test(new URL(r.url()).pathname)) urls.push(r.url())
   })
   return urls
 }
@@ -652,7 +661,12 @@ test('reloading retains all five packs, and listing them never asks /collection'
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   try {
     const page = await ctx.newPage()
-    watch(page, 'visitor reloading cached icon collections')
+    // These three tests are about the live /collection path (its stored answers
+    // and its back-off), which a page that can read the site's own pack lists
+    // never takes. Withholding the lists puts the page on that path; the 404s
+    // are deliberate, so the persona is the one whose refusals are not reported.
+    watch(page, REFUSED)
+    await withholdSnapshots(page)
     await go(page, '/create/icons')
     await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
@@ -711,6 +725,7 @@ test('an expired collection keeps its pack available when collection requests fa
       localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
     }, { names, title: collection.title, at })
     let requests = 0
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests++
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
@@ -743,6 +758,7 @@ test('Try again sends at most one collection request per pack on each click', as
     watch(page, 'visitor whose icon catalogue is refused')
     const requests = []
     let refusing = true
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests.push(new URL(route.request().url()).searchParams.get('prefix'))
       if (!refusing) return route.fallback()

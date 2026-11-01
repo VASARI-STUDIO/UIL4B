@@ -20,7 +20,9 @@
 // per-spec route that drifted would refuse differently from the outage.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
+import {
+  ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, iconifyRequests, isLiveIconify, refuseIconifyGlyphs,
+} from './iconify-stub.js'
 
 const PERSONA = 'a designer looking for an icon on a shared office connection, where the icon API has rate-limited the whole building'
 
@@ -95,6 +97,11 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 
     await expect(page.getByText(/couldn.t reach the icon service/i)).toHaveCount(0)
     expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
+    // And the catalogue itself came from this site's pack lists: the page asked
+    // Iconify for glyphs only, never for a pack list.
+    const tally = iconifyRequests(page.context())
+    expect(tally.snapshot, 'the pack lists were not read from the site').toBeGreaterThan(0)
+    expect(tally.collection, 'a first visit asked Iconify for a pack list').toBe(0)
 
     const m = await page.evaluate(() => {
       // A mono cell is a <use> of a symbol in the page's sprite; a coloured one is a decoded <img>.
@@ -125,6 +132,13 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 // answering from the fixture (route.fallback hands the request to the context
 // route), and a refused answer is stamped REFUSED_VALUE so the audit counts it
 // as deliberate.
+//
+// THE VICTIM'S BATCH ANSWERS 503, NOT 429. A 429 starts the shared Iconify
+// back-off (src/utils/iconifyFetch.js): by design nothing more goes to Iconify
+// until it ends, so a 429 cannot show the page asking the failed pack again.
+// A 503 is a pack that failed on its own, which is the case the page's own
+// bounded retry exists for. The back-off after a 429 is pinned in
+// 97-iconify-persistent-cache.spec.js and tests/unit/iconify-fetch.test.js.
 const BATCH = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/[^/]+\.json$/.test(u.pathname) && u.search.includes('icons=')
 
 const failFirstPack = async (page, failures) => {
@@ -136,7 +150,7 @@ const failFirstPack = async (page, failures) => {
     seen.requests += 1
     if (seen.requests > failures) return route.fallback()
     return route.fulfill({
-      status: 429, contentType: 'text/plain', body: 'Too Many Requests',
+      status: 503, contentType: 'text/plain', body: 'Service Unavailable',
       headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE },
     })
   })
