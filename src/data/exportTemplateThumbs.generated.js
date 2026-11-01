@@ -203,28 +203,28 @@ export const EXPORT_TEMPLATE_THUMBS = {
     },
     "guidelines": {
       "presentation": {
-        "sourceSha256": "969b9ef0f1fd64e1f9701075eb4006b174f17448ddbb13ed389ead94729fcd1a",
+        "sourceSha256": "8cae1830ed2bb505def412cde425425c8ef5cf8bb1d46b737ddba359d7858b7c",
         "files": [
           {
             "file": "guidelines-presentation-240.webp",
             "width": 240,
             "height": 135,
-            "bytes": 1546,
-            "sha256": "f3d68065cf82765446cebe09965c8743b9417b89539b75341c826e8e8a423e8a"
+            "bytes": 2004,
+            "sha256": "40c8cb66c5ab64ddef3e728916d247cf253d38d4211497891839abcea8f7244d"
           },
           {
             "file": "guidelines-presentation-480.webp",
             "width": 480,
             "height": 270,
-            "bytes": 2764,
-            "sha256": "3f892681723eb1128deb97b8a0a4945aa12244fe1fb1a75f19a969e649513a30"
+            "bytes": 3404,
+            "sha256": "28f2cfd384c3b5394d36ef067aa142fcc45c5e593803106fe4bdaf338b85304f"
           },
           {
             "file": "guidelines-presentation-720.webp",
             "width": 720,
             "height": 405,
-            "bytes": 3852,
-            "sha256": "c1f2a2f80e00474c78e2c555df3462e3ee29fbe5087e4bec5d55e71cd523acab"
+            "bytes": 4574,
+            "sha256": "95b3f4ac267b9222f5cbe9a6421177d8205903ac36bef9382a8886b3f40f2163"
           }
         ]
       },
