@@ -590,6 +590,7 @@ const SERVER_ONLY = [
   'daily-usage',
   'provider-health',
   'moderators',
+  'admin-settings',
 ]
 
 const ACTORS = [
