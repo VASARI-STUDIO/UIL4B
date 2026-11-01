@@ -69,7 +69,13 @@ const TOOLS = [
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
   {
     route: '/create/font-pair',
-    actions: [{ row: 'Shuffle', menu: 'Shuffle the heading' }, 'Build a type scale from this pair', 'Copy font import'],
+    actions: [
+      { row: 'Shuffle', menu: 'Shuffle the pair' },
+      { row: 'Swap', menu: 'Swap heading and body' },
+      { row: 'Undo', menu: 'Undo the last change' },
+      'Build a type scale from this pair',
+      'Copy font import',
+    ],
     // Below 1024 Shuffle is in the docked bar, and below 768 so is Copy CSS.
     dockedBelow: 1024,
     docked: ['Shuffle'],

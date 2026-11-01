@@ -128,7 +128,7 @@
 .fpr-page .fpr-product-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 /* Sample content inside the specimen: a product page's two buttons, drawn in
    the body family. Not controls. */
-.fpr-page .fpr-product-actions span { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 18px; border-radius: 999px; font-family: var(--fpr-b-ff); font-size: 14px; font-weight: 600; }
+.fpr-page .fpr-product-actions span { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 18px; border-radius: 999px; font-family: var(--fpr-b-ff); font-size: 14px; font-weight: var(--fpr-b-btn, 600); }
 .fpr-page .fpr-product-primary { color: var(--accent-ink); background: var(--accent-fill); }
 .fpr-page .fpr-product-secondary { color: var(--tl-ink); border: 1px solid var(--tl-line-2); }
 .fpr-page .fpr-glyphs { margin: 0 0 10px; color: var(--tl-ink); font-family: var(--fpr-h-ff); font-weight: var(--fpr-b-fw); font-size: clamp(16px, 2vw, 24px); line-height: 1.5; letter-spacing: .02em; word-break: break-word; }
@@ -144,34 +144,65 @@
 .fpr-page .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
 .fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: max(var(--fs-caption), 13px); line-height: 1.55; color: var(--tl-dim); }
 .fpr-page .fpr-suggest-grid { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--tl-hair); }
-.fpr-page .fpr-card { min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--tl-hair); }
-.fpr-page .fpr-card-line { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 52px; }
+.fpr-page .fpr-card { min-width: 0; border-bottom: 1px solid var(--tl-hair); }
+/* A row is one tap target: the pair drawn in both faces (the heading line in
+   the current heading face, the body line in the candidate), the family and the
+   action on one line, then the reason in plain view. Flat on the page, no card. */
+.fpr-page .fpr-card-apply {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 14px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tl-ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color .16s var(--tl-ease);
+}
+.fpr-page .fpr-card-head {
+  min-width: 0;
+  font-family: var(--fpr-h-ff);
+  font-weight: var(--fpr-h-fw);
+  font-size: clamp(20px, 5.4vw, 26px);
+  line-height: 1.15;
+  letter-spacing: -.015em;
+  overflow-wrap: anywhere;
+}
+.fpr-page .fpr-card-text {
+  min-width: 0;
+  font-family: var(--fpr-b-ff);
+  font-weight: var(--fpr-b-fw);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--tl-soft);
+  overflow-wrap: anywhere;
+}
+.fpr-page .fpr-card-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; margin-top: 4px; }
 .fpr-page .fpr-card-name {
   flex: 1 1 auto;
   min-width: 0;
   font-family: var(--fpr-b-ff);
   font-weight: var(--fpr-b-fw);
-  font-size: 18px;
-  line-height: 1.25;
+  font-size: 15px;
+  line-height: 1.3;
   color: var(--tl-ink);
   overflow-wrap: anywhere;
 }
-/* The pair in use reads as plain text, not a button. */
-.fpr-page .fpr-card-apply[aria-pressed="true"] { border-color: transparent; background: transparent; padding-inline: 4px; cursor: default; }
-.fpr-page .fpr-card-why > summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--tl-dim);
-  cursor: pointer;
-  list-style: none;
+.fpr-page .fpr-card-cta { flex: none; font-size: 13px; line-height: 1.3; color: var(--tl-dim); white-space: nowrap; }
+.fpr-page .fpr-card-reason { max-width: 62ch; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
+/* The pair in use is marked, not hidden: the row stays pressable but reads as chosen. */
+.fpr-page .fpr-card-apply[aria-pressed="true"] { background: var(--tl-wash); cursor: default; }
+.fpr-page .fpr-card-apply[aria-pressed="true"] .fpr-card-cta { color: var(--tl-ink); }
+@media (hover: hover) and (pointer: fine) {
+  .fpr-page .fpr-card-apply:hover:not([aria-pressed="true"]) { background: var(--tl-wash); }
+  .fpr-page .fpr-delivery > summary:hover { color: var(--tl-ink); }
 }
-.fpr-page .fpr-card-why > summary::-webkit-details-marker { display: none; }
-/* A drawn caret so it can rotate; the UA marker is hidden above. */
-.fpr-page .fpr-card-why > summary::before,
+/* A drawn caret so it can rotate; the UA marker is hidden below. */
 .fpr-page .fpr-delivery > summary::after {
   content: "";
   width: 0;
@@ -181,13 +212,7 @@
   border-bottom: 3.5px solid transparent;
   transition: transform .16s var(--tl-ease);
 }
-.fpr-page .fpr-card-why[open] > summary::before,
 .fpr-page .fpr-delivery[open] > summary::after { transform: rotate(90deg); }
-.fpr-page .fpr-card-reason { margin: 0 0 8px; max-width: 62ch; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
-@media (hover: hover) and (pointer: fine) {
-  .fpr-page .fpr-card-why > summary:hover,
-  .fpr-page .fpr-delivery > summary:hover { color: var(--tl-ink); }
-}
 
 /* ── The handoff: a disclosure row under the list ───────────────────────── */
 .fpr-page .fpr-delivery { min-width: 0; border-bottom: 1px solid var(--tl-hair); }
@@ -259,12 +284,23 @@ html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-h); }
   .fpr-page .tl-pills { gap: 8px; }
   .fpr-page .svt-trigger { min-height: 44px; }
   .fpr-page .fpr-input { height: 44px; font-size: 16px; }
-  .fpr-page .fpr-card-why > summary { min-height: 44px; }
+  .fpr-page .fpr-card-apply { min-height: 56px; }
 }
-/* The disclosure caret turns with a transition; reduced motion drops it. */
-html[data-reduced-motion="true"] .fpr-page .fpr-card-why > summary::before,
-html[data-reduced-motion="true"] .fpr-page .fpr-delivery > summary::after { transition: none; }
+/* The disclosure caret and the row wash ease; reduced motion drops it. */
+html[data-reduced-motion="true"] .fpr-page .fpr-delivery > summary::after,
+html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-card-why > summary::before,
-  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-delivery > summary::after { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-delivery > summary::after,
+  :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-card-apply { transition: none; }
+}
+
+/* ── Lock toggle: pressed reads as a filled wash, never colour alone (the icon
+   and the word change too) ─────────────────────────────────────────────── */
+.fpr-page .fpr-lock[aria-pressed="true"] { background: var(--tl-wash-on); border-color: var(--tl-line-on); color: var(--tl-ink); }
+
+/* ── Phone: the specimen leads, compact, and the controls follow ────────── */
+@media (max-width: 767px) {
+  .fpr-page .fpr-specimen { min-height: 0; padding-top: 4px; }
+  .fpr-page .fpr-h1 { font-size: clamp(28px, 9vw, 36px); margin-bottom: 8px; }
+  .fpr-page .fpr-article .fpr-h2 { display: none; }
 }

@@ -84,3 +84,160 @@ export function rankPairings(catalogue, font, { limit = 6 } = {}) {
   }
   return out
 }
+
+/** The weight a catalog entry should use for headings — 700 when it ships one. */
+export function headingWeight(font) {
+  if (!font?.variants?.length) return 700
+  return font.variants.includes(700) ? 700 : font.variants[font.variants.length - 1]
+}
+
+/** The weight a catalog entry should use for body copy — 400 when it ships one. */
+export function bodyWeight(font) {
+  if (!font?.variants?.length) return 400
+  return font.variants.includes(400) ? 400 : font.variants[0]
+}
+
+// ── Shuffle: the same rules as the suggestions ──────────────────────────────
+//
+// A shuffle that ignores PAIRING_RULES is a slot machine, and one that can draw
+// the body's own family produces the "Inter + Inter" non-pair the page refuses
+// to open on. So a shuffle only ever returns a pair the rules above allow, with
+// two different families, and it never touches a side the person has locked.
+
+// The catalogue is sorted by popularity, so the draw comes from the first slice
+// rather than the whole list: a random pick from 1,700 families is almost always
+// something nobody would ship, which reads as broken rather than serendipitous.
+export const SHUFFLE_POOL = 200
+
+// When a body of a category no rule targets (a display or handwriting body, say)
+// is locked, these plain heading categories are what is offered.
+const PLAIN_HEADINGS = ['sans-serif', 'serif']
+
+/** The heading categories whose rules offer a body of `bodyCategory` — the rules read backwards. */
+export function headingCategoriesFor(bodyCategory) {
+  const out = Object.entries(PAIRING_RULES)
+    .filter(([, rules]) => rules.some(([category]) => category === bodyCategory))
+    .map(([heading]) => heading)
+  return out.length ? out : PLAIN_HEADINGS
+}
+
+/** The reason a `headingCategory` heading takes a `bodyCategory` body, or '' when no rule says. */
+export function reasonFor(headingCategory, bodyCategory) {
+  const rules = PAIRING_RULES[headingCategory] || PAIRING_RULES['sans-serif']
+  return rules.find(([category]) => category === bodyCategory)?.[1] || ''
+}
+
+/** Do the rules allow this pair? Two different families, and the heading's rules name the body's category. */
+export function pairIsAllowed(heading, body) {
+  if (!heading?.family || !body?.family || heading.family === body.family) return false
+  const rules = PAIRING_RULES[heading.category] || PAIRING_RULES['sans-serif']
+  return rules.some(([category]) => category === body.category)
+}
+
+const pickOne = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))]
+
+function shuffled(list, random) {
+  const out = list.slice()
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
+/**
+ * Re-roll a pair, honouring a lock.
+ *   lock 'heading'  keep the heading, draw a body from its ranked suggestions
+ *   lock 'body'     keep the body, draw a heading whose rules offer that body
+ *   lock 'both'     nothing to draw: returns null
+ *   no lock         draw a new heading, then a body for it from its suggestions
+ * Returns `{ heading, body, reason, changed }` (`changed` names the sides that
+ * moved) or null when nothing valid can be drawn. `random` is injectable so a
+ * test can walk every branch.
+ */
+export function shufflePair(catalogue, {
+  heading, body, lock = null, random = Math.random, pool = SHUFFLE_POOL, limit = 12,
+} = {}) {
+  const fonts = (Array.isArray(catalogue) ? catalogue : []).filter((f) => f && f.family)
+  if (!fonts.length || lock === 'both') return null
+  const popular = fonts.slice(0, Math.min(pool, fonts.length))
+
+  const drawBody = (head, avoid) => {
+    const ranked = rankPairings(fonts, head, { limit })
+    const fresh = ranked.filter((s) => s.font.family !== avoid)
+    const list = fresh.length ? fresh : ranked
+    return list.length ? pickOne(list, random) : null
+  }
+
+  if (lock === 'heading') {
+    if (!heading?.family) return null
+    const hit = drawBody(heading, body?.family)
+    return hit ? { heading, body: hit.font, reason: hit.reason, changed: ['body'] } : null
+  }
+
+  if (lock === 'body') {
+    if (!body?.family) return null
+    const cats = headingCategoriesFor(body.category)
+    const fits = (list) => list.filter((f) => f.family !== body.family && cats.includes(f.category))
+    let list = fits(popular).filter((f) => f.family !== heading?.family)
+    if (!list.length) list = fits(fonts).filter((f) => f.family !== heading?.family)
+    if (!list.length) list = fits(fonts)
+    if (!list.length) return null
+    const next = pickOne(list, random)
+    return { heading: next, body, reason: reasonFor(next.category, body.category), changed: ['heading'] }
+  }
+
+  // Nothing locked. A heading with no valid body is skipped, so a short
+  // catalogue still answers or says it cannot.
+  const heads = shuffled(popular.filter((f) => f.family !== heading?.family && f.family !== body?.family), random)
+  for (const head of heads.length ? heads : shuffled(popular, random)) {
+    const hit = drawBody(head, body?.family)
+    if (hit && hit.font.family !== head.family) {
+      return { heading: head, body: hit.font, reason: hit.reason, changed: ['heading', 'body'] }
+    }
+  }
+  return null
+}
+
+// ── Undo and Swap ───────────────────────────────────────────────────────────
+// A snapshot is the four values that make a pair: { headingName, bodyName,
+// headingW, bodyW }. Locks are controls, not content, so they are not in it.
+
+export const PAIR_HISTORY_MAX = 20
+
+const sameSnapshot = (a, b) => (
+  a.headingName === b.headingName && a.bodyName === b.bodyName
+  && a.headingW === b.headingW && a.bodyW === b.bodyW
+)
+
+/** Add a snapshot to the undo stack (newest last). A repeat of the top is not added; the stack is capped. */
+export function pushPairHistory(stack, snapshot, max = PAIR_HISTORY_MAX) {
+  const list = Array.isArray(stack) ? stack : []
+  if (!snapshot) return list
+  const last = list[list.length - 1]
+  if (last && sameSnapshot(last, snapshot)) return list
+  return [...list, snapshot].slice(-max)
+}
+
+/** Take the newest snapshot off the stack: `{ snapshot, rest }`, `snapshot` null when empty. */
+export function popPairHistory(stack) {
+  const list = Array.isArray(stack) ? stack : []
+  if (!list.length) return { snapshot: null, rest: list }
+  return { snapshot: list[list.length - 1], rest: list.slice(0, -1) }
+}
+
+/**
+ * Swap the two sides. The old heading becomes the body at its default body
+ * weight and the old body becomes the heading at its default heading weight —
+ * carrying a 700 into the body, or a 400 into the heading, would not be a swap
+ * of faces but of weights as well.
+ */
+export function swapPair(headingFont, bodyFont) {
+  if (!headingFont?.family || !bodyFont?.family) return null
+  return {
+    headingName: bodyFont.family,
+    bodyName: headingFont.family,
+    headingW: headingWeight(bodyFont),
+    bodyW: bodyWeight(headingFont),
+  }
+}

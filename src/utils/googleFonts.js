@@ -1,6 +1,7 @@
 import { FALLBACK_FONTS } from '../data/fallbackFonts'
 import { detectCanvasFontRendered } from './fontDetection'
-import { rankPairings } from './fontPairing'
+import { rankPairings, headingWeight, bodyWeight } from './fontPairing'
+import { buildFontImportUrl, familyAxis } from './fontImport'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_FONTS_API_KEY || ''
 const API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`
@@ -286,18 +287,18 @@ const loadedFonts = new Map()
 // load/error events into a per-family status. `nonce` busts the HTTP cache on a
 // manual retry so a transiently-failed request is genuinely re-attempted rather
 // than served from cache.
-function injectFontLink(family, weights, nonce) {
+function injectFontLink(family, weights, nonce, italics = []) {
   // CSS2 API wants the axis tag ONCE: family=Name:wght@400;700 — NOT
   // wght@400;wght@700 (which Google rejects, leaving the font unloaded).
-  const weightStr = `wght@${weights.join(';')}`
-  let url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${weightStr}&display=swap`
+  // Italic cuts switch it to ital,wght@0,400;1,400 (see fontImport.js).
+  let url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:${familyAxis(weights, italics)}&display=swap`
   if (nonce) url += `&_r=${nonce}`
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = url
   link.dataset.fontFamily = family
 
-  const entry = { link, weights: new Set(weights), status: 'pending', ready: null }
+  const entry = { link, weights: new Set(weights), italics: new Set(italics), status: 'pending', ready: null }
   entry.ready = new Promise(resolve => {
     link.onload = () => {
       // Only the latest link for this family owns the status — a superseded
@@ -319,7 +320,7 @@ function injectFontLink(family, weights, nonce) {
   return entry
 }
 
-export function loadFont(family, weights = [400]) {
+export function loadFont(family, weights = [400], italics = []) {
   const requested = [...new Set(weights)]
     .filter(w => Number.isFinite(w))
     .sort((a, b) => a - b)
@@ -328,19 +329,21 @@ export function loadFont(family, weights = [400]) {
   const existing = loadedFonts.get(family)
   if (existing) {
     // Already covers everything we need — nothing to do.
-    if (requested.every(w => existing.weights.has(w))) {
+    if (requested.every(w => existing.weights.has(w)) && italics.every(w => existing.italics.has(w))) {
       return existing.ready.then(() => existing.status)
     }
     // Otherwise upgrade the link to the union of weights so previews aren't
     // forced to synthesise (faux-bold) a weight that was never downloaded.
     requested.forEach(w => existing.weights.add(w))
+    italics.forEach(w => existing.italics.add(w))
     const all = [...existing.weights].sort((a, b) => a - b)
+    const allItalics = [...existing.italics].sort((a, b) => a - b)
     existing.link.remove()
-    const upgraded = injectFontLink(family, all, null)
+    const upgraded = injectFontLink(family, all, null, allItalics)
     return upgraded.ready.then(() => upgraded.status)
   }
 
-  const entry = injectFontLink(family, requested, null)
+  const entry = injectFontLink(family, requested, null, [...new Set(italics)].sort((a, b) => a - b))
   return entry.ready.then(() => entry.status)
 }
 
@@ -351,7 +354,8 @@ export async function reloadFont(family) {
   const existing = loadedFonts.get(family)
   const weights = existing ? [...existing.weights].sort((a, b) => a - b) : [400]
   if (existing) existing.link.remove()
-  const entry = injectFontLink(family, weights, Date.now())
+  const italics = existing ? [...existing.italics].sort((a, b) => a - b) : []
+  const entry = injectFontLink(family, weights, Date.now(), italics)
   await entry.ready
 }
 
@@ -457,14 +461,9 @@ export async function suggestPairings(font, { limit = 6 } = {}) {
   return rankPairings(await getRawFonts(), font, { limit })
 }
 
+// `families`: [{ family, weights?, italics? }]. Italic cuts are optional.
 export function getFontImportUrl(families) {
-  const params = families
-    .map(({ family, weights = [400] }) => {
-      const wStr = weights.sort((a, b) => a - b).join(';')
-      return `family=${encodeURIComponent(family)}:wght@${wStr}`
-    })
-    .join('&')
-  return `https://fonts.googleapis.com/css2?${params}&display=swap`
+  return buildFontImportUrl(families)
 }
 
 export function getFontCSSRule(family, fallback = 'sans-serif') {
@@ -488,14 +487,6 @@ export function fontStack(font) {
   return getFontCSSRule(font.family, GENERIC_FOR[font.category] || 'sans-serif')
 }
 
-/** The weight a catalog entry should use for headings — 700 when it ships one. */
-export function headingWeight(font) {
-  if (!font?.variants?.length) return 700
-  return font.variants.includes(700) ? 700 : font.variants[font.variants.length - 1]
-}
-
-/** The weight a catalog entry should use for body copy — 400 when it ships one. */
-export function bodyWeight(font) {
-  if (!font?.variants?.length) return 400
-  return font.variants.includes(400) ? 400 : font.variants[0]
-}
+// The default heading and body weights live in fontPairing.js (pure, so the
+// shuffle and swap rules can be tested); re-exported for the other tools.
+export { headingWeight, bodyWeight }
