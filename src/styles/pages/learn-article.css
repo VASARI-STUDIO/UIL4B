@@ -333,6 +333,11 @@
    grows. */
 .lart .lart-sources li a{display:inline-flex;align-items:center;min-height:24px}
 .lart .lart-spec-cite a{display:inline-flex;align-items:center;min-height:24px}
+/* Phone width: the links a reader uses to move on are 44px, not 24px. The 24px
+   floor stays for wider screens. Inline links in sentences are exempt. */
+@media(max-width:767px){
+  .lart .lart-sources li a,.lart .lart-spec-cite a,.lart .lart-crumb a,.lart .lart-meta a{min-height:44px}
+}
 
 @media(max-width:640px){
   .lart{font-size:16.5px}
