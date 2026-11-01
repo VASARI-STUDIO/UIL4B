@@ -350,6 +350,7 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 const DISCOVER_SPEC = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
   { id: 'gradient-gallery', icon: 'gradient-library', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'button-library', icon: 'button-library', label: 'Button Library', desc: 'Ten button designs with every state built in — copy the HTML and CSS, or edit size, corners and colour with Pro.', route: '/discover/buttons', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', tool: 'font-gallery' },
   // Reachable from BOTH surfaces on purpose. The page is already a Discover
   // gallery in everything but its URL — #292 put it on the shared Library
@@ -557,6 +558,7 @@ const CREATE_MENU = buildCreateMenu()
 const MENU_ROW_HUE = {
   'palette-library': 'colour',
   'gradient-gallery': 'colour',
+  'button-library': 'neutral',
   'font-gallery': 'type',
   'icon-library': 'icons',
   'community-prompts': 'ai',
@@ -597,7 +599,7 @@ function groupsToMenu(groups, spec) {
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
-  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library'] },
+  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library', 'button-library'] },
   { label: 'Community', ids: ['inspiration', 'community-prompts'] },
   { label: 'Your library', ids: ['collections'] },
 ])
