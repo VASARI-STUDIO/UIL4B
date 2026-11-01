@@ -13,7 +13,7 @@ import {
 } from './_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
-import { aiAttemptRefusal, imagePayloadProblem } from './_lib/aiLimits.js'
+import { aiAccountRefusal, aiSharedRefusal, imagePayloadProblem } from './_lib/aiLimits.js'
 import {
   BRAND_STARTER_TOOL_ID,
   MAX_PROMPT_CHARS,
@@ -1138,11 +1138,16 @@ async function serveBacklog(req, res) {
   }
 }
 
-// The checks that must pass before a quota unit is reserved: the request's own
-// input, then the attempt limits (see _lib/aiLimits.js). Both sit ahead of the
-// meter on purpose. A malformed request does no provider work, so it is
-// refused without being counted; a counted attempt is never given back, which
-// is what the generation meter cannot do once it has refunded a failed call.
+// The checks that run before a quota unit is reserved: the request's own input,
+// then the account's own attempt limits (see _lib/aiLimits.js). A malformed
+// request does no provider work, so it is refused without being counted; a
+// counted attempt is never given back, which is what the generation meter
+// cannot do once it has refunded a failed call.
+//
+// The counters shared between people (address and site) are NOT spent here. A
+// request the quota meter then refuses costs the provider nothing and must not
+// use up an allowance other people rely on; refuseSharedAttempt spends them
+// inside the metered run.
 // Sends the refusal itself and returns true, or returns false to carry on.
 async function refuseBeforeMeter(req, res, { task, db, uid, plan }) {
   const invalid = task.validate ? task.validate(req.body) : null
@@ -1150,11 +1155,27 @@ async function refuseBeforeMeter(req, res, { task, db, uid, plan }) {
     res.status(400).json({ error: invalid })
     return true
   }
-  const refused = await aiAttemptRefusal(db, { uid, req, planId: plan.id })
+  const refused = await aiAccountRefusal(db, { uid, req, planId: plan.id })
   if (!refused) return false
+  sendRefusal(res, refused)
+  return true
+}
+
+// The address and site counters, spent once the quota unit is reserved and
+// ahead of the provider call. It is the first thing the `run` callback of
+// runMeteredTask does: when this sends a refusal the runner returns null, which
+// makes runMeteredTask give the reserved unit back. Returns true when it sent
+// the refusal.
+async function refuseSharedAttempt(req, res, { db, plan }) {
+  const refused = await aiSharedRefusal(db, { req, planId: plan.id })
+  if (!refused) return false
+  sendRefusal(res, refused)
+  return true
+}
+
+function sendRefusal(res, refused) {
   if (refused.retryAfter) res.setHeader('Retry-After', String(refused.retryAfter))
   res.status(refused.status).json(refused.body)
-  return true
 }
 
 export default async function handler(req, res) {
@@ -1374,6 +1395,10 @@ export default async function handler(req, res) {
       db: fireDb,
       meters,
       run: async ([used]) => {
+        // The unit is reserved, so this request is about to cost the provider:
+        // only now are the shared counters spent. A refusal returns null and
+        // runMeteredTask refunds the unit.
+        if (await refuseSharedAttempt(req, res, { db: fireDb, plan })) return null
         res.setHeader('Cache-Control', 'no-store')
         const generated = await task.run(req, res, { plan, bucket, used })
         // A runner that answered for itself — every failure path above does —
@@ -1442,6 +1467,9 @@ export default async function handler(req, res) {
     // Which document holds the per-day count of capped refunds, if the task has one.
     cap: task.cutoffRefundCap ? { ref: usageRef, ...task.cutoffRefundCap } : undefined,
     run: async ([monthUsed, used], { refundCapped }) => {
+      // Reserved, so about to cost the provider: spend the shared counters now.
+      // A refusal returns null and runMeteredTask refunds both reserved units.
+      if (await refuseSharedAttempt(req, res, { db: fireDb, plan })) return null
       res.setHeader('Cache-Control', 'no-store')
       // Task runners either send an error response themselves (and return the
       // res object / undefined) or return the success payload for the shared

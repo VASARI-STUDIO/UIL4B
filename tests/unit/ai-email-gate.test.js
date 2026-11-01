@@ -101,7 +101,8 @@ function loadAi({ decoded, user = {} }) {
     altTextGenerationConfig, altTextOutcome, altTextCutoffReply, ALT_TEXT_CUTOFF_REFUND_CAP,
     // The attempt limits and image check sit after this gate and are covered by
     // ai-attempt-limits.test.js; here they let everything through.
-    aiAttemptRefusal: async () => null,
+    aiAccountRefusal: async () => null,
+    aiSharedRefusal: async () => null,
     imagePayloadProblem: () => null,
   }
   const api = vm.runInNewContext(`(function(){\n${out}\n;return { handler, TASKS };\n})()`, sandbox, { filename: AI_PATH })

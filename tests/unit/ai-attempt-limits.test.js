@@ -2,19 +2,24 @@
 //
 // The quota meter counts generations and refunds a call that produced nothing,
 // so a failing call used to be free to repeat against the shared provider pool.
-// api/_lib/aiLimits.js adds, in front of the meter:
+// api/_lib/aiLimits.js adds, in two stages:
 //
-//   per account  6 a minute, 60 an hour
-//   per address  30 a day, for accounts that are not Pro
-//   site-wide    180 a day
+//   before the meter   per account  6 a minute, 60 an hour
+//   after the unit is  per address  30 a day, for accounts that are not Pro
+//   reserved           site-wide    150 a day non-Pro, 180 a day Pro (two buckets)
 //
 // and refuses a malformed image before anything is reserved or counted.
+//
+// The counters shared between people (address, site) are spent only by a
+// request that will reach the provider: one the quota meter refuses spends
+// neither, and one they refuse after the unit is reserved gives the unit back.
 //
 // aiLimits.js runs for real against the in-memory Firestore in
 // helpers/api-fakes.js. The handler is api/ai.js executed under node:vm with its
 // imports replaced (the way ai-email-gate.test.js does it), with the REAL
-// aiAttemptRefusal and imagePayloadProblem wired in, so the order of the checks
-// in the handler is what is under test, not a copy of it.
+// aiAccountRefusal, aiSharedRefusal, imagePayloadProblem and runMeteredTask
+// wired in, so the order of the checks in the handler, and the refund of a unit,
+// are what is under test, not a copy of them.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -24,10 +29,12 @@ import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
 import { fakeDb } from './helpers/api-fakes.js'
 import {
-  AI_ABUSE_LIMITS, MAX_IMAGE_BASE64_CHARS, aiAttemptRefusal, imagePayloadProblem,
+  AI_ABUSE_LIMITS, MAX_IMAGE_BASE64_CHARS, SITE_DAY_LIMIT_NON_PRO, SITE_DAY_LIMIT_PRO,
+  aiAccountRefusal, aiSharedRefusal, imagePayloadProblem,
 } from '../../api/_lib/aiLimits.js'
+import { runMeteredTask } from '../../api/_lib/aiGeneration.js'
 import { cleanKey } from '../../api/_lib/env.js'
-import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from '../../api/_lib/plans.js'
+import { planForUser, modelFor } from '../../api/_lib/plans.js'
 import { usageDayKey, usageMonthKey } from '../../api/_lib/aiUsage.js'
 import { emailGateBody } from '../../api/_lib/emailGate.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from '../../api/_lib/mail.js'
@@ -37,10 +44,26 @@ const MIN = AI_ABUSE_LIMITS.perUidMinute
 const HOUR = AI_ABUSE_LIMITS.perUidHour
 const IP_DAY = AI_ABUSE_LIMITS.perIpDay
 const SITE = AI_ABUSE_LIMITS.siteDay
+const SITE_PRO = AI_ABUSE_LIMITS.siteDayPro
 const T0 = 1_800_000_000_000
 
 const req = (ip = '203.0.113.7') => ({ headers: { 'x-forwarded-for': ip } })
-const attempt = (db, o = {}) => aiAttemptRefusal(db, { uid: 'u1', req: req(o.ip), planId: 'free', now: T0, ...o, ...(o.ip ? { req: req(o.ip) } : {}) })
+const args = (o = {}) => ({ uid: 'u1', req: req(o.ip), planId: 'free', now: T0, ...o, ...(o.ip ? { req: req(o.ip) } : {}) })
+const account = (db, o) => aiAccountRefusal(db, args(o))
+const shared = (db, o) => aiSharedRefusal(db, args(o))
+// One request that gets past the quota meter: the account stage, then the
+// shared stage, the order the route runs them in. The first refusal wins.
+const attempt = async (db, o) => (await account(db, o)) || (await shared(db, o))
+
+// The count in a rate-limit counter ('ai-ip-day', 'ai-site-day', ...), summed
+// over every document of that bucket; 0 when none was ever written.
+const counted = (db, bucket) => [...db.docs.entries()]
+  .filter(([k]) => k.startsWith(`rate-limits/${bucket}_`))
+  .reduce((n, [, v]) => n + (v.count || 0), 0)
+
+// Quota units currently held in the usage documents, across every meter.
+const heldUnits = (db) => db.inCollection('daily-usage')
+  .reduce((n, doc) => n + Object.values(doc).reduce((m, v) => m + (typeof v === 'number' ? v : 0), 0), 0)
 
 // ── the figures ─────────────────────────────────────────────────────────────
 
@@ -48,7 +71,14 @@ test('the figures are the ones the abuse brief asks for', () => {
   assert.deepEqual([MIN.limit, MIN.windowMs], [6, 60_000])
   assert.deepEqual([HOUR.limit, HOUR.windowMs], [60, 3_600_000])
   assert.deepEqual([IP_DAY.limit, IP_DAY.windowMs], [30, 86_400_000])
-  assert.deepEqual([SITE.limit, SITE.windowMs], [180, 86_400_000])
+  assert.deepEqual([SITE.limit, SITE.windowMs], [150, 86_400_000])
+  assert.deepEqual([SITE_PRO.limit, SITE_PRO.windowMs], [180, 86_400_000])
+})
+
+test('the site-wide figures are the two named constants, and Pro keeps more headroom than the rest', () => {
+  assert.equal(SITE.limit, SITE_DAY_LIMIT_NON_PRO)
+  assert.equal(SITE_PRO.limit, SITE_DAY_LIMIT_PRO)
+  assert.ok(SITE_PRO.limit > SITE.limit)
 })
 
 // ── bucket maths ────────────────────────────────────────────────────────────
@@ -125,30 +155,87 @@ test('a Pro account is not held to the per-address cap', async () => {
 
 test('a free request with no address is refused and counts for nothing', async () => {
   const db = fakeDb()
-  const refused = await aiAttemptRefusal(db, { uid: 'u1', req: { headers: {} }, planId: 'free', now: T0 })
+  const refused = await aiAccountRefusal(db, { uid: 'u1', req: { headers: {} }, planId: 'free', now: T0 })
   assert.equal(refused.status, 400)
   assert.equal(db.inCollection('rate-limits').length, 0)
+  // ...and the shared stage refuses it too, should a caller ever skip the first.
+  const again = await aiSharedRefusal(db, { req: { headers: {} }, planId: 'free', now: T0 })
+  assert.equal(again.status, 400)
+  assert.equal(db.inCollection('rate-limits').length, 0)
+})
+
+test('a Pro request with no address is not refused: the address limit is not theirs', async () => {
+  const db = fakeDb()
+  assert.equal(await aiAccountRefusal(db, { uid: 'p1', req: { headers: {} }, planId: 'pro', now: T0 }), null)
+  assert.equal(await aiSharedRefusal(db, { req: { headers: {} }, planId: 'pro', now: T0 }), null)
 })
 
 // ── site-wide breaker ───────────────────────────────────────────────────────
 
-test('the site-wide breaker trips at 180 a day across accounts and addresses', async () => {
+test('the non-Pro site breaker trips at 150 a day across accounts and addresses', async () => {
   const db = fakeDb()
   for (let i = 0; i < SITE.limit; i += 1) {
-    // Pro accounts, so the per-address cap is out of the way; one each, so the
-    // account buckets are too.
-    assert.equal(await attempt(db, { uid: `p${i}`, planId: 'pro' }), null, `attempt ${i + 1}`)
+    // One address per account, so neither the per-address cap nor an account
+    // bucket cuts in first.
+    assert.equal(await attempt(db, { uid: `f${i}`, ip: `192.0.2.${i + 1}` }), null, `attempt ${i + 1}`)
   }
+  const refused = await attempt(db, { uid: 'f-last', ip: '198.51.100.200' })
+  assert.equal(refused.status, 429)
+  assert.equal(refused.body.rateLimited, 'site')
+})
+
+test('Pro has its own site bucket: it trips at 180 a day, and non-Pro traffic never touches it', async () => {
+  const db = fakeDb()
+  for (let i = 0; i < SITE.limit; i += 1) await attempt(db, { uid: `f${i}`, ip: `192.0.2.${i + 1}` })
+  assert.equal((await attempt(db, { uid: 'f-last', ip: '198.51.100.200' })).body.rateLimited, 'site', 'the non-Pro bucket is spent')
+  assert.equal(counted(db, 'ai-site-day-pro'), 0, 'free traffic left the Pro bucket alone')
+  for (let i = 0; i < SITE_PRO.limit; i += 1) {
+    assert.equal(await attempt(db, { uid: `p${i}`, planId: 'pro' }), null, `Pro attempt ${i + 1}`)
+  }
+  assert.equal(counted(db, 'ai-site-day'), SITE.limit, 'Pro traffic left the non-Pro bucket alone')
   const refused = await attempt(db, { uid: 'p-last', planId: 'pro' })
   assert.equal(refused.status, 429)
   assert.equal(refused.body.rateLimited, 'site')
 })
 
-test('a request refused by its own account bucket does not spend the site allowance', async () => {
+test('a request refused by its own account bucket does not spend the address or site allowance', async () => {
   const db = fakeDb()
-  for (let i = 0; i < 50; i += 1) await attempt(db, { uid: 'u1', planId: 'pro' })
-  const siteKey = [...db.docs.keys()].find((k) => k.startsWith('rate-limits/ai-site-day_'))
-  assert.equal(db.docs.get(siteKey).count, MIN.limit, 'only the six admitted attempts reached the site counter')
+  for (let i = 0; i < 50; i += 1) await attempt(db, { uid: 'u1' })
+  assert.equal(counted(db, 'ai-site-day'), MIN.limit, 'only the six admitted attempts reached the site counter')
+  assert.equal(counted(db, 'ai-ip-day'), MIN.limit, 'nor the address counter')
+})
+
+// ── the two stages and their order ──────────────────────────────────────────
+
+test('the account stage spends only the account buckets', async () => {
+  const db = fakeDb()
+  assert.equal(await account(db), null)
+  assert.equal(counted(db, 'ai-uid-minute'), 1)
+  assert.equal(counted(db, 'ai-uid-hour'), 1)
+  for (const bucket of ['ai-ip-day', 'ai-site-day', 'ai-site-day-pro']) assert.equal(counted(db, bucket), 0, bucket)
+})
+
+test('the shared stage spends the address and the site, and not the account', async () => {
+  const db = fakeDb()
+  assert.equal(await shared(db), null)
+  assert.equal(counted(db, 'ai-ip-day'), 1)
+  assert.equal(counted(db, 'ai-site-day'), 1)
+  for (const bucket of ['ai-uid-minute', 'ai-uid-hour', 'ai-site-day-pro']) assert.equal(counted(db, bucket), 0, bucket)
+})
+
+test('a Pro request in the shared stage spends only the Pro site bucket', async () => {
+  const db = fakeDb()
+  assert.equal(await shared(db, { planId: 'pro' }), null)
+  assert.equal(counted(db, 'ai-site-day-pro'), 1)
+  for (const bucket of ['ai-ip-day', 'ai-site-day']) assert.equal(counted(db, bucket), 0, bucket)
+})
+
+test('a request the address limit refuses does not spend the site allowance', async () => {
+  const db = fakeDb()
+  for (let i = 0; i < IP_DAY.limit; i += 1) await shared(db, { uid: `u${i}` })
+  assert.equal(counted(db, 'ai-site-day'), IP_DAY.limit)
+  for (let i = 0; i < 10; i += 1) assert.equal((await shared(db, { uid: `x${i}` })).body.rateLimited, 'ip')
+  assert.equal(counted(db, 'ai-site-day'), IP_DAY.limit, 'ten refused requests left the site counter where it was')
 })
 
 // ── failing closed ──────────────────────────────────────────────────────────
@@ -178,7 +265,7 @@ function dbDownFor(bucket) {
 }
 
 for (const [bucket, planId] of [
-  ['ai-uid-minute', 'pro'], ['ai-uid-hour', 'pro'], ['ai-ip-day', 'free'], ['ai-site-day', 'pro'],
+  ['ai-uid-minute', 'pro'], ['ai-uid-hour', 'pro'], ['ai-ip-day', 'free'], ['ai-site-day', 'free'], ['ai-site-day-pro', 'pro'],
 ]) {
   test(`when only the ${bucket} counter cannot be read, the request is refused`, async () => {
     const refused = await attempt(dbDownFor(bucket), { planId })
@@ -213,7 +300,12 @@ function loadAi({ user = {}, db = fakeDb(), decoded = { uid: 'u1', email: 'a@exa
   while (/^export (const|function) /m.test(out)) out = out.replace(/^export (const|function) /m, '$1 ')
 
   db.docs.set('users/u1', user)
+  // `reserved` counts quota units reserved (the runner was entered), `ran` the
+  // provider calls. `quota.limit` is every plan's allowance on the real meter;
+  // it starts out high so a test only meets the quota when it sets it low.
   const ledger = { reserved: 0, ran: 0 }
+  const quota = { limit: 1000 }
+  const who = { decoded }
   const handlerDb = {
     ...db,
     doc: (p) => {
@@ -229,28 +321,30 @@ function loadAi({ user = {}, db = fakeDb(), decoded = { uid: 'u1', email: 'a@exa
     cleanKey, nodeTimingSafeEqual,
     mailFrom: () => mailFrom({}), sendingDomainConfigured: () => sendingDomainConfigured({}), REPLY_TO,
     adminDb: () => handlerDb,
-    adminAuth: () => ({ verifyIdToken: async () => decoded }),
+    adminAuth: () => ({ verifyIdToken: async () => who.decoded }),
     credentialProblem: () => null,
     FieldValueIncrement: async () => 1,
     requireAdmin: async () => ({ ok: false, status: 401 }),
     emailGateBody, serveUsage: async () => {},
     usageDayKey, usageMonthKey,
-    planForUser, dailyLimitFor, monthlyLimitFor, modelFor,
+    planForUser, modelFor,
+    dailyLimitFor: () => quota.limit, monthlyLimitFor: () => quota.limit,
     classifyGeminiFinish: () => ({}), emptyReplyError: () => '', MAX_TOKENS_EMPTY_MESSAGE: '',
     BRAND_STARTER_TOOL_ID: 'brand-starter', MAX_PROMPT_CHARS: 500, MIN_PROMPT_CHARS: 12,
     PALETTE_MIN_ROLES: 5, PALETTE_MAX_ROLES: 8, BASE_MIN: 14, BASE_MAX: 20, RATIO_MIN: 1.1, RATIO_MAX: 1.7,
     fontChoiceList: () => [],
-    generationBucket: () => ({ suffix: 'life', limit: 1, period: 'lifetime' }),
+    generationBucket: () => ({ suffix: 'life', limit: quota.limit, period: 'lifetime' }),
     exhaustedError: () => 'used',
     parseStarterJson: () => ({}), sanitizeBrandStarter: () => ({}),
-    runMeteredTask: async ({ meters, run }) => {
-      ledger.reserved += 1
-      const result = await run(meters.map(() => 0), { refundCapped: () => {} })
-      return { ok: true, result, counts: meters.map(() => 0) }
-    },
+    // The REAL meter, over the in-memory Firestore: it reserves, refuses and
+    // refunds as in production. Only the count of reservations is added.
+    runMeteredTask: (options) => runMeteredTask({
+      ...options,
+      run: (counts, helpers) => { ledger.reserved += 1; return options.run(counts, helpers) },
+    }),
     altTextGenerationConfig: () => ({}), altTextOutcome: () => ({}), altTextCutoffReply: () => ({}),
     ALT_TEXT_CUTOFF_REFUND_CAP: { field: 'x', limit: 1 },
-    aiAttemptRefusal, imagePayloadProblem,
+    aiAccountRefusal, aiSharedRefusal, imagePayloadProblem,
   }
   const api = vm.runInNewContext(`(function(){\n${out}\n;return { handler, TASKS };\n})()`, sandbox, { filename: 'api/ai.js' })
   for (const [name, task] of Object.entries(api.TASKS)) {
@@ -258,7 +352,11 @@ function loadAi({ user = {}, db = fakeDb(), decoded = { uid: 'u1', email: 'a@exa
     // A runner that returns nothing is a failed call: the real meter refunds it.
     task.run = async () => { ledger.ran += 1; return ledger.failRuns ? null : { ok: true, task: name } }
   }
-  const call = async (body, ip = '203.0.113.7') => {
+  // `as` picks the signed-in account: { uid, user }. Default is u1 with `user`.
+  const call = async (body, ip = '203.0.113.7', as = {}) => {
+    const uid = as.uid || 'u1'
+    who.decoded = { ...decoded, uid }
+    db.docs.set(`users/${uid}`, as.user || user)
     const res = {
       statusCode: 200, headers: {}, body: undefined,
       status(c) { this.statusCode = c; return this },
@@ -268,8 +366,10 @@ function loadAi({ user = {}, db = fakeDb(), decoded = { uid: 'u1', email: 'a@exa
     await api.handler({ method: 'POST', headers: { authorization: 'Bearer t', 'x-forwarded-for': ip }, body, query: {} }, res)
     return res
   }
-  return { call, ledger, db }
+  return { call, ledger, db, quota }
 }
+
+const PRO_USER = { subscription: { status: 'active', currentPeriodEnd: Date.now() + 20 * 86_400_000 } }
 
 const GOOD = { task: 'alt-text', image: 'QUJDRA==', mimeType: 'image/png' }
 
@@ -328,11 +428,145 @@ test('handler: the brand-starter task is counted too, and is not image-checked',
   assert.equal(ledger.reserved, MIN.limit)
 })
 
-test('handler: both metered paths run the checks before the meter (source order)', () => {
-  const guard = (aiSource.match(/await refuseBeforeMeter\(/g) || []).length
-  assert.equal(guard, 2, 'both the generation path and the daily/monthly path call refuseBeforeMeter')
+// ── the shared counters are spent only by a request that reaches the provider ─
+
+const ADDRESS_AND_SITE = ['ai-ip-day', 'ai-site-day', 'ai-site-day-pro']
+
+test('handler: a request the quota meter refuses spends neither the address nor the site counter', async () => {
+  const { call, ledger, db, quota } = loadAi()
+  quota.limit = 0
+  const res = await call(GOOD)
+  assert.equal(res.statusCode, 429)
+  assert.ok(res.body.usage, 'it is the quota refusal, not an attempt limit')
+  assert.equal(ledger.ran, 0)
+  assert.equal(counted(db, 'ai-uid-minute'), 1, 'the account counters still count it')
+  for (const bucket of ADDRESS_AND_SITE) assert.equal(counted(db, bucket), 0, bucket)
+})
+
+test('handler: the brand-starter path is the same: a quota refusal spends neither shared counter', async () => {
+  const { call, db, quota } = loadAi()
+  quota.limit = 0
+  const res = await call({ task: 'brand-starter' })
+  assert.equal(res.statusCode, 429)
+  for (const bucket of ADDRESS_AND_SITE) assert.equal(counted(db, bucket), 0, bucket)
+})
+
+test('handler: quota-refused retries from one address do not lock out the next person on it', async () => {
+  const { call, ledger, db, quota } = loadAi()
+  quota.limit = 0
+  // Well past the 30 a day an address is allowed, each from a different account.
+  for (let i = 0; i < IP_DAY.limit + 10; i += 1) assert.equal((await call(GOOD, '203.0.113.7', { uid: `spent${i}` })).statusCode, 429)
+  quota.limit = 1000
+  const res = await call(GOOD, '203.0.113.7', { uid: 'fresh' })
+  assert.equal(res.statusCode, 200, 'their own first generation went ahead')
+  assert.equal(ledger.ran, 1)
+  assert.equal(counted(db, 'ai-ip-day'), 1, 'only the request that reached the provider was counted')
+})
+
+test('handler: quota-refused calls from many throwaway accounts do not fill the site counter against a Pro account', async () => {
+  const { call, ledger, db, quota } = loadAi()
+  quota.limit = 0
+  for (let i = 0; i < SITE_PRO.limit + 20; i += 1) {
+    assert.equal((await call(GOOD, `192.0.2.${(i % 250) + 1}`, { uid: `throwaway${i}` })).statusCode, 429)
+  }
+  quota.limit = 1000
+  assert.equal((await call(GOOD, '198.51.100.9', { uid: 'free-fresh' })).statusCode, 200)
+  assert.equal((await call(GOOD, '198.51.100.10', { uid: 'paying', user: PRO_USER })).statusCode, 200)
+  assert.equal(ledger.ran, 2)
+  assert.equal(counted(db, 'ai-site-day'), 1)
+  assert.equal(counted(db, 'ai-site-day-pro'), 1)
+})
+
+test('handler: the shared counters are spent only after the unit is reserved (a spent quota leaves the address counter at one)', async () => {
+  const { call, db, quota } = loadAi()
+  quota.limit = 1
+  assert.equal((await call(GOOD, '203.0.113.7', { uid: 'a' })).statusCode, 200)
+  assert.equal((await call(GOOD, '203.0.113.7', { uid: 'a' })).statusCode, 429, 'the second is over the quota')
+  assert.equal(counted(db, 'ai-ip-day'), 1)
+  assert.equal(counted(db, 'ai-site-day'), 1)
+})
+
+test('handler: a request the address limit refuses after the unit is reserved gives the unit back', async () => {
+  const { call, ledger, db } = loadAi()
+  for (let i = 0; i < IP_DAY.limit; i += 1) await shared(db, { uid: `other${i}` })
+  const res = await call(GOOD)
+  assert.equal(res.statusCode, 429)
+  assert.equal(res.body.rateLimited, 'ip')
+  assert.ok(Number(res.headers['Retry-After']) > 0)
+  assert.equal(ledger.reserved, 1, 'the unit was reserved first')
+  assert.equal(ledger.ran, 0, 'and the provider was never called')
+  assert.equal(heldUnits(db), 0, 'every reserved unit (month and day) was given back')
+})
+
+test('handler: a request the site limit refuses after the unit is reserved gives the unit back', async () => {
+  const { call, ledger, db } = loadAi()
+  for (let i = 0; i < SITE.limit; i += 1) await shared(db, { uid: `other${i}`, ip: `192.0.2.${i + 1}` })
+  const res = await call(GOOD, '198.51.100.77')
+  assert.equal(res.statusCode, 429)
+  assert.equal(res.body.rateLimited, 'site')
+  assert.equal(ledger.ran, 0)
+  assert.equal(heldUnits(db), 0)
+})
+
+test('handler: the brand-starter path also gives its unit back when a shared limit refuses it', async () => {
+  const { call, ledger, db } = loadAi()
+  for (let i = 0; i < IP_DAY.limit; i += 1) await shared(db, { uid: `other${i}` })
+  const res = await call({ task: 'brand-starter' })
+  assert.equal(res.body.rateLimited, 'ip')
+  assert.equal(ledger.ran, 0)
+  assert.equal(heldUnits(db), 0)
+})
+
+test('handler: a unit that went to the provider stays spent (the refund is only for a refusal)', async () => {
+  const { call, db } = loadAi()
+  assert.equal((await call(GOOD)).statusCode, 200)
+  assert.equal(heldUnits(db), 2, 'one for the month and one for the day')
+})
+
+test('handler: a refused request that reserved a unit keeps its account attempt (attempts are never given back)', async () => {
+  const { call, db } = loadAi()
+  for (let i = 0; i < IP_DAY.limit; i += 1) await shared(db, { uid: `other${i}` })
+  await call(GOOD)
+  assert.equal(counted(db, 'ai-uid-minute'), 1)
+  assert.equal(counted(db, 'ai-uid-hour'), 1)
+})
+
+test('handler: Pro is not shut out by a full non-Pro site bucket, and keeps its own', async () => {
+  const { call, ledger, db } = loadAi()
+  for (let i = 0; i < SITE.limit; i += 1) await shared(db, { uid: `other${i}`, ip: `192.0.2.${i + 1}` })
+  assert.equal((await call(GOOD, '198.51.100.77')).body.rateLimited, 'site', 'a free account is shut out')
+  const pro = await call(GOOD, '198.51.100.78', { uid: 'paying', user: PRO_USER })
+  assert.equal(pro.statusCode, 200, 'the paying account still runs')
+  assert.equal(ledger.ran, 1)
+  assert.equal(counted(db, 'ai-site-day-pro'), 1)
+})
+
+test('handler: a Pro account is refused by the Pro site bucket, once that one is full', async () => {
+  const { call, ledger, db } = loadAi()
+  for (let i = 0; i < SITE_PRO.limit; i += 1) await shared(db, { uid: `other${i}`, planId: 'pro' })
+  const res = await call(GOOD, '198.51.100.78', { uid: 'paying', user: PRO_USER })
+  assert.equal(res.statusCode, 429)
+  assert.equal(res.body.rateLimited, 'site')
+  assert.equal(ledger.ran, 0)
+  assert.equal(heldUnits(db), 0)
+})
+
+test('handler: the checks run in order: input, account limits, quota, then address and site (source order)', () => {
+  assert.equal((aiSource.match(/await refuseBeforeMeter\(/g) || []).length, 2, 'both metered paths call refuseBeforeMeter')
+  assert.equal((aiSource.match(/await refuseSharedAttempt\(/g) || []).length, 2, 'both metered paths spend the shared counters')
   const meter = [...aiSource.matchAll(/await runMeteredTask\(\{/g)].map((m) => m.index)
-  const first = aiSource.indexOf('await refuseBeforeMeter(')
-  const second = aiSource.indexOf('await refuseBeforeMeter(', first + 1)
-  assert.ok(first < meter[0] && second < meter[1], 'each guard sits ahead of its runMeteredTask call')
+  const guard = [...aiSource.matchAll(/await refuseBeforeMeter\(/g)].map((m) => m.index)
+  const spend = [...aiSource.matchAll(/await refuseSharedAttempt\(/g)].map((m) => m.index)
+  const runCall = [...aiSource.matchAll(/await task\.run\(/g)].map((m) => m.index)
+  for (let i = 0; i < 2; i += 1) {
+    assert.ok(guard[i] < meter[i], `path ${i + 1}: the account checks sit ahead of the meter`)
+    assert.ok(meter[i] < spend[i], `path ${i + 1}: the shared counters are spent inside the metered run`)
+    assert.ok(spend[i] < runCall[i], `path ${i + 1}: and before the provider call`)
+  }
+})
+
+test('handler: the account checks never touch the shared counters', () => {
+  const body = aiSource.slice(aiSource.indexOf('async function refuseBeforeMeter'), aiSource.indexOf('async function refuseSharedAttempt'))
+  assert.ok(body.includes('aiAccountRefusal('))
+  assert.ok(!body.includes('aiSharedRefusal('), 'refuseBeforeMeter must not spend the address or site counter')
 })
