@@ -75,7 +75,8 @@ const LIBS = [
     search: (page) => page.getByLabel('Search gradients'),
   },
   {
-    key: 'prompts', route: '/discover/prompts', card: '.pl-card', noun: 'community prompts', singular: 'community prompt',
+    // The list, not the overview: the overview shows a few prompts per section, so it cannot carry the tier counts.
+    key: 'prompts', route: '/discover/prompts#all', card: '.pl-card', noun: 'community prompts', singular: 'community prompt',
     total: COMMUNITY_PROMPTS.length, totalFromData: LIBRARY_TOTALS.prompts,
     status: 'community prompt library', head: false,
     search: (page) => page.getByLabel('Search community prompts'),
@@ -141,10 +142,21 @@ for (const vp of VIEWPORTS) {
           watch(page, `a signed-out visitor on the ${lib.key} library`)
           await go(page, lib.route)
           await expect(page.locator(lib.card).first()).toBeVisible()
-          await expect(page.locator(lib.card)).toHaveCount(ANON_SEES)
+          if (lib.key === 'prompts') {
+            // The prompt list draws every prompt: the open ones as cards, the
+            // rest as locked cards that never carry a title or text. Its wall is
+            // the closing block, which counts what a free account adds.
+            await expect(page.locator('.pl-card:not(.pl-locked-card)')).toHaveCount(ANON_SEES)
+            await expect(page.locator('.pl-locked-card')).toHaveCount(lib.total - ANON_SEES)
+            const close = page.locator('.pl-close')
+            await expect(close.locator('h2')).toHaveText(`${FREE_OPENS - ANON_SEES} more prompts open with a free account`)
+            await expect(close.locator('p')).toHaveText(`A free account opens ${FREE_OPENS} of the ${lib.total} community prompts. Pro opens all ${lib.total}.`)
+          } else {
+            await expect(page.locator(lib.card)).toHaveCount(ANON_SEES)
 
-          // The wall, on the unnarrowed view.
-          await expect(wallOf(page).locator('.lockt-cta-body')).toHaveText(sentenceFor(lib))
+            // The wall, on the unnarrowed view.
+            await expect(wallOf(page).locator('.lockt-cta-body')).toHaveText(sentenceFor(lib))
+          }
           if (lib.head) {
             await expect(page.locator('.drh-head p')).toHaveText(`${lib.total} ${lib.noun} · ${ANON_SEES} shown`)
           }
@@ -161,8 +173,15 @@ for (const vp of VIEWPORTS) {
           await expect(page.locator(lib.card).first()).toBeVisible()
           // The wall steps aside for a narrowed view; the closing line carries the offer.
           await expect(wallOf(page)).toHaveCount(0)
-          await expect(page.locator('.gcta-detail')).toHaveText(sentenceFor(lib))
-          await expect(page.locator('.gcta-action')).toHaveText('Create your free account')
+          if (lib.key === 'prompts') {
+            // A search gets no paywall and no locked card, so it cannot say how
+            // many locked prompts matched.
+            await expect(page.locator('.pl-close')).toHaveCount(0)
+            await expect(page.locator('.pl-locked-card')).toHaveCount(0)
+          } else {
+            await expect(page.locator('.gcta-detail')).toHaveText(sentenceFor(lib))
+            await expect(page.locator('.gcta-action')).toHaveText('Create your free account')
+          }
           await capture(page, theme, lib, vp, 'signed-out-narrowed')
         })
 

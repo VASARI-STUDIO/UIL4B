@@ -51,7 +51,7 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 //   /create/emoji             213          225          68       237
 //   /create/icons              68          178          68        92
 //   /create/font-gallery      135          195         135       159
-//   /discover/prompts          80          172          80        92
+//   /discover/prompts          80          172          80        92   (that toolbar is gone: see the prompts table below)
 //
 // RE-DERIVED 2026-09-18, when the Spectrum redesign gave the filters a row of
 // their own. That is the app design file's own toolbar anatomy — one panel,
@@ -88,26 +88,37 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 // wraps to three lines on a desktop too; the ceiling is derived the same way
 // regardless, and the surface still went 225 → 68.
 //
-// /discover/prompts WAS in this table at its unimproved height, as the one
-// surface still on the one-off `.pl-toolbar`: #298 had given it a bespoke tablet
-// treatment and #318 deliberately left it alone. #323 moved it onto the shared
-// toolbar with the rest, so it now takes the same ceiling and the same search
-// share as its siblings, and its bespoke band rule is gone from global.css.
+// /discover/prompts is on its own `.pl-toolbar` again, and it has TWO states
+// (src/components/prompt/PromptFilters.jsx), so it has two rows in the table:
+//
+//   state                          1440    834    768   ceiling
+//   overview   /discover/prompts     60     48     48        84
+//   list       /discover/prompts#all 104    160    160       184
+//
+// The overview toolbar is the search field alone. The list state is three
+// designed rows at 768 and 834: the search, then the category chips (all of
+// them on one line), then Sort and Access side by side. The ceilings follow the
+// rule above: the height the designed layout really has, in this file's own
+// iPad context, plus 24px of slack for one honest extra line. A fourth row —
+// the chips wrapping, or Sort and Access splitting — is 204px or more and goes
+// red; at 641px, where the chips do wrap, it measures 212.
 //
 // THE FOURTH COLUMN is the search field's largest allowed share of the row, or
 // null where the surface has a recorded reason to let it take the row.
 //
-// Every surface now carries a share, because every surface is now on the shared
-// toolbar. `.pl-toolbar` used to be the null here — #298 had uncapped its search
-// field so the category chips could hold a full row, and asserting a share would
-// have overruled a recorded choice on a surface #318 did not touch. #323 retired
-// that toolbar, so the exemption retired with it.
+// The prompts rows are null, and it is a recorded choice and not an exemption
+// found at the last minute: the search field has its own row in both states
+// (capped at 520px), so there is nothing beside it for it to crowd out. The
+// share guards the shared toolbars, where the field shares a line with the
+// filters. The measurement below looks for `.lbry-search` / `.pl-search-wrap`
+// and finds neither on this page, so null is also what the code would do.
 const TOOLBARS = [
   ['/discover/gradients', '.lbry-toolbar', 144, 0.6],
   ['/discover/palettes', '.lbry-toolbar', 144, 0.6],
   ['/create/emoji', '.lbry-toolbar', 144, 0.6],
   ['/create/icons', '.lbry-toolbar', 144, 0.6],
-  ['/discover/prompts', '.lbry-toolbar', 144, 0.6],
+  ['/discover/prompts', '.pl-toolbar', 84, null],
+  ['/discover/prompts#all', '.pl-toolbar', 184, null],
 ]
 
 async function open(browser, width, path, waitFor) {
