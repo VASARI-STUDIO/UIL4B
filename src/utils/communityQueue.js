@@ -53,7 +53,7 @@ export const QUEUE_KINDS = Object.freeze(['gradient', 'design', 'palette', 'icon
  * real submission — a half-formed document must never reach a reviewer's list
  * looking like something they can act on.
  */
-export function buildQueueRecord({ kind, payload, user, name }) {
+export function buildQueueRecord({ kind, payload, user, name, authorName }) {
   if (!QUEUE_KINDS.includes(kind)) return null
   if (!payload || typeof payload !== 'object') return null
   if (!user?.uid) return null
@@ -62,10 +62,12 @@ export function buildQueueRecord({ kind, payload, user, name }) {
     kind,
     name: title || `Untitled ${kind}`,
     authorUid: user.uid,
-    // Display name only. The email is deliberately NOT copied here: this
-    // collection is readable by every signed-in user once an item is approved,
-    // and a submission does not need to disclose an address to be reviewed.
-    authorName: (user.displayName || 'Anonymous').slice(0, 60),
+    // A name only, never the email: this collection is readable by every
+    // signed-in user once an item is approved, and a submission does not need to
+    // disclose an address to be reviewed. `authorName` is the public name the
+    // submitter chose (their community handle); the signed-in `user` carries only
+    // an email and uid, so it is the usual source. firestore.rules caps it at 60.
+    authorName: String(authorName || user.displayName || 'Anonymous').trim().slice(0, 60) || 'Anonymous',
     status: CLIENT_WRITABLE_STATUS,
     payload,
     createdAt: new Date().toISOString(),

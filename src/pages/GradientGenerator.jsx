@@ -35,6 +35,13 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
+import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
+import useCommunitySubmitGate from '../hooks/useCommunitySubmitGate'
+import { buildGradientPayload } from '../utils/gradientSubmissions'
+import { buildQueueRecord } from '../utils/communityQueue'
+import { publishToQueueOnce } from '../utils/communityQueueApi'
+import { isPostLimit } from '../utils/communityLimits'
+import { getOwnerHandle } from '../utils/constants'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
@@ -53,6 +60,12 @@ import '../styles/pages/gradient.css'
 // a jump to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
+
+// How long a community submission waits for the queue before it says so. Offline,
+// Firestore holds the write and never rejects.
+const SUBMIT_TIMEOUT_MS = 8000
+// A free-form document id for one submission (crypto.randomUUID where it exists).
+const newSubmissionId = () => (globalThis.crypto?.randomUUID?.() ?? `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`)
 
 // ── Random settings ──
 // What Random and Shuffle from palette may make. A group holds the values that
@@ -1523,6 +1536,93 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     }
   }
 
+  // ── Submit to the community ──
+  // The one write is the account's review queue (communityQueueApi.publishToQueue,
+  // a pending document under the signer's uid). Nothing is kept in this browser:
+  // a submission that lives in one browser can never reach a reviewer. The form
+  // stays as it was when the write fails, and "submitted" is only ever shown once
+  // the queue has accepted it.
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submitName, setSubmitName] = useState('')
+  const [submitErr, setSubmitErr] = useState('')
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const [submitDone, setSubmitDone] = useState(false)
+  const submitOpenRef = useRef(false)
+  // The document id for the submission in flight; kept until it is accepted.
+  const submitAttemptRef = useRef(null)
+  useEffect(() => { submitOpenRef.current = submitOpen }, [submitOpen])
+  // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
+  const closeSubmit = useCallback(() => setSubmitOpen(false), [])
+  const openSubmitForm = useCallback(() => {
+    if (saveOpenRef.current) closeSave('item')
+    setSubmitErr('')
+    setSubmitDone(false)
+    setSubmitName(n => n.trim() || defaultSaveName)
+    setSubmitOpen(true)
+  }, [closeSave, defaultSaveName])
+  const submitGate = useCommunitySubmitGate({ surface: 'gradient', what: 'gradient', onOpen: openSubmitForm })
+
+  const submitToCommunity = async (author) => {
+    if (submitBusy) return
+    const name = submitName.trim()
+    if (!name) { setSubmitErr('Give the gradient a name first.'); return }
+    // Defence in depth: the form is only mounted for a signed-in person, but a
+    // sign-out mid-flow must not slip a submission through.
+    if (!user?.uid) { setSubmitOpen(false); return }
+    const payload = buildGradientPayload({ type, angle, stops, author })
+    const queued = payload && buildQueueRecord({ kind: 'gradient', name, user, authorName: author, payload })
+    if (!queued) { setSubmitErr('This gradient can’t be submitted. Check that every stop has a colour.'); return }
+    setSubmitErr('')
+    setSubmitBusy(true)
+    // Offline, Firestore queues the write and never rejects, so the wait is
+    // bounded. One document id per form, so a retry after a timeout cannot post
+    // a second copy if the first write lands late.
+    if (!submitAttemptRef.current) submitAttemptRef.current = newSubmissionId()
+    const id = submitAttemptRef.current
+    const write = publishToQueueOnce(queued, { id })
+    const succeeded = () => {
+      // An earlier write for this form already finished it.
+      if (submitAttemptRef.current !== id) return
+      submitAttemptRef.current = null
+      if (!mountedRef.current) return
+      // A fresh form reopens with the default name, not one already sent.
+      setSubmitName('')
+      setSubmitErr('')
+      if (submitOpenRef.current) setSubmitDone(true)
+      else toast?.('Gradient submitted for review')
+    }
+    try {
+      let timer
+      const outcome = await Promise.race([
+        write.then(() => 'sent'),
+        new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), SUBMIT_TIMEOUT_MS) }),
+      ])
+      clearTimeout(timer)
+      if (outcome === 'timeout') {
+        // The form stays as it was. If the write lands later it replaces this
+        // message with the confirmation instead of leaving a false failure.
+        write.then(succeeded, () => {})
+        if (!mountedRef.current) return
+        const offline = 'This is taking too long, so you may be offline. Your gradient is still here. Check your connection and try again.'
+        if (submitOpenRef.current) setSubmitErr(offline)
+        else toast?.(offline, 'error')
+        return
+      }
+      succeeded()
+    } catch (err) {
+      if (!mountedRef.current) return
+      const message = isPostLimit(err)
+        ? err.message
+        : err?.code === 'permission-denied'
+          ? 'The community wouldn’t accept that from this account. Sign in again and retry.'
+          : 'Couldn’t reach the review queue. Check your connection and try again.'
+      if (submitOpenRef.current) setSubmitErr(message)
+      else toast?.(message, 'error')
+    } finally {
+      if (mountedRef.current) setSubmitBusy(false)
+    }
+  }
+
   // ── Drag: stop handles on the preview rail ──
   // One drag session, shared by "grab an existing handle" and "press the rail to
   // create one", so a newly added stop is immediately draggable in the SAME
@@ -1946,7 +2046,40 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </SaveShareItem>
             </>
           )}
+          after={(
+            <>
+              <div className="plb-menu-sub">Community</div>
+              <SaveShareItem
+                icon="users"
+                onClick={submitGate.request}
+                disabled={authLoading}
+                busy={authLoading}
+                title={authLoading ? 'Checking your account…' : undefined}
+              >
+                Submit to the community…
+              </SaveShareItem>
+            </>
+          )}
         />
+      )}
+      {submitOpen && user?.uid && (
+        <CommunitySubmitDialog
+          noun="gradient"
+          ownerHandle={getOwnerHandle(user.email)}
+          name={submitName}
+          onNameChange={(v) => { setSubmitName(v); setSubmitErr('') }}
+          onSubmit={submitToCommunity}
+          onClose={closeSubmit}
+          error={submitErr}
+          busy={submitBusy}
+          done={submitDone ? {
+            message: 'Thanks. A reviewer checks it before it appears. Until then it is listed as pending under Your submissions in the Gradient Library, where you can also withdraw it.',
+            to: '/discover/gradients',
+            toLabel: 'See your submissions',
+          } : null}
+        >
+          <span className="plb-submit-sw" style={{ background: paintCss }} />
+        </CommunitySubmitDialog>
       )}
       <ToolGrid>
         <ToolMain>
