@@ -425,8 +425,7 @@ export function trackFontCopy(fontFamily) {
 }
 
 // ── P-001: the two events that make the funnel answerable ───────────────────
-// Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
-// in this repository, per .gitignore. Until they existed there was no way
+// Until they existed there was no way
 // to answer "did this user build something?", "what did they do before
 // upgrading?" or "where do people stop?" — which is why nearly every other
 // proposal in that file is 'inferred' rather than 'measured'.
@@ -588,7 +587,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

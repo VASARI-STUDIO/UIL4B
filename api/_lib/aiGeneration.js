@@ -16,24 +16,23 @@
 // THE ALLOWANCE
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** One per account, ever. The founder: "free users will get 1 free usage". */
+/** One per account, ever. */
 export const FREE_TOTAL_GENERATIONS = 1
 
-/** ⚠️ The founder's number to change — see src/config/aiGeneration.js. */
+/** A Pro account's monthly allowance; src/config/aiGeneration.js mirrors it. */
 export const PRO_MONTHLY_GENERATIONS = 20
 
 export const BRAND_STARTER_TOOL_ID = 'brand-starter'
 
 /**
- * WHERE THE COUNT LIVES, and why this needed nothing from the founder.
+ * WHERE THE COUNT LIVES, and why it needs no rules change.
  *
  * Both buckets are documents in `daily-usage`, which appears NOWHERE in
  * firestore.rules. That file default-denies, so the collection is unreachable
  * from every client and only the Admin SDK — which bypasses rules — can touch
  * it. api/ai.js already relies on exactly this property for the daily and
  * monthly AI counts, and it is what keeps this change clear of a rules edit:
- * rules changes are founder-gated and published separately, and the environment
- * refuses to stage them.
+ * rules are published separately from the code.
  *
  * The suffixes can never collide with the ones already in that collection:
  * days are `uid_2026-09-06`, months are `uid_m2026-09`, and a lifetime bucket
@@ -117,8 +116,8 @@ export function exhaustedError(planId) {
 // THE COST, stated plainly: the unit is now spent BEFORE the answer exists, so
 // a provider failure has to give it back. refundQuotaUnit is that, and
 // runMeteredTask calls it on every path where the runner did not produce a
-// generation. The founder's rule — "a failed request must not consume a free
-// user's single use" — survives, with a window: a process killed between the
+// generation. The rule that a failed request must not consume a free
+// user's single use survives, with a window: a process killed between the
 // reservation and the refund leaves the unit spent. That is a strictly smaller
 // hole than the one it replaces, and it fails toward refusing rather than
 // toward overspending a shared bucket.
