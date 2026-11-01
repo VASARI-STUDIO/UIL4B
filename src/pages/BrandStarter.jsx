@@ -13,6 +13,7 @@ import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import { navigatesThisTab } from '../utils/handoffSlot'
 import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
 import {
   BETA_NOTE,
@@ -507,6 +508,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
         >
           <header className="bs-result-h">
             <h2 className="bs-result-name">{result.name}</h2>
+            <AiLabel what="brand starter" />
             {provider && (
               <span style={providerBadgeStyle(provider)} title={provider.title} data-testid="ai-provider-badge">
                 {provider.label}
