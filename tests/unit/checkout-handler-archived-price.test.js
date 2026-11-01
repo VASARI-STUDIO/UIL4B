@@ -35,6 +35,8 @@ let clock = 1_800_000_000_000
 const price = (id, overrides = {}) => ({
   id,
   active: true,
+  // The product comes back expanded: priceIsSellable refuses an archived or unexpanded one.
+  product: { id: 'prod_1', active: true },
   recurring: { interval: 'month', interval_count: 1 },
   ...overrides,
 })

@@ -71,9 +71,17 @@ export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, yearly: 1 })
  * sellable. The price list and checkout both apply this one check, so the price
  * a visitor is shown and the price a checkout charges are chosen by the same
  * rule.
+ *
+ * The price's product must be active too: an active price on an archived product
+ * is rejected by Stripe at session create. The caller has to EXPAND the product
+ * (`expand: ['product']` on a retrieve, `['data.product']` on a list); a product
+ * that is still a bare id, missing or deleted cannot be checked, so the price is
+ * refused rather than guessed at.
  */
 export function priceIsSellable(price, interval) {
   if (!price?.active) return false
+  const product = price.product
+  if (!product || typeof product !== 'object' || product.active !== true) return false
   return !!INTERVAL_MAP[interval]
     && price.recurring?.interval === INTERVAL_MAP[interval]
     && price.recurring?.interval_count === INTERVAL_COUNTS[interval]

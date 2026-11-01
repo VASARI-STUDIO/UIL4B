@@ -20,6 +20,7 @@ let clock = 1_800_000_000_000
 const monthlyPrice = (id, overrides = {}) => ({
   id,
   active: true,
+  product: { id: 'prod_1', active: true },
   currency: 'usd',
   unit_amount: 900,
   currency_options: {},
