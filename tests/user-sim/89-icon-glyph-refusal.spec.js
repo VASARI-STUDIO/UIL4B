@@ -97,10 +97,11 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 
     await expect(page.getByText(/couldn.t reach the icon service/i)).toHaveCount(0)
     expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
-    // And the catalogue itself came from this site's pack lists: the page asked
-    // Iconify for glyphs only, never for a pack list.
+    // And the names came from the heads committed with the page: the default
+    // listing reads no pack list at all, from this site or from Iconify, and
+    // asks Iconify for glyphs only.
     const tally = iconifyRequests(page.context())
-    expect(tally.snapshot, 'the pack lists were not read from the site').toBeGreaterThan(0)
+    expect(tally.snapshot, 'the default listing read a full pack list from the site').toBe(0)
     expect(tally.collection, 'a first visit asked Iconify for a pack list').toBe(0)
 
     const m = await page.evaluate(() => {

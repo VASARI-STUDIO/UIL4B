@@ -19,7 +19,7 @@
 // it the browser hides the response and the page sees a rejected fetch, which
 // is a different path (a short pause after three rejections), not a 429.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, iconifyRequests, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'visitor whose icon catalogue is refused'
@@ -54,16 +54,19 @@ async function seedGlyphBackoff(page, ms) {
   }, { key: COOLDOWN_KEY, ms })
 }
 
-const painted = (page) => page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.complete && i.naturalWidth > 0).length)
+// A glyph is a loaded image (the coloured packs) or a sprite symbol (every other pack).
+const painted = (page) => page.evaluate(() => [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')].filter((c) => (c.matches('img') ? c.complete && c.naturalWidth > 0 : !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`))).length)
 const blank = (page) => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
 
 test.describe('a 429 from Iconify', () => {
   test.skip(isLiveIconify(), 'the live API decides what it serves; this spec pins the refused shape')
   test.setTimeout(90_000)
 
-  test('a cold refused pack list does not stop the glyph files of the packs the site lists', async ({ page }) => {
-    // Pro browses fluent-emoji, the one pack with no list on the site, so its
-    // /collection is the one live pack-list request of a cold visit. Refuse it.
+  test('a refused pack list does not stop the glyph files of the packs the site lists', async ({ page }) => {
+    // Pro picks fluent-emoji, the one pack with no list on the site, so its
+    // /collection is the one live pack-list request of the visit. Refuse it.
+    // The default listing names its packs from the committed heads and never
+    // asks /collection, so the refusal only meets the pack that needs the list.
     watch(page, PERSONA)
     await signIn(page, { plan: 'pro' })
     let lists = 0
@@ -74,10 +77,22 @@ test.describe('a 429 from Iconify', () => {
     const batches = batchLog(page)
     await go(page, '/create/icons')
 
-    await expect.poll(() => painted(page), { timeout: 20_000, message: 'the grid drew no glyphs after a pack list was refused' }).toBeGreaterThan(20)
-    expect(lists, 'POSITIVE CONTROL: the live pack list was asked for and refused').toBe(1)
-    expect(batches.length, 'glyph files were requested after the pack list was refused').toBeGreaterThan(0)
+    await expect.poll(() => painted(page), { timeout: 20_000, message: 'the default grid drew no glyphs' }).toBeGreaterThan(20)
+    expect(lists, 'the default listing asked /collection').toBe(0)
+
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'fluent-emoji')
+    await expect.poll(() => lists, { timeout: 20_000, message: 'POSITIVE CONTROL: the live pack list was asked for and refused' }).toBe(1)
     await expect(page.getByText(NOTICE), 'one refused pack list is not an outage').toHaveCount(0)
+
+    // The pack list is cooling down, but a pack the site lists still opens, asks for its
+    // glyph files and paints them.
+    const before = batches.length
+    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'mdi')
+    await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Material Design', { timeout: 20_000 })
+    await expect.poll(() => batches.length, { timeout: 20_000, message: 'glyph files were not requested after the pack list was refused' }).toBeGreaterThan(before)
+    await expect.poll(() => painted(page), { timeout: 20_000, message: 'the grid drew no glyphs after a pack list was refused' }).toBeGreaterThan(20)
+    await expect(page.getByText(NOTICE), 'one refused pack list is not an outage').toHaveCount(0)
+    expect(lists, 'a pack the site lists went to /collection').toBe(1)
     expect(iconifyRequests(page.context()).escaped).toEqual([])
   })
 

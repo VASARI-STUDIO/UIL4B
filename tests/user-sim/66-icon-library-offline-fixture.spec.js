@@ -633,7 +633,7 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered').toBe(4)
+  expect(anon.chips.length, 'the group tray rendered: Coloured, Brand logos and Flags, with no Emoji chip').toBe(3)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
@@ -641,9 +641,9 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   }
   expect(anon.chips.map((c) => c.name).filter((n) => /^My icons/i.test(n)), 'My icons is a toggle, not a group chip').toEqual([])
   expect(locked(anon).map((c) => c.name), 'signed out, every group is locked and asks for Pro').toEqual(
-    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
+    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro'],
   )
-  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
+  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same three stay locked').toEqual(locked(anon).map((c) => c.name))
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's
@@ -698,8 +698,9 @@ test('a pack listed once is not listed again after a reload', async ({ browser }
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20000 })
     await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Lucide', { timeout: 20000 })
-    // One pack's full listing is the one thing that still needs /collection.
-    expect(iconifyRequests(ctx).collection, 'opening a pack asks for its listing once').toBe(1)
+    // One pack's full listing is read from the site's own copy, once, and never asked of Iconify.
+    expect(iconifyRequests(ctx).snapshot, 'opening a pack reads its listing once').toBe(1)
+    expect(iconifyRequests(ctx).collection, 'a pack the site holds a list for is not asked of Iconify').toBe(0)
 
     await page.reload()
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
@@ -707,7 +708,8 @@ test('a pack listed once is not listed again after a reload', async ({ browser }
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20000 })
     await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Lucide', { timeout: 20000 })
-    expect(iconifyRequests(ctx).collection, 'the saved listing answers after a reload').toBe(1)
+    expect(iconifyRequests(ctx).snapshot, 'the saved listing answers after a reload').toBe(1)
+    expect(iconifyRequests(ctx).collection, 'a reload still asks Iconify for no list').toBe(0)
     expect(iconifyRequests(ctx).escaped).toEqual([])
   } finally { await ctx.close() }
 })

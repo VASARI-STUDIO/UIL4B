@@ -1086,6 +1086,9 @@ for (const width of [1440, 390]) {
       const circleFlags = collections.get('circle-flags')
       circleFlags.uncategorized = Array.from({ length: 180 }, (_, i) => `flag-${String(i).padStart(3, '0')}`)
       circleFlags.total = circleFlags.uncategorized.length
+      // The page reads a pack's list from the site's own copy first, so the shortened list is served there too.
+      await page.route(url => url.pathname === '/iconify/collections/circle-flags.json',
+        route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(circleFlags) }))
       await page.route(url => ICONIFY_HOSTS.includes(url.hostname)
         && url.pathname === '/collection' && url.searchParams.get('prefix') === 'circle-flags',
       route => route.fulfill({

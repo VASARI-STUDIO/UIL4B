@@ -26,7 +26,10 @@ test('every pack IconLibrary.jsx browses on first paint has a fixture file', () 
   const end = page.indexOf("// The group tray", start)
   assert.ok(start >= 0 && end > start, 'the catalogue declarations must be available')
   const { packs, groups } = new Function(`${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)()
-  assert.deepEqual(groups, ['coloured', 'brands', 'flags', 'emoji'])
+  assert.deepEqual(groups, ['coloured', 'brands', 'flags'])
+  for (const pack of ['twemoji', 'fluent-emoji', 'noto', 'openmoji']) {
+    assert.ok(packs.includes(pack), `${pack} stays in the default listing and the pack menu without an Emoji chip`)
+  }
   for (const pack of ['lucide', 'ph', 'mdi', 'heroicons', 'solar']) {
     assert.ok(packs.includes(pack), `${pack} remains available without style chips`)
   }

@@ -25,7 +25,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const DIR = path.join(ROOT, 'public', ...COLLECTION_SNAPSHOT_PATH.split('/').filter(Boolean))
 // fluent-emoji is too large for the snapshot route and stays a live request.
 const LIVE_ONLY = ['fluent-emoji']
-const ICONIFY_PACKS = Object.keys(ICON_PACK_TIERS).filter((p) => p !== 'logodev' && !LIVE_ONLY.includes(p))
+// The animated sets are Pro only and listed through the server check, so their lists must
+// never sit in public/ where anyone can read them.
+const ANIMATED = Object.keys(ICON_PACK_TIERS).filter((p) => ICON_PACK_TIERS[p].animated)
+const ICONIFY_PACKS = Object.keys(ICON_PACK_TIERS).filter((p) => p !== 'logodev' && !LIVE_ONLY.includes(p) && !ANIMATED.includes(p))
 
 const answer = (body, init = {}) => new Response(typeof body === 'string' ? body : JSON.stringify(body), {
   status: 200, headers: { 'content-type': 'application/json' }, ...init,
@@ -49,6 +52,13 @@ test('the live-only packs are still offered, and have no snapshot to go stale', 
   for (const pack of LIVE_ONLY) {
     assert.ok(pack in ICON_PACK_TIERS, `${pack} is no longer offered: drop it from LIVE_ONLY here and in the script`)
     assert.ok(!fs.existsSync(path.join(DIR, `${pack}.json`)), `${pack} has a snapshot: drop it from LIVE_ONLY here and in the script`)
+  }
+})
+
+test('a Pro-only animated set has no public snapshot', () => {
+  assert.ok(ANIMATED.length >= 3, `expected the animated sets to be flagged in ICON_PACK_TIERS; found ${ANIMATED.length}`)
+  for (const pack of ANIMATED) {
+    assert.ok(!fs.existsSync(path.join(DIR, `${pack}.json`)), `${pack} is Pro only: its list must not be served from public/`)
   }
 })
 
@@ -96,13 +106,15 @@ test('a pack list with only categories is usable', () => {
 
 test('the page asks the snapshot before Iconify, and still falls back to Iconify', () => {
   const src = strip(fs.readFileSync(path.join(ROOT, 'src/pages/IconLibrary.jsx'), 'utf8'))
-  // The page's pack-list loader is built by createCollectionLoader; the part
-  // that decides where a list comes from is its fetchEntry.
-  // Found by what it passes to createCollectionLoader, not by the name of the
-  // constant it is assigned to, so a rename cannot make this vacuous or red.
+  // The page builds its pack-list loaders with createCollectionLoader; the part
+  // that decides where a list comes from is each one's fetchEntry. The public
+  // loader is the one that reads the snapshot (the animated sets' loader asks the
+  // server's Pro check instead), found by what it passes in, not by the name of
+  // the constant it is assigned to, so a rename cannot make this vacuous or red.
   const loaders = [...src.matchAll(/createCollectionLoader\(\{[\s\S]*?\n\}\)/g)].map((m) => m[0])
-  assert.equal(loaders.length, 1, `IconLibrary.jsx should build exactly one pack-list loader; found ${loaders.length}`)
-  const body = loaders[0]
+  const publicLoaders = loaders.filter((l) => /fetchCollectionSnapshot\(/.test(l))
+  assert.equal(publicLoaders.length, 1, `IconLibrary.jsx should build exactly one pack-list loader that reads the snapshot; found ${publicLoaders.length} of ${loaders.length}`)
+  const body = publicLoaders[0]
   assert.match(body, /fetchEntry:/, 'the loader needs a fetchEntry: that is where a list comes from')
   const snap = body.indexOf('fetchCollectionSnapshot(pack)')
   const live = body.indexOf('fetchWithFallback(`/collection?prefix=')

@@ -163,6 +163,10 @@ const BODY = '<path fill="none" stroke="currentColor" stroke-width="2" d="M3 12h
 async function serveShortLucide(page) {
   const names = Array.from({ length: TOTAL }, (_, i) => NAME(i))
   const headers = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
+  // The page reads a pack's list from the site's own copy first, so the synthetic list is served there.
+  // The /collection route below stays for the request a pack with no copy falls back to.
+  await page.route((u) => u.pathname === '/iconify/collections/lucide.json',
+    (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'lucide',
     (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/lucide.json' && u.search.includes('icons='),

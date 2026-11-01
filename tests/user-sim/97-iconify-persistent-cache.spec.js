@@ -35,7 +35,7 @@
 // withholdSnapshots, which is a pack with no usable snapshot.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, ready, signIn, watch } from './helpers.js'
-import { fixturePacks, iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify, withholdSnapshots } from './iconify-stub.js'
+import { iconifyRequests, isIconifyUrl, isLiveIconify, limitIconify, withholdSnapshots } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 // helpers.js drops the console lines Chromium logs for deliberate 429s for this
@@ -47,7 +47,7 @@ const GROUPS = '/create/icons/groups'
 /** The icon grid has drawn its glyphs, not only its cells. */
 async function paint(page) {
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
-  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20000 }).toBeGreaterThan(20)
 }
 
 /** Let the debounced glyph tranches and any prefetch land before a count is read. */
@@ -62,14 +62,14 @@ function iconifyUrlLog(page) {
 
 /** The tally as plain numbers, so a before/after difference can be taken. */
 function mark(ctx) {
-  const { collection, batch, search, svg } = iconifyRequests(ctx)
-  return { collection, batch, search, svg }
+  const { collection, snapshot, batch, search, svg } = iconifyRequests(ctx)
+  return { collection, snapshot, batch, search, svg }
 }
 function since(ctx, before) {
   const now = mark(ctx)
   return Object.fromEntries(Object.keys(now).map((k) => [k, now[k] - before[k]]))
 }
-const NOTHING = { collection: 0, batch: 0, search: 0, svg: 0 }
+const NOTHING = { collection: 0, snapshot: 0, batch: 0, search: 0, svg: 0 }
 /** Glyph tranches a reload may send: none. A tranche is a fixed slice of its pack (glyphChunkPlan), so a cache load and a network load ask for the same URLs. */
 const MAX_NEW_TRANCHES = 0
 
@@ -106,7 +106,7 @@ async function switchPacks(page) {
   for (const pack of SWITCHES) {
     await chooseMenuOption(page, select, pack)
     await page.waitForTimeout(1000)
-    await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 15000 }).toBeGreaterThan(0)
+    await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 15000 }).toBeGreaterThan(0)
   }
 }
 
@@ -116,7 +116,7 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
   const page = await ctx.newPage()
   watch(page, 'designer reloading the icon library')
-  // Pro, so "All packs" is the full twenty-five-pack load that rate-limited the page.
+  // Pro, so "All packs" is the full twenty-five-pack listing that rate-limited the page.
   await signIn(page, { plan: 'pro' })
   const urls = iconifyUrlLog(page)
 
@@ -129,12 +129,12 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
   // POSITIVE CONTROL: the first visit did go to the fixture. Without it, "the
   // reloads sent nothing" is true of a page that never asked.
   const first = mark(ctx)
-  expect(iconifyRequests(ctx).snapshot, 'load 1 read one pack list per pack from the site').toBe(fixturePacks().length)
-  // Pro browses fluent-emoji, the one pack the repo commits no list for, so it
-  // is the one live /collection request of a cold visit. Exactly one: more is a
-  // list the site serves being asked of Iconify; none means the stub answers a
-  // list the product does not serve (iconify-stub.test.js pins that).
-  expect(first.collection, 'load 1 asked Iconify for a list the site serves, or skipped the one it must ask').toBe(1)
+  // The default listing names its packs from the heads committed with the page, so
+  // it reads no pack list at all. Only a pack the visitor opens is listed in full,
+  // from the site's own copy: tabler, mdi and lucide, once each (SWITCHES revisits
+  // tabler, and the second visit comes from the saved list).
+  expect(first.snapshot, 'load 1 read one pack list from the site for each pack it opened').toBe(3)
+  expect(first.collection, 'load 1 asked Iconify for a list the site serves').toBe(0)
   expect(first.batch, 'load 1 fetched its glyph tranches').toBeGreaterThan(0)
   const afterFirst = urls.length
 
@@ -149,7 +149,7 @@ test('reloading /create/icons twice and switching packs sends the catalogue once
     const { batch, ...catalogue } = since(ctx, before)
     const asked = urls.slice(seen).join(' ')
     expect(catalogue, `load ${n} went back to the API for something load 1 already had: ${asked}`)
-      .toEqual({ collection: 0, search: 0, svg: 0 })
+      .toEqual({ collection: 0, snapshot: 0, search: 0, svg: 0 })
     // A tranche's URL used to be the exact list of names on screen when the
     // debounce fired, which depends on the order the packs landed (the network
     // decides it on load 1, the cache on load 2), so a reload could ask for a
@@ -226,7 +226,7 @@ test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a tot
     await pickPack(page, select, pack)
     await page.waitForTimeout(1000)
     await expect(notice, `switching to cached ${pack} raised the banner`).toHaveCount(0)
-    await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 15000 }).toBeGreaterThan(0)
+    await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 15000 }).toBeGreaterThan(0)
   }
   expect(ledger.urls.length, `a cached pack switch was sent during the cool-down: ${ledger.urls.slice(sent).join(' ')}`).toBe(sent)
 
@@ -248,8 +248,7 @@ test('after a total failure a reload stays quiet, and Try again clears the cool-
 
   // A first visit with nothing cached while the API refuses everything, the way
   // the live API did (Retry-After 3555, not readable by the page). The site's
-  // own pack lists are withheld, so every pack falls back to the live request
-  // that the 429 and its cool-down apply to.
+  // own pack lists are withheld too, so nothing but the refusing API can answer.
   await withholdSnapshots(page)
   const ledger = await limitIconify(page, { after: 0, retryAfter: 3555 })
   await go(page, '/create/icons')
@@ -269,10 +268,13 @@ test('after a total failure a reload stays quiet, and Try again clears the cool-
   await withholdSnapshots(page)
   await notice.getByRole('button', { name: 'Try again' }).click()
   await expect(notice).toHaveCount(0, { timeout: 20000 })
-  // Signed out: the status line reads "Showing 60 of 60 · 5 sets" (Pro adds "All packs").
-  await expect(page.getByText(/Showing [\d,]+ of [\d,]+ · \d+ sets/)).toBeVisible({ timeout: 20000 })
+  // Signed out: the grid is the five-set sample, and the page says so under it.
+  await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+  await paint(page)
   await expect(page.getByText(/Built-in icons/)).toHaveCount(0)
-  expect(iconifyRequests(ctx).collection, 'Try again fetched the catalogue (the pack lists are withheld, so it is the live request)').toBeGreaterThan(0)
+  // The default listing names its packs from the committed heads, so the glyph
+  // files are what Try again fetched, and the refusal that raised the notice was theirs.
+  expect(iconifyRequests(ctx).batch, 'Try again fetched the glyph files').toBeGreaterThan(0)
   await ctx.close()
 })
 
@@ -302,8 +304,10 @@ test('/create/icons-emoji and its Groups tab load from the cache on a reload', a
 
   await open()
   const first = mark(ctx)
-  expect(iconifyRequests(ctx).snapshot, 'load 1 read the Icons tab pack lists from the site').toBeGreaterThan(0)
-  expect(first.collection, 'load 1 asked Iconify for a pack list the site already serves').toBe(0)
+  // The Icons tab and the Groups index name their icons from the heads committed with
+  // the page, so neither reads a full pack list, from the site or from Iconify.
+  expect(first.snapshot, 'load 1 read a full pack list from the site for a default view').toBe(0)
+  expect(first.collection, 'load 1 asked Iconify for a pack list').toBe(0)
   expect(first.batch, 'load 1 fetched glyph tranches').toBeGreaterThan(0)
 
   for (const n of [2, 3]) {

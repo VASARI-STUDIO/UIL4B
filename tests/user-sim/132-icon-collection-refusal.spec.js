@@ -18,7 +18,7 @@
 //   - drop the setSoftNotice('partial') in browseGroup -> the third test.
 import { test, expect } from './base.js'
 import { go, signIn, watch, chooseMenuOption } from './helpers.js'
-import { isLiveIconify, refuseIconifyCollections } from './iconify-stub.js'
+import { isLiveIconify, refuseIconifyCollections, withholdSnapshots } from './iconify-stub.js'
 
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
 const BUILT_IN = /couldn.t reach the icon service/i
@@ -54,6 +54,9 @@ test('one pack whose listing is refused still shows its first icons, with a quie
   await page.setViewportSize({ width: 1280, height: 900 })
   await signIn(page, { plan: 'pro' })
   await refuseIconifyCollections(page)
+  // The site's own pack lists would answer a picked pack before /collection is asked; this test is about the
+  // pack whose list the site does not hold, so they are taken away.
+  await withholdSnapshots(page)
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'tabler')
@@ -71,6 +74,7 @@ test('a group with three of its four listings refused shows what loaded and says
   await page.setViewportSize({ width: 1440, height: 900 })
   await signIn(page, { plan: 'pro' })
   await refuseIconifyCollections(page, { except: ['circle-flags'] })
+  await withholdSnapshots(page)
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
 
@@ -85,4 +89,30 @@ test('a group with three of its four listings refused shows what loaded and says
   await expect(quiet.getByRole('button', { name: 'Try again' })).toBeVisible()
   await expect(page.getByText(BUILT_IN)).toHaveCount(0)
   expect(await page.locator('.ig .ic').count(), 'the packs that loaded are on screen').toBeGreaterThan(4)
+})
+
+test('with /collection refused, a picked pack and a group still list in full from the site\'s own copy, with no notice', async ({ page }) => {
+  test.skip(isLiveIconify(), LIVE)
+  watch(page, 'a designer picking packs while /collection is refused')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await signIn(page, { plan: 'pro' })
+  await refuseIconifyCollections(page)
+  const asked = collectionRequests(page)
+  await go(page, '/create/icons')
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
+
+  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'tabler')
+  await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Tabler')
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(20)
+  await expect(page.locator('.ig-notice')).toHaveCount(0)
+
+  const flags = page.getByRole('button', { name: 'Flags', exact: true })
+  const groupMenu = page.getByRole('button', { name: /^Group\b/ })
+  await expect(flags.or(groupMenu).first()).toBeVisible()
+  if (!await flags.isVisible()) await groupMenu.click()
+  await flags.click()
+  await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000 }).toBeGreaterThan(8)
+  await expect(page.locator('.ig-notice')).toHaveCount(0)
+  await expect(page.getByText(BUILT_IN)).toHaveCount(0)
+  expect(asked, 'the lists came from the site, so /collection was never asked').toEqual([])
 })

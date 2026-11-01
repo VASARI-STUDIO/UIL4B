@@ -47,6 +47,7 @@ import {
 } from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
+import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
   endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
@@ -119,16 +120,18 @@ const ICON_GROUPS = {
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
-  emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
 }
-const GROUP_ORDER = ['coloured', 'brands', 'flags', 'emoji']
+const GROUP_ORDER = ['coloured', 'brands', 'flags']
+// Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
+// ride in the default "All packs" listing and stay in the pack menu.
+const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
 const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
-const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -1083,28 +1086,15 @@ function relativeLuminance(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-// Sanitise arbitrary SVG markup (fetched OR pasted) before it ever touches the
-// DOM: parse, drop <script>, strip on* handlers and javascript: hrefs. Returns
-// the cleaned <svg> string, or null if it isn't valid SVG.
+// Clean arbitrary SVG markup (fetched, saved OR pasted) before it ever touches the
+// DOM, with the allow-list sanitiser: only listed elements and attributes survive,
+// and a reference must name something inside the file. Returns the cleaned <svg>
+// string, or null if it isn't valid SVG (or is over the sanitiser's size caps).
 function sanitizeSvgMarkup(text) {
   if (!text || typeof text !== 'string') return null
   try {
-    const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
-    if (doc.querySelector('parsererror')) return null
-    const svg = doc.querySelector('svg')
-    if (!svg) return null
-    svg.querySelectorAll('script').forEach(n => n.remove())
-    const walk = (el) => {
-      for (const a of [...el.attributes]) {
-        const name = a.name.toLowerCase()
-        const val = (a.value || '').trim().toLowerCase()
-        if (name.startsWith('on')) el.removeAttribute(a.name)
-        else if ((name === 'href' || name === 'xlink:href') && val.startsWith('javascript:')) el.removeAttribute(a.name)
-      }
-      for (const child of [...el.children]) walk(child)
-    }
-    walk(svg)
-    return svg.outerHTML
+    const clean = sanitiseSvgInline(text)
+    return clean ? clean.svg : null
   } catch { return null }
 }
 
@@ -1459,7 +1449,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Synchronous base markup for non-CDN sources (memoised — no setState churn).
   const localBase = useMemo(() => {
     if (!activeIcon) return null
-    if (activeIcon.custom && activeIcon.svg) return normalizeCustomBase(activeIcon.svg)
+    // A saved icon is cleaned again on open: it was only checked when it was pasted.
+    if (activeIcon.custom && activeIcon.svg) return normalizeCustomBase(sanitizeSvgMarkup(activeIcon.svg))
     if (activeIcon.svg) return sanitizeSvgMarkup(activeIcon.svg)
     if (!activeIcon.cdn) return embeddedSvgMarkup(activeIcon)
     return null
@@ -3543,7 +3534,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     setLoading(false)
   }, [])
 
-  const doSearch = useCallback((q, scope = {}) => {
+  const doSearch = useCallback((q, scope = {}, manualRetry = false) => {
     q = (q || '').trim()
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
@@ -3595,12 +3586,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         })
       return
     }
-    if (cdnOk.current === false) {
+    // After a failed request typing answers from the built-in set without asking
+    // again, but Try again is the visitor asking on purpose, so it always goes out.
+    if (cdnOk.current === false && !manualRetry) {
       renderLocal(q, packFilter)
       return
     }
     const rid = ++reqId.current
-    retryRef.current = () => doSearch(q, scope)
+    retryRef.current = () => doSearch(q, scope, true)
     setSource('search')
     setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
@@ -4743,7 +4736,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         <LibraryToolbar
           className="ig-toolbar"
           quick={0}
-          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
+          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' && weightState(weight).ok ? 1 : 0)}
           search={{
             value: query,
             onChange: handleQueryChange,
@@ -4874,7 +4867,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             {softNotice && !loadError && !gated && (
               <div className="ig-notice ig-notice-quiet" role="status">
                 <span>{SOFT_NOTICE_COPY[softNotice]}</span>
-                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}
 
