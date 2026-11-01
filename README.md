@@ -70,6 +70,7 @@ Key files: `src/App.jsx`, `src/main.jsx`, `src/styles/global.css`,
 
 Proprietary, source-available. The code is published to be read; it is not open
 source. See [LICENSE](LICENSE) for what is and is not permitted.
+The UIL4B name, logo and the look of uil4b.com are not licensed (see LICENSE).
 
 Third-party components keep their own licences and are not covered by that
 notice, including the icon packs in `public/icons-data.js`, the fonts in
