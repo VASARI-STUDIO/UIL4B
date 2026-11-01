@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { answerIconify, fixturePacks, headPackNames, headPackOfUrl, ICONIFY_HOSTS, refusesCollection } from '../user-sim/iconify-stub.js'
+import { answerIconify, answerSnapshot, fixturePacks, headPackNames, headPackOfUrl, ICONIFY_HOSTS, refusesCollection, SNAPSHOT_PATH_RE, snapshotPacks } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -26,7 +26,10 @@ test('every pack IconLibrary.jsx browses on first paint has a fixture file', () 
   const end = page.indexOf("// The group tray", start)
   assert.ok(start >= 0 && end > start, 'the catalogue declarations must be available')
   const { packs, groups } = new Function(`${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)()
-  assert.deepEqual(groups, ['coloured', 'brands', 'flags', 'emoji'])
+  assert.deepEqual(groups, ['coloured', 'brands', 'flags'])
+  for (const pack of ['twemoji', 'fluent-emoji', 'noto', 'openmoji']) {
+    assert.ok(packs.includes(pack), `${pack} stays in the default listing and the pack menu without an Emoji chip`)
+  }
   for (const pack of ['lucide', 'ph', 'mdi', 'heroicons', 'solar']) {
     assert.ok(packs.includes(pack), `${pack} remains available without style chips`)
   }
@@ -51,6 +54,34 @@ test('/collection answers per pack, and Lucide holds a full first page', () => {
   assert.ok(names.length >= 120, `lucide fixture has ${names.length} names; the default grid's first page needs 120 from one pack`)
   assert.ok(names.includes('zap'), '10-home hands lucide:zap to the editor; the fixture must hold it')
   assert.equal(answerIconify(`${HOST}/collection?prefix=no-such-pack`).status, 404)
+})
+
+test('the site\'s own pack list is the /collection fixture for a pack with a committed snapshot, and a 404 for every other pack', () => {
+  const committed = new Set(snapshotPacks())
+  assert.ok(committed.size >= 20, `expected the repo to commit many pack lists; found ${committed.size}`)
+  for (const pack of fixturePacks()) {
+    const site = answerSnapshot(`/iconify/collections/${pack}.json`)
+    if (!committed.has(pack)) {
+      assert.equal(site.status, 404,
+        `${pack}: the repo commits no pack list for it, so the site must 404 and the page must go on to the live /collection`)
+      continue
+    }
+    assert.equal(site.status, 200, `${pack}: the site's pack list has no fixture answer`)
+    assert.deepEqual(json(site), json(answerIconify(`${HOST}/collection?prefix=${pack}`)),
+      `${pack}: the site's list and the live /collection answer must be the same body, or the suite tests two different catalogues`)
+  }
+  // fluent-emoji is the one pack the real page asks Iconify for (Pro only). If
+  // the repo ever commits its list, this goes red and the Pro cold-visit counts
+  // in specs 66 and 97 (exactly one /collection) must drop to 0.
+  assert.equal(committed.has('fluent-emoji'), false,
+    'fluent-emoji has a committed snapshot now: update the Pro cold-visit counts in specs 66 and 97')
+  assert.equal(answerSnapshot('/iconify/collections/fluent-emoji.json').status, 404)
+  assert.equal(answerSnapshot('/iconify/collections/no-such-pack.json').status, 404,
+    'a pack with no fixture must 404 on the site too, which is what sends the page on to Iconify')
+  assert.equal(answerSnapshot('/iconify/collections/lucide.json.map').status, 404)
+  assert.ok(SNAPSHOT_PATH_RE.test('/iconify/collections/lucide.json'))
+  assert.ok(!SNAPSHOT_PATH_RE.test('/lucide.json'), 'the batched glyph endpoint is not a pack list')
+  assert.ok(!SNAPSHOT_PATH_RE.test('/iconify/collections/a/b.json'))
 })
 
 test('/search filters the fixture index by query and by prefix(es), and a broad query mixes packs', () => {
