@@ -39,10 +39,12 @@ const WIDTHS = [
   [1440, 900],
 ]
 
+// /learn/help is not listed: it is a router with no reveal blocks, so the
+// non-vacuous check below would have nothing to measure. The last test in this
+// file fails if reveal blocks ever come back to it, so it gets listed then.
 const URLS = [
   '/learn/principles',
   '/learn#learn-topic-typography',
-  '/learn/help#faq',
   '/learn#learn-topic-colour',
 ]
 
@@ -132,4 +134,13 @@ test.describe('reveal blocks on screen are visible after a jump', () => {
       })
     }
   }
+})
+
+test('the help router has no reveal blocks, so it needs no entry in URLS', async ({ page }) => {
+  watch(page, PERSONA)
+  await go(page, '/learn/help#faq')
+  await expect(page.locator('#faq')).toBeAttached()
+  expect(await page.locator('[data-reveal], [data-reveal-group]').count(),
+    '/learn/help gained reveal blocks: add /learn/help#faq to URLS')
+    .toBe(0)
 })
