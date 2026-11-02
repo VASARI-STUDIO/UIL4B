@@ -101,9 +101,8 @@ test('the note and the help line hold their lines, so a choice never moves the c
   const css = flatCss(ICON_CSS)
   assert.match(css.match(/\.iel-page \.icust-ground-note ?\{[^}]*\}/)[0], /min-height: ?calc\(8px \+ 1em \* 1\.4\)/)
   assert.match(css, /@media ?\(max-width: ?560px\) ?\{ ?\.iel-page \.icust-ground-note ?\{[^}]*min-height: ?calc\(8px \+ 2em \* 1\.4\)/)
-  // two lines held by default (a phone), one from 561px up where both sentences fit one line
+  // two lines at every width: no narrower override for the help line
   assert.match(css.match(/\.iel-page \.icust-colour-help ?\{[^}]*\}/)[0], /min-height: ?calc\(2em \* 1\.4\)/)
-  assert.match(css, /@media ?\(min-width: ?561px\) ?\{ ?\.iel-page \.icust-right \.icust-colour-help ?\{[^}]*min-height: ?calc\(1em \* 1\.4\)/)
   assert.doesNotMatch(css, /@media[^{]*\{ ?\.iel-page \.icust-colour-help ?\{/)
 })
 
@@ -115,7 +114,8 @@ test('on a touch screen each ground swatch has a 44 by 44 hit area and a 16px ga
   const coarse = block.slice(0, block.indexOf('@media(max-width:560px)'))
   assert.match(coarse, /\.icust-ground ?\{ ?gap: ?16px ?\}/)
   assert.match(coarse, /\.icust-ground-sw ?\{ ?width: ?28px; ?height: ?28px ?\}/)
-  assert.match(coarse, /\.icust-ground-sw::after ?\{[^}]*inset: ?-8px ?\}/)
+  // The swatch has a 1px border, so its padding box (the ::after's reference) is 26px: 9px a side makes 44.
+  assert.match(coarse, /\.icust-ground-sw::after ?\{[^}]*inset: ?-9px ?\}/)
 })
 
 test('the Custom radio claims no popup, and the note names a custom colour', () => {

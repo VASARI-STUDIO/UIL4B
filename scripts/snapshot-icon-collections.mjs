@@ -22,13 +22,15 @@
 // package's metadata.json holds the categories). A pack too large for the CDN
 // (fluent-emoji) cannot be rebuilt that way, so it has no snapshot and the page
 // asks Iconify for it live. Nothing is written unless every requested pack has an
-// answer. Rerun it, commit the diff.
+// answer. It also rewrites src/data/iconPackCounts.generated.js (the icon counts the
+// signed-out gate quotes). Rerun it, commit the diff.
 
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ICON_PACK_TIERS } from '../src/data/iconPackTiers.js'
 import { COLLECTION_SNAPSHOT_PATH, isCollectionAnswer } from '../src/utils/iconCollectionSnapshot.js'
+import { writeCounts } from './emit-icon-pack-counts.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = path.join(root, 'public', ...COLLECTION_SNAPSHOT_PATH.split('/').filter(Boolean))
@@ -157,3 +159,6 @@ for (const [pack, data] of results) {
   console.log(`${pack}: ${sources.get(pack)}`)
 }
 console.log(`wrote ${results.size} packs to ${path.relative(root, OUT_DIR)} (${(bytes / 1024).toFixed(0)} KB)`)
+// The gate quotes how many icons a free account opens; keep that count in step with the lists.
+await writeCounts()
+console.log('wrote src/data/iconPackCounts.generated.js')
