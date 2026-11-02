@@ -54,7 +54,9 @@ const KEEP = {
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
     'grd-stop-select', 'grd-tintmenu-item',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
-    'plb-match-btn'],
+    'plb-match-btn',
+    // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
+    'fpr-card-apply'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
@@ -67,7 +69,9 @@ const KEEP = {
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
     'grd-preset',
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
-    'cc-lg-chip'],
+    'cc-lg-chip',
+    // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
+    'pl-card'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood

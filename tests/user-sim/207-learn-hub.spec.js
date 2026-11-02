@@ -342,7 +342,7 @@ test.describe('keyboard', () => {
 })
 
 test.describe('Discover shares the hint component and keeps its own look', () => {
-  test('the Discover hint is still mono capitals', async ({ page }) => {
+  test('the Discover hint is in the body face, sentence case, at the 13px floor', async ({ page }) => {
     watch(page, 'visitor on Discover, which must not change')
     await go(page, '/discover')
     const hint = page.locator('.srf-hint')
@@ -352,10 +352,10 @@ test.describe('Discover shares the hint component and keeps its own look', () =>
       return { family: cs.fontFamily, transform: cs.textTransform, size: cs.fontSize, spacing: cs.letterSpacing, learn: !!el.closest('.srf--learn') }
     })
     expect(s.learn, 'this is the Learn page, not Discover').toBe(false)
-    expect(s.family).toMatch(/mono/i)
-    expect(s.transform).toBe('uppercase')
-    expect(s.size).toBe('11.5px')
-    expect(parseFloat(s.spacing), 'the tracking was removed from the Discover hint').toBeGreaterThan(0)
+    expect(s.family).not.toMatch(/mono/i)
+    expect(s.transform).toBe('none')
+    expect(parseFloat(s.size), 'the hint is at least the 13px caption floor').toBeGreaterThanOrEqual(13)
+    expect(['normal', '0px'], 'the hint is untracked').toContain(s.spacing)
     // Control: Learn's hint on the same component is not.
     await go(page, '/learn')
     const learn = await styleOf(page, '.srf-hint')

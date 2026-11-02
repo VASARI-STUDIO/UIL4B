@@ -464,15 +464,15 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         {editing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Title</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Title</label>
               <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', fontSize: 13 }} />
             </div>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Prompt Text</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Prompt text</label>
               <textarea value={text} onChange={e => setText(e.target.value)} style={{ width: '100%', minHeight: 100, resize: 'vertical', fontSize: 12 }} />
             </div>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
               <input value={tags} onChange={e => setTags(e.target.value)} style={{ width: '100%', fontSize: 12 }} placeholder="e.g. landing-page, hero, modern" />
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -2575,10 +2575,10 @@ export default function Admin({ toast }) {
                   className={`adm-time-btn${filterType === t ? ' active' : ''}`}
                   onClick={() => setFilterType(prev => (prev === t ? 'all' : t))}
                   title={filterType === t && t !== 'all' ? 'Click again to clear' : undefined}
-                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  style={{ textTransform: 'capitalize', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 >
                   <FilterGlyph id={t} />
-                  {t === 'all' ? 'All Types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
+                  {t === 'all' ? 'All types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
                 </button>
               ))}
               <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
@@ -2588,7 +2588,7 @@ export default function Admin({ toast }) {
                   className={`adm-time-btn${filterStatus === s ? ' active' : ''}`}
                   onClick={() => setFilterStatus(prev => (prev === s ? 'all' : s))}
                   title={filterStatus === s && s !== 'all' ? 'Click again to clear' : undefined}
-                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  style={{ textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 >
                   <FilterGlyph id={s} />
                   {s === 'all' ? 'All' : STATUS_LABELS[s]}{statusCounts[s] ? ` · ${statusCounts[s]}` : ''}
@@ -2657,7 +2657,7 @@ export default function Admin({ toast }) {
             <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length}{pendingPrompts.length >= ADMIN_PROMPT_LIMIT ? '+' : ''})</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {ADMIN_PROMPT_FILTERS.map(f => (
-                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => selectPromptFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => selectPromptFilter(f)} style={{ textTransform: 'capitalize' }}>
                   {f}
                 </button>
               ))}

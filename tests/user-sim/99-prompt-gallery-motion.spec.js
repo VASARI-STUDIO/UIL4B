@@ -1,20 +1,25 @@
-// The community prompt gallery: a 3 / 2 / 1 column grid of large cards whose
+// The community prompt gallery: a 3 / 2 / 1 column list of large cards whose
 // output plays as an animation while the card is on screen, a Save that
 // toggles, and a "See it running" view whose demo scrolls inside its own
 // frame while the dialog around it holds still.
+//
+// The page opens on an overview (a section per category) and the grid is the
+// list state, `#all` in the URL. Only an overview section's lead card and the
+// list's cards play their animation; the overview's compact "rest" cards and
+// the cover tiles stay still, so a section decodes one animation, not five.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 
-async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference', member = false } = {}) {
+async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference', hash = '', member = false } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion })
   await context.addInitScript(() => { try { localStorage.setItem('vs-prompt-tab', 'community') } catch { /* no storage */ } })
   const page = await context.newPage()
   watch(page, 'a visitor browsing community prompts')
   // Saving belongs to an account; signed out, Save opens the sign-in prompt.
   if (member) await signIn(page)
-  await go(page, '/discover/prompts')
+  await go(page, `/discover/prompts${hash}`)
   await expect(page.locator('.pl-card').first()).toBeVisible()
   return { context, page }
 }
@@ -27,7 +32,7 @@ const firstCardId = async (page) => {
 test.describe('the community prompt gallery', () => {
   for (const [width, cols] of [[1440, 3], [768, 2], [390, 1]]) {
     test(`${cols} column${cols > 1 ? 's' : ''} at ${width}px, 16:10 previews, nothing wider than the page`, async ({ browser }) => {
-      const { context, page } = await openLibrary(browser, { width })
+      const { context, page } = await openLibrary(browser, { width, hash: '#all' })
       const m = await page.evaluate(() => {
         const grid = document.querySelector('.pl-gallery')
         const cards = [...grid.querySelectorAll(':scope > .pl-card-cell')]
@@ -50,9 +55,10 @@ test.describe('the community prompt gallery', () => {
   }
 
   test('the animation plays only while its card is on screen, with no layout shift', async ({ browser }) => {
-    // A phone, where one column puts the last card below the fold.
-    const { context, page } = await openLibrary(browser, { width: 390, height: 844 })
-    const cell = page.locator('.pl-gallery > .pl-card-cell').last()
+    // A phone, where one column puts the last open card below the fold. The
+    // list ends in locked cards, which have no title of their own to match.
+    const { context, page } = await openLibrary(browser, { width: 390, height: 844, hash: '#all' })
+    const cell = page.locator('.pl-gallery > .pl-card-cell:not(.pl-card-cell--locked)').last()
     const title = (await cell.locator('.pl-card-title').innerText()).trim()
     const id = COMMUNITY_PROMPTS.find((p) => p.title === title)?.id
     test.skip(!PROMPT_ANIM_IDS.includes(id), 'no animation captured for this card in this build')
@@ -76,6 +82,35 @@ test.describe('the community prompt gallery', () => {
     await page.evaluate(() => window.scrollTo(0, 0))
     await expect(shot).toHaveAttribute('data-anim', 'off')
     await expect(anim).toHaveCount(0)
+    await context.close()
+  })
+
+  test('on the overview only a section lead plays; rest cards and cover tiles stay still', async ({ browser }) => {
+    test.skip(!PROMPT_ANIM_IDS.length, 'no animations captured in this build')
+    const { context, page } = await openLibrary(browser, { width: 1440, height: 900 })
+    await expect(page.locator('.pl-overview')).toBeVisible()
+
+    // Positive control: the lead at the top of the page does play.
+    const lead = page.locator('.pl-card-cell--lead .pl-card-shot').first()
+    await expect(lead, 'no lead card on the overview').toBeVisible()
+    await expect(lead).toHaveAttribute('data-anim', 'on')
+    await expect(lead.locator('img.pl-card-anim')).toHaveCount(1)
+
+    // Bring every rest card and every cover on screen, give the in-view
+    // observer two frames to report, then count what is playing.
+    const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    const stillOnes = page.locator('.pl-card-cell--rest, .pl-cover')
+    const n = await stillOnes.count()
+    expect(n, 'the overview has no rest cards or covers to check').toBeGreaterThan(0)
+    for (let i = 0; i < n; i++) {
+      await stillOnes.nth(i).scrollIntoViewIfNeeded()
+      await frames()
+    }
+    const rest = page.locator('.pl-card-cell--rest:not(.pl-card-cell--locked) .pl-card-shot')
+    expect(await rest.count(), 'no open rest card on the overview').toBeGreaterThan(0)
+    for (const shot of await rest.all()) await expect(shot).toHaveAttribute('data-anim', 'off')
+    expect(await page.locator('.pl-card-cell--rest img.pl-card-anim').count(), 'a rest card is playing').toBe(0)
+    expect(await page.locator('.pl-cover img.pl-card-anim').count(), 'a cover tile is playing').toBe(0)
     await context.close()
   })
 

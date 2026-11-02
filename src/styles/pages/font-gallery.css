@@ -17,7 +17,7 @@
 .fg-page{min-width:0;padding-bottom:var(--s-4)}
 :where(.fg-page) .fg-more-btn--primary{color:var(--accent-fg);background:var(--accent-fill);border-color:var(--accent-fill)}
 :where(.fg-page) .fg-more-btn--primary:hover:not(:disabled){background:var(--brand-soft);border-color:var(--brand-soft);color:var(--accent-fg)}
-:where(.fg-page) .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:12px;font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:max(var(--fs-caption),12px);font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-tray-actions{display:flex;gap:8px;flex-shrink:0}
 :where(.fg-page) .fg-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:max(40px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(40px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow-y:auto;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fg-fade var(--dur-2) var(--ease-entrance)}
 @media (max-width:560px){
@@ -37,7 +37,7 @@
 :where(.fg-page) .fg-more{display:flex;justify-content:center;margin-bottom:var(--s-5)}
 :where(.fg-page) .fg-compare-tray{position:sticky;bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
 :where(.fg-page) .fg-compare-tray-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-:where(.fg-page) .fg-compare-tray-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+:where(.fg-page) .fg-compare-tray-label{font-family:var(--font);font-size:max(var(--fs-caption),10px);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 :where(.fg-page) .fg-compare-chip:hover{border-color:var(--bh);color:var(--t0)}
 :where(.fg-page) .fg-compare-chip svg{opacity:.6}
 :where(.fg-page) .fg-compare{max-width:1100px;padding:28px}
@@ -47,7 +47,7 @@
 :where(.fg-page) .fg-compare-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 :where(.fg-page) .fg-compare-input{flex:1;min-width:200px;min-height:38px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
 :where(.fg-page) .fg-compare-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-:where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--t2);font-weight:600}
+:where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:max(var(--fs-caption),11px);color:var(--t2);font-weight:600;font-variant-numeric:tabular-nums}
 :where(.fg-page) .fg-compare-control input[type=range]{width:120px;accent-color:var(--accent)}
 :where(.fg-page) .fg-compare-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
 :where(.fg-page) .fg-compare-col{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
@@ -56,12 +56,12 @@
 :where(.fg-page) .fg-compare-col-name:hover{color:var(--accent-text)}
 :where(.fg-page) .fg-compare-col-remove{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-col-remove:hover{border-color:var(--err);color:var(--err-strong)}
-:where(.fg-page) .fg-compare-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize}
+:where(.fg-page) .fg-compare-meta{font-family:var(--font);font-size:max(var(--fs-caption),10px);color:var(--t2);text-transform:none}
 :where(.fg-page) .fg-compare-sample{min-height:96px;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw-h);line-height:1.25;letter-spacing:-.01em;word-break:break-word;overflow:hidden}
 :where(.fg-page) .fg-compare-charset{padding-top:8px;border-top:1px solid var(--border);color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw-b);font-size:15px;line-height:1.5}
-:where(.fg-page) .fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:11px;font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:max(var(--fs-caption),11px);font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-copy:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-:where(.fg-page) .fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:12.5px;color:var(--t1);line-height:1.5}
+:where(.fg-page) .fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:max(var(--fs-caption),12.5px);color:var(--t1);line-height:1.5}
 :where(.fg-page) .fg-loading-note-spinner{flex-shrink:0;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:fg-spin .7s linear infinite}
 @media (max-width:560px){
   :where(.fg-page) .fg-compare{padding:18px}
@@ -93,7 +93,7 @@
   min-height: 40px;
   padding: 8px 15px;
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size:max(var(--fs-caption),12.5px);
   font-weight: 560;
   color: var(--t0);
   background: transparent;
@@ -126,7 +126,7 @@
   box-shadow: 0 2px 4px -2px rgba(10, 10, 11, .08), 0 22px 44px -24px rgba(10, 10, 11, .32);
 }
 
-.fg-page .fg-compare-tray-label { font-weight: 500; letter-spacing: .14em; }
+.fg-page .fg-compare-tray-label { font-weight: 500; letter-spacing: normal; }
 
 .fg-page .fg-compare-chip {
   min-height: 34px;
@@ -163,8 +163,11 @@
 .fg-page .fg-detail-close:hover { color: var(--t0); background: var(--hvr); }
 
 .fg-page .fg-detail-label {
+  font-family: var(--font);
+  font-size: max(var(--fs-caption), 10px);
   font-weight: 500;
-  letter-spacing: .14em;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t2);
 }
 
@@ -258,7 +261,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   box-shadow: none;
 }
 .fg-page .fg-preview-field input:focus { outline: none; }
-.fg-page .fg-preview-k { flex: 0 0 auto; font-size: 12.5px; color: var(--tl-dim); }
+.fg-page .fg-preview-k { flex: 0 0 auto; font-size:max(var(--fs-caption),12.5px); color: var(--tl-dim); }
 .fg-page .fg-size {
   display: inline-flex;
   align-items: center;
@@ -268,9 +271,9 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   border: 1px solid var(--tl-line);
   border-radius: var(--radius-pill);
 }
-.fg-page .fg-size-k { font-size: 12.5px; color: var(--tl-dim); }
+.fg-page .fg-size-k { font-size:max(var(--fs-caption),12.5px); color: var(--tl-dim); }
 .fg-page .fg-size input[type="range"] { width: 96px; min-width: 0; margin: 0; accent-color: var(--t0); }
-.fg-page .fg-size-v { min-width: 44px; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-align: right; }
+.fg-page .fg-size-v { min-width: 44px; font-family: var(--mono); font-size: max(var(--fs-caption), 11px); color: var(--tl-ink); text-align: right; }
 .tl-sheet-layer .fg-size,
 .fg-page .tl-pop .fg-size,
 .tl-sheet-layer .fg-preview-field,
@@ -399,7 +402,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   border-radius: 0;
   cursor: pointer;
 }
-.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
 
 /* The name: top-left, in its own face, at band size. `--fg-fit` is the scale
    FontGallery's useFitName sets for a long name; it never goes below the floor,
@@ -443,9 +446,6 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   color: var(--fg-ink-2);
   font-variant-numeric: tabular-nums;
   transition: color var(--dur-1) var(--ease-standard);
-}
-@media (max-width: 767px) {
-  .fg-page .fg-card-meta { font-size: 12px; }
 }
 
 /* The wake's contents: always laid out, so only their opacity changes. */
@@ -509,25 +509,15 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   @container fg-reveal (height < 18px) { .fg-page .fg-card-pangram { display: none; } }
 }
 
-/* The wake: the ground flips to --t0 with --bg-0 ink. Hover waits 80ms, so a
-   pointer crossing the list does not strobe it; keyboard focus shows it at
-   once. Only colour and opacity change; no box moves. */
-.fg-page .fg-card:has(:focus-visible) {
-  --fg-ground: var(--t0);
-  --fg-ink: var(--bg-0);
-  --fg-ink-2: color-mix(in srgb, var(--bg-0) 78%, transparent);
-  --fg-back: var(--t0);
-}
+/* The reveal: the pangram and the weights fade in on the same transparent
+   band. Hover waits 80ms, so a pointer crossing the list does not strobe it;
+   keyboard focus shows it at once. Only opacity changes; no box moves and the
+   ground and ink stay as they are at rest. */
 .fg-page .fg-card:has(:focus-visible) .fg-card-reveal { opacity: 1; }
-.fg-page .fg-card:has(.fg-card-open:focus-visible) .fg-card-open:focus-visible { outline-color: var(--bg-0); }
 @media (hover: hover) {
-  .fg-page .fg-card:hover {
-    --fg-ground: var(--t0);
-    --fg-ink: var(--bg-0);
-    --fg-ink-2: color-mix(in srgb, var(--bg-0) 78%, transparent);
-    --fg-back: var(--t0);
-  }
   .fg-page .fg-card:hover .fg-card-reveal { opacity: 1; }
+  /* Tiles hide the reveal, so a hovered tile shows its name in the link colour. */
+  .fg-page .fg-grid--tiles .fg-card:hover .fg-card-name { color: var(--tl-link); }
   .fg-page .fg-card:hover,
   .fg-page .fg-card:hover :is(.fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare) { transition-delay: 80ms; }
 }
@@ -552,7 +542,6 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
 }
 .fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.fg-page .fg-card:has(:focus-visible) .fg-card-compare:focus-visible { outline-color: var(--bg-0); }
 @media (hover: hover) {
   .fg-page .fg-card-compare:hover { color: var(--fg-ink); border-color: color-mix(in srgb, var(--fg-ink) 60%, transparent); }
 }
@@ -673,7 +662,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 /* ── Grid view: 4, 3 and 2 columns of the same bands ─────────────────────────
    The name wraps in its cell (two lines at most) instead of shrinking, and
    keeps 60px clear on the right for the compare button. The wake's reveal has
-   no room here, so only the ground flips. The grid is one pixel wider than its
+   no room here, so a tile stays as it is at rest. The grid is one pixel wider than its
    parent so the last column's hairline falls outside the clip. */
 .fg-page .fg-results--tiles { overflow-x: clip; }
 .fg-page .fg-grid--tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: calc(100% + 1px); }

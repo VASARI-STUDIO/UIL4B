@@ -350,10 +350,16 @@ test('the prompt gate is handed the library, not the view of it the reader built
     'the splitter must be given the canonical prompt library')
   assert.ok(!/splitLockedLibrary\(sorted/.test(src),
     'the splitter is being given a sorted view — the Sort control can move the gate')
+  // The sort now runs inside the list memo, over the split's open rows only
+  // (`open = base.filter(openIds.has)`, then `[...open].sort(`). It must stay
+  // after the split, and it must sort the open rows, never the canonical list.
   const split = src.indexOf('splitLockedLibrary(')
-  const sort = src.indexOf('[...openCommunity]')
+  const sort = src.indexOf('[...open].sort(')
   assert.ok(split > -1 && sort > -1, 'the page no longer splits then sorts — re-read this test')
   assert.ok(split < sort, 'the sort runs before the gate — the reader owns the boundary again')
+  assert.ok(/let open = base\.filter\(\(p\) => openIds\.has\(p\.id\)\)/.test(src),
+    'the list must take its open rows from the split (openIds), not from the unfiltered category')
+  assert.ok(!/\[\.\.\.communityRows\]\.sort\(/.test(src), 'the canonical library is being sorted in place of the open rows')
 })
 
 test('the gradient gallery filters and searches the split output, closing its hex oracle', () => {
@@ -370,11 +376,29 @@ test('no wall writes a tier number as a literal', () => {
   // the moment a row is added, and the cap makes these numbers move more often
   // than the library does.
   for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
     assert.ok(/Another \$\{accountAdds\}/.test(src), `${name}'s account wall must interpolate its own count`)
     assert.ok(/Another \$\{locked/.test(src), `${name}'s Pro wall must interpolate the remaining count`)
     assert.ok(/accountTierGain\(\{/.test(src), `${name} must compute the account gain rather than assume it`)
   }
+  // The prompt library's walls are the overview's closing section and the
+  // list's offer under the grid. Each states a count, and each count is
+  // interpolated from the data the page holds.
+  const overview = stripComments(read('src/components/prompt/PromptOverview.jsx'))
+  for (const [what, pattern] of [
+    ['the signed-out count', /Signed out, you can open \$\{openCount\} of the \$\{total\} community prompts/],
+    ['the free-account count', /A free account opens \$\{freeSet\.size\}\. Pro opens all \$\{total\}/],
+    ['the free-tier count', /Free covers \$\{openCount\} of the \$\{total\} community prompts/],
+    ['the Pro remainder', /Pro opens the other \$\{total - openCount\}/],
+  ]) {
+    assert.ok(pattern.test(overview), `the overview's closing wall must interpolate ${what}`)
+  }
+  const list = stripComments(read(PAGES.prompts))
+  assert.ok(/\$\{plural\(viaAccount\)\} open with a free account/.test(list), 'the list wall must interpolate the account count')
+  assert.ok(/\$\{plural\(total\)\} open with Pro/.test(list), 'the list wall must interpolate the Pro count')
+  assert.ok(/A free account opens \$\{freeIds\.size\} of the \$\{communityRows\.length\}/.test(list), 'the list wall must state the free tier from the data')
+  assert.ok(!/\b\d+ (more )?(community )?prompts? (open|with)/.test(overview + list), 'a prompt wall writes its count as a literal')
 })
 
 test('the signed-out wall offers the free account, and the paid wall offers Pro', () => {
@@ -397,8 +421,8 @@ test('the Community tab counts what it will show, and only when nothing is withh
   // disagrees with the page. Its sibling tab counts the prompts you have. While
   // anything is locked neither number is right, so the badge stands down.
   const src = stripComments(read(PAGES.prompts))
-  assert.ok(/lockedCount === 0 && <span className="pl-tab-count">\{browsableCommunity\.length\}/.test(src),
-    'the Community tab count must be the browsable set, and only drawn when no row is locked')
+  assert.ok(/lockedCount === 0 && <span className="pl-tab-count">\{openCommunity\.length\}/.test(src),
+    'the Community tab count must be the open set, and only drawn when no row is locked')
 })
 
 test('freeOpens is the free cap, or fewer when the library holds fewer open rows', () => {
@@ -436,7 +460,17 @@ test('the real libraries agree with LIBRARY_TOTALS, so the sentence is true for 
 })
 
 test('the pages build the closing lines and the walls from the helper, with no second set of numbers', () => {
+  // The prompt library is split across the page, the overview and the list's
+  // offer, and states its tier counts from the gate itself (galleryLimit and the
+  // split's open rows). It is held to the same two rules below: no tier number
+  // typed in, and a free-account action for a signed-out visitor.
+  for (const file of [PAGES.prompts, 'src/components/prompt/PromptOverview.jsx']) {
+    const src = stripComments(read(file))
+    assert.ok(src.includes('Create your free account'), `${file} has no free-account action for a signed-out visitor`)
+    assert.ok(!/\b(of the|opens|shown) (3|10|20|100|101)\b/.test(src), `${file} writes a tier number as a literal`)
+  }
   for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
     assert.ok(/tierSentence\(\{/.test(src), `${name} does not use the shared tier sentence`)
     assert.ok(!/A free account opens \$\{(browsable|openCommunity)/.test(src), `${name} still writes its own free-account arithmetic`)
@@ -463,7 +497,22 @@ test('no placeholder is stamped with a price the row does not carry', () => {
   // anonymous rung the next rows are NOT Pro's — they come with a free account
   // — so those cards may not be rendered there. If that component ever takes a
   // tier-aware label, this test is the thing to come back and relax.
+  //
+  // It was relaxed for prompts, on exactly that condition: PromptLockedCard takes
+  // a `kind` and prints "Opens with a free account" or "Opens with Pro" itself,
+  // and both pages choose 'account' only for a signed-out viewer on a row a free
+  // account opens.
+  const locked = stripComments(read('src/components/prompt/PromptLockedCard.jsx'))
+  assert.ok(locked.includes('Opens with a free account') && locked.includes('Opens with Pro'),
+    'PromptLockedCard must name what each locked card opens with')
+  assert.ok(/kind === 'account'/.test(locked), 'PromptLockedCard must branch on kind')
+  for (const file of [PAGES.prompts, 'src/components/prompt/PromptOverview.jsx']) {
+    const src = stripComments(read(file))
+    assert.ok(/tier === 'anonymous' && (freeIds|freeSet)\.has\(p\.id\)\s*\?\s*'account'\s*:\s*'pro'/.test(src),
+      `${file} must label a locked card 'account' only for a signed-out viewer on a row a free account opens`)
+  }
   for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
     const anon = src.indexOf("=== 'anonymous'")
     const card = src.search(/Locked(Palette|Prompt)Card key=/)

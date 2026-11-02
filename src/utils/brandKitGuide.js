@@ -91,6 +91,15 @@ import { activeColour, deriveTints, hasTints, tintsStale } from './projectTints.
 
 /** Live under localStorage, not sessionStorage — see the resumability note. */
 export const GUIDE_KEY = 'vs-uikit-guide'
+/**
+ * When the flow was last visited by one of its own tools. The flag above reads
+ * as off once this is older than GUIDE_IDLE_MS, so a walkthrough that was left
+ * behind does not put its bar on a tool someone opens days later. A flag with no
+ * stamp (written before the stamp existed) still reads as on.
+ */
+export const GUIDE_AT_KEY = 'vs-uikit-guide-at'
+/** How long the flow stays part-way with none of its tools visited. */
+export const GUIDE_IDLE_MS = 3 * 24 * 60 * 60 * 1000
 /** Whether the orientation card has been shown once already. */
 export const GUIDE_SEEN_KEY = 'vs-uikit-guide-seen'
 /** Fired on window when a fresh start turns the flow on. See startGuide. */
@@ -311,10 +320,18 @@ function drop(key, storage) {
    active, so a flag written before the list existed keeps working. */
 const FLAG_ON = '1'
 
-function readFlag(storage) {
+/* Left too long: the stamp is older than the idle window. No stamp, or one that
+   cannot be read, is not stale: the flag then behaves as it always did. */
+function flagIsStale(storage, now) {
+  const at = Number(read(GUIDE_AT_KEY, storage))
+  return Number.isFinite(at) && at > 0 && now - at > GUIDE_IDLE_MS
+}
+
+function readFlag(storage, now = Date.now()) {
   const raw = read(GUIDE_KEY, storage)
+  if (typeof raw !== 'string' || flagIsStale(storage, now)) return { active: false, accepted: [] }
   if (raw === FLAG_ON) return { active: true, accepted: [] }
-  if (typeof raw === 'string' && raw.startsWith(`${FLAG_ON}:`)) {
+  if (raw.startsWith(`${FLAG_ON}:`)) {
     const ids = raw.slice(FLAG_ON.length + 1).split(',')
     return { active: true, accepted: BRAND_KIT_STEPS.map((s) => s.id).filter((id) => ids.includes(id)) }
   }
@@ -323,10 +340,19 @@ function readFlag(storage) {
 
 function writeFlag(accepted, storage) {
   write(GUIDE_KEY, accepted.length ? `${FLAG_ON}:${accepted.join(',')}` : FLAG_ON, storage)
+  write(GUIDE_AT_KEY, String(Date.now()), storage)
+}
+
+/**
+ * A tool of the flow is on screen, so the flow is still being walked: restart
+ * the idle clock. Does nothing when the flow is not running.
+ */
+export function touchGuide(storage) {
+  if (readFlag(storage).active) write(GUIDE_AT_KEY, String(Date.now()), storage)
 }
 
 /** Is the visitor part-way through the walkthrough? */
-export const isGuideActive = (storage) => readFlag(storage).active
+export const isGuideActive = (storage, now) => readFlag(storage, now).active
 /**
  * Enter the flow. The nav's brand-kit action calls this on a fresh start and on
  * a resume, so a running flow keeps the steps already moved past.
@@ -342,7 +368,10 @@ export function startGuide(storage) {
   }
 }
 /** Leave it. The card stays "seen" so re-entering does not re-teach. */
-export const endGuide = (storage) => drop(GUIDE_KEY, storage)
+export function endGuide(storage) {
+  drop(GUIDE_KEY, storage)
+  drop(GUIDE_AT_KEY, storage)
+}
 
 /** The ids of the steps the person has pressed Next on, in flow order. */
 export const acceptedSteps = (storage) => readFlag(storage).accepted

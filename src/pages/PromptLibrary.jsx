@@ -1,27 +1,29 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
+import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPT_ROWS } from '../data/communityPrompts'
 import { LIBRARY_RULES, isStub } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { TAG_CATEGORIES } from '../data/promptCategories'
-import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, parseTags, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
+import { getLenis } from '../hooks/useSmoothScroll'
+import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
 import { onAccountApplied } from '../utils/accountEvents'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
-import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
+import { splitLockedLibrary, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
-import LibraryToolbar from '../components/library/LibraryToolbar'
-import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import PromptCard from '../components/prompt/PromptCard'
+import PromptLockedCard from '../components/prompt/PromptLockedCard'
+import PromptOverview from '../components/prompt/PromptOverview'
+import PromptFilters from '../components/prompt/PromptFilters'
+import { categoryBySlug, categoryMembers, countLine } from '../components/prompt/promptGallery'
 import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
 import SubmitPromptPanel from '../components/prompt/SubmitPromptPanel'
-import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -34,22 +36,36 @@ import '../styles/pages/prompt-library.css'
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'prompt'
 
-// Filter options for the shared LibraryFilterGroup trays. Module scope: they
-// derive from static data, and rebuilding them per render would hand the group
-// a new array identity every keystroke and re-measure the sliding indicator —
-// the same reason the Gradient Library hoists its own (GradientGallery.jsx).
-const SORT_OPTIONS = [
-  { id: 'popular', label: 'Popular' },
-  { id: 'new', label: 'Newest' },
-]
+// The list state lives in the URL hash: `#website` is that category's list and
+// `#all` is every prompt. No hash is the overview. The router's hash landing
+// looks for an element with this id and finds none, so it does not scroll.
+const ALL_SLUG = 'all'
 
-// `activeCategory` is null for "no filter" but a filter tray needs a real id
-// for its reset option, so 'all' is the wire value and null is the state. The
-// two are mapped at the boundary rather than changing the filter predicate.
-const CATEGORY_OPTIONS = [
-  { id: 'all', label: 'All' },
-  ...TAG_CATEGORIES.map(cat => ({ id: cat.label, label: cat.label })),
-]
+// Move the page to an element the way the rest of the app does: through Lenis
+// when it owns the scroll, otherwise natively with `behavior: 'auto'`, which
+// follows the stylesheet (smooth, or instant under reduced motion).
+function scrollToElement(el, block = 'start') {
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0
+  const top = block === 'center'
+    ? window.scrollY + rect.top - (window.innerHeight - rect.height) / 2
+    : window.scrollY + rect.top - margin
+  const y = Math.max(0, Math.round(top))
+  const lenis = getLenis()
+  if (lenis) {
+    // Lenis clamps to the page height it last measured, and it re-measures on a
+    // delay. Right after the list swaps for the overview that height is still
+    // the list's, so a section lower down would stop short. Measure now.
+    lenis.resize()
+    lenis.scrollTo(y)
+  }
+  else window.scrollTo({ top: y, behavior: 'auto' })
+}
+
+// A section has two View more buttons and only one is displayed at a given
+// width, so focus goes to the one that is.
+const firstVisible = (nodes) => [...nodes].find((el) => el.offsetParent !== null) || null
 
 export default function PromptLibrary({ onCopy, toast }) {
   const { t } = useI18n()
@@ -57,7 +73,6 @@ export default function PromptLibrary({ onCopy, toast }) {
   const { requireLogin } = useLoginPrompt()
   // Stable primitive so the gate effect doesn't re-run on every AuthContext render.
   const uid = user?.uid || null
-  const { isPro } = useSubscription()
   // A Pro account's full community set comes from the server
   // (src/utils/proLibrary.js); the bundle holds the free prompts and tag-only
   // stubs. Until it arrives a Pro viewer sees the free prompts and a status
@@ -71,20 +86,43 @@ export default function PromptLibrary({ onCopy, toast }) {
   const [prompts, setPrompts] = useState(getPrompts)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState(null)
   const [savedIds, setSavedIds] = useState(getSavedIds)
   const [communitySort, setCommunitySort] = useState('popular') // 'popular' | 'new'
-  const [tab, setTab] = useState(() => {
+  const [access, setAccess] = useState('all') // 'all' | 'free' | 'pro'
+  // The list state is the URL hash, so the browser's Back button is "back to the
+  // overview" and a list can be linked to. Entering a list from the overview is
+  // a push; switching chips inside it replaces, so Back is one step either way.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const hashSlug = (() => {
+    try { return decodeURIComponent(location.hash.slice(1)) } catch { return location.hash.slice(1) }
+  })()
+  const listCat = hashSlug === ALL_SLUG ? null : categoryBySlug(hashSlug)
+  const hashIsList = hashSlug === ALL_SLUG || listCat !== null
+
+  const [savedTab, setTab] = useState(() => {
+    if (hashIsList) return 'community'
     try { return localStorage.getItem('vs-prompt-tab') === 'my' ? 'my' : 'community' }
     catch { return 'community' }
   })
 
-  useEffect(() => {
-    try { localStorage.setItem('vs-prompt-tab', tab) } catch { /* ignore */ }
-  }, [tab])
+  // A list is a Community view, so arriving at one (a link, the browser's Back)
+  // puts the page on Community. That happens once per list, when the address
+  // CHANGES to it. Forcing it on every render would undo "My Prompts" clicked
+  // from inside a list: the tab is set before the router has dropped the hash.
+  // The stored choice is written only by `switchTab`, so a shared link never
+  // overwrites it.
+  const listKey = hashIsList ? hashSlug : null
+  const [seenList, setSeenList] = useState(listKey)
+  if (listKey !== seenList) {
+    setSeenList(listKey)
+    if (listKey && savedTab !== 'community') setTab('community')
+  }
+  const tab = hashIsList ? 'community' : savedTab
 
+  // ── The overview and the list ─────────────────────────────────────────────
   // Persist a freshly-created personal prompt (built by AddPromptPanel).
   const addPrompt = useCallback((prompt) => {
     const updated = [prompt, ...getPrompts()]
@@ -158,13 +196,16 @@ export default function PromptLibrary({ onCopy, toast }) {
     onCopy(txt)
   }, [onCopy])
 
-  const switchTab = (next) => { setTab(next); setActiveCategory(null); setSearch('') }
-
-  // The one way out of a filtered-to-nothing grid. Named rather than inlined
-  // because the empty state and any future toolbar reset must clear the SAME
-  // pair of controls — a reset that clears the search but leaves the category
-  // set is the half-escape that sends a user back round the loop.
-  const clearFilters = useCallback(() => { setSearch(''); setActiveCategory(null) }, [])
+  // A tab switch leaves any list behind: the hash is dropped (replace, so Back
+  // does not return to a list of the other tab) and the filters reset.
+  const switchTab = (next) => {
+    setTab(next)
+    try { localStorage.setItem('vs-prompt-tab', next) } catch { /* ignore */ }
+    setSearch('')
+    setAccess('all')
+    setCommunitySort('popular')
+    if (hashIsList) navigate({ hash: '' }, { replace: true })
+  }
 
   // Community submission gate. The panel is only ever mounted for a signed-in
   // user, so a signed-out visitor is asked to sign in first instead of typing a
@@ -274,7 +315,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   // OPEN set is sorted afterwards. Which prompts are free is now a property of
   // the library; the order they are shown in is the reader's choice, and the
   // two can no longer reach each other.
-  const { open: openCommunity, locked: lockedPrompts, remaining: lockedCount, eligible } = useMemo(() => (
+  const { open: openCommunity, remaining: lockedCount } = useMemo(() => (
     splitLockedLibrary(communityRows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.prompts.isOpen,
@@ -295,36 +336,163 @@ export default function PromptLibrary({ onCopy, toast }) {
     })
   ), [communityRows, ready, tier])
 
-  // Display order, chosen by the reader, applied to what the gate already
-  // opened. Nothing here can move a prompt across the gate.
-  const browsableCommunity = useMemo(() => {
-    const list = [...openCommunity]
-    if (communitySort === 'new') return list.reverse()
-    return list.sort((a, b) => (b.saves || 0) - (a.saves || 0))
-  }, [openCommunity, communitySort])
+  const openIds = useMemo(() => new Set(openCommunity.map((p) => p.id)), [openCommunity])
 
-  const accountAdds = accountTierGain({ tier, eligible, shown: openCommunity.length })
+  // "Free" in the Access control means what a free account opens: the first
+  // `free` rung's worth of the rows the flag allows, in canonical order. Taken
+  // from the library, not from a view of it, so no control can change it.
+  const freeIds = useMemo(() => {
+    const flagged = communityRows.filter((p) => LIBRARY_RULES.prompts.isOpen(p) === true)
+    return new Set(flagged.slice(0, galleryLimit('free')).map((p) => p.id))
+  }, [communityRows])
+  const byAccess = useCallback((items) => (
+    access === 'free' ? items.filter((p) => freeIds.has(p.id))
+      : access === 'pro' ? items.filter((p) => !freeIds.has(p.id))
+        : items
+  ), [access, freeIds])
 
-  const sourceList = isCommunity ? browsableCommunity : prompts
+  // ── Which state the page is in ────────────────────────────────────────────
+  // The list is the hash on the Community tab; My Prompts has no overview.
+  const inList = isCommunity && hashIsList
+  const cat = inList ? listCat : null
+  const q = search.trim().toLowerCase()
 
-  const q = search.toLowerCase()
-  const activeTags = activeCategory ? TAG_CATEGORIES.find(c => c.label === activeCategory)?.tags || [] : []
+  // Each chip says how many prompts it returns under the current Access.
+  const chips = useMemo(() => ({
+    all: byAccess(communityRows).length,
+    categories: TAG_CATEGORIES.map((c) => ({ slug: c.slug, label: c.label, count: byAccess(categoryMembers(c, communityRows)).length })),
+  }), [byAccess, communityRows])
 
-  // Only while browsing the whole community library, and only when something
-  // is actually locked. `lockedCount` is 0 for a Pro viewer, so the block
-  // disappears for them without a second condition.
-  const lockedBlockVisible = isCommunity && !proPending && lockedCount > 0 && !q.trim() && !activeCategory
-  // Where the viewer stands on the ladder, in words, for the wall and the close.
-  const ladderLine = tierSentence({ tier, shown: openCommunity.length, total: communityRows.length, eligible, noun: 'community prompts' })
-
-  const filtered = sourceList.filter(p => {
-    if (activeCategory) {
-      const pTags = parseTags(p.tags)
-      if (!pTags.some(tag => activeTags.includes(tag))) return false
+  // The list: this category's primary prompts and tag matches, narrowed by Access,
+  // then split by the gate. Open ones are searched and sorted; locked ones are
+  // drawn from their tags alone and never read by the search.
+  const listItems = useMemo(() => {
+    if (!inList) return { open: [], locked: [] }
+    const base = byAccess(cat ? categoryMembers(cat, communityRows) : communityRows)
+    let open = base.filter((p) => openIds.has(p.id))
+    const locked = base.filter((p) => !openIds.has(p.id))
+    if (q) {
+      open = open.filter((p) => (p.text || '').toLowerCase().includes(q) || (p.tags || '').toLowerCase().includes(q) || (p.title || '').toLowerCase().includes(q))
     }
-    if (!q) return true
-    return p.text.toLowerCase().includes(q) || (p.tags || '').toLowerCase().includes(q) || (p.title || '').toLowerCase().includes(q)
-  })
+    open = communitySort === 'new' ? [...open].reverse() : [...open].sort((a, b) => (b.saves || 0) - (a.saves || 0))
+    return { open, locked: q || proPending ? [] : locked }
+  }, [inList, byAccess, cat, communityRows, openIds, q, communitySort, proPending])
+
+  const filtered = useMemo(() => {
+    if (isCommunity) return listItems.open
+    return prompts.filter((p) => !q || (p.text || '').toLowerCase().includes(q) || (p.tags || '').toLowerCase().includes(q) || (p.title || '').toLowerCase().includes(q))
+  }, [isCommunity, listItems, prompts, q])
+  const listCount = listItems.open.length + listItems.locked.length
+
+  // ── Moving between the overview and the list ─────────────────────────────
+  // `entry` remembers how the list was reached, so "Back to overview" can step
+  // back through history when the overview is what is behind it, and replace
+  // when the visitor landed on a linked list.
+  const entry = useRef({ fromOverview: false, focusResults: false })
+
+  const openList = useCallback((slug, { focusResults = true } = {}) => {
+    entry.current = { fromOverview: true, focusResults }
+    navigate({ hash: `#${slug}` })
+  }, [navigate])
+  const chooseCategory = useCallback((slug) => {
+    navigate({ hash: `#${slug || ALL_SLUG}` }, { replace: true })
+  }, [navigate])
+  const backToOverview = useCallback(() => {
+    if (entry.current.fromOverview) navigate(-1)
+    else navigate({ hash: '' }, { replace: true })
+  }, [navigate])
+
+  // Typing a search enters the list, as View more does. Only the first
+  // keystroke navigates; after that the list is already the state.
+  const onSearch = useCallback((value) => {
+    setSearch(value)
+    if (isCommunity && !hashIsList && value.trim()) openList(ALL_SLUG, { focusResults: false })
+  }, [isCommunity, hashIsList, openList])
+
+  // One reset for every way out of a list, including the browser's Back
+  // button: the filters belong to the list, so the overview starts clean.
+  const [wasList, setWasList] = useState(inList)
+  if (wasList !== inList) {
+    setWasList(inList)
+    if (!inList) { setSearch(''); setAccess('all'); setCommunitySort('popular') }
+  }
+
+  // The one way out of a filtered-to-nothing list. The empty state and the
+  // toolbar must clear the SAME controls: a reset that clears the search but
+  // leaves Access narrowed is the half-escape that sends a user round the loop.
+  const clearFilters = useCallback(() => {
+    setSearch('')
+    setAccess('all')
+    if (isCommunity && hashIsList) navigate({ hash: `#${ALL_SLUG}` }, { replace: true })
+  }, [isCommunity, hashIsList, navigate])
+
+  // Land the visitor where they were going. Entering a list from a button
+  // puts the controls at the top and the heading under the screen reader's
+  // cursor; leaving it puts focus on the View more of the section of the last
+  // list shown (or on Browse all after the all-prompts list), scrolled into
+  // view, so Back never means "top of the page".
+  const resultsHeadRef = useRef(null)
+  const listSlugRef = useRef(null)
+  const wasListRef = useRef(false)
+  useEffect(() => {
+    const was = wasListRef.current
+    wasListRef.current = inList
+    if (inList) listSlugRef.current = listCat ? listCat.slug : ALL_SLUG
+    if (!was && inList) {
+      const { focusResults } = entry.current
+      entry.current = { ...entry.current, focusResults: false }
+      if (focusResults) {
+        scrollToElement(document.getElementById('pl-toolbar'))
+        resultsHeadRef.current?.focus({ preventScroll: true })
+      }
+    } else if (was && !inList) {
+      entry.current = { fromOverview: false, focusResults: false }
+      if (!isCommunity) return
+      const slug = listSlugRef.current
+      const section = slug && slug !== ALL_SLUG ? document.getElementById(`pl-shelf-${slug}`) : null
+      const target = (section && firstVisible(section.querySelectorAll('.pl-viewmore')))
+        || document.getElementById('pl-browse-all')
+      if (target) {
+        target.focus({ preventScroll: true })
+        // The section's top, unless the button then sits below the screen (a
+        // phone's View more is under the whole shelf, and the first shelf is
+        // taller than the screen): then the button is what is centred.
+        let toSection = !!section
+        if (section) {
+          const margin = parseFloat(getComputedStyle(section).scrollMarginTop) || 0
+          const reach = target.getBoundingClientRect().bottom - (section.getBoundingClientRect().top - margin)
+          toSection = reach <= window.innerHeight - 16
+        }
+        scrollToElement(toSection ? section : target, toSection ? 'start' : 'center')
+      }
+    }
+  }, [inList, listCat, isCommunity])
+
+  const filtersProp = inList ? {
+    categories: chips.categories,
+    allCount: chips.all,
+    activeSlug: cat ? cat.slug : null,
+    onCategory: chooseCategory,
+    sort: communitySort,
+    onSort: setCommunitySort,
+    access,
+    onAccess: setAccess,
+    resultCount: listCount,
+    activeCount: (communitySort !== 'popular' ? 1 : 0) + (access !== 'all' ? 1 : 0),
+  } : null
+
+  // The list's heading and the count line under it.
+  const catLabel = cat ? cat.label : null
+  const listTitle = q
+    ? `Results for “${search.trim()}”${catLabel ? ` in ${catLabel}` : ''}`
+    : (catLabel || 'All prompts')
+  const listCountLine = q
+    ? `${filtered.length} ${filtered.length === 1 ? 'prompt matches' : 'prompts match'}`
+    : countLine([...listItems.open, ...listItems.locked], (p) => openIds.has(p.id), tier !== 'pro')
+  const signupFree = useCallback(() => {
+    requireLogin('browse more of the community prompts', { free: true, signup: true })
+  }, [requireLogin])
+  const lockedKind = (p) => (tier === 'anonymous' && freeIds.has(p.id) ? 'account' : 'pro')
 
   return (
     <div className="sec lib-surface plib-page">
@@ -387,54 +555,24 @@ export default function PromptLibrary({ onCopy, toast }) {
               withheld, neither number is the right one, so the badge stands
               down: how many are withheld is the wall's job, and the wall
               states it exactly. */}
-          {lockedCount === 0 && <span className="pl-tab-count">{browsableCommunity.length}</span>}
+          {lockedCount === 0 && <span className="pl-tab-count">{openCommunity.length}</span>}
         </button>
       </div>
 
-      {/* Toolbar — the shared Library control block, as used by the Palette,
-          Gradient, Icon, Emoji and Font surfaces, so the tablet band (the tray
-          collapses to a menu between 641 and 980px) applies here too.
-
-          Sort is a filter group rather than its own control, as in the Font
-          Gallery: it asks "which subset, in which order?" in the one idiom.
-
-          The primary action lives in the HERO, not here, as on the sibling
+      {/* Search always; the filters only in the list state. Not sticky, and the
+          primary action lives in the HERO, not here, as on the sibling
           galleries: under the masthead it would leave the viewport at
-          320x800 (guarded by 21-reflow-320). */}
-      <LibraryToolbar
-        className="pl-lbry-toolbar"
-        quick={1}
-        activeFilters={isCommunity ? (communitySort !== 'popular' ? 1 : 0) + (activeCategory ? 1 : 0) : 0}
+          320x800 (guarded by 21-reflow-320). The label stays "Search
+          community prompts" for assistive tech; the placeholder is short so
+          it fits a phone. */}
+      <PromptFilters
         search={{
           value: search,
-          onChange: setSearch,
-          placeholder: isCommunity ? 'Search community prompts…' : t('promptLibrary.searchPlaceholder'),
+          onChange: onSearch,
           label: isCommunity ? 'Search community prompts' : 'Search your prompts',
         }}
-      >
-        {/* An ARRAY, not a fragment: LibraryToolbar reads its groups with
-            Children.toArray, which flattens arrays and does not flatten
-            fragments, and it needs to see two groups to keep the category
-            chips on a phone's quick row and put the sort in the sheet. */}
-        {isCommunity && [
-            <LibraryFilterGroup
-              key="sort"
-              label="Sort community prompts"
-              triggerLabel="Sort"
-              value={communitySort}
-              onChange={setCommunitySort}
-              options={SORT_OPTIONS}
-            />,
-            <LibraryFilterGroup
-              key="category"
-              label="Filter prompts by category"
-              triggerLabel="Category"
-              value={activeCategory || 'all'}
-              onChange={(id) => setActiveCategory(id === 'all' ? null : id)}
-              options={CATEGORY_OPTIONS}
-            />,
-        ]}
-      </LibraryToolbar>
+        filters={filtersProp}
+      />
 
       {/* Add prompt panel (slide-down) — only for My Prompts */}
       {!isCommunity && (
@@ -448,151 +586,149 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       )}
 
-      {/* The results region: a labelled <section> and an aria-live count, as
-          the sibling libraries have through DiscoverResultHead. That component
-          draws a visible eyebrow and heading; this page names the region with
-          an sr-only h2 instead (the same pattern the locked grid below uses),
-          so nothing moves on screen. The name is the current tab's label. */}
-      <section aria-labelledby="pl-results-heading">
-        <h2 className="sr-only" id="pl-results-heading">
-          {isCommunity ? 'Community' : 'My Prompts'}
-        </h2>
-        <p className="sr-only" aria-live="polite">
-          {filtered.length} {filtered.length === 1 ? 'prompt' : 'prompts'}
-        </p>
-      {filtered.length > 0 ? (
-        <div className="pl-gallery">
-          {filtered.map((p) => (
-            <PromptCard
-              key={p.id}
-              p={p}
-              onOpen={setModalPrompt}
-              isCommunity={isCommunity}
-              isSaved={savedIds.has(p.id)}
-              onToggleSave={isCommunity ? toggleCommunitySave : undefined}
-            />
-          ))}
-        </div>
-      ) : (
-        isCommunity ? (
-          /* LibraryEmpty announces empty results and lets visitors clear filters.
-             While a Pro library is on its way the status block below speaks
-             instead: the full set may well match. */
-          proPending ? null : (
-            <LibraryEmpty
-              className="pl-empty"
-              title="No prompts match your search"
-              onClear={clearFilters}
-            />
-          )
-        ) : (
-          <div className="pl-empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-            </svg>
-            <p>{t('promptLibrary.noPrompts')}</p>
-            <button className="btn btn-accent" onClick={() => setAddOpen(true)}>{t('promptLibrary.addPrompt')}</button>
-          </div>
-        )
-      )}
-      </section>
-
-      {/* The teased tail of the community library: three placeholders, then one
-          wall. Shown only while BROWSING — under a search or a category filter
-          the user has asked a narrower question, and answering it with a
-          paywall is an interruption rather than an offer (same rule as the
-          Palette Library).
-
-          It is also why the empty state stays "No prompts match your search"
-          and does not say how many locked prompts DID match. That sentence
-          would be the search oracle rebuilt in words: it answers "does a Pro
-          prompt contain my phrase" for anyone willing to type. */}
-      {lockedBlockVisible && (
-        tier === 'anonymous' ? (
-          /* The anonymous rung gets the wall and no placeholders.
-             LockedPromptCard stamps each one "Pro", and for a signed-out
-             visitor that is the wrong price: the next seven arrive with a free
-             account. The pill lives in components/library/LockedTease.jsx,
-             which this stream does not own, so the rows are left out rather
-             than mislabelled — see the note in PaletteGallery.jsx. The action
-             is the app's own sign-in gate with `free: true`, the same one the
-             Submit button above uses, so this is a rung and not a second gate. */
-          <div className="lockt-cta">
-            <div className="lockt-cta-copy">
-              <p className="lockt-cta-head">{`Another ${accountAdds} community ${accountAdds === 1 ? 'prompt' : 'prompts'} with a free account`}</p>
-              <p className="lockt-cta-body">{ladderLine}</p>
-            </div>
-            <button
-              type="button"
-              className="btn btn-accent lockt-cta-btn"
-              onClick={() => requireLogin('browse more of the community prompts', { free: true, signup: true })}
-            >
-              Create your free account
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* The locked grid names itself. A screen-reader user meets three more
-                cards after the free ones and needs to know why they differ. The
-                placeholder SHAPES are hidden inside the card; nothing announced
-                here is invented, because the card holds nothing to invent. */}
-            {/* h2, not h3: this labels a top-level region of the page, and the
-                only other landmark heading here (the closing CTA) is an h2. As an
-                h3 it made the page read h1 -> h3 -> h2 to anyone navigating by
-                heading level. */}
-            <h2 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h2>
-            <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
-              {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} gate="prompt-library-locked-card" />)}
-            </div>
-            <LockedTeaseCta
-              gate="prompt-library-community-lock"
-              heading={`Another ${lockedCount} community ${lockedCount === 1 ? 'prompt' : 'prompts'} with Pro`}
-              body="Each one opens as the complete brief its author wrote — the full prompt text to copy, not a preview of it."
-              action="See what Pro includes"
-            />
-          </>
-        )
-      )}
-
-      {isCommunity && proPending && <ProLibraryStatus library={pro} noun="community prompt library" />}
-
-      {/* The closing line, below the last card and below the Pro tease. The
-          prompt submission entry is ON this page rather than behind a route, so
-          the CTA calls it directly — which means a signed-out visitor meets
-          exactly the requireLogin gate the masthead's Submit button uses, with
-          the same COMMUNITY_SUBMIT_REASONS, because it IS that code path and
-          not a second copy of it. */}
-      {/* "create and submit your
-          own" is for Pro viewers only; everyone else is offered more access
-          instead, except where the locked tease above already is that offer. */}
-      {isPro === true ? (
-        <GalleryCloseCta
-          className="pl-cta"
-          detail="Write one and submit it to the community library — every submission is reviewed before it appears."
-          action="Create and submit your own"
-          onAction={openSubmitFromClose}
-          busy={authLoading}
+      {/* The overview is the Community tab's default: one section per category.
+          Everything else (a category, Browse all, a search, My Prompts) is the
+          list below. */}
+      {isCommunity && !inList ? (
+        <PromptOverview
+          rows={communityRows}
+          openRows={openCommunity}
+          tier={tier}
+          proPending={proPending}
+          loadingStatus={<ProLibraryStatus library={pro} noun="community prompt library" />}
+          savedIds={savedIds}
+          onOpen={setModalPrompt}
+          onToggleSave={toggleCommunitySave}
+          onViewMore={openList}
+          onBrowseAll={() => openList(ALL_SLUG)}
+          onSignup={signupFree}
+          onSubmit={openSubmitFromClose}
         />
-      ) : !lockedBlockVisible && !proPending && lockedCount > 0 ? (
-        // A signed-out visitor's next step is the free account, with the same
-        // numbers the wall states; a free account's next step is Pro.
-        tier === 'anonymous' ? (
-          <GalleryCloseCta
-            className="pl-cta"
-            detail={ladderLine}
-            action="Create your free account"
-            onAction={() => requireLogin('browse more of the community prompts', { free: true, signup: true })}
-            busy={authLoading}
-          />
-        ) : (
-          <GalleryCloseCta
-            className="pl-cta"
-            detail={ladderLine}
-            action="See what Pro includes"
-            to="/plans"
-          />
-        )
-      ) : null}
+      ) : (
+        <section aria-labelledby={inList ? 'pl-results-h' : 'pl-results-heading'}>
+          {inList ? (
+            <div className="pl-results-head">
+              <button type="button" className="btn pl-ov-btn pl-back" onClick={backToOverview}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+                Back to overview
+              </button>
+              <h2 id="pl-results-h" ref={resultsHeadRef} tabIndex={-1}>{listTitle}</h2>
+              <p className="pl-shelf-count">{listCountLine}</p>
+              {/* Search reads only the prompts this viewer can open, so a
+                  locked prompt can never be found by a phrase from its text;
+                  the list says so rather than leaving a short result unexplained. */}
+              {q && tier !== 'pro' && <p className="pl-note">{`Search covers the ${openCommunity.length} prompts open to you.`}</p>}
+            </div>
+          ) : (
+            <h2 className="sr-only" id="pl-results-heading">My Prompts</h2>
+          )}
+          {inList && <ProLibraryStatus library={pro} noun="community prompt library" />}
+          <p className="sr-only" aria-live="polite">
+            {inList ? listCount : filtered.length} {(inList ? listCount : filtered.length) === 1 ? 'prompt' : 'prompts'}
+          </p>
+          {(inList ? listCount : filtered.length) > 0 ? (
+            <div className="pl-gallery">
+              {(inList ? listItems.open : filtered).map((p) => (
+                <PromptCard
+                  key={p.id}
+                  p={p}
+                  onOpen={setModalPrompt}
+                  isCommunity={isCommunity}
+                  isSaved={savedIds.has(p.id)}
+                  onToggleSave={isCommunity ? toggleCommunitySave : undefined}
+                />
+              ))}
+              {/* What this viewer cannot open: the real output, blurred, a lock
+                  and the tags. Never the title or the text. */}
+              {inList && listItems.locked.map((p) => (
+                <PromptLockedCard
+                  key={p.id}
+                  preview={{ id: p.id, tags: LIBRARY_RULES.prompts.preview(p).tags }}
+                  kind={lockedKind(p)}
+                  variant="list"
+                  onSignup={signupFree}
+                />
+              ))}
+            </div>
+          ) : (
+            isCommunity ? (
+              /* LibraryEmpty announces empty results and lets visitors clear filters.
+                 While a Pro library is on its way the status block above speaks
+                 instead: the full set may well match. */
+              proPending ? null : (
+                <LibraryEmpty
+                  className="pl-empty"
+                  title="No prompts match your search"
+                  detail="Try a shorter word, or clear the search and filters to see every prompt."
+                  clearLabel="Clear search and filters"
+                  onClear={clearFilters}
+                />
+              )
+            ) : (
+              <div className="pl-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p>{t('promptLibrary.noPrompts')}</p>
+                <button className="btn btn-accent" onClick={() => setAddOpen(true)}>{t('promptLibrary.addPrompt')}</button>
+              </div>
+            )
+          )}
+        </section>
+      )}
+
+      {/* The offer under a list: what the locked cards above open with, or the
+          way to add one's own. A search or an empty list gets none: the visitor
+          has asked a narrower question, and answering it with a paywall is an
+          interruption (and would say how many locked prompts matched). */}
+      {inList && !proPending && !q && (
+        tier === 'pro' ? (
+          <section className="pl-close" aria-labelledby="pl-wall-h">
+            <div className="pl-close-text">
+              <h2 id="pl-wall-h">Submit a prompt of your own</h2>
+              <p>Every submission is reviewed before it appears in the library.</p>
+            </div>
+            <div className="pl-close-actions">
+              <button type="button" className="btn btn-accent pl-ov-btn" onClick={openSubmitFromClose} disabled={authLoading}>
+                Create and submit your own
+              </button>
+            </div>
+          </section>
+        ) : listItems.locked.length > 0 ? (
+          <section className="pl-close" aria-labelledby="pl-wall-h">
+            {(() => {
+              const total = listItems.locked.length
+              const viaAccount = tier === 'anonymous' ? listItems.locked.filter((p) => freeIds.has(p.id)).length : 0
+              const plural = (n) => `${n} more ${n === 1 ? 'prompt' : 'prompts'}`
+              return viaAccount > 0 ? (
+                <>
+                  <div className="pl-close-text">
+                    <h2 id="pl-wall-h">{`${plural(viaAccount)} open with a free account`}</h2>
+                    <p>{`A free account opens ${freeIds.size} of the ${communityRows.length} community prompts. Pro opens all ${communityRows.length}.`}</p>
+                  </div>
+                  <div className="pl-close-actions">
+                    <button type="button" className="btn btn-accent pl-ov-btn" onClick={signupFree}>Create your free account</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="pl-close-text">
+                    <h2 id="pl-wall-h">{`${plural(total)} open with Pro`}</h2>
+                    <p>Each opens as the full brief its author wrote, ready to copy.</p>
+                  </div>
+                  <div className="pl-close-actions">
+                    <Link className="btn btn-accent pl-ov-btn" to="/plans" onClick={() => { reportUpgradeGate('prompt-library-community-lock') }}>
+                      See what Pro includes
+                    </Link>
+                  </div>
+                </>
+              )
+            })()}
+          </section>
+        ) : null
+      )}
 
       {/* Detail Modal */}
       {modalPrompt && (

@@ -338,11 +338,11 @@
   padding: 0;
   border-radius: 0;
   background: none;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 400;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   /* `--t2`, not `--t3`. On the card's own 4% ink wash `--t3` measured 4.19:1 at
      390, 834 and 1440 in light — the category is the only classification on the
      card and it is the smallest type on it, so it is the wrong place to spend
@@ -404,10 +404,10 @@
   color: var(--cm-ink);
 }
 .ch-spectrum .ch-queue-head .meta {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cm-quiet);
 }
 .ch-spectrum .ch-queue-note {
@@ -451,9 +451,9 @@
    is mono micro-caps in the quiet ink and NOT an accent chip, because "not
    sent" is not a feature. */
 .ch-spectrum .ch-queue-row .ch-card-tag {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .12em;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
   color: var(--cm-quiet);
 }
 .ch-spectrum .ch-queue-row .btn {
@@ -537,7 +537,7 @@
   /* The category tag grows back to a readable size at phone width, where a 10px
      mono caps line is the smallest thing on the screen. account.css already
      made the same call for the old chip. */
-  .ch-spectrum .ch-card-tag { font-size: 10.5px; letter-spacing: .06em; }
+  .ch-spectrum .ch-card-tag { font-size: var(--fs-caption); letter-spacing: normal; }
   .ch-spectrum .ch-card-meta { gap: 6px; }
   .ch-spectrum .ch-queue-row { gap: 10px; padding: 12px; }
 }

@@ -1,105 +1,183 @@
-// Photographs of real work set in a typeface — the per-family slot, and the
-// rules that decide whether one may be shown.
+// Documented real-world uses of a typeface, listed per family, and the rule that
+// decides whether an entry may be shown.
 //
-// ── THIS FILE IS DELIBERATELY EMPTY, AND THAT IS THE DECISION ───────────────
+// Each entry is a LINK to the page that documents the use. The app hosts no
+// third-party imagery: a documenting page (a Fonts In Use entry, or the brand's
+// own typography page) is cited, not copied.
 //
-// The founder asked for two example tabs (2026-09-05): "For font examples i
-// want 1 tab showing Usage examples using some made mockup use cases, but i
-// want a tab showing real world use applications for each font and an image to
-// show it i can collect images myself later if you cant do it".
+// REAL_WORLD_USES is keyed by family name, spelled exactly as the Google Fonts
+// catalogue spells it ("Playfair Display", not "playfair-display"), because that
+// is the string every caller already holds. Each value is an array; the panel
+// shows the entries in the order given.
 //
-// He chose the second half of his own sentence: BUILD IT EMPTY AND HE FILLS IT.
-// So what ships is the tab, the layout, the shape of an entry and the rules an
-// entry has to satisfy — and NOT ONE IMAGE, and NOT ONE INVENTED EXAMPLE. A
-// placeholder photograph here would be the whole problem in miniature: it is
-// either somebody's work used without permission, or it is a drawing of a
-// product that does not exist, which PRODUCT.md calls a claim.
+//   title    What the use is: a brand or a project.
+//   year     Optional. Four digits, only when the documenting page states it.
+//   where    One short plain line on where the family appears. When the
+//            documenting page does not say, use "Documented on Fonts In Use".
+//   credit   Who documented it, shown as the credit line.
+//   url      The documenting page. Absolute https only.
 //
-// ── WHY THE RULES ARE THE PRODUCT HERE ──────────────────────────────────────
+// An entry may also carry an image, but only with all of its provenance. These
+// four fields travel together: leave all of them out, or give all of them.
 //
-// [fonts-in-use-surface] is BLOCKED, and it is blocked on exactly this: who
-// owns the imagery, under what licence it may be shown, who curates it, and
-// what provenance is displayed. Nothing in this file unblocks that. What it
-// does is make the answer unavoidable at the moment someone adds a row —
-// `isShowable` refuses an entry that cannot say where the image came from, who
-// made the work and under what permission it appears, so a half-filled row
-// renders NOTHING rather than an uncredited photograph.
+//   image    Path to a local file under `public/`, starting with "/". Never a
+//            hot link.
+//   alt      What is in the picture, for a reader who cannot see it.
+//   author   Who made the picture.
+//   licence  The permission it is shown under, for example "CC BY-SA 4.0".
 //
-// That is not belt-and-braces. An uncredited photograph on a public page IS the
-// takedown surface the backlog item is protecting the product from, and the
-// most likely way one arrives is somebody pasting a file path in a hurry.
-//
-// ── THE SHAPE OF AN ENTRY ───────────────────────────────────────────────────
-//
-// REAL_WORLD_USES is keyed by family name, spelled EXACTLY as the Google Fonts
-// catalogue spells it ("Playfair Display", not "playfair-display"), because
-// that is the string every caller already holds. Each value is an array, newest
-// or best first; the panel shows them in the order given.
-//
-//   image    Path to the file, served from `public/`. A local file, not a hot
-//            link: hotlinking someone's server is both a rights question and an
-//            availability one.
-//   alt      What is IN the photograph, for a reader who cannot see it. Never
-//            "Playfair Display in use" — that describes the caption, not the
-//            image.
-//   title    What the work IS. "Menu for a wine bar", "Album sleeve".
-//   credit   Who made or owns the work. A real name or organisation.
-//   source   Where the image came from, as a URL that can be checked.
-//   licence  Under what permission it is shown here. "Used with permission of
-//            the studio", "CC BY 4.0", "Press kit, redistribution permitted".
-//            A licence nobody can name is a licence the product does not have.
-//
-// Example of a COMPLETE entry, kept as a comment rather than as data so that it
-// cannot render and cannot be mistaken for a shipped one:
-//
-//   'Playfair Display': [
-//     {
-//       image: '/font-uses/playfair-display-wine-list.jpg',
-//       alt: 'A folded card menu on a dark table, its headings set in a high-contrast serif',
-//       title: 'Wine list for a neighbourhood bar',
-//       credit: 'Studio name',
-//       source: 'https://example.com/the-page-it-came-from',
-//       licence: 'Used with permission of the studio',
-//     },
-//   ],
+// `isShowable` fails closed: an entry that is malformed, or that names an image
+// without its alt text, author and licence, is dropped rather than drawn partly.
 
-/** Family name → the cleared uses for it. Empty until someone clears one. */
-export const REAL_WORLD_USES = {}
+/** Family name → the documented uses for it. */
+export const REAL_WORLD_USES = {
+  Roboto: [
+    {
+      title: '7-Eleven rebranding',
+      where: 'Roboto is used on the brand’s website.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/41967/7-eleven-rebranding',
+    },
+    {
+      title: 'Canton of Bern corporate design',
+      where: 'Roboto is used on the canton’s website.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/40563/canton-of-bern-corporate-design-2020',
+    },
+    {
+      title: 'All Roboto uses on Fonts In Use',
+      where: 'Every documented use of Roboto, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/31435/roboto',
+    },
+  ],
+  'Open Sans': [
+    {
+      title: 'America250',
+      where: 'Open Sans is used on the America250 website.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/78716/america250',
+    },
+    {
+      title: 'All Open Sans uses on Fonts In Use',
+      where: 'Every documented use of Open Sans, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/7520/open-sans',
+    },
+  ],
+  Montserrat: [
+    {
+      title: 'Wikimedia Foundation',
+      where: 'Montserrat is used in the Wikimedia Foundation logo and for all of its branded content.',
+      credit: 'Wikimedia Foundation brand guidelines',
+      url: 'https://meta.wikimedia.org/wiki/Brand/Typography',
+    },
+    {
+      title: 'All Montserrat uses on Fonts In Use',
+      where: 'Every documented use of Montserrat, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/32481/montserrat',
+    },
+  ],
+  Poppins: [
+    {
+      title: 'All Poppins uses on Fonts In Use',
+      where: 'Every documented use of Poppins, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/45323/poppins',
+    },
+  ],
+  Inter: [
+    {
+      title: 'Ville de Fribourg identity',
+      where: 'Documented on Fonts In Use',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/72741/ville-de-fribourg-stadt-freiburg-identity',
+    },
+    {
+      title: 'Verhaalpaal Noord',
+      where: 'Documented on Fonts In Use',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/69280/verhaalpaal-noord-exhibition-and-gogme-hoe-am',
+    },
+    {
+      title: 'Hjärnfonden',
+      where: 'Documented on Fonts In Use',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/uses/45179/hjaernfonden',
+    },
+    {
+      title: 'All Inter uses on Fonts In Use',
+      where: 'Every documented use of Inter, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/93554/inter',
+    },
+  ],
+  'Roboto Condensed': [
+    {
+      title: 'All Roboto Condensed uses on Fonts In Use',
+      where: 'Every documented use of Roboto Condensed, on the Fonts In Use typeface page.',
+      credit: 'Fonts In Use',
+      url: 'https://fontsinuse.com/typefaces/90008/roboto-condensed',
+    },
+  ],
+}
 
-// Every field an entry must carry before it may be drawn. All six are required
-// and none has a default: a default would be this module inventing provenance,
-// which is the one thing it exists to prevent.
-export const REQUIRED_USE_FIELDS = ['image', 'alt', 'title', 'credit', 'source', 'licence']
+/** Fields every entry must carry. */
+export const REQUIRED_USE_FIELDS = ['title', 'where', 'credit', 'url']
+
+/** The four fields that travel together: all present, or all absent. */
+export const IMAGE_USE_FIELDS = ['image', 'alt', 'author', 'licence']
 
 /** True when a value is a non-empty string once trimmed. */
 function filled(value) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+/** True for an absolute https URL. */
+export function isHttpsUrl(value) {
+  if (!filled(value)) return false
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+/** True for a path into `public/` ("/font-uses/x.jpg"), not a URL. */
+function isLocalPath(value) {
+  return filled(value) && /^\/(?!\/)/.test(value)
+}
+
 /**
  * May this entry be shown?
  *
- * Fails closed on anything that is not an object with all six fields filled in.
- * The caller renders only what this returns true for, so an incomplete row is
- * absent rather than partial — there is no "image with a missing credit" state,
- * because that state is the defect.
+ * A link-only entry needs its title, line, credit and an https URL. An entry
+ * that names any image field needs all four, so a picture is never drawn
+ * without its alt text, author and licence.
  */
 export function isShowable(use) {
-  if (!use || typeof use !== 'object') return false
-  return REQUIRED_USE_FIELDS.every(field => filled(use[field]))
+  if (!use || typeof use !== 'object' || Array.isArray(use)) return false
+  if (!REQUIRED_USE_FIELDS.every(field => filled(use[field]))) return false
+  if (!isHttpsUrl(use.url)) return false
+  if (use.year !== undefined && !/^\d{4}$/.test(String(use.year))) return false
+  const hasImageField = IMAGE_USE_FIELDS.some(field => use[field] !== undefined)
+  if (hasImageField) {
+    if (!IMAGE_USE_FIELDS.every(field => filled(use[field]))) return false
+    if (!isLocalPath(use.image)) return false
+  }
+  return true
 }
 
 /**
  * The showable uses for a family, in the order they were listed.
  *
  * Always an array. An unknown family, a family with no entries and a family
- * whose entries are all incomplete are the same answer to the panel — it has
- * nothing to show — and the panel says so in words rather than drawing an
- * empty grid.
+ * whose entries are all refused give the same answer: nothing to show.
  */
 export function usesFor(family) {
   if (!filled(family)) return []
-  const rows = REAL_WORLD_USES[family]
+  const rows = Object.hasOwn(REAL_WORLD_USES, family) ? REAL_WORLD_USES[family] : null
   if (!Array.isArray(rows)) return []
   return rows.filter(isShowable)
 }

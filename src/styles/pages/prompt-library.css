@@ -100,7 +100,7 @@
 .plib-page .pl-modal-header .pl-tag{
   padding:4px 8px;border-radius:var(--radius-xs);
   background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t1);
-  font-size:11px;font-weight:560;letter-spacing:0;text-transform:none;
+  font-size:var(--fs-caption);font-weight:560;letter-spacing:0;text-transform:none;
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .plib-page .pl-card-copy-hint{color:var(--t1)}
@@ -221,3 +221,332 @@
 .plib-page .pl-add-note{margin-top:8px;font-size:12px;line-height:1.5;color:var(--t2)}
 .plib-page .pl-add-note strong{font-weight:600;color:var(--t0)}
 .plib-page .pl-add-actions .lib-btn{min-width:0}
+
+
+
+/* ── The overview: shelves, covers and the close ───────────────────────────
+   The gallery's default view. Each category is a section with a hairline
+   above it, not a box: heading, "N prompts · M open to you", View more. A
+   shelf has a large lead and four more beside it; a small category gets a
+   cover of its outputs. Every grid track is minmax(0,1fr), so a long title
+   or a wide image can never widen the page, and nothing here is sticky. */
+.plib-page .pl-ov-btn{
+  min-height:44px;padding:0 16px;justify-content:center;
+  font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;text-decoration:none;
+}
+
+.plib-page .pl-shelf{margin-top:56px;padding-top:24px;border-top:1px solid var(--border)}
+.plib-page .pl-shelves>.pl-shelf:first-child{margin-top:0}
+/* View more sits in one place above 640px: the top right of the heading row.
+   The description runs the full width under both, so it never wraps narrow
+   beside the button. The hgroup wrapper dissolves so its children take the
+   head grid's cells. */
+.plib-page .pl-shelf-head{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;
+  column-gap:24px;margin-bottom:20px;
+}
+.plib-page .pl-shelf-hgroup{display:contents}
+.plib-page .pl-shelf-hline{grid-column:1;grid-row:1;min-width:0}
+.plib-page .pl-viewmore--top{grid-column:2;grid-row:1}
+/* Centres the 44px button on the 28px heading's line: (44 - 33.6) / 2. */
+.plib-page .pl-viewmore--top{margin-top:-5px}
+.plib-page .pl-viewmore--bottom{display:none}
+.plib-page .pl-shelf-hline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.plib-page .pl-shelf-hline h2{margin:0;font-size:28px;line-height:1.2;letter-spacing:-.02em;font-weight:650;color:var(--t0)}
+.plib-page .pl-shelf-count{margin:0;color:var(--t2);font-size:14px;font-weight:500;line-height:1.4;font-variant-numeric:tabular-nums}
+.plib-page .pl-shelf-desc{grid-column:1 / -1;grid-row:2;max-width:72ch;margin:6px 0 0;color:var(--t1);font-size:15px;line-height:1.5}
+
+.plib-page .pl-shelf-grid{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;
+}
+.plib-page .pl-shelf-item{display:flex;min-width:0}
+.plib-page .pl-shelf-item>.pl-card-cell{flex:1}
+.plib-page .pl-shelf-item--lead{grid-column:1 / span 2;grid-row:1 / span 2}
+
+/* ── Variant cards (lead, rest) ────────────────────────────────────────────
+   Outside `.pl-gallery` there is no `--pl-preview-h`, so the picture is the
+   capture's own 16:10 in the card's width. The poster is laid over the box
+   rather than sized by it, which lets the lead's picture take whatever height
+   the 2x2 grid leaves. */
+.plib-page .pl-card-cell--lead .pl-card-preview,
+.plib-page .pl-card-cell--rest .pl-card-preview{
+  display:block;height:auto;aspect-ratio:16/10;padding:0;
+}
+.plib-page .pl-card-cell--lead .pl-card-poster,
+.plib-page .pl-card-cell--rest .pl-card-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.plib-page .pl-card-cell--lead .pl-card-text-hero,
+.plib-page .pl-card-cell--rest .pl-card-text-hero{justify-content:flex-start}
+.plib-page .pl-card-cell--lead .pl-card-author,
+.plib-page .pl-card-cell--rest .pl-card-author{
+  margin-top:auto;color:var(--t2);font-size:13px;font-weight:500;line-height:1.4;font-variant-numeric:tabular-nums;
+}
+.plib-page .pl-card-cell--lead .pl-card-saves,
+.plib-page .pl-card-cell--rest .pl-card-saves{padding:0;background:none;border-radius:0;font-family:inherit;font-size:inherit;color:inherit}
+.plib-page .pl-card-cell--lead .pl-card-author .pl-card-saves::before{content:'·';margin-right:8px}
+/* Save is a 44px target here, sitting in the foot's bottom right corner. */
+.plib-page .pl-card-cell--lead .pl-card-save,
+.plib-page .pl-card-cell--rest .pl-card-save{min-height:44px;right:12px;bottom:12px;padding:0 16px;font-size:13px}
+.plib-page .pl-card-cell--lead.has-save .pl-card-author,
+.plib-page .pl-card-cell--rest.has-save .pl-card-author{min-height:44px;padding-right:100px}
+
+/* The lead: the shelf's most-saved open prompt, large. Its box can be narrower
+   than the poster's 16:10, so the crop keeps the left edge, where the text is. */
+.plib-page .pl-card-cell--lead .pl-card-poster{object-position:left top}
+.plib-page .pl-card-cell--lead .pl-card-preview{aspect-ratio:auto;flex:1 0 auto;min-height:62.5cqi}
+.plib-page .pl-card-cell--lead .pl-card-text-hero{flex:0 0 auto;gap:8px;padding:18px 20px 12px}
+.plib-page .pl-card-cell--lead .pl-card-title{margin:0;font-size:22px;line-height:1.25;letter-spacing:-.015em}
+.plib-page .pl-card-excerpt{
+  margin:0;max-width:65ch;color:var(--t1);font-size:15px;line-height:1.5;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;padding-bottom:2px;
+}
+.plib-page .pl-card-cell--lead .pl-card-tags{gap:6px}
+
+/* A compact item: poster, title, saves and Save. */
+.plib-page .pl-card-cell--rest .pl-card-text-hero{flex:1;gap:6px;padding:14px 16px 12px}
+.plib-page .pl-card-cell--rest .pl-card-title{margin:0;font-size:16px;line-height:1.35}
+
+/* ── Locked: the real output, blurred, a lock and a plain label ─────────── */
+.plib-page .pl-locked-card{
+  appearance:none;-webkit-appearance:none;width:100%;margin:0;padding:0;
+  font:inherit;text-align:left;color:inherit;text-decoration:none;background:var(--card);
+}
+.plib-page .pl-locked-card>.pl-card-text-hero{display:flex}
+.plib-page .pl-locked-card .pl-card-poster{filter:blur(14px);transform:scale(1.12)}
+.plib-page .pl-lockmark{
+  position:absolute;left:50%;top:50%;z-index:1;transform:translate(-50%,-50%);
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--card);color:var(--t0);
+  font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap;
+  /* Positioned from left:50%, the pill would otherwise only get the half of a
+     narrow tile to its right, and the padlock shrank to nothing. */
+  width:max-content;
+}
+.plib-page .pl-lock-glyph{flex:none}
+.plib-page .pl-card.no-img .pl-card-title--tags{font-weight:500;color:var(--t1)}
+.plib-page .pl-card-lockmeta{
+  display:flex;align-items:center;min-height:44px;margin-top:auto;
+  color:var(--t2);font-size:13px;font-weight:500;line-height:1.4;
+}
+
+/* ── Covers: a small category shows its outputs as a 2x2 ──────────────── */
+.plib-page .pl-covers{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:56px 32px;
+  padding-top:24px;border-top:1px solid var(--border);
+}
+.plib-page .pl-shelves+.pl-covers{margin-top:56px}
+.plib-page .pl-cover{min-width:0}
+.plib-page .pl-cover .pl-shelf-head{margin-bottom:16px}
+/* Paired covers share a row: the head takes its own height, the pictures sit at
+   the bottom of the rest, so both start on one line however long a blurb runs. */
+.plib-page .pl-cover:not(.pl-cover--span){display:grid;grid-template-rows:auto 1fr}
+.plib-page .pl-cover:not(.pl-cover--span) .pl-mosaic{align-self:end}
+/* A cover with no partner of its size takes the whole row, heading left and
+   outputs right, so there is never an empty half-row beside it. */
+.plib-page .pl-cover--span{
+  grid-column:1 / -1;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;align-items:start;
+}
+.plib-page .pl-cover--span .pl-shelf-head{margin-bottom:0}
+.plib-page .pl-cover--span .pl-mosaic{grid-column:2;grid-row:1}
+.plib-page .pl-mosaic{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;cursor:pointer}
+@media(min-width:641px){
+  .plib-page .pl-cover--wide{grid-template-columns:minmax(0,1fr);row-gap:16px}
+  .plib-page .pl-cover--wide .pl-mosaic{grid-column:1;grid-row:2;grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+.plib-page .pl-mosaic-tile{
+  position:relative;isolation:isolate;aspect-ratio:16/10;overflow:hidden;
+  border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);
+  transition:border-color var(--dur-1) ease;
+}
+@media(hover:hover){
+  .plib-page .pl-mosaic:hover .pl-mosaic-tile{border-color:var(--bh)}
+}
+.plib-page .pl-mosaic-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.plib-page .pl-mosaic-tile.is-locked img{filter:blur(12px);transform:scale(1.12)}
+.plib-page .pl-mosaic-name{display:block;padding:12px;color:var(--t1);font-size:14px;font-weight:600;line-height:1.3}
+
+/* ── The close: what this viewer's access covers, the offer, the way in ── */
+.plib-page .pl-close{
+  display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+  gap:16px 24px;margin-top:64px;padding-top:24px;border-top:1px solid var(--border);
+}
+.plib-page .pl-close-text{flex:1 1 320px;min-width:0}
+.plib-page .pl-close h2{margin:0;font-size:22px;line-height:1.3;font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.plib-page .pl-close p{margin:4px 0 0;max-width:60ch;color:var(--t1)}
+.plib-page .pl-close-actions{display:flex;flex-wrap:wrap;gap:12px}
+
+/* ── Tablet, 641 to 1024: the lead on the left, the rest as rows ────────── */
+@media(max-width:1024px){
+  .plib-page .pl-shelf-grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:0}
+  .plib-page .pl-shelf-item--lead{grid-column:1;grid-row:1 / span 4}
+  .plib-page .pl-shelf-item--rest{grid-column:2}
+
+  /* Rows, not tiles: thumbnail, title, saves, Save. */
+  .plib-page .pl-card-cell--rest .pl-card{
+    flex-direction:row;align-items:center;gap:12px;padding:12px 0;overflow:visible;
+    background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0;
+  }
+  .plib-page .pl-shelf-item--lead+.pl-shelf-item--rest .pl-card{padding-top:0}
+  .plib-page .pl-card-cell--rest .pl-card-preview{
+    flex:0 0 112px;width:112px;border:1px solid var(--border);border-radius:var(--radius-s);
+  }
+  .plib-page .pl-card-cell--rest .pl-card-text-hero{padding:0 52px 0 0;gap:2px;justify-content:center}
+  .plib-page .pl-card-cell--rest .pl-card-title{font-size:15px}
+  .plib-page .pl-card-cell--rest .pl-card-author,
+  .plib-page .pl-card-cell--rest.has-save .pl-card-author{min-height:0;margin-top:0;padding-right:0}
+  .plib-page .pl-card-cell--rest .pl-card-save{
+    top:50%;bottom:auto;right:0;transform:translateY(-50%);width:44px;padding:0;justify-content:center;
+  }
+  .plib-page .pl-card-cell--rest .pl-card-save span{display:none}
+  .plib-page .pl-shelf-item--lead+.pl-shelf-item--rest .pl-card-save{top:calc(50% - 6px)}
+  .plib-page .pl-card-cell--rest.pl-card-cell--locked .pl-card-text-hero{padding-right:0}
+  .plib-page .pl-card-cell--rest .pl-card-lockmeta{min-height:0;margin-top:0}
+  .plib-page .pl-card-cell--rest .pl-lockmark{padding:6px}
+  .plib-page .pl-card-cell--rest .pl-lockmark span{display:none}
+  /* A cover tile has nothing beside it that says what opens it, so its label
+     stays at every width; the pill just takes less side padding. */
+  .plib-page .pl-mosaic-tile .pl-lockmark{padding:6px 10px}
+  /* Covers are half width here: a smaller heading keeps View more on its line. */
+  .plib-page .pl-cover .pl-shelf-hline h2{font-size:24px}
+  .plib-page .pl-cover .pl-viewmore--top{margin-top:-8px}
+}
+@media(max-width:1024px) and (hover:hover){
+  .plib-page .pl-card-cell--rest .pl-card:hover{
+    background:color-mix(in srgb,var(--t0) 3%,transparent);border-color:var(--border);
+  }
+}
+
+/* ── Phone, 640 and below: the lead, then two rows, then View more ─────── */
+@media(max-width:640px){
+  .plib-page .pl-shelf{margin-top:40px}
+  .plib-page .pl-shelf-head{grid-template-columns:minmax(0,1fr);margin-bottom:16px}
+  .plib-page .pl-shelf-hline h2,
+  .plib-page .pl-cover .pl-shelf-hline h2{font-size:22px}
+  .plib-page .pl-viewmore--top{display:none}
+  .plib-page .pl-viewmore--bottom{display:flex;width:100%;margin-top:16px}
+  .plib-page .pl-shelf-grid{grid-template-columns:minmax(0,1fr)}
+  .plib-page .pl-shelf-item--lead{grid-row:auto;margin-bottom:8px}
+  .plib-page .pl-shelf-item--rest{grid-column:1}
+  .plib-page .pl-shelf-item:nth-child(n+4){display:none}
+  .plib-page .pl-shelf-item--lead+.pl-shelf-item--rest .pl-card{padding-top:12px}
+  .plib-page .pl-shelf-item--lead+.pl-shelf-item--rest .pl-card-save{top:50%}
+  .plib-page .pl-card-cell--lead .pl-card-text-hero{padding:16px 16px 12px}
+  .plib-page .pl-card-cell--lead .pl-card-title{font-size:20px}
+  .plib-page .pl-card-cell--lead .pl-card-excerpt{-webkit-line-clamp:3}
+  .plib-page .pl-covers{grid-template-columns:minmax(0,1fr);gap:40px}
+  .plib-page .pl-shelves+.pl-covers{margin-top:40px}
+  .plib-page .pl-cover--span{display:block}
+  .plib-page .pl-cover--span .pl-shelf-head{margin-bottom:16px}
+  .plib-page .pl-close{margin-top:48px}
+  .plib-page .pl-close-actions{width:100%}
+  .plib-page .pl-close-actions .btn{flex:1 1 100%}
+}
+
+
+/* ── The toolbar: search, and in the list the three filters ────────────────
+   Search is always there. Category, Sort and Access exist in the list state
+   only: the overview is headings and View more, then filters. Nothing here is
+   sticky. Above 640px the filter groups sit in the toolbar's own grid
+   (`display:contents` on the body); at 640 and below they sit behind the
+   Filters button and open inline, pushing the page down. */
+.plib-page .pl-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:40px}
+.plib-page .pl-tb-search{display:flex;gap:8px;min-width:0}
+.plib-page .pl-search{position:relative;flex:1 1 auto;min-width:0;max-width:520px}
+.plib-page .pl-search input{
+  width:100%;min-height:var(--search-h);margin:0;padding:0 48px 0 44px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--inp);color:var(--t0);
+  font-family:var(--font);font-size:16px;line-height:1.3;box-shadow:none;
+  -webkit-appearance:none;appearance:none;
+}
+.plib-page .pl-search input::placeholder{color:var(--t3);opacity:1}
+.plib-page .pl-search input::-webkit-search-cancel-button{display:none}
+.plib-page .pl-search input:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.plib-page .pl-search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--t2);pointer-events:none}
+.plib-page .pl-search-clear{
+  position:absolute;right:2px;top:2px;width:44px;height:44px;display:grid;place-items:center;
+  border:0;border-radius:var(--btn-radius);background:none;color:var(--t2);cursor:pointer;
+}
+.plib-page .pl-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media(hover:hover){.plib-page .pl-search-clear:hover{color:var(--t0);background:var(--hvr)}}
+
+.plib-page .pl-filters-btn{display:none;min-height:48px;padding:0 16px;gap:8px;white-space:nowrap;font-size:14px;font-weight:600}
+.plib-page .pl-filters-n{
+  min-width:20px;padding:1px 6px;border-radius:var(--radius-pill);
+  background:var(--t0);color:var(--card);font-size:var(--fs-caption);line-height:1.4;font-variant-numeric:tabular-nums;text-align:center;
+}
+
+.plib-page .pl-filters-done{display:none;min-height:44px;width:100%;border-radius:var(--btn-radius)}
+.plib-page .pl-tb-body{display:contents}
+.plib-page .pl-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.plib-page .pl-glabel{margin-right:4px;color:var(--t2);font-size:13px;font-weight:500}
+.plib-page .pl-tb-cat{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+/* The chip row is named for assistive tech; sighted users read the chips. */
+.plib-page .pl-tb-cat>.pl-glabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.plib-page .pl-tb-sortacc{display:flex;flex-wrap:wrap;gap:12px 24px;min-width:0}
+
+/* One option: a native radio laid invisibly over the label's pill, so the
+   control keeps its keyboard and screen-reader behaviour and the whole pill
+   is the hit area. */
+.plib-page .pl-opt{position:relative;display:inline-flex}
+.plib-page .pl-opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer}
+.plib-page .pl-opt>span{
+  display:inline-flex;align-items:center;min-height:44px;padding:0 14px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--card);color:var(--t1);
+  font-size:14px;font-weight:500;line-height:1.2;white-space:nowrap;
+  transition:background-color var(--dur-1) ease,border-color var(--dur-1) ease,color var(--dur-1) ease;
+}
+.plib-page .pl-opt input:checked+span{background:var(--t0);border-color:var(--t0);color:var(--card);font-weight:600}
+.plib-page .pl-opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+@media(hover:hover){.plib-page .pl-opt input:not(:checked):hover+span{border-color:var(--bh);color:var(--t0)}}
+/* A category chip carries the number it returns. */
+.plib-page .pl-opt-n{margin-left:6px;color:var(--t2);font-weight:500;font-variant-numeric:tabular-nums}
+.plib-page .pl-opt input:checked+span .pl-opt-n{color:color-mix(in srgb,var(--card) 72%,var(--t0))}
+
+/* Sort and Access: one segmented control per question, at the chip's 44px. A
+   tinted track with the picked segment raised on it, so they never read as
+   chips. */
+.plib-page .pl-seg{
+  display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--t0) 5.5%,transparent);box-shadow:inset 0 0 0 1px var(--border);
+}
+.plib-page .pl-seg .pl-opt{display:flex}
+.plib-page .pl-seg .pl-opt>span{flex:1;justify-content:center;padding:0 16px;border-color:transparent;background:transparent}
+.plib-page .pl-seg .pl-opt input:checked+span{background:var(--card);border-color:var(--bh);color:var(--t0)}
+@media(hover:hover){.plib-page .pl-seg .pl-opt input:not(:checked):hover+span{border-color:transparent;color:var(--t0)}}
+
+@media(min-width:1101px){
+  .plib-page .pl-toolbar{grid-template-columns:minmax(0,520px) minmax(0,1fr);grid-template-areas:"search sa" "cat cat";column-gap:24px}
+  .plib-page .pl-tb-search{grid-area:search}
+  .plib-page .pl-tb-sortacc{grid-area:sa;justify-self:end}
+  .plib-page .pl-tb-cat{grid-area:cat}
+}
+
+
+/* ── The list: back, heading, count, then the grid ──────────────────────── */
+.plib-page .pl-results-head{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:24px}
+.plib-page .pl-results-head h2{margin:0;overflow-wrap:anywhere;font-size:32px;line-height:1.2;letter-spacing:-.02em;font-weight:650;color:var(--t0)}
+.plib-page .pl-results-head h2:focus{outline:none}
+.plib-page .pl-results-head .pl-shelf-count{margin:0}
+.plib-page .pl-note{margin:0;color:var(--t2);font-size:14px;line-height:1.5}
+/* Back to overview: a quiet button, pulled left so its label lines up with the heading. */
+.plib-page .pl-back{padding:0 12px 0 8px;margin-left:-8px;gap:6px;border-color:transparent;background:transparent}
+@media(hover:hover){.plib-page .pl-back:hover{border-color:transparent;background:color-mix(in srgb,var(--t0) 5%,transparent)}}
+.plib-page .pl-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-results-head+.pl-gallery{margin-top:0}
+.plib-page .pl-empty.lbry-empty{align-items:flex-start;text-align:left;padding:48px 0}
+
+@media(max-width:640px){
+  .plib-page .pl-toolbar{margin-bottom:32px}
+  .plib-page .pl-filters-btn{display:inline-flex}
+  .plib-page .pl-filters-done{display:flex;justify-content:center}
+  /* The filters sit behind the button and open in place. */
+  .plib-page .pl-tb-body{display:none}
+  .plib-page .pl-tb-body.is-open{display:flex;flex-direction:column;gap:12px;padding-top:4px}
+  .plib-page .pl-tb-cat>.pl-glabel{position:static;width:auto;height:auto;overflow:visible;clip:auto;flex-basis:100%}
+  .plib-page .pl-group{flex-direction:row}
+  .plib-page .pl-glabel{flex-basis:100%}
+  .plib-page .pl-tb-sortacc{flex-direction:column;gap:12px}
+  .plib-page .pl-seg{display:grid;width:100%}
+  .plib-page .pl-results-head h2{font-size:26px}
+}

@@ -330,7 +330,7 @@
 /* "1–3 of 12": which rows the window shows. Held to the widest label ("10–12 of
    12", eleven mono cells) and right-aligned, so the header does not shift as it
    scrolls. */
-.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
+.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--font); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 /* "3 selected" and its Clear / Done button sit in the Stops head row, which the
    flip button already makes 26px (44 on touch), so showing them moves nothing. */
 .grd .grd-sel-count { margin-right: 6px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--tl-ink); }
@@ -451,7 +451,7 @@
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 /* A free account sees "Pro" as a word beside Tints, not a second padlock. */
-.grd .grd-pro-tag { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--tl-dim); }
+.grd .grd-pro-tag { font-size: var(--fs-caption); font-weight: 600; letter-spacing: normal; color: var(--tl-dim); }
 
 /* The line in the Selected stop and Geometry label rows that says what a lock does.
    Its line box is the label's height, so the row keeps the height it had. */
@@ -563,7 +563,6 @@
   color: var(--tl-ink);
   font-family: var(--mono);
   font-size: 12px;
-  letter-spacing: .02em;
   text-transform: uppercase;
 }
 /* The offset outline from :focus-visible is the one focus indicator. The global
@@ -984,7 +983,7 @@
 .grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; column-gap: 8px; }
 /* The label sits level with the first line of chips (28px tall, so 6px down), however many lines they take. */
 .grd .grd-gen-k { padding-top: 6px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
-.grd .grd-gen-pro { display: block; font-size: 10.5px; font-weight: 600; line-height: 12px; letter-spacing: .02em; color: var(--tl-dim); }
+.grd .grd-gen-pro { display: block; font-size: var(--fs-caption); font-weight: 600; line-height: 12px; letter-spacing: normal; color: var(--tl-dim); }
 .grd .grd-gen-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .grd .tl-pill.grd-gen-chip {
   justify-content: center;

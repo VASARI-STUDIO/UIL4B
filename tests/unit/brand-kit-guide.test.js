@@ -13,6 +13,8 @@ import assert from 'node:assert/strict'
 
 import {
   BRAND_KIT_STEPS,
+  GUIDE_AT_KEY,
+  GUIDE_IDLE_MS,
   GUIDE_START_EVENT,
   acceptStep,
   acceptedSteps,
@@ -29,6 +31,7 @@ import {
   startGuide,
   stepArtefacts,
   stepById,
+  touchGuide,
 } from '../../src/utils/brandKitGuide.js'
 import { liveToolRoutes, CREATE_HOMES_THAT_RENDER } from '../../src/data/toolTree.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -179,6 +182,42 @@ test('the flow flag survives a tab, because a brand system is not one sitting', 
   assert.equal(storage.getItem('vs-uikit-guide'), '1')
   endGuide(storage)
   assert.equal(isGuideActive(storage), false)
+})
+
+test('a flow left behind stops showing, and a visit to one of its tools keeps it alive', () => {
+  const storage = fakeStorage()
+  startGuide(storage)
+  acceptStep('color', storage)
+  assert.ok(Number(storage.getItem(GUIDE_AT_KEY)) > 0, 'starting stamps the flow')
+  const at = Number(storage.getItem(GUIDE_AT_KEY))
+
+  assert.equal(isGuideActive(storage, at + GUIDE_IDLE_MS - 1000), true, 'inside the window')
+  assert.equal(isGuideActive(storage, at + GUIDE_IDLE_MS + 1000), false, 'past the window')
+  assert.deepEqual(acceptedSteps(storage), ['color'], 'the steps are still read while it is current')
+
+  // A visit restarts the clock; a start after it went stale begins from step one.
+  storage.setItem(GUIDE_AT_KEY, String(Date.now() - GUIDE_IDLE_MS - 1000))
+  assert.equal(isGuideActive(storage), false)
+  assert.deepEqual(acceptedSteps(storage), [], 'a stale flow forgets the steps moved past')
+  touchGuide(storage)
+  assert.equal(isGuideActive(storage), false, 'a stale flow is not revived by a visit')
+  startGuide(storage)
+  assert.equal(isGuideActive(storage), true)
+  assert.deepEqual(acceptedSteps(storage), [])
+
+  storage.setItem(GUIDE_AT_KEY, String(Date.now() - GUIDE_IDLE_MS + 60 * 1000))
+  touchGuide(storage)
+  assert.ok(Date.now() - Number(storage.getItem(GUIDE_AT_KEY)) < 5000, 'a visit restarts the clock')
+
+  endGuide(storage)
+  assert.equal(storage.getItem(GUIDE_AT_KEY), null, 'ending the flow drops the stamp')
+  touchGuide(storage)
+  assert.equal(storage.getItem(GUIDE_AT_KEY), null, 'a visit outside a flow writes nothing')
+})
+
+test('a flag with no stamp, from before the stamp existed, still reads as running', () => {
+  assert.equal(isGuideActive(fakeStorage({ 'vs-uikit-guide': '1' })), true)
+  assert.equal(isGuideActive(fakeStorage({ 'vs-uikit-guide': '1:color', [GUIDE_AT_KEY]: 'garbled' })), true)
 })
 
 test('a fresh start announces itself, so a guide already on screen can take it up', () => {

@@ -172,7 +172,7 @@ test('the full-screen menu is the design\'s four items and its note — not a me
   ]) {
     assert.doesNotMatch(src, re, `the marketing menu has grown ${what} again`)
   }
-  assert.match(src, /EVERY CORE TOOL IS FREE, FOREVER/, 'the design\'s menu note is gone')
+  assert.match(src, /Every core tool is free, forever/, 'the design\'s menu note is gone')
   assert.match(src, /className="spnav-mi spnav-mi--accent"[\s\S]{0,80}Open the toolkit/,
     'the fourth big item, "Open the toolkit ↗" in the accent, is gone')
   // What a dialog has to do, whatever is in it.

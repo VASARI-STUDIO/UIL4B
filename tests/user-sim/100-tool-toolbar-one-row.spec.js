@@ -69,7 +69,13 @@ const TOOLS = [
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
   {
     route: '/create/font-pair',
-    actions: [{ row: 'Shuffle', menu: 'Shuffle the heading' }, 'Build a type scale from this pair', 'Copy font import'],
+    actions: [
+      { row: 'Shuffle', menu: 'Shuffle the pair' },
+      { row: 'Swap', menu: 'Swap heading and body' },
+      { row: 'Undo', menu: 'Undo the last change' },
+      'Build a type scale from this pair',
+      'Copy font import',
+    ],
     // Below 1024 Shuffle is in the docked bar, and below 768 so is Copy CSS.
     dockedBelow: 1024,
     docked: ['Shuffle'],
@@ -80,8 +86,8 @@ const TOOLS = [
   },
   {
     route: '/create/type-scale',
-    // Save to a project is in the docked bar at every width, never the toolbar;
-    // under 768 Copy CSS is there too.
+    // From 768 Save to a project sits right against Copy CSS at the end of the
+    // toolbar; under 768 both are in the docked bar.
     actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,

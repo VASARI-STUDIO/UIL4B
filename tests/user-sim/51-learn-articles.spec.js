@@ -466,3 +466,38 @@ test.describe('Learn articles', () => {
     }
   })
 })
+
+// The typeface-metrics table has five columns and sits in a 56ch article
+// column. At desktop widths every column is on screen: the table does not need
+// the wrapper's sideways scroll, so the last column (the matched size, the one
+// the text refers to) is never hidden behind it.
+//
+// MUTATION: remove `lart-table--fit` from TypeMetricsTable.jsx (or its rule in
+// learn-article.css) and the headings stop wrapping, the table grows wider than
+// the column, and this goes red at all three widths.
+test.describe('Learn articles · the typeface metrics table fits its column', () => {
+  for (const width of [1024, 1280, 1440]) {
+    test(`${width}px: all five columns are inside the wrapper, with no sideways scroll`, async ({ page }) => {
+      watch(page, `reader of the typeface metrics guide on a ${width}px screen`)
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/learn/typeface-metrics')
+      const wrap = page.locator('.lart-table-scroll[aria-label*="measured per em"]')
+      await expect(wrap, 'the metrics table rendered nothing').toBeVisible()
+      await wrap.scrollIntoViewIfNeeded()
+      const fit = await wrap.evaluate((el) => {
+        const box = el.getBoundingClientRect()
+        const heads = [...el.querySelectorAll('thead th')].map((th) => {
+          const r = th.getBoundingClientRect()
+          return { text: th.textContent.trim(), left: r.left, right: r.right }
+        })
+        return { scroll: el.scrollWidth, client: el.clientWidth, left: box.left, right: box.right, heads }
+      })
+      expect(fit.heads, 'the table lost a column').toHaveLength(5)
+      expect(fit.scroll, `${width}px: the table scrolls sideways (${fit.scroll} > ${fit.client})`).toBeLessThanOrEqual(fit.client + 1)
+      const last = fit.heads[fit.heads.length - 1]
+      expect(last.text).toMatch(/matched to/)
+      expect(last.right, `${width}px: the last column runs past the wrapper`).toBeLessThanOrEqual(fit.right + 1)
+      expect(last.left, `${width}px: the last column starts outside the wrapper`).toBeGreaterThanOrEqual(fit.left)
+    })
+  }
+})

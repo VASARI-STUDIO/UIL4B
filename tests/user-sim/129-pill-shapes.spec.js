@@ -36,7 +36,8 @@ const SURFACES = [
   ['/', ['.hcmd-bar', '.sp-seg', '.sp-seeds']],
   ['/discover/palettes', ['.pnav-search-field', '.lbry-search', '.lbry-toolbar']],
   ['/discover/gradients', ['.lbry-search', '.lbry-toolbar']],
-  ['/discover/prompts', ['.lbry-search', '.lbry-toolbar']],
+  // The prompt list has its own toolbar markup; its search is held to the same bar as the rest.
+  ['/discover/prompts#all', ['.pl-search input']],
   ['/create/emoji', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/icons', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/font-gallery', ['.lbry-search']],
@@ -48,10 +49,10 @@ const SURFACES = [
 ]
 
 // The bordered search fields: one hairline width and style.
-const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.spm-ic-search'])
+const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.pl-search input', '.spm-ic-search'])
 // The search bars proper: one height, one border colour, one fill. .hcmd-bar is
 // the hero input and is left out on purpose.
-const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.spm-ic-search'])
+const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.pl-search input', '.spm-ic-search'])
 const SEARCH_H = 44
 // A search that sits ON a tool toolbar (the Font Gallery's, at 1440) is one of the
 // toolbar's controls, so it takes the toolbar control height, not the page search's.

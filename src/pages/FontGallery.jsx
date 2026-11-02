@@ -491,7 +491,7 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
                   <CloseIcon />
                 </button>
               </div>
-              <div className="fg-compare-meta">{font.category} · {font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</div>
+              <div className="fg-compare-meta">{sentence(catWord(font.category))} · {font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</div>
               <div className="fg-compare-sample">{text.trim() || PANGRAM}</div>
               <div className="fg-compare-charset">
                 <div>AaBbCcDd</div>
