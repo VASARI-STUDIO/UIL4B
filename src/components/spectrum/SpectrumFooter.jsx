@@ -182,13 +182,13 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
-            <Column heading="TOOLS">
+            <Column heading="Tools">
               <li><NavLink to="/tools">All tools</NavLink></li>
               {TOOLS.map(([groupId, label]) => (
                 <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
               ))}
             </Column>
-            <Column heading="PROJECT">
+            <Column heading="Project">
               {PROJECT.map(([hash, label]) => {
                 const href = salesHref(hash, pathname)
                 return (
@@ -200,7 +200,7 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
                 )
               })}
             </Column>
-            <Column heading="EXPLORE">
+            <Column heading="Explore">
               {EXPLORE.map(([to, label]) => (
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}
@@ -210,7 +210,7 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
                 CSS shows one and hides the other (display:none also drops it from
                 the accessibility tree), so the prerendered tree is right at
                 every width and nothing reflows after hydration. */}
-            <Column heading="LEGAL" className="sp-footer-col--legal">
+            <Column heading="Legal" className="sp-footer-col--legal">
               {LEGAL.map(([to, label]) => (
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}

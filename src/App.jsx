@@ -98,6 +98,15 @@ const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
 // way /discover is chromeless and /discover/palettes is not.
 const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+
+// The dev-only component sheet. The condition is written out here, in the
+// expressions Vite replaces with literals in a production build, so the
+// bundler drops both the `import()` below and the <Route> further down: the
+// page, its sheet and its fixtures never reach a deployed bundle.
+// tests/unit/dev-component-sheet-not-in-production.test.js builds both ways
+// and proves it. It is in no sitemap, nav, route-meta table or llms.txt.
+const DEV_SHEET = import.meta.env.DEV || import.meta.env.MODE === 'test'
+const DevComponents = DEV_SHEET ? lazy(() => import('./pages/DevComponents')) : null
 // /discover and /learn — the two surface INDEXES, in one component.
 //
 // STATIC UNTIL 2026-09-18, and it was static for a reason that expired: it
@@ -289,7 +298,10 @@ function AppInner({ toast }) {
     // routeMeta.js cannot know /roadmap (it is bundled into api/ and must not read
     // the flag), so the page that exists only while the flag is on is cleared here.
     const roadmapPage = TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap'
-    const missing = !roadmapPage && isUnknownRoute(location.pathname)
+    // The dev sheet has no metadata entry on purpose (routeMetaMap is shipped),
+    // so it is cleared here the same way, and only where the route exists.
+    const devSheetPage = DEV_SHEET && location.pathname.replace(/\/+$/, '') === '/dev/components'
+    const missing = !roadmapPage && !devSheetPage && isUnknownRoute(location.pathname)
     // THE LOOKUP KEY IS NORMALISED, and it has to be, because the other two
     // readers of this same pathname already are: canonicalUrl() strips a
     // trailing slash (routeMeta.js) and so does isUnknownRoute() one line
@@ -307,7 +319,8 @@ function AppInner({ toast }) {
       && (location.state?.signup === true || new URLSearchParams(location.search).get('signup') === '1')
     const title = missing
       ? 'UI L4B | Page not found'
-      : signupLogin ? LOGIN_SIGNUP_TITLE : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
+      : devSheetPage ? 'UI L4B | Component sheet (dev)'
+        : signupLogin ? LOGIN_SIGNUP_TITLE : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
       : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
@@ -611,6 +624,9 @@ function AppInner({ toast }) {
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
+              {/* Dev and test builds only. DEV_SHEET is false in production, so
+                  this is `false` there and the route does not exist. */}
+              {DEV_SHEET && <Route path="/dev/components" element={<DevComponents toast={toast} />} />}
               {/* A real 404, not a redirect. The redirect made every typo and
                   dead backlink a 200-status indexable copy of the homepage, and
                   silently teleported the user so a broken link looked like it

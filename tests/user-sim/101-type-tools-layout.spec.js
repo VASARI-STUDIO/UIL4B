@@ -33,12 +33,8 @@ const TOOLS = [
     route: '/create/font-pair',
     title: 'Font Pair',
     output: '.fpr-page .fpr-specimen',
-    // Pair A puts the family rows and the preview text ahead of the specimen on
-    // a phone (fonts build spec, criterion 7), so below 768 the first screen
-    // holds the controls and the specimen is the next screen. The first screen
-    // is checked on the family rows; the specimen must still start within the
-    // second screen, so it can't be pushed out of reach.
-    phone: { first: '.fpr-page .fpr-fam', outputWithin: 2 },
+    // A phone opens on the specimen (it is the first thing in the DOM), so the
+    // default rule applies: the output starts on the first screen.
   },
   {
     route: '/create/type-scale',

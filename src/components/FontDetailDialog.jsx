@@ -209,8 +209,10 @@ export default function FontDetailDialog({
     } else {
       window.history.pushState({ ...window.history.state, fgd: true }, '')
     }
-    // Any pop while open means the reader left our entry, so the pop-up closes.
-    const onPop = () => {
+    // Any pop while open means the reader left our entry, so the pop-up closes,
+    // except the pop a dialog opened on top makes when it closes itself.
+    const onPop = (event) => {
+      if (event.__overlaySelf) return
       popped = true
       closeRef.current()
     }

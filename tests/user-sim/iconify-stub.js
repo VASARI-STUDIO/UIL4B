@@ -34,6 +34,12 @@
 //                                longer does, so this is no longer the path
 //                                that decides whether cells paint.
 //
+// The page also reads each pack's list from its own site first
+// (/iconify/collections/<pack>.json, committed under public/iconify/), so the
+// same collection/<pack>.json fixtures answer THAT path too. It is counted as
+// `snapshot` and never as `collection`: a `collection` request is one that
+// reached the Iconify host, which a first visit no longer sends.
+//
 // Fulfilled, never aborted: an abort is a console error the feedback loop
 // reports on every viewport, and the page's own fallback branch is a different
 // state from the one being tested. Every stubbed response carries
@@ -84,6 +90,26 @@ export async function refuseIconify(page) {
     (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
   await page.route((u) => ICONIFY_HOSTS.slice(1).includes(u.hostname),
     (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
+  // The site's own pack lists are part of the catalogue: leaving them answering
+  // would render a healthy page over a refused service.
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
+}
+
+/**
+ * Take the site's own pack lists away (a 404 for every /iconify/collections/<pack>.json)
+ * and leave Iconify itself answering from the fixture. This is a pack with no
+ * usable snapshot: the page must fall back to the live /collection request,
+ * which the stub then counts as `collection`. Call it before go(); a page route
+ * outranks the context route, and page.unrouteAll() puts the snapshots back.
+ *
+ * Stamped REFUSED_VALUE like the other refusals so the context audit reads it
+ * as deliberate. The 404s are same-origin, so they are not an Iconify escape.
+ */
+export async function withholdSnapshots(page) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
 }
 
 /**
@@ -188,6 +214,54 @@ export async function holdIconHeads(page, { delay = () => 0 } = {}) {
   })
   return state
 }
+
+/**
+ * Let `after` Iconify requests through to the fixture, then answer every one
+ * after that with 429 and a Retry-After, the way the live API did when one IP
+ * reloaded /create/icons a couple of times (3555 seconds, measured). Stamped
+ * REFUSED_VALUE so the audit counts it as deliberate.
+ *
+ * Returns a live ledger — `{ served, refused, urls }` — because the page route
+ * outranks the context route, so the context tally no longer sees these
+ * requests: this ledger is the count "at the stub" for anything after the call.
+ * Read it with a before/after difference.
+ *
+ * `expose` adds Access-Control-Expose-Headers: retry-after, which the real API
+ * does not send; without it the page cannot read the header and must fall back
+ * to its own default cool-down. Both shapes are worth a test.
+ */
+export async function limitIconify(page, { after = 0, retryAfter = 3555, expose = false } = {}) {
+  const ledger = { served: 0, refused: 0, urls: [] }
+  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname), (route) => {
+    const url = route.request().url()
+    ledger.urls.push(url)
+    if (ledger.urls.length <= after) {
+      ledger.served += 1
+      const answer = answerIconify(url)
+      return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
+        .catch(() => { /* context torn down mid-flight */ })
+    }
+    ledger.refused += 1
+    return route.fulfill({
+      status: 429,
+      contentType: 'text/plain',
+      headers: {
+        [ICONIFY_STUB_HEADER]: REFUSED_VALUE,
+        'access-control-allow-origin': '*',
+        'retry-after': String(retryAfter),
+        ...(expose ? { 'access-control-expose-headers': 'retry-after' } : {}),
+      },
+      body: 'Too Many Requests',
+    }).catch(() => { /* context torn down mid-flight */ })
+  })
+  return ledger
+}
+
+/**
+ * The page's own copy of a pack list, which it asks for before it asks Iconify.
+ * Matches the path on whatever origin the app is served from.
+ */
+export const SNAPSHOT_PATH_RE = /^\/iconify\/collections\/([^/]+)\.json$/
 
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
@@ -314,6 +388,36 @@ export function answerIconify(urlString) {
   return json(404, { error: 'not found' })
 }
 
+/**
+ * The folder the build copies the site's own pack lists from. The fixture holds
+ * a pack list for more packs than the site commits (fluent-emoji has none), and
+ * the real site answers those with a 404 so the page goes on to the live
+ * /collection request. Reading the folder, not the fixture, keeps the stub from
+ * answering a list the product never serves, which would hide that live request
+ * from every count.
+ */
+export const SNAPSHOT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', 'iconify', 'collections')
+
+/** The packs the site serves a list for, sorted. */
+export function snapshotPacks() {
+  return fs.readdirSync(SNAPSHOT_DIR).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort()
+}
+
+/**
+ * The answer for one same-origin pack list, as { status, contentType, body }:
+ * the pack's fixture body when the site commits a snapshot file for it, or a
+ * 404 for any other pack, which is what sends the page on to the Iconify host
+ * (where the live request is counted).
+ */
+export function answerSnapshot(pathname) {
+  const pack = pathname.match(SNAPSHOT_PATH_RE)?.[1]
+  const name = pack && decodeURIComponent(pack)
+  const body = name && snapshotPacks().includes(name) && loadFixture().collection.get(name)
+  return body
+    ? { status: 200, contentType: 'application/json', body }
+    : { status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'not found' }) }
+}
+
 function appendAudit(entry) {
   try {
     fs.mkdirSync(REPORT_DIR, { recursive: true })
@@ -333,7 +437,7 @@ export async function stubIconify(context) {
   // uses; the two are separate because "the grid drew its icons" and "a glyph's
   // own markup was fetched" stopped being the same question when the grid
   // started batching.
-  const tally = { stubbed: 0, refused: 0, collection: 0, search: 0, svg: 0, batch: 0, missing: [], escaped: [] }
+  const tally = { stubbed: 0, refused: 0, collection: 0, snapshot: 0, search: 0, svg: 0, batch: 0, missing: [], escaped: [] }
   context[ICONIFY_TALLY] = tally
 
   await context.route((url) => ICONIFY_HOSTS.includes(url.hostname), (route) => {
@@ -346,6 +450,16 @@ export async function stubIconify(context) {
     else if (pathname.endsWith('.svg')) tally.svg += 1
     else if (/^\/[^/]+\.json$/.test(pathname) && new URL(req.url()).search.includes('icons=')) tally.batch += 1
     if (answer.status === 404) tally.missing.push(pathname + new URL(req.url()).search)
+    return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
+      .catch(() => { /* context torn down mid-flight */ })
+  })
+
+  // The site's own pack lists. Not an Iconify host, so outside the escape audit;
+  // `snapshot` counts them so a spec can tell "read from this site" from "asked
+  // Iconify".
+  await context.route((url) => SNAPSHOT_PATH_RE.test(url.pathname), (route) => {
+    tally.snapshot += 1
+    const answer = answerSnapshot(new URL(route.request().url()).pathname)
     return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
       .catch(() => { /* context torn down mid-flight */ })
   })

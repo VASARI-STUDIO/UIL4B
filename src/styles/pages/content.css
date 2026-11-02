@@ -112,11 +112,11 @@
    mono captions the sheet it replaces carried (9px/9.5px/10px/10.5px/11px and
    --fs-micro, at .04em/.06em/.08em/.1em/.12em/.14em). */
 .cpg-cap {
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cpg-faint);
 }
 

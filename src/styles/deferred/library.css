@@ -108,7 +108,7 @@
 .pl-textarea{min-height:100px;resize:vertical;font-size:13px;line-height:1.7}
 .pl-add-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
 .pl-add-field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
-.pl-add-field label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.pl-add-field label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 /* The locked tease continues the gallery, so its seam is the ROW GAP, not
    the 8px that separates the first grid from the toolbar. --pl-gap is read
@@ -188,7 +188,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-card-tags{display:flex;gap:5px;flex-wrap:wrap}
 
 /* Card date inline */
-.pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
+.pl-card-date-inline{font-family:var(--font);font-size:var(--fs-caption);color:var(--t3);margin-top:8px;font-variant-numeric:tabular-nums}
 /* Copy hint */
 .pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
@@ -246,7 +246,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* --t2, not --t3: at 10px on the --bg-3 chip --t3 measures 4.46:1 in light
    (#66665f on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
    dark clears either way. Same reasoning as .arc-ratio-card-use. */
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.emoji-section-count{font-size:var(--fs-caption);font-weight:560;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
 /* Recovery action inside the search empty/error states (Try again · Search all
    categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
    matches .emoji-tone-btn so the two controls on this surface agree. */
@@ -362,7 +362,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    no heading, rule or padding over an empty row. The tiles stay mounted inside
    so their glyphs still load. */
 .icust-similar:not([data-ready]){height:0;padding:0;border-top-width:0;overflow:hidden}
-.icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.icust-similar-label{margin-bottom:12px;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
 .icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
@@ -383,8 +383,8 @@ html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
-.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
-.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--t2);margin-bottom:10px}
+.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
@@ -835,7 +835,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lbry-filtertrig[data-active="true"]{
   color:var(--t0);border-color:var(--bh);background:var(--card);box-shadow:none;
 }
-.lib-surface .lbry-filtertrig-k{font-size:10px;letter-spacing:.06em}
+.lib-surface .lbry-filtertrig-k{font-size:var(--fs-caption);letter-spacing:normal}
 /* The menu keeps rows as rows: no chip border in a list. */
 .lib-surface .lbry-filtermenu .lbry-filter{
   border-color:transparent;border-radius:var(--radius-s);

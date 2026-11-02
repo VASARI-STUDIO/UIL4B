@@ -15,9 +15,8 @@
 //     in the baseline row up to 760px, as the LEGAL column from 761px. Both sit in
 //     the page from the first render, so crossing the line moves nothing.
 //
-// The drawn quiet-link sizes are hand-checked (32px tall; 67, 82 and 98px wide at
-// 10.5px mono, 0.14em tracking, 14px side padding), not read back from the
-// stylesheet. They were also measured on the build before this slice.
+// The drawn quiet links are 32px tall (16px line, 8px padding above and below) and
+// set in the UI sans: sentence case, 13px, weight 560, normal tracking.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -161,6 +160,32 @@ test.describe('quiet links', () => {
     for (const b of boxes) {
       expect(b.h).toBe(32)
       expect(await ownerAt(page, b.x + b.w / 2, b.y + b.h / 2 - 21), `${b.text} has a touch area under a mouse`).toBeNull()
+    }
+    await ctx.close()
+  })
+
+  test('1440 mouse: the links are set in the UI sans, sentence case, not mono capitals', async ({ browser }) => {
+    const { ctx, page } = await open(browser, DESKTOP, 'a desktop visitor')
+    await go(page, '/')
+    const sans = await page.evaluate(() => {
+      const probe = document.createElement('span')
+      probe.style.fontFamily = 'var(--font)'
+      document.body.appendChild(probe)
+      const family = getComputedStyle(probe).fontFamily
+      probe.remove()
+      return family
+    })
+    const styles = await page.locator('.spnav-quiet-link').evaluateAll((els) => els.map((el) => {
+      const cs = getComputedStyle(el)
+      return { text: el.textContent.trim(), family: cs.fontFamily, size: parseFloat(cs.fontSize), weight: Number(cs.fontWeight), tracking: cs.letterSpacing, transform: cs.textTransform }
+    }))
+    expect(styles.map((s) => s.text)).toEqual(QUIET)
+    for (const s of styles) {
+      expect(s.family, `${s.text} is not in the UI sans`).toBe(sans)
+      expect(s.size, `${s.text} is under the 13px floor`).toBeGreaterThanOrEqual(13)
+      expect(s.weight, `${s.text} is heavier than 600`).toBeLessThanOrEqual(600)
+      expect(s.tracking, `${s.text} is tracked`).toBe('normal')
+      expect(s.transform, `${s.text} is uppercased`).toBe('none')
     }
     await ctx.close()
   })
@@ -317,7 +342,7 @@ for (const w of WIDTHS) {
     await expect(footer.getByRole('navigation', { name: 'Legal' })).toHaveCount(w.inColumn ? 0 : 1)
     const groups = await footer.locator('.sp-footer-col').evaluateAll((cols) => cols.filter((c) => c.getClientRects().length > 0).length)
     expect(groups, `${w.width}px should draw ${w.groups} link groups`).toBe(w.groups)
-    if (w.inColumn) await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('LEGAL')
+    if (w.inColumn) await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('Legal')
     await ctx.close()
   })
 }

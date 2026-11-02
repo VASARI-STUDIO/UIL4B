@@ -407,7 +407,7 @@
   background: rgba(var(--sp-ink-rgb), .07);
   min-height: 25px;
 }
-.sp-search .hcmd-kbd kbd { font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-search .hcmd-kbd kbd { font-family: var(--mono); font-size: 10px; font-weight: 400; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-search-ghost {
   position: absolute;
   left: 46px;
@@ -561,10 +561,10 @@
 .spectrum .sp-role { transition: filter .18s ease; }
 @media (hover: hover) and (pointer: fine) { .sp-role:hover { filter: brightness(1.08); } }
 .spectrum .sp-role:active { transform: scale(.986); }
-.sp-role-name { font-size: 12px; letter-spacing: .02em; opacity: .85; }
+.sp-role-name { font-size: var(--bt-m); letter-spacing: normal; opacity: .85; }
 .sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
-.sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-roles .sp-role-aa { font-size: 12px; letter-spacing: .02em; font-variant-numeric: tabular-nums; opacity: .85; }
+.sp-role-val { font-size: 13px; letter-spacing: normal; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-roles .sp-role-aa { font-size: var(--bt-m); letter-spacing: normal; font-variant-numeric: tabular-nums; opacity: .85; }
 .sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .sp-prev-say { display: grid; gap: 3px; min-width: 0; }
 .sp-prev-say small { font-size: 12px; letter-spacing: 0; opacity: .75; }
@@ -753,7 +753,7 @@
 .sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
 .sp-model-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .sp-model-conv { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: 12px; letter-spacing: .02em; }
+.sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: var(--bt-m); letter-spacing: normal; }
 .sp-model-chip.is-out { border-color: var(--accent-border); color: var(--accent-text); }
 .sp-model-wire { flex: 1; max-width: 120px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; height: 1px; background: var(--sp-line-strong); color: var(--sp-dim); }
 .sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
@@ -762,7 +762,7 @@
 /* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
    drawn larger than a caption. */
 @media (min-width: 761px) {
-  .sp-model-chip { padding: 8px 16px; font-size: var(--bt-l); font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
+  .sp-model-chip { padding: 8px 16px; font-size: var(--bt-l); font-weight: 600; letter-spacing: normal; line-height: 1.2; }
   .sp-model-wire { max-width: 160px; }
   .sp-model-wire .sp-ph { font-size: 16px; }
   .sp-model-unit { font-size: var(--bt-l); font-weight: 500; color: var(--sp-ink); }
@@ -771,7 +771,7 @@
 .sp-ratio { display: grid; align-content: start; gap: 12px; }
 .sp-ratio-stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); display: grid; place-items: center; padding: 10px; }
 .sp-ratio-stage img { display: block; width: 100%; max-width: 100%; max-height: 150px; border-radius: 8px; object-fit: cover; }
-.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: 12px; letter-spacing: .02em; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
+.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: var(--bt-m); letter-spacing: normal; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
 .sp-ratio-half { font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-frames { display: grid; align-content: start; gap: 12px; }
 .sp-strip { position: relative; display: flex; gap: 2px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); }
@@ -1119,7 +1119,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-disc-art--icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); place-items: center; background: var(--sp-page); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); color: var(--sp-ink); font-size: 26px; }
 .sp-disc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 14px 14px; }
 .sp-disc-name { font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-disc-meta { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-disc-meta { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-disc-cta {
   position: relative;
   display: flex;
@@ -1155,7 +1155,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 }
 .sp-disc-cta-say { font-family: var(--display); font-weight: 560; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.04; letter-spacing: -.02em; max-width: min(14ch, 100%); }
 .sp-disc-cta-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.sp-disc-cta-count { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; opacity: .72; }
+.sp-disc-cta-count { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; opacity: .72; font-variant-numeric: tabular-nums; }
 .sp-disc-cta .sp-pill-icon { width: 38px; height: 38px; background: rgba(var(--sp-page-rgb), .14); font-size: 16px; }
 .sp-disc-foot { margin-top: clamp(22px, 2.6vw, 32px); padding-top: 22px; border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
 .sp-disc-foot p { margin: 0; max-width: min(52ch, 100%); font-size: 14.5px; line-height: 1.55; color: var(--sp-dim); }

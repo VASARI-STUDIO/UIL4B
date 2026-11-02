@@ -31,7 +31,7 @@ import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
 import { AccountSwitcher, OfflineNote, SignOutRows } from './nav/AccountSwitcher'
 import useOfflineGate from './nav/useOfflineGate'
-import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
+import { menuFootNote, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -1282,6 +1282,7 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                                   >{t.label}</span>
                                 )}
                             </span>
+                            {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
                           </Link>
@@ -1305,16 +1306,6 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
               <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
                 <DiscoverCounts />
               </Suspense>
-            )}
-            {section.id === 'learn' && (
-              <ul className="pnav-guides">
-                {menuGuides().map((g) => (
-                  <li className="pnav-guide" key={g.to}>
-                    <span className="pnav-guide-label">{g.label}</span>
-                    <span className="pnav-guide-mins">{g.mins}</span>
-                  </li>
-                ))}
-              </ul>
             )}
             {section.id === 'create' ? (
               <button type="button" className="pnav-editorial-cta" onClick={onBrandKit} data-pnav-menuitem>

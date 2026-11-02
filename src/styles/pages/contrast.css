@@ -173,7 +173,7 @@
 }
 
 /* ── Where each test lands ──────────────────────────────────────────────── */
-.cc .cc-lg { display: grid; gap: 6px; }
+.cc .cc-lg { display: grid; gap: 2px; }
 .cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
 .cc .cc-lg-chip {
   display: grid;
