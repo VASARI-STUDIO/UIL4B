@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 // ── WHAT THIS PAGE IS ALLOWED TO READ FROM utils/analytics ────────────────
 // getAggregateAnalytics() is the only cross-user reader in that module: it sums
 // the `analytics-daily` documents every signed-in session writes, so what it
@@ -28,6 +28,7 @@ import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/me
 import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
 import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_RANGES, DEFAULT_RANGE_ID, parseRangeId, rangeWindow, inWindow } from '../utils/adminRange'
 import { isAdminEmail } from '../utils/constants'
 import { accountProviderIds } from '../utils/authSwitch'
 import { stashPriceDraft, takePriceDraft, overlayDraft } from '../utils/priceDraftStash'
@@ -204,12 +205,15 @@ function DonutChart({ segments, size = 120 }) {
  * localStorage — with nothing on either card to tell them apart. One component
  * that is only ever handed aggregate rows cannot develop that difference again.
  */
-function TopList({ title, rows, unit, empty, wide = false }) {
+function TopList({ title, rows, unit, empty, range, wide = false }) {
   const max = Math.max(1, ...rows.map(r => r[1]))
   return (
     <div className="adm-card">
       <div className="adm-card-header">
-        <span className="adm-card-title">{title}</span>
+        <span className="adm-card-heading">
+          <span className="adm-card-title">{title}</span>
+          <span className="adm-card-range">{range}</span>
+        </span>
         <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
       </div>
       <div className="adm-card-body">
@@ -231,12 +235,15 @@ function TopList({ title, rows, unit, empty, wide = false }) {
 
 // Per-tool usage as two separate numbers: how often the tool was opened and how
 // often something was then done in it. The bar follows Opened.
-function ToolUsageCard({ rows }) {
+function ToolUsageCard({ rows, range }) {
   const max = Math.max(1, ...rows.map(r => r.opened))
   return (
     <div className="adm-card" data-testid="adm-tool-usage">
       <div className="adm-card-header">
-        <span className="adm-card-title">Tools</span>
+        <span className="adm-card-heading">
+          <span className="adm-card-title">Tools</span>
+          <span className="adm-card-range">{range}</span>
+        </span>
         <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} tools</span>
       </div>
       <div className="adm-card-body">
@@ -1780,6 +1787,24 @@ export default function Admin({ toast }) {
   const [confirmPageReset, setConfirmPageReset] = useState(false)
   const [resettingPages, setResettingPages] = useState(false)
 
+  // The overview's date range lives in the URL (?range=90d) so a reload or a
+  // shared link lands on the same window. The default is left out of the query.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rangeId = parseRangeId(searchParams.get('range'))
+  const selectRange = (next) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (next === DEFAULT_RANGE_ID) params.delete('range')
+      else params.set('range', next)
+      return params
+    }, { replace: true })
+  }
+  // Re-derived on every refresh so a tab left open past midnight moves its window.
+  const range = useMemo(() => rangeWindow(rangeId), [rangeId, refreshedAt]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Only the newest aggregate read may report: a slow read for a range the
+  // admin has already left must not overwrite the figures for the current one.
+  const aggregateRead = useRef(0)
+
   // One status at a time, newest first, capped (see utils/adminPromptQuery.js).
   // Reading the whole collection pulled every spam prompt, with its inline
   // media, into the moderator's browser.
@@ -1825,23 +1850,6 @@ export default function Admin({ toast }) {
     // when the server list cannot be read. Nothing on this page states a
     // figure from it. See the import note at the top of the file.
     setData(getAnalyticsSummary())
-    // Cross-user aggregate from Firestore (safe-empty on failure). Non-blocking
-    // relative to the localStorage data above, which renders immediately.
-    setAggregateLoaded(false)
-    setAggregateError('')
-    // A FAILED READ IS NOT ZERO. This used to swallow the error and substitute
-    // an empty result, so a permissions failure, an offline admin or a bad
-    // service account all rendered as "0 views" — visually identical to a site
-    // nobody visited. On the one page whose entire job is telling you what is
-    // true, the most expensive thing it can do is state a confident number it
-    // does not have. The error is kept and shown instead.
-    getAggregateAnalytics(30)
-      .then(agg => { setAggregate(agg); setAggregateError('') })
-      .catch(err => {
-        setAggregate(null)
-        setAggregateError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      })
-      .finally(() => setAggregateLoaded(true))
     const localFeedback = getFeedback()
     const merged = [...localFeedback]
     // A REFUSED READ IS NOT AN EMPTY QUEUE — the same fault the aggregate block
@@ -1867,6 +1875,32 @@ export default function Admin({ toast }) {
     await loadPrompts(promptFilterRef.current)
     setRefreshedAt(Date.now())
   }, [loadPrompts])
+
+  // Cross-user aggregate from Firestore for the chosen range. Separate from
+  // refresh() so changing the range re-reads only this and not the feedback
+  // and prompt queues.
+  const loadAggregate = useCallback(() => {
+    const read = ++aggregateRead.current
+    const win = rangeWindow(rangeId)
+    setAggregateLoaded(false)
+    setAggregateError('')
+    // A FAILED READ IS NOT ZERO. This used to swallow the error and substitute
+    // an empty result, so a permissions failure, an offline admin or a bad
+    // service account all rendered as "0 views" — visually identical to a site
+    // nobody visited. On the one page whose entire job is telling you what is
+    // true, the most expensive thing it can do is state a confident number it
+    // does not have. The error is kept and shown instead.
+    return getAggregateAnalytics(win.days, { since: win.startDay })
+      .then(agg => { if (read === aggregateRead.current) { setAggregate(agg); setAggregateError('') } })
+      .catch(err => {
+        if (read !== aggregateRead.current) return
+        setAggregate(null)
+        setAggregateError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      })
+      .finally(() => { if (read === aggregateRead.current) setAggregateLoaded(true) })
+  }, [rangeId])
+
+  const reloadAll = () => { refresh(); loadAggregate() }
 
   const [serverVerified, setServerVerified] = useState(false)
   const [verifyError, setVerifyError] = useState('')
@@ -1939,6 +1973,11 @@ export default function Admin({ toast }) {
     if (effectiveUnlocked) refresh()
   }, [effectiveUnlocked, refresh])
 
+  // Runs on arrival and again whenever the range changes.
+  useEffect(() => {
+    if (effectiveUnlocked) loadAggregate()
+  }, [effectiveUnlocked, loadAggregate])
+
   // ── Derived data ──
 
   // Submission stats
@@ -1976,10 +2015,22 @@ export default function Admin({ toast }) {
     return counts
   }, [feedback])
 
+  // The overview's feedback cards cover the chosen range only, by the day each
+  // report was filed. The Submissions tab and its badge still list everything.
+  const rangeFeedback = useMemo(() => feedback.filter(f => inWindow(f.createdAt, range)), [feedback, range])
+  const rangeFeatures = useMemo(() => rangeFeedback.filter(f => f.type === 'feature'), [rangeFeedback])
+  const rangeOpenBugs = useMemo(() => rangeFeedback.filter(f => f.type === 'bug' && f.status !== 'done'), [rangeFeedback])
+  // Open bugs filed before the window: still open, so the card says they exist
+  // rather than letting a short range make the list look clean.
+  const olderOpenBugs = useMemo(
+    () => feedback.filter(f => f.type === 'bug' && f.status !== 'done' && !inWindow(f.createdAt, range)).length,
+    [feedback, range],
+  )
+
   const feedbackDonut = useMemo(() => {
     const types = ['bug', 'feature', 'general', 'help', 'report']
-    return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: feedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
-  }, [feedback])
+    return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: rangeFeedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
+  }, [rangeFeedback])
 
   // ── Handlers ──
 
@@ -2088,7 +2139,7 @@ export default function Admin({ toast }) {
     setResettingPages(false)
     setConfirmPageReset(false)
     toast(ok ? 'Page analytics reset' : 'Local data cleared — server reset failed', ok ? 'success' : 'error')
-    refresh()
+    reloadAll()
   }
 
   // ── Lock screen ──
@@ -2143,7 +2194,7 @@ export default function Admin({ toast }) {
               Updated <span className="mono">{new Date(refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </span>
           )}
-          <button className="btn btn-s" onClick={refresh}>Refresh</button>
+          <button className="btn btn-s" onClick={reloadAll}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
         </div>
       </div>
@@ -2221,12 +2272,31 @@ export default function Admin({ toast }) {
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
+          {/* The range every figure below reports on. One row that never wraps:
+              the labels shorten under 640px so all six stay on a single line. */}
+          <div className="adm-range" role="group" aria-label="Date range for the overview">
+            {ADMIN_RANGES.map(r => (
+              <button
+                key={r.id}
+                type="button"
+                className="adm-range-btn"
+                aria-pressed={rangeId === r.id}
+                aria-label={r.label}
+                data-range={r.id}
+                onClick={() => selectRange(r.id)}
+              >
+                <span className="adm-range-long" aria-hidden="true">{r.label}</span>
+                <span className="adm-range-short" aria-hidden="true">{r.short}</span>
+              </button>
+            ))}
+          </div>
+
           {/* Category — audience (all users, server aggregate) */}
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Audience</div>
               <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                All users · server totals · last 30 days
+                All users · server totals · {range.phrase}
                 {!confirmPageReset && (
                   <button className="btn btn-s" onClick={() => setConfirmPageReset(true)} style={{ fontSize: 10 }}>Reset page analytics</button>
                 )}
@@ -2277,7 +2347,7 @@ export default function Admin({ toast }) {
                   </p>
                   <p className="mono" style={{ fontSize: 10.5, color: 'var(--t3)', textAlign: 'center', margin: '6px 0 0', wordBreak: 'break-word' }}>{aggregateError}</p>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                    <button type="button" className="btn btn-s" onClick={refresh}>Retry</button>
+                    <button type="button" className="btn btn-s" onClick={loadAggregate}>Retry</button>
                   </div>
                 </div>
               </div>
@@ -2296,22 +2366,22 @@ export default function Admin({ toast }) {
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.totalViews)}</div>
                     <div className="adm-stat-label">Total Page Views</div>
-                    <div className="adm-stat-sub">All signed-in users</div>
+                    <div className="adm-stat-sub">All signed-in users · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.byPath.length)}</div>
                     <div className="adm-stat-label">Distinct Pages</div>
-                    <div className="adm-stat-sub">With recorded views</div>
+                    <div className="adm-stat-sub">With recorded views · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.byTool.reduce((s, t) => s + t[1], 0))}</div>
                     <div className="adm-stat-label">Tool Actions</div>
-                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types used</div>
+                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types used · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.days.length)}</div>
                     <div className="adm-stat-label">Active Days</div>
-                    <div className="adm-stat-sub">In last 30 days</div>
+                    <div className="adm-stat-sub">Days with traffic · {range.phrase}</div>
                   </div>
                 </div>
                 {/* THE FOUR RANKED LISTS, ALL FROM THE SAME AGGREGATE.
@@ -2326,16 +2396,16 @@ export default function Admin({ toast }) {
                   <TopList
                     title="Top Pages"
                     unit="pages"
-                    empty="No page data yet"
+                    empty="No page data yet" range={range.phrase}
                     rows={aggregate.byPath.map(([path, n]) => [path === 'root' ? '/' : path.replace(/_/g, '/'), n])}
                   />
-                  <ToolUsageCard rows={toolUsageRows(aggregate)} />
-                  <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} />
-                  <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} />
+                  <ToolUsageCard rows={toolUsageRows(aggregate)} range={range.phrase} />
+                  <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} range={range.phrase} />
+                  <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} range={range.phrase} />
                   {/* The funnel counters share the daily document with the tool
                       counters but are not tool usage, so they get their own list. */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} wide />
+                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} range={range.phrase} wide />
                   </div>
                 </div>
               </>
@@ -2346,28 +2416,28 @@ export default function Admin({ toast }) {
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Feedback &amp; Community</div>
-              <span className="adm-cat-desc">Submissions across all devices</span>
+              <span className="adm-cat-desc">Submissions across all devices · {range.phrase}</span>
             </div>
             <div className="adm-grid-3">
               <div className="adm-card">
                 <div className="adm-card-header">
-                  <span className="adm-card-title">Submissions by Type</span>
+                  <span className="adm-card-heading"><span className="adm-card-title">Submissions by Type</span><span className="adm-card-range">{range.phrase}</span></span>
                 </div>
                 <div className="adm-card-body">
                   {feedbackDonut.length > 0
                     ? <DonutChart segments={feedbackDonut} />
-                    : <div className="adm-empty">No submissions yet</div>}
+                    : <div className="adm-empty">No submissions in the {range.phrase}</div>}
                 </div>
               </div>
 
             <div className="adm-card">
               <div className="adm-card-header">
-                <span className="adm-card-title">Feature Requests</span>
-                <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{feedback.filter(f => f.type === 'feature').length} total</span>
+                <span className="adm-card-heading"><span className="adm-card-title">Feature Requests</span><span className="adm-card-range">{range.phrase}</span></span>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rangeFeatures.length} filed</span>
               </div>
               <div className="adm-card-body">
                 <div className="adm-list">
-                  {feedback.filter(f => f.type === 'feature').slice(-6).reverse().map((f, i) => (
+                  {rangeFeatures.slice(-6).reverse().map((f, i) => (
                     <div key={f.id || i} className="adm-list-row">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--t0)', marginBottom: 2 }}>{f.subject || 'No subject'}</div>
@@ -2376,18 +2446,18 @@ export default function Admin({ toast }) {
                       <span className="adm-badge" style={{ color: STATUS_COLORS[f.status], background: STATUS_BGS[f.status] }}>{STATUS_LABELS[f.status]}</span>
                     </div>
                   ))}
-                  {feedback.filter(f => f.type === 'feature').length === 0 && <div className="adm-empty" style={{ padding: 16 }}>No feature requests yet</div>}
+                  {rangeFeatures.length === 0 && <div className="adm-empty" style={{ padding: 16 }}>No feature requests in the {range.phrase}</div>}
                 </div>
               </div>
             </div>
 
             <div className="adm-card">
               <div className="adm-card-header">
-                <span className="adm-card-title">Open Bugs</span>
+                <span className="adm-card-heading"><span className="adm-card-title">Open Bugs</span><span className="adm-card-range">filed in the {range.phrase}</span></span>
               </div>
               <div className="adm-card-body">
                 <div className="adm-feed">
-                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').map(f => (
+                  {rangeOpenBugs.map(f => (
                     <div key={f.id} className="adm-feed-item">
                       <span className="adm-feed-dot" style={{ background: STATUS_COLORS[f.status] }} />
                       <div className="adm-feed-body">
@@ -2396,10 +2466,15 @@ export default function Admin({ toast }) {
                       </div>
                     </div>
                   ))}
-                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').length === 0 && (
+                  {rangeOpenBugs.length === 0 && (
                     <div style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--ok)' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      No open bugs
+                      No open bugs filed in the {range.phrase}
+                    </div>
+                  )}
+                  {olderOpenBugs > 0 && (
+                    <div className="adm-card-range" data-testid="adm-older-bugs" style={{ padding: '4px 12px' }}>
+                      {olderOpenBugs} older open {olderOpenBugs === 1 ? 'bug is' : 'bugs are'} not shown. Widen the range to see {olderOpenBugs === 1 ? 'it' : 'them'}.
                     </div>
                   )}
                 </div>
@@ -2423,7 +2498,7 @@ export default function Admin({ toast }) {
               <div className="adm-card-header">
                 <span className="adm-card-title">AI provider health</span>
                 <span style={{ fontSize: 11, color: 'var(--t3)' }}>
-                  {aiHealth?.windowDays ? `last ${aiHealth.windowDays} days` : 'live'}
+                  {aiHealth?.windowDays ? `last ${aiHealth.windowDays} days · fixed, not set by the range` : 'live'}
                 </span>
               </div>
               <div className="adm-card-body">
