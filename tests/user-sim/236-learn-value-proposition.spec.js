@@ -68,7 +68,7 @@ test.describe('Improving your value proposition', () => {
     const row = page.locator(`#pnav-mega a.pnav-tool[href="${ROUTE}"]`)
     await expect(row).toBeVisible()
     await expect(row).not.toHaveAttribute('data-soon', 'true')
-    await expect(row).toContainText(article.navLabel)
+    await expect(row).toContainText(article.title)
   })
 
   test('does not scroll sideways at 390px', async ({ page }) => {
