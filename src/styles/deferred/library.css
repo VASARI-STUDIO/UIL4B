@@ -298,6 +298,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
+.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
@@ -351,8 +352,19 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-savedin strong{font-weight:600;color:var(--t1)}
 /* Code readout */
 .icust-code{margin:12px 24px 0}
-/* The code can be selected; a Copy button sits beside it. */
-.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all}
+.icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
+.icust-code-box:hover{border-color:var(--accent)}
+.icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
+.icust-code-box:hover .icust-code-hint{color:var(--accent-mid)}
+/* Copy-only snippet: the text is not selectable, so the Copy button is the one
+   way out — keeps the workflow inside UIL4B. */
+.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
+/* Reset lives at the end of the tag row. Hidden, not removed, while nothing
+   differs from the defaults, so the row keeps its height. */
+.lib-surface .icust-meta .icust-reset{flex:none;margin-left:auto;min-height:32px;padding:0 12px}
+.lib-surface .icust-meta .icust-reset.is-hidden{visibility:hidden}
+@media(pointer:coarse){.lib-surface .icust-meta .icust-reset{min-height:44px}}
 .icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
@@ -497,7 +509,8 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
-.icust-foot .lib-btn:disabled,.icust-code-copy:disabled{opacity:.5;cursor:not-allowed}
+.icust-foot .lib-btn:disabled,.icust-code-box:disabled{opacity:.5;cursor:not-allowed}
+.icust-code-box:disabled:hover{border-color:var(--border)}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
@@ -1624,53 +1637,28 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
    the app's own tokens (ink is --t0, the page is --bg-0, the dim line is
    --t1). No card, no box, no hairline.
 
-   Signed out, a row of blurred built-in icons continues the grid above it.
-   The row is decoration: the block's words and buttons are always on screen,
-   and the "Log in to see more" chip is an echo for a fine pointer only.
-   A mask fades the row into the block below it. */
+   Signed out, two rows of blurred built-in icons continue the grid above it.
+   The rows are decoration: no focus, no pointer, no hover state. The block's
+   words and buttons are always on screen and hold the one way in. A mask fades
+   the rows into the block below them. */
 .ig-end{margin-top:0}
 
 .ig-end-tease{
   --ig-end-cols:8;
   position:relative;isolation:isolate;
   display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
-  margin-top:4px;
+  margin-top:4px;pointer-events:none;user-select:none;
 }
 .ig-end-cell{
   position:relative;box-sizing:border-box;display:grid;place-items:start center;
   min-height:var(--ig-end-cell-h,92px);padding-top:16px;color:var(--t0);
 }
 .ig-end-cell>svg{width:24px;height:24px;filter:blur(3px)}
-.ig-end-chip svg{flex:0 0 auto;width:12px;height:12px}
 .ig-end-cell[data-row="0"]>svg{opacity:.72}
-.ig-end-cell[data-row="1"]>svg{opacity:.42}
+.ig-end-cell[data-row="1"]>svg{opacity:.5}
 @media(max-width:640px){
   .ig-end-tease{gap:2px}
   .ig-end-cell{min-height:var(--ig-end-cell-h,72px);padding-top:12px}
-}
-
-/* The chip. Absent on touch, where the band says the same thing in words. */
-.ig-end-chip{display:none}
-@media (hover:hover) and (pointer:fine){
-  .ig-end-cell{cursor:pointer}
-  .ig-end-chip{
-    position:absolute;left:50%;top:28px;z-index:1;transform:translate(-50%,-50%);
-    display:inline-flex;align-items:center;gap:6px;
-    padding:6px 10px;border-radius:var(--radius-pill);
-    background:var(--t0);color:var(--bg-0);
-    font:500 12px/1 var(--font);white-space:nowrap;
-    opacity:0;pointer-events:none;
-    transition:opacity 150ms cubic-bezier(.23,1,.32,1);
-  }
-  .ig-end-cell:hover .ig-end-chip{opacity:1}
-  /* Edge columns keep the chip inside the grid. */
-  .ig-end-cell[data-edge="first"] .ig-end-chip{left:0;transform:translateY(-50%)}
-  .ig-end-cell[data-edge="last"] .ig-end-chip{left:auto;right:0;transform:translateY(-50%)}
-}
-/* From 1200px the page gutter is wider than the chip's overhang, so the edge
-   chips can centre on their cell like the others. */
-@media (hover:hover) and (pointer:fine) and (min-width:1200px){
-  .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
 }
 
 /* The block: centred, one column. With a blurred row above it the heading is
@@ -1681,7 +1669,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 .ig-end{margin-bottom:64px}
 @media(max-width:767px){.ig-end{margin-bottom:48px}}
 /* The grid dissolves into the block: the mask is transparency, not a painted colour. */
-.ig-end-tease{-webkit-mask-image:linear-gradient(to bottom,#000 0%,transparent 85%);mask-image:linear-gradient(to bottom,#000 0%,transparent 85%)}
+.ig-end-tease{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%)}
 .ig-end-copy{min-width:0}
 .ig-end .ig-end-h{
   margin:0;
@@ -1721,12 +1709,11 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 }
 
 /* Reduced motion: the in-app choice wins in both directions, then the OS
-   setting. The chip appears and goes with no fade; the arrow does not rotate
-   and the press does not scale. */
-html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-link,.ig-end-chip){transition:none}
+   setting. The arrow does not rotate and the press does not scale. */
+html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-link){transition:none}
 html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-link,.ig-end-chip){transition:none}
+  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-link){transition:none}
   html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
 }
 

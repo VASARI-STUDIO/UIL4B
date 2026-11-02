@@ -243,7 +243,7 @@ test.describe('size rail (phone)', () => {
     // The whole field is above the foot (stuck to the bottom of the sheet) once it settles.
     await expect.poll(async () => {
       const f = await input.boundingBox()
-      const foot = await page.locator('.icust-body > .icust-foot').boundingBox()
+      const foot = await page.locator('.icust-main > .icust-foot').boundingBox()
       return foot.y - (f.y + f.height)
     }, { message: 'the field is covered by the foot', timeout: 5_000 }).toBeGreaterThanOrEqual(0)
     const f = await input.boundingBox()
