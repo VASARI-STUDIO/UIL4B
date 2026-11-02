@@ -795,8 +795,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .pl-modal-delete:hover{background:color-mix(in srgb,var(--err) 8%,transparent)!important}
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
-.emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
-.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;white-space:nowrap;font-family:var(--font)}
 .emoji-tone-btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-2);color:var(--t2);font-size:18px;line-height:1;cursor:pointer;font-family:var(--font);transition:border-color var(--t),background var(--t),color var(--t)}
 .emoji-tone-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
