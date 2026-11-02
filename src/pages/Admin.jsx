@@ -18,6 +18,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, 
 import { db } from '../utils/firebase'
 import { createPromptLoader, promptReadErrorText, ADMIN_PROMPT_DEFAULT_FILTER, ADMIN_PROMPT_FILTERS, ADMIN_PROMPT_LIMIT } from '../utils/adminPromptQuery'
 import CommunityQueue from '../components/admin/CommunityQueue'
+import CommunityNotifySettings from '../components/admin/CommunityNotifySettings'
 import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } from '../utils/feedbackQueueApi'
 import { useModerationRole } from '../hooks/useModerationRole'
 import {
@@ -90,6 +91,8 @@ const TABS = [
   { id: 'community', label: 'Community' },
   { id: 'prompts', label: 'Prompts' },
   { id: 'stripe', label: 'Stripe' },
+  // Server-side settings, visible to the administrator allowlist only.
+  { id: 'settings', label: 'Settings', adminOnly: true },
 ]
 
 function fmtDate(iso) {
@@ -1726,20 +1729,21 @@ export default function Admin({ toast }) {
   // refresh that makes a freshly minted claim usable in the same session.
   const { role, loading: roleLoading } = useModerationRole()
   const [tab, setTab] = useState('overview')
+  const tabs = TABS.filter(t => !t.adminOnly || isAdminUser)
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
   // stop; arrows move within it. Without this the ten tabs were ten separate
   // stops, so reaching the content of the last one meant ten presses.
   const tabRefs = useRef({})
   const onTabKeyDown = (e) => {
-    const i = TABS.findIndex(t => t.id === tab)
+    const i = tabs.findIndex(t => t.id === tab)
     let next = null
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + TABS.length) % TABS.length
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length
     else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = TABS.length - 1
+    else if (e.key === 'End') next = tabs.length - 1
     if (next === null) return
     e.preventDefault()
-    const id = TABS[next].id
+    const id = tabs[next].id
     setTab(id)
     tabRefs.current[id]?.focus()
   }
@@ -2170,7 +2174,7 @@ export default function Admin({ toast }) {
         aria-label="Admin sections"
         onKeyDown={onTabKeyDown}
       >
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button
             key={t.id}
             role="tab"
@@ -2691,6 +2695,9 @@ export default function Admin({ toast }) {
 
       {/* ═══════ STRIPE TAB ═══════ */}
       {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
+
+      {/* ═══════ SETTINGS TAB ═══════ */}
+      {tab === 'settings' && isAdminUser && <CommunityNotifySettings />}
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ import {
   writeBatch, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { notifyCommunityPost } from './communityNotify'
 import { QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS } from './communityQueue'
 import { COMMUNITY_LIMITS_ENABLED, UNSTAMPED_SCAN, mergeUnstamped, planCounter, queueOrderField } from './communityLimits'
 
@@ -48,6 +49,7 @@ export async function postWithLimits(ref, record, kind) {
 export async function publishToQueue(record) {
   const ref = doc(collection(db, QUEUE_COLLECTION))
   await postWithLimits(ref, record, 'submission')
+  notifyCommunityPost(QUEUE_COLLECTION, ref.id)
   return ref.id
 }
 
@@ -55,6 +57,7 @@ export async function publishToQueue(record) {
 export async function publishPrompt(record) {
   const ref = doc(collection(db, 'community-prompts'))
   await postWithLimits(ref, record, 'prompt')
+  notifyCommunityPost('community-prompts', ref.id)
   return ref.id
 }
 

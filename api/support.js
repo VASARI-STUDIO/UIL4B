@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
+import { NOTIFY_TYPES, handleCommunityNotify } from './_lib/communityNotify.js'
 import { waitUntil } from '@vercel/functions'
 
 // THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
@@ -248,6 +249,14 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // The community-submission email and its admin settings share this route to
+  // stay inside the function budget. They carry a signed-in user's ID token,
+  // count against their own limits (not the support form's below) and never
+  // reach the support message contract.
+  if (NOTIFY_TYPES.includes(req.body?.type)) {
+    return handleCommunityNotify(req, res, { getDb, defer, ...(verifyToken ? { verifyToken } : {}) })
+  }
 
   // Resolved here rather than at module scope so a credential problem surfaces
   // as a logged failure on the request that hit it, not as an import-time

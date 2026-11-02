@@ -240,8 +240,8 @@ test('the restyle did not reinstate anything #484 removed', () => {
   const tabs = admin.match(/const TABS = \[([\s\S]*?)\n\]/)
   assert.ok(tabs, 'the TABS array is unreadable, so this is checking nothing')
   const ids = [...tabs[1].matchAll(/id:\s*'([a-z]+)'/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe'],
-    'the tab set moved — #484 settled it at these six')
+  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe', 'settings'],
+    'the tab set moved — #484 settled it at six; Settings is the admin-only seventh')
 
   for (const dead of ['getPageViews', 'getSessions', 'getDesignAnalytics']) {
     assert.ok(!admin.includes(`${dead}(`),
