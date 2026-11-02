@@ -1,108 +1,126 @@
 // /learn/help — Help & Getting Started.
 //
-// FOUNDER DIRECTION, verbatim (2026-08-20, group D of the surface batch):
-// "these are less documents are more designed like a sales page style of large
-// visual, main point, simple not overly verbose points underneath." And
-// 2026-09-06: "make sure to make user centric design choices."
+// A router, not a document. The page asks "What are you here to do?" and lists
+// the jobs a visitor arrives with; each job opens one answer with a small
+// working picture of the thing itself. From 960px the answer sits in a sticky
+// stage beside the list, so the list never moves while you read; below that
+// each answer opens under its own row, one at a time.
 //
-// ── What this replaced, and why none of it survived ────────────────────────
+// Every figure and route comes from src/data/helpStart.js, which counts what it
+// advertises and is held to the registries by
+// tests/unit/help-and-principles-claims.test.js. The pictures are drawn by the
+// tools' own functions (src/components/HelpJobDemos.jsx).
 //
-// The previous page was a three-tab document — About / FAQ / Contact — with a
-// ten-question accordion, a three-card quick-action strip and a second copy of
-// the feedback form. It was the opposite of the direction above in every
-// dimension the direction names, and it was also carrying live false claims:
+// ── The anchors are load-bearing ───────────────────────────────────────────
 //
-//   · The tool inventory advertised "Image Converter", "Video to Frames
-//     extractor" and "Design Reference guides" as three separate things. There
-//     is one tool, /create/file-converter, frames is a MODE inside it, and the
-//     reference guides were retired in #335. Prose inventories of a generated
-//     list is the defect [handkept-tool-lists-remaining] exists to stop; this
-//     was the seventh copy and the only one nobody had found.
-//   · "There are no third-party analytics trackers" — src/main.jsx mounts
-//     <Analytics /> from @vercel/analytics on every route.
-//   · The Contact tab was a SECOND feedback form posting to the same
-//     /api/support endpoint as /feedback, with none of the accessibility work
-//     the 2026-08-11 audit put into that one: /feedback has real <label>s, a
-//     radiogroup with arrow-key movement and aria-invalid on an empty submit;
-//     this form had none of them, and its type buttons carried no role and no
-//     pressed state at all. Four surfaces already point at /feedback. Keeping a
-//     worse duplicate of the product's own reporting path is not a user-centric
-//     choice, so this page hands over to it instead.
+// src/data/legacyRoutes.js sends /about → /learn/help#about and
+// /faq → /learn/help#faq, and the report form's empty states link to
+// /learn/help#contact.
+//   #faq      the router section
+//   #about    the jobs list
+//   #contact  the "Report something broken" answer, which the hash also opens
 //
-// Every claim that survived is now derived — see src/data/helpStart.js, which
-// counts what it advertises and is held to the registries by
-// tests/unit/help-and-principles-claims.test.js.
-//
-// ── The shape, and where it comes from ─────────────────────────────────────
-//
-// One large visual, one main point, a few plain points. The visual is
-// <SystemRunStrip />: the value a new project starts from, the eleven stops the
-// product generates out of it, and the files those stops leave as — computed on
-// the page by the tools' own functions. A getting-started page's real question
-// is "what do I have to bring", and the honest answer here is nothing, so the
-// page shows what arrives rather than describing it.
-//
-// The "Where to start" band is Buffer's "Here's what you can do with Buffer"
-// arrangement — heading held on the left, and beside it the short list of moves
-// with what each one opens with, rather than a grid of equal cards:
-// https://mobbin.com/screens/42990c6e-5536-41b6-b2bb-5332fbe87768
-// The same screen is already cited on the homepage (Home.jsx, .hsteps-head),
-// which is the point: this is the product's established way of introducing a
-// set, not a new visual universe for one page.
-//
-// The answers below it are the plain-link register every well-built help index
-// in the Mobbin corpus uses — Figma's FigJam index, Loom's Getting Started,
-// OpenPhone's — a heading, one line, then text you can read at a glance. The
-// icon-tile grids (Jasper, Dub) were the alternative and are the construction
-// `anti-slop-quality-bar.md` names as "every idea enclosed in an equally
-// weighted rounded card".
-//   https://mobbin.com/sites/sections/3f77d37e-d2ba-47c2-b4b6-3dc10bb6d9f2  Figma
-//   https://mobbin.com/sites/sections/e4b58d1c-dbaf-484a-bdf3-c7427222c143  Loom
-//   https://mobbin.com/sites/sections/339529e6-b0f9-4e05-9b8d-d8c80ec813bf  OpenPhone
-//
-// NOT USED, deliberately: TryItMark, the drawn "give it a try" annotation the
-// founder picked out on the homepage. Its own contract is that it points at the
-// one thing in the hero a visitor can OPERATE — "not on the sign-up button,
-// which is a link out rather than something you can try". This hero's call to
-// action is a link out. A drawn phrase with nothing to point at is the
-// decoration that component was written to avoid becoming.
-//
-// ── The three anchors are load-bearing ─────────────────────────────────────
-//
-// src/data/legacyRoutes.js sends /about → /learn/help#about and /faq → /learn/help#faq, and
-// the old page answered those with tab ids. The sections below carry the same
-// three ids, so both retired URLs still land on the part of the page they name
-// rather than at the top of a page that no longer has that tab.
-import { Link } from 'react-router-dom'
-import { useReveal } from '../hooks/useReveal'
+// The "What is not built yet?" job is admin-only: unfinished tools are hidden
+// from everyone else, and the answer would promise a list they cannot see.
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useIsAdmin } from '../hooks/useIsAdmin'
-import { SystemRunStrip } from '../components/SystemProofs'
-import { HELP_ANSWERS, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_WITH_CONTENT } from '../data/helpStart'
-// The opening line is the founder's, read by id from the one module every
-// sales surface derives its value claim from. positioning-truth.test.js fails
-// if this page types the sentence instead.
+import useMediaQuery from '../hooks/useMediaQuery'
+import {
+  ColourDemo, CostDemo, FilesDemo, IconsDemo, SaveDemo, SoonDemo, TypeDemo,
+} from '../components/HelpJobDemos'
+import { HELP_ANSWERS, HELP_JOBS, HELP_JOB_HASHES, LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
+// The opening line is read by id from the one module every sales surface
+// derives its value claim from. positioning-truth.test.js fails if this page
+// types the sentence instead.
 import { SURFACE_LINE, line } from '../data/positioning'
-// The front door's own glyph set, so the arrow in this page's call to action
-// and the arrow in Spectrum's are the same drawing rather than two that look
-// alike. Inline SVG in the NavIcon idiom — no CDN, no icon font, no new
-// origin — and Spectrum is a STATIC import in App.jsx, so the module is
-// already in the entry chunk and costs this route nothing.
 import SpectrumIcon from '../components/spectrum/SpectrumIcon'
-// THIS PAGE NO LONGER IMPORTS styles/deferred/reading.css. Its `.hlp-*` rules
-// are replaced wholesale by help.css, and loading both would leave two sets of
-// rules for the same class names cascading by file order — which is the one
-// way a restyle produces a page that is half old and half new. The dead block
-// in reading.css is a follow-up for whoever owns that file next; it is shared
-// with /learn/:slug, /404 and /sitemap, and three other lanes are writing to
-// this tree.
 import '../styles/pages/content.css'
 import '../styles/pages/help.css'
+import '../styles/pages/help-router.css'
+
+const DEMOS = {
+  colour: ColourDemo,
+  type: TypeDemo,
+  icons: IconsDemo,
+  files: FilesDemo,
+  save: SaveDemo,
+  cost: CostDemo,
+  soon: SoonDemo,
+}
+
+const panelId = (job) => (job.id === 'report' ? 'contact' : `help-${job.id}`)
+const buttonId = (job) => `help-job-${job.id}`
+
+/** The job a URL hash points at: a known legacy hash, or a job's own id. */
+function jobFromHash(hash, jobs) {
+  const key = hash.replace(/^#/, '')
+  const id = HELP_JOB_HASHES[key] || key.replace(/^help-/, '')
+  return jobs.find((j) => j.id === id)?.id || null
+}
+
+function Panel({ job, open }) {
+  const Demo = DEMOS[job.id]
+  return (
+    <div className="hlr-ans" id={panelId(job)} hidden={!open}>
+      {job.start && <p className="hlp-start-opens">Opens with {job.start.opensWith}</p>}
+      <h2 className="hlr-h2">{job.heading}</h2>
+      <p className="hlr-lede">{job.lede}</p>
+      {Demo && <Demo />}
+      {(job.more || []).map((id) => {
+        const item = HELP_ANSWERS.find((a) => a.id === id)
+        return (
+          <div className="hlr-more" key={id}>
+            <h3>{item.q}</h3>
+            <p>{item.a}</p>
+          </div>
+        )
+      })}
+      {job.id === 'report' && (
+        <p className="hlr-lede">
+          To report community content that is illegal or harmful, use the
+          Report button on the item, or email{' '}
+          <a className="hlp-answer-link" href="mailto:support@uil4b.com?subject=Content%20report">support@uil4b.com</a>{' '}
+          with a link to it and why. You do not need an account.
+        </p>
+      )}
+      <Link className={`hlr-btn${job.id === 'colour' ? ' hlr-btn--ink' : ''}`} to={job.to}>{job.cta}</Link>
+    </div>
+  )
+}
 
 export default function HelpCentre() {
-  useReveal()
   // Unfinished tools are hidden from everyone but admins, so the page's
-  // "still being built" figure and its answer about them are admin-only too.
+  // "still being built" figure and its job about them are admin-only too.
   const { isAdmin } = useIsAdmin()
+  const wide = useMediaQuery('(min-width: 960px)')
+  const { hash } = useLocation()
+  const jobs = useMemo(() => HELP_JOBS.filter((j) => !j.adminOnly || isAdmin), [isAdmin])
+
+  // The first job starts open. null means the visitor closed it on a narrow
+  // screen; a wide screen always shows one answer, so it falls back to the first.
+  const [openId, setOpenId] = useState(jobs[0].id)
+  // A hash opens its job during render rather than in an effect, so the panel
+  // is already visible when the browser scrolls to it.
+  const [seenHash, setSeenHash] = useState(null)
+  if (hash !== seenHash) {
+    setSeenHash(hash)
+    const target = jobFromHash(hash, jobs)
+    if (target) setOpenId(target)
+  }
+
+  const known = jobs.some((j) => j.id === openId)
+  const active = known ? openId : (wide ? jobs[0].id : null)
+
+  useEffect(() => {
+    const target = jobFromHash(hash, jobs)
+    if (target) document.getElementById(panelId(jobs.find((j) => j.id === target)))?.scrollIntoView()
+  }, [hash, jobs])
+
+  const press = (id) => {
+    // On a narrow screen a second press closes the row; the stage always has one.
+    setOpenId(!wide && active === id ? null : id)
+  }
 
   return (
     <div className="sec cpg hlp">
@@ -110,118 +128,41 @@ export default function HelpCentre() {
         <h1 className="hlp-h1">
           Open any tool. It starts with something in it.
         </h1>
-        {/* Opens on SURFACE_LINE.helpOpening — the founder's forget-the-app-name
-            sentence, chosen there because a /learn/help visitor arrived looking for a
-            specific tool. Read by id, never typed.
-
-            IT IS THE WHOLE LEDE NOW. Two agent sentences used to follow it:
-            "No account, no setup, no blank canvas." — a three-part reassurance
-            of the kind the founder retired ("No credit card required", "Free
-            to use. No card.") — and "Sign in later if you want the same work
-            on another device.", which the "Do I need an account?" answer below
-            already says, at the place a reader would look for it. Anti-slop
-            audit, 2026-09-09. */}
+        {/* Opens on SURFACE_LINE.helpOpening — read by id, never typed. */}
         <p className="hlp-lede">{line(SURFACE_LINE.helpOpening)}</p>
-        <div className="hlp-hero-cta">
-          {/* The Spectrum pill, replacing `.ui-pill ui-pill-ink ui-pill-lg`.
-              Same destination, same label, same single call to action. */}
-          <Link className="cpg-cta cpg-cta--ink cpg-cta--lg" to="/create/palette">
-            <span>Open the palette builder</span>
-            <span className="cpg-cta-icon cpg-cta-icon--lg" aria-hidden="true">
-              <SpectrumIcon name="arrow-up-right" size={14} />
-            </span>
-          </Link>
-        </div>
-        {/* Counted, not typed. The sentence this replaced named a tool that had
-            been retired and one that had become a mode inside another. */}
+        {/* Counted, not typed. */}
         <p className="hlp-hint">
           {LIVE_TOOLS.length} tools open now
           {isAdmin && <> &middot; {SOON_TOOLS.length} still being built</>}
         </p>
       </header>
 
-      <SystemRunStrip />
-
-      {/* ── Where to start ──
-          `id="about"` because /about redirects here. The old tab under that
-          fragment was two paragraphs about the product; this is the same
-          question answered with destinations. */}
-      <section className="hlp-band" id="about" aria-labelledby="hlp-start-h">
-        <div className="hlp-band-head" data-reveal>
-          <h2 className="hlp-h2" id="hlp-start-h">Where to start.</h2>
-          {/* Both figures are counted off the list directly below, so the
-              sentence cannot survive a row being added, removed or reclassified.
-              The old page's equivalent sentence was a prose inventory and had
-              been wrong for two releases. */}
-          <p className="hlp-band-lede">
-            {STARTS_WITH_CONTENT} of these {HELP_STARTS.length} already have
-            something on screen the moment they open. The other one says so.
-          </p>
-        </div>
-        <ol className="hlp-starts" data-reveal>
-          {HELP_STARTS.map((step) => (
-            <li className="hlp-start" key={step.id}>
-              <Link className="hlp-start-link" to={step.to}>
-                <span className="hlp-start-label">{step.label}</span>
-                <span className="hlp-start-opens">Opens with {step.opensWith}</span>
-                <span className="hlp-start-go" aria-hidden="true"><SpectrumIcon name="arrow-right" size={15} /></span>
-              </Link>
-              <p className="hlp-start-body">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* ── Answers ──
-          `id="faq"` because /faq redirects here. Five questions, one sentence
-          each, every figure read from the module that owns it. The version this
-          replaced had ten questions averaging four sentences, three of which
-          were wrong. */}
-      <section className="hlp-band" id="faq" aria-labelledby="hlp-faq-h">
-        <div className="hlp-band-head" data-reveal>
-          <h2 className="hlp-h2" id="hlp-faq-h">Answers.</h2>
-        </div>
-        <dl className="hlp-answers" data-reveal>
-          {HELP_ANSWERS.map((item) => (item.adminOnly && !isAdmin ? null : (
-            <div className="hlp-answer" key={item.id}>
-              <dt className="hlp-answer-q">{item.q}</dt>
-              <dd className="hlp-answer-a">
-                {item.a}
-                {item.to && (
-                  <>
-                    {' '}
-                    <Link className="hlp-answer-link" to={item.to}>{item.linkLabel}</Link>
-                  </>
-                )}
-              </dd>
+      <section className="hlr" id="faq" aria-labelledby="hlr-q">
+        <p className="hlr-q" id="hlr-q">What are you here to do?</p>
+        <div className="hlr-grid">
+          <ul className="hlr-jobs" id="about" aria-labelledby="hlr-q">
+            {jobs.map((job) => (
+              <li key={job.id}>
+                <button
+                  type="button"
+                  className="hlr-job"
+                  id={buttonId(job)}
+                  aria-expanded={active === job.id}
+                  aria-controls={panelId(job)}
+                  onClick={() => press(job.id)}
+                >
+                  <span>{job.label}</span>
+                  <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
+                </button>
+                {!wide && <Panel job={job} open={active === job.id} />}
+              </li>
+            ))}
+          </ul>
+          {wide && (
+            <div className="hlr-stage">
+              {jobs.map((job) => <Panel key={job.id} job={job} open={active === job.id} />)}
             </div>
-          )))}
-        </dl>
-      </section>
-
-      {/* ── Something wrong ──
-          `id="contact"` because the old FAQ's empty state linked to
-          /learn/help#contact. One destination, not a second form. */}
-      <section className="hlp-band hlp-band--close" id="contact" aria-labelledby="hlp-contact-h">
-        <div className="hlp-close" data-reveal>
-          <h2 className="hlp-h2" id="hlp-contact-h">Something wrong, or missing?</h2>
-          <p className="hlp-band-lede">
-            The report form is the same one the app uses everywhere else, so it
-            reaches the same place whether you send it from here or from the tool
-            that broke.
-          </p>
-          <p className="hlp-band-lede">
-            To report community content that is illegal or harmful, use the
-            Report button on the item, or email{' '}
-            <a className="hlp-answer-link" href="mailto:support@uil4b.com?subject=Content%20report">support@uil4b.com</a>{' '}
-            with a link to it and why. You do not need an account.
-          </p>
-          <Link className="cpg-cta cpg-cta--ghost" to="/feedback">
-            <span>Report it</span>
-            <span className="cpg-cta-icon" aria-hidden="true">
-              <SpectrumIcon name="arrow-up-right" size={12} />
-            </span>
-          </Link>
+          )}
         </div>
       </section>
     </div>

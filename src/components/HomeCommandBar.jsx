@@ -106,10 +106,13 @@ const CARET = '▏'
 
 function RowIcon({ item }) {
   const cat = item.kind === 'tool' ? getCategory(item.category) : getCategory(item.id)
+  // A Learn guide has no category, so it draws its own glyph rather than a
+  // blank circle.
+  const glyph = item.guide ? item.icon : cat?.icon
   return (
     <span className="hcmd-row-glyph" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        {cat?.icon || <circle cx="12" cy="12" r="9" />}
+        {glyph || <circle cx="12" cy="12" r="9" />}
       </svg>
     </span>
   )
@@ -370,7 +373,9 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
                 // See categoryPillFor: the pill must not be localised past
                 // the row's own words, or one row reads in two spellings.
                 // A tool with no category (the Learn guides) has no pill.
-                const pill = item.kind === 'tool'
+                const pill = item.guide
+                  ? 'Guide'
+                  : item.kind === 'tool'
                   ? categoryPillFor(item, cat, t)
                   : t('common.category')
                 return (

@@ -138,6 +138,13 @@ const ADDED_SELECTORS = {
     '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
     '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
     '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
+  // /learn/help is a job list beside one answer. The old section and answer
+  // classes are gone; these are the router's own hooks. The stage is painted
+  // from 960px only, so the phone width carries fewer rows.
+  '/learn/help': ['.hlp-hero', '.hlp-h1', '.hlp-lede', '.hlp-hint', '.hlr-q', '.hlr-grid', '.hlr-jobs', '.hlr-job', '.hlr-tick',
+    '.hlr-stage', '.hlr-ans', '.hlr-h2', '.hlr-lede', '.hlr-demo', '.hlr-seed', '.hlr-seed-pick', '.hlr-seed-hex', '.hlr-strip',
+    '.hlr-stop', '.hlr-stop-sw', '.hlr-stop-n', '.hlr-read', '.hlr-leaves', '.hlr-btn', '.hlr-btn--ink', '.hlr-seg', '.hlr-ladder',
+    '.hlr-note', '.hlr-search', '.hlr-icons', '.hlr-drop', '.hlr-store', '.hlr-more', '.hlr-allow', '.hlr-bar'],
 }
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))

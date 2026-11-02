@@ -6,6 +6,7 @@ import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/reading.css'
 import '../styles/deferred/tool-shell.css'
+import '../styles/pages/trail.css'
 import { ENTRY_PATH } from '../utils/entryPath'
 
 // A real 404, replacing `<Route path="*" element={<Navigate to="/" replace />} />`.
@@ -125,14 +126,14 @@ export default function NotFound() {
         ))}
       </nav>
 
-      <p className="nf-more">
-        <NavLink to="/">Back to the homepage</NavLink>
-        {' · '}
-        <NavLink to="/sitemap">See every page</NavLink>
-        {' · '}
-        {/* The audit found four surfaces pointing here as the way to report a
-            problem, so a dead link is exactly the moment to offer it again. */}
-        <NavLink to={`/feedback?${report}`}>Report a broken link</NavLink>
+      <p className="nf-more trail">
+        <span className="trail-in">
+          <span className="trail-item"><NavLink to="/">Back to the homepage</NavLink></span>
+          <span className="trail-item"><NavLink to="/sitemap">See every page</NavLink></span>
+          {/* The audit found four surfaces pointing here as the way to report a
+              problem, so a dead link is exactly the moment to offer it again. */}
+          <span className="trail-item"><NavLink to={`/feedback?${report}`}>Report a broken link</NavLink></span>
+        </span>
       </p>
     </div>
   )

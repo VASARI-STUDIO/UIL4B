@@ -312,9 +312,9 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 // a page, and a pill naming it labels the row with something that is not there.
 const STATIC_TOOL_DEFS = [
   { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'prompts', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'] },
-  { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
-  { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
-  { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
+  { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, guide: true, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
+  { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, guide: true, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
+  { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, guide: true, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
 ]
 
@@ -440,8 +440,13 @@ function searchTokens(text) {
 }
 
 function tokenMatchRank(item, q) {
-  const words = q.trim().toLowerCase().split(/\s+/)
-  if (words.length < 2) return 5
+  // Split the query on every non-letter, the way the index is split, so
+  // "tint, generator", "tint generator." and "alt-text generator" read as the
+  // words they are. A single plain word is already handled by the substring
+  // checks in matchRank and matchesQuery; one with punctuation on it is not.
+  const trimmed = q.trim().toLowerCase()
+  const words = trimmed.split(/[^a-z0-9]+/).filter(Boolean)
+  if (words.length === 0 || (words.length < 2 && words[0] === trimmed)) return 5
   const significant = words.filter(word => !GENERIC_QUERY_WORDS.has(word))
   const terms = (significant.length ? significant : words).map(singularToken)
   const allMatch = (tokens) => terms.every(word => tokens.some(token => (
