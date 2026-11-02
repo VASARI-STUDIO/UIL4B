@@ -80,7 +80,7 @@ test('/learn/help carries no section numerals and sets its labels in the UI sans
     assert.ok(rule[1].includes('var(--font)') && !rule[1].includes('var(--mono)'), `${sel} is not set in the UI sans`)
     assert.ok(!/text-transform:\s*uppercase/.test(rule[1]), `${sel} is uppercased in CSS`)
   }
-  assert.match(read('src/pages/HelpCentre.jsx'), />Opens with \{step\.opensWith\}</)
+  assert.match(read('src/pages/HelpCentre.jsx'), />Opens with \{job\.start\.opensWith\}</)
 })
 
 test('/feedback: type and send labels come from the locale, and offline blocks Send', () => {

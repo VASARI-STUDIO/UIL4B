@@ -1,0 +1,278 @@
+/* help-router.css — the "What are you here to do?" router on /learn/help.
+ *
+ * Sits beside help.css, which still carries the hero (.hlp-hero, .hlp-h1,
+ * .hlp-lede, .hlp-hint) and the shared answer-link style. Everything particular
+ * to the router and its pictures is `hlr-*`.
+ *
+ * Wide (960px and up): the jobs are a list on the left and the open answer sits
+ * in a sticky stage on the right. Narrow: the stage is gone and each answer
+ * opens under its own row; the page switches between the two with a media
+ * query in JS, so the CSS only styles whichever one is in the DOM.
+ *
+ * One surface rule: the stage is the only card. The pictures inside an answer
+ * are separated by rules and fills, never by a second bordered box.
+ */
+
+.hlp .hlr { margin-top: calc(var(--s-6) - var(--cpg-sec)); min-width: 0; }
+.hlr-q {
+  margin: 0 0 var(--s-5);
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.2;
+  color: var(--cpg-ink);
+}
+.hlr-grid { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+
+.hlr-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── The list of jobs ── */
+.hlr-jobs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.hlr-jobs > li { border-bottom: 1px solid var(--cpg-line); min-width: 0; }
+.hlr-job {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--s-3) 0;
+  border: 0;
+  border-radius: var(--btn-radius);
+  background: none;
+  font: 500 18px/1.3 var(--font);
+  text-align: left;
+  color: var(--cpg-dim);
+  cursor: pointer;
+}
+.hlr-job[aria-expanded="true"] { color: var(--cpg-ink); }
+.hlr-job:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-tick { display: inline-flex; flex: 0 0 auto; opacity: 0; transition: opacity 150ms var(--cpg-ease); }
+.hlr-job[aria-expanded="true"] .hlr-tick { opacity: 1; }
+@media (hover: hover) {
+  .hlr-job:hover { color: var(--cpg-ink); }
+  .hlr-job:hover .hlr-tick { opacity: 1; }
+}
+
+/* ── An answer ── */
+.hlr-ans[hidden] { display: none; }
+.hlr-ans { padding: var(--s-1) 0 var(--s-5); min-width: 0; }
+.hlr-ans .hlp-start-opens { margin: 0 0 var(--s-2); }
+.hlr-h2 {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+.hlr-lede { margin: var(--s-3) 0 0; max-width: 56ch; font-size: 16px; line-height: 1.6; color: var(--cpg-dim); text-wrap: pretty; }
+.hlr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: var(--s-5);
+  padding: 0 22px;
+  border: 1px solid var(--cpg-line-strong);
+  border-radius: 999px;
+  font: 500 16px/1 var(--font);
+  color: var(--cpg-ink);
+  text-decoration: none;
+  transition: background-color 150ms var(--cpg-ease);
+}
+.hlr-btn--ink { background: var(--cpg-ink); border-color: var(--cpg-ink); color: var(--cpg-page); }
+.hlr-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-btn:active { transform: scale(.98); }
+@media (hover: hover) {
+  .hlr-btn:hover { background: var(--cpg-wash); text-decoration: none; }
+  .hlr-btn--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--cpg-page); }
+}
+
+/* A second question answered under the first, set off by a rule. */
+.hlr-more { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--cpg-line); }
+.hlr-more h3 { margin: 0; font: 600 17px/1.3 var(--font); letter-spacing: -.01em; color: var(--cpg-ink); }
+.hlr-more p { margin: var(--s-2) 0 0; max-width: 56ch; font-size: 16px; line-height: 1.6; color: var(--cpg-dim); }
+
+/* ── The pictures ── */
+.hlr-demo { margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--cpg-line); min-width: 0; }
+.hlr-note { margin: var(--s-3) 0 0; font-size: 14px; line-height: 1.5; color: var(--cpg-faint); }
+
+/* Colour: base input, the eleven stops, the reading, the files it leaves as. */
+.hlr-seed { display: flex; align-items: center; gap: var(--s-2); }
+.hlr-seed-pick {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-xs);
+  background: none;
+  cursor: pointer;
+}
+.hlr-seed-pick::-webkit-color-swatch-wrapper { padding: 0; }
+.hlr-seed-pick::-webkit-color-swatch { border: 0; border-radius: calc(var(--radius-xs) - 1px); }
+.hlr-seed-pick::-moz-color-swatch { border: 0; border-radius: calc(var(--radius-xs) - 1px); }
+/* 16px: below that iOS zooms the page when the field takes focus. */
+.hlr-seed-hex {
+  width: 112px;
+  height: 44px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-xs);
+  background: var(--cpg-card);
+  font: 500 16px/1 var(--mono);
+  color: var(--cpg-ink);
+}
+.hlr-seed-hex:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-seed-hex[aria-invalid="true"] { border-color: var(--err); }
+
+/* pan-y: a sideways drag across the strip picks stops, a vertical one still scrolls. */
+.hlr-strip {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: var(--s-1);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  min-inline-size: 0;
+  touch-action: pan-y;
+}
+.hlr-stop { position: relative; display: block; cursor: pointer; min-width: 0; }
+.hlr-stop input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.hlr-stop-sw {
+  display: block;
+  height: 88px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / .1);
+}
+[data-theme="dark"] .hlr-stop-sw { box-shadow: inset 0 0 0 1px oklch(1 0 0 / .14); }
+.hlr-stop input:checked + .hlr-stop-sw { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
+.hlr-stop input:focus-visible + .hlr-stop-sw { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-stop-n { display: block; margin-top: var(--s-2); font: 500 12px/1 var(--mono); text-align: center; color: var(--cpg-dim); }
+.hlr-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); margin: var(--s-4) 0 0; font-size: 15px; line-height: 1.5; color: var(--cpg-dim); }
+.hlr-read b { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cpg-ink); }
+.hlr-leaves { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-5); margin-top: var(--s-4); font-size: 15px; color: var(--cpg-dim); }
+.hlr-leaves h3 { margin: 0; font: 500 14px/1.4 var(--font); color: var(--cpg-faint); }
+.hlr-leaves ul { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-5); margin: 0; padding: 0; list-style: none; }
+
+/* Type: the ratio picker and the ladder. */
+.hlr-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--cpg-line); border-radius: 999px; }
+.hlr-seg button {
+  appearance: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: 500 14px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--cpg-dim);
+  cursor: pointer;
+  transition: background-color 150ms var(--cpg-ease), color 150ms var(--cpg-ease);
+}
+.hlr-seg button[aria-pressed="true"] { background: var(--cpg-ink); color: var(--cpg-page); }
+.hlr-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-ladder { display: grid; gap: var(--s-1); margin-top: var(--s-4); }
+.hlr-ladder > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: var(--s-3); align-items: baseline; }
+.hlr-ladder span { font: 400 13px/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--cpg-faint); }
+.hlr-ladder b { font-weight: 600; line-height: 1.15; letter-spacing: -.02em; overflow-wrap: anywhere; color: var(--cpg-ink); }
+
+/* Icons: a search over a small sample. */
+.hlr-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 360px;
+  height: 46px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius);
+  background: var(--cpg-card);
+  color: var(--cpg-faint);
+}
+.hlr-search input { width: 100%; min-width: 0; border: 0; background: none; font: 400 16px/1.2 var(--font); color: var(--cpg-ink); }
+.hlr-search input:focus { outline: none; }
+.hlr-search:focus-within { border-color: var(--cpg-ink); }
+.hlr-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: var(--s-2); margin: var(--s-4) 0 0; padding: 0; list-style: none; }
+.hlr-icons li { display: flex; align-items: center; justify-content: center; height: 56px; border-radius: var(--radius-s); background: var(--cpg-wash); color: var(--cpg-ink); }
+.hlr-icons svg { width: 24px; height: 24px; }
+
+/* Files: what the tool opens on. */
+.hlr-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  margin: 0;
+  padding: var(--s-4);
+  border: 1.5px dashed var(--cpg-line-strong);
+  border-radius: var(--radius);
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--cpg-faint);
+}
+
+/* Save: two columns split by a rule, not two boxes. */
+.hlr-store { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: 15px; line-height: 1.5; color: var(--cpg-dim); }
+.hlr-store b { display: block; margin-bottom: var(--s-1); color: var(--cpg-ink); font-weight: 600; }
+.hlr-store > div + div { padding-left: var(--s-5); border-left: 1px solid var(--cpg-line); }
+
+/* Money: the allowance as two bars on one scale. */
+.hlr-allow { display: grid; gap: var(--s-3); }
+.hlr-allow > div { display: grid; grid-template-columns: 48px minmax(0, 1fr) 72px; gap: var(--s-3); align-items: center; font-size: 15px; color: var(--cpg-dim); }
+.hlr-bar { position: relative; display: block; height: 12px; overflow: hidden; border-radius: 999px; background: var(--bg-3); }
+.hlr-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--cpg-ink); }
+.hlr-allow output { font: 400 14px/1 var(--mono); text-align: right; font-variant-numeric: tabular-nums; color: var(--cpg-ink); }
+
+/* Soon: one cell per tool. */
+.hlr-count { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: var(--s-1); }
+.hlr-count i { display: block; height: 32px; border-radius: 6px; background: var(--cpg-ink); }
+.hlr-count i.is-soon { background: none; border: 1.5px dashed var(--cpg-line-strong); }
+.hlr-count-key { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-5); margin: var(--s-3) 0 0; font-size: 14px; color: var(--cpg-faint); }
+
+/* ── Wide: list beside a sticky stage ── */
+@media (min-width: 960px) {
+  .hlr-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 40px; align-items: start; }
+  .hlr-stage {
+    position: sticky;
+    top: calc(var(--chrome-h) + var(--s-5));
+    min-height: 440px;
+    padding: var(--s-6);
+    border: 1px solid var(--cpg-line);
+    border-radius: var(--radius-xl);
+    background: var(--cpg-card);
+  }
+  .hlr-ans { padding: 0; }
+  .hlr-h2 { font-size: clamp(24px, 1.2vw + 16px, 32px); }
+  .hlr-stop-sw { height: 112px; }
+}
+
+/* ── Phone: six stops a row so each is a full touch target ── */
+@media (max-width: 599px) {
+  .hlr-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s-3) var(--s-1); }
+  .hlr-stop-sw { height: 56px; }
+  .hlr-store { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+  .hlr-store > div + div { padding: var(--s-4) 0 0; border-left: 0; border-top: 1px solid var(--cpg-line); }
+  .hlr-btn { width: 100%; }
+  .hlr-ladder > div { grid-template-columns: 88px minmax(0, 1fr); }
+  .hlr-icons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
