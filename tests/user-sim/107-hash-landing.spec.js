@@ -40,8 +40,15 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
     await go(page, '/learn/help#faq')
     await expectLanding(page, 'faq', '.pnav')
     const landingY = await page.evaluate(() => scrollY)
-    await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), landingY + 600)
-    await page.waitForFunction((top) => Math.abs(scrollY - top) <= 2, landingY + 600)
+    // Scroll on past the landing by up to 600px, but never past the end of a
+    // page shorter than that (the router page is about one screen tall at
+    // desktop widths). Half the room left keeps the target reachable, and the
+    // room check stops this passing without moving.
+    const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)
+    expect(room, 'the page needs room to scroll past the landing').toBeGreaterThan(100)
+    const helpTarget = landingY + Math.min(600, Math.floor(room / 2))
+    await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), helpTarget)
+    await page.waitForFunction((top) => Math.abs(scrollY - top) <= 2, helpTarget)
     const helpY = await page.evaluate(() => scrollY)
 
     await navigateInRouter(page, '/learn/principles')
@@ -103,11 +110,18 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await go(page, '/learn/help')
       await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
-      expect(await page.locator('#faq').evaluate((target) => target.getBoundingClientRect().top))
-        .toBeGreaterThan(viewport.height)
-      await navigateInRouter(page, '/learn/help#faq')
-      await expect(page).toHaveURL(/\/learn\/help#faq$/)
-      await expectLanding(page, 'faq', '.pnav')
+      // #contact is the last job's answer. It is hidden until the hash opens it,
+      // and on a phone its row starts well below the first screen, so the router
+      // has to open it AND scroll to it.
+      await expect(page.locator('#contact')).toBeHidden()
+      if (viewport.width < 960) {
+        expect(await page.locator('#help-job-report').evaluate((row) => row.getBoundingClientRect().top))
+          .toBeGreaterThan(viewport.height)
+      }
+      await navigateInRouter(page, '/learn/help#contact')
+      await expect(page).toHaveURL(/\/learn\/help#contact$/)
+      await expect(page.locator('#contact')).toBeVisible()
+      await expectLanding(page, 'contact', '.pnav')
     })
   })
 }
