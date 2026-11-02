@@ -253,10 +253,19 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Learn')
 
-    const rows = page.locator('#pnav-mega .pnav-guide')
+    // One list: the guides sit in the left column under each page's own title,
+    // with the read time in the same row. The right pane no longer repeats them.
+    const rows = page.locator('#pnav-mega .pnav-tool-mins')
     await expect(rows).toHaveCount(LEARN_ARTICLES.length)
-    await expect(page.locator('#pnav-mega .pnav-guide-label')).toHaveText(LEARN_ARTICLES.map((a) => a.title))
-    await expect(page.locator('#pnav-mega .pnav-guide-mins')).toHaveText(LEARN_ARTICLES.map((a) => `${readingMinutes(a.words)} MIN`))
+    await expect(rows).toHaveText(LEARN_ARTICLES.map((a) => `${readingMinutes(a.words)} min`))
+    for (const a of LEARN_ARTICLES) {
+      await expect(page.locator(`#pnav-mega a[href="/learn/${a.slug}"] .pnav-tool-nm`)).toHaveText(a.title)
+    }
+    await expect(page.locator('#pnav-mega .pnav-guides')).toHaveCount(0)
+    await expect(page.locator('#pnav-mega .pnav-menu-foot-link')).toHaveText(/See all guides/)
+    // Each time is whole: its text is not cut at its own box.
+    const cut = await rows.evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1).length)
+    expect(cut, 'a read time is clipped').toBe(0)
     const cta = page.locator('#pnav-mega .pnav-editorial-cta')
     await expect(cta).toHaveText(/Read the guides/)
     await expect(cta).toHaveAttribute('href', '/learn')
@@ -632,7 +641,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
       const row = page.locator(`#pnav-mega a.pnav-tool[href="/learn/${article.slug}"]`)
       await expect(row, `${article.slug} is not offered in the Learn menu`).toBeVisible()
       await expect(row).not.toHaveAttribute('data-soon', 'true')
-      await expect(row).toContainText(article.navLabel)
+      // The row carries the guide's own page title (navLabel is the short form).
+      await expect(row).toContainText(article.title)
     }
 
     // The description rule is unchanged and still absolute here: a Soon row
@@ -641,6 +651,48 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await expect(page.locator('#pnav-mega .pnav-tool-desc')).toHaveCount(0)
   })
 
+
+  // The guide rows carry the page's own long title, so the label wraps to two
+  // lines instead of an ellipsis, and the read time stays whole beside it.
+  // Titles fit one line at 1440 and 1280; 800 is the width where the long ones
+  // wrap, so that is where the two-line case is required to occur.
+  for (const [width, mustWrap] of [[1440, false], [1280, false], [800, true]]) {
+    test(`Learn menu at ${width}: guide titles wrap whole (at most two lines) and each "N min" is not clipped`, async ({ page }) => {
+      watch(page, 'a desktop reader opening the Learn menu')
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, MENU_ROUTE)
+      await openWithPointer(page, 'Learn')
+      const m = await page.evaluate(() => {
+        const panel = document.querySelector('#pnav-mega').getBoundingClientRect()
+        return [...document.querySelectorAll('#pnav-mega a.pnav-tool[href^="/learn/"]')]
+          .filter((a) => a.querySelector('.pnav-tool-mins'))
+          .map((a) => {
+            const nm = a.querySelector('.pnav-tool-nm')
+            const mins = a.querySelector('.pnav-tool-mins')
+            const row = a.getBoundingClientRect()
+            const mr = mins.getBoundingClientRect()
+            const lh = parseFloat(getComputedStyle(nm).lineHeight)
+            return {
+              href: a.getAttribute('href'),
+              lines: Math.round(nm.getBoundingClientRect().height / lh),
+              titleCut: nm.scrollWidth > nm.clientWidth + 1 || nm.scrollHeight > nm.clientHeight + 1,
+              ellipsis: getComputedStyle(nm).textOverflow === 'ellipsis',
+              minsCut: mins.scrollWidth > mins.clientWidth + 1 || mr.right > row.right + 1 || mr.right > panel.right + 1,
+              minsText: mins.textContent,
+            }
+          })
+      })
+      expect(m.length, 'no guide rows with a read time were found').toBe(LEARN_ARTICLES.length)
+      if (mustWrap) expect(m.some((r) => r.lines === 2), 'no title wraps, so the two-line case was not exercised at this width').toBe(true)
+      for (const r of m) {
+        expect(r.lines, `${r.href} title runs over two lines`).toBeLessThanOrEqual(2)
+        expect(r.titleCut, `${r.href} title is clipped`).toBe(false)
+        expect(r.ellipsis, `${r.href} title ends in an ellipsis`).toBe(false)
+        expect(r.minsCut, `${r.href} read time is clipped`).toBe(false)
+        expect(r.minsText).toMatch(/^\d+ min$/)
+      }
+    })
+  }
 
   // No row carries a description any more (App lines 138-142: one line each),
   // so there is nothing that can fall through to landing-page copy.
@@ -841,6 +893,7 @@ test.describe('layout: the phone sheet is three segments over a 2-column grid', 
       ['Discover', /Open Discover/, '/discover'],
       ['Learn', /Read the guides/, '/learn'],
     ]
+    const viewAll = { Create: /View all .* tools/, Discover: /View all .* tools/, Learn: /See all guides/ }
     for (const [tab, label, href] of cases) {
       await segs(page).filter({ hasText: tab }).click()
       const pill = page.locator('.pnav-sheet .pnav-acc-cta')
@@ -848,7 +901,7 @@ test.describe('layout: the phone sheet is three segments over a 2-column grid', 
       expect((await pill.boundingBox()).height).toBeGreaterThanOrEqual(44)
       if (href) await expect(pill).toHaveAttribute('href', href)
       const all = page.locator('.pnav-sheet .pnav-acc-all')
-      await expect(all).toHaveText(/View all .* tools/)
+      await expect(all).toHaveText(viewAll[tab])
       expect((await all.boundingBox()).height).toBeGreaterThanOrEqual(44)
     }
   })

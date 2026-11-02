@@ -394,7 +394,7 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 // rather than LEARN_GROUPS. Not tidiness: a delivered row and its guide carry
 // the SAME route, so rendering both puts two rows with one `data-route` into
 // the visual sitemap and two links to one page into the mega menu.
-import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
+import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, readingMinutes } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
   // Reference pages share the Learn prefix with published guides.
@@ -621,7 +621,9 @@ const LEARN_ARTICLE_ICONS = {
 // fake group or every group a fake route.
 const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
   id: `learn-${a.slug}`,
-  label: a.navLabel,
+  // The page's own title, so the menu and the page never name a guide two ways.
+  label: a.title,
+  mins: `${readingMinutes(a.words)} min`,
   route: `/learn/${a.slug}`,
   icon: LEARN_ARTICLE_ICONS[a.slug] || 'principles',
   desc: a.dek,
@@ -637,8 +639,8 @@ const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
 const LEARN_MENU = [
   [{ label: 'Guides', tools: LEARN_ARTICLE_ROWS }],
   ...groupsToMenu(LEARN_TOPIC_ROWS, [
-    { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
-    { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
+    { label: 'Foundations', ids: ['help', 'principles'] },
+    { label: 'Coming soon', ids: ['seo', 'marketing', 'ai-assistants'] },
   ]),
 ]
 

@@ -108,7 +108,7 @@ export default function HelpCentre() {
     <div className="sec cpg hlp">
       <header className="hlp-hero">
         <h1 className="hlp-h1">
-          Open any tool. It starts with <mark className="home-mark">something</mark> in it.
+          Open any tool. It starts with something in it.
         </h1>
         {/* Opens on SURFACE_LINE.helpOpening — the founder's forget-the-app-name
             sentence, chosen there because a /learn/help visitor arrived looking for a
