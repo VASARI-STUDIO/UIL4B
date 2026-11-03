@@ -1461,7 +1461,7 @@ function UsersPanel({ localUsers, toast, role }) {
                     <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
                     {' '}The rules understand a moderator, but this deployment cannot grant one yet, so
                     {' '}nothing on this screen offers to appoint anybody. Enabling it is an owner
-                    {' '}action &mdash; the steps are in docs/OWNER-ACTIONS.md &sect;1.3.
+                    {' '}action.
                   </>
                 : roster === null
                   ? (rosterError
@@ -2559,7 +2559,7 @@ export default function Admin({ toast }) {
                   {[
                     { label: 'Firebase Auth configured', ok: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
                     { label: 'Firestore database created', ok: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
-                    { label: 'Firestore security rules published', ok: true, note: 'Founder-confirmed 31 Jul 2026; re-test and republish after any rules change' },
+                    { label: 'Firestore security rules published', ok: true, note: 'Re-test and republish after any rules change' },
                     { label: 'Feedback/support email notifications', ok: false, note: 'Externally unverified — configure RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL in Vercel, then submit test feedback' },
                     { label: 'Google Sheets mirror (optional)', ok: false, note: 'Server-only configuration is not visible here — verify in Vercel and submit test feedback if used' },
                     { label: 'Custom domain', ok: true, note: 'uil4b.com configured' },
