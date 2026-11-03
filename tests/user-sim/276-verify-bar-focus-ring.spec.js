@@ -113,7 +113,9 @@ test.describe('the Icon pack trigger ring', () => {
     const ring = await trigger.evaluate((el) => {
       const probe = document.createElement('span')
       probe.style.color = 'var(--link)'
-      document.body.append(probe)
+      // Beside the trigger, so it reads --link in the same scope (a library
+      // surface can set its own).
+      el.parentElement.append(probe)
       const link = getComputedStyle(probe).color
       probe.remove()
       const cs = getComputedStyle(el)
