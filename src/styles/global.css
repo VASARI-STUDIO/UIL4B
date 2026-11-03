@@ -1578,7 +1578,12 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    The value is derived from the FAB's own box (38px tall, 20px inset) plus a
    gap, so the two cannot drift apart silently. */
 .app-footer{--fab-clearance:max(66px,calc(46px + env(safe-area-inset-bottom,0px)));padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
-.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
+/* The footer band is full-bleed (its rule and ground run edge to edge, like the
+   header), but its content sits in the same 1240px column as the Learn hub and
+   .app-page, centred, so the footer logo lines up with the page's own left edge
+   on a wide screen instead of hugging the viewport inset. Below 1240px plus the
+   inset it simply fills the padded box, as before. */
+.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;max-width:1240px;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
 .app-footer-mark .brand-logo{display:block;height:.85em}

@@ -83,3 +83,45 @@ test.describe('1 · the floating Feedback button on a narrow mouse window', () =
     await expect(page.getByRole('textbox').first(), 'the feedback page shows its form').toBeVisible()
   })
 })
+
+test.describe('2 · the footer shares the page content edge', () => {
+  for (const [width, height] of [[1440, 900], [1920, 1080]]) {
+    test(`on /learn the footer logo lines up with the hub heading at ${width}`, async ({ page }) => {
+      watch(page, 'someone scrolling the Learn hub to its footer')
+      await page.setViewportSize({ width, height })
+      await go(page, '/learn')
+      await expect(page.locator('.srf-h1')).toBeVisible()
+      const edges = await page.evaluate(() => {
+        const left = (s) => document.querySelector(s).getBoundingClientRect().left
+        const nav = document.querySelector('.pnav').getBoundingClientRect()
+        return {
+          h1: left('.srf-h1'),
+          footer: left('.app-footer-brand'),
+          navLeft: nav.left,
+          navWidth: nav.width,
+          viewport: document.documentElement.clientWidth,
+        }
+      })
+      expect(Math.abs(edges.footer - edges.h1),
+        `footer logo at x=${edges.footer}, hub heading at x=${edges.h1}`).toBeLessThanOrEqual(1)
+      // The header is still the full-bleed bar.
+      expect(edges.navLeft, 'the header starts at the left edge').toBe(0)
+      expect(edges.navWidth, 'the header runs the full width').toBeGreaterThanOrEqual(edges.viewport - 1)
+    })
+  }
+
+  for (const route of ['/learn', '/learn/help', '/plans', '/privacy']) {
+    test(`${route}: at 1920 the footer content is one 1240px column, centred`, async ({ page }) => {
+      watch(page, 'someone on a wide monitor')
+      await page.setViewportSize({ width: 1920, height: 1080 })
+      await go(page, route)
+      const box = await page.locator('.app-footer-inner').evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { left: r.left, right: r.right, width: r.width, viewport: document.documentElement.clientWidth }
+      })
+      expect(Math.round(box.width), `footer content is ${box.width}px wide`).toBe(1240)
+      expect(Math.abs(box.left - (box.viewport - box.right)),
+        `footer content is off-centre: ${box.left}px left, ${box.viewport - box.right}px right`).toBeLessThanOrEqual(1)
+    })
+  }
+})
