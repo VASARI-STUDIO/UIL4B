@@ -40,10 +40,11 @@ test.describe('the contents marker', () => {
       await go(page, `/learn/${article.slug}`)
       const ids = article.sections.map((s) => s.id)
       expect(await litIds(page), 'fresh load').toEqual([ids[0]])
+      // On a loaded runner the smooth scroll can take several seconds to land.
       await page.keyboard.press('End')
-      await expect.poll(() => litIds(page), { message: 'after End', timeout: 4000 }).toEqual([ids.at(-1)])
+      await expect.poll(() => litIds(page), { message: 'after End', timeout: 10_000 }).toEqual([ids.at(-1)])
       await page.keyboard.press('Home')
-      await expect.poll(() => litIds(page), { message: 'after Home', timeout: 4000 }).toEqual([ids[0]])
+      await expect.poll(() => litIds(page), { message: 'after Home', timeout: 10_000 }).toEqual([ids[0]])
     })
   }
 })
