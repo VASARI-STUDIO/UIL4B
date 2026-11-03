@@ -315,6 +315,12 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage-msg{position:absolute;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
 .icust-stage--light .icust-stage-msg,.icust-stage--checker .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-stage--dark .icust-stage-msg{color:rgba(244,244,245,.55)}
+/* A failed stage: the message with a text button under it, centred in the stage. */
+.icust-stage-msg--failed{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.icust-stage-retry{min-height:44px;padding:0 12px;border:0;background:none;font:inherit;font-weight:560;color:var(--t0);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.icust-stage--light .icust-stage-retry,.icust-stage--checker .icust-stage-retry{color:#18181B}
+.icust-stage--dark .icust-stage-retry{color:#F4F4F5}
+.icust-stage-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* A fact about the art, not a control: plain text in the row's control column, in
    the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
    height the segmented track gave the row, so the row does not change size. */

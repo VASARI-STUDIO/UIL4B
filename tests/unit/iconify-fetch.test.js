@@ -420,6 +420,30 @@ test('rejections spread out over time, timeouts and an offline browser do not st
   assert.equal(offline.api.cooldownUntil(), 0, 'offline is not rate limiting')
 })
 
+test('rejections while the page is hidden or unloading do not start a pause', async () => {
+  // A hidden tab: the browser's own visibility says so.
+  let hidden = true
+  const tab = rig({ answer: boom, opts: { isLeaving: () => hidden } })
+  for (const p of ['a', 'b', 'c', 'd']) await assert.rejects(tab.api.get(collectionOf(p)), TypeError)
+  assert.equal(tab.api.cooldownUntil(), 0, 'rejected while hidden: not a refusal')
+  hidden = false
+  for (const p of ['e', 'f']) await assert.rejects(tab.api.get(collectionOf(p)), TypeError)
+  assert.equal(tab.api.cooldownUntil(), 0, 'and they left no count behind: two visible rejections are still just two')
+  await assert.rejects(tab.api.get(collectionOf('g')), TypeError)
+  assert.ok(tab.api.cooldownUntil() > tab.clock.t, 'POSITIVE CONTROL: three visible rejections still start the pause')
+
+  // pagehide / beforeunload, as the page itself reports them.
+  let leave = () => {}
+  let back = () => {}
+  const page = rig({ answer: boom, opts: { listenLeave: (onLeave, onReturn) => { leave = onLeave; back = onReturn } } })
+  leave()
+  for (const p of ['a', 'b', 'c', 'd']) await assert.rejects(page.api.get(collectionOf(p)), TypeError)
+  assert.equal(page.api.cooldownUntil(), 0, 'rejected after pagehide: not a refusal')
+  back()
+  for (const p of ['e', 'f', 'g']) await assert.rejects(page.api.get(collectionOf(p)), TypeError)
+  assert.ok(page.api.cooldownUntil() > page.clock.t, 'a page restored from the back/forward cache counts again')
+})
+
 test('rejections with an old answer to fall back on do not start a cool-down', async () => {
   let down = false
   const { api, clock } = rig({ answer: () => (down ? boom() : ok()) })
