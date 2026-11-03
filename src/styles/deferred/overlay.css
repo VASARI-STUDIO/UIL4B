@@ -26,14 +26,13 @@
 .cp-input-wrap svg{color:var(--t2);flex-shrink:0}
 .cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
 .cp-input::placeholder{color:var(--t3)}
-.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 7px;border-radius:var(--radius-s);border:1px solid var(--border);cursor:pointer;flex-shrink:0;line-height:inherit}
+.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;flex-shrink:0;line-height:inherit}
 .cp-kbd-x{display:none}
 @media(hover:hover){.cp-kbd:hover{color:var(--t0)}}
-/* On a phone or tablet the chip becomes a 44px close button, and result
-   descriptions wrap in full instead of being cut at the category pill. */
+/* On a phone or tablet the chip becomes a 44px close button. */
 @media(pointer:coarse),(max-width:767px){
   .cp-input-wrap{padding-right:10px}
-  .cp-kbd{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:var(--radius-pill)}
+  .cp-kbd{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0}
   .cp-kbd-key{display:none}
   .cp-kbd-x{display:block}
 }
