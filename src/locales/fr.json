@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "Bibliothèque d'icônes",
-      "description": "Recherchez des milliers d'icônes via l'API Iconify."
+      "description": "Cherchez dans des packs d'icônes open source, puis copiez le SVG ou le JSX."
     },
     "altText": {
       "label": "Alt Text Generator",

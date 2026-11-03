@@ -205,8 +205,14 @@ function DonutChart({ segments, size = 120 }) {
  * localStorage — with nothing on either card to tell them apart. One component
  * that is only ever handed aggregate rows cannot develop that difference again.
  */
+const TOP_LIST_SHOWN = 8
+
 function TopList({ title, rows, unit, empty, range, wide = false }) {
   const max = Math.max(1, ...rows.map(r => r[1]))
+  // Only the first TOP_LIST_SHOWN rows are drawn, so a longer list says so.
+  const countLabel = rows.length > TOP_LIST_SHOWN
+    ? `top ${TOP_LIST_SHOWN} of ${rows.length} ${unit}`
+    : `${rows.length} ${unit}`
   return (
     <div className="adm-card">
       <div className="adm-card-header">
@@ -214,14 +220,14 @@ function TopList({ title, rows, unit, empty, range, wide = false }) {
           <span className="adm-card-title">{title}</span>
           <span className="adm-card-range">{range}</span>
         </span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{countLabel}</span>
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
           <div className={`adm-bar adm-top-list${wide ? ' adm-top-list--wide' : ''}`}>
-            {rows.slice(0, 8).map(([label, count]) => (
+            {rows.slice(0, TOP_LIST_SHOWN).map(([label, count]) => (
               <div key={label} className="adm-bar-row">
-                <span className="adm-bar-label">{label}</span>
+                <span className="adm-bar-label" title={label}>{label}</span>
                 <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
                 <span className="adm-bar-value">{count}</span>
               </div>
@@ -244,7 +250,7 @@ function ToolUsageCard({ rows, range }) {
           <span className="adm-card-title">Tools</span>
           <span className="adm-card-range">{range}</span>
         </span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} tools</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length > TOP_LIST_SHOWN ? `top ${TOP_LIST_SHOWN} of ${rows.length} tools` : `${rows.length} tools`}</span>
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
@@ -255,7 +261,7 @@ function ToolUsageCard({ rows, range }) {
               <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Opened</span>
               <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Used</span>
             </div>
-            {rows.slice(0, 8).map(({ id, opened, used }) => (
+            {rows.slice(0, TOP_LIST_SHOWN).map(({ id, opened, used }) => (
               <div key={id} className="adm-bar-row" data-tool={id}>
                 <span className="adm-bar-label" title={id}>{id}</span>
                 <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(opened / max) * 100}%` }} /></div>
@@ -1455,7 +1461,7 @@ function UsersPanel({ localUsers, toast, role }) {
                     <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
                     {' '}The rules understand a moderator, but this deployment cannot grant one yet, so
                     {' '}nothing on this screen offers to appoint anybody. Enabling it is an owner
-                    {' '}action &mdash; the steps are in docs/OWNER-ACTIONS.md &sect;1.3.
+                    {' '}action.
                   </>
                 : roster === null
                   ? (rosterError
@@ -2553,7 +2559,7 @@ export default function Admin({ toast }) {
                   {[
                     { label: 'Firebase Auth configured', ok: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
                     { label: 'Firestore database created', ok: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
-                    { label: 'Firestore security rules published', ok: true, note: 'Founder-confirmed 31 Jul 2026; re-test and republish after any rules change' },
+                    { label: 'Firestore security rules published', ok: true, note: 'Re-test and republish after any rules change' },
                     { label: 'Feedback/support email notifications', ok: false, note: 'Externally unverified — configure RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL in Vercel, then submit test feedback' },
                     { label: 'Google Sheets mirror (optional)', ok: false, note: 'Server-only configuration is not visible here — verify in Vercel and submit test feedback if used' },
                     { label: 'Custom domain', ok: true, note: 'uil4b.com configured' },
