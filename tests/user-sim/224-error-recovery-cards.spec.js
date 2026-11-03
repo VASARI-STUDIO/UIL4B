@@ -539,8 +539,8 @@ for (const variant of VARIANTS) {
 }
 
 // ───────────────────────────────── the 404 ─────────────────────────────────
-
-const BASE = () => `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT || 4174}`
+// The referrer has to be an address on the origin under test, whatever port the preview runs on, so it
+// is built from the config's baseURL; a fixed port would name another origin and read as another site.
 
 for (const variant of VARIANTS) {
   test.describe(`the 404, ${variant.id}`, () => {
@@ -555,9 +555,9 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('a fresh load keeps the browser\'s own focus, and the report link names the path and the linking page', async ({ browser }) => {
+    test('a fresh load keeps the browser\'s own focus, and the report link names the path and the linking page', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
-        await goRaw(page, '/nope-xyz', { referer: `${BASE()}/plans?utm=ignored#top` })
+        await goRaw(page, '/nope-xyz', { referer: `${baseURL}/plans?utm=ignored#top` })
         await expectTheme(page, variant)
         const h1 = page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })
         await expect(h1).toBeVisible()
@@ -577,10 +577,10 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('after in-app navigation the report does not blame the page the visit started from', async ({ browser }) => {
+    test('after in-app navigation the report does not blame the page the visit started from', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
         // Started from /plans (a full load with that referrer), then walked on.
-        await goRaw(page, '/privacy', { referer: `${BASE()}/plans` })
+        await goRaw(page, '/privacy', { referer: `${baseURL}/plans` })
         await expectRendered(page, '/privacy')
         await pushInApp(page, '/nope-xyz')
         await expect(page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })).toBeVisible()
@@ -589,9 +589,9 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('Report a broken link opens the form as a bug report with the path filled in', async ({ browser }) => {
+    test('Report a broken link opens the form as a bug report with the path filled in', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
-        await goRaw(page, '/nope-xyz', { referer: `${BASE()}/plans` })
+        await goRaw(page, '/nope-xyz', { referer: `${baseURL}/plans` })
         await page.getByRole('link', { name: 'Report a broken link' }).click()
         const form = page.locator('.fb-page')
         await expect(form).toBeVisible()
