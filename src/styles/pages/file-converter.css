@@ -305,6 +305,38 @@
 
 .fc .fc-seg-glyph { width: 16px; height: 16px; flex: none; }
 
+/* The sliding selected option. Segmented measures the checked option
+   (useSlideIndicator) and sets --si-x/-y/-w/-h/-r on the tray; the tray's
+   ::before is the selected look (ground, shadow, hairline) and moves with a
+   transform, so nothing in the flow shifts. While [data-slide] is on, the
+   checked option paints only its label; without it (server render, no script)
+   the option keeps its own look. "placed" draws the pill with no transition,
+   "ready" animates its moves. */
+.fc .fc-seg { position: relative; isolation: isolate; }
+.fc .fc-seg[data-slide]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  width: var(--si-w);
+  height: var(--si-h);
+  border-radius: var(--si-r, var(--radius-pill));
+  background: var(--bg-1);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+  transform: translate(var(--si-x), var(--si-y));
+  pointer-events: none;
+}
+.fc .fc-seg[data-slide="ready"]::before {
+  transition: transform .18s var(--fc-ease), width .18s var(--fc-ease), height .18s var(--fc-ease);
+}
+.fc .fc-seg[data-slide] .fc-seg-opt[aria-checked="true"] { background: transparent; box-shadow: none; }
+@media (forced-colors: active) {
+  .fc .fc-seg[data-slide]::before { content: none; }
+  .fc .fc-seg[data-slide] .fc-seg-opt[aria-checked="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+
 /* Chained with .fc-btn so it outranks the button's own weight and hover. */
 .fc .fc-btn.fc-toggle { font-weight: 500; }
 
@@ -1106,8 +1138,10 @@
    spellings the app uses. */
 html[data-reduced-motion="true"] .fc .fc-btn:active:not(:disabled) { transform: none; }
 html[data-reduced-motion="true"] .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fc .fc-seg[data-slide]::before { transition: none !important; }
   html:not([data-reduced-motion="false"]) .fc .fc-btn:active:not(:disabled) { transform: none; }
   html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--border); }
 }

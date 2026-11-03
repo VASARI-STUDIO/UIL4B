@@ -604,6 +604,17 @@ export function ToolPills({ options, value, onChange, label, labelledBy, describ
   )
 }
 
+// ── SlidePills ────────────────────────────────────────────────────────────
+// A hand-built `.tl-pills` group that keeps its own buttons, roles and key
+// handling and only gains the sliding pill. `value` is whatever identifies the
+// selection (and the option set, when that can change): the pill is re-measured
+// when it changes. Everything else passes straight through to the <div>.
+export function SlidePills({ value, children, ...rest }) {
+  const ref = useRef(null)
+  useSlideIndicator(ref, value)
+  return <div ref={ref} {...rest}>{children}</div>
+}
+
 // ── ToolSlider ────────────────────────────────────────────────────────────
 // The drawn slider row: a 12.5px label, a 6px track (any CSS background — a
 // hue rainbow, the gradient itself), and the value in 11px mono.

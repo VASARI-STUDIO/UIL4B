@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
+import useSlideIndicator from '../hooks/useSlideIndicator'
 import { useI18n } from '../contexts/I18nContext'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import { ICON_GROUPS_ROUTE } from '../data/iconGroups'
@@ -95,6 +96,9 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
   // built in and never asks the catalogue for anything.
   const iconFallback = tab === 'icon' && catalogue === 'fallback'
   const tabRefs = useRef({})
+  // The selected tab's pill slides between tabs (useSlideIndicator; library.css).
+  const switchRef = useRef(null)
+  useSlideIndicator(switchRef, tab)
 
   // The licence rows each tab reports for the footer's notice, kept per tab so a
   // hidden (kept-alive) tab cannot overwrite the visible one. The active tab's
@@ -162,7 +166,7 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
                 puts the control that says WHICH library you are in — so it goes
                 through `aside`, not `mark`: never aria-hidden, and never
                 dropped on a narrow screen the way the count is. */}
-            <div className="lib-switch" role="tablist" aria-label="Choose asset library">
+            <div ref={switchRef} className="lib-switch" role="tablist" aria-label="Choose asset library">
               {LIB_TABS.map((lib) => (
                 <button
                   key={lib.id}

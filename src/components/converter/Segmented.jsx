@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import useSlideIndicator from '../../hooks/useSlideIndicator'
 
 // A row of mutually exclusive choices that all show at once: a radiogroup, one
 // Tab stop, arrow keys move AND select (the same keys as the mode tabs).
@@ -11,6 +12,10 @@ export default function Segmented({
   id, label, options, value, onChange, disabled = false, isOptionDisabled, className = '',
 }) {
   const refs = useRef({})
+  const trayRef = useRef(null)
+  // The option set is part of the key: a different set can move the checked
+  // option without the value changing.
+  useSlideIndicator(trayRef, `${value}|${options.map((o) => o.id).join(',')}`)
   const off = (o) => disabled || !!(isOptionDisabled && isOptionDisabled(o))
   const enabled = options.filter((o) => !off(o))
 
@@ -38,7 +43,7 @@ export default function Segmented({
   return (
     <div className="fc-seg-wrap">
       <span className="fc-eyebrow" id={`${id}-label`}>{label}</span>
-      <div className={`fc-seg ${className}`.trim()} role="radiogroup" aria-labelledby={`${id}-label`}>
+      <div ref={trayRef} className={`fc-seg ${className}`.trim()} role="radiogroup" aria-labelledby={`${id}-label`}>
         {options.map((o, i) => {
           const selected = o.id === value
           const isOff = off(o)
