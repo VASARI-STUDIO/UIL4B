@@ -343,6 +343,9 @@ test.describe('library entrance animations', () => {
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
     expect((await enteringCard(page)).name, 'app set to motion, OS reduce').toBe('plSlideUp')
 
+    // Start from "true" so the wait below only passes once the app has really
+    // re-stamped from the OS change, not on the value set by hand above.
+    await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await stamped('false')
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
@@ -403,6 +406,9 @@ test.describe('library entrance animations', () => {
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
     expect((await enteringGlyph(page)).name, 'app set to motion, OS reduce').toBe('ig-glyph-in')
 
+    // Start from "true" so the wait below only passes once the app has really
+    // re-stamped from the OS change, not on the value set by hand above.
+    await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await stamped('false')
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
