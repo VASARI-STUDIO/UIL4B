@@ -425,10 +425,10 @@ test.describe('Brand kit walkthrough', () => {
     await expect(rail(page)).toBeHidden()
   })
 
-  // The desktop bar is chrome, not a card: full-bleed, 56px, fixed flush to the
-  // foot of the viewport, with no radius or shadow. Measured, not read from the
+  // The desktop bar is a floating glass pill: 896x50, centred, fixed 16px above the
+  // foot of the viewport, with a round end and a shadow. Measured, not read from the
   // stylesheet, so a rule that stops applying fails here.
-  test('1440px: the bar is a flush 56px strip with no radius or shadow, and on Colours it sits on the Adjust-all row', async ({ page }) => {
+  test('1440px: the bar is a centred 896x50 pill 16px above the foot, and on Colours it floats above the Adjust-all row', async ({ page }) => {
     watch(page, 'designer on a desktop with the walkthrough bar up')
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(([g, s]) => {
@@ -451,10 +451,12 @@ test.describe('Brand kit walkthrough', () => {
         shadow: cs.boxShadow,
       }
     })
-    expect(bar).toEqual({ height: 56, bottomGap: 0, left: 0, right: 0, position: 'fixed', radius: '0px', shadow: 'none' })
+    expect(bar.shadow, 'the pill floats, so it has a shadow').not.toBe('none')
+    expect(bar).toMatchObject({ height: 50, bottomGap: 16, left: 272, right: 272, position: 'fixed' })
+    expect(parseFloat(bar.radius), 'a pill, not a strip').toBeGreaterThanOrEqual(25)
 
-    // Colours: the Adjust-all row is the toolbar the bar rides on, so the bar's
-    // bottom edge is the toolbar's top edge.
+    // Colours: the Adjust-all row is the toolbar the pill floats above, so the pill's
+    // bottom edge is 16px above the toolbar's top edge.
     await go(page, '/create/palette')
     await expect(rail(page)).toBeVisible()
     const toolbar = page.locator('.plb-adjust')
@@ -462,13 +464,13 @@ test.describe('Brand kit walkthrough', () => {
     await expect.poll(async () => {
       const b = await rail(page).boundingBox()
       const t = await toolbar.boundingBox()
-      return Math.abs((b.y + b.height) - t.y) <= 1
-    }, { message: 'the bar is not directly above the Adjust-all row', timeout: 5000 }).toBe(true)
+      return Math.abs((t.y - (b.y + b.height)) - 16) <= 1
+    }, { message: 'the pill is not 16px above the Adjust-all row', timeout: 5000 }).toBe(true)
     const colours = await rail(page).evaluate((el) => ({
       height: el.getBoundingClientRect().height,
       toolbarBottomGap: window.innerHeight - document.querySelector('.plb-adjust').getBoundingClientRect().bottom,
     }))
-    expect(colours).toEqual({ height: 56, toolbarBottomGap: 0 })
+    expect(colours).toEqual({ height: 50, toolbarBottomGap: 0 })
   })
 
   test('the Palette page no longer offers Build UI system to anyone', async ({ page }) => {
@@ -483,5 +485,75 @@ test.describe('Brand kit walkthrough', () => {
     await expect(page.getByRole('button', { name: /UI System/ })).toHaveCount(0)
     // The tool itself is still there and still works.
     await expect(page.locator('.plb-seedchip')).toBeVisible()
+  })
+})
+
+// The desktop bar (1024px and up) is a floating glass pill. Measured from the
+// rendered page so a rule that stops applying fails. Below 1024px the bar is
+// unchanged; see 99-brand-kit-phone-and-name.spec.js.
+test.describe('Brand kit walkthrough: the desktop pill', () => {
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    test(`${width}px: a centred 896x50 pill, nothing wraps inside it, and Next is the only accent fill`, async ({ page }) => {
+      watch(page, 'designer on a desktop with the walkthrough bar up')
+      await page.setViewportSize({ width, height })
+      await page.addInitScript(([g, s]) => {
+        try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+      }, [GUIDE_KEY, SEEN_KEY])
+      for (const path of ['/create/font-pair', '/create/type-scale', '/create/icons']) {
+        await go(page, path)
+        await expect(rail(page), path).toBeVisible()
+        const m = await rail(page).evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const cs = getComputedStyle(el)
+          const steps = el.querySelector('.bkit-steps')
+          const fill = getComputedStyle(document.documentElement).getPropertyValue('--accent-fill')
+          const swatch = document.createElement('i')
+          swatch.style.backgroundColor = fill
+          document.body.append(swatch)
+          const accent = getComputedStyle(swatch).backgroundColor
+          swatch.remove()
+          return {
+            w: Math.round(r.width), h: Math.round(r.height), bottomGap: Math.round(window.innerHeight - r.bottom),
+            centred: Math.abs(r.left - (document.documentElement.clientWidth - r.right)) <= 1,
+            round: parseFloat(cs.borderTopLeftRadius) >= 25, glass: cs.backdropFilter, overflow: cs.overflow,
+            fits: el.scrollWidth === el.clientWidth && steps.scrollWidth === steps.clientWidth,
+            filled: [...el.querySelectorAll('*')].filter((n) => n.getBoundingClientRect().width > 0 && getComputedStyle(n).backgroundColor === accent).map((n) => n.className.split(' ').find((c) => c.startsWith('bkit-')) || n.tagName),
+          }
+        })
+        expect(m, path).toEqual({ w: 896, h: 50, bottomGap: 16, centred: true, round: true, glass: 'saturate(1.6) blur(24px)', overflow: 'visible', fits: true, filled: ['bkit-rail-next'] })
+      }
+    })
+  }
+
+  test('on Colours the pill floats 16px above the Adjust-all row, which keeps the foot', async ({ page }) => {
+    watch(page, 'designer on the colour board with the bar up')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(([g, s]) => {
+      try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+    }, [GUIDE_KEY, SEEN_KEY])
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-adjust')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => {
+      const t = document.querySelector('.plb-adjust').getBoundingClientRect()
+      const r = document.querySelector('.bkit-rail').getBoundingClientRect()
+      return { rowBottomGap: Math.round(window.innerHeight - t.bottom), above: Math.round(t.top - r.bottom) }
+    })).toEqual({ rowBottomGap: 0, above: 16 })
+  })
+
+  test('the current step is a 2px accent underline 3px above the link foot, and the pill is solid for reduced transparency', async ({ page }) => {
+    watch(page, 'designer finding where they are')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(([g, s]) => {
+      try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+    }, [GUIDE_KEY, SEEN_KEY])
+    await go(page, '/create/font-pair')
+    const lines = await rail(page).locator('.bkit-step').evaluateAll((links) => links.map((a) => {
+      const b = getComputedStyle(a, '::before')
+      return { current: a.getAttribute('aria-current') === 'step', drawn: b.content !== 'none', height: b.height, bottom: b.bottom }
+    }))
+    expect(lines.filter((l) => l.drawn)).toEqual([{ current: true, drawn: true, height: '2px', bottom: '3px' }])
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] })
+    await expect.poll(() => rail(page).evaluate((el) => getComputedStyle(el).backdropFilter), { message: 'reduced transparency left the blur on' }).toBe('none')
   })
 })

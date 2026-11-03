@@ -208,8 +208,9 @@ test.describe('Brand kit walkthrough on a phone', () => {
     })
   }
 
-  // From 768px the bar is flush to the viewport foot (bottom 0, no gap)
-  // and the popover hangs 64px above it (the 56px bar + 8px). On Colours
+  // From 1024px the bar is a pill floating 16px above the viewport foot and the
+  // popover hangs 74px above it (16 + 50 + 8). The help label is visually hidden
+  // there (absolute, clipped; the icon shows). On Colours
   // the bar rides on the Adjust-all row, so both offsets rise by its height.
   // gap is measured between the popover's foot and the bar's top edge.
   const desktopOffsets = (page) => page.evaluate(() => ({
@@ -225,7 +226,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await go(page, '/create/font-pair')
     await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
     await expect(introCard(page)).toBeVisible()
-    await expect.poll(() => desktopOffsets(page)).toEqual({ rail: '0px', card: '64px', help: 'static', gap: 8 })
+    await expect.poll(() => desktopOffsets(page)).toEqual({ rail: '16px', card: '74px', help: 'absolute', gap: 8 })
 
     // Each close button animates only what its own states change: both
     // hover colours and the 97% press scale (transform), and never `all`.
@@ -244,7 +245,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect.poll(async () => {
       const o = await desktopOffsets(page)
       return { rail: Math.round(parseFloat(o.rail) - toolbarH), card: Math.round(parseFloat(o.card) - toolbarH), help: o.help, gap: o.gap }
-    }).toEqual({ rail: 0, card: 64, help: 'static', gap: 8 })
+    }).toEqual({ rail: 16, card: 74, help: 'absolute', gap: 8 })
   })
 
   test('390px: the help trigger is a visible, named icon button and Escape returns focus to it', async ({ page }) => {
@@ -603,12 +604,12 @@ test.describe('Brand kit walkthrough: Name your project', () => {
   // height and its steps, and the panel is a popover 8px above it from 768px and
   // a sheet whose foot sits on the bar's top edge on a phone.
   const NAME_PANEL_WIDTHS = [
-    { width: 1440, height: 900, barHeight: 56, gap: 8 },
-    { width: 1024, height: 900, barHeight: 76, gap: 8 },
-    { width: 768, height: 900, barHeight: 76, gap: 8 },
-    { width: 390, height: 844, barHeight: 132, gap: 0 },
+    { width: 1440, height: 900, barHeight: 50, gap: 8, float: 16 },
+    { width: 1024, height: 900, barHeight: 50, gap: 8, float: 16 },
+    { width: 768, height: 900, barHeight: 76, gap: 8, float: 0 },
+    { width: 390, height: 844, barHeight: 132, gap: 0, float: 0 },
   ]
-  for (const { width, height, barHeight, gap } of NAME_PANEL_WIDTHS) {
+  for (const { width, height, barHeight, gap, float } of NAME_PANEL_WIDTHS) {
     test(`${width}px: the name step is a panel ${gap ? `${gap}px above` : 'joined to'} the bar, and the bar does not change`, async ({ page }) => {
       watch(page, 'designer naming a project')
       await page.setViewportSize({ width, height })
@@ -654,22 +655,26 @@ test.describe('Brand kit walkthrough: Name your project', () => {
         await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
       }
 
-      // One flat bar on the foot of the viewport at its one height, the spacer
-      // that clears the end of the tool matching it, and the panel in place.
-      await expect.poll(() => page.evaluate(() => {
+      // One bar at its one height, in place (flat on the foot of the viewport
+      // below 1024px; a glass pill floating 16px above it from 1024px), the
+      // spacer that clears the end of the tool matching it plus the gap around
+      // the pill, and the panel in place.
+      await expect.poll(() => page.evaluate((lift) => {
         const bar = document.querySelector('.bkit-rail')
         const box = bar.getBoundingClientRect()
         const panelBox = document.querySelector('.bkit-card--name').getBoundingClientRect()
         const cs = getComputedStyle(bar)
+        const flat = cs.backdropFilter === 'none' && cs.boxShadow === 'none' && cs.borderRadius === '0px'
+        const glass = cs.backdropFilter !== 'none' && cs.boxShadow !== 'none' && parseFloat(cs.borderTopLeftRadius) >= 25
         return {
           height: Math.round(box.height),
-          onBottom: Math.abs(box.bottom - window.innerHeight) < 1,
-          spacer: Math.abs(document.querySelector('.bkit-rail-space').getBoundingClientRect().height - box.height) < 1,
+          onBottom: Math.abs(window.innerHeight - box.bottom - lift) < 1,
+          spacer: Math.abs(document.querySelector('.bkit-rail-space').getBoundingClientRect().height - box.height - 2 * lift) < 1,
           noOverflow: bar.scrollWidth <= bar.clientWidth,
-          flat: cs.backdropFilter === 'none' && cs.boxShadow === 'none' && cs.borderRadius === '0px',
+          look: lift ? (glass ? 'pill' : 'other') : (flat ? 'flat' : 'other'),
           gap: Math.round(box.top - panelBox.bottom),
         }
-      })).toEqual({ height: barHeight, onBottom: true, spacer: true, noOverflow: true, flat: true, gap })
+      }, float)).toEqual({ height: barHeight, onBottom: true, spacer: true, noOverflow: true, look: float ? 'pill' : 'flat', gap })
 
       // Escape closes the panel, and focus goes back to the button that opened it.
       await page.keyboard.press('Escape')
@@ -726,7 +731,7 @@ test.describe('Brand kit walkthrough: rail polish and leaving', () => {
     })
     expect(geo.position).toBe('absolute')
     expect(geo.height).toBe('2px')
-    expect(geo.lineBottom, 'the line is anchored to the foot of the chip, not the bar edge').toBe('6px')
+    expect(geo.lineBottom, 'the line is anchored 3px above the foot of the chip inside the pill, not the bar edge').toBe('3px')
   })
 
   test('768px: Help and Close are 44px with 8px clear of Next', async ({ page }) => {
