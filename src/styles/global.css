@@ -3270,6 +3270,23 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-dcount-strip > span{flex:1}
 .pnav-dcount-n{font-family:var(--font);font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0;color:rgb(var(--ink-rgb))}
 .pnav-dcount-l{font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
+/* Discover: the counts and the suggested gallery share one slot in the pane. The
+   suggestion is a flat 48px row (a look at the gallery, its name, an arrow) under
+   a hairline, like the counts above it — not a card. */
+.pnav-dside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pnav-reco{display:grid;gap:2px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
+.pnav-reco--wait{min-height:76px}
+.pnav-reco-eyebrow{margin:0;font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-reco-link{display:flex;align-items:center;gap:10px;min-height:48px;margin-inline:-8px;padding:6px 8px;border-radius:12px;color:rgb(var(--ink-rgb));text-decoration:none;transition:background var(--dur-1) var(--ease-standard)}
+.pnav-reco-link:hover,.pnav-reco-link:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
+.pnav-reco-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-reco-prev{display:flex;flex:0 0 auto;width:48px;height:32px;box-sizing:border-box;border:1px solid rgba(var(--ink-rgb),.1);border-radius:var(--radius-xs);overflow:hidden}
+.pnav-reco-prev--strip > span{flex:1}
+.pnav-reco-prev--type{align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;line-height:1}
+.pnav-reco-prev--glyph{align-items:center;justify-content:center;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-reco-prev--glyph svg{width:18px;height:18px}
+.pnav-reco-name{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-reco-arrow{flex:0 0 auto;color:rgba(var(--ink-rgb),var(--ink-dim))}
 /* Learn: each guide row carries its reading time at the right, as plain text. The
    page's own title is long, so the label may take two lines instead of an ellipsis. */
 .pnav-tool-mins{flex:0 0 auto;font:400 11px/1.45 var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
@@ -3309,7 +3326,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 @media(max-width:1240px){
   .pnav-editorial{flex:1 1 100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"text vis" "cta vis";column-gap:28px;row-gap:13px;align-items:start;border-left:0;border-top:1px solid rgba(var(--ink-rgb),.06)}
   .pnav-editorial > :first-child{grid-area:text}
-  .pnav-editorial .pnav-prev,.pnav-editorial .pnav-dcounts,.pnav-editorial .pnav-guides{grid-area:vis}
+  .pnav-editorial .pnav-prev,.pnav-editorial .pnav-dside,.pnav-editorial .pnav-guides{grid-area:vis}
   .pnav-editorial-cta{grid-area:cta;justify-self:start;align-self:end;margin-top:0}
 }
 
@@ -3379,6 +3396,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-acc-panel{padding:0 0 14px}
 .pnav-acc-cta{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:18px 4px 0;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;text-decoration:none;cursor:pointer}
 .pnav-acc-cta:hover{color:var(--accent-ink);text-decoration:none}
+.pnav-acc-panel > .pnav-reco{margin:18px 4px 0}
 .pnav-acc-colhead{margin:0;padding:14px 4px 4px;font-family:var(--font);font-size:13px;font-weight:500;line-height:1.3;letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-acc-col:first-child .pnav-acc-colhead{padding-top:10px}
 .pnav-acc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px}

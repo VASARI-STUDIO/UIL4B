@@ -42,11 +42,13 @@ import { initialsOf } from '../utils/initials.js'
 import { readSessionHint } from '../utils/sessionHint'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
-// Discover pane's counts too — they render only inside the open Discover menu,
-// and the prompt count comes from a data module nothing else here imports.
+// Discover pane's counts and suggested gallery too — they render only inside
+// the open Discover menu, and the prompt count comes from a data module nothing
+// else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
+const DiscoverRecommended = lazy(() => import('./nav/DiscoverRecommended'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
@@ -1015,6 +1017,11 @@ function AppHeader() {
                     </div>
                   )
                 })}
+                {section.id === 'discover' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <DiscoverRecommended path={path} onPick={closeAll} />
+                  </Suspense>
+                )}
                 {section.id === 'create' ? (
                   <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
                     {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
@@ -1304,9 +1311,14 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
             </div>
             {section.id === 'create' && <ExportPreview />}
             {section.id === 'discover' && (
-              <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
-                <DiscoverCounts />
-              </Suspense>
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
+                  <DiscoverCounts />
+                </Suspense>
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <DiscoverRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
             )}
             {section.id === 'create' ? (
               <button type="button" className="pnav-editorial-cta" onClick={onBrandKit} data-pnav-menuitem>
