@@ -5,6 +5,7 @@
 // under plain `node --test`. IconLibrary.jsx owns the markup and the click
 // handlers.
 import { canSeePack } from '../data/iconPackTiers.js'
+import { ICON_PACK_COUNTS } from '../data/iconPackCounts.generated.js'
 
 /**
  * Which band, if any, closes the grid: 'anon', 'free' or null.
@@ -83,7 +84,8 @@ export function pickTeaseIcons({ icons, shownNames = [], count, canSee } = {}) {
   return out
 }
 
-export const TEASE_ROWS = 1
+// Two whole rows of blurred icons sit above the gate block.
+export const TEASE_ROWS = 2
 
 /** How many cells to draw for `cols` live grid columns. */
 export function teaseCellCount(cols) {
@@ -105,6 +107,23 @@ export function teaseCellPlace(index, cols) {
     row: Math.floor(index / cols),
     edge: col === 0 ? 'first' : col === cols - 1 ? 'last' : null,
   }
+}
+
+/**
+ * How many icons a viewer of `tier` can open across `packs` (IconLibrary's ALL_PACKS): each
+ * pack the tier table lets them see, less the icons a pack keeps for Pro. Read from the
+ * counts generated off the committed pack lists, so it is the real figure, not a typed one.
+ * A pack with no recorded count (one served live, or not yet snapshotted) adds nothing, so
+ * the figure can only err low.
+ */
+export function iconsOpenTo(packs, tier) {
+  let n = 0
+  for (const p of packs) {
+    const c = ICON_PACK_COUNTS[p]
+    if (!c || !canSeePack(p, tier)) continue
+    n += c[0] - (tier === 'paid' ? 0 : c[1])
+  }
+  return n
 }
 
 /**

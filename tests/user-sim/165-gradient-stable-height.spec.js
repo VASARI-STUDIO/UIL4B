@@ -742,6 +742,18 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         const panel = panelOf(page)
         while ((await stopRows(page).count()) < n) await addButton(panel).click()
         await expect(stopRows(page)).toHaveCount(n)
+        // The newest stop is active, so the page scrolls its row into view with a smooth scrollTo that
+        // is still running when the last row appears. A test that then sets scrollTop itself races that
+        // animation (the count read "10–12 of 12" after the test had asked for the top, and the window
+        // stopped a few pixels short). Wait for the window to reach the foot and stop, so what follows
+        // is the only thing that moves it.
+        if (n > 3) {
+          await expect.poll(
+            () => page.locator('.grd-stops').evaluate((el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1),
+            { message: 'the window has scrolled to the newest row' },
+          ).toBe(true)
+        }
+        await windowSettled(page)
       }
       /** Which "Select stop n" buttons are pressed (1-based), and every row's hex. */
       const selection = (page) => page.evaluate(() => {

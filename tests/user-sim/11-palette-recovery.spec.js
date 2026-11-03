@@ -406,16 +406,15 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   }
 
   // Every tool's toolbar opens on the design's drawn back
-  // button, which returns to the workspace (D:613). The Palette Builder is one
-  // press away in the Create menu; what is held here is that the tool still
+  // button, which returns to the tools index. What is held here is that the tool
   // offers an immediate way out, at the start of its toolbar.
   test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 

@@ -356,11 +356,11 @@ test('/credits is a real route in every registry a live route needs', () => {
   assert.match(read('public/llms.txt'), /\/credits\)/, 'run `npm run sync:llms`')
 })
 
-/* ── 8 · THE TWO CREDITS WITH NO FILE TO READ ───────────────────────────────
+/* ── 8 · THE CREDITS WITH NO FILE TO READ ───────────────────────────────────
  *
- * Unicode CLDR and the Iconify API are stated on the page because there is no
- * manifest for either. That makes them the two rows that CAN go stale, so each
- * one is checked against the file that would have to change. */
+ * Unicode CLDR, gemoji and the Iconify API are stated on the page because there
+ * is no manifest for any of them. That makes them the rows that CAN go stale, so
+ * each one is checked against the file that would have to change. */
 
 test('the CLDR credit is still true of the script that builds the emoji index', () => {
   const script = stripComments(read('scripts/build-emoji-index.mjs'))
@@ -372,6 +372,19 @@ test('the CLDR credit is still true of the script that builds the emoji index', 
     'the CLDR credit no longer names the file it explains, so nobody can check it')
   assert.ok(fs.existsSync(path.join(ROOT, 'src', 'data', 'emojiIndex.txt')),
     'the emoji index is gone — if it really went, this credit should go with it')
+})
+
+test('the gemoji credit is still true of the script that builds the emoji shortcodes', () => {
+  const script = stripComments(read('scripts/build-emoji-meta.mjs'))
+  assert.match(script, /github\/gemoji/,
+    'scripts/build-emoji-meta.mjs no longer sources GitHub gemoji, so the credit on '
+    + '/credits describes a source the emoji shortcodes do not use any more')
+  assert.match(CREDITS_PAGE, /name: 'gemoji'/, 'Credits.jsx no longer credits gemoji')
+  assert.match(CREDITS_PAGE, /github\.com\/github\/gemoji/, 'the gemoji credit lost its link')
+  assert.match(CREDITS_PAGE, /licenceName: 'MIT'[^}]*emojiShortcodes\.txt/s,
+    'the gemoji credit no longer states its licence and the file it explains')
+  assert.ok(fs.existsSync(path.join(ROOT, 'src', 'data', 'emojiShortcodes.txt')),
+    'the shortcode table is gone — if it really went, this credit should go with it')
 })
 
 test('the Iconify credit is still true of the page that fetches through it', () => {

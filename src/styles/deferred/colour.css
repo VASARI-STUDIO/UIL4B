@@ -289,9 +289,12 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-swapdir:hover,.plb-swapdir:focus-visible{color:var(--t0);background:var(--bg-2)}
 
 /* Custom right-click menu (fixed, viewport-clamped via --plb-mx/--plb-my) */
-.plb-ctx{position:fixed;left:var(--plb-mx);top:var(--plb-my);z-index:80;min-width:192px;padding:6px}
-.plb-ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;font-size:12.5px;font-weight:600;color:var(--t1);text-align:left;background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t);white-space:nowrap}
-.plb-ctx-item:hover{background:var(--bg-2);color:var(--t0)}
+.plb-ctx{position:fixed;left:var(--plb-mx);top:var(--plb-my);z-index:80;min-width:192px;padding:var(--s-2);background:var(--bg-1);border-radius:var(--radius-l);box-shadow:var(--shadow-cmd),0 0 0 1px color-mix(in srgb,var(--t0) 4%,transparent)}
+/* The row is .pop-item's (the dropdown row): height, padding, type, hover, focus. */
+.plb-ctx-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard);white-space:nowrap}
+.plb-ctx-item:hover{background:var(--hvr);color:var(--t0)}
+/* Scoped by the menu role so it outranks the tool layout's shared focus ring. */
+.plb-ctx[role="menu"] .plb-ctx-item:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 .plb-ctx-item svg{flex-shrink:0;opacity:.8}
 /* #D64545 on the menu card was 4.38:1 light / 3.97:1 dark at 12.5px
 . --err-strong is the text companion of the state token
@@ -299,7 +302,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    tint stays on the base token, which is what fills are for. */
 .plb-ctx-item--danger{color:var(--err-strong)}
 .plb-ctx-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong)}
-.plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
+.plb-ctx-sep{height:1px;margin:var(--s-1) 6px;background:var(--border)}
 .plb-ctx-item--muted{color:var(--t3);cursor:default}
 .plb-ctx-item--muted:hover{background:none;color:var(--t3)}
 .plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;color:var(--accent-text);border:1px solid var(--accent);border-radius:var(--radius-pill)}

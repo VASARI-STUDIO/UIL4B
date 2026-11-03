@@ -49,7 +49,7 @@ import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
 import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
-  endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
+  endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
@@ -1344,6 +1344,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [sizeText, setSizeText] = useState(() => String(size))
   const [clampedTo, setClampedTo] = useState(null)
   const railRef = useRef(null)
+  // True once the body has scrolled under the pinned head, which then wears a hairline.
+  const [scrolled, setScrolled] = useState(false)
   const primaryRef = useRef(null)
   const sizeInputRef = useRef(null)
   const sizeRowRef = useRef(null)
@@ -1998,15 +2000,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const row = sizeRowRef.current
     const body = panelRef.current?.querySelector('.icust-body')
     if (!row || !body) return
-    const foot = body.querySelector(':scope > .icust-foot')
-    // The scroller is the left column on the two-column layout, the body below it.
-    let scroller = row.parentElement
-    while (scroller && scroller !== body && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
-    scroller = scroller || body
+    const foot = body.querySelector('.icust-foot--tool')
+    const rowBox = row.getBoundingClientRect()
+    const footBox = foot ? foot.getBoundingClientRect() : null
+    // In the two-column layout the foot sits beside the size tiles, not under them.
+    const footOver = footBox && footBox.left < rowBox.right && footBox.right > rowBox.left
     const vv = window.visualViewport
-    const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
-    const over = row.getBoundingClientRect().bottom - floor
-    if (over > 0) scroller.scrollTop += over
+    const floor = Math.min(footOver ? footBox.top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
+    const over = rowBox.bottom - floor
+    if (over > 0) body.scrollTop += over
   }, [])
   useEffect(() => {
     const vv = window.visualViewport
@@ -2056,40 +2058,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
-  // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
-  const packName = activeIcon
-    ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
-    : ''
-  const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
-  const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
-
-  // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
-  // of them has more under it (icon-emoji-library.css). The attribute is set straight on the body, so
-  // reading it never renders; it is re-read when a column resizes or its content changes.
-  useEffect(() => {
-    const body = panelRef.current?.querySelector('.icust-body')
-    const cols = body ? [...body.querySelectorAll(':scope > .icust-left, :scope > .icust-right')] : []
-    if (!body || cols.length === 0) return undefined
-    let frame = 0
-    const measure = () => {
-      frame = 0
-      body.toggleAttribute('data-scrolls', cols.some(c => c.scrollHeight - c.clientHeight > 1 && /auto|scroll/.test(getComputedStyle(c).overflowY)))
-    }
-    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
-    measure()
-    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
-    const changed = new MutationObserver(schedule)
-    cols.forEach(c => {
-      resized?.observe(c)
-      changed.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open'] })
-    })
-    return () => {
-      cancelAnimationFrame(frame)
-      resized?.disconnect()
-      changed.disconnect()
-      body.removeAttribute('data-scrolls')
-    }
-  }, [activeIcon])
 
   return (
     <div className="icust-overlay" onMouseDown={onClose}>
@@ -2103,16 +2071,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="icust-head">
+        <div className={`icust-head${scrolled ? ' is-scrolled' : ''}`}>
           <div className="icust-head-text">
+            <span className="icust-eyebrow">{addMode && !activeIcon ? 'Add icon' : 'Customise'}</span>
             <h2 className="icust-title" id="icust-title">{title}</h2>
-            {headSub && <p className="icust-sub">{headSub}</p>}
           </div>
-          {/* Reset changes the controls and shows only once something differs. It stays before
-              Close in the tab order. */}
-          {activeIcon && edited && (
-            <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset</button>
-          )}
           <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -2120,7 +2083,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </button>
         </div>
 
-        <div className="icust-body">
+        <div className={`icust-body${activeIcon ? ' icust-body--split' : ''}`} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)}>
         {!activeIcon ? (
           <div className="icust-paste">
             <p className="icust-paste-help">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
@@ -2140,7 +2103,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            <div className="icust-left">
+            {/* The preview and the size tiles. From 960px wide (and tall enough) this is a sticky left
+                column that stays in view while the controls scroll; below that it is the top of the one
+                column and scrolls with the rest. */}
+            <div className="icust-aside">
             <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
@@ -2199,7 +2165,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
             </div>
 
-              <div className="icust-size" ref={railRef}>
+            <div className="icust-meta">
+              <div className="icust-tags">
+                <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
+                <span className="icust-tag icust-tag--name" title={activeIcon.name}>{activeIcon.name}</span>
+                {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
+              </div>
+              {/* Reset changes the controls, so it sits with them. It shows only
+                  once something differs; hidden (not removed) so the row holds. */}
+              <button
+                type="button"
+                className={`lib-btn icust-reset${edited ? '' : ' is-hidden'}`}
+                onClick={handleReset}
+                aria-label="Reset to default"
+              >Reset</button>
+            </div>
+
+            <div className="icust-size" ref={railRef}>
                 <div className="icust-size-head">
                   <span className="icust-size-title" id="icust-size-label">Export size</span>
                   <span className="icust-size-sub">shown at real pixels</span>
@@ -2272,7 +2254,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             </div>
 
-            <div className="icust-right">
+            <div className="icust-main">
             <div className="icust-controls">
               <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
                 <label id="icust-colour-label">Colour</label>
@@ -2311,8 +2293,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           {label}
                         </button>
                       ))}
-                      {/* Portalled to <body>: the right column scrolls on its own above 800px, and an
-                          inline panel hung off the fourth chip would be cut off by it. */}
+                      {/* Portalled to <body>: the pop-up's body scrolls and clips, and an inline panel
+                          hung off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
                         portal
                         value={color || themeInk}
@@ -2448,66 +2430,40 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               )}
 
-              <div className="icust-rot">
-                <div className="icust-rot-head">
-                  <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
-                  <span className="icust-mono icust-rot-val" aria-hidden="true">{rotate}°</span>
-                  {/* Polite and always mounted, so each press of Rotate is announced. */}
-                  <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
+              <div className="icust-row">
+                <label id="icust-rot-label">Rotate</label>
+                <div className="icust-seg" role="group" aria-labelledby="icust-rot-label">
+                  {[0, 90, 180, 270].map(deg => (
+                    <button key={deg} type="button" className={rotate === deg ? 'active' : ''} aria-pressed={rotate === deg} onClick={() => { setRotate(deg); markDirty() }}>{deg}°</button>
+                  ))}
                 </div>
-                <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
-                  </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
-                  </button>
-                  <span className="icust-rot-sep" aria-hidden="true" />
-                  <button type="button" className="icust-rot-btn" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
-                  </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
-                  </button>
+                {/* Polite and always mounted, so each press of Rotate is announced. */}
+                <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
+              </div>
+
+              <div className="icust-row">
+                <label>Flip</label>
+                <div className="icust-seg">
+                  <button type="button" className={flipH ? 'active' : ''} aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>Horizontal</button>
+                  <button type="button" className={flipV ? 'active' : ''} aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>Vertical</button>
                 </div>
               </div>
             </div>
 
-            <details className="icust-code">
-              <summary className="icust-code-sum">
-                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-                <span className="icust-code-name">SVG code</span>
-                <span className="icust-code-val"><span className="icust-mono">{size} × {size} · {codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
-              </summary>
-              <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
-                <button
-                  type="button"
-                  className="icust-code-copy"
-                  onClick={handleCopyCode}
-                  disabled={!baseSvgText}
-                  aria-disabled={previewing || undefined}
-                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
-                  aria-busy={!baseSvgText && !loadErr}
-                  aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
-                >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
-                <code tabIndex={0} role="region" aria-label="SVG code">{serializedOutput}</code>
-              </div>
-            </details>
-
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
+            <div className="icust-code">
+              <div className="icust-code-label">SVG</div>
+              <button
+                type="button"
+                className="icust-code-box"
+                onClick={handleCopyCode}
+                disabled={!baseSvgText}
+                aria-disabled={previewing || undefined}
+                aria-describedby={previewing ? 'icust-preview-line' : undefined}
+                aria-busy={!baseSvgText && !loadErr}
+              >
+                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : previewing ? 'Preview only' : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
+                <code>{serializedOutput}</code>
+              </button>
             </div>
 
             {/* The one preview line. Always mounted, so its first message is announced. With no
@@ -2582,6 +2538,21 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             </div>
 
+            {savedInProjects.length > 0 && (
+              <p className="icust-savedin">
+                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
+              </p>
+            )}
+
+            {similarList.length > 0 && (
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
+            )}
+            </div>
           </>
         )}
         </div>
@@ -3017,35 +2988,27 @@ function IconEndBand({ kind, heading, body, names, action, onAction, to, seconda
   )
 }
 
-/* One row of blurred icons that continues the grid past the cap. They use a
+/* Two rows of blurred icons that continue the grid past the cap. They use a
    grid of their own (the live grid's column count, passed in) rather than the
    `.ig` class, so anything that looks up the results grid still finds exactly
    one. The glyphs are
    path strings already compiled into the bundle and belong to packs a signed-out
    viewer may browse (see pickTeaseIcons), so this makes no request and holds
    nothing gated. The cells carry no name, no pack and no title, are not
-   focusable, and are hidden from assistive tech: the band below says the same
-   thing in words. A click or tap anywhere on them runs `onAction`. The hover
-   chip is CSS-only and appears for a fine pointer; touch relies on the band. */
-function IconEndTease({ cells, cols, cellH, chip, onAction }) {
+   focusable, take no pointer events and are hidden from assistive tech: the
+   band below says the same thing in words and holds the one way in. */
+function IconEndTease({ cells, cols, cellH }) {
   return (
-    <div className="ig-end-tease" aria-hidden="true" onClick={onAction}
+    <div className="ig-end-tease" aria-hidden="true"
       style={{ '--ig-end-cols': cols, ...(cellH ? { '--ig-end-cell-h': `${cellH}px` } : null) }}>
       {cells.map((cell, i) => {
-        const { row, edge } = teaseCellPlace(i, cols)
+        const { row } = teaseCellPlace(i, cols)
         return (
-          <span key={cell.key} className="ig-end-cell" data-row={row} data-edge={edge || undefined}>
+          <span key={cell.key} className="ig-end-cell" data-row={row}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
               strokeLinecap="round" strokeLinejoin="round" focusable="false">
               <path d={cell.d} />
             </svg>
-            <span className="ig-end-chip">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-                strokeLinecap="round" strokeLinejoin="round" focusable="false">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              {chip}
-            </span>
           </span>
         )
       })}
@@ -4316,10 +4279,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
-  const packsBehindLogin = useMemo(
-    () => freeSetCount - visiblePacks(ALL_PACKS, 'anon').length,
-    [freeSetCount],
-  )
+  // Every icon a free account opens, for the signed-out heading. From the pack lists, not typed.
+  const freeIconCount = useMemo(() => iconsOpenTo(ALL_PACKS, 'free'), [])
   // How many packs Pro adds over a free account, derived the same way.
   const packsProAddsCount = useMemo(() => packsProAdds(ALL_PACKS), [])
   // The signed-out sample's sets, named under the gate so "outline sets" points at something real.
@@ -4973,8 +4934,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             {endKind === 'anon' && (
               <IconEndBand
                 kind="anon"
-                heading={ICON_GATE_COPY.end.anon.heading(freeSetCount)}
-                body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, packsBehindLogin)}
+                heading={ICON_GATE_COPY.end.anon.heading(freeIconCount)}
+                body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
                 names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
@@ -4984,8 +4945,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     cells={teaseCells}
                     cols={teaseCols}
                     cellH={gridCellH}
-                    chip={ICON_GATE_COPY.end.anon.chip}
-                    onAction={() => openGate('free')}
                   />
                 )}
               />
