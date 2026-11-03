@@ -45,7 +45,7 @@ async function openWave(page) {
 }
 
 /** The dialog's open animation has finished, so a screenshot shows it at rest and not half faded in. */
-const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
 /** The icon's name is in its drawing, so a tile's src says which icon it came from. */
 const drawing = (prefix, name) => `<title>${prefix}/${name}</title><circle cx="12" cy="12" r="8"/>`
