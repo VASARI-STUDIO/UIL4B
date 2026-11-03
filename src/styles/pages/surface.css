@@ -147,13 +147,30 @@
 
 /* ── Learn: the guide index ───────────────────────────────────────────────────
    Search and the topic jump-links on the left, at the page's edge — not a
-   centred 560px island under a centred headline. */
-.srf .lidx-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; max-width: none; margin: 0 0 4px; }
-.srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; box-shadow: none; }
+   centred 560px island under a centred headline. Two rows below 1025px (search,
+   then the topics), one row above it. The topics are a single-line segmented
+   bar with 44px segments, never a wrapping row of text. */
+.srf .lidx-tools { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; max-width: 520px; margin: 0 0 4px; }
+.srf .lidx-tools .lbry-search { flex: 0 0 auto; max-width: none; box-shadow: none; }
 .srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
-.srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }
-.srf .lidx-topics a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--t1); text-decoration: none; border-bottom: 1px solid transparent; }
-.srf .lidx-topics a:hover { color: var(--t0); border-bottom-color: var(--t0); }
+/* The fill is an opaque mix, not a translucent wash, so the link text is
+   measured against one solid ground in both themes. */
+.srf .lidx-topics { display: flex; flex-wrap: nowrap; justify-content: stretch; gap: 0; border-radius: var(--radius-s); background: color-mix(in srgb, var(--t0) 5%, var(--bg-0)); font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+.srf .lidx-topics a { position: relative; flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 6px; white-space: nowrap; color: var(--t1); text-decoration: none; border-bottom: 0; border-radius: var(--radius-s); }
+.srf .lidx-topics a + a::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--srf-hair-2); }
+.srf .lidx-topics a:hover { color: var(--t0); background: var(--srf-wash); }
+.srf .lidx-topics a:focus-visible { outline-offset: -2px; }
+@media (min-width: 1025px) {
+  .srf .lidx-tools { flex-direction: row; align-items: center; gap: 24px; max-width: none; }
+  .srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; }
+  .srf .lidx-topics { flex: 0 0 auto; }
+  .srf .lidx-topics a { padding: 0 12px; }
+}
+/* Below 360px the counts would push the bar past the screen, so they step
+   aside (the headings below keep them). */
+@media (max-width: 359px) {
+  .srf .lidx-topics .lidx-topic-n { display: none; }
+}
 .srf .lidx-topic-n { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t2); font-variant-numeric: tabular-nums; }
 .srf .lidx-status { min-height: 1.5em; max-width: none; margin: 8px 0 0; text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 
@@ -232,8 +249,14 @@
   .srf .lidx-card:not(:has(.lidx-time)) { grid-template-areas: "title go" "dek dek"; }
 }
 @media (pointer: coarse), (max-width: 767px) {
-  .srf .lidx-topics a { min-height: 44px; }
   .srf .lidx-reset { min-height: 44px; }
+}
+/* The page gutter on a phone and a small tablet: 12px, the step the other
+   content pages use, in place of the shell's 16px. */
+@media (max-width: 768px) {
+  .srf.srf--learn .srf-wrap {
+    padding-inline: max(12px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  }
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────────

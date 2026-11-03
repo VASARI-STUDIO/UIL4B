@@ -139,7 +139,11 @@
    390px and was clipped, so the reader saw a truncated value in an article
    whose point was the exact value. It wraps at its own spaces now; short chips
    are unaffected because there is nothing in them to wrap at. */
-.lart .lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);overflow-wrap:break-word}
+.lart .lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);overflow-wrap:anywhere}
+/* A short token (useShortCode marks code of 20 characters or fewer) is one
+   unit: its hyphens and spaces are not places to break. Longer code keeps the
+   anywhere-wrap above. */
+.lart code[data-short]{white-space:nowrap;overflow-wrap:normal}
 .lart .lart-prose ul,.lart .lart-prose ol{margin:0 0 var(--s-4) 1.15em;display:flex;flex-direction:column;gap:var(--s-2)}
 .lart .lart-prose li{padding-left:4px}
 .lart .lart-dim{color:var(--t3)}
@@ -188,7 +192,10 @@
 /* ── Formula ── */
 .lart .lart-formula{margin:var(--s-5) 0}
 .lart .lart-formula pre{overflow-x:auto;scrollbar-width:thin;padding:var(--s-4);border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border)}
-.lart .lart-formula code{font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--t0);white-space:pre;display:block}
+/* The <pre> is the one box. The prose rule above gives every <code> a border,
+   a fill and a radius, which inside the <pre> drew a second rounded card in
+   the first; the code here is bare text on the pre's fill. */
+.lart .lart-formula code{font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--t0);white-space:pre;display:block;padding:0;border:0;border-radius:0;background:none}
 .lart .lart-formula figcaption{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 
 /* ── Tables ── */
@@ -199,7 +206,10 @@
 .lart .lart-table th,.lart .lart-table td{padding:10px 14px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--border)}
 .lart .lart-table tbody tr:last-child th,.lart .lart-table tbody tr:last-child td{border-bottom:0}
 .lart .lart-table thead th{font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none;color:var(--t2);background:var(--bg-2);white-space:nowrap}
-.lart .lart-table tbody th{font-weight:600;color:var(--t0)}
+.lart .lart-table tbody th{font-weight:600;color:var(--t0);min-width:7ch}
+/* A chip inside a table is a fill only: the scroller around it already has the
+   border, and a bordered chip in a bordered box reads as a card in a card. */
+.lart .lart-table code{border:0}
 .lart .lart-table td{color:var(--t1)}
 .lart .lart-table [data-num]{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 /* A prose cell that must stay on one line. The tables live in an overflow-x
@@ -211,7 +221,7 @@
    headings give way. The wrapper still scrolls where even that is too tight. */
 .lart .lart-table--fit thead th,.lart .lart-table--fit thead th[data-num]{font-family:var(--font);white-space:normal;line-height:1.35;vertical-align:bottom}
 .lart .lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
-.lart .lart-table-cap code{font-family:var(--mono);font-size:.92em}
+.lart .lart-table-cap code{font-family:var(--mono);font-size:max(12px,.92em)}
 
 /* ── The sideways-scroll cue, for the tables and the formula block ──
    MEASURED 2026-09-16 on the live /learn/colour-contrast: at 320/390/414 the
@@ -252,7 +262,7 @@
 
 .lart .lart-swatch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:var(--radius-xs);border:1px solid var(--border);font-size:12px;font-weight:600;margin-right:10px;vertical-align:middle}
 .lart .lart-swatch--wide{width:56px}
-.lart .lart-hex{font-family:var(--mono);font-size:11.5px;color:var(--t2);white-space:nowrap}
+.lart .lart-hex{font-family:var(--mono);font-size:12px;color:var(--t2);white-space:nowrap}
 /* A rendered specimen standing in the row label, beside the numbers measured
    from it — the Readymag font picker's specimen-then-name row, where the "Ag"
    is what you compare and the family name only tells you what you compared.
@@ -261,8 +271,8 @@
 .lart .lart-specimen{display:inline-block;min-width:44px;margin-right:10px;font-size:19px;line-height:1;color:var(--t0);vertical-align:middle}
 /* The second line of a row label: what the face is for, or how a figure beside
    it was arrived at. Never the measurement itself. */
-.lart .lart-face-role{display:block;margin-top:3px;font-size:11px;font-weight:400;line-height:1.4;color:var(--t3)}
-.lart .lart-face-role code{font-family:var(--mono);font-size:.94em}
+.lart .lart-face-role{display:block;margin-top:3px;font-size:12px;font-weight:400;line-height:1.4;color:var(--t3)}
+.lart .lart-face-role code{font-family:var(--mono);font-size:max(12px,.94em)}
 /* position:relative is load-bearing, not tidiness. The .sr-only text inside is
    position:absolute, and with no positioned ancestor it resolved against the
    initial containing block — so it escaped the table's overflow container and
@@ -346,17 +356,37 @@
   .lart .lart-table th,.lart .lart-table td{padding:9px 12px}
 }
 
+/* ── Stacked rows, phones only ──
+   A table opted in with lart-table--stack (the contrast and metrics tables)
+   becomes one block per row below 480px: the row heading on the left, each
+   value on the right under the column name it came from, so nothing is read by
+   scrolling sideways. Column headings are hidden visually (kept for assistive
+   technology) because every value prints its own through data-label. */
+@media(max-width:479px){
+  .lart .lart-table--stack,.lart .lart-table--stack tbody{display:block}
+  .lart .lart-table--stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .lart .lart-table--stack tbody tr{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:var(--s-3);row-gap:0;align-items:start;padding:var(--s-3);border-bottom:1px solid var(--border)}
+  .lart .lart-table--stack tbody tr:last-child{border-bottom:0}
+  .lart .lart-table--stack tbody th{grid-column:1;grid-row:1 / span 6;min-width:0;padding:0;border:0}
+  .lart .lart-table--stack tbody td{grid-column:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;column-gap:var(--s-2);padding:var(--s-1) 0;border:0;text-align:right}
+  .lart .lart-table--stack tbody td::before{content:attr(data-label);margin-right:auto;font-family:var(--font);font-size:12px;font-weight:500;line-height:1.35;color:var(--t2);text-align:left;white-space:normal}
+  .lart .lart-table--stack .lart-swatch{margin-right:var(--s-2)}
+}
+
 /* ── The type ladder. A LIST, not a table: the specimen carries its own row's
       clamp() as a font-size, so the sizes here move with the window exactly the
       way the exported CSS does. A table would have forced every specimen into a
       cell of the same height and turned a scale into a column of numbers. ── */
 .lart .lart-ladder-wrap{margin:var(--s-5) 0}
 .lart .lart-ladder{list-style:none;margin:0;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.lart .lart-prose .lart-ladder{margin:0}
 .lart .lart-ladder-row{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:baseline;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
 .lart .lart-ladder-row:last-child{border-bottom:0}
-.lart .lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t3)}
+.lart .lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t3)}
 .lart .lart-ladder-specimen{grid-row:1;grid-column:2;font-family:var(--display);font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--t0);overflow-wrap:anywhere}
-.lart .lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:2px}
+.lart .lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:12px;color:var(--t3);margin-top:2px}
+/* A superscript is 83% of its parent, which in a 12px caption is 10px. */
+.lart sup{font-size:max(12px,.83em)}
 
 .lart :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 

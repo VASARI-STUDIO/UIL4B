@@ -192,7 +192,11 @@
   /* --cpg-faint on --cpg-card: 6.52:1 light, 8.9:1 dark. */
   color: var(--cpg-faint);
 }
-.prn-cap code { font-family: var(--mono); font-size: .92em; color: var(--cpg-dim); }
+.prn-cap code { font-family: var(--mono); font-size: max(12px, .92em); color: var(--cpg-dim); }
+/* A superscript is 83% of its parent, which in a 12px caption is 10px. */
+.prn-cap sup { font-size: max(12px, .83em); }
+/* Inline code that has to stay one token in a narrow column (useShortCode). */
+.prn code[data-short] { white-space: nowrap; }
 
 /* Proof 1 — the two blues, each doing the job its ratio permits.
  * NO background or border on the row any more: the panel is the box. */
@@ -256,7 +260,9 @@
   flex-direction: column;
   gap: var(--s-1);
   padding: var(--s-5);
-  border: 1px solid var(--cpg-line);
+  /* A filled tile, not a card: the figure around it already has the border,
+     and a bordered tile in a bordered panel is a card in a card. */
+  border: 0;
   border-radius: var(--radius-xl);
   min-width: 0;
 }
