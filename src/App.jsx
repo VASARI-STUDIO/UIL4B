@@ -573,7 +573,9 @@ function AppInner({ toast }) {
                   threw `onCopy is not a function`, silently: no text, no toast,
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
-              <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+              {/* Parked: admins only until the library is opened up. Everyone
+                  else is sent to the homepage by RequireAdmin. */}
+              <Route path="/discover/prompts" element={<RequireAdmin><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
               {/* Copy-ready button designs. `onCopy` is required: every copy
                   button on the page calls it. */}
               <Route path="/discover/buttons" element={<ButtonLibrary onCopy={copy} />} />

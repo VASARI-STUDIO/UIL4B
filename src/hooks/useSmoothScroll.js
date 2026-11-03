@@ -61,7 +61,12 @@ export default function useSmoothScroll() {
     // and keeps out at the boundary too. Most overlay bodies already set it; the
     // ones that go through useModalDialog/usePopover now get it from the
     // `[data-lenis-prevent]` rule in global.css.
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: true, allowNestedScroll: true })
+    // In-page links ride a fixed-length tween, not the wheel's lerp. A lerp covers a
+    // share of the remaining distance per frame, so how long a jump takes grows with
+    // how far it goes: a contents link to a heading 4000px down was still 60px short
+    // of its landing line half a second after the click. 0.45s ends every jump inside
+    // that half second, whatever the distance.
+    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: { duration: 0.45 }, allowNestedScroll: true })
     setLenis(lenis)
 
     // Lenis measures the page once and re-measures on a ResizeObserver that waits

@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "アイコンライブラリ",
-      "description": "Iconify API で数千のアイコンを検索。"
+      "description": "オープンソースのアイコンパックを検索し、SVG か JSX をコピー。"
     },
     "altText": {
       "label": "Alt Text Generator",
@@ -126,10 +126,6 @@
     "docsDesign": {
       "label": "デザイン原則",
       "description": "視覚的階層、バランス、デザイン心理学。"
-    },
-    "promptLibrary": {
-      "label": "プロンプトライブラリ",
-      "description": "AI画像生成プロンプトをプレビュー付きで保存。"
     },
     "fontGallery": {
       "label": "フォントギャラリー",

@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "Bibliothèque d'icônes",
-      "description": "Recherchez des milliers d'icônes via l'API Iconify."
+      "description": "Cherchez dans des packs d'icônes open source, puis copiez le SVG ou le JSX."
     },
     "altText": {
       "label": "Alt Text Generator",
@@ -126,10 +126,6 @@
     "docsDesign": {
       "label": "Principes de design",
       "description": "Hiérarchie visuelle, équilibre et psychologie du design."
-    },
-    "promptLibrary": {
-      "label": "Bibliothèque de prompts",
-      "description": "Sauvegarder des prompts de génération d'images IA avec aperçu."
     },
     "fontGallery": {
       "label": "Galerie de Polices",

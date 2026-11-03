@@ -81,7 +81,8 @@ const LIBS = [
     status: 'community prompt library', head: false,
     search: (page) => page.getByLabel('Search community prompts'),
   },
-]
+  // parked: admin-only (the prompts route redirects everyone else to /)
+].filter((lib) => lib.key !== 'prompts')
 
 const API = /\/api\/ai\?library=/
 
