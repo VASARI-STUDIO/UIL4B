@@ -138,6 +138,11 @@ async function stubVerifyAdmin(page) {
 /** Sign in as the founder, seed the local reports, and land on the dashboard. */
 async function openDashboard(page, { theme = 'light' } = {}) {
   watch(page, 'founder')
+  // The Overview now reads a date range that ends today (30 days unless ?range= says
+  // otherwise), and the seeded daily documents end on 2026-09-18. Pin "today" the day
+  // after, or the real clock walks them out of the window and the tab shows its empty
+  // state with no figures to measure.
+  await page.clock.setFixedTime(new Date(2026, 8, 19, 12, 0, 0))
   await signIn(page, {
     admin: true,
     claims: { admin: true, email_verified: true },
