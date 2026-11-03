@@ -3338,13 +3338,26 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   .pnav-mobile::after{content:"";position:absolute;inset:50% auto auto 50%;width:44px;height:44px;transform:translate(-50%,-50%)}
   .pnav-menu{display:none}
 }
-/* A7: every header control is at least 44px to a finger, whatever it draws. */
-@media(pointer:coarse){
-  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
+/* A7: every header control is at least 44px to a finger, and to a mouse in a
+   phone-width window, whatever it draws. The circles stay 36px; the 44px area is an
+   invisible ::after centred on each control, so the row layout does not move. A wide
+   control (the logo, a trigger) only grows in height, so neighbours never share a point.
+   The menu button is not listed: its one 44px ::after is in the max-width:767px block above. */
+@media(pointer:coarse),(max-width:767px){
+  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
   /* Hit areas extend beyond the compact circles without changing row layout. */
-  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-mobile,.pnav-logo{overflow:visible}
-  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-mobile::after,.pnav-logo::after{pointer-events:auto}
-  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-logo{overflow:visible}
+  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-logo::after{pointer-events:auto}
+  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+}
+/* From 768px the theme button (36px) and the avatar (34px) sit 8px apart, and two
+   centred 44px areas need 9px, so they would share a 1px strip. The avatar is the
+   last control, so its area shifts 1px outward: the two areas meet edge to edge and
+   each is still 44px. */
+@media(pointer:coarse) and (min-width:768px){
+  .pnav-avatar-btn::after{transform:translate(calc(-50% + 1px),-50%)}
+}
+@media(pointer:coarse){
   .pnav-tool,.pnav-pop-item{min-height:44px}
 }
 
