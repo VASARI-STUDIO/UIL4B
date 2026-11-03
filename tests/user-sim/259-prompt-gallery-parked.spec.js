@@ -28,8 +28,10 @@ test.describe('the parked Prompt Library', () => {
     const menu = page.getByRole('region', { name: 'Discover menu' })
     await expect(menu).toBeVisible()
     // POSITIVE CONTROL: the menu has links in it, so an empty match below is
-    // the library being absent rather than the menu being empty.
-    await expect(menu.getByRole('link', { name: /Palette Library/ })).toBeVisible()
+    // the library being absent rather than the menu being empty. The suggested
+    // gallery at the top of the menu can also be the Palette Library, so the
+    // control reads the menu's own row.
+    await expect(menu.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
     await expect(menu.getByRole('link', { name: /Prompt/i })).toHaveCount(0)
     await expect(menu.locator(`a[href="${ROUTE}"]`)).toHaveCount(0)
   })
@@ -77,7 +79,7 @@ test.describe('the parked Inspiration row', () => {
     const menu = page.getByRole('region', { name: 'Discover menu' })
     await expect(menu).toBeVisible()
     // POSITIVE CONTROL: the menu still has its other column and links.
-    await expect(menu.getByRole('link', { name: /Palette Library/ })).toBeVisible()
+    await expect(menu.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
     await expect(menu.locator('.pnav-col-label', { hasText: 'Browse' })).toHaveCount(1)
     await expect(menu.getByRole('link', { name: /Inspiration/ })).toHaveCount(0)
     await expect(menu.locator('[data-row-id="inspiration"]')).toHaveCount(0)
@@ -89,7 +91,7 @@ test.describe('the parked Inspiration row', () => {
     await go(page, '/sitemap')
     const discover = page.locator('[data-sitemap-section="discover"]')
     // POSITIVE CONTROL: the Discover column rendered with a live row in it.
-    await expect(discover.getByRole('link', { name: /Palette Library/ })).toBeVisible()
+    await expect(discover.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
     await expect(discover.getByText('Inspiration')).toHaveCount(0)
   })
 
