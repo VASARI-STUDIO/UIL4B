@@ -69,11 +69,10 @@
     {
       "id": "discover",
       "label": "Discover",
-      "blurb": "Curated palettes, gradients and prompts",
+      "blurb": "Curated palettes and gradients",
       "tools": [
         "Palette Library",
-        "Gradient Library",
-        "Prompt Library"
+        "Gradient Library"
       ]
     },
     {

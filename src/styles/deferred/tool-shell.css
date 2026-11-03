@@ -304,8 +304,8 @@
 @media(min-width:520px) and (max-width:767px){
   .bkit-rail-actions{grid-template-columns:44px 44px minmax(0,18rem);justify-content:end}
 }
-/* After the X ends the walkthrough this covers the bar's footprint for a moment, so a second press lands on nothing. */
-.bkit-exit-shield{position:fixed;z-index:70;background:transparent}
+/* After the X ends the walkthrough this covers the bar's footprint for a moment, so a second press lands on nothing. It sits above the phone tab bar (z-index 118), which returns into the same footprint. */
+.bkit-exit-shield{position:fixed;z-index:119;background:transparent}
 
 /* ─── 768px and up: one row ─── */
 @media(min-width:768px){

@@ -53,6 +53,9 @@ import { go, watch, signIn } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
+// parked: admin-only (non-admins are redirected to /)
+test.skip(true, 'parked: admin-only')
+
 const ROUTE = '/discover/prompts'
 
 const FLAGGED_FREE = COMMUNITY_PROMPTS.filter((p) => p.free === true)

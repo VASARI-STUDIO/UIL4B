@@ -1,5 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useMediaQuery from '../hooks/useMediaQuery'
 import JSZip from 'jszip'
@@ -8,9 +8,11 @@ import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import DropZone from '../components/converter/DropZone'
 import AnimationBuilder from '../components/converter/AnimationBuilder'
+import EditBar from '../components/converter/EditBar'
+import useEditHistory from '../components/converter/useEditHistory'
 import JobStatus from '../components/converter/JobStatus'
 import {
-  loadImage, revealResult, scrollDocTo, stickyTopOffset, useGatedDownload,
+  loadImage, revealResult, scrollDocTo, stickyTopOffset, useActionBarLift, useGatedDownload,
 } from '../components/converter/shared'
 import {
   DRAFT_FORMATS,
@@ -230,6 +232,8 @@ export default function FileConverter({ toast }) {
   }
 
   const navigate = useNavigate()
+  const panelRef = useRef(null)
+  useActionBarLift(panelRef)
 
   return (
     <ToolLayout
@@ -295,7 +299,7 @@ export default function FileConverter({ toast }) {
         })()}
       </div>
 
-      <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
+      <div className="fc-panel" ref={panelRef} role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
         {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
         {mode === 'animation' && <AnimationBuilder toast={toast} />}
         {mode === 'video' && <VideoConvert toast={toast} />}
@@ -690,7 +694,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
 
             {!fmt.ico && (
               <div className="fc-insp-sec">
-                <div className="fc-pair">
+                <div className="fc-pair fc-pair--size">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
                     <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
@@ -712,19 +716,26 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     reasoning about two multipliers. */}
                 {sized.length > 0 && (
                   <div className="fc-outsize" aria-live="polite">
-                    <span className="fc-outsize-k">Output</span>
-                    {sized.length === 1 ? (
-                      <span className="fc-outsize-v">
-                        {sized[0].srcW}×{sized[0].srcH}
-                        <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
-                        <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
-                      </span>
-                    ) : (
-                      <span className="fc-outsize-v">
-                        {sized.length} images, longest side <strong>{widestOut}</strong> px
-                      </span>
-                    )}
-                    {anyCapped && <span className="fc-note">held to the size limit</span>}
+                    <div className="fc-outsize-line">
+                      <span className="fc-outsize-k">Output</span>
+                      {sized.length === 1 ? (
+                        <span className="fc-outsize-v">
+                          {sized[0].srcW}×{sized[0].srcH}
+                          {/* Drawn as an arrow, spoken as "to": the arrow alone
+                              left a screen reader with two sizes and no link. */}
+                          <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
+                          <span className="sr-only"> to </span>
+                          <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
+                        </span>
+                      ) : (
+                        <span className="fc-outsize-v">
+                          {sized.length} images, longest side <strong>{widestOut}</strong> px
+                        </span>
+                      )}
+                    </div>
+                    {/* Always one line tall, so the note arriving does not push
+                        the Convert button down. */}
+                    <span className="fc-note fc-outsize-cap">{anyCapped ? 'held to the size limit' : ''}</span>
                   </div>
                 )}
               </div>
@@ -771,7 +782,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
  * ratio, so the crop overlay's percentages land on the picture and not on
  * letterbox bars. Without it (Extract frames) it is the plain player.
  */
-function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, facts, onReplace, busy, editor, toggle, after }) {
+function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, facts, onReplace, busy, editor, toggle, after, edits }) {
   const size = editor?.size
   const crop = editor?.crop
   return (
@@ -809,6 +820,7 @@ function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, fact
         <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
       )}
       {after}
+      {edits}
       <div className="fc-source-card">
         <dl className="fc-facts">
           {facts.map(([k, v]) => (
@@ -949,6 +961,30 @@ function VideoConvert({ toast }) {
   const [job, setJob] = useState(null)
   const [engineFailed, setEngineFailed] = useState(false)
   const [result, setResult] = useState(null) // { url, blob, bytes, format, sig }
+  // The edits as one value, for Undo and Redo. The controls above stay plain
+  // state; stepping back writes an earlier recipe into them all at once.
+  const recipe = useMemo(
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction],
+  )
+  const history = useEditHistory(recipe, (r) => {
+    setTrimStart(r.trimStart)
+    setTrimEnd(r.trimEnd)
+    setShape(r.shape)
+    setAnchor(r.anchor)
+    setBox(r.box)
+    setFit(r.fit)
+    setCut(r.cut)
+    setRadius(r.radius)
+    setFill(r.fill)
+    setFillColour(r.fillColour)
+    setTurn(r.turn)
+    setFlipH(r.flipH)
+    setFlipV(r.flipV)
+    setSpeed(r.speed)
+    setDirection(r.direction)
+  }, !!srcUrl && !job)
+  const resetEdits = history.reset
   const videoRef = useRef(null)
   // One token per run. Cancel (and unmount) bumps it, and so does every new run,
   // so a run can only ever act while it is the latest one. A shared boolean,
@@ -1029,7 +1065,9 @@ function VideoConvert({ toast }) {
     setBox(null)
     setFit('crop')
     setView('before')
-  }, [srcUrl, result, toast])
+    // The edits above are the new file's starting point, not steps to undo.
+    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop' })
+  }, [srcUrl, result, toast, resetEdits])
 
   // Picking Custom starts a box a tenth in from every edge, so there is
   // something to drag; the typed fields and the drag edit the same box.
@@ -1193,6 +1231,7 @@ function VideoConvert({ toast }) {
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     setSrcUrl(null)
     setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+    resetEdits({})
   }
   const resultFmt = result ? findVideoFormat(result.format) : null
   const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
@@ -1276,6 +1315,7 @@ function VideoConvert({ toast }) {
                   outSize={outSize} dir={dir} speed={speed} fps={fps} start={start} len={secs} facts={consequence}
                 />
               ) : null}
+              edits={<EditBar history={history} disabled={working} />}
               // A recorded WebM often reports Infinity until it is played
               // through; treat that as unknown rather than as a length.
               onError={() => setSrcFailed(true)}
