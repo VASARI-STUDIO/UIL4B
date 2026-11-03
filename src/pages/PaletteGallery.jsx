@@ -345,7 +345,7 @@ export default function PaletteGallery({ toast }) {
             without a name this is an unexplained second grid. */}
         <h4 className="sr-only" id="pgl-locked-more">Palettes included with Pro</h4>
         <LibraryGrid className="pgal-grid pgal-grid--locked" labelledBy="pgl-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="palette-library-locked-card" />)}
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="palettes" gate="palette-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="palette-library-brand-lock"

@@ -1585,6 +1585,16 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 .lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 58%,var(--card))}
 .lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 58%,var(--card))}
 [data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.8}
+/* A real preview (LockedTease.jsx, scripts/library/lockedThumbs.mjs): the
+   row's own soft image over the tints, at a lighter blur so its colours and
+   shape read through. The image is already blurred and rounded when it is
+   made; this only softens the upscale. */
+.lib-surface .lockt-card--thumb .lockt-stripes{position:relative;filter:blur(4px)}
+.lib-surface .lockt-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;image-rendering:pixelated}
+/* A frost over it, so it reads as behind glass and stays quieter than the open
+   cards beside it; heavier in dark, where the colours glow against the card. */
+.lib-surface .lockt-card--thumb .lockt-stripes::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--card) 40%,transparent)}
+[data-theme="dark"] .lib-surface .lockt-card--thumb .lockt-stripes::after{background:color-mix(in srgb,var(--card) 45%,transparent)}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
 .lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(4px)}
@@ -1593,6 +1603,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
   display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
   border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);
   font-family:var(--font);font-size:13px;font-weight:560;white-space:nowrap;text-decoration:none;
+  box-shadow:0 0 0 2px var(--card);
   opacity:0;
 }
 .lib-surface .lockt-upgrade .lockt-glyph{width:13px;height:13px}

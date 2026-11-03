@@ -266,7 +266,7 @@ export default function GradientGallery({ toast }) {
             own — a fact, not an invention. */}
         <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
         <LibraryGrid className="grg-grid grg-grid--locked" min={280} labelledBy="grg-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="gradient-library-locked-card" />)}
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="gradients" gate="gradient-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="gradient-library-tier-lock"
