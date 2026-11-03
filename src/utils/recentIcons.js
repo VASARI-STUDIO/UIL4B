@@ -37,6 +37,19 @@ export function clearRecentIcons() {
   try { localStorage.removeItem(KEY) } catch { /* ignore quota/access errors */ }
 }
 
+// The one built-in set drawn as solid shapes (Simple Icons); the others are
+// single-stroke outlines, whose open paths turn into a wedge if they are filled.
+export const SOLID_BUILTIN_PACK = 'S'
+
+// Whether an embedded recent is drawn solid. The built-in set decides, matched by
+// name and path, rather than the flag stored with the entry: an outline-only glyph
+// must never inherit a fill. An entry the set no longer holds keeps its own flag.
+export function recentIsFilled(entry, builtIns = []) {
+  if (!entry || entry.cdn) return false
+  const source = builtIns.find((i) => i.n === entry.name && i.d === entry.d)
+  return source ? source.p === SOLID_BUILTIN_PACK : !!entry.filled
+}
+
 // Rebuild the copyable SVG markup for an embedded icon. CDN icons are fetched
 // on demand (their markup isn't stored), so this returns null for them.
 export function iconToSvg(icon) {

@@ -28,7 +28,7 @@ test.describe('the parked Prompt Library', () => {
     await expect(menu).toBeVisible()
     // POSITIVE CONTROL: the menu has links in it, so an empty match below is
     // the library being absent rather than the menu being empty.
-    await expect(menu.getByRole('link', { name: /Palette Library/ })).toBeVisible()
+    await expect(menu.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
     await expect(menu.getByRole('link', { name: /Prompt/i })).toHaveCount(0)
     await expect(menu.locator(`a[href="${ROUTE}"]`)).toHaveCount(0)
   })

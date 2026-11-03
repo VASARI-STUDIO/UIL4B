@@ -37,9 +37,10 @@
 // such rejections inside NET_FAIL_WINDOW, on requests with nothing cached to fall
 // back on, starts a short pause of NET_COOLDOWN. It is not the 429 ladder: it is
 // held in memory only, and the browser's `online` event ends it, so a flaky
-// connection that comes back is not locked out for a quarter of an hour. Timeouts
-// and a browser that reports itself offline do not count, and one good answer
-// clears the run.
+// connection that comes back is not locked out for a quarter of an hour. Timeouts,
+// a browser that reports itself offline and a page that is going away (hidden, or
+// after pagehide/beforeunload: browsers reject the requests still in flight when
+// a page unloads) do not count, and one good answer clears the run.
 //
 // ONLY A GOOD ANSWER IS KEPT. A 200 is stored only when its content type and body
 // fit the URL (JSON that parses for the catalogue, search and glyph files; SVG for
@@ -138,6 +139,19 @@ export function createIconifyFetch(opts = {}) {
   }
 
   const isOnline = opts.isOnline || (() => globalThis.navigator?.onLine !== false)
+  // Set once the page starts to unload; a page restored from the back/forward
+  // cache (pageshow) is live again.
+  let leaving = false
+  const isLeaving = opts.isLeaving || (() => leaving || globalThis.document?.visibilityState === 'hidden')
+  // Calls `onLeave` as the page goes away and `onReturn` if it comes back.
+  // Tests pass their own.
+  const listenLeave = opts.listenLeave || ((onLeave, onReturn) => {
+    try {
+      globalThis.addEventListener?.('pagehide', onLeave)
+      globalThis.addEventListener?.('beforeunload', onLeave)
+      globalThis.addEventListener?.('pageshow', onReturn)
+    } catch { /* no event target */ }
+  })
   // Calls `cb` when the connection returns. Tests pass their own.
   const listenOnline = opts.listenOnline || ((cb) => {
     try { globalThis.addEventListener?.('online', cb) } catch { /* no event target */ }
@@ -223,13 +237,14 @@ export function createIconifyFetch(opts = {}) {
   // cached to fall back on, is treated as the rate limit it most likely is.
   function noteNetworkFailure(err) {
     if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return
-    if (!isOnline()) return
+    if (!isOnline() || isLeaving()) return
     const t = now()
     netFails = netFails.filter((at) => t - at < NET_FAIL_WINDOW)
     netFails.push(t)
     if (netFails.length >= NET_FAIL_LIMIT) { netFails = []; netUntil = t + NET_COOLDOWN }
   }
   listenOnline(() => { netFails = []; netUntil = 0 })
+  listenLeave(() => { leaving = true }, () => { leaving = false })
 
   // ── persistent cache ───────────────────────────────────────────────────────
   function openCache() {

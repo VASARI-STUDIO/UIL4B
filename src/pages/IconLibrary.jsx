@@ -23,7 +23,7 @@ import FooterGlyph from '../components/library/FooterGlyph'
 import {
   downloadFileName, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
-import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
+import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
@@ -71,7 +71,7 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCredits'
-import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, HELD_HEADER } from '../utils/iconifyFetch'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
@@ -409,7 +409,12 @@ function fetchSvgText(pack, name, params = {}) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
         const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
-        if (r.ok) return await r.text()
+        if (r.ok) {
+          const text = await r.text()
+          // A 200 that is not SVG (a portal page, a cut-off body) is a failure, so
+          // it is not kept below and the next ask goes back to the network.
+          if (fitsUrl(url, r.headers.get('content-type'), text)) return text
+        }
       } catch { /* try next host */ }
     }
     throw new Error('Failed to fetch icon SVG')
@@ -420,6 +425,13 @@ function fetchSvgText(pack, name, params = {}) {
     p.then(txt => svgTextReady.set(key, txt)).catch(() => svgTextCache.delete(key))
   }
   return p
+}
+
+// Forget the markup held for an icon, so the next ask for it goes out again.
+function evictSvgText(pack, name) {
+  const key = svgKey(pack, name)
+  svgTextCache.delete(key)
+  svgTextReady.delete(key)
 }
 
 // Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
@@ -1284,6 +1296,18 @@ function SimilarSection({ list, srcFor, onPick }) {
   )
 }
 
+// What the stage says while its art is missing: Loading… for a screen reader only, or
+// that it could not load, with a way to ask again.
+function StageMsg({ failed, onRetry }) {
+  if (!failed) return <span className="icust-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
+  return (
+    <span className="icust-stage-msg icust-stage-msg--failed">
+      <span role="status">Couldn’t load this icon.</span>
+      <button type="button" className="icust-stage-retry" onClick={onRetry}>Try again</button>
+    </span>
+  )
+}
+
 // One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
 // pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
 function SizeArt({ markup, className = 'icust-size-art' }) {
@@ -1464,6 +1488,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // CDN base fetched once per icon, keyed by identity so a stale response from a
   // previous icon can never paint. All setState here is async (never in-render).
   const [fetched, setFetched] = useState({ id: null, svg: null, err: false })
+  // Bumped by "Try again" on the stage, so the fetch (and the image probe below) run again.
+  const [loadTry, setLoadTry] = useState(0)
   useEffect(() => {
     if (!activeIcon || !activeIcon.cdn || activeIcon.custom) return
     const id = activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`
@@ -1472,11 +1498,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       .then(txt => {
         if (cancelled) return
         const clean = sanitizeSvgMarkup(txt)
+        // Markup the sanitiser rejects must not stay in the session cache, or
+        // opening the icon again (or Try again) would be handed the same text.
+        if (!clean) evictSvgText(activeIcon.pack, activeIcon.name)
         setFetched(clean ? { id, svg: clean, err: false } : { id, svg: null, err: true })
       })
       .catch(() => { if (!cancelled) setFetched({ id, svg: null, err: true }) })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, loadTry])
 
   // Similar icons — same pack, same name-root (e.g. arrow-left surfaces
   // arrow-right / arrow-up). A foot-of-popup retention nudge: keep users building
@@ -1695,9 +1724,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     probe.onerror = () => { if (live) setFrame(f => ({ id: currentId, src: f.id === currentId ? f.src : '', failed: true })) }
     probe.src = previewSrc
     return () => { live = false; probe.onload = null; probe.onerror = null }
-  }, [previewSrc, currentId])
+  }, [previewSrc, currentId, loadTry])
   const shownSrc = (frame.id === currentId && frame.src) || (previewSvg ? previewSrc : '')
   const imageError = frame.id === currentId && frame.failed
+  // "Try again" on a failed stage: drop what is held for this icon (an answer that
+  // was not valid SVG included), lift any cool-down, and ask once more.
+  const retryLoad = () => {
+    if (activeIcon?.cdn && !activeIcon.custom) evictSvgText(activeIcon.pack, activeIcon.name)
+    clearIconifyCooldown()
+    setFetched({ id: null, svg: null, err: false })
+    setFrame(f => (f.id === currentId ? { ...f, failed: false } : f))
+    setLoadTry(n => n + 1)
+  }
   // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
   // name) keeps its own two-tone treatment when no colour is picked.
   const isDuotone = /-duotone$/.test((activeIcon?.custom ? activeIcon.base : activeIcon?.name) || '')
@@ -2115,7 +2153,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
                   {!baseSvgText && !loadErr && stageWait}
-                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
+                  {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
                 </>
               ) : (
                 <>
@@ -2132,7 +2170,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ) : imageError ? (
                     <span className="icust-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
                   ) : stageWait}
-                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
+                  {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
                 </>
               )}
               <div className="icust-stage-foot">
@@ -3176,7 +3214,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       name: i.n,
       pack: PACKS[i.p] || i.p,
       d: i.d,
-      filled: i.p === 'S',
+      filled: i.p === SOLID_BUILTIN_PACK,
       cdn: false
     })))
     setVisible(PAGE_SIZE)
@@ -3254,7 +3292,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     let holding = true
     const pageSize = Math.min(PAGE_SIZE, perPackCap * allowedPacks.length)
     const reveal = (timedOut = false) => {
-      if (rid !== reqId.current) return
+      // Once a page is out, a late call (the 2.5 s timer arms after a render, so
+      // it can fire once every pack has settled) must not set the empty `lists`
+      // over what is on screen, the built-in set included.
+      if (rid !== reqId.current || !holding) return
       const count = lists.reduce((sum, list) => sum + list.length, 0)
       if (firstPageReady(count, settled, allowedPacks.length, pageSize, timedOut)) {
         clearTimeout(firstPageTimer.current)
@@ -3864,9 +3905,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const q = query.trim()
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
+    // Logo.dev is not an Iconify set and belongs to no collection, so with it
+    // picked a chip would light and change nothing. Choosing a collection leaves
+    // the pack for "All packs", whose scope the chip then narrows.
+    const scopePack = nextGroup && pack === 'logodev' ? '' : pack
+    if (scopePack !== pack) setPack(scopePack)
     // Collections browse original artwork without replacing the stored weight.
-    if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
-    else if (pack) browsePack(pack, nextGroup, 'chip')
+    if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
+    else if (scopePack) browsePack(scopePack, nextGroup, 'chip')
     else if (nextGroup) browseGroup(nextGroup, 'chip')
     else browseAll('chip')
   }
@@ -3940,8 +3986,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      file has twice been fixed for — so the reference is dropped instead.
      Nothing of the visitor's is destroyed: recentIcons.js still holds it, and
      it reappears the moment the tier does. */
+  // A built-in entry's fill is re-read from the built-in set (not the flag saved
+  // with it), so an outline-only glyph is never drawn as a solid wedge.
   const visibleRecents = useMemo(
-    () => recents.filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier)),
+    () => recents
+      .filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier))
+      .map(r => (r.cdn ? r : { ...r, filled: recentIsFilled(r, window.icons) })),
     [recents, tier],
   )
 
