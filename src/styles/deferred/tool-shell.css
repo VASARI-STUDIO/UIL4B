@@ -26,6 +26,8 @@
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
+/* The library tab fallback holds the first screen, so the footer stays below the fold until the grid arrives. */
+.lib-loading--route{min-height:max(280px,calc(100svh - var(--chrome-h, 0px)))}
 .lib-loading span{font-size:var(--fs-caption)}
 
 /* Empty state */
