@@ -358,14 +358,17 @@ test.describe('the lit contents link', () => {
           await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
           await frames(page)
           await page.keyboard.press('End')
+          // On a loaded runner the smooth scroll can start after settled() has
+          // already seen twelve still frames at the top, so wait for the page to
+          // arrive before waiting for it to stop.
+          await expect.poll(() => page.evaluate(() => Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2),
+            { message: 'End did not reach the bottom', timeout: 10_000 }).toBe(true)
           await settled(page)
-          const bottom = await page.evaluate(() => Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2)
-          expect(bottom, 'End did not reach the bottom').toBe(true)
           await expect.poll(() => litIds(page), { message: 'after End' }).toEqual([ids.at(-1)])
 
           await page.keyboard.press('Home')
+          await expect.poll(() => page.evaluate(() => scrollY), { message: 'Home did not reach the top', timeout: 10_000 }).toBe(0)
           await settled(page)
-          expect(await page.evaluate(() => scrollY), 'Home did not reach the top').toBe(0)
           await expect.poll(() => litIds(page), { message: 'after Home' }).toEqual([ids[0]])
 
           const bad = await page.evaluate(() => window.__litBad)
