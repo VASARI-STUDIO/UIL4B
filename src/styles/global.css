@@ -1882,7 +1882,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* ─── Onboarding ─── */
 .onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));background:var(--bg-0)}
 /* The app file's panel: 18px radius over a hairline, no lift. */
-.onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
+/* No outer panel at any width: the option rows are the panels, in a 560px column on the page ground. */
+.onb-card{width:100%;max-width:560px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;position:relative;overflow:visible}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
 .onb-brand .brand-logo{display:block;height:1.1em}
@@ -1918,7 +1919,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
   .onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
 }
 
-.onb-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:16px;padding:0;background:none;border:none;color:var(--t1);font-size:14px;font-family:var(--font);cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
+.onb-back{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:16px;padding:0 16px;background:none;border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t0);font-weight:500;font-size:14px;font-family:var(--font);cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
 @media (hover:hover){
   .onb-back:hover{color:var(--t0)}
 }
@@ -1930,6 +1931,8 @@ main[tabindex="-1"]:focus-visible{outline:none}
 .onb-firstwin-step .onb-q{margin-bottom:6px}
 .onb-firstwin-options{gap:10px}
 .onb-firstwin-option{align-items:flex-start;padding:16px}
+/* From 521px the rows sit on the page ground with a hairline and no fill; the phone keeps its card fill. */
+@media(min-width:521px){.onb-firstwin-option{background:transparent}}
 .onb-firstwin-text{display:flex;flex-direction:column;gap:4px;min-width:0}
 .onb-firstwin-label{font-size:15px;font-weight:600;color:var(--t0);letter-spacing:-.01em}
 .onb-firstwin-blurb{font-size:13px;font-weight:400;line-height:1.5;color:var(--t2)}
@@ -1943,13 +1946,10 @@ main[tabindex="-1"]:focus-visible{outline:none}
 }
 
 
-/* On a phone the options are the only panels: no card around them, so the
-   blurbs get the width and nothing clips the focus rings. */
+/* On a phone the page gutter narrows so the blurbs get the width. */
 @media(max-width:520px){
   .onb{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right))}
-  .onb-card{padding:0;border:0;border-radius:0;background:transparent;overflow:visible}
   .onb-sub{font-size:14px}
-  .onb-back{display:flex;width:100%;min-height:48px;padding:0 16px;border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t0);font-weight:500}
 }
 
 /* ─── UI Builder: Code tabs ─── */

@@ -166,11 +166,11 @@
 .checkout-page .checkout-signin--inline { display: none; }
 
 /* ── The return page, and the invalid-selection state ─────────────────────────
-   Left-aligned in one panel, the state carried by the heading's words and a
+   One panel in a centred column of up to 480px, 15vh below the nav, text left-aligned inside it, the state carried by the heading's words and a
    glyph in the state colour — not by a 64px tinted circle, which is the stock
    confirmation screen. */
-.checkout-page .checkout-return { display: flex; justify-content: flex-start; padding: 8px 0 24px; }
-.checkout-page .checkout-return-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; max-width: 520px; padding: clamp(22px, 3.4vw, 34px); text-align: left; }
+.checkout-page .checkout-return { display: flex; justify-content: center; padding: 15vh 0 24px; }
+.checkout-page .checkout-return-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; max-width: 480px; padding: clamp(22px, 3.4vw, 34px); text-align: left; }
 .checkout-page .checkout-return-card h1 { margin: 4px 0 0; font-family: var(--display); font-size: clamp(24px, 3vw, 30px); font-weight: 600; letter-spacing: -.03em; line-height: 1.1; color: var(--t0); }
 .checkout-page .checkout-return-card p { max-width: 46ch; margin: 0; font-size: 14px; line-height: 1.6; color: var(--t1); }
 .checkout-page .checkout-return-card p strong { color: var(--t0); font-weight: 560; }
@@ -178,8 +178,8 @@
 .checkout-page .checkout-error-icon { display: flex; align-items: center; justify-content: flex-start; width: auto; height: auto; border-radius: 0; background: none; font-family: var(--display); font-size: 26px; font-weight: 600; line-height: 1; }
 .checkout-page .checkout-success-icon { color: var(--ok-strong); }
 .checkout-page .checkout-error-icon { color: var(--err-strong); }
-.checkout-page .checkout-success-icon svg,
-.checkout-page .checkout-error-icon svg { width: 28px; height: 28px; }
+.checkout-page .checkout-success-icon svg { width: 28px; height: 28px; }
+.checkout-page .checkout-error-icon svg { width: 24px; height: 24px; }
 .checkout-page .checkout-spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--co-hair-2); border-top-color: var(--accent-mid); animation: checkout-spin .8s linear infinite; }
 /* A reference a customer may be asked for: mono, selectable in one gesture,
    and allowed to wrap because a Stripe session id has no spaces. */
