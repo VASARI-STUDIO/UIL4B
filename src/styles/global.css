@@ -4361,6 +4361,12 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
 .lbry-search input::-webkit-search-cancel-button{display:none}
+/* The field shows focus with a border colour and a box-shadow ring, and the inner
+   input paints no outline of its own. Forced colours drops the shadow and
+   flattens the border, so the wrapper takes a real outline there. */
+@media (forced-colors:active){
+  .lbry-search:focus-within{outline:2px solid Highlight;outline-offset:2px}
+}
 /* 24px is the WCAG 2.5.8 floor, not a visual choice — the glyph is 14px. */
 .lbry-search-clear{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;color:var(--t3);background:none;border:0;border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}

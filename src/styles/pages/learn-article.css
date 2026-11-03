@@ -220,6 +220,12 @@
    without scrolling at desktop widths. The figures stay on one line; only the
    headings give way. The wrapper still scrolls where even that is too tight. */
 .lart .lart-table--fit thead th,.lart .lart-table--fit thead th[data-num]{font-family:var(--font);white-space:normal;line-height:1.35;vertical-align:bottom}
+/* Wrapping the headings still left the widest tables (five columns, one of them
+   a 16-row face list) 30-60px past the 56ch column, so the horizontal padding
+   tightens too. The phone rule below sets its own padding and stays after this. */
+@media(min-width:641px){
+  .lart .lart-table--fit th,.lart .lart-table--fit td{padding-inline:8px}
+}
 .lart .lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 .lart .lart-table-cap code{font-family:var(--mono);font-size:max(12px,.92em)}
 

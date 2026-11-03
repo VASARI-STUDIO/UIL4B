@@ -59,7 +59,7 @@ export function DataTable({ head, rows, caption, numeric = [], stack = false }) 
   return (
     <figure className="lart-table-wrap">
       <div className="lart-table-scroll" tabIndex={0} role="group" aria-labelledby={`${id}-cap`}>
-        <table className={stack ? 'lart-table lart-table--stack' : 'lart-table'}>
+        <table className={stack ? 'lart-table lart-table--fit lart-table--stack' : 'lart-table lart-table--fit'}>
           <thead>
             <tr>{head.map((h, i) => (
               <th key={i} scope="col" data-num={num.has(i) ? 'true' : undefined}>{h}</th>

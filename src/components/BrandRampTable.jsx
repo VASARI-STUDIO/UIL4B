@@ -74,7 +74,7 @@ export default function BrandRampTable() {
         role="group"
         aria-label="Each stop of a generated brand ramp, measured against both theme grounds"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Stop</th>
