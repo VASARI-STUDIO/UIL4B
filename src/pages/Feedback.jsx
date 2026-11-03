@@ -21,8 +21,8 @@ import '../styles/pages/feedback.css'
 // `?from=support` marks an arrival that wants help rather than to suggest
 // something, and `?reason=` or `?ref=` says why. Any reason or ref at all means
 // the same, so a link can name one without also naming `from`. A failed-payment
-// link may carry the marker in either parameter.
-const PAYMENT_FAILED = 'payment_failed'
+// link may carry the marker in either parameter, spelt either way.
+const PAYMENT_FAILED = new Set(['payment_failed', 'failed-payment'])
 const PAYMENT_TITLE = 'Get help'
 const PAYMENT_CARD_LINK = 'Update your card'
 const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and we'll sort it."
@@ -51,7 +51,7 @@ export default function Feedback({ toast }) {
   // A payment reason keeps priority over a broken-link report.
   const brokenPage = reason ? '' : sitePath(params.get('page'))
   const brokenFrom = brokenPage ? sitePath(params.get('referrer')) : ''
-  const paymentFailed = params.get('reason') === PAYMENT_FAILED || params.get('ref') === PAYMENT_FAILED
+  const paymentFailed = PAYMENT_FAILED.has(params.get('reason')) || PAYMENT_FAILED.has(params.get('ref'))
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
