@@ -5,11 +5,13 @@ import { SKIN_TONES, composeSkinTone } from '../../utils/emojiSkinTone'
 import { formatCodePoints, htmlEntity, formatShortcode, displayName, lookupEmoji } from '../../utils/emojiCodes'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../../data/emojiIndexLoader'
 import { getLoadedEmojiShortcodes, loadEmojiShortcodes } from '../../data/emojiShortcodesLoader'
+import EmojiStyles from './EmojiStyles'
 
 // The Emoji Library's detail dialog: one emoji, large, with every way of
-// writing it down and a copy button beside each. It is copy-only on purpose.
-// The glyph is whatever the visitor's system font draws, so there is no image
-// of ours to offer as a download.
+// writing it down and a copy button beside each, and a Styles row showing it
+// in other emoji art sets. It is copy-only on purpose: the glyph is whatever
+// the visitor's system font draws, and the other styles are shown, not offered
+// as downloads.
 //
 // The frame is the customiser's (`icust-*`: a centred dialog on desktop, a
 // bottom sheet on a phone). The body is not: `.icust-body` becomes a two-column
@@ -84,7 +86,7 @@ export default function EmojiDetailDialog({ emoji, tone: pageTone, onClose, onCo
   ]
 
   return (
-    <div className="icust-overlay" onMouseDown={onClose}>
+    <div className="icust-overlay emd-overlay" onMouseDown={onClose}>
       <div
         className="icust-panel emd-panel"
         role="dialog"
@@ -143,6 +145,8 @@ export default function EmojiDetailDialog({ emoji, tone: pageTone, onClose, onCo
               ))}
             </div>
           )}
+
+          <EmojiStyles glyph={shown} name={name} nameSettled={Boolean(index) || failed} toneId={tonePick?.id || ''} />
 
           <ul className="emd-rows">
             {rows.map((r) => (
