@@ -361,13 +361,12 @@ const DISCOVER_SPEC = [
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
   { id: 'icon-library', icon: 'icon-library', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
-  // /community has been live since #472 and this row was still pointing at
-  // /discover — the surface the visitor is already standing on — with a Soon
-  // badge on it. The mega menu, the mobile sheet and the visual sitemap all
-  // render this one row, so the site said "Soon" for a page it was serving 200
-  // for in three places at once. Route and flag both corrected; the desc was
-  // already written for the live page and is untouched.
-  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
+  // Parked: this row stays Soon until the Inspiration page is designed. It points
+  // at /community, which stays a public page (footer, sitemap); only the row is
+  // hidden. `soon: true` is the switch every public list already honours (the
+  // mega menu, the mobile sheet, /sitemap, the live count), and admins still see
+  // the row with its Soon badge. Set it back to `soon: false` to open it up.
+  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: true },
   // The Prompt Library (/discover/prompts) is parked behind the admin gate, so
   // no public list names it. Add its row back here when it opens up.
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
