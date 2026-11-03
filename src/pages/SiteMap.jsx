@@ -37,7 +37,7 @@ const FLAT_SECTIONS = [
     label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
-      { label: 'Home', route: '/home', note: 'The overview and starting point.' },
+      { label: 'Home', route: '/', note: 'The front page: what UIL4B does, and your own home once you sign in.' },
       { label: 'Projects', route: '/projects', note: 'Saved palettes, fonts and exports.' },
       { label: 'Settings', route: '/settings', note: 'Theme, appearance, account and data.' },
       { label: 'Plans & pricing', route: '/plans', note: 'Compare Free and Pro.' },

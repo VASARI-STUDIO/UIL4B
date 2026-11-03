@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { ICON_PACK_CREDITS } from '../../src/data/iconPackCredits.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
@@ -1110,30 +1111,30 @@ for (const width of [1440, 390]) {
       return data.uncategorized.slice().sort().map(name => ({ pack, name }))
     })
     const cells = page.locator('.ig .ic:not(.ig-skel)')
+    // A grouped grid names each pack once, in a heading row, and draws no label on a cell.
+    const headNames = page.locator('.ig .ig-pack-head .ig-pack-name')
     if (width === 1440) {
       await expect(cells).toHaveCount(120)
       const firstCell = cells.first()
-      // The pack name shows on hover only: transparent at rest (opacity, so still in the render
-      // tree), opaque under the pointer.
-      const packOpacity = (cell) => cell.locator('.ic-pack').evaluate(el => getComputedStyle(el).opacity)
-      await expect.poll(() => packOpacity(firstCell)).toBe('0')
-      await firstCell.hover()
-      await expect.poll(() => packOpacity(firstCell)).toBe('1')
-      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('Circle Flags'))
+      await expect(headNames, 'the first page is one pack, under one heading').toHaveText(['Circle Flags'])
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
       const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
       // Focus retains the original cell while rows above the viewport are windowed.
       await firstCell.focus()
       await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
       await expect(cells).toHaveCount(expected.length)
       await cells.nth(180).scrollIntoViewIfNeeded()
-      await cells.nth(180).hover()
-      await expect.poll(() => packOpacity(cells.nth(180))).toBe('1')
       expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
       await page.evaluate(() => window.scrollTo(0, 0))
     }
     await expect(cells).toHaveCount(expected.length)
     await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
-    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => packLabels[icon.pack]))
+    // Packs stay contiguous: one heading each, in group order, named as the footer credits the pack...
+    await expect.poll(() => headNames.allTextContents()).toEqual(packs.map(pack => ICON_PACK_CREDITS[pack].name))
+    await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    // ...and a cell still says which pack it is from to anyone who focuses it.
+    await expect.poll(() => cells.evaluateAll(els => els.map(el => el.getAttribute('aria-label'))))
+      .toEqual(expected.map(icon => `Customise ${icon.name}, ${packLabels[icon.pack]}`))
     if (width === 1440) {
       await choosePack(page, 'circle-flags')
       await expect(cells).toHaveCount(120)

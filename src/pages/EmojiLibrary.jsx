@@ -134,7 +134,7 @@ export default function EmojiLibrary({ onCopy }) {
     value: search,
     onChange: handleSearch,
     onFocus: requestIndex,
-    placeholder: 'Search emoji by name or keyword…',
+    placeholder: 'Search emoji',
     label: 'Search emoji',
   }), [search, handleSearch, requestIndex])
 

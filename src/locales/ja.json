@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "アイコンライブラリ",
-      "description": "Iconify API で数千のアイコンを検索。"
+      "description": "オープンソースのアイコンパックを検索し、SVG か JSX をコピー。"
     },
     "altText": {
       "label": "Alt Text Generator",
