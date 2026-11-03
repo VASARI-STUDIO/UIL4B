@@ -132,7 +132,7 @@ for (const vp of VIEWPORTS) {
         await go(page, '/learn')
         await setTheme(page, theme)
         const m = await page.evaluate(() => {
-          const links = [...document.querySelectorAll('.lidx-topics a')].map((a) => {
+          const links = [...document.querySelectorAll('.lidx-topics a')].filter((a) => a.getClientRects().length).map((a) => {
             const r = a.getBoundingClientRect()
             return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height, lines: a.getClientRects().length, wrap: getComputedStyle(a).whiteSpace }
           })
