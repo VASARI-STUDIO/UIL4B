@@ -56,6 +56,8 @@ test.describe('header search on a phone', () => {
     const dialog = await openSearch(page)
     const close = dialog.getByRole('button', { name: 'Close' })
     await expect(close).toBeVisible()
+    // The dialog opens with a short scale-in; measure once it has finished.
+    await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
     const box = await close.boundingBox()
     expect(box.width, 'close button width').toBeGreaterThanOrEqual(44)
     expect(box.height, 'close button height').toBeGreaterThanOrEqual(44)
@@ -137,9 +139,9 @@ for (let i = 1; i <= 9; i++) {
 }
 dayDoc[`view__${LONG_PAGE}`] = 20
 dayDoc[`icon__${LONG_ICON}`] = 20
-dayDoc['pack__lucide'] = 5
-dayDoc['pack__ph'] = 3
-dayDoc['pack__tabler'] = 1
+dayDoc['ipack__lucide'] = 5
+dayDoc['ipack__ph'] = 3
+dayDoc['ipack__tabler'] = 1
 const DOCS = { 'analytics-daily/2026-10-31': dayDoc }
 
 async function openAdmin(page, { roleEnabled = true } = {}) {
