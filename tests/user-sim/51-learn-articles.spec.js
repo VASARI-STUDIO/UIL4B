@@ -22,6 +22,7 @@
 import { test, expect } from './base.js'
 import { expectRendered, go, signIn, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { getArticleSources } from '../../src/data/learn/sources.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
 // A guard against this whole file passing over an empty list.
@@ -103,7 +104,7 @@ test.describe('Learn articles', () => {
 
       // Every source is a real outbound link, and the article ends at its tool.
       const sources = page.locator('.lart-sources a')
-      await expect(sources).toHaveCount(article.sources.length)
+      await expect(sources).toHaveCount(getArticleSources(article.slug).length)
       await expect(page.locator(`.lart-next a[href="${article.toolTo}"]`)).toBeVisible()
 
       // The head is the article's own, not the homepage's.

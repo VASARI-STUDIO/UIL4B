@@ -62,7 +62,7 @@ const MARKETING_ROUTES = [
 const LEARN_GUIDES = [
   '/learn/colour-contrast', '/learn/type-scales', '/learn/typeface-metrics',
   '/learn/font-loading', '/learn/colour-spaces', '/learn/theme-systems',
-  '/learn/brand-colour',
+  '/learn/brand-colour', '/learn/improving-value-proposition',
 ]
 
 // ── The masthead probe ──────────────────────────────────────────────────────

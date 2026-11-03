@@ -32,6 +32,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { getArticleSources } from '../../src/data/learn/sources.js'
 import { generateTintScale, T_LABELS } from '../../src/utils/colors.js'
 import { proseOf } from '../../scripts/learn-wordcount.mjs'
 
@@ -385,7 +386,8 @@ test('no guide slips into the first person or into marketing', () => {
   const flattery = /\b(?:you're awesome|great job|you've got this|amazing work|keep crushing|nailed it)\b/i
   for (const article of LEARN_ARTICLES) {
     const prose = proseOf(read('src', 'data', 'learn', article.file))
-    const found = firstPersonI.exec(prose) || firstPerson.exec(prose)
+    // "Annex I" is a Roman numeral (a numbered annex to an EU directive), not a pronoun.
+    const found = firstPersonI.exec(prose.replace(/\bAnnex I\b/g, 'Annex')) || firstPerson.exec(prose)
     assert.equal(found, null, `${article.slug} writes in the first person: "${found?.[0]}"`)
     assert.equal(marketing.exec(prose), null, `${article.slug} reads as marketing copy`)
     assert.equal(flattery.exec(prose), null, `${article.slug} flatters the reader`)
@@ -397,7 +399,7 @@ test('every guide still ends at a tool and cites at least three sources', () => 
   // an empty or gutted registry would make both vacuously true.
   assert.ok(LEARN_ARTICLES.length >= 5, 'fewer guides are registered than are published')
   for (const article of LEARN_ARTICLES) {
-    assert.ok(article.sources.length >= 3, `${article.slug} cites fewer than three sources`)
+    assert.ok(getArticleSources(article.slug).length >= 3, `${article.slug} cites fewer than three sources`)
     assert.match(article.toolTo, /^\/create\//, `${article.slug} does not end at a tool`)
   }
 })

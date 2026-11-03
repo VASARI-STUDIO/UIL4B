@@ -89,7 +89,7 @@
     {
       "id": "learn",
       "label": "Learn",
-      "blurb": "7 guides on colour, typography and accessibility",
+      "blurb": "8 guides on colour, typography, accessibility and psychology",
       "tools": [
         "Colour contrast",
         "Type scales",
@@ -97,7 +97,8 @@
         "Before the font arrives",
         "Colour spaces",
         "Dark and light themes",
-        "Brand colour"
+        "Brand colour",
+        "Value proposition"
       ]
     }
   ]

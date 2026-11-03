@@ -217,6 +217,24 @@ const NOT_A_PLAN_PRICE = [
       + 'the backreference "$1". A dollar sign in regex syntax is punctuation.',
   },
   {
+    file: 'src/data/learn/valueProposition.jsx',
+    // Excused only while the surrounding text says nothing about our own plans:
+    // a sentence that quoted a UIL4B tier would still be checked against the ladder.
+    context: /^(?![\s\S]*(?:UIL4B (?:Pro|plans?)|\/plans\b))/,
+    why: 'The value-proposition guide reports other parties\' figures: penalties and '
+      + 'settlements in consumer-law cases (A$15m, US$1bn), the maximum fine for fake '
+      + 'reviews, and the prices in a published buyer-and-seller experiment. They are '
+      + 'cited research and enforcement amounts, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/data/learn/sources.js',
+    context: /J\.C\. Penney|Emma Sleep|Service Seeking|settlement against Amazon/,
+    why: 'Four source labels in the value-proposition guide name the amount a retailer '
+      + 'lost (US$1 billion), a penalty a court ordered (A$15m), a fine for fake reviews '
+      + 'and a settlement (US$2.5 billion). They are headline figures from the cited '
+      + 'pages, not tiers of UIL4B.',
+  },
+  {
     file: 'src/pages/IconLibrary.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normalizeCustomBase substitutes with the backreference '

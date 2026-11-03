@@ -35,6 +35,7 @@ import {
   readingMinutes,
   topicAnchorId,
 } from '../../src/data/learnIndex.js'
+import { LEARN_SOURCES, getArticleSources } from '../../src/data/learn/sources.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP, LEARN_TOPIC_ROWS } from '../../src/data/toolTree.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
@@ -94,7 +95,7 @@ test('every article is a complete record', () => {
     assert.match(a.updated, /^\d{4}-\d{2}-\d{2}$/, `${a.slug} has an unusable updated date`)
     assert.ok(Number.isInteger(a.words) && a.words > 200, `${a.slug} has an implausible word count`)
     assert.ok(Array.isArray(a.sections) && a.sections.length >= 3, `${a.slug} has too few sections`)
-    assert.ok(Array.isArray(a.sources) && a.sources.length >= 1, `${a.slug} cites nothing`)
+    assert.ok(getArticleSources(a.slug).length >= 1, `${a.slug} cites nothing`)
     // navLabel is what the nav column shows, where the row is about 180px wide.
     assert.ok(a.navLabel.length <= 24, `${a.slug}'s navLabel is too long for a nav row`)
   }
@@ -153,13 +154,46 @@ test('the measured word count on disk is the one the reading estimate uses', () 
 
 test('every source is a real, attributable link', () => {
   for (const a of LEARN_ARTICLES) {
-    for (const s of a.sources) {
+    const sources = getArticleSources(a.slug)
+    for (const s of sources) {
       assert.ok(s.label && s.label.length > 8, `${a.slug} has a source with no usable label`)
       assert.match(s.href, /^https?:\/\/\S+$/, `${a.slug} has a source with an unusable href: ${s.href}`)
     }
-    const hrefs = a.sources.map((s) => s.href)
+    const hrefs = sources.map((s) => s.href)
     assert.equal(new Set(hrefs).size, hrefs.length, `${a.slug} lists the same source twice`)
   }
+})
+
+test('source lists are keyed to the registry and stay off the article records', () => {
+  // The records are in the entry chunk (routeMetaMap, toolTree and menuModel all
+  // import them); the lists are the bulk of an article and are read only by the
+  // lazy article page. A `sources` field creeping back onto a record would put
+  // them in every visitor's first download again.
+  assert.deepEqual(
+    Object.keys(LEARN_SOURCES).sort(),
+    LEARN_ARTICLES.map((a) => a.slug).sort(),
+    'src/data/learn/sources.js and the registry must list exactly the same slugs',
+  )
+  for (const a of LEARN_ARTICLES) {
+    assert.ok(!('sources' in a), `${a.slug} carries its sources on the registry record`)
+  }
+  assert.deepEqual(getArticleSources('no-such-article'), [], 'an unknown slug has no sources')
+})
+
+test('only the lazy article page imports the source lists', () => {
+  // Not "reachable from the entry chunk" (home-asset-budget walks that for the
+  // large top-level data files); this pins the one importer, so a second one
+  // has to be a deliberate edit to this list.
+  const importers = fs.readdirSync(path.join(process.cwd(), 'src'), { recursive: true })
+    .map((f) => f.split(path.sep).join('/'))
+    .filter((f) => /\.jsx?$/.test(f))
+    .filter((f) => /from\s*['"][^'"]*learn\/sources(?:\.js)?['"]/.test(read(`src/${f}`)))
+  assert.deepEqual(importers, ['pages/LearnArticle.jsx'])
+  assert.match(
+    read('src/App.jsx'),
+    /const LearnArticle = lazy\(\(\) => import\('\.\/pages\/LearnArticle'\)\)/,
+    'LearnArticle is no longer a lazy route, so the source lists are back in the entry chunk',
+  )
 })
 
 test('every article route carries its own metadata and gets a shell', () => {

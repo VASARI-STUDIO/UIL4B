@@ -1,4 +1,4 @@
-// Article: Colour contrast and the WCAG thresholds. Metadata in src/data/learnIndex.js.
+// Article: Colour contrast and the WCAG thresholds. Metadata in src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // Every threshold in this file is quoted from the standard with a link to the
 // clause. Every ratio is either arithmetic the reader can repeat, or computed

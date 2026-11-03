@@ -1,4 +1,4 @@
-// Article: Modular type scales. Metadata and sources in src/data/learnIndex.js.
+// Article: Modular type scales. Metadata in src/data/learnIndex.js, sources in src/data/learn/sources.js.
 //
 // Every size in this article is produced by stepPx() / buildFluidScale() from
 // src/utils/fluidType.js — the functions the Type Scale Generator exports from

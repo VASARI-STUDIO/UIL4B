@@ -613,6 +613,7 @@ const LEARN_ARTICLE_ICONS = {
   'colour-spaces': 'guide-colour-spaces',
   'theme-systems': 'guide-theme',
   'brand-colour': 'guide-brand',
+  'improving-value-proposition': 'marketing',
 }
 
 // The articles dealt into the menu's row shape. They are not folded into

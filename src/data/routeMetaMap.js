@@ -140,7 +140,7 @@ export const PAGE_DESCRIPTIONS = {
   '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.',
   '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
-  '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
+  '/learn': 'Reference guides on colour, typography, accessibility and psychology for people who build interfaces — the thresholds, formulas and standards they come from.',
   '/create/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
   '/create/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
   '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',

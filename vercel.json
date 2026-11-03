@@ -437,6 +437,10 @@
       "destination": "/learn/help/index.html"
     },
     {
+      "source": "/learn/improving-value-proposition",
+      "destination": "/learn/improving-value-proposition/index.html"
+    },
+    {
       "source": "/learn/principles",
       "destination": "/learn/principles/index.html"
     },
