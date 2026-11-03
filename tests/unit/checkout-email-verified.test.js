@@ -24,7 +24,7 @@ function world(tokens) {
   const stripe = {
     prices: {
       retrieve: async () => { stripeCalls.push('prices.retrieve'); throw new Error('not used') },
-      list: async () => { stripeCalls.push('prices.list'); return { data: [{ id: 'price_live', active: true, recurring: { interval: 'month', interval_count: 1 } }] } },
+      list: async () => { stripeCalls.push('prices.list'); return { data: [{ id: 'price_live', active: true, product: { id: 'prod_1', active: true }, recurring: { interval: 'month', interval_count: 1 } }] } },
     },
     customers: { create: async () => { stripeCalls.push('customers.create'); return { id: 'cus_1' } } },
     checkout: { sessions: { create: async () => { stripeCalls.push('sessions.create'); return { client_secret: 'cs_secret' } } } },

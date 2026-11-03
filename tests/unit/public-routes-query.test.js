@@ -430,7 +430,7 @@ const TEN_MINUTES = 10 * 60 * 1000
 let priceClock = 1_800_000_000_000
 
 const price = (id, interval, amount) => ({
-  id, active: true, currency: 'usd', unit_amount: amount, currency_options: {},
+  id, active: true, product: { id: 'prod_1', active: true }, currency: 'usd', unit_amount: amount, currency_options: {},
   recurring: { interval, interval_count: 1 },
 })
 
