@@ -311,7 +311,6 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 // The three Learn guides carry no category and so no pill: Documentation is not
 // a page, and a pill naming it labels the row with something that is not there.
 const STATIC_TOOL_DEFS = [
-  { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'prompts', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'] },
   { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, guide: true, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
   { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, guide: true, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
   { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, guide: true, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
@@ -341,7 +340,6 @@ export const TOOL_I18N_MAP = {
   'font-pair': 'tools.fontPairs',
   'type-scale': 'tools.typeScale',
   'alt-text': 'tools.altText',
-  prompts: 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
 }
 

@@ -117,8 +117,6 @@ const TOOLBARS = [
   ['/discover/palettes', '.lbry-toolbar', 144, 0.6],
   ['/create/emoji', '.lbry-toolbar', 144, 0.6],
   ['/create/icons', '.lbry-toolbar', 144, 0.6],
-  ['/discover/prompts', '.pl-toolbar', 84, null],
-  ['/discover/prompts#all', '.pl-toolbar', 184, null],
 ]
 
 async function open(browser, width, path, waitFor) {

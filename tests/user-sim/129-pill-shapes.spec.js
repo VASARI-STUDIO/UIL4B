@@ -36,8 +36,6 @@ const SURFACES = [
   ['/', ['.hcmd-bar', '.sp-seg', '.sp-seeds']],
   ['/discover/palettes', ['.pnav-search-field', '.lbry-search', '.lbry-toolbar']],
   ['/discover/gradients', ['.lbry-search', '.lbry-toolbar']],
-  // The prompt list has its own toolbar markup; its search is held to the same bar as the rest.
-  ['/discover/prompts#all', ['.pl-search input']],
   ['/create/emoji', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/icons', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/font-gallery', ['.lbry-search']],
