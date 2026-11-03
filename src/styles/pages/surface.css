@@ -166,10 +166,15 @@
   .srf .lidx-topics { flex: 0 0 auto; }
   .srf .lidx-topics a { padding: 0 12px; }
 }
-/* Below 360px the counts would push the bar past the screen, so they step
-   aside (the headings below keep them). */
-@media (max-width: 359px) {
-  .srf .lidx-topics .lidx-topic-n { display: none; }
+/* On a phone the bar holds the subject topics only: the counts step aside
+   (the headings below keep them), and "Using UIL4B", the last section on the
+   page, is reached by scrolling. */
+@media (max-width: 559px) {
+  .srf .lidx-topics .lidx-topic-n,
+  .srf .lidx-topics .lidx-topic-using { display: none; }
+}
+@media (max-width: 399px) {
+  .srf .lidx-topics a { padding: 0 4px; }
 }
 .srf .lidx-topic-n { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t2); font-variant-numeric: tabular-nums; }
 .srf .lidx-status { min-height: 1.5em; max-width: none; margin: 8px 0 0; text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
