@@ -170,6 +170,40 @@ export async function refuseIconifyCollections(page, { except = [] } = {}) {
     (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'error code: 1015' }))
 }
 
+/**
+ * Answer the batched glyph endpoint (/{prefix}.json?icons=a,b) on this PAGE
+ * from `bodyFor(prefix, name)` instead of the fixture's one shared drawing:
+ * return the icon's SVG body, or null for an icon the set does not have (which
+ * the real API lists under `not_found`, with a 200). That lets a spec give each
+ * name its own drawing and hide a set's icon. Stamped as a stub answer, so the
+ * context audit counts it as served, not escaped. Returns the requests seen, as
+ * `{ prefix, names }`. Call before go(); page.unrouteAll() hands the page back
+ * to the fixture.
+ */
+export async function answerIconifyBatches(page, bodyFor) {
+  const seen = []
+  await page.route((u) => u.hostname === ICONIFY_HOSTS[0] && /^\/[^/]+\.json$/.test(u.pathname) && u.searchParams.has('icons'), (route) => {
+    const url = new URL(route.request().url())
+    const prefix = decodeURIComponent(url.pathname.slice(1, -'.json'.length))
+    const names = (url.searchParams.get('icons') || '').split(',').map((s) => s.trim()).filter(Boolean)
+    seen.push({ prefix, names })
+    const icons = {}
+    const notFound = []
+    for (const n of names) {
+      const body = bodyFor(prefix, n)
+      if (body == null) notFound.push(n)
+      else icons[n] = { body }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {}, ...(notFound.length ? { not_found: notFound } : {}) }),
+    }).catch(() => { /* page torn down mid-flight */ })
+  })
+  return seen
+}
+
 const HEADS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'data', 'iconHeads')
 
 /** The packs that have a committed head file (src/data/iconHeads/<pack>.json). */
