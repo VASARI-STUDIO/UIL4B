@@ -472,13 +472,13 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     }
   })
 
-  // At 768 the notes card runs close to the window's edge: no room past it, so a card
+  // At 800 and 600 high (Tint is two columns from 768 to 900; the notes sit two to a row and low in the window) the notes card runs close to the window's edge: no room past it, so a card
   // sits right beside its note, over the next ones, and takes no pointer.
-  test.describe('at 768, where a card sits over the next notes', () => {
-    test.use({ viewport: { width: 768, height: 1024 } })
+  test.describe('at 800, where a card sits over the next notes', () => {
+    test.use({ viewport: { width: 800, height: 600 } })
 
     test('a card beside its note is click-through, and the pointer walking on opens the note under it', async ({ page }) => {
-      await openTint(page, 'someone running a pointer along the notes at 768')
+      await openTint(page, 'someone running a pointer along the notes at 800')
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
       let ghosts = 0
       for (let i = 0; i < 11; i++) {
@@ -489,7 +489,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
           expect(m.pointerEvents, `note ${i}: a ghost card takes no pointer`).toBe('none')
         }
       }
-      expect(ghosts, 'some cards are click-through at 768').toBeGreaterThan(0)
+      expect(ghosts, 'some cards are click-through at 800').toBeGreaterThan(0)
       await page.mouse.move(5, 5)
       await expect(openTip(page)).toHaveCount(0)
       const under = await walkNotes(page, ALONG)
@@ -500,15 +500,15 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     })
 
     test('a click-through card holds no pointer, and a note under it that the pointer rests on gets its own card', async ({ page }) => {
-      await openTint(page, 'someone resting on a note under a card at 768')
+      await openTint(page, 'someone resting on a note under a card at 800')
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
-      await settle(page, 1)
-      const m = await cardFit(page, 1)
-      expect(m.ghost, 'the card beside note 1 is click-through at 768').toBe(true)
+      await settle(page, 4)
+      const m = await cardFit(page, 4)
+      expect(m.ghost, 'the card beside note 4 is click-through at 800').toBe(true)
       expect(m.pointerEvents).toBe('none')
-      const c2 = await centreOf(page, 2)
+      const c2 = await centreOf(page, 5)
       await page.mouse.move(c2.x, c2.y, { steps: 6 })
-      await expect(openTip(page).locator('.tt-tip-head'), 'resting on note 2, under the card, opens its own').toHaveText(/^200 · #/, { timeout: 700 })
+      await expect(openTip(page).locator('.tt-tip-head'), 'resting on note 5, under the card, opens its own').toHaveText(/^500 · #/, { timeout: 700 })
     })
   })
 
