@@ -70,7 +70,9 @@ const RUNTIME_FAMILIES = [
 // on each tick mark (its own rotation) and --grd-wheel-angle on the hand (the
 // current angle), which the stylesheet reads as `rotate(var(...))`. The From image dialog sets --c
 // (a point's or strip slot's sampled hex) inline on each marker and slot (FromImageDialog.jsx).
-const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px'])
+// A library toolbar brought back on a phone keeps the left edge and width it
+// had in the page as --peek-left and --peek-w (LibraryToolbar.jsx).
+const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px', '--peek-left', '--peek-w'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()

@@ -5,6 +5,7 @@ import { ToolbarModeContext } from './toolbarMode'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import usePopover from '../../hooks/usePopover'
+import useToolbarPeek from './useToolbarPeek'
 
 // The control block that sits between a Library masthead and its grid: search,
 // then any number of filter groups, then an optional action.
@@ -53,6 +54,9 @@ import usePopover from '../../hooks/usePopover'
 // under the search: one scrollable chip row plus a filter sheet. Every other
 // group lives in the sheet. A chip row that scrolls sideways is a row that
 // never grows, which is the property wanted; a row of chips that wraps is not.
+//
+// A phone does not stick the bar; scrolling back up brings it back for a while
+// instead (useToolbarPeek.js).
 
 const PHONE_QUERY = '(max-width:640px)'
 // The wide floor is not the search field's comfortable width; it is how narrow
@@ -196,8 +200,19 @@ function LibraryToolbar({
   const rowMode = effective >= 1 ? 'collapse' : 'auto'
   const showFiltersButton = effective >= 2 && hasPanel
 
+  const barRef = useRef(null)
+  const { peek, slot } = useToolbarPeek(barRef, { frozen: open })
+
   return (
-    <div className={`lbry-toolbar${className ? ` ${className}` : ''}`} data-stage={effective}>
+    <>
+    {peek && slot && <div className="lbry-toolbar-spacer" style={{ height: slot.height }} aria-hidden="true" />}
+    <div
+      ref={barRef}
+      className={`lbry-toolbar${className ? ` ${className}` : ''}`}
+      data-stage={effective}
+      data-peek={peek && slot ? peek : undefined}
+      style={peek && slot ? { '--peek-left': `${slot.left}px`, '--peek-w': `${slot.width}px` } : undefined}
+    >
       <div className="lbry-toolbar-row" ref={rowRef}>
         {search && (
           <LibrarySearch
@@ -235,6 +250,7 @@ function LibraryToolbar({
       )}
       {extra && <div className="lbry-toolbar-row lbry-toolbar-row--extra">{extra}</div>}
     </div>
+    </>
   )
 }
 
