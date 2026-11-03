@@ -911,9 +911,11 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([MAX_STOPS - 1])
         expect((await selection(page)).hexes[MAX_STOPS - 2]).toBe(was.hexes[MAX_STOPS - 2])
+        // Still down the list, with the selected row inside the window. The page's smooth scroll to the
+        // new last row can start after the window has looked still, so poll rather than read once.
+        await expect.poll(() => windowScroll(page), { message: 'the window did not return to the top' }).toBeGreaterThanOrEqual(pitch * 7)
         await windowSettled(page)
-        // Still down the list, with the selected row inside the window.
-        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 7)
+        expect(await windowScroll(page), 'the window moved off the last row').toBeGreaterThanOrEqual(pitch * 7)
         const inView = await page.locator('.grd-stops').evaluate((win) => {
           const w = win.getBoundingClientRect()
           const r = win.children[win.children.length - 1].getBoundingClientRect()
@@ -933,8 +935,14 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([8])
         expect((await selection(page)).hexes[7], 'old row 9 slid into row 8').toBe(was.hexes[8])
+        // Where the window sits after the click depends on how Playwright aligned the row it pressed
+        // (centred, or with the button at the window's foot, which leaves the row 6px clipped). The page
+        // then scrolls the row fully into view with a smooth scrollTo that can start after the window has
+        // looked still for ten frames, so a single read after windowSettled can land on the clipped
+        // position. Poll for the position the page settles on instead.
+        await expect.poll(() => windowScroll(page), { message: 'the window did not return to the top' }).toBeGreaterThanOrEqual(pitch * 5)
         await windowSettled(page)
-        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 5)
+        expect(await windowScroll(page), 'the window moved off the selected row').toBeGreaterThanOrEqual(pitch * 5)
       })
 
       // The angle lock sits at the top right of the angle row and holds the angle
