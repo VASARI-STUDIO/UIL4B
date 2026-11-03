@@ -23,6 +23,10 @@ const CELL_GAP = 4
 const HEAD_H = 42         // section header row (text + bottom breathing room)
 const SECTION_GAP = 24    // extra space above each section after the first
 const OVERSCAN_PX = 500   // render this much beyond the viewport each way
+// A NEW layout (a search, a category, a new width) first mounts only the screen
+// plus this much, so its commit builds about half the cells; the window widens to
+// OVERSCAN_PX two frames later, after that first frame has painted.
+const FIRST_OVERSCAN_PX = 60
 
 // Placeholder → bitmap cell. `sprite` is null until the glyph has been drawn;
 // `pending` says a bitmap is still coming, so the cell shows a quiet placeholder
@@ -61,7 +65,7 @@ function windowOf(rows, minY, maxY) {
 
 const NO_WINDOW = { layout: null, start: 0, end: 0 }
 
-export default function EmojiGrid({ groups, catalogue, skinTone, onOpen }) {
+export default function EmojiGrid({ groups, catalogue, skinTone, onOpen, stale = false }) {
   const [gridW, setGridW] = useState(0)
   // Which rows are mounted, tagged with the layout they were measured against.
   const [win, setWin] = useState(NO_WINDOW)
@@ -123,7 +127,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onOpen }) {
     let band = { start: 0, end: 0 }
     if (el && layout.rows.length) {
       const top = -el.getBoundingClientRect().top
-      band = windowOf(layout.rows, top - OVERSCAN_PX, top + window.innerHeight + OVERSCAN_PX)
+      band = windowOf(layout.rows, top - FIRST_OVERSCAN_PX, top + window.innerHeight + FIRST_OVERSCAN_PX)
     }
     current = { layout, ...band }
     setWin(current)
@@ -147,7 +151,11 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onOpen }) {
       setWin(next)
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
-    update()
+    // The window for this layout is the small first one (set during render): let
+    // the first frame paint, then widen. A scroll or resize in between still
+    // widens at once, through onScroll's own update.
+    if (winRef.current.layout === layout) raf = requestAnimationFrame(() => { raf = requestAnimationFrame(update) })
+    else update()
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
     return () => {
@@ -232,6 +240,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onOpen }) {
     <div
       className="emoji-virt"
       ref={setVirtEl}
+      aria-busy={stale || undefined}
       style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
     >
       {/* THE CATEGORY HEADINGS ARE h2, NOT h3. They are the only section
