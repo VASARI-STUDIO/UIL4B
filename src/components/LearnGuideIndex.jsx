@@ -166,7 +166,7 @@ export default function LearnGuideIndex() {
                 <span className="lidx-topic-n">{g.total}</span>
               </a>
             ))}
-            <a href={`#${USING_ID}`}>Using UIL4B</a>
+            <a className="lidx-topic-using" href={`#${USING_ID}`}>Using UIL4B</a>
           </nav>
         )}
       </div>
