@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import useActiveSection from '../hooks/useActiveSection'
+import useShortCode from '../hooks/useShortCode'
 import NotFound from './NotFound'
 import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
@@ -93,6 +94,8 @@ function Article({ article }) {
   const sources = article.sources || []
   const active = useActiveSection(article.sections)
   const contentsRef = useRef(null)
+  const proseRef = useRef(null)
+  useShortCode(proseRef)
   useFocusableHeadings(article.sections)
   const next = nextInTopic(article.slug)
   const nextInSameTopic = Boolean(next) && next.topic === article.topic
@@ -160,7 +163,7 @@ function Article({ article }) {
             </details>
           </nav>
 
-          <article className="lart-prose">
+          <article className="lart-prose" ref={proseRef}>
             <Body />
           </article>
 

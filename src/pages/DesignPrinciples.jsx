@@ -43,8 +43,10 @@
 // "slop", "under-authored", "operative not performative" — describes how to
 // judge a surface, not what the product believes about interfaces, and none of
 // it is quoted or paraphrased here.
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useReveal } from '../hooks/useReveal'
+import useShortCode from '../hooks/useShortCode'
 import { DESIGN_PRINCIPLES } from '../data/designPrinciples'
 import {
   ContrastProof,
@@ -82,9 +84,11 @@ const PROOFS = {
 
 export default function DesignPrinciples() {
   useReveal()
+  const rootRef = useRef(null)
+  useShortCode(rootRef)
 
   return (
-    <div className="sec cpg prn">
+    <div className="sec cpg prn" ref={rootRef}>
       <header className="prn-hero">
         <h1 className="prn-h1">
           Every rule here is enforced by a screen.
