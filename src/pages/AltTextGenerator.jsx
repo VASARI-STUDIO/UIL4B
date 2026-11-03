@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, SlidePills,
 } from '../components/tool/ToolLayout'
 import { AI_LIMITS } from '../config/plans'
 import { useAuth } from '../contexts/AuthContext'
@@ -572,7 +572,7 @@ export default function AltTextGenerator({ toast }) {
           </ToolSection>
 
           <ToolSection label="Length" labelId="alt-tone-label" className="alt-length">
-            <div className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label">
+            <SlidePills className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label" value={tone}>
               {TONES.map(t => (
                 <button
                   key={t.id}
@@ -588,7 +588,7 @@ export default function AltTextGenerator({ toast }) {
                   {t.label}
                 </button>
               ))}
-            </div>
+            </SlidePills>
             <p className="alt-field-help" id="alt-tone-help">
               <strong>{activeTone.desc}.</strong> {activeTone.when}
             </p>

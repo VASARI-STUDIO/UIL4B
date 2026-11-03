@@ -193,7 +193,9 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
     const resting = await loaded.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(alphaOf(resting), `a loaded slot paints ${resting}`).toBe(0)
     await expect(loaded.locator('img')).toHaveCSS('opacity', '1')
-    await expect(loaded.locator('img')).toHaveCSS('transition-duration', '0.16s')
+    // A loaded glyph fades in by an opacity-only keyframe animation (ig-glyph-in, 200ms), not a transition.
+    await expect(loaded.locator('img')).toHaveCSS('animation-name', 'ig-glyph-in')
+    await expect(loaded.locator('img')).toHaveCSS('animation-duration', '0.2s')
     const atLoad = await page.evaluate(() => window.__flagLoadOpacity)
     expect(atLoad.length).toBeGreaterThan(0)
     expect(atLoad.every(opacity => opacity === '0'), 'flags remain hidden until their image load event').toBe(true)
