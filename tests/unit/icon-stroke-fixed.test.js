@@ -5,34 +5,30 @@ import * as iconStroke from '../../src/utils/iconStroke.js'
 
 const src = readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8')
 
-test('Fixed caption explains scaling with the current size and stroke in both states', () => {
-  assert.equal(typeof iconStroke.strokeScaleCaption, 'function')
-  for (const [size, stroke, scaledSize, grown, held] of [
-    [48, 4, '96', '8', '4'],
-    [128, 0.75, '256', '1.5', '0.75'],
-    [12, 4, '24', '8', '4'],
-    [128, 8, '256', '16', '8'],
-    [48, 1.125, '96', '2.25', '1.13'],
-  ]) {
-    for (const absolute of [false, true]) {
-      const caption = iconStroke.strokeScaleCaption({ size, stroke, absolute })
-      assert.equal(caption.prefix, `Resized to ${scaledSize}px, the stroke `)
-      assert.equal(caption.effect, absolute ? `stays ${held}px` : `grows to ${grown}px`)
-      assert.equal(caption.suffix, absolute ? '.' : `. Fixed keeps it at ${held}px.`)
-      assert.equal(`${caption.prefix}${caption.effect}${caption.suffix}`, absolute
-        ? `Resized to ${scaledSize}px, the stroke stays ${held}px.`
-        : `Resized to ${scaledSize}px, the stroke grows to ${grown}px. Fixed keeps it at ${held}px.`)
-    }
+test('the caption names the mode and its numbers at the current size', () => {
+  for (const [size, stroke, there] of [[48, 4, '8'], [128, 0.75, '4'], [12, 4, '2'], [24, 2, '2']]) {
+    const rel = iconStroke.strokeScaleCaption({ size, stroke, absolute: false })
+    const text = `${rel.prefix}${rel.effect}${rel.suffix}`
+    assert.match(text, /^Relative: /)
+    assert.ok(text.includes(`${stroke}px at 24px`), text)
+    if (size !== 24) assert.ok(text.includes(`${there}px at ${size}px`), text)
+    const fixed = iconStroke.strokeScaleCaption({ size, stroke, absolute: true })
+    assert.equal(`${fixed.prefix}${fixed.effect}${fixed.suffix}`, `Fixed: the stroke is ${stroke}px at every size and PNG scale, so bigger icons look lighter.`)
+    assert.doesNotMatch(text + fixed.suffix, /—/)
   }
 })
 
-test('Fixed uses its visible name and the live caption as its description', () => {
-  const button = src.match(/<button\b[^>]*className=\{`icust-abs[\s\S]*?>Fixed<\/button>/)?.[0]
-  assert.ok(button, 'Fixed button exists')
-  assert.doesNotMatch(button, /\btitle\s*=/)
-  assert.doesNotMatch(button, /\baria-label\s*=/)
-  assert.match(button, /aria-pressed=\{absStroke\}/)
-  assert.match(button, /aria-describedby="icust-stroke-note"/)
+test('Relative and Fixed are a two-way radio choice described by the live caption', () => {
+  const group = src.match(/<div className="icust-seg icust-mode"[^>]*>/)?.[0]
+  assert.ok(group, 'the choice exists')
+  assert.match(group, /role="radiogroup"/)
+  assert.match(group, /aria-describedby="icust-stroke-note"/)
+  assert.match(src, /\[\['Relative', false\], \['Fixed', true\]\]/)
   assert.match(src, /strokeScaleCaption\(\{ size, stroke, absolute: absStroke \}\)/)
   assert.match(src, /<p id="icust-stroke-note" className="icust-stroke-note">\r?\n\s*\{strokeCaption\.prefix\}<b>\{strokeCaption\.effect\}<\/b>\{strokeCaption\.suffix\}\r?\n/)
+})
+
+test('the PNG is serialised at its own pixel size with the slider value, not a scaled copy of it', () => {
+  assert.doesNotMatch(src, /stroke: stroke \* grow/)
+  assert.match(src, /size: format\.px, color: isColoredPack \? undefined : \(color \|\| themeInk\),\s+stroke, isStroke, absStroke/)
 })

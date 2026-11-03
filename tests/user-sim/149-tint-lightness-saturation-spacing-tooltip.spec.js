@@ -292,7 +292,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       await note(page, i).hover()
       const card = openTip(page).locator('.tt-tip-card')
       await expect(card, `note ${i}`).toBeVisible()
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
       const m = await card.evaluate((el, idx) => {
         const c = el.getBoundingClientRect()
         const n = document.querySelectorAll('.tt-note')[idx].getBoundingClientRect()
@@ -346,7 +346,7 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     await page.mouse.move(5, 5)
     await note(page, i).hover()
     await expect(openTip(page).locator('.tt-tip-card'), `note ${i}`).toBeVisible()
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+    await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
   }
   // The card's whole height, help paragraph and all, with its 6px bridge off (about 224px).
   const FULL = 238
@@ -967,7 +967,7 @@ test.describe('the contrast tooltip on a phone', () => {
       // The pinned card is in the flow, under the note, so the page scrolls it
       // into view after it draws; wait for it to be there, then for the fade to end.
       await expect.poll(() => card.evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight }), { message: `note ${i}: the card is scrolled into the window` }).toBe(true)
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
       const m = await card.evaluate((el) => {
         const r = el.getBoundingClientRect()
         const probe = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && el.contains(hit) }
@@ -1038,7 +1038,7 @@ for (const width of [768, 1024]) {
         await note(page, i).focus()
         const card = openTip(page).locator('.tt-tip-card')
         await expect(card, `note ${i}`).toBeVisible()
-        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+        await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
         const m = await card.evaluate((el) => { const r = el.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, vw: innerWidth } })
         expect(m.l, `note ${i}: card left`).toBeGreaterThanOrEqual(0)
         expect(m.r, `note ${i}: card right`).toBeLessThanOrEqual(m.vw)
@@ -1075,7 +1075,7 @@ for (const width of [390, 768]) {
       await note(page, 6).tap()
       const card = page.locator('.tt-tip--inline .tt-tip-card')
       await expect(card).toBeVisible()
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
       // Nothing above moved by a pixel, and the note itself did not move.
       expect(await look(), 'the card moved something it should not touch').toEqual(before)
@@ -1173,7 +1173,7 @@ for (const theme of ['light', 'dark']) {
       await openTint(page, `a reviewer checking the tooltip marks in ${theme}`)
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
       // A theme change animates colours; read once it has stopped.
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
       const read = await page.evaluate(() => {
         const css = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop]

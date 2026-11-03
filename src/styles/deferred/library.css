@@ -239,7 +239,11 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    at a precomputed top. No content-visibility here — its paint containment was
    what clipped the scale(1.2) hover — off-screen work is avoided by simply not
    mounting those rows at all. */
-.emoji-virt{position:relative}
+.emoji-virt{position:relative;transition:opacity 120ms ease-out}
+/* The grid is still showing the previous list (EmojiGrid `stale`): dim it a
+   little so the short wait reads as working. Opacity only, no spinner, and the
+   status line stays at full strength. */
+.emoji-virt[aria-busy="true"]{opacity:.6}
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
@@ -298,7 +302,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
@@ -315,6 +318,12 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage-msg{position:absolute;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
 .icust-stage--light .icust-stage-msg,.icust-stage--checker .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-stage--dark .icust-stage-msg{color:rgba(244,244,245,.55)}
+/* A failed stage: the message with a text button under it, centred in the stage. */
+.icust-stage-msg--failed{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.icust-stage-retry{min-height:44px;padding:0 12px;border:0;background:none;font:inherit;font-weight:560;color:var(--t0);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.icust-stage--light .icust-stage-retry,.icust-stage--checker .icust-stage-retry{color:#18181B}
+.icust-stage--dark .icust-stage-retry{color:#F4F4F5}
+.icust-stage-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* A fact about the art, not a control: plain text in the row's control column, in
    the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
    height the segmented track gave the row, so the row does not change size. */
@@ -352,19 +361,8 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-savedin strong{font-weight:600;color:var(--t1)}
 /* Code readout */
 .icust-code{margin:12px 24px 0}
-.icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-.icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover{border-color:var(--accent)}
-.icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover .icust-code-hint{color:var(--accent-mid)}
-/* Copy-only snippet: the text is not selectable, so the Copy button is the one
-   way out — keeps the workflow inside UIL4B. */
-.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
-/* Reset lives at the end of the tag row. Hidden, not removed, while nothing
-   differs from the defaults, so the row keeps its height. */
-.lib-surface .icust-meta .icust-reset{flex:none;margin-left:auto;min-height:32px;padding:0 12px}
-.lib-surface .icust-meta .icust-reset.is-hidden{visibility:hidden}
-@media(pointer:coarse){.lib-surface .icust-meta .icust-reset{min-height:44px}}
+/* The code can be selected; a Copy button sits beside it. */
+.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all}
 .icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
@@ -511,8 +509,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
-.icust-foot .lib-btn:disabled,.icust-code-box:disabled{opacity:.5;cursor:not-allowed}
-.icust-code-box:disabled:hover{border-color:var(--border)}
+.icust-foot .lib-btn:disabled,.icust-code-copy:disabled{opacity:.5;cursor:not-allowed}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
@@ -857,7 +854,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 }
 /* The count badge sits on an inverted chip when its option is on. */
 .lib-surface .lbry-filters .lbry-filter[data-active="true"] .lbry-filter-count{
-  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--bg-0);
+  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--t0);
 }
 /* The collapsed trigger is the same control in one line, so it takes the same
    resting affordance — this is the form the 641–980 band and every
@@ -1266,6 +1263,18 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 .lib-surface .ig .ic:focus-visible{background:var(--hvr);border-color:var(--border);outline:2px solid var(--accent);outline-offset:-2px}
 .lib-surface .ig .ic:active{background:var(--hvr);border-color:var(--border);transform:scale(.97)}
 .lib-surface .ig .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
+/* A grouped grid opens each pack with a full-width heading row: the pack's name and its
+   icon count, in place of a label on every cell. Its height is fixed (the box includes
+   the hairline and the air above it), so the windowed grid, which swaps cells for
+   same-height ghosts, can never move a row because of a heading. */
+.lib-surface .ig .ig-pack-head{
+  grid-column:1/-1;box-sizing:border-box;height:40px;margin:0;padding:0 4px 8px;
+  display:flex;align-items:flex-end;gap:8px;min-width:0;
+  border-bottom:1px solid var(--border);
+  font-family:var(--font);font-size:var(--fs-caption);line-height:16px;letter-spacing:0;text-transform:none;
+}
+.lib-surface .ig .ig-pack-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--t0)}
+.lib-surface .ig .ig-pack-count{flex-shrink:0;font-weight:500;color:var(--t2);font-variant-numeric:tabular-nums}
 /* Reduced motion: no fade and no press scale. The house pair: the in-app choice, then
    the OS preference unless the visitor turned motion back on. */
 html[data-reduced-motion="true"] .lib-surface .ig .ic{transition:none}
@@ -1556,7 +1565,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
    THE TINTS ARE DECORATION, NOT DATA. The preview has no colours to paint
    (LockedTease.jsx), so four fixed tints stand in, the same on every card;
-   none of them is a hex anywhere in src/data. Blurred at 16px they read as
+   none of them is a hex anywhere in src/data. Blurred at 7px the bands still read as
    "a palette is here" and give nothing to an eyedropper that means anything.
 
    NO TRANSITION on any .lockt- rule — tests/unit/locked-library-tease pins
@@ -1569,16 +1578,16 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 .lib-surface .lockt-card--blur .lockt-stripes{
   height:clamp(200px,34vw,260px);border:0;border-radius:0;
-  filter:blur(16px) saturate(1.1);transform:scale(1.15);
+  filter:blur(7px) saturate(1.15);transform:scale(1.08);
 }
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 30%,var(--card))}
-[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 58%,var(--card))}
+[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.8}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
-.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(6px)}
+.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(4px)}
 .lib-surface .lockt-upgrade{
   position:absolute;left:50%;top:calc(50% - 30px);z-index:2;transform:translate(-50%,-50%);
   display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;

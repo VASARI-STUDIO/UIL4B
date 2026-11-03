@@ -23,20 +23,21 @@ import FooterGlyph from '../components/library/FooterGlyph'
 import {
   downloadFileName, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
-import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
+import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
-import { isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
+import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
 import { BACK_TO_FREE_NOTE, proPreview } from '../utils/iconProPreview'
 import {
-  STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
-  stickyStrokePx, stickyStrokeToken, strokeAttrForPx, strokeScaleCaption, viewBoxOf,
+  STROKE_PX, STROKE_REFERENCE_SIZE, STROKE_UNIT_REF, canPinWithVectorEffect, customIconStroke, draftStrokePx,
+  markupHasStroke, parseViewBoxRect, stickyStrokePx, stickyStrokeToken, strokeAttrForPx, strokeScaleCaption,
+  transformScale, viewBoxOf, zoomedStroke,
 } from '../utils/iconStroke'
 import {
   CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
@@ -71,7 +72,7 @@ import {
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
 import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCredits'
-import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, HELD_HEADER } from '../utils/iconifyFetch'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 // The stylesheet families this surface needs, split out of the one
@@ -149,7 +150,7 @@ const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => I
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
-const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'])
+const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons'])
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
@@ -409,7 +410,12 @@ function fetchSvgText(pack, name, params = {}) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
         const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
-        if (r.ok) return await r.text()
+        if (r.ok) {
+          const text = await r.text()
+          // A 200 that is not SVG (a portal page, a cut-off body) is a failure, so
+          // it is not kept below and the next ask goes back to the network.
+          if (fitsUrl(url, r.headers.get('content-type'), text)) return text
+        }
       } catch { /* try next host */ }
     }
     throw new Error('Failed to fetch icon SVG')
@@ -420,6 +426,13 @@ function fetchSvgText(pack, name, params = {}) {
     p.then(txt => svgTextReady.set(key, txt)).catch(() => svgTextCache.delete(key))
   }
   return p
+}
+
+// Forget the markup held for an icon, so the next ask for it goes out again.
+function evictSvgText(pack, name) {
+  const key = svgKey(pack, name)
+  svgTextCache.delete(key)
+  svgTextReady.delete(key)
 }
 
 // Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
@@ -1005,15 +1018,18 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
-  const pack = showPack ? packOf(icon) : null
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+  const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
   // with it (see `.ic-pack`), so the accessible name carries it for everyone who
-  // cannot hover.
+  // cannot hover. `packInName` keeps it in the accessible name alone: a grouped
+  // grid names each pack in a heading row, so the cell draws no label, but a
+  // focused cell still has to say which pack it is from.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
+  const drawnPack = showPack ? packName : null
   return (
     <div
-      className={['ic', picked && 'is-picked', packName && 'has-pack'].filter(Boolean).join(' ')}
+      className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -1026,7 +1042,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && packName && <span key="p" className="ic-pack" aria-hidden="true">{packName}</span>}
+      {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
   )
 })
@@ -1109,8 +1125,7 @@ function embeddedSvgMarkup(icon) {
 // Heuristic: does this markup describe a stroke-based icon (so we show the
 // stroke control)? fill:none + a real stroke colour.
 function detectPastedStroke(svg) {
-  if (!svg) return false
-  return /fill\s*=\s*["']none["']/i.test(svg) && /stroke\s*=\s*["'](?!none)[^"']+["']/i.test(svg)
+  return markupHasStroke(svg)
 }
 
 // Re-neutralise a saved custom's baked root colour back to currentColor so the
@@ -1137,9 +1152,23 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 // Bake the live customiser values into REAL SVG attributes so copied/saved/
 // downloaded markup matches the Stage exactly (a workaround for Lucide's copy
 // resetting to default attributes — never fall back to defaults).
+const SHAPE_TAGS = new Set(['path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon'])
+
+// A chosen colour has to reach children that carry a colour of their own. Single-colour
+// artwork has its explicit fills and strokes mapped to currentColor (`none` stays); artwork
+// with several colours or a gradient keeps them, since one colour cannot stand for all.
+let tintMemo = { src: '', out: '' }
+function tintedMarkup(rawSvg) {
+  if (tintMemo.src === rawSvg) return tintMemo.out
+  const out = isMulticolourSvg(rawSvg) ? rawSvg : monochromeSvg(rawSvg)
+  tintMemo = { src: rawSvg, out }
+  return out
+}
+
 function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (!rawSvg) return ''
   const { size = 48, color, stroke, isStroke, absStroke, cap, join, rotate = 0, flipH = false, flipV = false } = opts
+  if (color) rawSvg = tintedMarkup(rawSvg)
   let doc
   try { doc = new DOMParser().parseFromString(rawSvg, 'image/svg+xml') } catch { return rawSvg }
   const svg = doc.querySelector('svg')
@@ -1170,18 +1199,26 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
   // (CSS `svg, svg *`). Mirror that here so icons whose child shapes carry their
   // own stroke attributes export with the edits applied, not the originals.
   if (isStroke) {
-    const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke })
     const shapes = [svg, ...svg.querySelectorAll('*')]
-    for (const el of shapes) {
+    // An element inside a scaled group is drawn at that scale, so its width is divided by it.
+    const insideOf = (el) => {
+      let k = 1
+      for (let n = el; n && n !== svg.parentNode; n = n.parentNode) k *= transformScale(n.getAttribute?.('transform'))
+      return k
+    }
+    const scaled = shapes.map(insideOf)
+    const pin = absStroke && canPinWithVectorEffect({ size, viewBox: box, scaledGroups: scaled.some(k => k !== 1) })
+    shapes.forEach((el, i) => {
+      const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke, inside: scaled[i] })
       if (strokeAttr != null) el.setAttribute('stroke-width', String(strokeAttr))
-      if (absStroke) el.setAttribute('vector-effect', 'non-scaling-stroke')
+      if (pin && SHAPE_TAGS.has(el.localName)) el.setAttribute('vector-effect', 'non-scaling-stroke')
       if (cap) el.setAttribute('stroke-linecap', cap)
       if (join) el.setAttribute('stroke-linejoin', join)
-    }
+    })
   }
-  const vb = (svg.getAttribute('viewBox') || '0 0 24 24').split(/\s+/).map(Number)
-  const cx = (vb[0] || 0) + (vb[2] || 24) / 2
-  const cy = (vb[1] || 0) + (vb[3] || 24) / 2
+  const vb = parseViewBoxRect(svg.getAttribute('viewBox'))
+  const cx = vb.x + vb.w / 2
+  const cy = vb.y + vb.h / 2
   const tf = transformAttr(rotate, flipH, flipV, cx, cy)
   if (tf) {
     const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -1223,7 +1260,7 @@ function recentPayload(icon) {
 // A line-style tile draws the icon at 56px with a stroke of 3 in the 24-unit grid, thick
 // enough that the ends and corners show. The stroke is in pixels, as the customiser's is.
 const LINE_TILE_PX = 56
-const LINE_TILE_STROKE_PX = 3 * LINE_TILE_PX / 24
+const LINE_TILE_STROKE_PX = 3
 
 // One "Similar in this pack" tile. It stays invisible (but in layout, so the
 // 44px row never shifts) until its glyph has loaded, then fades in: an empty
@@ -1278,6 +1315,18 @@ function SimilarSection({ list, srcFor, onPick }) {
         ))}
       </div>
     </div>
+  )
+}
+
+// What the stage says while its art is missing: Loading… for a screen reader only, or
+// that it could not load, with a way to ask again.
+function StageMsg({ failed, onRetry }) {
+  if (!failed) return <span className="icust-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
+  return (
+    <span className="icust-stage-msg icust-stage-msg--failed">
+      <span role="status">Couldn’t load this icon.</span>
+      <button type="button" className="icust-stage-retry" onClick={onRetry}>Try again</button>
+    </span>
   )
 }
 
@@ -1344,8 +1393,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [sizeText, setSizeText] = useState(() => String(size))
   const [clampedTo, setClampedTo] = useState(null)
   const railRef = useRef(null)
-  // True once the body has scrolled under the pinned head, which then wears a hairline.
-  const [scrolled, setScrolled] = useState(false)
   const primaryRef = useRef(null)
   const sizeInputRef = useRef(null)
   const sizeRowRef = useRef(null)
@@ -1356,9 +1403,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // the homepage draft is a user-unit number for a 24-grid glyph. Converting at
   // the boundary means a saved icon re-opens at the weight it was saved at.
   const [stroke, setStroke] = useState(() => (
-    (icon?.custom ? customIconStrokePx(icon) : null)
+    (icon?.custom ? customIconStroke(icon)?.px : null)
     ?? kept?.stroke
-    ?? draftStrokePx(icon?.draftStroke, icon?.draftSize)
+    ?? draftStrokePx(icon?.draftStroke)
     ?? readStickyStroke()
   ))
   const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke) || !!kept?.absStroke)
@@ -1439,14 +1486,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [savePickerOpen])
 
   const inColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
-  const isStroke = useMemo(() => {
-    if (!activeIcon) return false
-    if (activeIcon.custom) return !!activeIcon.isStroke
-    if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
-    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
-    return !activeIcon.filled
-  }, [activeIcon])
-  const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
 
   // Synchronous base markup for non-CDN sources (memoised — no setState churn).
   const localBase = useMemo(() => {
@@ -1461,6 +1500,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // CDN base fetched once per icon, keyed by identity so a stale response from a
   // previous icon can never paint. All setState here is async (never in-render).
   const [fetched, setFetched] = useState({ id: null, svg: null, err: false })
+  // Bumped by "Try again" on the stage, so the fetch (and the image probe below) run again.
+  const [loadTry, setLoadTry] = useState(0)
   useEffect(() => {
     if (!activeIcon || !activeIcon.cdn || activeIcon.custom) return
     const id = activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`
@@ -1469,11 +1510,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       .then(txt => {
         if (cancelled) return
         const clean = sanitizeSvgMarkup(txt)
+        // Markup the sanitiser rejects must not stay in the session cache, or
+        // opening the icon again (or Try again) would be handed the same text.
+        if (!clean) evictSvgText(activeIcon.pack, activeIcon.name)
         setFetched(clean ? { id, svg: clean, err: false } : { id, svg: null, err: true })
       })
       .catch(() => { if (!cancelled) setFetched({ id, svg: null, err: true }) })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, loadTry])
 
   // Similar icons — same pack, same name-root (e.g. arrow-left surfaces
   // arrow-right / arrow-up). A foot-of-popup retention nudge: keep users building
@@ -1521,6 +1565,22 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
   const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
+  // Whether the artwork itself draws with a stroke, decided once per loaded SVG.
+  const strokeFromMarkup = useMemo(() => (rawBaseSvgText ? markupHasStroke(rawBaseSvgText) : null), [rawBaseSvgText])
+  const isStroke = useMemo(() => {
+    if (!activeIcon) return false
+    if (activeIcon.custom) return !!activeIcon.isStroke
+    if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
+    if (activeIcon.cdn) {
+      // Coloured packs keep their own colours. For the rest the artwork decides, once per
+      // loaded SVG; until it arrives the pack list is the first guess.
+      if (COLORED_PACKS.has(activeIcon.pack)) return false
+      if (strokeFromMarkup !== null) return strokeFromMarkup
+      return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
+    }
+    return !activeIcon.filled
+  }, [activeIcon, strokeFromMarkup])
+  const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
   // A saved icon carries its own markup and nothing fetches it, so it never waits.
   const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom })
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
@@ -1532,8 +1592,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
-    host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
-  }, [rendersInline, baseSvgText])
+    const markup = rendersInline && baseSvgText ? (color && !isColoredPack ? tintedMarkup(baseSvgText) : baseSvgText) : ''
+    host.innerHTML = markup
+    // A stroke inside a scaled group is drawn at that scale; --ig-k hands the stylesheet the
+    // factor to divide by, as the exported file does.
+    if (/\btransform\s*=/.test(markup)) {
+      const root = host.querySelector('svg')
+      for (const el of root ? root.querySelectorAll('*') : []) {
+        let k = 1
+        for (let n = el; n && n !== root; n = n.parentNode) k *= transformScale(n.getAttribute('transform'))
+        if (k !== 1) el.style.setProperty('--ig-k', String(k))
+      }
+    }
+  }, [rendersInline, baseSvgText, color, isColoredPack])
 
   // Live preview via the ONLY permitted inline-style channel: setProperty.
   //
@@ -1550,7 +1621,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // The stage always draws at the inspection size, so the stroke is scaled to it:
     // the drawing keeps the proportions of the file exported at `size`.
     const strokeAttr = strokeAttrForPx({
-      px: stroke * inspectPx / size, size: inspectPx, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
+      px: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size }), size: inspectPx, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
     })
     stage.style.setProperty('--ig-size', `${inspectPx}px`)
     stage.style.setProperty('--ig-stroke', String(strokeAttr ?? STROKE_PX.default))
@@ -1677,7 +1748,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Reuse the grid's cached markup, resolving currentColor for standalone images.
   const previewSvg = useMemo(() => serializeCustomizedSvg(baseSvgText, {
     size: inspectPx, color: isColoredPack ? undefined : (color || themeInk),
-    stroke: stroke * inspectPx / size, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+    stroke: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size }), isStroke, absStroke, cap, join, rotate, flipH, flipV,
   }), [baseSvgText, size, inspectPx, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
   const previewSrc = useMemo(() => (previewSvg ? svgToDataUri(previewSvg) : stageImgUrl), [previewSvg, stageImgUrl])
   // The frame on screen is the last one that decoded for THIS icon. A new size,
@@ -1692,9 +1763,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     probe.onerror = () => { if (live) setFrame(f => ({ id: currentId, src: f.id === currentId ? f.src : '', failed: true })) }
     probe.src = previewSrc
     return () => { live = false; probe.onload = null; probe.onerror = null }
-  }, [previewSrc, currentId])
+  }, [previewSrc, currentId, loadTry])
   const shownSrc = (frame.id === currentId && frame.src) || (previewSvg ? previewSrc : '')
   const imageError = frame.id === currentId && frame.failed
+  // "Try again" on a failed stage: drop what is held for this icon (an answer that
+  // was not valid SVG included), lift any cool-down, and ask once more.
+  const retryLoad = () => {
+    if (activeIcon?.cdn && !activeIcon.custom) evictSvgText(activeIcon.pack, activeIcon.name)
+    clearIconifyCooldown()
+    setFetched({ id: null, svg: null, err: false })
+    setFrame(f => (f.id === currentId ? { ...f, failed: false } : f))
+    setLoadTry(n => n + 1)
+  }
   // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
   // name) keeps its own two-tone treatment when no colour is picked.
   const isDuotone = /-duotone$/.test((activeIcon?.custom ? activeIcon.base : activeIcon?.name) || '')
@@ -1799,14 +1879,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       if (format.kind === 'svg') {
         saveBlobAs(new Blob([serializedOutput], { type: 'image/svg+xml' }), file)
       } else {
-        // The PNG is the preview drawn at `px`: a stroke width is in pixels of
-        // the size it was set at, so it scales with the export (a Fixed stroke
-        // included), and a plain icon takes the ink the stage shows because a
-        // PNG has no `currentColor` to inherit.
-        const grow = format.px / (size || 1)
+        // The PNG is the icon drawn at `px`, so it is serialised at that size: a
+        // Relative stroke keeps its share of the icon at every scale, a Fixed one keeps
+        // its pixels. A plain icon takes the ink the stage shows because a PNG has no
+        // `currentColor` to inherit.
         const svg = serializeCustomizedSvg(baseSvgText, {
           size: format.px, color: isColoredPack ? undefined : (color || themeInk),
-          stroke: stroke * grow, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+          stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
         })
         saveBlobAs(await svgToPngBlob(svg), file)
       }
@@ -1844,7 +1923,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       // Stamp the unit. Records without it predate the pixel fix and stored
       // `stroke` in viewBox units; `customIconStrokePx` converts those on read,
       // and this marker is what stops a converted value being converted twice.
-      strokeUnit: STROKE_UNIT_PX,
+      strokeUnit: STROKE_UNIT_REF,
     }
     setSavePickerOpen(false)
     setNewProjOpen(false)
@@ -1889,7 +1968,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setClampedTo(null)
     setColor(d.color)
     setStroke(d.stroke)
-    writeStickyStroke(d.stroke, d.size)
+    writeStickyStroke(d.stroke, STROKE_REFERENCE_SIZE)
     setAbsStroke(d.absStroke)
     setCap(d.cap)
     setJoin(d.join)
@@ -1915,7 +1994,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // The viewer's own icon in the previewed style and size, on the stage's ground.
     const svg = baseSvgText ? serializeCustomizedSvg(baseSvgText, {
       size: PROOF_PX, color: isColoredPack ? undefined : (color || themeInk),
-      stroke: stroke * PROOF_PX / size, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+      stroke: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: PROOF_PX, exportSize: size }), isStroke, absStroke, cap, join, rotate, flipH, flipV,
     }) : ''
     const proof = svg ? (
       <>
@@ -2000,15 +2079,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const row = sizeRowRef.current
     const body = panelRef.current?.querySelector('.icust-body')
     if (!row || !body) return
-    const foot = body.querySelector('.icust-foot--tool')
-    const rowBox = row.getBoundingClientRect()
-    const footBox = foot ? foot.getBoundingClientRect() : null
-    // In the two-column layout the foot sits beside the size tiles, not under them.
-    const footOver = footBox && footBox.left < rowBox.right && footBox.right > rowBox.left
+    const foot = body.querySelector(':scope > .icust-foot')
+    // The scroller is the left column on the two-column layout, the body below it.
+    let scroller = row.parentElement
+    while (scroller && scroller !== body && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
+    scroller = scroller || body
     const vv = window.visualViewport
-    const floor = Math.min(footOver ? footBox.top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
-    const over = rowBox.bottom - floor
-    if (over > 0) body.scrollTop += over
+    const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
+    const over = row.getBoundingClientRect().bottom - floor
+    if (over > 0) scroller.scrollTop += over
   }, [])
   useEffect(() => {
     const vv = window.visualViewport
@@ -2058,6 +2137,40 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
+  // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
+  const packName = activeIcon
+    ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
+    : ''
+  const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
+  const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
+
+  // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
+  // of them has more under it (icon-emoji-library.css). The attribute is set straight on the body, so
+  // reading it never renders; it is re-read when a column resizes or its content changes.
+  useEffect(() => {
+    const body = panelRef.current?.querySelector('.icust-body')
+    const cols = body ? [...body.querySelectorAll(':scope > .icust-left, :scope > .icust-right')] : []
+    if (!body || cols.length === 0) return undefined
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      body.toggleAttribute('data-scrolls', cols.some(c => c.scrollHeight - c.clientHeight > 1 && /auto|scroll/.test(getComputedStyle(c).overflowY)))
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    measure()
+    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
+    const changed = new MutationObserver(schedule)
+    cols.forEach(c => {
+      resized?.observe(c)
+      changed.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open'] })
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      resized?.disconnect()
+      changed.disconnect()
+      body.removeAttribute('data-scrolls')
+    }
+  }, [activeIcon])
 
   return (
     <div className="icust-overlay" onMouseDown={onClose}>
@@ -2071,11 +2184,16 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className={`icust-head${scrolled ? ' is-scrolled' : ''}`}>
+        <div className="icust-head">
           <div className="icust-head-text">
-            <span className="icust-eyebrow">{addMode && !activeIcon ? 'Add icon' : 'Customise'}</span>
             <h2 className="icust-title" id="icust-title">{title}</h2>
+            {headSub && <p className="icust-sub">{headSub}</p>}
           </div>
+          {/* Reset changes the controls and shows only once something differs. It stays before
+              Close in the tab order. */}
+          {activeIcon && edited && (
+            <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset</button>
+          )}
           <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -2083,7 +2201,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </button>
         </div>
 
-        <div className={`icust-body${activeIcon ? ' icust-body--split' : ''}`} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)}>
+        <div className="icust-body">
         {!activeIcon ? (
           <div className="icust-paste">
             <p className="icust-paste-help">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
@@ -2103,16 +2221,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         ) : (
           <>
-            {/* The preview and the size tiles. From 960px wide (and tall enough) this is a sticky left
-                column that stays in view while the controls scroll; below that it is the top of the one
-                column and scrolls with the rest. */}
-            <div className="icust-aside">
-            <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
+            <div className="icust-left">
+            <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}`} ref={stageRef}>
               {rendersInline ? (
                 <>
                   <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
                   {!baseSvgText && !loadErr && stageWait}
-                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
+                  {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
                 </>
               ) : (
                 <>
@@ -2129,7 +2244,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ) : imageError ? (
                     <span className="icust-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
                   ) : stageWait}
-                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
+                  {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
                 </>
               )}
               <div className="icust-stage-foot">
@@ -2165,23 +2280,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
             </div>
 
-            <div className="icust-meta">
-              <div className="icust-tags">
-                <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
-                <span className="icust-tag icust-tag--name" title={activeIcon.name}>{activeIcon.name}</span>
-                {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
-              </div>
-              {/* Reset changes the controls, so it sits with them. It shows only
-                  once something differs; hidden (not removed) so the row holds. */}
-              <button
-                type="button"
-                className={`lib-btn icust-reset${edited ? '' : ' is-hidden'}`}
-                onClick={handleReset}
-                aria-label="Reset to default"
-              >Reset</button>
-            </div>
-
-            <div className="icust-size" ref={railRef}>
+              <div className="icust-size" ref={railRef}>
                 <div className="icust-size-head">
                   <span className="icust-size-title" id="icust-size-label">Export size</span>
                   <span className="icust-size-sub">shown at real pixels</span>
@@ -2254,7 +2353,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             </div>
 
-            <div className="icust-main">
+            <div className="icust-right">
             <div className="icust-controls">
               <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
                 <label id="icust-colour-label">Colour</label>
@@ -2293,8 +2392,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           {label}
                         </button>
                       ))}
-                      {/* Portalled to <body>: the pop-up's body scrolls and clips, and an inline panel
-                          hung off the fourth chip would be cut off by it. */}
+                      {/* Portalled to <body>: the right column scrolls on its own above 800px, and an
+                          inline panel hung off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
                         portal
                         value={color || themeInk}
@@ -2337,20 +2436,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       inputMax={STROKE_PX.inputMax}
                       decimals={2}
                       ariaLabel="Stroke width in pixels"
-                      onChange={(v) => { setStroke(v); writeStickyStroke(v, size); markDirty() }}
+                      onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
                     />
-                    {/* Both modes now measure the same pixels AT THIS SIZE; they
-                        differ only once someone rescales the exported file. Off:
-                        the stroke scales with the artwork, the way an icon should.
-                        On (non-scaling-stroke): it holds this pixel width at every
-                        size it is ever drawn at. "Absolute" never said that. */}
-                    <button
-                      type="button"
-                      className={`icust-abs${absStroke ? ' active' : ''}`}
-                      aria-pressed={absStroke}
-                      aria-describedby="icust-stroke-note"
-                      onClick={() => { setAbsStroke(a => !a); markDirty() }}
-                    >Fixed</button>
+                    {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
+                        scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
+                    <div className="icust-seg icust-mode" role="radiogroup" aria-label="Stroke scaling" aria-describedby="icust-stroke-note" onKeyDown={steerRadios}>
+                      {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
+                        <button
+                          key={name}
+                          type="button"
+                          role="radio"
+                          aria-checked={absStroke === abs}
+                          tabIndex={absStroke === abs ? 0 : -1}
+                          className={absStroke === abs ? 'active' : undefined}
+                          onClick={() => { setAbsStroke(abs); markDirty() }}
+                        >{name}</button>
+                      ))}
+                    </div>
                   </div>
                   <p id="icust-stroke-note" className="icust-stroke-note">
                     {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
@@ -2430,40 +2532,66 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               )}
 
-              <div className="icust-row">
-                <label id="icust-rot-label">Rotate</label>
-                <div className="icust-seg" role="group" aria-labelledby="icust-rot-label">
-                  {[0, 90, 180, 270].map(deg => (
-                    <button key={deg} type="button" className={rotate === deg ? 'active' : ''} aria-pressed={rotate === deg} onClick={() => { setRotate(deg); markDirty() }}>{deg}°</button>
-                  ))}
+              <div className="icust-rot">
+                <div className="icust-rot-head">
+                  <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
+                  <span className="icust-mono icust-rot-val" aria-hidden="true">{rotate}°</span>
+                  {/* Polite and always mounted, so each press of Rotate is announced. */}
+                  <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
                 </div>
-                {/* Polite and always mounted, so each press of Rotate is announced. */}
-                <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
-              </div>
-
-              <div className="icust-row">
-                <label>Flip</label>
-                <div className="icust-seg">
-                  <button type="button" className={flipH ? 'active' : ''} aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>Horizontal</button>
-                  <button type="button" className={flipV ? 'active' : ''} aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>Vertical</button>
+                <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
+                  <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
+                  </button>
+                  <button type="button" className="icust-rot-btn" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
+                  </button>
+                  <span className="icust-rot-sep" aria-hidden="true" />
+                  <button type="button" className="icust-rot-btn" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
+                  </button>
+                  <button type="button" className="icust-rot-btn" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="icust-code">
-              <div className="icust-code-label">SVG</div>
-              <button
-                type="button"
-                className="icust-code-box"
-                onClick={handleCopyCode}
-                disabled={!baseSvgText}
-                aria-disabled={previewing || undefined}
-                aria-describedby={previewing ? 'icust-preview-line' : undefined}
-                aria-busy={!baseSvgText && !loadErr}
-              >
-                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : previewing ? 'Preview only' : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
-                <code>{serializedOutput}</code>
-              </button>
+            <details className="icust-code">
+              <summary className="icust-code-sum">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                <span className="icust-code-name">SVG code</span>
+                <span className="icust-code-val"><span className="icust-mono">{size} × {size} · {codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
+              </summary>
+              <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
+                <button
+                  type="button"
+                  className="icust-code-copy"
+                  onClick={handleCopyCode}
+                  disabled={!baseSvgText}
+                  aria-disabled={previewing || undefined}
+                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
+                  aria-busy={!baseSvgText && !loadErr}
+                  aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
+                >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
+                <code tabIndex={0} role="region" aria-label="SVG code">{serializedOutput}</code>
+              </div>
+            </details>
+
+            {savedInProjects.length > 0 && (
+              <p className="icust-savedin">
+                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
+              </p>
+            )}
+
+            {similarList.length > 0 && (
+              <SimilarSection
+                key={currentId}
+                list={similarList}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                onPick={onPick}
+              />
+            )}
             </div>
 
             {/* The one preview line. Always mounted, so its first message is announced. With no
@@ -2538,21 +2666,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
             </div>
 
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
-            </div>
           </>
         )}
         </div>
@@ -3173,7 +3286,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       name: i.n,
       pack: PACKS[i.p] || i.p,
       d: i.d,
-      filled: i.p === 'S',
+      filled: i.p === SOLID_BUILTIN_PACK,
       cdn: false
     })))
     setVisible(PAGE_SIZE)
@@ -3251,7 +3364,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     let holding = true
     const pageSize = Math.min(PAGE_SIZE, perPackCap * allowedPacks.length)
     const reveal = (timedOut = false) => {
-      if (rid !== reqId.current) return
+      // Once a page is out, a late call (the 2.5 s timer arms after a render, so
+      // it can fire once every pack has settled) must not set the empty `lists`
+      // over what is on screen, the built-in set included.
+      if (rid !== reqId.current || !holding) return
       const count = lists.reduce((sum, list) => sum + list.length, 0)
       if (firstPageReady(count, settled, allowedPacks.length, pageSize, timedOut)) {
         clearTimeout(firstPageTimer.current)
@@ -3861,9 +3977,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const q = query.trim()
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
+    // Logo.dev is not an Iconify set and belongs to no collection, so with it
+    // picked a chip would light and change nothing. Choosing a collection leaves
+    // the pack for "All packs", whose scope the chip then narrows.
+    const scopePack = nextGroup && pack === 'logodev' ? '' : pack
+    if (scopePack !== pack) setPack(scopePack)
     // Collections browse original artwork without replacing the stored weight.
-    if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
-    else if (pack) browsePack(pack, nextGroup, 'chip')
+    if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
+    else if (scopePack) browsePack(scopePack, nextGroup, 'chip')
     else if (nextGroup) browseGroup(nextGroup, 'chip')
     else browseAll('chip')
   }
@@ -3937,8 +4058,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      file has twice been fixed for — so the reference is dropped instead.
      Nothing of the visitor's is destroyed: recentIcons.js still holds it, and
      it reappears the moment the tier does. */
+  // A built-in entry's fill is re-read from the built-in set (not the flag saved
+  // with it), so an outline-only glyph is never drawn as a solid wedge.
   const visibleRecents = useMemo(
-    () => recents.filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier)),
+    () => recents
+      .filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier))
+      .map(r => (r.cdn ? r : { ...r, filled: recentIsFilled(r, window.icons) })),
     [recents, tier],
   )
 
@@ -4477,7 +4602,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         if (win.upTo) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
         return
       }
-      const kids = grid.children
+      // Cells only: a grouped grid also holds full-width pack heading rows, and
+      // every index below (ghost step, stored heights, the kept cell) is a cell index.
+      const kids = grid.querySelectorAll(':scope > .ic')
       // Cells were added (or swapped for ghosts) since the last read, so the page
       // has layout pending. Reading a rect now would force it inside this
       // callback; the frame lays it out anyway, and the next frame reads clean.
@@ -4499,7 +4626,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       // focus would fall to <body>. (Capping `upTo` at the focused cell instead
       // left the whole grid whole once cell 0 had been clicked.)
       const focused = grid.contains(document.activeElement)
-        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > *'))
+        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > .ic'))
         : -1
       const keep = focused >= 0 && focused < upTo ? focused : -1
       if (upTo === win.upTo && keep === win.keep) return
@@ -4531,6 +4658,44 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       grid.removeEventListener('focusout', schedule)
     }
   }, [windowed, win, icons])
+
+  // A GROUPED GRID STATES EACH PACK ONCE, in a full-width heading row, and its cells
+  // draw no pack label (the label vanished at 980px and below, which left phones and
+  // tablets with no sign of where one pack ends and the next begins).
+  const groupHeads = source === 'group'
+  // Icons per pack across the whole result, not just the revealed page, so a
+  // heading's count never changes as more of the list scrolls in.
+  const packCounts = useMemo(() => {
+    if (!groupHeads) return null
+    const counts = new Map()
+    for (const icon of icons) {
+      const p = packOf(icon)
+      if (p) counts.set(p, (counts.get(p) || 0) + 1)
+    }
+    return counts
+  }, [groupHeads, icons])
+  // The heading is a sibling of the cells with a fixed CSS height (`.ig-pack-head`),
+  // so it never moves the cells after it. Cell indexes (and so `ghosts`) count cells only.
+  const renderGroupedGrid = (list, ghosts, counts) => {
+    const out = []
+    let prev = null
+    list.forEach((icon, idx) => {
+      const p = packOf(icon)
+      if (p && p !== prev) {
+        const n = counts.get(p) || 0
+        out.push(
+          <h3 key={`head:${p}:${idx}`} className="ig-pack-head">
+            <span className="ig-pack-name">{creditRows([p], liveCredit)[0].name}</span>{' '}
+            <span className="ig-pack-count">{`${n.toLocaleString('en-AU')} ${n === 1 ? 'icon' : 'icons'}`}</span>
+          </h3>,
+        )
+      }
+      if (p) prev = p
+      const ghost = ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0
+      out.push(renderCell(icon, idx, false, ghost))
+    })
+    return out
+  }
 
   // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
   // It is already dropped below 980px; above 980px it was still drawn under EVERY
@@ -4586,6 +4751,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       src={!ghost && icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
       gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
+      packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
       onPick={onPick}
@@ -4880,7 +5046,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                       </div>
                     </div>
                   ))
-                  : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null)}
+                  : (packCounts
+                    ? renderGroupedGrid(shown, windowed && win.list === icons ? win : null, packCounts)
+                    : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null))}
               </div>
             )}
 

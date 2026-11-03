@@ -444,7 +444,7 @@ test.describe('the customiser while its artwork is loading', () => {
     } finally { releaseBatch(); releaseArt() }
   })
 
-  test('a Phosphor icon whose art arrives after the modal opens never shows the art with a stroke other than its settled one', async ({ page }) => {
+  test('a Lucide icon whose art arrives after the modal opens never shows the art with a stroke other than its settled one', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
@@ -456,16 +456,17 @@ test.describe('the customiser while its artwork is loading', () => {
     // The grid's glyph batch is held too, so the cell has no markup to hand the
     // stage and the art can only arrive after the modal is open.
     await page.route(u => ICONIFY_HOSTS.includes(u.hostname)
-      && /^\/ph\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
+      && /^\/lucide\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
       await heldBatch
       await route.fallback()
     })
-    // A 256-unit viewBox, as Phosphor draws. Until the art is here the stage has no
+    // A 256-unit viewBox, Phosphor's grid. Phosphor itself now draws as an image (it is not a stroke
+    // pack), so a stroke pack carries the odd viewBox here. Until the art is here the stage has no
     // viewBox to read, so its first stroke value is the 24-unit one; the settled
     // value for this art is a different number. A frame holding both is the fault.
     const ART = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" '
       + 'stroke="currentColor"><circle cx="128" cy="128" r="96"/></svg>'
-    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/ph\/[^/]+\.svg$/.test(u.pathname), async route => {
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/lucide\/[^/]+\.svg$/.test(u.pathname), async route => {
       artRequests += 1
       await heldArt
       await route.fulfill({
@@ -474,7 +475,7 @@ test.describe('the customiser while its artwork is loading', () => {
       })
     })
     try {
-      await choosePack(page, 'ph')
+      await choosePack(page, 'lucide')
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect.poll(() => artRequests).toBeGreaterThan(0)
@@ -617,13 +618,13 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
       expect(rowBox, 'the row stays one 44px line while every tile waits').toBe(44)
 
-      // Tab from the control before the row must not land on a waiting tile. Save is the last
-      // control ahead of the row (Reset is hidden, and so cannot take focus, until something is
-      // edited), and the guard proves the focus really started there.
-      const save = page.locator('.icust-save')
-      await expect(save).toBeEnabled()
-      await save.focus()
-      await expect(save, 'the Tab walk starts on the control just before the row').toBeFocused()
+      // Tab from the control before the row must not land on a waiting tile. The SVG code summary is
+      // the last control ahead of the row (Reset is hidden, and so cannot take focus, until something
+      // is edited), and the guard proves the focus really started there.
+      const codeSum = page.locator('.icust-code-sum')
+      await expect(page.locator('.icust-save')).toBeEnabled()
+      await codeSum.focus()
+      await expect(codeSum, 'the Tab walk starts on the control just before the row').toBeFocused()
       for (let i = 0; i < 4; i += 1) {
         await page.keyboard.press('Tab')
         const onTile = await page.evaluate(() => document.activeElement?.classList.contains('icust-similar-btn'))
@@ -652,8 +653,8 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       expect((await tileState(failed)).height).toBe(44)
 
       // Positive control for the Tab check: a shown tile IS reachable from the same spot.
-      await save.focus()
-      await expect(save).toBeFocused()
+      await codeSum.focus()
+      await expect(codeSum).toBeFocused()
       await page.keyboard.press('Tab')
       await expect(page.getByRole('button', { name: `Open ${names[0]}`, exact: true })).toBeFocused()
     } finally { release() }

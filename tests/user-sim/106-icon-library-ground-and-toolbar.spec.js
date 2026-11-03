@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { ICON_PACK_CREDITS } from '../../src/data/iconPackCredits.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
@@ -68,7 +69,7 @@ test.describe('the customizer preview ground', () => {
     }
     // Reset clears the colour but is not a ground control either.
     await page.getByRole('radio', { name: 'White', exact: true }).click()
-    await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
+    await page.getByRole('button', { name: 'Reset', exact: true }).click()
     await expect(page.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
     await expect(stage).toHaveClass(/icust-stage--page/)
     expect((await stageAndPage(page)).bg, 'a colour press moved the ground').toBe(before.bg)
@@ -113,18 +114,26 @@ test.describe('the ground switch', () => {
         const chip = (name) => page.getByRole('radio', { name, exact: true })
         const note = page.locator('.icust-ground-note')
         const top = async (name) => (await chip(name).boundingBox()).y
-        const noteHeight = async () => (await note.boundingBox()).height
+        // The size rail sits under the note, in the stage's column. Wider than a phone sheet the stage
+        // gives room to a note and takes it back; on the sheet (640 and below) the stage stays its 168px
+        // and the note's lines are held in the note's own box. Either way the rail (and the chips in the
+        // other column) never move.
+        const railTop = async () => (await page.locator('.icust-size').boundingBox()).y
+        const stageHeight = async () => (await page.locator('.icust-stage').boundingBox()).height
 
-        // The note's line is held with or without a note.
+        // Above 640 no band is held while there is no note: the box is empty and the stage keeps the room.
         await chip('Text colour').click()
         await expect(note.locator('p')).toHaveCount(0)
         const quietChips = await top('Black')
-        const quietHeight = await noteHeight()
+        const quietRail = await railTop()
+        const quietStage = await stageHeight()
+        if (width <= 640) expect(quietStage, 'the phone stage is taller than its 168px').toBeLessThanOrEqual(172)
         // The icon colour that is hard to see on this theme's page raises the note.
         await chip(scheme === 'dark' ? 'Black' : 'White').click()
         await expect(note.locator('p')).toBeVisible()
         expect(await top('Black'), 'the contrast note moved the colour chips').toBe(quietChips)
-        expect(await noteHeight(), 'the note box changed height').toBe(quietHeight)
+        expect(await railTop(), 'the contrast note moved the size rail').toBeCloseTo(quietRail, 0)
+        if (width <= 640) expect(await stageHeight(), 'the contrast note resized the phone stage').toBeCloseTo(quietStage, 0)
         // Back to Text colour: still nothing moves.
         await chip('Text colour').click()
         await expect(note.locator('p')).toHaveCount(0)
@@ -441,15 +450,17 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
         'Copy SVG': page.getByRole('button', { name: 'Copy SVG', exact: true }),
         Save: page.getByRole('button', { name: 'Save to project', exact: true }),
         Download: page.getByRole('button', { name: 'Download SVG', exact: true }),
-        'the code box': page.locator('.icust-code-box'),
+        'the code Copy': page.locator('.icust-code-copy'),
       }
+      // The code sits in a closed disclosure; open it so the clicks below really land on its Copy.
+      await page.locator('.icust-code-sum').click()
       for (const [label, button] of Object.entries(actions)) {
         await expect(button, `${label} is live with no markup`).toBeDisabled()
         await expect(button, `${label} does not say it is busy`).toHaveAttribute('aria-busy', 'true')
       }
       // A click that lands anyway (force skips the actionability wait) does nothing.
       await actions['Copy SVG'].click({ force: true, timeout: 2000 }).catch(() => {})
-      await actions['the code box'].click({ force: true, timeout: 2000 }).catch(() => {})
+      await actions['the code Copy'].click({ force: true, timeout: 2000 }).catch(() => {})
       await expect(page.getByRole('button', { name: /Copied!/ }), 'it claimed to copy nothing').toHaveCount(0)
       expect(await page.evaluate(() => window.__clipboardWrites), 'the clipboard was written with no markup').toEqual([])
 
@@ -892,7 +903,7 @@ for (const [name, body, multicolour] of [
     await go(page, '/create/icons')
     await choosePack(page, 'logos')
     await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
-    await expect(page.locator('.icust-code-box')).toBeEnabled()
+    await expect(page.locator('.icust-code-copy')).toBeEnabled()
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
     await expect(colour.getByText('Default', { exact: true })).toHaveCount(0)
     await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
@@ -901,7 +912,7 @@ for (const [name, body, multicolour] of [
     await expect(colour.locator('.cpk-trigger')).toHaveCount(multicolour ? 0 : 1)
     if (multicolour) return
     await colour.getByRole('radio', { name: 'Black', exact: true }).click()
-    await expect(page.locator('.icust-code-box')).toContainText('color="#000000"')
+    await expect(page.locator('.icust-code code')).toContainText('color="#000000"')
     await expect.poll(async () => decodeURIComponent(await page.locator('.icust-stage-img').getAttribute('src'))).toContain('color="#000000"')
     await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
     const copied = await page.evaluate(() => window.__copiedSvg)
@@ -1110,30 +1121,30 @@ for (const width of [1440, 390]) {
       return data.uncategorized.slice().sort().map(name => ({ pack, name }))
     })
     const cells = page.locator('.ig .ic:not(.ig-skel)')
+    // A grouped grid names each pack once, in a heading row, and draws no label on a cell.
+    const headNames = page.locator('.ig .ig-pack-head .ig-pack-name')
     if (width === 1440) {
       await expect(cells).toHaveCount(120)
       const firstCell = cells.first()
-      // The pack name shows on hover only: transparent at rest (opacity, so still in the render
-      // tree), opaque under the pointer.
-      const packOpacity = (cell) => cell.locator('.ic-pack').evaluate(el => getComputedStyle(el).opacity)
-      await expect.poll(() => packOpacity(firstCell)).toBe('0')
-      await firstCell.hover()
-      await expect.poll(() => packOpacity(firstCell)).toBe('1')
-      await expect(cells.locator('.ic-pack')).toHaveText(Array(120).fill('Circle Flags'))
+      await expect(headNames, 'the first page is one pack, under one heading').toHaveText(['Circle Flags'])
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
       const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
       // Focus retains the original cell while rows above the viewport are windowed.
       await firstCell.focus()
       await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
       await expect(cells).toHaveCount(expected.length)
       await cells.nth(180).scrollIntoViewIfNeeded()
-      await cells.nth(180).hover()
-      await expect.poll(() => packOpacity(cells.nth(180))).toBe('1')
       expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
       await page.evaluate(() => window.scrollTo(0, 0))
     }
     await expect(cells).toHaveCount(expected.length)
     await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
-    await expect.poll(() => cells.locator('.ic-pack').allTextContents()).toEqual(expected.map(icon => packLabels[icon.pack]))
+    // Packs stay contiguous: one heading each, in group order, named as the footer credits the pack...
+    await expect.poll(() => headNames.allTextContents()).toEqual(packs.map(pack => ICON_PACK_CREDITS[pack].name))
+    await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    // ...and a cell still says which pack it is from to anyone who focuses it.
+    await expect.poll(() => cells.evaluateAll(els => els.map(el => el.getAttribute('aria-label'))))
+      .toEqual(expected.map(icon => `Customise ${icon.name}, ${packLabels[icon.pack]}`))
     if (width === 1440) {
       await choosePack(page, 'circle-flags')
       await expect(cells).toHaveCount(120)
