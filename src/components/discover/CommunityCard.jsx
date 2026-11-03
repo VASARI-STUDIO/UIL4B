@@ -113,7 +113,8 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
         title={saved ? 'Saved' : 'Save'}
       >
         <HeartIcon filled={saved} />
-        <span className="ch-heart-count">{count}</span>
+        {/* A zero says nothing a bare heart does not; show the figure once someone has saved it. */}
+        {count > 0 && <span className="ch-heart-count">{count}</span>}
       </button>
       <ReportButton
         className="ch-report"
