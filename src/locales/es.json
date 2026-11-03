@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "Biblioteca de iconos",
-      "description": "Busca miles de iconos a través de la API de Iconify."
+      "description": "Busca en packs de iconos de código abierto y copia SVG o JSX."
     },
     "altText": {
       "label": "Alt Text Generator",

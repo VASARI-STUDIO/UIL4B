@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "아이콘 라이브러리",
-      "description": "Iconify API로 수천 개의 아이콘을 검색."
+      "description": "오픈소스 아이콘 팩을 검색하고 SVG 또는 JSX를 복사."
     },
     "altText": {
       "label": "Alt Text Generator",
