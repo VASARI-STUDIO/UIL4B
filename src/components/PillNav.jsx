@@ -958,6 +958,7 @@ function AppHeader() {
         <MegaMenu
           ref={menuRef}
           section={activeSection}
+          path={path}
           showSoon={isAdmin}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
@@ -1134,13 +1135,13 @@ function AppHeader() {
 //
 // It is a function component with a forwarded ref only in name: React 19
 // passes `ref` as a prop.
-function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
+function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
   const stacks = menuStacks(section, { showSoon })
   const promo = menuPromo(section)
-  // The file opens every menu with its first row lit (feat = flatNav[0] when
-  // nothing is hovered, App line 1414); CSS lights it only while no other row
-  // is hovered or focused.
-  const featId = stacks[0]?.[0]?.tools?.[0]?.id
+  // A row is marked only when it is the page the visitor is on: aria-current,
+  // which the CSS draws. Hover and keyboard focus light a row separately, and an
+  // open menu lights nothing by itself.
+  const isHere = (t) => !!t.route && (path === t.route || path.startsWith(t.route + '/') || !!t.views?.includes(path))
 
   // THE READOUT. One row is "active" while the pointer is on it or keyboard focus
   // is in it; the foot's line then says what that row is for, and goes back to
@@ -1262,7 +1263,7 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                             data-moment={moment}
                             data-live={moment && t.id === liveId ? '' : undefined}
                             aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
-                            data-feat={t.id === featId ? 'true' : undefined}
+                            aria-current={isHere(t) ? 'page' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}
                             data-pnav-menuitem
