@@ -31,6 +31,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
+import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { requestFeedbackDialog } from '../../utils/errorReport'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
@@ -171,7 +172,8 @@ export function ToolLayout({
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
 // back         { to, label, text, hint, history } | false (see ToolBack).
-//              Default /projects, "Back to workspace".
+//              Default /tools, "Back to all tools": the tools index, never the
+//              browser history.
 //              A tool that wants the back button to collapse on a phone passes
 //              false and adds <ToolBack/> as an item instead.
 // items        the tool's actions, in row order:
@@ -204,7 +206,7 @@ export function ToolToolbar({
   feedback = true,
 }) {
   const navigate = useNavigate()
-  const backProps = back === false ? null : { to: '/projects', label: 'Back to workspace', ...(back || {}) }
+  const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
   const rowRef = useRef(null)
   const widths = useRef(new Map())
   const [hidden, setHidden] = useState(() => new Set())
@@ -452,21 +454,22 @@ export function ToolToolbar({
 // ── ToolBack ──────────────────────────────────────────────────────────────
 // The 36px hairline square with the left arrow.
 //
-// Where it goes depends on how the person got here. React Router writes an `idx`
-// into history.state: 0 for the entry a tab first loads on, one higher for every
-// in-app push. A replace keeps the idx, so a redirect landing (a retired path, or
-// the return from login) is still 0 and has nothing in the app behind it. So
-// idx > 0 means the page before this one is inside the app (Palette Builder ->
-// Tint, say) and the arrow steps back to it, as the browser's own back does. A
-// landing keeps the fixed `to` ("Back to workspace"). A modified click (new tab,
-// new window) keeps the plain link, and a tool that names its own destination
-// passes `history={false}`.
+// A tool's back arrow goes to the tools index (/tools) by default, wherever the
+// person came from. A tool that names a different destination (the Contrast
+// Checker opened from the Palette Builder) passes its own `to`.
+//
+// `history` opts in to the browser's own back. React Router writes an `idx` into
+// history.state: 0 for the entry a tab first loads on, one higher for every
+// in-app push. A replace keeps the idx, so a redirect landing is still 0 and has
+// nothing in the app behind it. So with `history`, idx > 0 means the page before
+// this one is inside the app and the arrow steps back to it. A modified click
+// (new tab, new window) keeps the plain link.
 const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
 
 // `text` draws the destination's name beside the arrow (the 36px hairline pill
 // instead of the square), and `hint` replaces the tooltip that repeats `label`
 // with a sentence a screen reader gets as the description.
-export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true, text, hint }) {
+export function ToolBack({ to = '/tools', label = 'Back to all tools', history = false, text, hint }) {
   const navigate = useNavigate()
   // history.state is read on every render; subscribing to the location makes
   // each navigation render this again.
@@ -569,10 +572,14 @@ export function ToolSection({ label, labelId, heading = false, aside, className,
 // shape: 'pill' (999px, default) | 'block' (r12, stretched — Text/Background).
 // Options may carry `ariaLabel` (the button's accessible name) and `title`
 // (hover text); `describedBy` points the group at a visible description.
+// The selected pill slides to the one chosen (useSlideIndicator; tool-layout.css).
 export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, mono = false, shape = 'pill', className, disabledValues }) {
   const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
+  const ref = useRef(null)
+  useSlideIndicator(ref, value)
   return (
     <div
+      ref={ref}
       className={cx('tl-pills', shape === 'block' && 'tl-pills--block', className)}
       role="group"
       aria-label={labelledBy ? undefined : label}

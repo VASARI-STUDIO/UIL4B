@@ -277,10 +277,12 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
     // Inline custom properties that carry a time, an index or a digit count and feed no colour
     // (the home hero's stagger origin, the bench rail's tab index, the proof figures' width).
     // Counting them as tints would drop every colour value under the home hero from the comparison.
+    // The sliding pill (useSlideIndicator) writes --si-x/-y/-w/-h/-r, a measured box, on every pill group:
+    // geometry, not a colour, so the --si- family is not a tint either.
     const NOT_A_TINT = new Set(['--sp-arrive-at', '--sp-i', '--sp-digits'])
     let tinted = false
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      for (const p of n.style) if (p.startsWith('--') && !NOT_A_TINT.has(p)) { tinted = true; break }
+      for (const p of n.style) if (p.startsWith('--') && !p.startsWith('--si-') && !NOT_A_TINT.has(p)) { tinted = true; break }
       if (tinted) break
     }
     // `font-family` joins the colour list, and for exactly the reason the list

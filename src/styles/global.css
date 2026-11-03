@@ -459,7 +459,8 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
      Inverse  .btn-inverse               — ink fill, page-coloured text
      Quiet    .btn (the base)            — --card surface + 1px --border hairline
    The base rule below IS the Quiet treatment; don't add a fourth. ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--btn-radius);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),opacity var(--dur-2) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
+/* line-height is set so a link and a button with the same class are one height: a button's own line-height is `normal`, a link inherits the page's 1.65. */
+.btn{display:inline-flex;line-height:normal;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--btn-radius);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),opacity var(--dur-2) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:var(--dur-1)}
 .btn-s{padding:6px 12px;font-size:11.5px;border-radius:var(--btn-radius)}
