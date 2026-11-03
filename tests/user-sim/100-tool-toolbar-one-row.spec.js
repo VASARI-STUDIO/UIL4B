@@ -56,8 +56,9 @@ const TOOLS = [
   { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, 'Reset'], primary: /^Save or share/, title: 'Gradient', phoneDock: true },
   { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker', phoneDock: true },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint', phoneDock: true },
-  // Signed out, so "Add to project" (canSaveProjects) is not offered here.
-  { route: '/create/semantic-color', actions: [], primary: /^Copy /, title: 'Semantic Colour', phoneDock: true },
+  // Signed out, so "Add to project" (canSaveProjects) is not offered here. The
+  // Download button is on the row where it fits; else its two rows are in More.
+  { route: '/create/semantic-color', actions: [{ row: 'Download', menu: 'Download CSS' }], primary: /^Copy /, title: 'Semantic Colour', phoneDock: true },
   // Studio tools. The converter's and the Brand Starter's run actions live
   // with their inputs (the action bar, the brief), so their toolbars have no
   // primary; /seo's three tools are tabs under the toolbar, so its row is the

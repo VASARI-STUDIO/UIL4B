@@ -49,7 +49,6 @@ const KEY_WIDTHS = [320, 390, 768, 1440]
 const MASTHEAD_ROUTES = [
   '/discover/palettes',
   '/discover/gradients',
-  '/discover/prompts',
   '/create/icons',
   '/create/emoji',
 ]

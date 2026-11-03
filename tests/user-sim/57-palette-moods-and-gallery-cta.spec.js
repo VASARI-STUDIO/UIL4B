@@ -228,8 +228,6 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
   { route: '/discover/gradients', card: '.grg-card', action: 'Make your own', href: '/create/gradient' },
-  // The prompt gallery closes its list with its own block (.pl-close) and its own heading, not the shared question.
-  { route: '/discover/prompts#all', card: '.pl-card', action: 'Create and submit your own', href: null, ctaSel: '.pl-close', qSel: 'h2', question: /^Submit a prompt of your own$/ },
   { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
 ]
 

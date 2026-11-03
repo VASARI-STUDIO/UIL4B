@@ -1,6 +1,6 @@
 // DOM helpers every converter mode shares. Kept apart from utils/mediaEncode.js,
 // which is DOM-free on purpose so its numbers can be unit-tested as numbers.
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import useExportGate from '../../hooks/useExportGate'
 import { getLenis } from '../../hooks/useSmoothScroll'
 
@@ -102,4 +102,45 @@ export function useGatedDownload() {
     triggerDownload(blobOrUrl, filename)
     return true
   }, [requireExportAccount])
+}
+
+/**
+ * Keep the global toast clear of the pinned action bar. The bar comes and goes
+ * as tabs change and files arrive, and its height changes with its notes, so
+ * it is found again on every change under `rootRef` and measured while it
+ * lives: its height goes to --fc-bar-live on <html>, which the page sheet
+ * adds to the toast's offset on a phone.
+ */
+export function useActionBarLift(rootRef) {
+  useEffect(() => {
+    const root = rootRef.current
+    const html = document.documentElement
+    if (!root) return undefined
+    let bar = null
+    let sizer = null
+    const publish = () => {
+      html.style.setProperty('--fc-bar-live', `${Math.round(bar ? bar.getBoundingClientRect().height : 0)}px`)
+    }
+    const find = () => {
+      const next = root.querySelector('.fc-actionbar')
+      if (next === bar) return
+      sizer?.disconnect()
+      bar = next
+      html.classList.toggle('fc-has-bar', !!bar)
+      if (bar && typeof ResizeObserver !== 'undefined') {
+        sizer = new ResizeObserver(publish)
+        sizer.observe(bar)
+      }
+      publish()
+    }
+    find()
+    const watcher = new MutationObserver(find)
+    watcher.observe(root, { childList: true, subtree: true })
+    return () => {
+      watcher.disconnect()
+      sizer?.disconnect()
+      html.classList.remove('fc-has-bar')
+      html.style.removeProperty('--fc-bar-live')
+    }
+  }, [rootRef])
 }

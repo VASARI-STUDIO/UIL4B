@@ -127,10 +127,6 @@
       "label": "Principes de design",
       "description": "Hiérarchie visuelle, équilibre et psychologie du design."
     },
-    "promptLibrary": {
-      "label": "Bibliothèque de prompts",
-      "description": "Sauvegarder des prompts de génération d'images IA avec aperçu."
-    },
     "fontGallery": {
       "label": "Galerie de Polices",
       "description": "Galerie visuelle pour parcourir et prévisualiser les polices."

@@ -127,10 +127,6 @@
       "label": "Principi di design",
       "description": "Gerarchia visiva, equilibrio e psicologia del design."
     },
-    "promptLibrary": {
-      "label": "Libreria di prompt",
-      "description": "Salvare prompt di generazione immagini IA con anteprime."
-    },
     "fontGallery": {
       "label": "Galleria Font",
       "description": "Galleria visiva per sfogliare e visualizzare in anteprima i caratteri."

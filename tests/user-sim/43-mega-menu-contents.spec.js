@@ -233,7 +233,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await openWithPointer(page, 'Discover')
 
     const counts = page.locator('#pnav-mega .pnav-dcount-n')
-    await expect(counts).toHaveCount(3)
+    await expect(counts).toHaveCount(2)
     const values = (await counts.allTextContents()).map((t) => t.trim())
     expect(values.slice(0, 2)).toEqual([String(GALLERY_PALETTES.length), String(GALLERY_GRADIENTS.length)])
     // The gradient strip is a real gallery gradient, not a decorative ramp.

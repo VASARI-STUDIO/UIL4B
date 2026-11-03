@@ -143,10 +143,6 @@
       "label": "Design Principles",
       "description": "Visual hierarchy, balance, and design psychology."
     },
-    "promptLibrary": {
-      "label": "Prompt Library",
-      "description": "Save AI image generation prompts with output previews."
-    },
     "emojiLibrary": {
       "label": "Emoji Library",
       "description": "Browse and copy emojis organized by category."
