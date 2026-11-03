@@ -389,6 +389,10 @@
       "destination": "/discover/index.html"
     },
     {
+      "source": "/discover/buttons",
+      "destination": "/discover/buttons/index.html"
+    },
+    {
       "source": "/discover/gradients",
       "destination": "/discover/gradients/index.html"
     },
