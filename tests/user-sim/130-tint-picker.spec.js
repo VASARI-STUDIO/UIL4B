@@ -209,7 +209,9 @@ test.describe('390x520 · a short phone', () => {
     const last = picker.locator('.cpk-section:not(.cpk-recents) .cpk-swatch').last()
     await picker.evaluate((el) => { el.scrollTop = el.scrollHeight })
     await expect.poll(async () => (await state()).atEnd).toBe(true)
-    expect((await state()).more, 'the cue goes once the end is reached').toBe(false)
+    // The cue is cleared by the panel's scroll listener, which runs a frame
+    // after scrollTop is set, so it is waited for rather than read at once.
+    await expect.poll(async () => (await state()).more, { message: 'the cue goes once the end is reached' }).toBe(false)
     const reached = await last.evaluate((el) => {
       const b = el.getBoundingClientRect()
       return document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) === el
