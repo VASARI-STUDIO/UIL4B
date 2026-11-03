@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "图标库",
-      "description": "通过 Iconify API 搜索数千个图标。"
+      "description": "搜索开源图标包，然后复制 SVG 或 JSX。"
     },
     "altText": {
       "label": "Alt Text Generator",

@@ -163,7 +163,15 @@ export default function CommandPalette({ open, onClose }) {
             onChange={e => { setQuery(e.target.value); setHighlight(0) }}
             onKeyDown={onKey}
           />
-          <span className="cp-kbd" aria-hidden="true">esc</span>
+          {/* A real button, not a key hint: a phone has no Esc key. The "esc"
+              text shows on a pointer-and-keyboard screen, an X on touch; the
+              name is the same either way. */}
+          <button type="button" className="cp-kbd" aria-label={t('common.close')} onClick={onClose}>
+            <span className="cp-kbd-key" aria-hidden="true">esc</span>
+            <svg className="cp-kbd-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="cp-results" ref={listRef} id={`${uid}-list`} role="listbox" aria-label={t('common.tools') || 'Results'}>

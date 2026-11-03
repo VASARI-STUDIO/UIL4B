@@ -131,7 +131,7 @@ test.describe('the Discover landing', () => {
 })
 
 test.describe('the Help centre', () => {
-  test('opens on the founder’s sentence and nothing after it', async ({ page }) => {
+  test('opens on the positioning line and nothing after it', async ({ page }) => {
     // Was: the positioning line followed by "No account, no setup, no blank
     // canvas. Sign in later if you want the same work on another device." —
     // a three-part reassurance in a class of line since retired, and a sentence the
