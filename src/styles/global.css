@@ -5190,9 +5190,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .lockt-cta{gap:12px;padding:16px}
   .lockt-cta-btn{width:100%}
 }
-/* The 44px touch target applies on every touch screen, not only phone widths:
-   a tablet is wider than 640px and its button measured about 38px. */
-@media(pointer:coarse){.lockt-cta-btn{min-height:44px}}
 
 /* The row form of the same placeholder, for the Palette Builder's gallery
    popup. Structural sibling of .plb-varrow at :7922 — same geometry and the
