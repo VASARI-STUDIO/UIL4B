@@ -12,6 +12,7 @@ import '../styles/pages/info.css'
 // The front door's own glyph set. Inline SVG in the NavIcon idiom, already in
 // the entry chunk because Spectrum is a static import in App.jsx.
 import SpectrumIcon from '../components/spectrum/SpectrumIcon'
+import MenuSelect from '../components/tool/MenuSelect'
 // The keys the app actually binds. Printed from here so this page cannot
 // document a chord the handlers ignore — which is exactly what it did.
 import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
@@ -364,6 +365,12 @@ function ScreenStats() {
 
 const SECTION_IDS = SECTIONS.map((s) => s.id)
 
+// Every target the index reaches: the accordion sections, then the stats panel.
+const JUMP_OPTIONS = [
+  ...SECTIONS.map((s) => ({ value: s.id, label: s.title })),
+  { value: 'screen-stats', label: 'Screen stats' },
+]
+
 // The section a URL fragment names, or null.
 const hashSection = () => {
   if (typeof window === 'undefined') return null
@@ -434,6 +441,20 @@ export default function InfoCentre() {
     return () => handlers.forEach((off) => off())
   }, [])
 
+  // The narrow-width index: open the section, move the address to it so the
+  // jump is linkable and Back returns, scroll it under the fixed chrome
+  // (`scroll-margin-top` on every id), then put focus on its heading button so
+  // the next Tab continues from there rather than from the closed list.
+  const jumpTo = (id) => {
+    flushSync(() => openSection(id))
+    // Assigning the fragment (as a link would) keeps the router's history in step.
+    if (window.location.hash !== `#${id}`) window.location.hash = id
+    const target = document.getElementById(id)
+    if (!target) return
+    target.scrollIntoView({ block: 'start' })
+    document.getElementById(`ic-head-${id}`)?.focus({ preventScroll: true })
+  }
+
   const dismissIntro = () => {
     setIntroDismissed(true)
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* quota */ }
@@ -480,6 +501,18 @@ export default function InfoCentre() {
           so this is the product's own pattern rather than a new one. */}
       <div className="cpg-split">
         <div className="cpg-rail-col">
+          {/* Below 1000px the 14 links would wrap to several rows and push the
+              content down the screen, so the rail gives way to one button that
+              opens the same list as a sheet (a popover from 768). The sticky
+              rail below returns at 1000px and up. */}
+          <MenuSelect
+            className="ic-jump"
+            label="Jump to section"
+            placeholder="Jump to section"
+            value=""
+            options={JUMP_OPTIONS}
+            onChange={jumpTo}
+          />
           <nav className="cpg-rail ic-toc" aria-label="On this page">
             <ol>
               {SECTIONS.map(s => (

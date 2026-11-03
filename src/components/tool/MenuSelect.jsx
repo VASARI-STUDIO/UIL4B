@@ -24,7 +24,10 @@ const proMark = mark => <span className="menu-select-mark">{mark === 'Pro' && <T
 // the list row only; the trigger leaves it out). Any `icon` turns the whole list into the
 // two-line "rich" form; `footnote` is a note under the rows. A list that passes
 // none of these renders as it always has.
-export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote }) {
+// `placeholder` is the trigger's text while no row matches `value`: the control
+// then reads as a command ("Jump to section") rather than as a current choice,
+// and its spoken name is the label alone.
+export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote, placeholder }) {
   const uid = useId()
   const triggerId = id || `select-${uid}`
   const listId = `${triggerId}-list`
@@ -33,7 +36,8 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   const rows = flattenOptions(groups)
   const current = rows.find(option => String(option.value) === String(value))
   const currentMark = current?.mark || groups.find(option => option.options && flattenOptions([option]).some(row => String(row.value) === String(value)))?.mark
-  const currentLabel = `${current?.label ?? value}${currentMark ? `, ${currentMark}` : ''}`
+  const showPlaceholder = !current && placeholder !== undefined
+  const currentLabel = showPlaceholder ? placeholder : `${current?.label ?? value}${currentMark ? `, ${currentMark}` : ''}`
   const rich = rows.some(option => option.icon)
   const name = ariaLabel || ariaName || label
   const [open, setOpen] = useState(false)
@@ -171,7 +175,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   }
   return <>
     <button ref={triggerRef} id={triggerId} type="button" className={`menu-select-trigger${toolbar ? ' tl-select' : ''} ${className}`} disabled={disabled}
-      value={value} aria-label={name ? `${name}: ${currentLabel}` : undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
+      value={value} aria-label={name ? (showPlaceholder ? name : `${name}: ${currentLabel}`) : undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
       onClick={() => open ? close() : show()} onKeyDown={event => {
         if (listboxKeyAction(event.key, false, disabled) === 'open') { event.preventDefault(); if (!open) show() }
       }}>

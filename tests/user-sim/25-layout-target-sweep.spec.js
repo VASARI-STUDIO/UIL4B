@@ -388,7 +388,16 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         const bar = [...document.querySelectorAll('.lbry-toolbar')].find(vis)
         if (!bar) return null
         const row = bar.querySelector(':scope > .lbry-toolbar-row')
-        const tops = [...row.children].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+        // The Palette Library's phone toolbar (<= 640px) is two deliberate rows: the search field alone on
+        // the first, the collection switch, Filters and Create sharing the second. The rule is that the
+        // CONTROLS share a line, so the search is taken out of that count and checked to sit above them.
+        const twoRow = location.pathname === '/discover/palettes' && window.innerWidth <= 640
+        const centre = (e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)
+        const tops = [...row.children].filter(vis).filter((e) => !(twoRow && e.classList.contains('lbry-search'))).map(centre)
+        const quickEl = twoRow ? bar.querySelector(':scope > .lbry-toolbar-quick') : null
+        if (quickEl && vis(quickEl)) tops.push(centre(quickEl))
+        const searchEl = twoRow ? row.querySelector(':scope > .lbry-search') : null
+        const searchAbove = !twoRow || (!!searchEl && vis(searchEl) && tops.every((t) => t > searchEl.getBoundingClientRect().bottom - 1))
         const trays = [...bar.querySelectorAll('.lbry-filters')].filter(vis).map((t) => {
           const quick = !!t.closest('.lbry-toolbar-quick')
           const tb = t.getBoundingClientRect()
@@ -403,6 +412,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         })
         return {
           rowLines: new Set(tops).size,
+          searchAbove,
           trays,
           filtersBtn: !!bar.querySelector('.lbry-filtersbtn'),
           stage: bar.dataset.stage,
@@ -412,6 +422,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
       await ctx.close()
       if (!r) { damage.push(`${path} @${w}px: no toolbar rendered`); continue }
       if (r.rowLines !== 1) damage.push(`${path} @${w}px: the toolbar row wraps onto ${r.rowLines} lines (stage ${r.stage})`)
+      if (!r.searchAbove) damage.push(`${path} @${w}px: the search field is not on its own row above the controls`)
       for (const t of r.trays) {
         if (!t.chips) damage.push(`${path} @${w}px: tray “${t.name}” is empty`)
         if (t.lines > 1) damage.push(`${path} @${w}px: tray “${t.name}” wraps onto ${t.lines} lines`)

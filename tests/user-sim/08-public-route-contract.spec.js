@@ -120,7 +120,7 @@ test.describe('public route contract', () => {
     await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     // Midnight Teal is the first eligible palette, so it is inside the
     // anonymous cap and the search still has something to narrow to.
-    await page.getByPlaceholder('Search by name, hex, colour or mood…').fill('Midnight Teal')
+    await page.getByPlaceholder('Search palettes').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
 
