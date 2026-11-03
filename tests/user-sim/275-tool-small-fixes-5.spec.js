@@ -28,7 +28,10 @@
 //   - EmojiLibrary.jsx: put `quick={0}` back on the toolbar: "the categories sit in
 //     the Filters sheet" fails;
 //   - EmojiLibrary.jsx: lengthen the search placeholder: "the search placeholder
-//     fits its field" fails at 320.
+//     fits its field" fails at 320;
+//   - SurfaceIndex.jsx: render the Learn roadmap as `.surface-card` articles again
+//     (or add a Link or `.lidx-go` to the row): "the unwritten topics are plain
+//     rows" fails at all three widths; change the lede and it fails on the text.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -196,3 +199,51 @@ test.describe('Emoji toolbar at 768px', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4 · Learn hub: the unwritten topics are plain rows
+// ─────────────────────────────────────────────────────────────────────────────
+
+// The roadmap is an admin-only sight (a visitor sees the guides alone).
+for (const width of [390, 768, 1440]) {
+  test.describe(`Learn hub Soon topics at ${width}px`, () => {
+    test.use({ viewport: { width, height: 900 }, hasTouch: width < 800, isMobile: width < 800 })
+
+    test('the unwritten topics are plain rows, one per line', async ({ page }) => {
+      watch(page, `the founder reading the Learn hub at ${width}px`)
+      await signIn(page, { admin: true })
+      await go(page, '/learn')
+      const rows = page.locator('.lidx-card--soon')
+      await expect(rows.first()).toBeVisible()
+      expect(await rows.count(), 'unwritten topics').toBeGreaterThan(0)
+      await expect(page.locator('#surface-grid-heading ~ .srf-lede')).toHaveText("These topics aren't written yet.")
+      const facts = await rows.evaluateAll((els) => els.map((el) => {
+        const cs = getComputedStyle(el)
+        const r = el.getBoundingClientRect()
+        return {
+          tag: el.tagName,
+          border: parseFloat(cs.borderTopWidth) + parseFloat(cs.borderLeftWidth),
+          linked: !!el.closest('a') || !!el.querySelector('a'),
+          arrow: !!el.querySelector('.lidx-go'),
+          time: el.querySelector('.lidx-time')?.textContent,
+          title: !!el.querySelector('.lidx-title')?.textContent,
+          dek: !!el.querySelector('.lidx-dek')?.textContent,
+          top: Math.round(r.top),
+          left: Math.round(r.left),
+        }
+      }))
+      for (const f of facts) {
+        expect(f.tag, 'a link or button stands in for a plain row').toBe('DIV')
+        expect(f.border, 'the row has a border').toBe(0)
+        expect(f.linked, 'the row is a link').toBe(false)
+        expect(f.arrow, 'the row has an arrow').toBe(false)
+        expect(f.time, 'Soon sits in the read-time slot').toBe('Soon')
+        expect(f.title && f.dek, 'title and one-line summary').toBe(true)
+      }
+      expect(new Set(facts.map((f) => f.top)).size, 'two topics share a line, so a row is paired or orphaned').toBe(facts.length)
+      expect(new Set(facts.map((f) => f.left)).size, 'rows start at different left edges').toBe(1)
+      await rows.first().scrollIntoViewIfNeeded()
+      await page.screenshot({ path: `${SHOTS}/learn-soon-${width}.png` })
+    })
+  })
+}

@@ -206,7 +206,7 @@ const SURFACES = {
     groups: LEARN_ROADMAP,
     hint: `${LEARN_ARTICLES.length} guides. Every figure is cited or measured on the page.`,
     gridTitle: 'Topics still being written.',
-    gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
+    gridLede: "These topics aren't written yet.",
   },
 }
 
@@ -271,6 +271,21 @@ export default function SurfaceIndex({ surface }) {
           {s.gridLede && <p className="srf-lede">{s.gridLede}</p>}
         </div>
 
+        {/* Learn's unwritten topics are plain rows in the guide index's own
+            shape: title, one line, and "Soon" where the read time goes. Not
+            cards, no link and no arrow, so they carry less weight than the
+            guides above them and never break into a 2 + 1 grid. */}
+        {surface === 'learn' ? (
+          <div className="lidx-grid">
+            {groups.map((g) => (
+              <div className="lidx-card lidx-card--soon" key={g.id} data-reveal>
+                <h3 className="lidx-title">{g.label}</h3>
+                <span className="lidx-time">Soon</span>
+                <p className="lidx-dek">{g.desc}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="surface-grid">
           {groups.map((g) => {
             const hue = g.accent ? 'accent' : s.hue
@@ -317,6 +332,7 @@ export default function SurfaceIndex({ surface }) {
             )
           })}
         </div>
+        )}
       </section>
       )}
       </main>
