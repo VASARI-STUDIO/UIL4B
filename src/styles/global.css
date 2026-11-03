@@ -3021,8 +3021,10 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{color:var(--accent-soft)}
 .pnav-tool:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb))}
-.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat]:not([data-hue]) .pnav-tool-ico{color:var(--accent-soft)}
+/* The page the visitor is on: full ink and a leading bar. An open menu draws no
+   other row as selected; the grey tile is hover and keyboard focus only. */
+.pnav-tool[aria-current="page"]{color:rgb(var(--ink-rgb));box-shadow:inset 3px 0 0 var(--accent-fill)}
+.pnav-tool[aria-current="page"]:not([data-hue]) .pnav-tool-ico{color:var(--accent-soft)}
 /* HUE GLYPHS (mega menu). A row wears its category as the glyph's colour: the
    category's STRONG colour, drawn straight on the menu with no tile behind it.
    Menu-scoped on purpose: the global --hue-* set has almost no margin (see the
@@ -3079,7 +3081,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool-nm[data-face]{font-size-adjust:.5}
 /* The ink the rainbow settles on is the row's own text colour (.86 at rest, full on hover). */
 .pnav-tool[data-moment]{--mm-nm-ink:rgba(var(--ink-rgb),.86)}
-.pnav-tool[data-moment]:is(:hover,:focus-visible),.pnav-grid:not(:hover):not(:focus-within) .pnav-tool[data-feat][data-moment]{--mm-nm-ink:rgb(var(--ink-rgb))}
+.pnav-tool[data-moment]:is(:hover,:focus-visible),.pnav-tool[data-moment][aria-current="page"]{--mm-nm-ink:rgb(var(--ink-rgb))}
 /* Rest states of the moving parts: the glyph looks as it always did. */
 .pnav-tool-ico{position:relative}
 .pnav-tool-ico svg{position:relative}
@@ -3330,15 +3332,32 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   .pnav-avatar-btn,.pnav-avatar,.pnav-avatar-slot{width:36px;height:36px}
   .pnav-mobile{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--inp);color:rgb(var(--ink-rgb));cursor:pointer}
   .pnav-mobile[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
+  /* The drawn circle stays 36px; its hit area is 44px at phone width whatever
+     the pointer, so a narrow desktop window gets the same target as a finger. */
+  .pnav-mobile{position:relative;overflow:visible}
+  .pnav-mobile::after{content:"";position:absolute;inset:50% auto auto 50%;width:44px;height:44px;transform:translate(-50%,-50%)}
   .pnav-menu{display:none}
 }
-/* A7: every header control is at least 44px to a finger, whatever it draws. */
-@media(pointer:coarse){
-  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-mobile,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
+/* A7: every header control is at least 44px to a finger, and to a mouse in a
+   phone-width window, whatever it draws. The circles stay 36px; the 44px area is an
+   invisible ::after centred on each control, so the row layout does not move. A wide
+   control (the logo, a trigger) only grows in height, so neighbours never share a point.
+   The menu button is not listed: its one 44px ::after is in the max-width:767px block above. */
+@media(pointer:coarse),(max-width:767px){
+  .pnav-search-field,.pnav-theme,.pnav-iconbtn,.pnav-act,.pnav-more,.pnav-avatar-btn,.pnav-logo,.pnav-trigger,.pnav-login,.pnav-upgrade{position:relative}
   /* Hit areas extend beyond the compact circles without changing row layout. */
-  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-mobile,.pnav-logo{overflow:visible}
-  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-mobile::after,.pnav-logo::after{pointer-events:auto}
-  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-mobile::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .pnav-search-field,.pnav-export,.pnav-avatar-btn,.pnav-logo{overflow:visible}
+  .pnav-search-field::after,.pnav-export::after,.pnav-avatar-btn::after,.pnav-logo::after{pointer-events:auto}
+  .pnav-search-field::after,.pnav-theme::after,.pnav-iconbtn::after,.pnav-act::after,.pnav-more::after,.pnav-avatar-btn::after,.pnav-logo::after,.pnav-trigger::after,.pnav-login::after,.pnav-upgrade::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+}
+/* From 768px the theme button (36px) and the avatar (34px) sit 8px apart, and two
+   centred 44px areas need 9px, so they would share a 1px strip. The avatar is the
+   last control, so its area shifts 1px outward: the two areas meet edge to edge and
+   each is still 44px. */
+@media(pointer:coarse) and (min-width:768px){
+  .pnav-avatar-btn::after{transform:translate(calc(-50% + 1px),-50%)}
+}
+@media(pointer:coarse){
   .pnav-tool,.pnav-pop-item{min-height:44px}
 }
 
@@ -3395,15 +3414,20 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    6.84:1; #121418 at .8 on #F5F5F2 is 9.37:1). Phones only. */
 .pnav-tabs{display:none}
 @media(max-width:767px){
-  .pnav-tabs{position:fixed;left:0;right:0;bottom:0;z-index:118;display:flex;justify-content:space-around;padding:6px max(12px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:rgba(var(--page-rgb),.94);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(var(--ink-rgb),.08)}
-  .pnav-tab{flex:1 1 0;display:grid;justify-items:center;align-content:center;gap:3px;min-height:48px;padding:0;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:12px;font-weight:400;line-height:1.2;text-decoration:none;cursor:pointer}
+  .pnav-tabs{position:fixed;left:0;right:0;bottom:0;z-index:118;display:flex;justify-content:space-around;padding:6px max(12px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:rgb(var(--page-rgb));border-top:1px solid rgba(var(--ink-rgb),.08)}
+  .pnav-tab{position:relative;flex:1 1 0;display:grid;justify-items:center;align-content:center;gap:3px;min-height:48px;padding:0;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:12px;font-weight:400;line-height:1.2;text-decoration:none;cursor:pointer}
   /* Hover only where a pointer can hover, so a tap does not leave the tab inked like the current one. */
   @media(hover:hover){
     .pnav-tab:hover{text-decoration:none;color:rgb(var(--ink-rgb))}
     .pnav-tab[aria-disabled="true"]:hover{color:rgba(var(--ink-rgb),var(--ink-dim))}
   }
   .pnav-tab[aria-disabled="true"]{opacity:.55;cursor:default}
-  .pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{color:rgb(var(--ink-rgb));font-weight:560}
+  /* Only the page's own tab is drawn as selected: ink, weight and a bar on the
+     bar's top edge. A tab that opened the menu sheet (aria-expanded) or is
+     hovered or focused is never drawn this way, so two tabs never both read as
+     current, and the bar is a cue that does not depend on colour. */
+  .pnav-tab.is-current{color:rgb(var(--ink-rgb));font-weight:560}
+  .pnav-tab.is-current::before{content:"";position:absolute;top:-6px;left:50%;width:24px;height:2px;margin-left:-12px;border-radius:0 0 2px 2px;background:currentColor}
   .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
   html.has-tabbar body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
   /* The bar is fixed over the bottom of the scrollport. Without this, a control
