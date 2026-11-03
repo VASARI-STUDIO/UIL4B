@@ -156,9 +156,9 @@ for (const size of [TABLET, DESKTOP]) {
         await trigger.focus()
         await page.keyboard.press('ArrowDown')
         await expect.poll(async () => (await readRows(page)).filter((r) => r.focused).map((r) => r.id)).toEqual(['palette'])
-        const rows = await readRows(page)
-        const lit = rows.filter((r) => alpha(r.tile) > 0).map((r) => r.id)
-        expect(lit, 'only the row focus is on is lit').toEqual(['palette'])
+        // The tile fades in on a transition, so wait for it rather than read one frame.
+        await expect.poll(async () => (await readRows(page)).filter((r) => alpha(r.tile) > 0).map((r) => r.id),
+          { message: 'only the row focus is on is lit' }).toEqual(['palette'])
         expect(await page.locator('#pnav-mega .pnav-tool[data-row-id="palette"]').evaluate((el) => el.matches(':focus-visible')),
           'the ring is keyboard focus-visible').toBe(true)
         await shot(page, `menu-create-keyboard-${size.tag}-${theme}`)
