@@ -46,10 +46,13 @@ async function fakeAtlasWorker(page, mode) {
     }
     const RealWorker = window.Worker
     const isFlag = (ch) => /^[\u{1F1E6}-\u{1F1FF}]{2}$/u.test(ch)
+    // A real 1x1 PNG: the atlas decodes each sheet and sends an undecodable one
+    // back to text, so a fake sheet has to be an image the browser can decode.
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='), (c) => c.charCodeAt(0))
     const answer = (worker, msg) => {
       const text = []
       msg.chars.forEach((ch, i) => { if (isFlag(ch)) { text.push(i); state.flagsRuledOut++ } })
-      const reply = { gen: msg.gen, id: msg.id, blob: new Blob(['sheet']), rows: Math.ceil(msg.chars.length / msg.cols), w: 432, h: 36, text }
+      const reply = { gen: msg.gen, id: msg.id, blob: new Blob([png], { type: 'image/png' }), rows: Math.ceil(msg.chars.length / msg.cols), w: 432, h: 36, text }
       setTimeout(() => { if (worker.onmessage) worker.onmessage({ data: reply }) }, 0)
     }
     state.release = () => {

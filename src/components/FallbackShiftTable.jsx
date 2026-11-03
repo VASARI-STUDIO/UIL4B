@@ -97,7 +97,7 @@ export default function FallbackShiftTable() {
         role="group"
         aria-label="The same sentence measured in the declared stack and in the stack without its webfont"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">What is painted</th>
