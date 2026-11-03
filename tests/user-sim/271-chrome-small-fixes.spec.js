@@ -132,7 +132,8 @@ test.describe('2 · the footer shares the page content edge', () => {
     })
   }
 
-  for (const route of ['/learn', '/learn/help', '/plans', '/privacy']) {
+  // /plans draws its own marketing footer, not the site footer, so it is not here.
+  for (const route of ['/learn', '/learn/help', '/privacy']) {
     test(`${route}: at 1920 the footer content is one 1240px column, centred`, async ({ page }) => {
       watch(page, 'someone on a wide monitor')
       await page.setViewportSize({ width: 1920, height: 1080 })
