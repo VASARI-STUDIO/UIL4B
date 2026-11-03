@@ -63,7 +63,11 @@ export function revealResult(node) {
   if (!window.matchMedia?.(REVEAL_QUERY).matches) return
   const top = stickyTopOffset()
   const actionbar = node.closest('.fc-bench')?.querySelector('.fc-actionbar')
-  const bottom = window.innerHeight - (actionbar ? actionbar.getBoundingClientRect().height : 0)
+  // On a phone the action bar rests on top of the fixed tab bar, so both cover
+  // the foot of the screen. The tab bar is display:none from 768px up.
+  const tabbar = document.querySelector('.pnav-tabs')
+  const tabbarH = tabbar && getComputedStyle(tabbar).display !== 'none' ? tabbar.getBoundingClientRect().height : 0
+  const bottom = window.innerHeight - tabbarH - (actionbar ? actionbar.getBoundingClientRect().height : 0)
   const r = node.getBoundingClientRect()
   if (r.top >= top && r.bottom <= bottom) return
   scrollDocTo(Math.max(0, r.top + window.scrollY - top - REVEAL_GAP))

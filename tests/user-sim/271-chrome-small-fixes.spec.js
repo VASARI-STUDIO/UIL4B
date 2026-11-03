@@ -10,8 +10,10 @@
 //   - global.css: make the hide rule `(max-width:700px)`: the 767 case fails;
 //   - global.css: hide the button at every width: "the floating Feedback button
 //     is still there from 768" fails.
+import fs from 'node:fs'
+import path from 'node:path'
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, restingScrollY } from './helpers.js'
 
 // A route inside the app shell that has both the floating button (above 767)
 // and the site footer.
@@ -124,4 +126,103 @@ test.describe('2 · the footer shares the page content edge', () => {
         `footer content is off-centre: ${box.left}px left, ${box.viewport - box.right}px right`).toBeLessThanOrEqual(1)
     })
   }
+})
+
+// ── 3 · a revealed GIF clears the phone tab bar ──────────────────────────────
+// The GIF builder is driven the way 99-animation-builder drives it: the real
+// ffmpeg core is answered from node_modules.
+const CORE_DIR = path.join(process.cwd(), 'node_modules', '@ffmpeg', 'core', 'dist', 'esm')
+
+async function serveCore(page) {
+  await page.route((u) => u.href.startsWith('https://cdn.jsdelivr.net/'), async (route) => {
+    const name = route.request().url().split('/').pop()
+    const file = path.join(CORE_DIR, name)
+    if (!fs.existsSync(file)) return route.fulfill({ status: 404, body: '' })
+    return route.fulfill({
+      status: 200,
+      headers: { 'content-type': name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', 'access-control-allow-origin': '*' },
+      body: fs.readFileSync(file),
+    })
+  })
+}
+
+async function makeFrames(page) {
+  const out = await page.evaluate(async () => {
+    const res = []
+    for (const [name, hex] of [['frame-1.png', '#ff0000'], ['frame-2.png', '#00ff00'], ['frame-3.png', '#0000ff']]) {
+      const c = document.createElement('canvas')
+      c.width = 64
+      c.height = 48
+      const x = c.getContext('2d')
+      x.fillStyle = hex
+      x.fillRect(0, 0, 64, 48)
+      const b = await new Promise((r) => c.toBlob(r, 'image/png'))
+      res.push({ name, bytes: Array.from(new Uint8Array(await b.arrayBuffer())) })
+    }
+    return res
+  })
+  return out.map((f) => ({ name: f.name, mimeType: 'image/png', buffer: Buffer.from(f.bytes) }))
+}
+
+test.describe('3 · a revealed GIF clears the tab bar and the action bar', () => {
+  test('390: Build sits above the tab bar, and a rebuilt result that was half-hidden is scrolled clear', async ({ page }) => {
+    test.setTimeout(180_000)
+    watch(page, 'someone building a GIF on a phone-width screen')
+    await page.setViewportSize({ width: 390, height: 844 })
+    // Reduced motion: the reveal is an instant jump, so there is no glide to wait out.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await serveCore(page)
+    await go(page, '/create/file-converter')
+    await page.getByRole('tab', { name: 'Animation', exact: true }).click()
+    await page.locator('.fc-drop input[type="file"]').setInputFiles(await makeFrames(page))
+    await expect(page.locator('.fc-frame')).toHaveCount(3)
+
+    const tabs = page.locator('.pnav-tabs')
+    await expect(tabs, 'the phone tab bar is drawn at 390').toBeVisible()
+    const build = page.getByRole('button', { name: 'Build GIF' })
+    const geometry = () => page.evaluate(() => {
+      const top = (s) => document.querySelector(s).getBoundingClientRect().top
+      const result = document.querySelector('.fc-result')?.getBoundingClientRect()
+      return {
+        tabsTop: top('.pnav-tabs'),
+        barTop: top('.fc-actionbar'),
+        resultTop: result ? result.top : null,
+        resultBottom: result ? result.bottom : null,
+        buildBottom: [...document.querySelectorAll('.fc-actionbar button')].find((b) => /^Build/.test(b.textContent)).getBoundingClientRect().bottom,
+        stickyBottom: document.querySelector('[data-tool-toolbar]').getBoundingClientRect().bottom,
+      }
+    })
+
+    // The Build button is pinned above the tab bar, not under it.
+    const before = await geometry()
+    expect(before.buildBottom, 'Build is under the tab bar').toBeLessThanOrEqual(before.tabsTop + 1)
+    await expect(build).toBeInViewport()
+
+    // First build, then a second with the result left half under the bars.
+    await build.click()
+    const img = page.locator('.fc-result img[alt="GIF result"]')
+    await expect(img).toBeAttached({ timeout: 150_000 })
+    const firstSrc = await img.getAttribute('src')
+    await restingScrollY(page, 'after the first reveal')
+
+    // Slide the page so the result's bottom edge hides 20px behind the action
+    // bar, with its top still below the toolbar.
+    await page.evaluate(() => {
+      const r = document.querySelector('.fc-result').getBoundingClientRect()
+      const barTop = document.querySelector('.fc-actionbar').getBoundingClientRect().top
+      window.scrollBy(0, r.bottom - (barTop + 20))
+    })
+    await restingScrollY(page, 'after moving the result under the bars')
+    const hidden = await geometry()
+    expect(hidden.resultBottom, 'set-up: the result bottom should hide behind the bars').toBeGreaterThan(Math.min(hidden.barTop, hidden.tabsTop) + 10)
+    expect(hidden.resultTop, 'set-up: the result top should still be on screen').toBeGreaterThanOrEqual(hidden.stickyBottom)
+
+    await page.getByRole('button', { name: 'Build GIF' }).click()
+    await expect.poll(() => img.getAttribute('src'), { timeout: 150_000, message: 'the second build never replaced the result' }).not.toBe(firstSrc)
+
+    await expect.poll(async () => {
+      const g = await geometry()
+      return g.resultBottom <= Math.min(g.barTop, g.tabsTop) + 1 && g.resultTop >= g.stickyBottom - 1
+    }, { timeout: 3000, message: 'the revealed result still ends under the action bar or the tab bar' }).toBe(true)
+  })
 })
