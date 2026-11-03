@@ -674,7 +674,7 @@ html.bkit-on .tl { --tl-dock-h: 0px; }
 }
 
 /* ── Export menu (ExportMenu.jsx) ─────────────────────────────────────────
-   The button is the one .tl-btn--accent; the list reuses the overflow's
+   The button is .tl-btn--accent, or .tl-btn--quiet beside another primary; the list reuses the overflow's
    popover (.tl-pop) and bottom sheet (.tl-sheet) and its rows (.tl-menu-row),
    with pill rows to match the button. */
 .tl .tl-export { position: relative; display: flex; align-items: center; }
