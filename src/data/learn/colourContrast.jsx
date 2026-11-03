@@ -27,6 +27,7 @@ export default function ColourContrast() {
         <DataTable
           head={['Success criterion', 'Normal text', 'Large text', 'Level']}
           numeric={[1, 2]}
+          stack
           rows={[
             ['1.4.3 Contrast (Minimum)', '4.5:1', '3:1', 'AA'],
             ['1.4.6 Contrast (Enhanced)', '7:1', '4.5:1', 'AAA'],

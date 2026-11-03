@@ -8,7 +8,7 @@ import { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
 import { useSaveTypeSystemToolbar } from '../hooks/useSaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolIcon,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolIcon, SlidePills,
 } from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -728,7 +728,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
 
   const weightButtons = (font, value, onPick, label) => (
-    <div className="tsc-weights tl-pills" role="group" aria-label={label}>
+    <SlidePills className="tsc-weights tl-pills" role="group" aria-label={label} value={`${font.variants.join(',')}:${value}`}>
       {font.variants.map(w => (
         <button
           key={w}
@@ -740,7 +740,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           {w}
         </button>
       ))}
-    </div>
+    </SlidePills>
   )
 
   // The three pieces of the work column. The split shows the ladder and the
@@ -829,7 +829,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   )
 
   const formatPills = (
-    <div className="tsc-fmt tl-pills" role="group" aria-label="Export format">
+    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
       {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
         <button
           key={id}
@@ -841,7 +841,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           {label}
         </button>
       ))}
-    </div>
+    </SlidePills>
   )
   const exportPre = (
     <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
@@ -1086,7 +1086,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                     />
                   </div>
                 )}
-                <div className="tsc-bp-mode tl-pills tl-pills--block" role="group" aria-label="How the two scales are joined">
+                <SlidePills className="tsc-bp-mode tl-pills tl-pills--block" role="group" aria-label="How the two scales are joined" value={fluid}>
                   <button
                     type="button"
                     className={fluid ? 'tsc-mode-btn tl-pill is-on' : 'tsc-mode-btn tl-pill'}
@@ -1103,7 +1103,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   >
                     Fixed &middot; media query
                   </button>
-                </div>
+                </SlidePills>
               </fieldset>
 
               <fieldset className="tsc-bp">
@@ -1188,7 +1188,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         <ToolMain className="tsc-output" ref={setWorkEl}>
           {!split && (
             <div className="tsc-view-bar">
-              <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
+              <SlidePills className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view" value={view}>
                 {VIEWS.map(([id, label]) => (
                   <button
                     key={id}
@@ -1205,7 +1205,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                     {label}
                   </button>
                 ))}
-              </div>
+              </SlidePills>
               {view !== 'code' && widthMenu}
             </div>
           )}

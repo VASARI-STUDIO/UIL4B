@@ -413,16 +413,18 @@ html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
 /* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}
-/* Loaded glyphs fade without moving. */
-.ic img,.ig-chip img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
-.ic img.ig-glyph-in,.ig-chip--in img{opacity:1}
-.ic img.ig-glyph-pending{opacity:0;transition:none}
+/* Loaded glyphs fade in without moving: opacity only, from the hidden pending
+   state. A glyph already measured on an earlier mount never gets the class, so
+   it paints at once. */
+@keyframes ig-glyph-in{from{opacity:0}to{opacity:1}}
+.ic img.ig-glyph-in,.ig-chip--in img{opacity:1;animation:ig-glyph-in var(--dur-2) var(--ease-out) both}
+.ic img.ig-glyph-pending{opacity:0}
 /* The artwork stays hidden while the chip waits, so it never shows on a bare
    skeleton. */
 .ig-chip--wait img{opacity:0}
-html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
+html[data-reduced-motion="true"] :is(.ic img.ig-glyph-in,.ig-chip--in img){animation:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ic img,.ig-chip img){transition:none}
+  html:not([data-reduced-motion="false"]) :is(.ic img.ig-glyph-in,.ig-chip--in img){animation:none}
 }
 .ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
 .ig-rail-badge svg{width:9px;height:9px}
@@ -744,6 +746,28 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lib-switch-btn.is-active{
   background:rgba(247,247,244,.14);border-color:rgba(247,247,244,.34);color:#F7F7F4;
 }
+/* The sliding selected tab. IconEmojiLibrary measures the selected tab
+   (useSlideIndicator) and sets --si-x/-y/-w/-h/-r on the tablist; its ::before
+   is the selected look (wash + hairline) and moves with a transform, so nothing
+   in the flow shifts. While [data-slide] is on, the selected tab paints only its
+   label and glyph; without it (server render, no script) the tab keeps its own
+   look. "placed" draws the pill with no transition, "ready" animates its moves. */
+.lib-surface .lib-switch{position:relative;isolation:isolate}
+.lib-surface .lib-switch[data-slide]::before{
+  content:"";position:absolute;left:0;top:0;z-index:-1;box-sizing:border-box;
+  width:var(--si-w);height:var(--si-h);
+  border:1px solid rgba(247,247,244,.34);border-radius:var(--si-r,var(--radius-pill));
+  background:rgba(247,247,244,.14);
+  transform:translate(var(--si-x),var(--si-y));pointer-events:none;
+}
+.lib-surface .lib-switch[data-slide="ready"]::before{
+  transition:transform .18s cubic-bezier(.23,1,.32,1),width .18s cubic-bezier(.23,1,.32,1),height .18s cubic-bezier(.23,1,.32,1);
+}
+.lib-surface .lib-switch[data-slide] .lib-switch-btn.is-active{background:transparent;border-color:transparent}
+@media(forced-colors:active){
+  .lib-surface .lib-switch[data-slide]::before{content:none}
+  .lib-surface .lib-switch[data-slide] .lib-switch-btn.is-active{border-color:Highlight}
+}
 .lib-surface .lib-switch-btn>svg{width:16px;height:16px;color:rgba(247,247,244,.7)}
 .lib-surface .lib-switch-btn.is-active>svg{color:var(--accent-hover)}
 .lib-surface .lib-switch-emoji{font-size:15px}
@@ -890,7 +914,9 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 html[data-reduced-motion="true"] .lib-surface .lbry-filters .lbry-filter:active,
 html[data-reduced-motion="true"] .lib-surface .lbry-filtertrig:active,
 html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:none}
+html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{transition:none !important}
 @media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .lib-switch[data-slide]::before{transition:none !important}
   html:not([data-reduced-motion="false"]) .lib-surface .lbry-filters .lbry-filter:active,
   html:not([data-reduced-motion="false"]) .lib-surface .lbry-filtertrig:active,
   html:not([data-reduced-motion="false"]) .lib-surface .lib-switch-btn:active{transform:none}
@@ -1103,6 +1129,16 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 }
 .lib-surface .lbry-card:hover .lbry-card-shot{transform:none;box-shadow:none}
 .lib-surface .lbry-card .lbry-card-shot{border-radius:0}
+/* A card that mounts rises 12px into place as it fades in. Transform and
+   opacity only; `backwards` fill, so the finished card carries no animation
+   state and hover and focus behave as before. Cards already on the page do not
+   replay it. */
+@keyframes plSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.lib-surface .lbry-card{animation:plSlideUp var(--dur-2) var(--ease-out) backwards}
+html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .lbry-card{animation:none}
+}
 /* THE FOOT IS TWO THINGS COMPETING FOR ONE LINE, AND THE NAME LOSES.
    `.lbry-card-tail` is `flex-shrink:0`, so it holds the same width at every
    card size — 141px of "Copy CSS" and "Open →" on the Gradient Library — while

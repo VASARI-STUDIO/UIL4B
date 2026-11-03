@@ -26,8 +26,11 @@ import { useLayoutEffect } from 'react'
 const SELECTED = '[aria-pressed="true"],[aria-checked="true"],[aria-selected="true"]'
 
 function measure(root, item) {
-  const on = root.querySelector(item)
-  // Hidden (display:none), or nothing selected: let the child paint its own look.
+  // One pill follows one selection. A group that can hold several (or none)
+  // lets each selected child paint its own look instead.
+  const all = root.querySelectorAll(item)
+  const on = all.length === 1 ? all[0] : null
+  // Hidden (display:none), or not exactly one selected: let the children paint their own look.
   if (!on || on.offsetWidth === 0) {
     delete root.dataset.slide
     return false

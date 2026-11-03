@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, SlidePills,
 } from '../components/tool/ToolLayout'
 // The page's own sheet; every rule is scoped under `.arc-page`, the page root.
 import '../styles/pages/aspect-ratio.css'
@@ -681,7 +681,7 @@ export default function RatioCalculator({ onCopy }) {
           <ToolSection label="Start from">
             {/* A toggle group with aria-pressed: each button announces whether
                 it is the chosen preset list. */}
-            <div className="rc-tabs tl-pills tl-pills--block" role="group" aria-label="Preset list">
+            <SlidePills className="rc-tabs tl-pills tl-pills--block" role="group" aria-label="Preset list" value={tab}>
               {TABS.map(t => (
                 <button
                   key={t} type="button"
@@ -692,7 +692,7 @@ export default function RatioCalculator({ onCopy }) {
                   {t}
                 </button>
               ))}
-            </div>
+            </SlidePills>
             {presetBody}
             {sizeOptions.length > 0 && (
               <div className="rc-field">
@@ -720,11 +720,11 @@ export default function RatioCalculator({ onCopy }) {
 
           <ToolSection label="I know the…" labelId="arc-known-label">
             <div className="rc-known">
-              <div className="arc-sides tl-pills tl-pills--block" role="group" aria-labelledby="arc-known-label">
+              <SlidePills className="arc-sides tl-pills tl-pills--block" role="group" aria-labelledby="arc-known-label" value={side}>
                 <button type="button" className={`pt-t tl-pill${side === 'width' ? ' on is-on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
                 <button type="button" className={`pt-t tl-pill${side === 'height' ? ' on is-on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
                 <button type="button" className={`pt-t tl-pill${side === 'both' ? ' on is-on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
-              </div>
+              </SlidePills>
               {side === 'both'
                 ? (
                   <div className="rc-ratio-row">

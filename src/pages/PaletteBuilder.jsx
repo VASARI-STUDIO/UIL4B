@@ -8,7 +8,7 @@ import SnapSlider from '../components/SnapSlider'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode, SlidePills,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -3589,7 +3589,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               <div className="plb-sx-head">
                 <div className="plb-menu-title">{exploring ? 'Explore' : 'Suggest'}</div>
                 {exploring && (
-                  <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
+                  <SlidePills className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey} value={galleryTab}>
                     {['community', 'brands'].map(tab => (
                       <button
                         key={tab}
@@ -3605,7 +3605,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                         {tab === 'community' ? 'Palettes' : 'Brands'}
                       </button>
                     ))}
-                  </div>
+                  </SlidePills>
                 )}
                 <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
               </div>

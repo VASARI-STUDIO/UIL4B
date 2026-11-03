@@ -9,7 +9,7 @@ import AngleWheel from '../components/tool/AngleWheel'
 import StopTintMenu from '../components/tool/StopTintMenu'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon, SlidePills,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
@@ -145,13 +145,14 @@ function FilterGroup({ label, options, value, onChange, coarse, onAnnounce, lock
     <div className="grd-shuf-row" data-locked={lockedNote ? '' : undefined}>
       <span className="grd-shuf-k" id={`grd-shuf-${label}`}>{label}</span>
       {lockedNote && <p className="grd-shuf-lock" id={`grd-shuf-lock-${label}`}>{lockedNote}</p>}
-      <div
+      <SlidePills
         className="tl-pills"
         role="group"
         aria-labelledby={`grd-shuf-${label}`}
         aria-disabled={lockedNote ? 'true' : undefined}
         aria-describedby={lockedNote ? `grd-shuf-lock-${label}` : undefined}
         onKeyDown={onKeyDown}
+        value={options.filter(isOn).join('|')}
       >
         {options.map((o, i) => (
           <button
@@ -164,7 +165,7 @@ function FilterGroup({ label, options, value, onChange, coarse, onAnnounce, lock
             onClick={(e) => { if (lockedNote) return; select(o, e); onAnnounce?.(label) }}
           >{String(o)}</button>
         ))}
-      </div>
+      </SlidePills>
     </div>
   )
 }
