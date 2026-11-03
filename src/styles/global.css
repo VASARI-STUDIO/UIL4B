@@ -4474,11 +4474,17 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      results heading under it ("Colours worth building with" clipped). With
      the offset gone it is 24px above and 28px clear below. */
   .lbry-toolbar{position:relative;top:auto;gap:8px;padding:8px}
+  /* Brought back by scrolling up (LibraryToolbar.jsx, useToolbarPeek.js): fixed
+     under the nav at the width and left edge it had in the page, sliding in from
+     under the nav and out the same way. A spacer holds its place meanwhile. */
+  .lbry-toolbar[data-peek]{position:fixed;top:var(--nav-clear);left:var(--peek-left);width:var(--peek-w);margin:0;animation:lbry-peek-in .22s cubic-bezier(.2,.8,.2,1)}
+  .lbry-toolbar[data-peek="out"]{transform:translateY(calc(-100% - var(--nav-clear)));transition:transform .2s cubic-bezier(.4,0,1,1);animation:none}
   .lbry-toolbar-filters{width:100%}
   .lbry-filters{width:100%}
   .lbry-toolbar-action{width:100%;margin-left:0}
   .lbry-toolbar-action>*{width:100%;justify-content:center}
 }
+@keyframes lbry-peek-in{from{transform:translateY(calc(-100% - var(--nav-clear)))}}
 @media(min-width:641px) and (max-width:980px){
   /* THE SEARCH FIELD'S BASIS IS WHAT DECIDES HOW MANY ROWS THIS BAND GETS.
      Flex wraps on BASE sizes, not on shrunk ones, so a 240px basis reserves
