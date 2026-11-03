@@ -63,7 +63,7 @@ export const DESIGN_PRINCIPLES = Object.freeze([
   Object.freeze({
     id: 'leaves',
     rule: 'A system is not finished until it is a file.',
-    body: 'Every format the export panel lists is built. One that is not built shows Soon and its button stays disabled — for everyone, on every plan, so no plan can sell a file the product cannot make.',
+    body: 'Every format the export panel lists is built. One that is not built shows Soon and its button stays disabled for everyone, on every plan. No plan can sell a file the product cannot make.',
     to: '/plans',
     linkLabel: 'See what each plan exports',
   }),

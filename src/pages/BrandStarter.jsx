@@ -126,9 +126,10 @@ import '../styles/pages/brand-starter.css'
 
 // A brief the tool can honestly say is enough. Written as a real product rather
 // than a placeholder mood board, because a placeholder that reads "your idea
-// here" teaches nothing about what a good input looks like.
-const EXAMPLE_BRIEF = 'A booking app for independent dog groomers. Calm and practical, '
-  + 'not corporate. Most of the screen is a schedule, so it has to stay readable all day.'
+// here" teaches nothing about what a good input looks like. Kept short enough
+// to sit inside the field's three rows on a 320px screen: a textarea clips its
+// placeholder instead of growing around it.
+const EXAMPLE_BRIEF = 'A booking app for independent dog groomers. Calm and practical, readable all day.'
 
 /**
  * The first family in a CSS font stack, with its quotes taken off.
