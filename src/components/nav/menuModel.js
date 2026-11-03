@@ -86,7 +86,7 @@ export function menuPromo(section) {
   }
   if (section.id === 'discover') {
     return {
-      title: 'Palettes, gradients, fonts, icons and prompts',
+      title: 'Palettes, gradients, fonts, icons and buttons',
       blurb: `${numberWord(liveLibraryCount())} libraries you can open without an account, each with a way straight into the tool that finishes the job.`,
       cta: 'Open Discover',
       href: '/discover',

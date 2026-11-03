@@ -188,7 +188,7 @@ test('THE ONE THAT MATTERS: no locale names a tool or category the app does not 
   const consumed = consumedKeys()
   const files = locales()
   assert.ok(files.length >= 10, `only ${files.length} locale files — this guard would pass vacuously`)
-  assert.ok(consumed.tools.size >= 8 && consumed.categories.size >= 6,
+  assert.ok(consumed.tools.size >= 7 && consumed.categories.size >= 6,
     'the consumed sets look empty — the derivation broke, not the locales')
   for (const [code, messages] of files) {
     for (const block of ['tools', 'categories']) {
@@ -244,7 +244,7 @@ test('the i18n map can rename a tool but cannot invent one', () => {
   // A key naming a tool that does not exist is silently ignored at runtime, so
   // nothing else would notice it had been aimed at a ghost.
   const known = new Set(TOOL_ENTRIES.map((t) => t.id))
-  assert.ok(Object.keys(TOOL_I18N_MAP).length >= 8, 'the map looks empty — this would pass vacuously')
+  assert.ok(Object.keys(TOOL_I18N_MAP).length >= 7, 'the map looks empty — this would pass vacuously')
   for (const [id, prefix] of Object.entries(TOOL_I18N_MAP)) {
     assert.ok(known.has(id), `TOOL_I18N_MAP translates "${id}", which is not a tool in the registry`)
     assert.match(prefix, /^tools\.[A-Za-z0-9_]+$/, `${id} maps to "${prefix}", which is not a tools.* key`)

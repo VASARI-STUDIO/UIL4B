@@ -31,7 +31,7 @@
 // the nine other locales this app ships.
 import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
-import LegalContents from '../components/legal/LegalContents'
+import LegalContents, { BackToContents } from '../components/legal/LegalContents'
 import { KEY_PURPOSES } from '../utils/dataExport'
 import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
@@ -199,6 +199,7 @@ export default function Privacy() {
                     </p>
                   </>
                 )}
+                <BackToContents />
               </section>
             )
           })}

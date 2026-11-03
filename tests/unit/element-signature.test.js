@@ -21,7 +21,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  elementSignature, invokedByPointer, isStableToken, nativeMenuWins, safeSignature,
+  elementSignature, invokedByPointer, isOnLink, isStableToken, nativeMenuWins, safeSignature,
 } from '../../src/utils/elementSignature.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -270,4 +270,13 @@ test('Shift+F10 and the Menu key are keyboard, wherever they claim to be', () =>
   // An event reporting no button at all falls back to the coordinates.
   assert.equal(invokedByPointer({}), false)
   assert.equal(invokedByPointer({ clientX: 0, clientY: 0 }), false)
+})
+
+test('a page menu leaves a right-click on a link to the browser', () => {
+  const link = { closest: (sel) => (sel === 'a[href]' ? {} : null) }
+  const plain = { closest: () => null }
+  assert.equal(isOnLink(link), true)
+  assert.equal(isOnLink(plain), false)
+  assert.equal(isOnLink(null), false)
+  assert.equal(isOnLink({}), false)
 })

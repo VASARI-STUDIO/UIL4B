@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import useExportGate from '../hooks/useExportGate'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { ToolLayout, ToolButton, ToolPills, ToolSelect } from '../components/tool/ToolLayout'
 import { useAppearance } from '../contexts/AppearanceContext'
 import {
@@ -161,6 +162,8 @@ const TurnGlyph = () => <Svg><path d="M20 12a8 8 0 1 1-2.35-5.65" /><path d="M20
 export default function ModelConverter({ toast }) {
   const requireExportAccount = useExportGate()
   const { reducedMotion } = useAppearance() || {}
+  // A touch screen has no right button or arrow keys, so it is told the gestures it has.
+  const touch = useMediaQuery('(pointer: coarse)')
   const uid = useId()
   const hintId = `${uid}-hint`
   const summaryId = `${uid}-summary`
@@ -634,7 +637,9 @@ export default function ModelConverter({ toast }) {
             />
           </div>
           <p className="v3d-hint" id={hintId}>
-            Drag to orbit, scroll or pinch to zoom, right-drag to pan. With the view focused: arrow keys orbit, + and − zoom, F fits.
+            {touch
+              ? 'Drag to turn the model, pinch to zoom, drag with two fingers to pan.'
+              : 'Drag to orbit, scroll or pinch to zoom, right-drag to pan. With the view focused: arrow keys orbit, + and − zoom, F fits.'}
           </p>
         </section>
 

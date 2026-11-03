@@ -368,7 +368,8 @@ const DISCOVER_SPEC = [
   // for in three places at once. Route and flag both corrected; the desc was
   // already written for the live page and is untouched.
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
-  { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
+  // The Prompt Library (/discover/prompts) is parked behind the admin gate, so
+  // no public list names it. Add its row back here when it opens up.
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
 
@@ -561,7 +562,6 @@ const MENU_ROW_HUE = {
   'button-library': 'neutral',
   'font-gallery': 'type',
   'icon-library': 'icons',
-  'community-prompts': 'ai',
   'learn-colour-contrast': 'colour',
   'learn-type-scales': 'type',
   'learn-typeface-metrics': 'type',
@@ -600,7 +600,7 @@ function groupsToMenu(groups, spec) {
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
   { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library', 'button-library'] },
-  { label: 'Community', ids: ['inspiration', 'community-prompts'] },
+  { label: 'Community', ids: ['inspiration'] },
   { label: 'Your library', ids: ['collections'] },
 ])
 
@@ -662,7 +662,7 @@ function liveDiscoverGroups() {
   return DISCOVER_GROUPS.filter((group) => !group.soon)
 }
 
-/** "Palettes, gradients, fonts, icons and prompts" — assembled, never typed. */
+/** "Palettes, gradients, fonts, icons and buttons" — assembled, never typed. */
 function discoverPromoTitle() {
   const names = liveDiscoverGroups()
     .map((group) => group.label.replace(/ (?:Library|Gallery|Resources)$/, ''))

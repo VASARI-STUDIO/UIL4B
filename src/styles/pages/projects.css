@@ -465,11 +465,6 @@ h2.uh-continue-name { white-space: normal; }
      html.has-tabbar a scroll-padding-bottom of the bar's height, which lands the notice flush on the bar;
      this adds only 12px of air, so the notice ends 12px above the bar (not bar + 12 twice over). */
   html.has-tabbar .uh .uh-cap { scroll-margin-bottom: var(--s-3); }
-  /* The Feedback pill floats s-4 above the bar, 36px tall, and covers the notice's right edge. Where it is
-     shown (it is display:none on a coarse pointer), stop the notice s-3 above the pill too. */
-  @media not all and (pointer: coarse) {
-    html.has-tabbar .uh .uh-cap { scroll-margin-bottom: calc(var(--s-4) + 36px + var(--s-3)); }
-  }
 }
 @media (min-width: 641px) { .uh .uh-tool--all { display: none; } }
 
@@ -514,12 +509,6 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-pop-actions > * { flex: 1; }
 }
 
-/* Feedback rides above the tab bar on this page and is hidden while any sheet is open. These two sit
-   outside `.uh` because the button is mounted app-wide; `:has(.uh)` keeps them to this page. */
-@media (max-width: 767px) {
-  html.has-tabbar:has(.uh) .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--s-4) + env(safe-area-inset-bottom)); }
-  html:has(.uh .uh-pop, .pnav-sheet) .global-feedback-btn { display: none; }
-}
 
 /* ══ The workspace in the /tools language ═══════════════════════════════════════════════════════════
    The page root also wears .spectrum (tokens, ground, ink) and .spt (the /tools rows and plates from

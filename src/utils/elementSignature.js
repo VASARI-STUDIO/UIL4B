@@ -278,3 +278,12 @@ export function chainFrom(node, { depth = 8 } = {}) {
   }
   return out
 }
+
+/**
+ * Is this right-click on a link? A page's own menu checks this first and returns
+ * without preventing the default, so the browser's link options (new tab, new
+ * window, split view, copy address) stay available there.
+ */
+export function isOnLink(target) {
+  return typeof target?.closest === 'function' && !!target.closest('a[href]')
+}

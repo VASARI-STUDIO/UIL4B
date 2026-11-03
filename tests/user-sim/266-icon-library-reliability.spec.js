@@ -144,23 +144,20 @@ for (const [shape, answer] of Object.entries(REFUSALS)) {
       watch(page, 'a designer whose icon file failed to load once')
       await signIn(page, { plan: 'pro' })
       const refusing = await refuseGlyphFiles(page, answer)
+      // The customiser is opened from the Recent rail, from a Lucide entry that is a CDN icon by
+      // construction. Going through the grid would not do: while the icon service is refused the
+      // grid first shows Lucide cells waiting on their glyphs and then swaps to the built-in set,
+      // which has an `arrow-right` of its own drawn from embedded markup. A click that lands after
+      // the swap opens that icon, which cannot fail, and the test then waits for a message that
+      // can never come. The rail does not swap, and Lucide is drawn inline from the icon's own
+      // markup, which is the file refused here.
+      await page.addInitScript(() => {
+        localStorage.setItem('vs-recent-icons', JSON.stringify([
+          { key: 'lucide:arrow-right', action: 'copy', ts: Date.now(), cdn: true, pack: 'lucide', name: 'arrow-right' },
+        ]))
+      })
       await go(page, '/create/icons')
-      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20_000 })
-      // Lucide is drawn inline from the icon's own markup, which is the file refused here.
-      const filters = page.getByRole('button', { name: /^Filters(?: \d+)?$/ })
-      const sheet = page.getByRole('dialog', { name: 'Filters' })
-      const inSheet = await filters.isVisible()
-      if (inSheet) {
-        await filters.click()
-        await expect(sheet).toBeVisible()
-      }
-      await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
-      if (inSheet) {
-        await sheet.getByRole('button', { name: 'Done', exact: true }).click()
-        await expect(sheet).toBeHidden()
-      }
-      await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20_000 })
-      await page.locator(REAL_CELL).first().click()
+      await page.getByRole('button', { name: 'Copied arrow-right — open to customise' }).click({ timeout: 20_000 })
 
       const stage = page.locator('.icust-stage')
       await expect(stage).toBeVisible({ timeout: 20_000 })

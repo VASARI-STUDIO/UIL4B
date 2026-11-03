@@ -116,14 +116,14 @@
 }
 /* The <small> that says the starter cards are examples is a CAVEAT, not a
    second sentence of the pitch, and it is the one line that stops twelve seed
-   entries reading as a community. It keeps its own line and drops to the quiet
-   ink so the two are told apart at a glance rather than by reading both. */
+   entries reading as a community. It keeps its own line, a step smaller than the
+   pitch but in the same readable ink, so it is not missed. */
 .ch-spectrum .ch-sub small {
   display: inline-block;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
-  color: var(--cm-quiet);
+  color: var(--cm-dim);
 }
 
 /* The two submit entries. A pair, not one with a switch — Mobbin/Wix runs
@@ -552,7 +552,7 @@
   .ch-spectrum .ch-head { align-items: flex-start; }
   .ch-spectrum .ch-head-actions { width: 100%; flex-wrap: nowrap; }
   .ch-spectrum .ch-head-actions .ch-submit-btn { flex: 1 1 0; justify-content: center; }
-  .ch-spectrum .ch-sub small { font-size: 14px; }
+  .ch-spectrum .ch-sub small { font-size: 15px; }
 }
 
 /* Phone and tablet: the chips take a row of their own and the sort switch sits

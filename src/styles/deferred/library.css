@@ -850,7 +850,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 }
 /* The count badge sits on an inverted chip when its option is on. */
 .lib-surface .lbry-filters .lbry-filter[data-active="true"] .lbry-filter-count{
-  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--bg-0);
+  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--t0);
 }
 /* The collapsed trigger is the same control in one line, so it takes the same
    resting affordance — this is the form the 641–980 band and every
@@ -1259,6 +1259,18 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 .lib-surface .ig .ic:focus-visible{background:var(--hvr);border-color:var(--border);outline:2px solid var(--accent);outline-offset:-2px}
 .lib-surface .ig .ic:active{background:var(--hvr);border-color:var(--border);transform:scale(.97)}
 .lib-surface .ig .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
+/* A grouped grid opens each pack with a full-width heading row: the pack's name and its
+   icon count, in place of a label on every cell. Its height is fixed (the box includes
+   the hairline and the air above it), so the windowed grid, which swaps cells for
+   same-height ghosts, can never move a row because of a heading. */
+.lib-surface .ig .ig-pack-head{
+  grid-column:1/-1;box-sizing:border-box;height:40px;margin:0;padding:0 4px 8px;
+  display:flex;align-items:flex-end;gap:8px;min-width:0;
+  border-bottom:1px solid var(--border);
+  font-family:var(--font);font-size:var(--fs-caption);line-height:16px;letter-spacing:0;text-transform:none;
+}
+.lib-surface .ig .ig-pack-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--t0)}
+.lib-surface .ig .ig-pack-count{flex-shrink:0;font-weight:500;color:var(--t2);font-variant-numeric:tabular-nums}
 /* Reduced motion: no fade and no press scale. The house pair: the in-app choice, then
    the OS preference unless the visitor turned motion back on. */
 html[data-reduced-motion="true"] .lib-surface .ig .ic{transition:none}
@@ -1549,7 +1561,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
    THE TINTS ARE DECORATION, NOT DATA. The preview has no colours to paint
    (LockedTease.jsx), so four fixed tints stand in, the same on every card;
-   none of them is a hex anywhere in src/data. Blurred at 16px they read as
+   none of them is a hex anywhere in src/data. Blurred at 7px the bands still read as
    "a palette is here" and give nothing to an eyedropper that means anything.
 
    NO TRANSITION on any .lockt- rule — tests/unit/locked-library-tease pins
@@ -1562,16 +1574,16 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 .lib-surface .lockt-card--blur .lockt-stripes{
   height:clamp(200px,34vw,260px);border:0;border-radius:0;
-  filter:blur(16px) saturate(1.1);transform:scale(1.15);
+  filter:blur(7px) saturate(1.15);transform:scale(1.08);
 }
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 30%,var(--card))}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 30%,var(--card))}
-[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 58%,var(--card))}
+[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.8}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
-.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(6px)}
+.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(4px)}
 .lib-surface .lockt-upgrade{
   position:absolute;left:50%;top:calc(50% - 30px);z-index:2;transform:translate(-50%,-50%);
   display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
