@@ -1578,7 +1578,12 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    The value is derived from the FAB's own box (38px tall, 20px inset) plus a
    gap, so the two cannot drift apart silently. */
 .app-footer{--fab-clearance:max(66px,calc(46px + env(safe-area-inset-bottom,0px)));padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
-.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
+/* The footer band is full-bleed (its rule and ground run edge to edge, like the
+   header), but its content sits in the same 1240px column as the Learn hub and
+   .app-page, centred, so the footer logo lines up with the page's own left edge
+   on a wide screen instead of hugging the viewport inset. Below 1240px plus the
+   inset it simply fills the padded box, as before. */
+.app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;max-width:1240px;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
 .app-footer-mark .brand-logo{display:block;height:.85em}
@@ -1725,8 +1730,12 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* On a touch screen the floating button would sit over
    real controls (gallery Like/Open/Copy, Settings Edit, /plans, Projects Load).
    It does not float there at all: "Send feedback" is in the account popover and
-   the phone menu sheet, and right-click reporting is a pointer feature anyway. */
-@media (pointer:coarse){.global-feedback-btn{display:none}}
+   the phone menu sheet, and right-click reporting is a pointer feature anyway.
+   A narrow mouse window is the same screen as a phone as far as the page is
+   concerned: the button covers text there, so it is hidden below the tablet
+   breakpoint whatever the pointer. The footer link and the right-click menu
+   still reach the form. */
+@media (pointer:coarse),(max-width:767px){.global-feedback-btn{display:none}}
 .global-feedback-btn svg{flex-shrink:0}
 /* The compact form fires on EITHER axis. It used to be width-only, so the one
    device class with the least vertical room — a phone held sideways, 844–932px
@@ -3270,6 +3279,23 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-dcount-strip > span{flex:1}
 .pnav-dcount-n{font-family:var(--font);font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0;color:rgb(var(--ink-rgb))}
 .pnav-dcount-l{font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
+/* Discover: the counts and the suggested gallery share one slot in the pane. The
+   suggestion is a flat 48px row (a look at the gallery, its name, an arrow) under
+   a hairline, like the counts above it — not a card. */
+.pnav-dside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pnav-reco{display:grid;gap:2px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
+.pnav-reco--wait{min-height:76px}
+.pnav-reco-eyebrow{margin:0;font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-reco-link{display:flex;align-items:center;gap:10px;min-height:48px;margin-inline:-8px;padding:6px 8px;border-radius:12px;color:rgb(var(--ink-rgb));text-decoration:none;transition:background var(--dur-1) var(--ease-standard)}
+.pnav-reco-link:hover,.pnav-reco-link:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
+.pnav-reco-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-reco-prev{display:flex;flex:0 0 auto;width:48px;height:32px;box-sizing:border-box;border:1px solid rgba(var(--ink-rgb),.1);border-radius:var(--radius-xs);overflow:hidden}
+.pnav-reco-prev--strip > span{flex:1}
+.pnav-reco-prev--type{align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;line-height:1}
+.pnav-reco-prev--glyph{align-items:center;justify-content:center;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-reco-prev--glyph svg{width:18px;height:18px}
+.pnav-reco-name{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnav-reco-arrow{flex:0 0 auto;color:rgba(var(--ink-rgb),var(--ink-dim))}
 /* Learn: each guide row carries its reading time at the right, as plain text. The
    page's own title is long, so the label may take two lines instead of an ellipsis. */
 .pnav-tool-mins{flex:0 0 auto;font:400 11px/1.45 var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;color:rgba(var(--ink-rgb),var(--ink-faint));white-space:nowrap}
@@ -3309,7 +3335,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 @media(max-width:1240px){
   .pnav-editorial{flex:1 1 100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"text vis" "cta vis";column-gap:28px;row-gap:13px;align-items:start;border-left:0;border-top:1px solid rgba(var(--ink-rgb),.06)}
   .pnav-editorial > :first-child{grid-area:text}
-  .pnav-editorial .pnav-prev,.pnav-editorial .pnav-dcounts,.pnav-editorial .pnav-guides{grid-area:vis}
+  .pnav-editorial .pnav-prev,.pnav-editorial .pnav-dside,.pnav-editorial .pnav-guides{grid-area:vis}
   .pnav-editorial-cta{grid-area:cta;justify-self:start;align-self:end;margin-top:0}
 }
 
@@ -3379,6 +3405,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-acc-panel{padding:0 0 14px}
 .pnav-acc-cta{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:18px 4px 0;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;text-decoration:none;cursor:pointer}
 .pnav-acc-cta:hover{color:var(--accent-ink);text-decoration:none}
+.pnav-acc-panel > .pnav-reco{margin:18px 4px 0}
 .pnav-acc-colhead{margin:0;padding:14px 4px 4px;font-family:var(--font);font-size:13px;font-weight:500;line-height:1.3;letter-spacing:0;text-transform:none;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-acc-col:first-child .pnav-acc-colhead{padding-top:10px}
 .pnav-acc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px}
@@ -4361,6 +4388,12 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
 .lbry-search input::-webkit-search-cancel-button{display:none}
+/* The field shows focus with a border colour and a box-shadow ring, and the inner
+   input paints no outline of its own. Forced colours drops the shadow and
+   flattens the border, so the wrapper takes a real outline there. */
+@media (forced-colors:active){
+  .lbry-search:focus-within{outline:2px solid Highlight;outline-offset:2px}
+}
 /* 24px is the WCAG 2.5.8 floor, not a visual choice — the glyph is 14px. */
 .lbry-search-clear{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;color:var(--t3);background:none;border:0;border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}
@@ -4618,10 +4651,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      above it keeps both reachable rather than trading one for the other. */
   .bill-banner{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(74px + env(safe-area-inset-bottom,0px));width:auto}
 }
-/* Where the phone tab bar is fixed along the bottom, the FAB and the banner
-   stack above it instead of under it. */
+/* Where the phone tab bar is fixed along the bottom, the banner stacks above
+   it instead of under it. */
 @media (max-width:767px){
-  html.has-tabbar .global-feedback-btn{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
   html.has-tabbar .bill-banner{bottom:calc(var(--tabbar-h) + 20px + env(safe-area-inset-bottom))}
 }
 @media (max-width:520px){
@@ -4818,6 +4850,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-option--rich .menu-select-desc{max-width:none;font-size:12px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-wrap:nowrap}
 .menu-select-option--divider{position:relative;margin-top:9px}
 .menu-select-option--divider::before{content:'';position:absolute;inset-inline:0;top:-5px;border-top:1px solid var(--border)}
+/* A hairline above every group that follows another row or group, in the separator colour. */
+.menu-select-list [role="group"]:not(:first-child){margin-top:var(--s-1);padding-top:var(--s-1);border-top:1px solid var(--border)}
 .menu-select-foot{max-width:46ch;margin:0;padding:8px 10px 4px;font-size:11px;line-height:15px;color:var(--t2)}
 @media(pointer:coarse){.menu-select-option{min-height:44px}}
 @media(pointer:coarse){.menu-select-foot{font-size:12px;line-height:16px}}

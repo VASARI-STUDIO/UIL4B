@@ -5,7 +5,7 @@
 //
 //   390   section order · the date and time as one line under the title, weekday dropped below 360 ·
 //         project rows (a drawn thumb beside the name over its line) · New project full width under the
-//         work · no sideways scroll at 320 · 44px targets · Feedback and the tab bar clear of the last control
+//         work · no sideways scroll at 320 · 44px targets · the tab bar clears the last control
 //   768   Today as one ruled row (date and time fixed at 200px, the meters beside it) · the tools as six
 //         rows in one column (176px thumbs) · Discover two across, 345.3px a card; 641, 1000 and 640 for the
 //         edges of the band, and 1023 / 1024 for where Discover goes to four across
@@ -26,8 +26,8 @@
 //   projects.css  `.uh-row-name` `text-overflow: ellipsis` -> `clip`      -> "a long project name is cut with an ellipsis"
 //   projects.css  `.uh-tool--all` min-height 56px -> 30px and padding 12px -> 0, `.uh-open` min-height -> 30px -> "the thumb targets are 44px"
 //   projects.css  `.uh-pro-cta` width 100% -> auto and `.uh-pro-cta-row .uh-pro-cta` justify-self -> start -> "the Pro button is full width"
-//   projects.css  `.uh .uh-main` padding-bottom -> 0 at 640               -> "the last control clears Feedback and the tab bar"
-//   global-feedback-btn `bottom` -> 8px                                    -> "Feedback sits above the tab bar" (earlier)
+//   projects.css  `.uh .uh-main` padding-bottom -> 0 at 640               -> "the last control clears the tab bar"
+//   global.css  `(max-width:767px)` dropped from the Feedback hide rule     -> "Feedback is not drawn" (390 mouse window)
 //   projects.css  `.uh .uh-today { display: grid` -> `block` at 641-1023  -> "Today is one row"
 //   projects.css  `.uh.uh-spt .uh-today` `border: 0` -> `1px solid`        -> "Today is a ruled row, not a framed card"
 //   projects.css  tools two-column rule `min-width: 1100px` -> `700px`     -> "the tools are six rows in one column"
@@ -316,12 +316,13 @@ test.describe('on a 390px phone, in a real touch context', () => {
     })
   })
 
-  // A fine-pointer window 390px wide: on a coarse pointer global.css hides the Feedback button altogether
-  // (`@media (pointer: coarse)`), so the position the page gives it only shows on a narrow mouse window.
-  test('Feedback sits above the tab bar, and the last control clears both', async ({ browser }) => {
+  // A fine-pointer window 390px wide: global.css hides the floating Feedback button below 768px for every
+  // pointer type (it covered text in a narrow mouse window), so nothing floats above the tab bar and the last
+  // control only has to clear the tab bar.
+  test('Feedback is not drawn, and the last control clears the tab bar', async ({ browser }) => {
     await onPhone(browser, PHONE, async (page) => {
       const feedback = page.locator('.global-feedback-btn')
-      await expect(feedback).toBeVisible()
+      await expect(feedback).toBeHidden()
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
       await expect.poll(() => page.evaluate(() => Math.round(scrollY)), 'the page reached its end').toBeGreaterThan(1000)
       const m = await page.evaluate(() => {
@@ -329,14 +330,13 @@ test.describe('on a 390px phone, in a real touch context', () => {
         const controls = [...document.querySelectorAll('.uh a[href], .uh button')].filter((e) => e.getBoundingClientRect().width > 0)
         const lastBottom = Math.max(...controls.map((e) => e.getBoundingClientRect().bottom))
         const end = document.querySelector('.uh-main').lastElementChild.getBoundingClientRect().bottom
-        return { feedback: rect('.global-feedback-btn'), tabs: rect('.pnav-tabs'), lastBottom, end, viewport: innerHeight }
+        return { tabs: rect('.pnav-tabs'), lastBottom, end, viewport: innerHeight }
       })
       expect(m.tabs, 'the tab bar is not drawn').not.toBeNull()
       expect(m.tabs.bottom, 'the tab bar is at the foot of the screen').toBeCloseTo(m.viewport, 0)
-      expect(m.tabs.top - m.feedback.bottom, `Feedback is ${Math.round(m.tabs.top - m.feedback.bottom)}px above the tab bar`).toBeGreaterThanOrEqual(12)
-      // At the end of the page, the last control and the last block both end above Feedback.
-      expect(m.lastBottom, 'the last control is under Feedback').toBeLessThanOrEqual(m.feedback.top + 1)
-      expect(m.end, 'the last block is under Feedback').toBeLessThanOrEqual(m.feedback.top + 1)
+      // At the end of the page, the last control and the last block both end above the tab bar.
+      expect(m.lastBottom, 'the last control is under the tab bar').toBeLessThanOrEqual(m.tabs.top + 1)
+      expect(m.end, 'the last block is under the tab bar').toBeLessThanOrEqual(m.tabs.top + 1)
     }, { touch: false })
   })
 })

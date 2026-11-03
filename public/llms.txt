@@ -38,7 +38,6 @@
 - [CSS Gradient Library and Ideas](https://uil4b.com/discover/gradients): Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.
 - [CSS Button Library: Copy-Ready HTML and CSS](https://uil4b.com/discover/buttons): Ten button designs with hover, pressed, focus and disabled states. Copy the HTML and CSS free; edit size, corners and colour, and get an AI prompt, with Pro.
 - [Community](https://uil4b.com/community): Join the UI L4B community. Share designs and discover inspiration.
-- [AI Website Design Prompts Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
 
 ## Plans
 - Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens, JSON tokens, Tailwind theme, Contrast pairs CSV and Contrast pairs JSON, with a "Made with UIL4B" footer line.

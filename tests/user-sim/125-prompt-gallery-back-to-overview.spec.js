@@ -16,12 +16,16 @@
 // width (top right above 640px, full width at the bottom at 640 and below), so
 // the visible one is the one that must hold focus.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
+
+// parked: only an admin can open /discover/prompts, so every page here signs in as the admin.
+// The admin plan is Pro, so this file says nothing about Free or signed-out gating.
 
 for (const [width, height, where] of [[1440, 900, 'top'], [390, 844, 'bottom']]) {
   test(`Back from a chip-switched list returns to the overview with focus on that section's View more — ${width}px`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width, height } })
     const page = await context.newPage()
+    await signIn(page, { admin: true })
     watch(page, `a visitor going into a prompt list and back out at ${width}px`)
     await go(page, '/discover/prompts')
     await expect(page.locator('.pl-overview')).toBeVisible()
@@ -68,6 +72,7 @@ for (const [width, height, where] of [[1440, 900, 'top'], [390, 800, 'bottom']])
     test(`Back from the ${heading} list scrolls down to that section with focus on its View more — ${width}px`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width, height } })
       const page = await context.newPage()
+      await signIn(page, { admin: true })
       watch(page, `a visitor opening the ${heading} list from the bottom of the overview and coming back at ${width}px`)
       await go(page, '/discover/prompts')
       await expect(page.locator('.pl-overview')).toBeVisible()
@@ -107,6 +112,7 @@ for (const [hash, label] of [['#all', 'Browse all'], ['#website', 'the Website l
   test(`My Prompts clicked from ${label} stays on My Prompts, and Community clicked from there returns to the overview`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     const page = await context.newPage()
+    await signIn(page, { admin: true })
     watch(page, `a visitor leaving ${label} for My Prompts and back`)
     await go(page, `/discover/prompts${hash}`)
     await expect(page.locator('.pl-gallery')).toBeVisible()
@@ -137,6 +143,7 @@ test('a shared list link opens Community without overwriting a saved My Prompts 
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   await context.addInitScript((k) => { try { if (!sessionStorage.getItem('seeded')) { localStorage.setItem(k, 'my'); sessionStorage.setItem('seeded', '1') } } catch { /* no storage */ } }, TAB_KEY)
   const page = await context.newPage()
+  await signIn(page, { admin: true })
   watch(page, 'a visitor who last used My Prompts following a shared list link')
   await go(page, '/discover/prompts#website')
   await expect(page.locator('#pl-results-h')).toHaveText('Website')

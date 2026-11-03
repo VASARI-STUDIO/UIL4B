@@ -145,6 +145,7 @@ export const atlas = {
   textOnly: new Set(),// glyphs the worker judged cannot be a bitmap: they stay text
   sheets: [],         // { url, bytes, chars, last }, revoked when dropped
   bytes: 0,           // decoded bytes the sheets hold
+  badSheets: 0,       // sheets the browser failed to decode since the last reset
   queue: [],          // chunks waiting for the worker, front first
   current: null,      // the chunk the worker is drawing
   worker: null,
@@ -211,6 +212,7 @@ function atlasReset() {
   atlas.sheets.forEach(s => URL.revokeObjectURL(s.url))
   atlas.sheets = []
   atlas.bytes = 0
+  atlas.badSheets = 0
   atlas.sprites = new Map()
   atlas.textOnly = new Set()
   atlas.queue = []
@@ -232,7 +234,7 @@ function atlasTeardown() {
 function atlasInstall(job, reply) {
   const { blob, rows, w, h, text } = reply
   for (const i of text || []) atlas.textOnly.add(job.chars[i])
-  if (!blob) return
+  if (!blob) return null
   const skip = new Set(text || [])
   const url = URL.createObjectURL(blob)
   const sheet = { url, bytes: w * h * 4, chars: [], last: Date.now() }
@@ -254,6 +256,40 @@ function atlasInstall(job, reply) {
       },
     })
   })
+  return sheet
+}
+
+// A sheet the browser cannot decode (or whose blob has gone) paints nothing, and
+// every cell it serves is already hiding its text behind `has-bitmap`. So the
+// glyphs go back to text: sprites removed, the glyphs marked text-only so they are
+// not queued again, and the grid told so the cells re-render. The worker's own
+// check covers the first sheet only; this covers every sheet, off the paint path.
+// A sheet already trimmed or reset away (its blob URL revoked on purpose) is not
+// a failure.
+const SHEET_FAILURE_LIMIT = 3
+export function atlasSheetFailed(sheet) {
+  if (!atlas.sheets.includes(sheet)) return
+  atlas.sheets = atlas.sheets.filter(s => s !== sheet)
+  atlas.bytes -= sheet.bytes
+  URL.revokeObjectURL(sheet.url)
+  for (const ch of sheet.chars) {
+    if (atlas.sprites.get(ch)?.sheet === sheet) atlas.sprites.delete(ch)
+    atlas.textOnly.add(ch)
+  }
+  atlas.badSheets++
+  // Repeated failures mean the browser cannot be trusted with sheets at all.
+  if (atlas.badSheets >= SHEET_FAILURE_LIMIT) { atlasFail(); return }
+  if (sheet.chars.some(ch => atlas.mounted.has(ch))) atlasEmit()
+}
+
+// Decode the sheet the way the cell's background will. The browser shares the
+// decode with the background of the same URL, so this is not a second decode.
+function atlasProbe(sheet) {
+  if (typeof Image === 'undefined') return
+  const img = new Image()
+  img.src = sheet.url
+  if (typeof img.decode === 'function') img.decode().catch(() => atlasSheetFailed(sheet))
+  else img.onerror = () => atlasSheetFailed(sheet)
 }
 
 function atlasWorker() {
@@ -267,7 +303,8 @@ function atlasWorker() {
     if (reply.gen !== atlas.gen || !job) { if (reply.gen === atlas.gen) atlas.current = null; atlasPump(); return }
     atlas.current = null
     if (reply.error) { atlasFail(); return }
-    atlasInstall(job, reply)
+    const sheet = atlasInstall(job, reply)
+    if (sheet) atlasProbe(sheet)
     // Tell the grid only when a mounted cell can change: a background sheet for
     // glyphs nobody is looking at would re-render the whole grid for nothing. A
     // cell mounted later reads the sprite straight from the atlas.

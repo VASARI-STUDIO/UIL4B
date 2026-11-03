@@ -94,7 +94,7 @@ export default function ThemeInversionTable() {
         role="group"
         aria-label="This page's own colour pairs, and the same pairs with every channel inverted"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Pair</th>
