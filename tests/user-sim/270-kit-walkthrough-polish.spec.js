@@ -151,14 +151,15 @@ for (const width of [390, 1440]) {
       await seed(page)
       await go(page, '/create/palette')
       await expect(rail(page)).toBeVisible()
-      // Pressed and read in one task: the control a second press would land on is
-      // whatever holds the X's spot once the bar is gone (the Add column button,
-      // the phone tab bar's You tab).
-      const hit = await leaveButton(page).evaluate((el) => {
+      // Pressed, then read one frame later (well inside the cover's 500ms): the
+      // control a second press would land on is whatever holds the X's spot once
+      // the bar is gone (the Add column button, the phone tab bar's You tab).
+      const hit = await leaveButton(page).evaluate(async (el) => {
         const r = el.getBoundingClientRect()
         const px = r.left + r.width / 2
         const py = r.top + r.height / 2
         el.click()
+        await new Promise((resolve) => requestAnimationFrame(() => resolve()))
         const top = document.elementFromPoint(px, py)
         return { shield: !!top?.closest('.bkit-exit-shield'), what: String(top?.className || top?.tagName || 'nothing') }
       })
