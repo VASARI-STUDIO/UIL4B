@@ -102,7 +102,9 @@ export function llmsRoutes() {
   // same kind of question they do — what this product is bound by — and because
   // a machine summarising the product should be able to see which third-party
   // work it is built on without inferring it from the tool list.
-  const more = ['/plans', '/mobile', '/tools', '/learn/help', '/learn/principles', '/sitemap', '/privacy', '/terms', '/credits']
+  // `/community` is listed here because its Discover row (Inspiration) is parked
+  // as Soon, which would otherwise drop the still-public page from this file.
+  const more = ['/plans', '/mobile', '/tools', '/learn/help', '/learn/principles', '/community', '/sitemap', '/privacy', '/terms', '/credits']
     .map((r) => mustBePrerendered(r, 'the More section'))
   const moreRoutes = new Set(more)
 
