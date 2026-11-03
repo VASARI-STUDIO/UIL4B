@@ -2,14 +2,34 @@
 //
 //   1. The floating Feedback button is not drawn below 768px, for any pointer;
 //      the footer link and the right-click menu still reach the form at 390.
+//   2. The footer content sits in the same 1240px column as the Learn hub, so
+//      the footer logo and the hub heading share a left edge at 1440 and 1920,
+//      with the header still full-bleed.
+//   3. A GIF the builder reveals on a phone-width screen ends above the fixed
+//      tab bar and the action bar, and Build sits above the tab bar.
+//   4. At 1000px and narrower (where the legal contents is the "On this page"
+//      disclosure, not the sticky rail) every clause of /privacy and /terms
+//      ends with a 44px "Contents" link back to it; from 1001px it is not drawn.
 //
 // MUTATIONS (each should turn the named test red):
 //   - global.css: drop `(max-width:767px)` from the `.global-feedback-btn`
-//     hide rule: "the floating Feedback button is not drawn at 390 or 767"
-//     fails on the mouse window (a phone's coarse pointer already hid it);
-//   - global.css: make the hide rule `(max-width:700px)`: the 767 case fails;
-//   - global.css: hide the button at every width: "the floating Feedback button
-//     is still there from 768" fails.
+//     hide rule: "the floating Feedback button is not drawn at 390 / 767"
+//     fail on the mouse window (a phone's coarse pointer already hid it);
+//   - global.css: make that media query `(max-width:700px)`: the 767 case fails;
+//   - global.css: hide the button at every width: "still there from 768" fails;
+//   - global.css: delete `max-width:1240px` from `.app-footer-inner`: "the
+//     footer logo lines up with the hub heading" fails at 1440 and 1920, and
+//     "one 1240px column" fails at 1920;
+//   - shared.js: delete the `tabbarH` term from `revealResult`'s `bottom`: "a
+//     rebuilt result that was half-hidden is scrolled clear" fails, because the
+//     result is judged already visible while its foot is under the bars;
+//   - file-converter.css: delete the `html.has-tabbar .fc .fc-actionbar` lift:
+//     the same test fails on "Build is under the tab bar";
+//   - LegalContents.jsx: drop `<BackToContents />` from Terms.jsx or Privacy.jsx:
+//     the clause-ends-with-a-link tests fail for that page;
+//   - legal.css: delete `.lgl-back { display: none; }`: the 1001 / 1440 tests
+//     fail; delete `min-height: 44px` from the narrow rule: the 44px test fails;
+//   - legal.css: change that narrow query to 767px: the 1000 test fails.
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
@@ -225,4 +245,57 @@ test.describe('3 · a revealed GIF clears the tab bar and the action bar', () =>
       return g.resultBottom <= Math.min(g.barTop, g.tabsTop) + 1 && g.resultTop >= g.stickyBottom - 1
     }, { timeout: 3000, message: 'the revealed result still ends under the action bar or the tab bar' }).toBe(true)
   })
+})
+
+// ── 4 · the legal pages give a way back to the contents ──────────────────────
+test.describe('4 · /privacy and /terms: every clause ends with a Contents link where the index is not a rail', () => {
+  for (const route of ['/privacy', '/terms']) {
+    for (const width of [390, 767, 1000]) {
+      test(`${route} at ${width}: each clause ends with a 44px Contents link`, async ({ page }) => {
+        watch(page, 'someone reading the long legal page on a phone')
+        await page.setViewportSize({ width, height: 844 })
+        await go(page, route)
+        await expect(page.locator('.lgl .lgl-sec').first()).toBeVisible()
+        const rows = await page.evaluate(() => [...document.querySelectorAll('.lgl .lgl-sec')].map((s) => {
+          const last = s.lastElementChild
+          const r = last.getBoundingClientRect()
+          return { id: s.id, isLink: last.matches('a.lgl-back'), text: last.textContent.trim(), height: r.height, href: last.getAttribute('href') }
+        }))
+        expect(rows.length, 'the page has clauses').toBeGreaterThan(5)
+        for (const row of rows) {
+          expect(row.isLink, `${row.id} does not end with the Contents link`).toBe(true)
+          expect(row.text).toMatch(/Contents$/)
+          expect(row.height, `${row.id}: the Contents link is ${row.height}px tall`).toBeGreaterThanOrEqual(44)
+          expect(row.href).toBe('#legal-contents')
+        }
+      })
+    }
+
+    for (const width of [1001, 1440]) {
+      test(`${route} at ${width}: the sticky rail is the index, so no Contents link is drawn`, async ({ page }) => {
+        watch(page, 'someone reading the legal page on a desktop')
+        await page.setViewportSize({ width, height: 900 })
+        await go(page, route)
+        await expect(page.locator('.lgl .lgl-sec').first()).toBeVisible()
+        await expect(page.locator('nav.lgl-toc'), 'the rail is the index here').toBeVisible()
+        await expect(page.locator('.lgl-back').first()).toBeHidden()
+      })
+    }
+
+    test(`${route} at 390: the link returns to the opened index`, async ({ page }) => {
+      watch(page, 'someone at the bottom of a long legal page')
+      await page.setViewportSize({ width: 390, height: 844 })
+      await go(page, route)
+      const links = page.locator('.lgl-sec .lgl-back')
+      const last = links.last()
+      await last.scrollIntoViewIfNeeded()
+      await last.click()
+      const index = page.locator('.lgl-toc-m')
+      await expect(index, 'the index opens').toHaveAttribute('open', '')
+      await expect.poll(() => page.evaluate(() => {
+        const r = document.querySelector('#legal-contents').getBoundingClientRect()
+        return r.top >= 0 && r.top < innerHeight / 2
+      }), { message: 'the page did not return to the index' }).toBe(true)
+    })
+  }
 })
