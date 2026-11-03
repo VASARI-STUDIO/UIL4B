@@ -208,6 +208,10 @@
 }
 .srf .lidx-card::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 1px; background: var(--srf-hair); }
 .srf .lidx-card:hover { background: var(--srf-wash); box-shadow: none; transform: none; text-decoration: none; }
+/* A topic that is not written yet is the same row with nothing to press: the
+   title is quieter, and it has no hover band and no arrow. */
+.srf .lidx-card--soon:hover { background: transparent; }
+.srf .lidx-card--soon .lidx-title { color: var(--t1); }
 /* `.lidx-top` holds the topic and the time. The topic repeats the group
    heading directly above it on every row, so only the time is shown; the
    wrapper steps aside so the time can take its own column. */

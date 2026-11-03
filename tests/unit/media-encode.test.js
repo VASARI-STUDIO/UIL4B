@@ -363,6 +363,49 @@ test('scale: a 4 x 4000 source and an anamorphic one both end inside the cap', (
   assert.match(scaleFilter(480), /setsar=1$/)
 })
 
+// The prediction against the filter it mirrors. ffmpeg evaluates the scale
+// expressions with `iw`/`ih` as the stored frame and `sar` as the file's sample
+// aspect ratio; the browser's videoWidth is the stored width times that ratio,
+// which is what outputSize is given. The expressions are read out of scaleFilter
+// and evaluated here, so a change to either side that makes them disagree fails.
+const ffmpegScale = (storedW, storedH, sar, width) => {
+  const [, wExpr] = scaleFilter(width).match(/scale=w='([^']+)'/)
+  const [, hExpr] = scaleFilter(width).match(/:h='([^']+)'/)
+  const run = (expr, ow) => new Function('min', 'max', 'floor', 'round', 'iw', 'ih', 'sar', 'ow', `return ${expr}`)(
+    Math.min, Math.max, Math.floor, Math.round, storedW, storedH, sar, ow,
+  )
+  const w = run(wExpr)
+  return { w, h: run(hExpr, w) }
+}
+
+test('scale: the predicted size is the size the filter makes, for anamorphic and extreme sources', () => {
+  // [stored width, stored height, sample aspect ratio]; each displays at a whole width.
+  const sources = [
+    [720, 576, 16 / 15], [720, 576, 64 / 45], [1440, 1080, 4 / 3], [720, 480, 8 / 9], [100, 100, 2],
+    [1920, 1080, 1], [1080, 1920, 1], [640, 480, 1],
+    [4, 4000, 1], [4000, 4, 1], [3, 5000, 1], [2, 1920, 1], [8000, 100, 1],
+  ]
+  for (const [sw, sh, sar] of sources) {
+    const displayW = Math.round(sw * sar)
+    for (const width of [16, 480, 720, 1920]) {
+      const made = ffmpegScale(sw, sh, sar, width)
+      const said = outputSize(displayW, sh, { width })
+      // A height that lands exactly between two even sizes (an odd whole number
+      // before halving) rounds either way on a float's last digit, in ffmpeg as
+      // here, so that one case is left out rather than asserted by luck.
+      const half = ((made.w * sh) / displayW) % 2
+      if (Math.abs(half - 1) < 1e-6 && made.h < MAX_ANIMATION_SIDE) continue
+      const label = `${sw}x${sh} sar ${sar.toFixed(3)} at width ${width}`
+      assert.deepEqual(said, made, label)
+      assert.ok(made.w <= MAX_ANIMATION_SIDE && made.h <= MAX_ANIMATION_SIDE, `${label} passes the cap: ${made.w}x${made.h}`)
+      assert.ok(made.w >= 2 && made.h >= 2 && made.w % 2 === 0, `${label} is a usable even size: ${made.w}x${made.h}`)
+    }
+  }
+  // The two sources the card names, in plain numbers.
+  assert.deepEqual(ffmpegScale(720, 576, 16 / 15, 480), { w: 480, h: 360 })
+  assert.deepEqual(ffmpegScale(4, 4000, 1, 480), { w: 2, h: 1920 })
+})
+
 test('crop box: clamped to even whole pixels inside the picture; the full picture is no crop', () => {
   assert.deepEqual(clampBox({ x: -5, y: 3, w: 9999, h: 61 }, 320, 200), { x: 0, y: 2, w: 320, h: 60 })
   assert.deepEqual(clampBox({ x: 300, y: 0, w: 101, h: 50 }, 320, 200), { x: 220, y: 0, w: 100, h: 50 })

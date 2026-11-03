@@ -57,12 +57,11 @@ test.describe('Learn articles', () => {
     await expect(page.locator('.home-hero-hint')).not.toContainText(/coming soon/i)
     await expect(page.locator('.home-hero-hint')).toContainText(new RegExp(`${LEARN_ARTICLES.length}|One`, 'i'))
 
-    // And the topics that are NOT written still wear a Soon badge and go
-    // nowhere. This is the half that was called out as dishonest before: eight
-    // cards describing eight unbuilt guides. They stay, they just stay honest.
-    const soon = page.locator('.surface-card:not(.surface-card--link)')
+    // And the topics that are NOT written are plain rows that say Soon and go
+    // nowhere: no card, no link, no arrow (275-tool-small-fixes-5.spec.js holds the shape).
+    const soon = page.locator('.lidx-card--soon')
     await expect(soon).toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
-    await expect(soon.locator('.soon-badge').first()).toBeVisible()
+    await expect(soon.locator('.lidx-time').first()).toHaveText('Soon')
   })
 
   for (const article of LEARN_ARTICLES) {
