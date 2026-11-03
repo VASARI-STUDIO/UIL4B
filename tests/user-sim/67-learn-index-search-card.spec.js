@@ -63,7 +63,7 @@ const field = (page) => page.getByRole('searchbox', { name: 'Search the guides' 
  * from the middle of the transition — measured once at 1.07:1, the light ink
  * on the dark ground — and would fail a page that reads perfectly well.
  */
-const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
 /** Computed opacity of every element matching `sel`. */
 const opacities = (page, sel) => page.$$eval(sel, (els) => els.map((el) => getComputedStyle(el).opacity))

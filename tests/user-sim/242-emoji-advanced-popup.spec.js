@@ -46,7 +46,7 @@ const dialogOf = (page) => page.locator(DIALOG)
 const valueOf = (dialog, label) => dialog.locator('.emd-row').filter({ hasText: label }).locator('.emd-value')
 
 /** Let the dialog's entrance animation finish, so a measurement or a screenshot sees it at rest. */
-const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
 /** Search for `query` when given, click the cell for `glyph`, and wait for the dialog. */
 async function openEmoji(page, glyph, query) {
