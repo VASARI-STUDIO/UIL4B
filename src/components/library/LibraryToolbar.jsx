@@ -230,7 +230,7 @@ function LibraryToolbar({
       </div>
       {quickGroup && (
         <ToolbarModeContext.Provider value="expand">
-          <div className="lbry-toolbar-quick">{quickGroup}</div>
+          <div className="lbry-toolbar-quick rail-overflow">{quickGroup}</div>
         </ToolbarModeContext.Provider>
       )}
       {extra && <div className="lbry-toolbar-row lbry-toolbar-row--extra">{extra}</div>}

@@ -1005,15 +1005,18 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
-  const pack = showPack ? packOf(icon) : null
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+  const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
   // with it (see `.ic-pack`), so the accessible name carries it for everyone who
-  // cannot hover.
+  // cannot hover. `packInName` keeps it in the accessible name alone: a grouped
+  // grid names each pack in a heading row, so the cell draws no label, but a
+  // focused cell still has to say which pack it is from.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
+  const drawnPack = showPack ? packName : null
   return (
     <div
-      className={['ic', picked && 'is-picked', packName && 'has-pack'].filter(Boolean).join(' ')}
+      className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -1026,7 +1029,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && packName && <span key="p" className="ic-pack" aria-hidden="true">{packName}</span>}
+      {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
   )
 })
@@ -4477,7 +4480,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         if (win.upTo) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
         return
       }
-      const kids = grid.children
+      // Cells only: a grouped grid also holds full-width pack heading rows, and
+      // every index below (ghost step, stored heights, the kept cell) is a cell index.
+      const kids = grid.querySelectorAll(':scope > .ic')
       // Cells were added (or swapped for ghosts) since the last read, so the page
       // has layout pending. Reading a rect now would force it inside this
       // callback; the frame lays it out anyway, and the next frame reads clean.
@@ -4499,7 +4504,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       // focus would fall to <body>. (Capping `upTo` at the focused cell instead
       // left the whole grid whole once cell 0 had been clicked.)
       const focused = grid.contains(document.activeElement)
-        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > *'))
+        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > .ic'))
         : -1
       const keep = focused >= 0 && focused < upTo ? focused : -1
       if (upTo === win.upTo && keep === win.keep) return
@@ -4531,6 +4536,44 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       grid.removeEventListener('focusout', schedule)
     }
   }, [windowed, win, icons])
+
+  // A GROUPED GRID STATES EACH PACK ONCE, in a full-width heading row, and its cells
+  // draw no pack label (the label vanished at 980px and below, which left phones and
+  // tablets with no sign of where one pack ends and the next begins).
+  const groupHeads = source === 'group'
+  // Icons per pack across the whole result, not just the revealed page, so a
+  // heading's count never changes as more of the list scrolls in.
+  const packCounts = useMemo(() => {
+    if (!groupHeads) return null
+    const counts = new Map()
+    for (const icon of icons) {
+      const p = packOf(icon)
+      if (p) counts.set(p, (counts.get(p) || 0) + 1)
+    }
+    return counts
+  }, [groupHeads, icons])
+  // The heading is a sibling of the cells with a fixed CSS height (`.ig-pack-head`),
+  // so it never moves the cells after it. Cell indexes (and so `ghosts`) count cells only.
+  const renderGroupedGrid = (list, ghosts, counts) => {
+    const out = []
+    let prev = null
+    list.forEach((icon, idx) => {
+      const p = packOf(icon)
+      if (p && p !== prev) {
+        const n = counts.get(p) || 0
+        out.push(
+          <h3 key={`head:${p}:${idx}`} className="ig-pack-head">
+            <span className="ig-pack-name">{creditRows([p], liveCredit)[0].name}</span>{' '}
+            <span className="ig-pack-count">{`${n.toLocaleString('en-AU')} ${n === 1 ? 'icon' : 'icons'}`}</span>
+          </h3>,
+        )
+      }
+      if (p) prev = p
+      const ghost = ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0
+      out.push(renderCell(icon, idx, false, ghost))
+    })
+    return out
+  }
 
   // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
   // It is already dropped below 980px; above 980px it was still drawn under EVERY
@@ -4586,6 +4629,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       src={!ghost && icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
       gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
+      packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
       onPick={onPick}
@@ -4880,7 +4924,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                       </div>
                     </div>
                   ))
-                  : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null)}
+                  : (packCounts
+                    ? renderGroupedGrid(shown, windowed && win.list === icons ? win : null, packCounts)
+                    : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null))}
               </div>
             )}
 
