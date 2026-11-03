@@ -127,10 +127,6 @@
       "label": "设计原则",
       "description": "视觉层次、平衡和设计心理学。"
     },
-    "promptLibrary": {
-      "label": "提示词库",
-      "description": "保存AI图像生成提示词及输出预览。"
-    },
     "fontGallery": {
       "label": "字体画廊",
       "description": "浏览和预览字体的视觉画廊。"
