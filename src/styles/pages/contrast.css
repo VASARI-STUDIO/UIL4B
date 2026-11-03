@@ -451,7 +451,13 @@
 
 /* ── Phone: fields stacked label-left, Swap down the right edge ─────────── */
 @media (max-width: 559px) {
-  .cc .cc-views .tl-pill { min-height: 44px; }
+  /* The four view names share one row. Each pill takes an equal share and its
+     label never wraps; 6px sides leave slack for a wider face. If the row is
+     still too narrow (large text), it scrolls sideways instead of running past
+     the edge. */
+  .cc .cc-views { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: 3px; margin-block: -3px; }
+  .cc .cc-views::-webkit-scrollbar { display: none; }
+  .cc .cc-views .tl-pill { min-height: 44px; padding-inline: 6px; white-space: nowrap; }
   .cc .cc-pairbar {
     grid-template-columns: minmax(0, 1fr) 44px;
     grid-template-rows: auto auto;

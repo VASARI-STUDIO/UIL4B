@@ -574,7 +574,7 @@ export default function TintTool({ onCopy, toast }) {
       )}
       <ToolGrid>
         <ToolMain>
-          <div className="tt-cols" role="group" aria-label={`${multi ? `Scale ${selIndex + 1}, ` : ''}${steps} steps`}>
+          <div className="tt-cols" data-steps={steps} role="group" aria-label={`${multi ? `Scale ${selIndex + 1}, ` : ''}${steps} steps`}>
             {scale.steps.map((t) => (
               <button
                 key={t.label}

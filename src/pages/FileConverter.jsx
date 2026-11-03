@@ -1,6 +1,7 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import useMediaQuery from '../hooks/useMediaQuery'
 import JSZip from 'jszip'
 import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
 import SnapSlider from '../components/SnapSlider'
@@ -194,6 +195,9 @@ function revealQueue(node) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
+  // On a phone the intro sits behind a "How it works" row so the drop zone is on
+  // the first screen; from 768px it is the plain paragraph under the tabs.
+  const phone = useMediaQuery('(max-width: 767px)')
   // Pick up anything handed over in memory — the dashboard's quick-upload tile
   // (files only) or the homepage Image panel (files plus an output draft).
   //
@@ -267,16 +271,28 @@ export default function FileConverter({ toast }) {
             </button>
           ))}
         </div>
-        <p className="fc-about">
-          Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
-          where your browser can make it), build
-          animations from frames, edit videos and GIFs (crop, turn, speed,
-          reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
-          out of a video. It all runs in your browser and your files are never
-          uploaded. Image conversion works offline. The video tools download a
-          converter engine, about 9 MB, from a public code CDN the first time
-          you use one, then keep it cached.
-        </p>
+        {(() => {
+          const about = (
+            <p className="fc-about">
+              Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
+              where your browser can make it), build
+              animations from frames, edit videos and GIFs (crop, turn, speed,
+              reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
+              out of a video. It all runs in your browser and your files are never
+              uploaded. Image conversion works offline. The video tools download a
+              converter engine, about 9 MB, from a public code CDN the first time
+              you use one, then keep it cached.
+            </p>
+          )
+          return phone
+            ? (
+              <details className="fc-howto">
+                <summary>How it works</summary>
+                {about}
+              </details>
+            )
+            : about
+        })()}
       </div>
 
       <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
