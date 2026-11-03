@@ -199,8 +199,6 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
    take the grid from 25 columns to 12 at 1280 and multiply the scroll by four.
    So the grid stays; what changes is its STATE language, onto the design's
    picked cell (accent wash over an accent hairline). */
-.iel-page .emoji-cell.copied{background:var(--accent-wash);border-color:var(--accent-border)}
-.iel-page .emoji-cell.copied::after{color:var(--accent-mid)}
 .iel-page .emoji-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .iel-page .emoji-tone-btn{border-color:var(--bh);background:transparent;min-height:44px;height:auto}
 .iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
@@ -226,6 +224,67 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}
+
+
+/* ── The emoji detail dialog ───────────────────────────────────────────────
+   The frame is the customiser's (.icust-overlay / -panel / -head / -title /
+   -sub / -close), so it is already a dialog on desktop and a bottom sheet at
+   640px and under. The body is its own, because .icust-body turns into a
+   two-column grid above 800px and this is one column.
+
+   One surface, no cards: the glyph sits straight on the panel and the four
+   values are rows divided by hairlines. Each row is a flex line that never
+   wraps: the value shrinks and breaks inside its own box, and the Copy button
+   keeps its 44px and its place at the right. Labels are the UI face; only the
+   literal values (code points, entity) are mono.
+   Mobile first: the narrow layout is the base and 641px adds room. */
+.iel-page .emd-body{
+  display:flex;flex-direction:column;gap:16px;flex:1 1 auto;min-height:0;
+  padding:4px 16px max(16px,env(safe-area-inset-bottom,0px));
+  overflow-y:auto;overscroll-behavior:contain;
+}
+.iel-page .emd-hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 0}
+.iel-page .emd-glyph{
+  font-size:96px;line-height:1.15;text-align:center;
+  /* A family or a long flag sequence must not push the panel wider than itself. */
+  max-width:100%;overflow-wrap:anywhere;
+}
+/* .lib-btn: the deferred library sheet sets min-height:40px at (0,2,0) and loads after this file. */
+.iel-page .lib-btn.emd-copy{flex:none;min-height:44px;min-width:88px}
+.iel-page .lib-btn.emd-copy--main{min-width:136px}
+
+.iel-page .emd-tones{display:flex;justify-content:center;gap:4px}
+.iel-page .emd-tone{
+  flex:1 1 44px;min-width:44px;max-width:56px;height:44px;padding:0;
+  display:grid;place-items:center;font-size:24px;line-height:1;
+  border:1px solid var(--border);border-radius:var(--btn-radius);background:transparent;cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .emd-tone:hover{background:var(--hvr);border-color:var(--bh)}}
+.iel-page .emd-tone[aria-pressed="true"]{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+.iel-page .emd-tone:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.iel-page .emd-rows{margin:0;padding:0;list-style:none}
+.iel-page .emd-row{
+  display:flex;flex-wrap:nowrap;align-items:center;gap:12px;
+  min-height:60px;padding:8px 0;border-top:1px solid var(--border);
+}
+.iel-page .emd-text{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+.iel-page .emd-label{font-family:var(--font);font-size:13px;font-weight:560;line-height:1.4;color:var(--t2)}
+.iel-page .emd-value{
+  font-family:var(--mono);font-size:14px;line-height:1.4;color:var(--t0);
+  overflow-wrap:anywhere;-webkit-user-select:text;user-select:text;
+}
+.iel-page .emd-value.is-plain,.iel-page .emd-value.is-empty{font-family:var(--font)}
+.iel-page .emd-value.is-empty{color:var(--t2)}
+
+@media(min-width:641px){
+  /* Two classes plus .icust-panel: the customiser's own width rules (760px, 560px) come later in this file at
+     the same specificity and would otherwise win, making this a 760px dialog. */
+  .iel-page .icust-panel.emd-panel{width:min(440px,calc(100vw - 32px))}
+  .iel-page .emd-body{padding-inline:24px}
+  .iel-page .emd-tones{gap:8px}
+}
 
 
 /* ── The weight segment: Regular / Bold / Fill / Duo ───────────────────────
