@@ -108,9 +108,11 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       seatHead()
     }
     // The sheet header lies over the top band of the sheet, so it follows the sheet's top edge.
+    // offsetTop is the sheet's resting place: it ignores the slide-in transform, which the
+    // header plays too, so the two meet however far the slide has got.
     const seatHead = () => {
       const panel = popRef.current
-      if (panel) headRef.current?.style.setProperty('--sheet-top', `${panel.getBoundingClientRect().top}px`)
+      if (panel) headRef.current?.style.setProperty('--sheet-top', `${panel.offsetTop}px`)
     }
     size()
     window.addEventListener('resize', size)

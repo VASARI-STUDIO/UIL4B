@@ -22,29 +22,40 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
-const ROUTE = '/create/file-converter'
+const ROUTE = '/create/type-scale'
+const NAME = 'Scale ratio'
 
 const head = (page) => page.locator('.menu-select-sheet-head')
-const trigger = (page) => page.locator('#fc-img-format')
+const trigger = (page) => page.locator('#tsc-ratio')
+
+async function openPage(page) {
+  await go(page, ROUTE)
+  await expect(trigger(page)).toBeVisible()
+}
 
 test.describe('Phone dropdown sheets', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test('a phone dropdown sheet is titled with the dropdown\'s own label and has a 44px Close', async ({ page }) => {
-    watch(page, 'phone user opening the output format dropdown')
-    await go(page, ROUTE)
+    watch(page, 'phone user opening the Scale ratio dropdown')
+    await openPage(page)
     await trigger(page).click()
-    const list = page.getByRole('listbox', { name: 'Output format' })
+    const list = page.getByRole('listbox', { name: NAME })
     await expect(list).toBeVisible()
 
     // The title is the listbox's own name, drawn in full and inside the sheet.
-    await expect(head(page).locator('.menu-select-sheet-title')).toHaveText('Output format')
+    await expect(head(page).locator('.menu-select-sheet-title')).toHaveText(NAME)
     const geo = await page.evaluate(() => {
       const h = document.querySelector('.menu-select-sheet-head').getBoundingClientRect()
       const l = document.querySelector('.menu-select-list').getBoundingClientRect()
       const t = document.querySelector('.menu-select-sheet-title')
       const c = document.querySelector('.menu-select-sheet-close').getBoundingClientRect()
-      const firstRow = document.querySelector('.menu-select-list [role="option"]').getBoundingClientRect()
+      // The list opens scrolled to the chosen row; that row, and the first row
+      // once scrolled back to the top, must sit below the header.
+      const listEl = document.querySelector('.menu-select-list')
+      const chosen = listEl.querySelector('[role="option"][aria-selected="true"]').getBoundingClientRect()
+      listEl.scrollTop = 0
+      const firstRow = listEl.querySelector('[role="option"]').getBoundingClientRect()
       return {
         headInsideSheet: h.top >= l.top && h.bottom <= l.bottom && h.left >= l.left && h.right <= l.right,
         titleClipped: t.scrollWidth > t.clientWidth,
@@ -52,6 +63,7 @@ test.describe('Phone dropdown sheets', () => {
         closeH: c.height,
         closeRightGap: Math.round(h.right - c.right),
         rowsBelowHead: firstRow.top >= h.bottom - 0.5,
+        chosenBelowHead: chosen.top >= h.bottom - 0.5,
       }
     })
     expect(geo.headInsideSheet, 'the header sits inside the sheet').toBe(true)
@@ -59,13 +71,16 @@ test.describe('Phone dropdown sheets', () => {
     expect(geo.closeH, 'the Close is 44px tall').toBeGreaterThanOrEqual(44)
     expect(geo.closeW, 'the Close is 44px wide').toBeGreaterThanOrEqual(44)
     expect(geo.closeRightGap, 'the Close sits at the trailing edge').toBeLessThanOrEqual(20)
-    expect(geo.rowsBelowHead, 'the first option sits under the header, not behind it').toBe(true)
+    expect(geo.chosenBelowHead, 'the chosen option opens in view, not behind the header').toBe(true)
+    expect(geo.rowsBelowHead, 'scrolled to the top, the first option sits under the header, not behind it').toBe(true)
+    await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
+    await page.screenshot({ path: '.claude/scratch/misc4/sheet-390.png' })
   })
 
   for (const way of ['Escape', 'Close', 'the dim area']) {
     test(`closing a phone dropdown sheet with ${way} puts focus back on the trigger`, async ({ page }) => {
       watch(page, `phone user dismissing the sheet with ${way}`)
-      await go(page, ROUTE)
+      await openPage(page)
       await trigger(page).click()
       const list = page.locator('.menu-select-list[role="listbox"]')
       await expect(list).toBeVisible()
@@ -79,11 +94,11 @@ test.describe('Phone dropdown sheets', () => {
   }
 
   test('choosing an option still works and leaves no header behind', async ({ page }) => {
-    watch(page, 'phone user choosing a format')
-    await go(page, ROUTE)
+    watch(page, 'phone user choosing a scale ratio')
+    await openPage(page)
     const before = await trigger(page).getAttribute('aria-label')
     await trigger(page).click()
-    await page.getByRole('option', { name: 'WebP' }).first().click()
+    await page.locator('.menu-select-list [role="option"][aria-selected="false"]').first().click()
     await expect(head(page)).toHaveCount(0)
     expect(await trigger(page).getAttribute('aria-label')).not.toBe(before)
   })
@@ -93,10 +108,10 @@ test.describe('A tablet dropdown stays a popover', () => {
   test.use({ viewport: { width: 768, height: 1024 } })
 
   test('a tablet dropdown stays a popover with no header', async ({ page }) => {
-    watch(page, 'tablet user opening the output format dropdown')
-    await go(page, ROUTE)
+    watch(page, 'tablet user opening the Scale ratio dropdown')
+    await openPage(page)
     await trigger(page).click()
-    await expect(page.getByRole('listbox', { name: 'Output format' })).toBeVisible()
+    await expect(page.getByRole('listbox', { name: NAME })).toBeVisible()
     await expect(head(page)).toHaveCount(0)
     await page.keyboard.press('Escape')
     await expect(trigger(page)).toBeFocused()
