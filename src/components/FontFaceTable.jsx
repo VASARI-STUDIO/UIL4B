@@ -179,7 +179,7 @@ export default function FontFaceTable() {
         role="group"
         aria-label="Every font face this page declares, and whether its file has been downloaded"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Face</th>

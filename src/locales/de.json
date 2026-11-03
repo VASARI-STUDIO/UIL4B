@@ -127,10 +127,6 @@
       "label": "Designprinzipien",
       "description": "Visuelle Hierarchie, Balance und Designpsychologie."
     },
-    "promptLibrary": {
-      "label": "Prompt-Bibliothek",
-      "description": "KI-Bildgenerierungs-Prompts mit Vorschau speichern."
-    },
     "fontGallery": {
       "label": "Schriftgalerie",
       "description": "Visuelle Galerie zum Durchstöbern und Vorschauen von Schriften."

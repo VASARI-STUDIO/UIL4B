@@ -151,11 +151,11 @@ export const SECTIONS = Object.freeze([
   Object.freeze({
     id: 'discover',
     label: 'Discover',
-    blurb: 'Curated palettes, gradients and prompts',
+    blurb: 'Curated palettes and gradients',
     hue: 'component',
     group: null,
-    tools: Object.freeze(['Palette Library', 'Gradient Library', 'Prompt Library']),
-    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients', '/discover/prompts']),
+    tools: Object.freeze(['Palette Library', 'Gradient Library']),
+    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients']),
   }),
   Object.freeze({
     id: 'plans',

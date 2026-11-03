@@ -128,6 +128,33 @@
   .lgl-toc-m-row:hover { color: var(--cpg-ink); }
 }
 
+/* ── The way back to the contents ──
+ * The last line of each clause. Drawn only where the contents is the
+ * disclosure above the document (1000px and narrower); beside the sticky rail
+ * the index is always on screen, so the link is not drawn at all. 44px tall,
+ * the same target as a contents row. The paragraph or list it follows gives up
+ * its last-child margin to the link's own spacing, and does so at every width
+ * so the wide layout keeps the spacing it had without the link. */
+.lgl-back { display: none; }
+.lgl-p:has(+ .lgl-back), .lgl-list:has(+ .lgl-back) { margin-bottom: 0; }
+@media (max-width: 1000px) {
+  .lgl-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: 44px;
+    margin-top: var(--s-2);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 560;
+    color: var(--cpg-dim);
+    text-decoration: none;
+  }
+}
+@media (max-width: 1000px) and (hover: hover) {
+  .lgl-back:hover { color: var(--cpg-ink); }
+}
+
 /* ── The document ──
  * `.legal-card` STAYS ON THIS ELEMENT, and that is a contract rather than a
  * leftover: tests/user-sim/88-marketing-breakpoints.spec.js reads the first
@@ -394,7 +421,7 @@
 @page { margin: 18mm 16mm; }
 @media print {
   .skip-link, .pnav, .pnav-menu, .notice-stack, .bill-banner, .toast,
-  .app-footer, .sp-footer, .global-feedback-btn, .lgl .lgl-toc-col {
+  .app-footer, .sp-footer, .global-feedback-btn, .lgl .lgl-toc-col, .lgl .lgl-back {
     display: none !important;
   }
   html, body, .app-shell { background: none !important; }

@@ -127,10 +127,6 @@
       "label": "Principios de diseño",
       "description": "Jerarquía visual, equilibrio y psicología del diseño."
     },
-    "promptLibrary": {
-      "label": "Biblioteca de prompts",
-      "description": "Guardar prompts de generación de imágenes con IA con vistas previas."
-    },
     "fontGallery": {
       "label": "Galería de Fuentes",
       "description": "Galería visual para explorar y previsualizar tipografías."
