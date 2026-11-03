@@ -361,8 +361,17 @@ test.describe('the lit contents link', () => {
           // On a loaded runner the smooth scroll can start after settled() has
           // already seen twelve still frames at the top, so wait for the page to
           // arrive before waiting for it to stop.
-          await expect.poll(() => page.evaluate(() => Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2),
-            { message: 'End did not reach the bottom', timeout: 10_000 }).toBe(true)
+          // The guide can still grow while that scroll runs (a late image or
+          // font), so a scroll aimed at the old bottom stops short of the new
+          // one. Once it has stopped short, End is pressed again, as a reader
+          // would.
+          let lastY = -1
+          await expect.poll(async () => {
+            const at = await page.evaluate(() => ({ y: scrollY, bottom: Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2 }))
+            if (!at.bottom && at.y === lastY) await page.keyboard.press('End')
+            lastY = at.y
+            return at.bottom
+          }, { message: 'End did not reach the bottom', timeout: 15_000 }).toBe(true)
           await settled(page)
           await expect.poll(() => litIds(page), { message: 'after End' }).toEqual([ids.at(-1)])
 
