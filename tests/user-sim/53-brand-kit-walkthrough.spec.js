@@ -338,10 +338,9 @@ test.describe('Brand kit walkthrough', () => {
     // Jump to the last step. The colour step still reads as done AND still
     // shows its swatches — that is the whole point of a guided flow rather than
     // four bookmarks, and it is carried by the saved design, not by a cursor.
-    // The bar shows a built step's artefact only once its content box is 1240px
-    // wide (a container query). Below that the bar is one row of steps
-    // and buttons with no swatches, and the colours step one built are in the
-    // help panel; at 1440px the bar carries them itself.
+    // On desktop the bar is the floating pill, which holds only the steps and
+    // its buttons, so a built step's artefact (the colours step one made) is
+    // never drawn in it; it is in the help panel instead.
     await page.getByRole('link', { name: /Icons/ }).first().click()
     await expect(page).toHaveURL(/\/create\/icons$/)
     const colourChip = rail(page).getByRole('link', { name: /Colours/ })
@@ -357,11 +356,7 @@ test.describe('Brand kit walkthrough', () => {
     })
     const built = await page.evaluate((k) => (JSON.parse(localStorage.getItem(k) || '{}').palette?.colors || []).length, DESIGN_KEY)
     expect(built, 'step one saved no colours').toBeGreaterThan(0)
-    await expect.poll(barSwatches, { message: 'the bar does not show the colours step one built at 1440px' }).toBe('shown')
-    await expect(rail(page).locator('.bkit-step.is-done .bkit-step-swatch')).toHaveCount(built)
-    await page.setViewportSize({ width: 1100, height: 900 })
-    await expect.poll(barSwatches, { message: 'the bar shows swatches below 1240px of bar width; they live in the help panel there' }).toBe('hidden')
-    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect.poll(barSwatches, { message: 'the pill draws the colours step one built; they live in the help panel' }).toBe('hidden')
     await page.getByRole('button', { name: /What.s this\?/ }).click()
     await expect(card(page)).toBeVisible()
     await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)

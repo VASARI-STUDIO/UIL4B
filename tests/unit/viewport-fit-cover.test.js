@@ -68,7 +68,9 @@ for (const sel of BOTTOM_BARS) {
     const placed = bodies(sel).filter((b) => /(^|[;\s])bottom\s*:/.test(b) || /position\s*:\s*fixed/.test(b))
     assert.ok(placed.length > 0, `found a placing rule for ${sel}`)
     for (const body of placed) {
-      assert.match(body, /safe-area-inset-bottom|--bkit-h|--tool-dock-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      // --bkit-reserve is --bkit-h plus the gap around the desktop pill, so it
+      // carries the inset too (checked below).
+      assert.match(body, /safe-area-inset-bottom|--bkit-h|--bkit-reserve|--tool-dock-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
     }
   })
 }
@@ -155,3 +157,10 @@ for (const [sel, prop] of SIDE_GUTTERS) {
     }
   })
 }
+
+test('--bkit-reserve is built on --bkit-h, so a bar placed on it keeps the inset', () => {
+  const css = fs.readFileSync('src/styles/deferred/tool-shell.css', 'utf8')
+  const defs = [...css.matchAll(/--bkit-reserve\s*:\s*([^;}]+)/g)].map((m) => m[1])
+  assert.ok(defs.length > 0, 'tool-shell.css no longer defines --bkit-reserve')
+  for (const d of defs) assert.match(d, /var\(--bkit-h\)/, `--bkit-reserve: ${d}`)
+})
