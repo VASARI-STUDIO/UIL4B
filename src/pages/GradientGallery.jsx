@@ -380,7 +380,7 @@ export default function GradientGallery({ toast }) {
         search={{
           value: rawQuery,
           onChange: setRawQuery,
-          placeholder: 'Search gradients by name, hex or mood…',
+          placeholder: 'Search gradients',
           label: 'Search gradients',
         }}
       >

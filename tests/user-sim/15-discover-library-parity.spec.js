@@ -418,7 +418,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
 
-    const search = page.getByPlaceholder('Search by name, hex, colour or mood…')
+    const search = page.getByPlaceholder('Search palettes')
     await search.fill('Netflix')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
     await expect(page.locator('.pgal-name')).toHaveText('Netflix')
@@ -478,7 +478,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     // nor its hex may return anything. The haystack indexes every palette's hex
     // values, so filtering the FULL library would let a visitor CONFIRM a
     // locked brand's colours by typing them — a disclosure dressed as a search.
-    const search = page.getByPlaceholder('Search by name, hex, colour or mood…')
+    const search = page.getByPlaceholder('Search palettes')
     const paid = PAID_BRANDS[0]
     await search.fill(paid.name)
     await expect(page.locator('.pgal-card')).toHaveCount(0)

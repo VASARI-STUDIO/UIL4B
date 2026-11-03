@@ -38,18 +38,19 @@
  * order, and that opening one gives `.ic-acc-body-inner` a height above zero.
  * `display:none` would satisfy the tab-order half and break the other two.
  *
- * ── THE INDEX WRAPS BELOW 1000px, IT DOES NOT SCROLL ───────────────────────
+ * ── THE INDEX IS ONE BUTTON BELOW 1000px ───────────────────────────────────
  *
- * content.css's `.cpg-rail` turns into a horizontal scroller at that width,
- * which is right for /terms and /privacy and WRONG here, and the reason is a
- * measurement rather than a preference. 24-mobile-overhaul runs a glyph-level
- * sweep at 320/360/390/430/560/768 that puts a `Range` around the text of
- * every `.ic-toc a` and fails if any of it lands past the viewport's right
- * edge — and unlike its element-level sweep, that one has no escape hatch for
- * a scrollable ancestor. A scroller is off-screen glyphs by definition. So on
- * this page the rail becomes a wrapped row of pills, which is what it already
- * was, only at the right size.
+ * Fourteen links do not fit one row on a phone or a tablet. Wrapping them
+ * pushes the content a screenful down, and scrolling them sideways leaves
+ * glyphs off-screen. Below 1000px the rail is hidden and `.ic-jump` takes its
+ * place: one 48px button that opens the same list as a bottom sheet (a popover
+ * from 768). The sticky rail returns above 1000px.
  */
+
+/* The jump button only exists below 1000px, where the rail is hidden. */
+.ic-wrap .ic-jump { display: none; }
+/* Rail rows are touch-sized wherever the rail is shown. */
+.ic-wrap .ic-toc .cpg-rail-row { min-height: 44px; align-items: center; }
 
 .ic-wrap {
   /* The panel text lines up with the title, which starts at the row's padding. */
@@ -367,21 +368,14 @@
 /* ── Narrow ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 1000px) {
-  /* The index WRAPS rather than scrolling here. See the header — a horizontal
-     scroller puts `.ic-toc a` glyphs past the viewport edge, and this page's
-     overflow sweep measures those glyphs with no escape hatch for a
-     scrollable ancestor. */
-  .ic-wrap .ic-toc ol {
+  .ic-wrap .ic-toc { display: none; }
+  .ic-wrap .ic-jump {
     display: flex;
-    flex-wrap: wrap;
-    grid-auto-flow: row;
-    overflow-x: visible;
-    gap: 6px;
-    margin-inline: 0;
-    padding-inline: 0;
-    padding-bottom: 0;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 15px;
   }
-  .ic-wrap .ic-toc .cpg-rail-row { font-size: 13px; padding: 9px 14px; min-height: 40px; }
   .ic-main { max-width: none; gap: clamp(36px, 6vw, 56px); }
 }
 

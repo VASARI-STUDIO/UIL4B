@@ -376,9 +376,9 @@ export default function PaletteGallery({ toast }) {
         search={{
           value: query,
           onChange: setQuery,
-          // Says what the field now matches. The Gradient Library's reads
-          // "by name, hex or mood"; this one also has the hue names.
-          placeholder: 'Search by name, hex, colour or mood…',
+          // Short enough to show whole in the field at 390px; the field still
+          // matches name, hex, colour and mood.
+          placeholder: 'Search palettes',
           label: 'Search palettes',
         }}
         action={(
