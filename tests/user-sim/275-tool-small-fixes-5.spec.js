@@ -59,3 +59,69 @@ for (const [width, touch] of [[320, true], [360, true], [320, false], [360, fals
     })
   })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2 · Pro libraries: the locked cards share their rows
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Every row of the locked grid ends where the grid ends: a row whose last card
+// stops short leaves an empty cell beside it.
+const lockedRows = (page, gridSelector) => page.evaluate((sel) => {
+  const grid = document.querySelector(sel)
+  if (!grid) return null
+  const box = grid.getBoundingClientRect()
+  const cards = [...grid.querySelectorAll(':scope > .lockt-card')].map((c) => c.getBoundingClientRect())
+  const rows = new Map()
+  for (const r of cards) rows.set(Math.round(r.top), [...(rows.get(Math.round(r.top)) || []), r])
+  return {
+    count: cards.length,
+    gridRight: box.right,
+    rows: [...rows.values()].map((row) => ({ cards: row.length, right: Math.max(...row.map((r) => r.right)) })),
+  }
+}, gridSelector)
+
+const LOCKED_LIBRARIES = [
+  { name: 'Palette Library', route: '/discover/palettes', grid: '.pgal-grid--locked' },
+  { name: 'Gradient Library', route: '/discover/gradients', grid: '.grg-grid--locked' },
+]
+
+for (const width of [390, 600, 768, 1024, 1440]) {
+  test.describe(`Locked cards at ${width}px`, () => {
+    test.use({ viewport: { width, height: 900 }, hasTouch: width < 800, isMobile: width < 800 })
+
+    for (const lib of LOCKED_LIBRARIES) {
+      test(`${lib.name}: the locked cards share their rows, no empty cell`, async ({ page }) => {
+        watch(page, `a free designer meeting the locked ${lib.name} cards at ${width}px`)
+        await signIn(page, { plan: 'free' })
+        await go(page, lib.route)
+        const grid = page.locator(lib.grid)
+        await grid.scrollIntoViewIfNeeded()
+        await expect(grid.locator(':scope > .lockt-card').first()).toBeVisible()
+        const r = await lockedRows(page, lib.grid)
+        expect(r.count, 'locked cards on the page').toBeGreaterThan(1)
+        for (const row of r.rows) {
+          expect(Math.abs(row.right - r.gridRight), `a row of ${row.cards} locked card(s) stops ${Math.round(r.gridRight - row.right)}px short of the grid edge`).toBeLessThanOrEqual(1)
+        }
+        await page.screenshot({ path: `${SHOTS}/${lib.route.split('/').pop()}-locked-${width}.png` })
+      })
+    }
+  })
+}
+
+test.describe('Palette stripes at 390px', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the stripes end in a hairline, so a white last swatch is not a hole', async ({ page }) => {
+    watch(page, 'someone browsing the palette library on a phone')
+    await go(page, '/discover/palettes')
+    const stripes = page.locator('.pgal-card .pgal-stripes').first()
+    await expect(stripes).toBeVisible()
+    const edge = await stripes.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { width: parseFloat(cs.borderBottomWidth), style: cs.borderBottomStyle, colour: cs.borderBottomColor }
+    })
+    expect(edge.width, 'hairline width').toBeGreaterThanOrEqual(1)
+    expect(edge.style, 'hairline style').toBe('solid')
+    expect(edge.colour, 'hairline is drawn, not transparent').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+  })
+})
