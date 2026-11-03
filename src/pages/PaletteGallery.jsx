@@ -12,7 +12,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { paletteHaystack } from '../utils/paletteSearch'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
@@ -544,7 +544,7 @@ export default function PaletteGallery({ toast }) {
               <div className="lockt-cta">
                 <div className="lockt-cta-copy">
                   <p className="lockt-cta-head">{`${gatedNoun} palettes need an account`}</p>
-                  <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
+                  <p className="lockt-cta-body">{`A free account opens ${freeOpens({ eligible })} of the ${rows.length} palettes. Pro opens all ${rows.length}.`}</p>
                 </div>
                 <button
                   type="button"
@@ -559,7 +559,9 @@ export default function PaletteGallery({ toast }) {
                 gate="palette-library-brand-chip"
                 heading={`${gatedNoun} palettes are part of Pro`}
                 body={anonymous
-                  ? `${gatedNoun} palettes need Pro. ${accountAdds > 0 ? `A free account opens ${accountAdds} more curated palettes; ` : ''}Pro opens all ${rows.length}.`
+                  // A free account does not open Brand, so signed out the only
+                  // offer is Pro, in the one sentence the button below keeps.
+                  ? `Pro opens all ${rows.length} palettes, brand systems included.`
                   : `Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
                 action="See what Pro includes"
               />

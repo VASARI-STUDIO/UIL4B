@@ -1,5 +1,6 @@
 import { Children, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import usePopover, { placePopover } from '../../hooks/usePopover'
 import { flattenOptions, listboxKeyAction, listboxSelection, listboxTarget, selectedOptionIndex, typeaheadTarget } from '../../utils/listboxKeys'
 import ToolIcon from './ToolIcon'
@@ -45,6 +46,9 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   if (disabled && open) setOpen(false)
   const buffer = useRef({ text: '', time: 0 })
   const scrimRef = useRef(null)
+  const headRef = useRef(null)
+  // Under 768px the list is a bottom sheet (global.css) and gets a header.
+  const phone = useMediaQuery('(max-width: 767px)')
   const { triggerRef, popRef } = usePopover(open, () => {
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(false)
@@ -77,6 +81,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     }
     popRef.current?.style.setProperty('--select-layer', String(layer))
     scrimRef.current?.style.setProperty('--select-layer', String(layer))
+    headRef.current?.style.setProperty('--select-layer', String(layer))
     // A list opened from inside a sheet or dialog that already covers the phone
     // tab bar must not leave room for it (see global.css).
     const tabs = document.querySelector('.pnav-tabs')
@@ -91,7 +96,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       if (!panel) return
       panel.style.removeProperty('--select-scroll-max-h')
       placePopover(triggerRef.current, panel)
-      if (panel.scrollHeight <= panel.clientHeight) return
+      if (panel.scrollHeight <= panel.clientHeight) { seatHead(); return }
       // End the scrollport halfway through a row, including grouped lists.
       const limit = panel.offsetHeight
       const midpoints = Array.from(panel.querySelectorAll('[role="option"]'), row => row.offsetTop + row.offsetHeight / 2 + panel.clientTop)
@@ -100,11 +105,19 @@ export default function MenuSelect({ label, value, options, children, onChange, 
         panel.style.setProperty('--select-scroll-max-h', `${height}px`)
         placePopover(triggerRef.current, panel)
       }
+      seatHead()
+    }
+    // The sheet header lies over the top band of the sheet, so it follows the sheet's top edge.
+    // offsetTop is the sheet's resting place: it ignores the slide-in transform, which the
+    // header plays too, so the two meet however far the slide has got.
+    const seatHead = () => {
+      const panel = popRef.current
+      if (panel) headRef.current?.style.setProperty('--sheet-top', `${panel.offsetTop}px`)
     }
     size()
     window.addEventListener('resize', size)
     return () => window.removeEventListener('resize', size)
-  }, [open, options, children, popRef, triggerRef])
+  }, [open, phone, options, children, popRef, triggerRef])
   useEffect(() => {
     if (open && active >= 0) popRef.current?.querySelector(`[data-option-index="${active}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [open, active, popRef])
@@ -189,12 +202,19 @@ export default function MenuSelect({ label, value, options, children, onChange, 
         onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); close() }} />
       <div ref={popRef} id={listId} role="listbox" tabIndex={-1} aria-label={name} aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
       aria-describedby={footnote ? footId : undefined}
-      className={`pop menu-select-list${rich ? ' menu-select-list--rich' : ''}`} data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
+      className={`pop menu-select-list${rich ? ' menu-select-list--rich' : ''}${phone ? ' menu-select-list--titled' : ''}`} data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
       {groups.map((option, groupIndex) => option.options ? <div key={groupIndex} role="group" aria-label={option.mark ? `${option.group}, ${option.mark}` : option.group}>
         <div className="pop-head" aria-hidden="true"><span>{option.group}</span>{option.mark && proMark(option.mark)}</div>
         {flattenOptions([option]).map(row => renderRow(row, option.mark))}
       </div> : renderRow(typeof option === 'string' ? { value: option, label: option } : option))}
       {footnote && <p id={footId} className="menu-select-foot" aria-hidden="true">{footnote}</p>}
-    </div></>, document.body)}
+    </div>
+    {/* A listbox owns only options, so the header is its sibling. The title is
+        the listbox's own name, so it is not read out a second time. data-pop-scrim
+        makes a press here count as inside the popover; the button's click closes it. */}
+    {phone && <div ref={headRef} className="menu-select-sheet-head" data-pop-scrim={listId}>
+      {name && <span className="menu-select-sheet-title" aria-hidden="true">{name}</span>}
+      <button type="button" className="menu-select-sheet-close" onClick={close}>Close</button>
+    </div>}</>, document.body)}
   </>
 }

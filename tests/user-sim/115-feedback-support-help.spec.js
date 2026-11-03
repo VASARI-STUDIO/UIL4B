@@ -19,6 +19,10 @@ import { go, signIn, watch } from './helpers.js'
 const PAYMENT_URLS = [
   '/feedback?from=support&ref=payment_failed',
   '/feedback?from=support&reason=payment_failed',
+  // The /support redirect keeps the query, so a link spelt the other way lands
+  // here as `?from=support&ref=failed-payment`.
+  '/feedback?from=support&ref=failed-payment',
+  '/feedback?ref=failed-payment',
 ]
 
 // A request to the support endpoint is a failure of these tests: a submit that

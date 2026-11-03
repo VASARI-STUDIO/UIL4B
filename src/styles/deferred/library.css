@@ -239,7 +239,11 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    at a precomputed top. No content-visibility here — its paint containment was
    what clipped the scale(1.2) hover — off-screen work is avoided by simply not
    mounting those rows at all. */
-.emoji-virt{position:relative}
+.emoji-virt{position:relative;transition:opacity 120ms ease-out}
+/* The grid is still showing the previous list (EmojiGrid `stale`): dim it a
+   little so the short wait reads as working. Opacity only, no spinner, and the
+   status line stays at full strength. */
+.emoji-virt[aria-busy="true"]{opacity:.6}
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
@@ -298,7 +302,6 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
@@ -315,6 +318,12 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-stage-msg{position:absolute;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
 .icust-stage--light .icust-stage-msg,.icust-stage--checker .icust-stage-msg{color:rgba(10,10,11,.5)}
 .icust-stage--dark .icust-stage-msg{color:rgba(244,244,245,.55)}
+/* A failed stage: the message with a text button under it, centred in the stage. */
+.icust-stage-msg--failed{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.icust-stage-retry{min-height:44px;padding:0 12px;border:0;background:none;font:inherit;font-weight:560;color:var(--t0);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.icust-stage--light .icust-stage-retry,.icust-stage--checker .icust-stage-retry{color:#18181B}
+.icust-stage--dark .icust-stage-retry{color:#F4F4F5}
+.icust-stage-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* A fact about the art, not a control: plain text in the row's control column, in
    the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
    height the segmented track gave the row, so the row does not change size. */
@@ -352,19 +361,8 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-savedin strong{font-weight:600;color:var(--t1)}
 /* Code readout */
 .icust-code{margin:12px 24px 0}
-.icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-.icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover{border-color:var(--accent)}
-.icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover .icust-code-hint{color:var(--accent-mid)}
-/* Copy-only snippet: the text is not selectable, so the Copy button is the one
-   way out — keeps the workflow inside UIL4B. */
-.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
-/* Reset lives at the end of the tag row. Hidden, not removed, while nothing
-   differs from the defaults, so the row keeps its height. */
-.lib-surface .icust-meta .icust-reset{flex:none;margin-left:auto;min-height:32px;padding:0 12px}
-.lib-surface .icust-meta .icust-reset.is-hidden{visibility:hidden}
-@media(pointer:coarse){.lib-surface .icust-meta .icust-reset{min-height:44px}}
+/* The code can be selected; a Copy button sits beside it. */
+.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all}
 .icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
@@ -511,8 +509,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
-.icust-foot .lib-btn:disabled,.icust-code-box:disabled{opacity:.5;cursor:not-allowed}
-.icust-code-box:disabled:hover{border-color:var(--border)}
+.icust-foot .lib-btn:disabled,.icust-code-copy:disabled{opacity:.5;cursor:not-allowed}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`

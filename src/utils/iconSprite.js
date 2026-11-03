@@ -39,7 +39,8 @@ const ID_RE = /^ics(\d+)$/
  */
 export function symbolMarkup(svgText, id) {
   const clean = sanitiseSvgInline(svgText, { idPrefix: id })
-  if (!clean || !clean.ok) return null
+  // CSS converted into attributes is still a rewrite, so that icon stays an image.
+  if (!clean || !clean.ok || clean.css) return null
   const m = ROOT_RE.exec(clean.svg)
   if (!m) return null
   const box = VIEWBOX_RE.exec(m[1])

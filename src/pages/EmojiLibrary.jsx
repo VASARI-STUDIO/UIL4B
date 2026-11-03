@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useDeferredValue } from 'react'
 import usePopover from '../hooks/usePopover'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
@@ -106,6 +106,12 @@ export default function EmojiLibrary({ onCopy }) {
     const items = searchEmoji(base, index, query)
     return { groups: items.length ? [{ cat: 'Results', items }] : [], count: items.length }
   }, [query, activeCat, index])
+
+  // The grid renders from a deferred copy, so a keystroke or a category click
+  // paints the typed text, chip and status first and the new cells in a later
+  // task. `gridStale` is true while the grid still shows the previous list.
+  const gridGroups = useDeferredValue(results.groups)
+  const gridStale = gridGroups !== results.groups
 
   // Offline is recoverable without the user doing anything: when the network
   // returns, fetch the index they already asked for. The Try again button stays
@@ -286,7 +292,8 @@ export default function EmojiLibrary({ onCopy }) {
         {/* The windowed grid and its scroll state live in EmojiGrid, so a scroll
             tick re-renders the grid alone and never this page or its toolbar. */}
         <EmojiGrid
-          groups={results.groups}
+          groups={gridGroups}
+          stale={gridStale}
           catalogue={PARSED_EMOJI_DATA}
           skinTone={skinTone}
           onOpen={setDetail}
