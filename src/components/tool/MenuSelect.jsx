@@ -14,6 +14,10 @@ function childOptions(children) {
   })
 }
 
+// A "Pro" mark carries the app's lock icon (decorative: the row's spoken name
+// already says "Pro"); any other mark stays plain words.
+const proMark = mark => <span className="menu-select-mark">{mark === 'Pro' && <ToolIcon name="lock-simple" size={12} />}{mark}</span>
+
 // An option may also carry `icon` (a node drawn before the label), `triggerIcon`
 // (the smaller node the toolbar trigger shows), `short` (the trigger's text) and
 // `divider` (a hairline above the row) and `note` (a quiet word after the name in
@@ -116,6 +120,14 @@ export default function MenuSelect({ label, value, options, children, onChange, 
     window.addEventListener('keydown', dismiss, true)
     return () => window.removeEventListener('keydown', dismiss, true)
   }, [open, popRef, triggerRef])
+  // PageUp and PageDown travel the rows in view, less one so the row you were on
+  // stays on screen.
+  const pageSize = () => {
+    const panel = popRef.current
+    const row = panel?.querySelector('[role="option"]')
+    if (!panel || !row?.offsetHeight) return 10
+    return Math.max(Math.floor(panel.clientHeight / row.offsetHeight) - 1, 1)
+  }
   const onKey = event => {
     if (event.altKey || event.ctrlKey || event.metaKey) return
     const action = listboxKeyAction(event.key, true, disabled)
@@ -124,7 +136,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       choose(active)
       return
     }
-    const next = action === 'move' ? listboxTarget(event.key, active, rows) : -1
+    const next = action === 'move' ? listboxTarget(event.key, active, rows, pageSize()) : -1
     if (next >= 0) {
       event.preventDefault()
       setActive(next)
@@ -153,7 +165,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       {option.desc
         ? <span className="menu-select-body"><span className="menu-select-text">{option.label}{option.note && <span className="menu-select-note"> ({option.note})</span>}</span><span id={descId} className="menu-select-desc">{option.desc}</span></span>
         : <span className="menu-select-text">{option.label}{option.note && <span className="menu-select-note"> ({option.note})</span>}</span>}
-      {option.mark && <span className="menu-select-mark">{option.mark}</span>}
+      {option.mark && proMark(option.mark)}
       <svg className="menu-select-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m5 12 4 4L19 6" /></svg>
     </div>
   }
@@ -175,7 +187,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       aria-describedby={footnote ? footId : undefined}
       className={`pop menu-select-list${rich ? ' menu-select-list--rich' : ''}`} data-pop-fixed="true" data-pop-trigger={triggerId} onKeyDown={onKey}>
       {groups.map((option, groupIndex) => option.options ? <div key={groupIndex} role="group" aria-label={option.mark ? `${option.group}, ${option.mark}` : option.group}>
-        <div className="pop-head" aria-hidden="true"><span>{option.group}</span>{option.mark && <span className="menu-select-mark">{option.mark}</span>}</div>
+        <div className="pop-head" aria-hidden="true"><span>{option.group}</span>{option.mark && proMark(option.mark)}</div>
         {flattenOptions([option]).map(row => renderRow(row, option.mark))}
       </div> : renderRow(typeof option === 'string' ? { value: option, label: option } : option))}
       {footnote && <p id={footId} className="menu-select-foot" aria-hidden="true">{footnote}</p>}

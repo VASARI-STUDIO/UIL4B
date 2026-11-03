@@ -33,12 +33,14 @@
 //
 // ── The one thing here that is typed ────────────────────────────────────────
 //
-// ASSET_CREDITS below. Two sources have no manifest to read — an emoji search
-// index built from Unicode CLDR, and the Iconify API the icon grid fetches
-// through — so their provenance lives in a comment in the script that uses
-// them. They are stated here and CHECKED there: the coverage test asserts
-// scripts/build-emoji-index.mjs still names the CLDR source this page credits,
-// so a change of source cannot leave the credit behind.
+// ASSET_CREDITS below. Three sources have no manifest to read — an emoji search
+// index built from Unicode CLDR, the emoji shortcodes taken from GitHub's
+// gemoji, and the Iconify API the icon grid fetches through — so their
+// provenance lives in a comment in the script that uses them. They are stated
+// here and CHECKED there: the coverage test asserts scripts/build-emoji-index.mjs
+// still names the CLDR source this page credits, and that
+// scripts/build-emoji-meta.mjs still names gemoji, so a change of source cannot
+// leave the credit behind.
 import { Link } from 'react-router-dom'
 import { allPackCredits, licenceOf } from '../data/iconPackCredits'
 // GENERATED — `node scripts/sync-credits.mjs`. A data file rather than a module
@@ -51,7 +53,7 @@ import '../styles/pages/credits.css'
 
 const { fonts: FONT_CREDITS, dependencies: DIRECT_DEPENDENCIES, firebase: FIREBASE_PACKAGES } = creditsManifest
 
-/* ── The two sources with no file to read ──────────────────────────────────
+/* ── The sources with no file to read ──────────────────────────────────
  *
  * `checkedIn` names the file that would have to change for the credit to go
  * stale, so the assertion in the coverage test and the sentence on the page
@@ -65,6 +67,15 @@ const ASSET_CREDITS = [
     licenceName: 'Unicode licence',
     used: 'The emoji search index in src/data/emojiIndex.txt is built from CLDR’s English emoji annotations — the names and keywords that let the Emoji Library find one character rather than a whole category.',
     checkedIn: 'scripts/build-emoji-index.mjs',
+  },
+  {
+    name: 'gemoji',
+    author: 'GitHub, Inc.',
+    url: 'https://github.com/github/gemoji',
+    licenceUrl: 'https://github.com/github/gemoji/blob/master/LICENSE',
+    licenceName: 'MIT',
+    used: 'The chat shortcodes (:wave:) and the Unicode version shown in the Emoji Library’s detail dialog, in src/data/emojiShortcodes.txt, come from GitHub’s gemoji list.',
+    checkedIn: 'scripts/build-emoji-meta.mjs',
   },
   {
     name: 'Iconify',

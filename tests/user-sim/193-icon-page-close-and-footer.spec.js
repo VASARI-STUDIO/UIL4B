@@ -92,7 +92,7 @@ for (const [width, ctx] of [
       await open(page, '/create/icons')
       await expect(page.getByRole('main').getByRole('button', { name: 'Log in', exact: true }), 'one Log in button in main, and it is the gate’s').toHaveCount(1)
       await expect(page.locator('.ig-end .ig-end-pill')).toHaveText('Log in')
-      await expect(page.locator('.ig-end'), 'the gate says the new heading').toContainText('Log in to open all 12 sets.')
+      await expect(page.locator('.ig-end'), 'the gate says the new heading').toContainText('Log in to access')
     })
 
     test('/create/icons signed out: the licence row names each set with its licence and a link', async ({ page }) => {

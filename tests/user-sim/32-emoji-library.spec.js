@@ -33,7 +33,7 @@ test.describe('emoji library', () => {
     await field.click()          // the index loads on focus
     await field.fill('pizza')
 
-    // The cell's accessible name is its title, "Copy 🍕".
+    // The cell's accessible name is its title, "Details for 🍕".
     await expect.poll(() => page.locator(`${CELL}[title*="🍕"]`).count(), { timeout: 15000 })
       .toBeGreaterThan(0)
 
