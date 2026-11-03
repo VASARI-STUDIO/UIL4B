@@ -24,6 +24,7 @@ import { freeVariationIds, paletteVariations, scorePalette } from '../utils/pale
 // utils/paletteNames.js for why `colorName` is deterministic and
 // `randomPaletteName` deliberately is not.
 import { colorName, randomPaletteName } from '../utils/paletteNames'
+import { isOnLink } from '../utils/elementSignature'
 import { roleLabel } from '../utils/paletteRoles'
 import { barRef, colRef } from '../utils/paletteBoard'
 import { VISION_HUES, VISION_MODES, VISION_NOTE, visionAnnouncement, visionMode } from '../utils/visionModes'
@@ -3129,8 +3130,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const toolbarItems = [
     {
       id: 'back', priority: 2,
-      render: () => <ToolBack to="/projects" label="Back to projects" history={false} />,
-      menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
+      render: () => <ToolBack />,
+      menu: { label: 'Back to all tools', icon: 'arrow-left', onSelect: () => navigate('/tools') },
     },
     { id: 'seed', priority: 4, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
     {
@@ -3311,6 +3312,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   setToolsIdx(cur => (cur === i ? null : i))
                 }}
                 onContextMenu={(e) => {
+                  if (isOnLink(e.target)) return
                   e.preventDefault()
                   ctxTriggerRef.current = e.currentTarget.querySelector('.plb-tool--more')
                   setTintsIdx(null); setPickerIdx(null)
