@@ -74,6 +74,13 @@ export default function useSmoothScroll() {
     }
     window.addEventListener('click', remeasureBeforeAnchor, true)
 
+    // A lerped scroll ends when the rounded value equals the rounded target. A
+    // target on an exact half pixel (a heading at 4138.5) is approached from
+    // one side and never rounds to it, so the scroll never completes and the
+    // page stays "scrolling". Every target is a whole pixel instead.
+    const fromTo = lenis.animate.fromTo.bind(lenis.animate)
+    lenis.animate.fromTo = (from, to, options) => fromTo(from, Math.round(to), options)
+
     let rafId = 0
     const raf = (time) => {
       lenis.raf(time)

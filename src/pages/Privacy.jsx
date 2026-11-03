@@ -80,7 +80,7 @@ function StorageSection() {
               <tr key={row.key}>
                 <td data-label="Key"><span className="storage-key">{row.key}</span></td>
                 <td className="storage-purpose" data-label="Purpose">{row.purpose}</td>
-                <td data-label="Personal data"><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
+                <td data-label="Personal data"><span className="sr-only">Personal data: </span><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
               </tr>
             ))}
           </tbody>
@@ -165,7 +165,7 @@ export default function Privacy() {
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
-        <h1 className="cpg-h1">Privacy &amp; <em>data</em>.</h1>
+        <h1 className="cpg-h1">Privacy &amp; data.</h1>
         <p className="cpg-cap lgl-updated">{t('privacy.lastUpdated')}</p>
       </header>
 
