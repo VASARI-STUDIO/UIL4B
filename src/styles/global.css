@@ -1725,8 +1725,12 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* On a touch screen the floating button would sit over
    real controls (gallery Like/Open/Copy, Settings Edit, /plans, Projects Load).
    It does not float there at all: "Send feedback" is in the account popover and
-   the phone menu sheet, and right-click reporting is a pointer feature anyway. */
-@media (pointer:coarse){.global-feedback-btn{display:none}}
+   the phone menu sheet, and right-click reporting is a pointer feature anyway.
+   A narrow mouse window is the same screen as a phone as far as the page is
+   concerned: the button covers text there, so it is hidden below the tablet
+   breakpoint whatever the pointer. The footer link and the right-click menu
+   still reach the form. */
+@media (pointer:coarse),(max-width:767px){.global-feedback-btn{display:none}}
 .global-feedback-btn svg{flex-shrink:0}
 /* The compact form fires on EITHER axis. It used to be width-only, so the one
    device class with the least vertical room — a phone held sideways, 844–932px
@@ -4618,10 +4622,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      above it keeps both reachable rather than trading one for the other. */
   .bill-banner{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(74px + env(safe-area-inset-bottom,0px));width:auto}
 }
-/* Where the phone tab bar is fixed along the bottom, the FAB and the banner
-   stack above it instead of under it. */
+/* Where the phone tab bar is fixed along the bottom, the banner stacks above
+   it instead of under it. */
 @media (max-width:767px){
-  html.has-tabbar .global-feedback-btn{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
   html.has-tabbar .bill-banner{bottom:calc(var(--tabbar-h) + 20px + env(safe-area-inset-bottom))}
 }
 @media (max-width:520px){
