@@ -3,16 +3,15 @@
 // Palette, Emoji and Icon libraries, at 320 and 390 on a touch screen:
 //   - the toolbar is one row of controls (plus the quick chip row) and nothing
 //     in it runs past the viewport or the toolbar's own edge;
-//   - a chip row that scrolls sideways either shows its last chip whole or
-//     carries the `.rail-overflow` edge fade, so a cut chip reads as "continues";
+//   - the emoji categories sit in the Filters sheet, so no chip row scrolls sideways;
 //   - the selected "All" chip's count reads at 4.5:1 in dark and light;
 //   - a locked preview is blurred lightly enough to show bands but holds no
 //     content: no hex, no image, only the item's name, a Pro tag and a link to
 //     /plans.
 //
 // MUTATIONS (each should turn the named test red):
-//   - drop `rail-overflow` from `.lbry-toolbar-quick` in LibraryToolbar.jsx:
-//     "the emoji chip row shows its last chip or an edge fade" fails;
+//   - put `quick={0}` back on the emoji toolbar in EmojiLibrary.jsx:
+//     "the emoji categories sit in the Filters sheet" fails;
 //   - set the selected count's colour back to `var(--bg-0)`: "the selected All
 //     count reads at 4.5:1" fails in both themes;
 //   - set `.lockt-stripes` back to `blur(16px)`: "a locked preview is lightly
@@ -104,30 +103,23 @@ for (const theme of ['light', 'dark']) {
         })
       }
 
-      test('the emoji chip row shows its last chip or an edge fade', async ({ page }) => {
+      test('the emoji categories sit in the Filters sheet, not a sideways chip row', async ({ page }) => {
         watch(page, 'someone choosing an emoji category on a phone')
         await go(page, '/create/emoji')
-        const quick = page.locator('.lbry-toolbar-quick')
-        await expect(quick).toBeVisible()
+        const filters = page.locator('.lbry-toolbar .lbry-filtersbtn')
+        await expect(filters).toBeVisible()
         await page.waitForTimeout(400)
-        const state = await quick.evaluate((el) => {
-          const last = el.querySelector('.lbry-filter:last-of-type')
-          const lastBox = last.getBoundingClientRect()
-          const box = el.getBoundingClientRect()
-          const cs = getComputedStyle(el)
-          return {
-            lastWhole: lastBox.right <= box.right + 0.5,
-            scrolls: el.scrollWidth > el.clientWidth + 1,
-            faded: el.classList.contains('rail-overflow') && /gradient/.test(cs.maskImage || cs.webkitMaskImage || ''),
-          }
-        })
-        expect(state.lastWhole || state.faded, `last chip whole: ${state.lastWhole}, edge fade: ${state.faded}`).toBe(true)
+        expect(await page.locator('.lbry-toolbar-quick').count(), 'a sideways chip row is back').toBe(0)
+        expect(await page.locator('.lbry-toolbar .lbry-filter').count(), 'category chips sit on the toolbar row').toBe(0)
+        await filters.click()
+        await expect(page.locator('.lbry-sheet .lbry-filter')).toHaveCount(12)
       })
 
       test('the selected All count reads at 4.5:1', async ({ page }) => {
         watch(page, 'someone reading the emoji category counts')
         await go(page, '/create/emoji')
-        const count = page.locator('.lbry-toolbar-quick .lbry-filter[data-active="true"] .lbry-filter-count').first()
+        await page.locator('.lbry-toolbar .lbry-filtersbtn').click()
+        const count = page.locator('.lbry-sheet .lbry-filter[data-active="true"] .lbry-filter-count').first()
         await expect(count).toBeVisible()
         const ratio = await contrastOf(count)
         expect(ratio, 'count contrast').toBeGreaterThanOrEqual(4.5)

@@ -125,3 +125,74 @@ test.describe('Palette stripes at 390px', () => {
     expect(edge.colour, 'hairline is drawn, not transparent').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3 · Emoji Library toolbar: no sideways chip row, a placeholder that fits
+// ─────────────────────────────────────────────────────────────────────────────
+
+for (const theme of ['light', 'dark']) {
+  for (const width of [320, 390]) {
+    test.describe(`Emoji toolbar at ${width}px, ${theme}`, () => {
+      test.use({ viewport: { width, height: 844 }, hasTouch: true, isMobile: true, colorScheme: theme })
+
+      test('the categories sit in the Filters sheet, not a sideways chip row', async ({ page }) => {
+        watch(page, 'someone choosing an emoji category on a phone')
+        await go(page, '/create/emoji')
+        const filters = page.locator('.lbry-toolbar .lbry-filtersbtn')
+        await expect(filters).toBeVisible({ timeout: 15_000 })
+        const bar = await page.evaluate(() => {
+          const scrolls = [...document.querySelectorAll('.lbry-toolbar *')]
+            .filter((el) => el.scrollWidth > el.clientWidth + 1 && ['auto', 'scroll'].includes(getComputedStyle(el).overflowX))
+            .map((el) => el.className)
+          return {
+            quick: document.querySelectorAll('.lbry-toolbar-quick').length,
+            chipsOnRow: document.querySelectorAll('.lbry-toolbar .lbry-filter').length,
+            scrolls,
+            pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }
+        })
+        expect(bar.quick, 'a sideways chip row is back').toBe(0)
+        expect(bar.chipsOnRow, 'category chips sit on the toolbar row').toBe(0)
+        expect(bar.scrolls, 'something in the toolbar scrolls sideways').toEqual([])
+        expect(bar.pageOverflow, 'the page scrolls sideways').toBeLessThanOrEqual(1)
+        await filters.click()
+        const sheet = page.locator('.lbry-sheet')
+        await expect(sheet.locator('.lbry-filter')).toHaveCount(12)
+        // Choosing one closes nothing by itself; Done does, and the button then counts the pick.
+        await sheet.locator('.lbry-filter', { hasText: 'Smileys' }).click()
+        await sheet.getByRole('button', { name: 'Done' }).click()
+        await expect(sheet).toBeHidden()
+        await expect(filters.locator('.lbry-filtersbtn-count')).toHaveText('1')
+        await page.screenshot({ path: `${SHOTS}/emoji-toolbar-${width}-${theme}.png` })
+      })
+
+      test('the search placeholder fits its field', async ({ page }) => {
+        watch(page, 'someone reading the emoji search field on a phone')
+        await go(page, '/create/emoji')
+        const input = page.locator('.lbry-toolbar .lbry-search input')
+        await expect(input).toBeVisible({ timeout: 15_000 })
+        const fit = await input.evaluate((el) => {
+          const cs = getComputedStyle(el)
+          const ctx = document.createElement('canvas').getContext('2d')
+          ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+          const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+          return { text: el.placeholder, need: ctx.measureText(el.placeholder).width, room }
+        })
+        expect(fit.need, `"${fit.text}" needs ${Math.round(fit.need)}px of the ${Math.round(fit.room)}px in the field`).toBeLessThanOrEqual(fit.room)
+      })
+    })
+  }
+}
+
+test.describe('Emoji toolbar at 768px', () => {
+  test.use({ viewport: { width: 768, height: 900 } })
+
+  test('the category facet is one trigger and nothing scrolls sideways', async ({ page }) => {
+    watch(page, 'someone choosing an emoji category on a tablet')
+    await go(page, '/create/emoji')
+    await expect(page.locator('.lbry-filtertrig')).toHaveCount(1, { timeout: 15_000 })
+    expect(await page.locator('.lbry-toolbar-quick').count(), 'a sideways chip row is back').toBe(0)
+    expect(await page.locator('.lbry-toolbar .lbry-filter').count(), 'category chips sit on the toolbar row').toBe(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+  })
+})

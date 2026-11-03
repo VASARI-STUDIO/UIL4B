@@ -246,7 +246,10 @@ export default function EmojiLibrary({ onCopy }) {
           accessible name. */}
       <LibraryToolbar
         className="emoji-toolbar"
-        quick={0}
+        // Twelve category chips cannot fit one phone row, and the row never
+        // scrolls sideways, so on a phone the categories sit in the Filters
+        // sheet (a wrapped chip list) and the Filters button counts the pick.
+        quick={null}
         activeFilters={activeCat ? 1 : 0}
         search={searchProp}
         action={toneAction}
