@@ -5,7 +5,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { test } from 'node:test'
 
-const css = fs.readFileSync('src/styles/global.css', 'utf8')
+// Line endings are normalised so the line-based read works on a CRLF checkout.
+const css = fs.readFileSync('src/styles/global.css', 'utf8').replace(/\r\n/g, '\n')
 const rule = (selector) => {
   const start = css.indexOf(selector + '{')
   assert.notEqual(start, -1, `${selector} rule exists`)
