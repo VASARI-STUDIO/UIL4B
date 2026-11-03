@@ -120,6 +120,29 @@
   color: var(--tl-dim);
 }
 
+/* The phone's intro: one 44px row that opens to the paragraph. */
+.fc .fc-howto summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tl-dim);
+}
+.fc .fc-howto summary::-webkit-details-marker { display: none; }
+.fc .fc-howto summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 10px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.fc .fc-howto[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.fc .fc-howto summary:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.fc .fc-howto[open] .fc-about { padding-bottom: 8px; }
+
 .fc .fc-3d-note {
   margin: 20px 0 0;
   font-size: 12px;

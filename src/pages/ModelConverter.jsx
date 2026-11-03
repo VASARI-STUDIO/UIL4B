@@ -545,10 +545,13 @@ export default function ModelConverter({ toast }) {
                 <span className="v3d-empty-glyph"><CubeGlyph /></span>
                 <p className="v3d-empty-line">Drop a model here, or choose a file</p>
                 <p className="v3d-empty-formats">
-                  {inputLabels().join(' · ')}
-                  <br />
                   Up to {describeSizeLimit()}. Drop a .gltf with its .bin, or an .obj with its .mtl, together.
                 </p>
+                {/* The format list is behind a row of its own; a press on it must not open the file chooser. */}
+                <details className="v3d-formats" onClick={(e) => e.stopPropagation()}>
+                  <summary>Supported formats</summary>
+                  <p className="v3d-formats-list">{inputLabels().join(' · ')}</p>
+                </details>
                 <button type="button" className="v3d-btn" onClick={(e) => { e.stopPropagation(); choose() }}>
                   Choose a file
                 </button>

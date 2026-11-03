@@ -476,6 +476,12 @@
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-k { width: 56px; flex: 0 0 auto; }
 :is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-v { width: 42px; text-align: right; flex: 0 0 auto; }
+/* On a phone or a touch screen the small mono labels (slider values, the
+   OKLCH/Step pills) are 12px, the floor for text read at arm's length. */
+@media (max-width: 767px), (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-slider-v,
+  :is(.tl, .tl-sheet-layer) .tl-pill--mono { font-size: 12px; }
+}
 :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
