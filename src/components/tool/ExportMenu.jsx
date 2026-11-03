@@ -21,6 +21,8 @@ import ToolIcon from './ToolIcon'
 //           screen reader user still finds it; choosing it does nothing.
 //   label   the button's text and the menu's accessible name.
 //   icon    the button's leading icon; a trailing caret is always drawn.
+//   variant 'accent' (default, the toolbar's one primary) or 'quiet' (a hairline
+//           action that sits beside a different primary).
 //
 // Placement, dismissal and focus return are usePopover's. From 768px the list
 // is a popover under the button; below it the same rows sit in the toolbar
@@ -33,7 +35,7 @@ import ToolIcon from './ToolIcon'
 const PHONE = '(max-width: 767px)'
 const ROWS = '[role="menuitem"]'
 
-export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy' }) {
+export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy', variant = 'accent' }) {
   const [open, setOpen] = useState(false)
   const phone = useMediaQuery(PHONE)
   const menuId = useId().replace(/:/g, '')
@@ -131,7 +133,7 @@ export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy
       <button
         ref={triggerRef}
         type="button"
-        className="tl-btn tl-btn--accent tl-export-btn"
+        className={`tl-btn tl-btn--${variant} tl-export-btn`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
