@@ -146,12 +146,12 @@ test.describe('every tool surface renders operable controls and stays inside its
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the emoji category facet is a labelled control that opens a list', () => {
-  // A PHONE GETS THE CATEGORIES IN THE FILTERS SHEET. Toolbars never wrap or scroll:
-  // a filter sheet. Below 641px the toolbar never scrolls sideways and never
-  // wraps: the twelve categories sit in the Filters sheet, one tap away. What is
-  // asserted there is that no strip or trigger is on the row, the page does not
-  // scroll sideways, and the sheet holds all twelve.
-  test('it is a trigger from 641px up and a Filters sheet on a phone, never a strip or a wrapped tray', async ({ page }) => {
+  // A PHONE GETS THE CATEGORIES AS ONE SCROLLING STRIP. Toolbars never wrap:
+  // one scrollable chip row plus a filter sheet. Below 641px the toolbar
+  // keeps its first group on screen as a single line that scrolls sideways —
+  // the shape every platform emoji keyboard uses. What is asserted there is
+  // that it is ONE line, holds all twelve, and does not scroll the page.
+  test('it is a trigger from 641px up and one scrolling strip on a phone, never a wrapped tray', async ({ page }) => {
     watch(page, 'someone looking for an emoji on a phone')
     await go(page, '/create/emoji')
 
@@ -162,24 +162,24 @@ test.describe('the emoji category facet is a labelled control that opens a list'
       if (PHONE_WIDTHS.includes(width)) {
         // Waited for, not read once: the emoji library is a lazy chunk, and at
         // the first width it can still be "Opening the emoji library".
-        const filters = page.locator('.lbry-toolbar .lbry-filtersbtn')
-        await expect(filters, `@${width} no Filters button on a phone`).toBeVisible({ timeout: 15_000 })
-        const row = await page.evaluate(() => ({
-          strips: document.querySelectorAll('.lbry-toolbar-quick').length,
-          triggers: document.querySelectorAll('.lbry-toolbar .lbry-filtertrig').length,
-          chipsOnRow: document.querySelectorAll('.lbry-toolbar .lbry-filter').length,
-          pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        }))
-        expect(row.strips, `@${width} a sideways chip strip is back`).toBe(0)
-        expect(row.triggers, `@${width} a trigger AND the sheet for one facet`).toBe(0)
-        expect(row.chipsOnRow, `@${width} category chips sit on the toolbar row`).toBe(0)
-        expect(row.pageOverflow, `@${width} the toolbar scrolls the page sideways`).toBeLessThanOrEqual(1)
-        await filters.click()
-        const sheet = page.locator('.lbry-sheet')
-        await expect(sheet, `@${width} the Filters sheet did not open`).toBeVisible()
-        await expect(sheet.locator('.lbry-filter'), `@${width} the sheet does not carry all twelve categories`).toHaveCount(12)
-        await sheet.getByRole('button', { name: 'Done' }).click()
-        await expect(sheet).toBeHidden()
+        await expect(page.locator('.lbry-toolbar-quick .lbry-filters'),
+          `@${width} no category strip on a phone`).toBeVisible({ timeout: 15_000 })
+        const strip = await page.evaluate(() => {
+          const row = document.querySelector('.lbry-toolbar-quick .lbry-filters')
+          if (!row) return null
+          const chips = [...row.querySelectorAll('.lbry-filter')]
+          return {
+            chips: chips.length,
+            lines: new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+            triggers: document.querySelectorAll('.lbry-toolbar .lbry-filtertrig').length,
+            pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }
+        })
+        expect(strip, `@${width} no category strip on a phone`).not.toBeNull()
+        expect(strip.chips, `@${width} the strip does not carry all twelve categories`).toBe(12)
+        expect(strip.lines, `@${width} the category strip wraps`).toBe(1)
+        expect(strip.triggers, `@${width} a trigger AND a strip for one facet`).toBe(0)
+        expect(strip.pageOverflow, `@${width} the strip scrolls the page sideways`).toBeLessThanOrEqual(1)
         continue
       }
 
@@ -264,8 +264,8 @@ test.describe('the emoji category facet is a labelled control that opens a list'
     watch(page, 'someone who opened the emoji library in a narrow window and then widened it')
     await page.setViewportSize({ width: 430, height: 844 })
     await go(page, '/create/emoji')
-    await expect(page.locator('.lbry-toolbar .lbry-filtersbtn'),
-      '@430 no Filters button on a phone').toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.lbry-toolbar-quick .lbry-filters'),
+      '@430 no category strip on a phone').toBeVisible({ timeout: 15_000 })
 
     for (const width of [768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 844 })
