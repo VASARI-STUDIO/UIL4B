@@ -239,7 +239,11 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    at a precomputed top. No content-visibility here — its paint containment was
    what clipped the scale(1.2) hover — off-screen work is avoided by simply not
    mounting those rows at all. */
-.emoji-virt{position:relative}
+.emoji-virt{position:relative;transition:opacity 120ms ease-out}
+/* The grid is still showing the previous list (EmojiGrid `stale`): dim it a
+   little so the short wait reads as working. Opacity only, no spinner, and the
+   status line stays at full strength. */
+.emoji-virt[aria-busy="true"]{opacity:.6}
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
