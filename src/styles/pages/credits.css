@@ -5,11 +5,19 @@
  *
  * A credits page is a list of obligations, and the obligation is the licence
  * rather than the item — four icon sets are CC-BY and that is one fact about
- * four rows, not four facts. So the page is grouped by licence, each group led
- * by a heading that says what that licence asks, and the rows under it are a
- * plain two-column list. Tiling twenty-seven equal cards would have flattened
- * that structure into decoration, and it is the structure that makes the page
- * readable rather than a dump.
+ * four rows, not four facts. So the page is grouped by licence: each group is a
+ * disclosure row (licence name, count) and the rows under it are a plain list
+ * separated by hairlines. Nothing here is a box, so nothing is a box inside a
+ * box.
+ *
+ * ── Phone first ─────────────────────────────────────────────────────────────
+ *
+ * At phone width the licence groups start closed, so the page opens on the
+ * search field and a short list of group rows rather than a hundred names. From
+ * 640px up they start open and the lists run in two columns. Every row that is
+ * a link is the whole row (56px, 48px for package names), and the secondary
+ * "licence" link is its own 44px target, so no control on the page is a bare
+ * 20px word.
  *
  * ── Tokens only ─────────────────────────────────────────────────────────────
  *
@@ -19,15 +27,19 @@
  *
  * ── Widths ──────────────────────────────────────────────────────────────────
  *
- * Measured at 320, 390, 834 and 1440 in both themes. The row grid is
- * `minmax(0,1fr)` at every step — an `auto` track lets a long package name
- * (@stripe/react-stripe-js, @firebase/app-check-interop-types) push the grid
- * wider than the viewport, which is the one way a list of npm names overflows.
- * `overflow-wrap:anywhere` is the second half of that, for the names with no
- * break opportunity at all.
+ * The row grid is `minmax(0,1fr)` at every step — an `auto` track lets a long
+ * package name (@stripe/react-stripe-js, @firebase/app-check-interop-types) push
+ * the grid wider than the viewport, which is the one way a list of npm names
+ * overflows. `overflow-wrap:anywhere` is the second half of that, for the names
+ * with no break opportunity at all.
+ *
+ * ── Type floor ──────────────────────────────────────────────────────────────
+ *
+ * Nothing is set under 12px. The package scope and licence notices use
+ * `max(12px, .75rem)` so a raised root size still raises them.
  */
 
-.crd { --crd-gap: var(--s-5); padding-bottom: var(--s-9); }
+.crd { padding-bottom: var(--s-9); }
 
 /* ── The tally ── */
 .crd-tally {
@@ -35,7 +47,7 @@
   flex-wrap: wrap;
   gap: var(--s-2) var(--s-5);
   list-style: none;
-  margin: 0 0 var(--s-8);
+  margin: 0 0 var(--s-5);
   padding: 0;
   font-size: var(--fs-body-s);
   color: var(--t2);
@@ -43,169 +55,248 @@
 .crd-tally li { display: flex; align-items: baseline; gap: 6px; }
 .crd-tally b {
   font-family: var(--mono);
-  font-size: var(--fs-h4);
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--t0);
   font-variant-numeric: tabular-nums;
 }
 
+/* ── The search ──
+ * 16px text so iOS does not zoom the page on focus, 48px high so it is a
+ * comfortable thumb target. The status line under it keeps its height whether or
+ * not it has words, so typing never moves the list. */
+.crd-search { margin: 0 0 var(--s-6); }
+.crd-search-input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+  color: var(--t0);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+}
+.crd-search-input::placeholder { color: var(--t2); opacity: 1; }
+.crd-search-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crd-search-status {
+  min-height: 1.5em;
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--t2);
+}
+.crd-empty { margin: 0 0 var(--s-7); font-size: var(--fs-body); color: var(--t1); }
+
 /* ── Sections ── */
-.crd-sec { margin-bottom: var(--s-9); }
-.crd-sec-head { max-width: 62ch; margin-bottom: var(--s-6); }
+.crd-sec { margin-bottom: var(--s-8); }
+.crd-sec-head { max-width: 62ch; margin-bottom: var(--s-5); }
 .crd-h2 {
   font-family: var(--display);
-  font-size: var(--fs-h3);
+  font-size: var(--fs-h4);
   font-weight: 600;
   letter-spacing: -.02em;
   color: var(--t0);
   margin: 0 0 var(--s-2);
 }
-.crd-sec-note { font-size: var(--fs-body-s); line-height: 1.7; color: var(--t1); margin: 0; }
-
-/* ── A licence group ──
- * The rule on the left is the grouping made visible: everything indented past
- * it is under the licence named at the top. It replaces the box a card would
- * have drawn, at a fraction of the ink. */
-.crd-group {
-  border-left: 1px solid var(--border);
-  padding-left: var(--s-4);
-  margin-bottom: var(--s-7);
+.crd-sec-note { font-size: var(--fs-body-s); line-height: 1.65; color: var(--t1); margin: 0; }
+.crd-sec-note a,
+.crd-asks a,
+.crd-foot a {
+  color: var(--accent-text, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: var(--radius-xs);
 }
-.crd-group-h {
+
+/* ── A licence group: one disclosure row ──
+ * The row is the summary, so the whole 56px band opens it. The count sits beside
+ * the chevron, which turns when the group is open. */
+.crd-group { border-top: 1px solid var(--border); }
+.crd-sec > .crd-group:last-child { border-bottom: 1px solid var(--border); }
+.crd-group-sum {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--s-2);
+  gap: var(--s-3);
+  min-height: 56px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-xs);
+}
+.crd-group-sum::-webkit-details-marker { display: none; }
+.crd-group-sum::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 3px;
+  border-right: 1.5px solid var(--t2);
+  border-bottom: 1.5px solid var(--t2);
+  transform: translateY(-2px) rotate(45deg);
+}
+.crd-group[open] > .crd-group-sum::after { transform: translateY(2px) rotate(-135deg); }
+.crd-group-h {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-family: var(--font);
-  font-size: var(--fs-caption);
+  font-size: var(--fs-body);
   font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
   color: var(--t0);
-  margin: 0 0 6px;
+  overflow-wrap: anywhere;
 }
-.crd-group-h a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.crd-group-h a:hover { color: var(--accent-text, var(--accent)); }
-
-/* SC 2.5.8 — every target on this page is a link in a run of text, and a bare
- * inline anchor at 13px is under 24px tall. inline-flex + min-height lifts the
- * box without touching the type size or breaking the line it sits in. */
-/* The radius is declared AT REST, not in the :focus-visible block below.
- * A focus style that changes geometry moves the thing it is meant to point at,
- * and tests/unit/focus-ring-geometry.test.js fails the build over it — the ring
- * has to trace the shape the control actually has. */
-/* min-WIDTH too, and not only min-height. MEASURED at 1440: the MIT link in a
- * licence heading was 20 x 24 — three characters wide — which fails SC 2.5.8 on
- * the axis nobody checks. `justify-content:center` only bites when the box is
- * wider than its text, so it affects that one link and nothing else. */
-.crd a {
-  min-height: 24px;
-  min-width: 24px;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xs);
-}
-.crd-group-h a,
-.crd-row a,
-.crd-asks a,
-.crd-sec-note a,
-.crd-foot a { display: inline-flex; }
-.crd summary { border-radius: var(--radius-xs); }
-
-.crd-tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  letter-spacing: normal;
+.crd-group-count {
+  font-size: var(--fs-body-s);
+  font-variant-numeric: tabular-nums;
   color: var(--t2);
-  text-transform: none;
 }
-.crd-tag--owed { border-color: var(--accent-border-strong, var(--bh)); color: var(--accent-text, var(--accent)); }
-
+.crd-group-body { padding-bottom: var(--s-4); }
 .crd-asks {
   font-size: var(--fs-body-s);
   line-height: 1.65;
   color: var(--t2);
-  margin: 0 0 var(--s-4);
+  margin: 0 0 var(--s-3);
   max-width: 62ch;
 }
+.crd-list + .crd-asks { margin: var(--s-3) 0 0; }
+/* The licence link reads as one phrase, so it never splits across lines. */
+.crd-asks a { white-space: nowrap; }
 
-/* ── Rows ── */
-.crd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--crd-gap); }
-.crd-row { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+/* ── Rows ──
+ * A row is a grid of the main link and, when there is one, a second 44px link
+ * beside it. A note, when there is one, takes the full width beneath. */
+.crd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.crd-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border-top: 1px solid var(--border);
+}
+.crd-group-body > .crd-list > .crd-row:first-child { border-top: 0; }
+.crd-row-link {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  padding-block: var(--s-2);
+  color: var(--t0);
+  text-decoration: none;
+  border-radius: var(--radius-xs);
+}
 .crd-row-name {
   font-size: var(--fs-body);
   font-weight: 600;
+  line-height: 1.35;
   color: var(--t0);
-  text-decoration: none;
+}
+a.crd-row-link .crd-row-name {
+  text-decoration: underline;
+  text-decoration-color: var(--bh);
+  text-underline-offset: 3px;
   width: fit-content;
 }
-a.crd-row-name { text-decoration: underline; text-decoration-color: var(--bh); text-underline-offset: 3px; }
-a.crd-row-name:hover { text-decoration-color: currentColor; color: var(--accent-text, var(--accent)); }
-.crd-row-by { font-size: var(--fs-body-s); color: var(--t1); }
-.crd-row-note { font-size: var(--fs-body-s); line-height: 1.6; color: var(--t2); margin: 0; max-width: 62ch; }
-.crd-row-meta {
-  display: flex;
+.crd-row-by { font-size: var(--fs-body-s); line-height: 1.4; color: var(--t1); }
+.crd-row-by code { font-family: inherit; font-size: inherit; color: inherit; background: none; padding: 0; }
+.crd-row-side {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  color: var(--t3);
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: var(--s-2);
+  margin-right: calc(var(--s-2) * -1);
+  font-size: var(--fs-body-s);
+  color: var(--t1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: var(--radius-xs);
 }
-.crd-row-meta code { font-family: inherit; color: inherit; background: none; padding: 0; }
-.crd-row-meta a { color: var(--t2); }
-.crd-row-meta a:hover { color: var(--t0); }
+.crd-row-note {
+  grid-column: 1 / -1;
+  max-width: 62ch;
+  margin: 0;
+  padding-bottom: var(--s-3);
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+  color: var(--t2);
+}
+@media (hover: hover) {
+  a.crd-row-link:hover .crd-row-name,
+  .crd-row-side:hover,
+  .crd-asks a:hover,
+  .crd-sec-note a:hover { color: var(--accent-text, var(--accent)); text-decoration-color: currentColor; }
+}
 
 /* The font notice is the licence text verbatim, so it is set as quoted text:
  * mono, one measure, and a rule down the side to say it is not our sentence. */
+.crd-row--font { display: block; padding-block: var(--s-3); }
 .crd-copy {
   font-family: var(--mono);
-  font-size: var(--fs-caption);
+  font-size: max(12px, .75rem);
   line-height: 1.6;
   color: var(--t1);
-  margin: 2px 0 4px;
+  margin: var(--s-1) 0 var(--s-1);
   padding-left: var(--s-3);
   border-left: 2px solid var(--bh);
   max-width: 72ch;
   overflow-wrap: anywhere;
 }
+.crd-links { display: flex; flex-wrap: wrap; gap: 0 var(--s-4); }
+.crd-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: var(--fs-body-s);
+  color: var(--t1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+@media (hover: hover) {
+  .crd-links a:hover { color: var(--accent-text, var(--accent)); }
+}
 
 /* ── The package scope ── */
-.crd-list--pkgs { gap: var(--s-3); }
+.crd-row--pkg .crd-row-link { min-height: 48px; }
 .crd-row--pkg .crd-row-name { font-family: var(--mono); font-size: var(--fs-body-s); font-weight: 500; }
+.crd-row--pkg .crd-more { grid-column: 1 / -1; }
 
-.crd-more { margin-top: 6px; }
+.crd-more { padding-bottom: var(--s-2); }
 .crd-more summary {
   cursor: pointer;
   display: flex;
   align-items: center;
-  min-height: 24px;
+  min-height: 48px;
   font-size: var(--fs-body-s);
   color: var(--t2);
-  width: fit-content;
+  border-radius: var(--radius-xs);
 }
-.crd-more summary:hover { color: var(--t0); }
-.crd-more[open] summary { margin-bottom: var(--s-3); }
+.crd-more summary code { font-family: var(--mono); font-size: inherit; margin: 0 .3em; }
+@media (hover: hover) {
+  .crd-more summary:hover { color: var(--t0); }
+}
+.crd-more[open] summary { margin-bottom: var(--s-2); }
 .crd-scope {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
-  gap: 4px var(--s-4);
+  gap: var(--s-1) var(--s-4);
 }
 .crd-scope li {
   display: flex;
   justify-content: space-between;
   gap: var(--s-3);
   font-family: var(--mono);
-  font-size: var(--fs-micro);
+  font-size: max(12px, .75rem);
   color: var(--t2);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -221,24 +312,27 @@ a.crd-row-name:hover { text-decoration-color: currentColor; color: var(--accent-
   color: var(--t2);
   max-width: 68ch;
 }
-.crd-foot code { font-family: var(--mono); font-size: .95em; color: var(--t1); margin: 0 3px; }
+.crd-foot code { font-family: var(--mono); font-size: max(12px, .95em); color: var(--t1); margin: 0 3px; }
 
-/* ── Focus. Never removed, only drawn. ── */
+/* ── Focus. Never removed, only drawn. ──
+ * The radius is declared at rest on every control above, not here: a focus style
+ * that changes geometry moves the thing it points at, and
+ * tests/unit/focus-ring-geometry.test.js fails the build over it. */
 .crd a:focus-visible,
 .crd summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* ── Two columns once there is room for two measures side by side.
- * 834 is the iPad portrait step the suite measures; the grid switches a little
- * under it so the tablet band is not a single long column of short rows. ── */
-@media (min-width: 760px) {
-  .crd-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5) var(--s-7); }
-  .crd-list--fonts { grid-template-columns: minmax(0, 1fr); }
-  .crd-group { padding-left: var(--s-5); }
+/* ── Two columns once there is room for two measures side by side. ── */
+@media (min-width: 640px) {
+  .crd-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--s-5); }
+  /* The first row of each column loses its top rule, so the rules do not double
+     against the group's own. */
+  .crd-group-body > .crd-list > .crd-row:nth-child(2) { border-top: 0; }
+  .crd-list--pkgs .crd-row--pkg:has(.crd-more) { grid-column: 1 / -1; }
 }
 @media (min-width: 1100px) {
-  .crd-list--fonts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .crd-list--pkgs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .crd-group-body > .crd-list > .crd-row:nth-child(3) { border-top: 0; }
 }

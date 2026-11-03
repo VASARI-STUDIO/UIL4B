@@ -72,7 +72,7 @@ export const HELP_STARTS = Object.freeze([
     opensWith: 'the whole library',
     // What is free and what is capped is stated the same way /plans states it,
     // from the same constant, so the two surfaces cannot disagree.
-    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that wants an account — ${FREE_SAVE_LIMITS.customIcons} of them on the free plan.`,
+    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
   }),
   Object.freeze({
     id: 'files',
@@ -99,7 +99,7 @@ export const HELP_ANSWERS = Object.freeze([
     q: 'Do I need an account?',
     // Using a tool is never metered; what the free plan caps is how much you
     // can SAVE. /plans makes the same distinction from the same constants.
-    a: `No. Every tool opens and runs signed out, and using one is never metered. An account is what lets you save — ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons on the free plan — and carry settings to another device.`,
+    a: `No. Every tool opens and runs signed out, and using one is never metered. An account lets you save and carry settings to another device. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons.`,
   }),
   Object.freeze({
     id: 'cost',
@@ -179,7 +179,7 @@ export const HELP_JOBS = Object.freeze([
     label: 'Find an icon',
     start: startOf('icons'),
     heading: 'Search the whole library and copy the SVG, signed out.',
-    lede: `Saving your own custom icons wants an account: ${FREE_SAVE_LIMITS.customIcons} of them on the free plan.`,
+    lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
     to: startOf('icons').to,
     cta: 'Open the Icon Library',
   }),
@@ -223,7 +223,7 @@ export const HELP_JOBS = Object.freeze([
     id: 'report',
     label: 'Report something broken',
     heading: 'One report form, from anywhere.',
-    lede: 'It is the same form the app uses everywhere else, so it reaches the same place whether you send it from here or from the tool that broke.',
+    lede: 'It is the same form the app uses everywhere. It reaches the same place whether you send it from here or from the tool that broke.',
     to: '/feedback',
     cta: 'Report it',
   }),

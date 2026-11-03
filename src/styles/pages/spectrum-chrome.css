@@ -264,8 +264,9 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* The icon buttons are drawn at 38px and the quiet links about 32px tall; on a
    touch screen each takes a 44px hit area centred on it, so the drawn size
    stays and the target is 44px. The quiet links are wider than 44px, so only
-   their height grows and neighbouring areas never overlap. */
-@media(pointer:coarse){
+   their height grows and neighbouring areas never overlap. Any pointer gets them
+   below 768px, where the pill is the phone layout. */
+@media(pointer:coarse),(max-width:767px){
   .spnav-icon,.spnav-cta,.spnav-mark,.spnav-quiet-link{position:relative}
   .spnav-icon::after,.spnav-cta::after,.spnav-mark::after,.spnav-quiet-link::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 }
