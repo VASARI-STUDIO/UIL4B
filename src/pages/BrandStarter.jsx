@@ -273,6 +273,24 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
   // error alert, and once the address is verified it repeats the request.
   const [needsVerify, setNeedsVerify] = useState(false)
   const resultRef = useRef(null)
+  // The brief grows to hold its text (or the example shown while it is empty), so
+  // neither is ever cut off inside the field; CSS caps the height and it scrolls.
+  const briefRef = useRef(null)
+  useEffect(() => {
+    const el = briefRef.current
+    if (!el) return undefined
+    const fit = () => {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+    }
+    fit()
+    let width = el.clientWidth
+    const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+      if (el.clientWidth !== width) { width = el.clientWidth; fit() }
+    }) : null
+    watch?.observe(el)
+    return () => watch?.disconnect()
+  }, [brief])
 
   const allowance = generationAllowance(planId)
   const used = server?.used ?? 0
@@ -421,6 +439,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
         </p>
         <textarea
           id="bs-brief"
+          ref={briefRef}
           className="bs-field"
           aria-describedby="bs-brief-hint bs-brief-count"
           rows={3}

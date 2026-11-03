@@ -827,6 +827,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const anchorRef = useRef(0)
   const stopListRef = useRef(null) // the stop list's scrolling window (see syncStopScroll)
   const coarse =useMediaQuery('(pointer: coarse)')
+  // On a phone the toolbar row keeps the name, Random and More; Back, Reset and
+  // the stop count are off the row (Back and Reset are in More).
+  const phoneBar = useMediaQuery('(max-width: 767px)')
   const multi = picked.length >= 2
   // The stops a colour, lock or delete acts on: the selection, or the active stop.
   const targets = useMemo(() => (multi ? picked : [activeStop]), [multi, picked, activeStop])
@@ -1868,7 +1871,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Random', icon: 'shuffle', onSelect: pressRandom, title: randomTitle },
         },
         {
-          id: 'back', priority: 2,
+          id: 'back', priority: 2, inline: !phoneBar,
           render: () => (
             <ToolButton
               variant="square"
@@ -1883,12 +1886,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Back', icon: 'arrow-u-up-left', ariaDisabled: backCount === 0, title: backCount === 0 ? 'Nothing to go back to yet' : 'Back to the previous gradient', onSelect: goBack },
         },
         {
-          id: 'reset', priority: 1,
+          id: 'reset', priority: 1, inline: !phoneBar,
           render: () => <ToolButton icon="arrow-counter-clockwise" onClick={reset} title="Reset to the starting gradient">Reset</ToolButton>,
           menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset },
         },
         {
-          id: 'count', priority: 2, align: 'end', menu: false,
+          id: 'count', priority: 2, align: 'end', menu: false, inline: !phoneBar,
           render: () => <span className="tl-meta grd-count">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>,
         },
       ]}

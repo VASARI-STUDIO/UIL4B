@@ -410,7 +410,7 @@
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
-.grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
+.grd .grd-stop-pos { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
 /* Room for the role name on a fine pointer. The side card keeps one 15px scrollbar
    gutter and the window another, so "Secondary 500" had 64px of a 96px column once
    both were drawn. The window bleeds 8px into the section's padding each side (the
@@ -456,7 +456,7 @@
 /* The line in the Selected stop and Geometry label rows that says what a lock does.
    Its line box is the label's height, so the row keeps the height it had. */
 .grd .tl-sec-head:has(> .grd-lock-cap) > .tl-sec-label { flex: none; white-space: nowrap; }
-.grd .grd-lock-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 12px; color: var(--tl-dim); }
+.grd .grd-lock-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 12px; color: var(--tl-dim); }
 .grd .grd-lock-cap-short { display: none; }
 @media (max-width: 379px) {
   .grd .grd-lock-cap-long { display: none; }
