@@ -128,7 +128,7 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
   }
 
   const fallback = (
-    <div className="lib-loading" role="status" aria-live="polite">
+    <div className="lib-loading lib-loading--route" role="status" aria-live="polite">
       <div className="fg-loader" />
       <strong>Opening the {current.label.toLowerCase().replace(/s$/, '')} library</strong>
       <span>Your search and filters will stay in place when you switch libraries.</span>
