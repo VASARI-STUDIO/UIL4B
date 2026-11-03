@@ -233,6 +233,11 @@
 
 .fc .fc-pair > div { display: grid; gap: 8px; min-width: 0; }
 
+/* The size limit's longest label ("Full HD — 1920 px") needs most of the row; the
+   export scale's longest is "@0.25x". Equal halves cut the first one off. This
+   comes before the 480px rule below, which stacks the pair and wins by order. */
+.fc .fc-pair--size { grid-template-columns: minmax(0, 1fr) 104px; }
+
 .fc .fc-row { display: flex; align-items: center; gap: 10px; }
 
 .fc .fc-row .fc-note { margin: 0; }
@@ -657,16 +662,28 @@
 /* The output readout. One line, under the controls it explains, and quiet
    enough that it reads as a status rather than another control. */
 .fc .fc-outsize {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+  display: grid;
+  gap: 4px;
   margin-top: 4px;
   padding-top: 10px;
   font-size: 12.5px;
   color: var(--t2);
   border-top: 1px dashed var(--border);
 }
+
+/* The sizes stay on one line (the value gives way before it wraps), and the
+   note under them holds a line of its own whether or not it has words, so the
+   block is the same height with the note and without. */
+.fc .fc-outsize-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fc .fc-outsize-line .fc-outsize-v { min-width: 0; overflow-wrap: anywhere; }
+
+.fc .fc-outsize-cap { min-height: 1.45em; }
 
 .fc .fc-outsize-k {
   font-family: var(--font);
@@ -1167,4 +1184,48 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   html:not([data-reduced-motion="false"]) .fc .fc-seg[data-slide]::before { transition: none !important; }
   html:not([data-reduced-motion="false"]) .fc .fc-btn:active:not(:disabled) { transform: none; }
   html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+}
+
+/* ── Edit list (Video tab) ────────────────────────────────────────────────────
+   Undo, Redo and the edits so far in one row that never wraps. Below 480px the
+   buttons shrink to their icons (the name stays on the button for assistive
+   tech); the line gives way with an ellipsis. */
+.fc .fc-editbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-width: 0; }
+
+.fc .fc-editbtn { flex: none; padding-inline: 12px; white-space: nowrap; }
+
+.fc .fc-editbtn svg { width: 16px; height: 16px; flex: none; }
+
+.fc .fc-btn.fc-editbtn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; background: transparent; border-color: var(--border); }
+
+.fc .fc-btn.fc-editbtn[aria-disabled="true"]:active { transform: none; }
+
+.fc .fc-editline {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--t1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fc .fc-editline-k { margin-right: 6px; color: var(--t3); }
+
+@media (max-width: 480px) {
+  .fc .fc-editbtn { min-width: 44px; padding-inline: 0; }
+  .fc .fc-editbtn-text {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+}
+
+/* The toast clears the pinned action bar. FileConverter measures the bar into
+   --fc-bar-live and marks <html> while it is on screen. */
+@media (max-width: 767px) {
+  html.fc-has-bar.has-tabbar .toast {
+    bottom: calc(var(--tabbar-h) + var(--fc-bar-live, 0px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom));
+  }
 }

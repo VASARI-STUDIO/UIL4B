@@ -44,7 +44,6 @@ import { go } from './helpers.js'
 const SURFACES = [
   '/discover/palettes',
   '/discover/gradients',
-  '/discover/prompts',
   '/create/icons',
   '/create/emoji',
 ]
