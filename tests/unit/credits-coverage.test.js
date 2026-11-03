@@ -392,3 +392,15 @@ test('the Iconify credit is still true of the page that fetches through it', () 
     'IconLibrary.jsx no longer fetches from Iconify, so the credit on /credits is stale')
   assert.match(CREDITS_PAGE, /Iconify/, 'Credits.jsx no longer credits Iconify')
 })
+
+test('every colour system Nearest match compares against is credited, with its owner and licence', () => {
+  const registry = JSON.parse(read('scripts/nearest-sources/systems.json'))
+  for (const sys of registry.systems) {
+    assert.ok(sys.owner, `${sys.id} in systems.json names no owner, so its /credits row credits nobody`)
+    assert.ok(sys.licence && /^https:\/\//.test(sys.licenceUrl), `${sys.id} has no licence or licence link`)
+  }
+  assert.match(CREDITS_PAGE, /from '\.\.\/\.\.\/scripts\/nearest-sources\/systems\.json'/,
+    'Credits.jsx no longer reads the colour systems from the registry the build uses')
+  assert.match(read('src/data/nearest/index.js'), new RegExp(`id: "${registry.systems.at(-1).id}"`),
+    'the shipped nearest-match index and the registry disagree')
+})

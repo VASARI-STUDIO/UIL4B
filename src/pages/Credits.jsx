@@ -51,6 +51,7 @@ import { allPackCredits, licenceOf } from '../data/iconPackCredits'
 // records the run that caught that. tests/unit/credits-coverage.test.js fails
 // the build if it has drifted from public/fonts/, package.json or node_modules/.
 import creditsManifest from '../data/creditsManifest.json'
+import nearestSources from '../../scripts/nearest-sources/systems.json'
 import '../styles/pages/credits.css'
 
 const { fonts: FONT_CREDITS, dependencies: DIRECT_DEPENDENCIES, firebase: FIREBASE_PACKAGES } = creditsManifest
@@ -88,6 +89,17 @@ const ASSET_CREDITS = [
     used: 'The Icon Library reads every catalogue and every glyph through the public Iconify API. Iconify hosts and normalises the sets credited above; it does not own them.',
     checkedIn: 'src/pages/IconLibrary.jsx',
   },
+  // The colour systems Nearest match compares against, read from the registry
+  // the build script fetches them by, so a system added there is credited here.
+  ...nearestSources.systems.map((sys) => ({
+    name: `${sys.label} colours`,
+    author: sys.owner,
+    url: sys.sourceUrl,
+    licenceUrl: sys.licenceUrl,
+    licenceName: sys.licence.split(',')[0],
+    used: `Nearest match finds the closest named colour in this set (${sys.version}).`,
+    checkedIn: 'scripts/nearest-sources/systems.json',
+  })),
 ]
 
 /* jszip is dual-licensed and a dual licence is a CHOICE, not a description.
@@ -386,7 +398,7 @@ export default function Credits() {
           <div className="crd-sec-head">
             <h2 className="crd-h2" id="crd-data">Data &amp; services</h2>
             <p className="crd-sec-note">
-              Two sources that are neither a package nor an icon set, and would
+              Sources that are neither a package nor an icon set, and would
               otherwise go unnamed.
             </p>
           </div>
