@@ -170,30 +170,31 @@
 /* ─── Pro plan disabled state ─── */
 
 /* ─── Brand kit walkthrough ─── */
-/* A bar docked to the foot of the viewport on every step, and one panel that
-   opens from it: a bottom sheet joined to the bar on a phone, a popover above
-   the trigger from 768px. The panel has no scrim and no full-viewport layer, so
-   the tool behind it stays usable.
+/* A bar on every step, and one panel that opens from it: a bottom sheet joined
+   to the bar on a phone, a popover above the trigger from 768px. Below 1024px
+   the bar is docked to the foot of the viewport; from 1024px it is a glass pill
+   floating over it. The panel has no scrim and no full-viewport layer, so the
+   tool behind it stays usable.
 
    The bar is built from the viewport, not the host page's gutters, so it has one
    width and one x on all four tools. It never animates in: each tool mounts its
    own copy, so an entrance would replay on every Next. An in-flow spacer of the
-   bar's height (plus the tool's own bottom toolbar, where it has one) keeps the
+   bar's reserve (plus the tool's own bottom toolbar, where it has one) keeps the
    end of the tool clear of it.
 
-   One height per width, on every step and in every state. Below 1056px a 20px
-   band at the top of the bar carries "Step N of 4" (--bkit-head); from 1056px
+   One height per width, on every step and in every state. Below 1024px a 20px
+   band at the top of the bar carries "Step N of 4" (--bkit-head); from 1024px
    the same text sits inline at the start of the row and the band is 0:
      · under 768px   band, then two 44px rows (steps, then Close / Help / Next), 132px
      · 768 to 1023px band, then one row, 76px
-     · 1024 to 1055  band, then one row, 76px
-     · 1056px up     one row, 56px
-   --bkit-h holds the safe-area inset on the tiers that sit on the screen edge,
-   so the bar and its spacer agree. */
-:root{--bkit-head:20px;--bkit-h:calc(112px + var(--bkit-head) + env(safe-area-inset-bottom))}
+     · 1024px up     a pill, one row, 50px, floating --bkit-float above the foot
+   --bkit-h is the bar's own height and holds the safe-area inset on the tiers
+   that sit on the screen edge, so the bar and its spacer agree. --bkit-reserve
+   is --bkit-h plus the gap above and below the pill (none below 1024px): what
+   anything stacked over the bar, and the end of the page, has to clear. */
+:root{--bkit-head:20px;--bkit-float:0px;--bkit-h:calc(112px + var(--bkit-head) + env(safe-area-inset-bottom));--bkit-reserve:calc(var(--bkit-h) + 2 * var(--bkit-float))}
 @media(min-width:768px){:root{--bkit-h:calc(56px + var(--bkit-head) + env(safe-area-inset-bottom))}}
-@media(min-width:1024px){:root{--bkit-h:calc(56px + var(--bkit-head))}}
-@media(min-width:1056px){:root{--bkit-head:0px}}
+@media(min-width:1024px){:root{--bkit-head:0px;--bkit-float:16px;--bkit-h:50px}}
 
 .bkit-rail{
   --bkit-hair:color-mix(in srgb,var(--t0) 9%,transparent);
@@ -201,7 +202,7 @@
   --bkit-mark-line:color-mix(in srgb,var(--t0) 30%,transparent);
   --bkit-focus:var(--link,var(--accent-text));
   --bkit-ease:cubic-bezier(.23,1,.32,1);
-  position:fixed;inset-inline:0;bottom:var(--bkit-toolbar-h,0px);z-index:60;isolation:isolate;
+  position:fixed;inset-inline:0;bottom:calc(var(--bkit-toolbar-h,0px) + var(--bkit-float));z-index:60;isolation:isolate;
   container:bkit / inline-size;
   box-sizing:border-box;height:var(--bkit-h);margin:0;
   /* 1px rule + 7px + band + 44px + 8px + 44px + 8px = 112px + band */
@@ -210,7 +211,7 @@
   background:var(--bg-0);border:0;border-top:1px solid var(--bkit-hair);
   font-family:var(--font);
 }
-.bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+.bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px))}
 
 /* The lead. Below 1056px it is the band at the top of the bar, with only the
    count drawn; the title is read out but not shown. From 1056px it sits in the
@@ -335,22 +336,80 @@
 @media(min-width:768px) and (hover:hover){
   .bkit-step:hover{background:var(--hvr);color:var(--t0)}
 }
+/* ─── 1024px and up: the floating pill ───
+   The bar is a glass pill, 896x50, centred on the viewport and --bkit-float
+   above the foot (above the tool's own bottom toolbar where it has one, which
+   keeps the foot). It uses the app's glass recipe (.glass: --glass-border,
+   --glass-shadow, saturate and a blur) with the nav's 88% page tint and a 24px
+   blur, so the tool shows through it, and a solid fallback below.
+   Nothing inside it is a box. Only Next (the one accent fill, or an outline
+   while a panel is open) and the four step marks have a ground or an edge;
+   the step links, help and close are bare until hovered, and a hover changes
+   their colour, not their ground. The current step is the 2px accent underline.
+   One backdrop-filter surface means no ancestor of the bar may be a backdrop
+   root (filter, opacity under 1, mask, clip-path, backdrop-filter, mix-blend-
+   mode, or will-change on those); none is, so the bar stays a plain child of
+   the page and its blur reads what is behind it. The row never wraps or
+   scrolls at any desktop width, so overflow stays visible and the focus rings
+   sit outside the pill. */
 @media(min-width:1024px){
-  .bkit-rail{z-index:40}
-  .bkit-rail-help,.bkit-rail-close{width:36px;height:36px}
+  .bkit-rail{
+    --bkit-glass:color-mix(in srgb,var(--bg-0) 88%,transparent);
+    --bkit-dim:color-mix(in srgb,var(--t0) 62%,var(--bg-0));
+    z-index:40;
+    width:min(896px,100% - 2 * var(--bkit-float));
+    margin-block:0;margin-inline:auto;
+    padding-block:6px;padding-inline:20px 6px;
+    background:var(--bkit-glass);
+    -webkit-backdrop-filter:saturate(160%) blur(24px);backdrop-filter:saturate(160%) blur(24px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-pill);
+    box-shadow:var(--glass-shadow),var(--ring);
+  }
+  [data-theme="light"] .bkit-rail{--bkit-dim:color-mix(in srgb,var(--t0) 80%,var(--bg-0))}
+
+  /* The lead sits in the row: the band is gone (--bkit-head is 0) and the title
+     shows beside the count. */
+  .bkit-rail-head{position:static;align-items:baseline;flex:none;height:auto}
+  .bkit-rail-eyebrow{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+  .bkit-rail-count{margin-inline-start:var(--s-2);color:var(--bkit-dim)}
+
+  /* Steps are links with no ground in any state. The mark answers built or
+     not; the label and the underline, 3px above the link's foot, answer where
+     you are. */
+  .bkit-step{height:36px;background:transparent;color:var(--bkit-dim)}
+  .bkit-step-mark{color:var(--bkit-dim)}
+  .bkit-step.is-current::before{bottom:3px;background:var(--accent-mid)}
+
+  /* Help and close are bare 36px circles with a 44px hit area. The help label
+     stays in the DOM, visually hidden, so its accessible name is unchanged. */
+  .bkit-rail .bkit-rail-help,.bkit-rail .bkit-rail-close{width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--t1)}
+  .bkit-rail-help::after,.bkit-rail-close::after{width:44px;height:44px}
+  .bkit-rail-help-icon{width:18px;height:18px}
+  .bkit-rail-close svg{width:16px;height:16px;stroke-width:2}
   .bkit-rail .bkit-rail-next{height:36px}
+}
+@media(min-width:1024px) and (hover:hover){
+  .bkit-step:hover{background:transparent;color:var(--t0)}
+}
+@media(min-width:1024px) and (hover:hover) and (pointer:fine){
+  .bkit-rail .bkit-rail-help:hover,.bkit-rail .bkit-rail-close:hover{background:var(--hvr);color:var(--t0)}
 }
 /* On a fine pointer the chromatic outline is the hover, so the border stays put. */
 @media(min-width:1024px) and (hover:hover){
-  .bkit-rail .bkit-rail-help:hover,.bkit-rail .bkit-rail-next.is-outline:hover{border-color:var(--bkit-line)}
+  .bkit-rail .bkit-rail-next.is-outline:hover{border-color:var(--bkit-line)}
 }
-
-/* From 1056px the bar has room for the lead in its row: the band is gone
-   (--bkit-head is 0) and the title shows beside the count. */
-@media(min-width:1056px){
-  .bkit-rail-head{position:static;align-items:baseline;flex:none;height:auto}
-  .bkit-rail-eyebrow{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
-  .bkit-rail-count{margin-inline-start:var(--s-2)}
+/* Solid fallback: a person who asks for less transparency, or a browser with no
+   backdrop-filter, gets an opaque page-coloured pill. */
+@media(min-width:1024px) and (prefers-reduced-transparency:reduce){
+  .bkit-rail{background:var(--bg-1);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  @media(min-width:1024px){
+    .bkit-rail{background:var(--bg-1)}
+  }
+}
+@media(min-width:1024px) and (forced-colors:active){
+  .bkit-rail{background:Canvas;border-color:CanvasText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 /* ─── What the bar shows as it gets wider ───
@@ -443,9 +502,9 @@
   .bkit-card{
     --bkit-pad:20px;--bkit-rise:8px;
     inset-inline:auto;right:var(--bkit-dock-end,var(--s-4));
-    bottom:var(--bkit-dock-bottom,calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + var(--s-2)));
+    bottom:var(--bkit-dock-bottom,calc(var(--bkit-h) + var(--bkit-float) + var(--bkit-toolbar-h,0px) + var(--s-2)));
     width:min(400px,100vw - 32px);padding:var(--bkit-pad);
-    max-height:calc(var(--bkit-vvh,100dvh) - var(--chrome-h) - var(--bkit-h) - var(--bkit-toolbar-h,0px) - 16px);
+    max-height:calc(var(--bkit-vvh,100dvh) - var(--chrome-h) - var(--bkit-reserve) - var(--bkit-toolbar-h,0px) - 16px);
     border-bottom:1px solid var(--border);border-radius:var(--radius-2xl);
     animation-duration:180ms;
   }
@@ -479,12 +538,12 @@
   html.bkit-on.has-tabbar{scroll-padding-bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 8px)}
 }
 /* A control reached by Tab scrolls clear of the fixed bar. */
-html.bkit-on{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 8px)}
-html.bkit-on body .toast{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 12px + var(--toast-lift))}
-html.bkit-on body .global-feedback-btn{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 14px)}
-html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 20px)}
+html.bkit-on{scroll-padding-block-end:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 8px)}
+html.bkit-on body .toast{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 12px + var(--toast-lift))}
+html.bkit-on body .global-feedback-btn{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 14px)}
+html.bkit-on body .bill-banner{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 20px)}
 @media(max-width:520px){
-  html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 74px)}
+  html.bkit-on body .bill-banner{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 74px)}
 }
 
 /* Forced colours: the system hairline, and Highlight for where you are. */
