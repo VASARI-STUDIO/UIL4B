@@ -12,13 +12,16 @@ import { go, signIn, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 
-async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference', hash = '', member = false } = {}) {
+// parked: only an admin can open /discover/prompts, so every page here signs in as the admin.
+// The admin plan is Pro, so this file says nothing about Free or signed-out gating.
+
+async function openLibrary(browser, { width = 1440, height = 900, reducedMotion = 'no-preference', hash = '' } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion })
   await context.addInitScript(() => { try { localStorage.setItem('vs-prompt-tab', 'community') } catch { /* no storage */ } })
   const page = await context.newPage()
   watch(page, 'a visitor browsing community prompts')
-  // Saving belongs to an account; signed out, Save opens the sign-in prompt.
-  if (member) await signIn(page)
+  // Only an admin reaches the route; the admin account is also the member who can save.
+  await signIn(page, { admin: true })
   await go(page, `/discover/prompts${hash}`)
   await expect(page.locator('.pl-card').first()).toBeVisible()
   return { context, page }
@@ -127,7 +130,7 @@ test.describe('the community prompt gallery', () => {
   })
 
   test('Save toggles: pressed state, unsave with Undo, the same in the modal', async ({ browser }) => {
-    const { context, page } = await openLibrary(browser, { member: true })
+    const { context, page } = await openLibrary(browser)
     const id = await firstCardId(page)
     const save = page.locator('.pl-card-save').first()
     const myCount = page.locator('.pl-tab', { hasText: 'My Prompts' }).locator('.pl-tab-count')

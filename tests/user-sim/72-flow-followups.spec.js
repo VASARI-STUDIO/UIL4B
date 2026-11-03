@@ -490,7 +490,9 @@ test.describe('7 — an onboarded account typing /onboarding lands on its home',
 // 8 — the shared dialog hook hands focus back a frame later
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('8 — the dialog hook hands focus back a frame after the close, not inside it', () => {
-  for (const size of [PHONE, DESK]) {
+  // Desktop only: the floating Feedback button is not drawn below 768px, and it
+  // is the opener this test returns focus to.
+  for (const size of [DESK]) {
     // Neither the project detail nor New project is a dialog, so the dialog this
     // hook serves on /projects is the Feedback form, opened from the floating
     // Feedback button (FeedbackModal uses the same useModalDialog).

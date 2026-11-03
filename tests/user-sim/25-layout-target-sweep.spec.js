@@ -480,6 +480,7 @@ async function promptToolbar(page) {
   })
 }
 
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
 test('S4 · the Prompt Library toolbar is one line at any width, and the Filters button loses nothing', async ({ browser }) => {
   budget(PROMPT_WIDTHS.length * 2)
   const damage = []
@@ -487,7 +488,7 @@ test('S4 · the Prompt Library toolbar is one line at any width, and the Filters
     const phone = w <= 640
     // The overview: the search field alone, one line, no groups yet.
     {
-      const { ctx, page } = await open(browser, w, 900, '/discover/prompts', '.pl-toolbar', { touch: phone })
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts', '.pl-toolbar', { touch: phone, as: { admin: true } })
       const r = await promptToolbar(page)
       await ctx.close()
       if (r.mainLines !== 1) damage.push(`overview @${w}px: the toolbar row is ${r.mainLines} lines`)
@@ -496,7 +497,7 @@ test('S4 · the Prompt Library toolbar is one line at any width, and the Filters
     }
     // The list: the three groups.
     {
-      const { ctx, page } = await open(browser, w, 900, '/discover/prompts#all', '.pl-toolbar', { touch: phone })
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts#all', '.pl-toolbar', { touch: phone, as: { admin: true } })
       let r = await promptToolbar(page)
       if (r.mainLines !== 1) damage.push(`list @${w}px: the toolbar row is ${r.mainLines} lines`)
       if (phone) {
@@ -752,7 +753,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   // On a touch screen the FAB is not drawn at all (feedback lives in the menus),
   // so the compact form is a mouse-and-short-window case.
   for (const [w, h] of FAB_SHORT) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
@@ -761,13 +762,13 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
     if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
   }
   for (const [w, h] of FAB_ROOMY) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.pl-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
   }
   {
-    const { ctx, page } = await open(browser, 844, 390, '/discover/prompts', '.pl-toolbar')
+    const { ctx, page } = await open(browser, 844, 390, '/discover/palettes', '.lbry-toolbar')
     const f = await fabState(page)
     await ctx.close()
     if (f && (f.w || f.h)) damage.push(`844x390 touch: the FAB is drawn (${f.w}x${f.h}) where the menus carry feedback`)
@@ -781,12 +782,13 @@ const FAB_COVER = [
   ['/discover/prompts', '.pl-toolbar', [...FAB_SHORT, [390, 844]]],
 ]
 
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
   budget(FAB_COVER.reduce((n, [, , shapes]) => n + shapes.length, 0))
   const damage = []
   for (const [path, waitFor, shapes] of FAB_COVER) {
     for (const [w, h] of shapes) {
-      const { ctx, page } = await open(browser, w, h, path, waitFor)
+      const { ctx, page } = await open(browser, w, h, path, waitFor, { as: { admin: true } })
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
       // Every rectangle below is read from a live layout, so the page has to
       // have stopped moving first. 500ms was a guess at how long that takes.

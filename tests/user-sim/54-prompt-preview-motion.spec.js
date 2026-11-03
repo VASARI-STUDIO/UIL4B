@@ -53,7 +53,10 @@
 // shape. "It did not move" is trivially true of a page that never rendered, and
 // that is exactly how this file would start lying.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
+
+// parked: only an admin can open /discover/prompts, so every page here signs in as the admin.
+// The admin plan is Pro, so this file says nothing about Free or signed-out gating.
 
 const ROUTE = '/discover/prompts'
 const CARD = '.pl-card'
@@ -99,6 +102,7 @@ async function open(browser, { os, stored }) {
     try { localStorage.setItem('vs-prompts', JSON.stringify(rows)) } catch { /* quota */ }
   }, SEEDED)
   const page = await ctx.newPage()
+  await signIn(page, { admin: true })
   return { ctx, page }
 }
 

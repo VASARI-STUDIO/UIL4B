@@ -30,6 +30,7 @@ import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
+import { isOnLink } from '../utils/elementSignature'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
@@ -2145,6 +2146,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 key={i}
                 className={`grd-stop${inSel ? ' is-on' : ''}${multi && inSel ? ' is-multi' : ''}`}
                 onContextMenu={(e) => {
+                  if (isOnLink(e.target)) return
                   // A finger's long press selects; the Tints button opens the menu there.
                   if (coarse) { e.preventDefault(); return }
                   openTintMenu(e, i, e.currentTarget.querySelector('.grd-stop-select'))

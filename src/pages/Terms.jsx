@@ -50,7 +50,7 @@
 // id cut from the rendered title would change with the language and every
 // bookmark to it would break.
 import { useI18n } from '../contexts/I18nContext'
-import LegalContents from '../components/legal/LegalContents'
+import LegalContents, { BackToContents } from '../components/legal/LegalContents'
 import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
 
@@ -107,6 +107,7 @@ export default function Terms() {
                   </p>
                 )}
                 {s.more && <p className="lgl-p">{t(s.more)}</p>}
+                <BackToContents />
               </section>
             )
           })}

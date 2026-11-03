@@ -25,6 +25,23 @@ function keepRowVisible(col, row) {
   else if (r.bottom > c.bottom) col.scrollTop += r.bottom - c.bottom
 }
 
+/* The link at the end of each clause that returns to the contents. It is shown
+   only where the contents is the disclosure above the document (the stylesheet
+   hides it beside the sticky rail), and it opens the disclosure so the clause
+   list is there once the page has jumped. */
+export function BackToContents() {
+  const back = () => {
+    const details = document.querySelector('.lgl-toc-m')
+    if (details) details.open = true
+    setTimeout(() => details?.querySelector('summary')?.focus({ preventScroll: true }), 0)
+  }
+  return (
+    <a className="lgl-back" href="#legal-contents" onClick={back}>
+      <span aria-hidden="true">&uarr;</span> Contents
+    </a>
+  )
+}
+
 /* items: [{ id, label, lang? }]. `lang` marks a clause that is not in the
    page's language, on both the rail entry and (set by the page) the clause. */
 export default function LegalContents({ items }) {
@@ -49,7 +66,7 @@ export default function LegalContents({ items }) {
 
   if (narrow) {
     return (
-      <div className="cpg-rail-col lgl-toc-col">
+      <div className="cpg-rail-col lgl-toc-col" id="legal-contents">
         <details className="lgl-toc-m" ref={detailsRef}>
           <summary className="lgl-toc-m-sum">On this page</summary>
           <nav aria-label="On this page">
