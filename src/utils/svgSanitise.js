@@ -68,12 +68,15 @@
 //  · Over a cap: bytes, element count, nesting depth, <use> count (a <use> chain
 //    can multiply what the renderer has to draw, so the count is bounded).
 //
-// RETURN: `{ ok, svg, removed }`, or `null` on a reject.
+// RETURN: `{ ok, css, svg, removed }`, or `null` on a reject.
 //  · `svg`     the cleaned markup, always with the SVG xmlns on the root.
 //  · `removed` plain-text notes of what was dropped (`<script>`, `@onload`), at
 //              most 50, de-duplicated. Never put these in innerHTML.
 //  · `ok`      true when nothing needed removing. A display path can use `svg`
 //              whatever `ok` says; an upload path can refuse when it is false.
+//  · `css`     true when the file carried a style, class or <style>, converted
+//              or not, so a caller that wants the file exactly as drawn can
+//              tell that the output was rewritten.
 //  Comments, the <?xml?> declaration, xmlns:* declarations, `version` and
 //  `xml:space` are dropped without a note: they are noise, not content.
 //  `null` rather than `{ ok: false }` keeps the contract of the private
@@ -511,6 +514,7 @@ function cleanElement(node, ctx) {
   // A <style> that collectSheets() read is gone either way; only a refused one
   // earns a note.
   if (node.name === 'style' && node.sheet) {
+    ctx.css = true
     if (node.sheet.why) ctx.note(`<style> (${node.sheet.why})`)
     return null
   }
@@ -525,8 +529,8 @@ function cleanElement(node, ctx) {
   let styleText
   for (const [rawName, value] of node.attrs) {
     const name = rawName === 'xlink:href' ? 'href' : rawName
-    if (rawName === 'class') { classValue = value; continue }
-    if (rawName === 'style') { styleText = value; continue }
+    if (rawName === 'class') { classValue = value; ctx.css = true; continue }
+    if (rawName === 'style') { styleText = value; ctx.css = true; continue }
     if (rawName === 'xmlns' && value === SVG_NS) { attrs.push(['xmlns', SVG_NS]); continue }
     if (rawName.startsWith('xmlns:')) continue
     if (SILENT_ATTRIBUTES.has(rawName)) continue
@@ -657,7 +661,7 @@ function serialise(node) {
  * @param {string} source
  * @param {{ idPrefix?: string, maxBytes?: number, maxElements?: number,
  *           maxDepth?: number, maxUse?: number }} [options]
- * @returns {{ ok: boolean, svg: string, removed: string[] } | null}
+ * @returns {{ ok: boolean, css: boolean, svg: string, removed: string[] } | null}
  */
 export function sanitiseSvgInline(source, options = {}) {
   const idPrefix = options.idPrefix ?? ''
@@ -683,6 +687,7 @@ export function sanitiseSvgInline(source, options = {}) {
     byClass: new Map(),
     byElement: new Map(),
     referenced: new Set(),
+    css: false,
     note: (what) => { if (removed.size < MAX_REMOVED_NOTES) removed.add(what) },
   }
 
@@ -697,7 +702,7 @@ export function sanitiseSvgInline(source, options = {}) {
     resolveRefs(clean, ids, ctx)
     if (!idPrefix) dropUnreferencedIds(clean, ctx.referenced)
     const notes = [...removed]
-    return { ok: notes.length === 0, svg: serialise(clean), removed: notes }
+    return { ok: notes.length === 0, css: ctx.css, svg: serialise(clean), removed: notes }
   } catch (err) {
     if (err instanceof Reject) return null
     throw err

@@ -68,7 +68,7 @@ function assertInert(svg, label = '') {
 test('a clean icon comes out byte-for-byte as it went in, with ok and nothing removed', () => {
   const src = read('tests/user-sim/fixtures/iconify/icon.svg').trim()
   const out = run(src)
-  assert.deepEqual(out, { ok: true, svg: src, removed: [] })
+  assert.deepEqual(out, { ok: true, css: false, svg: src, removed: [] })
 })
 
 test('the root always carries the SVG namespace, added when the source left it out', () => {
@@ -667,7 +667,7 @@ test('no element survives inside <title> or <desc>, allow-listed or not, so inli
   assert.equal(run(wrap('<title><g/></title>')).svg, wrap('<title/>'))
   // Text beside the dropped child stays; a plain title is untouched.
   assert.equal(run(wrap('<title>a<g/>b</title>')).svg, wrap('<title>ab</title>'))
-  assert.deepEqual(run(wrap('<title>Flame</title><desc>A flame</desc>')), { ok: true, svg: wrap('<title>Flame</title><desc>A flame</desc>'), removed: [] })
+  assert.deepEqual(run(wrap('<title>Flame</title><desc>A flame</desc>')), { ok: true, css: false, svg: wrap('<title>Flame</title><desc>A flame</desc>'), removed: [] })
 })
 
 test('attribute values cannot break out of their quotes on the way out', () => {
@@ -746,7 +746,7 @@ test('tab, CR and LF still separate values, as in a pretty-printed or wrapped pa
 
 test('version, xml:space and xmlns:* declarations are dropped without a finding', () => {
   const out = run(`<svg xmlns="${NS}" version="1.1" xml:space="preserve" xmlns:xlink="http://www.w3.org/1999/xlink" baseProfile="full"/>`)
-  assert.deepEqual(out, { ok: true, svg: `<svg xmlns="${NS}"/>`, removed: [] })
+  assert.deepEqual(out, { ok: true, css: false, svg: `<svg xmlns="${NS}"/>`, removed: [] })
 })
 
 test('a duplicate id loses the second copy, so a reference cannot be ambiguous', () => {
