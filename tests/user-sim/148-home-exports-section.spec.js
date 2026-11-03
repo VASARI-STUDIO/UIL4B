@@ -985,7 +985,7 @@ const durations = (page) => page.locator(ART_IMG).evaluateAll((els) => els.map((
 }))
 
 /** Come back when everything animating on the page has finished (not a timer). */
-const animationsSettled = (page) => page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)))
+const animationsSettled = (page) => page.evaluate(() => Promise.allSettled(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished)))
 
 /**
  * Swap card 2 and card 3 twice each (the second swap is the one a fade-out can be seen on), and report the kinds of motion ('transition',

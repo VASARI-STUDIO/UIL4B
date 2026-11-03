@@ -54,8 +54,11 @@ async function openCustomiser(page) {
 /** Is the focused element inside the node? */
 const focusInside = (locator) => locator.evaluate((el) => el.contains(document.activeElement))
 
-/** Let the dialog's entrance animation finish, so a screenshot shows it at rest. */
-const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+/** Let the dialog's entrance animation finish, so a screenshot shows it at rest. Scroll-linked animations
+ *  (a rail's edge fade, animation-timeline: scroll()) have no end, so only clock-driven ones are awaited. */
+const settled = (page) => page.evaluate(() => Promise.all(
+  document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {})),
+))
 
 const toast = (page, message) => page.evaluate((m) => window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: m, type: 'info' } })), message)
 

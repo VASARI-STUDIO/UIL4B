@@ -133,7 +133,7 @@
     },
     "iconLibrary": {
       "label": "Icon Library",
-      "description": "Search thousands of icons via Iconify API."
+      "description": "Search open-source icon packs, then copy SVG or JSX."
     },
     "altText": {
       "label": "Alt Text Generator",
