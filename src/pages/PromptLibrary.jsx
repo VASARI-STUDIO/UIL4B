@@ -16,6 +16,7 @@ import { onAccountApplied } from '../utils/accountEvents'
 import { splitLockedLibrary, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryEmpty from '../components/library/LibraryEmpty'
+import SlideTabs from '../components/SlideTabs'
 import PromptCard from '../components/prompt/PromptCard'
 import PromptLockedCard from '../components/prompt/PromptLockedCard'
 import PromptOverview from '../components/prompt/PromptOverview'
@@ -535,7 +536,7 @@ export default function PromptLibrary({ onCopy, toast }) {
       />
 
       {/* Tab switcher */}
-      <div className="pl-tabs">
+      <SlideTabs className="pl-tabs" value={tab}>
         <button type="button" className={`pl-tab${tab === 'my' ? ' active' : ''}`} aria-pressed={tab === 'my'} onClick={() => switchTab('my')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
@@ -557,7 +558,7 @@ export default function PromptLibrary({ onCopy, toast }) {
               states it exactly. */}
           {lockedCount === 0 && <span className="pl-tab-count">{openCommunity.length}</span>}
         </button>
-      </div>
+      </SlideTabs>
 
       {/* Search always; the filters only in the list state. Not sticky, and the
           primary action lives in the HERO, not here, as on the sibling

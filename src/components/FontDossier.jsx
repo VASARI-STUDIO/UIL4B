@@ -7,6 +7,7 @@ import {
   fontsInUseSearchUrl, ladderFor, sceneWeights, scenesFor,
 } from '../utils/fontScenes'
 import { usesFor } from '../data/fontRealWorldUses'
+import SlideTabs from './SlideTabs'
 import { useFontLicences } from '../hooks/useFontLicences'
 import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 import { weightName } from '../utils/fontGallery'
@@ -140,7 +141,7 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
   }
 
   return (
-    <div className="fdx-tabs" role="tablist" aria-label={label}>
+    <SlideTabs className="fdx-tabs" value={value} role="tablist" aria-label={label}>
       {DOSSIER_TABS.map(t => (
         <button
           key={t.id}
@@ -157,7 +158,7 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
           {t.label}
         </button>
       ))}
-    </div>
+    </SlideTabs>
   )
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLenis } from '../../hooks/useSmoothScroll'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import PhIcon from './PhIcon'
+import SlideTabs from '../SlideTabs'
 import ToolFoot from './ToolFoot'
 import BenchConverter from './BenchConverter'
 import { PH_REGULAR } from './phosphorRegular'
@@ -200,11 +201,11 @@ function PalettePanel({ base, onBase, harmony, onHarmony }) {
 
         <div className="sp-copyas">
           <span className="sp-label">Copy as</span>
-          <div role="group" aria-label="Copy format">
+          <SlideTabs className="sp-utabs" value={fmt} role="group" aria-label="Copy format">
             {FORMATS.map((f, i) => (
               <button key={f} type="button" className="sp-utab" aria-pressed={fmt === i} onClick={() => setFmt(i)}>{f}</button>
             ))}
-          </div>
+          </SlideTabs>
         </div>
       </div>
 
@@ -267,11 +268,11 @@ function IconPanel({ icon, onIcon, weight, onWeight, size, onSize }) {
             aria-label="Search icons"
           />
         </label>
-        <div className="sp-tabs-row" role="group" aria-label="Weight">
+        <SlideTabs className="sp-utabs sp-tabs-row" value={weight} role="group" aria-label="Weight">
           {ICON_WEIGHTS.map(([label], i) => (
             <button key={label} type="button" className="sp-utab" aria-pressed={weight === i} onClick={() => wantWeight(i)}>{label}</button>
           ))}
-        </div>
+        </SlideTabs>
       </div>
 
       <div className="sp-ico-main">
@@ -357,11 +358,11 @@ function FontPanel({ font, onFont }) {
             aria-label="Search families"
           />
         </label>
-        <div className="sp-font-cats" role="group" aria-label="Category">
+        <SlideTabs className="sp-utabs sp-font-cats" value={cat} role="group" aria-label="Category">
           {FONT_CATS.map((label, i) => (
             <button key={label} type="button" className="sp-utab" aria-pressed={cat === i} onClick={() => setCat(i)}>{label}</button>
           ))}
-        </div>
+        </SlideTabs>
       </div>
 
       <div className="sp-font-ctl">

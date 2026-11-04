@@ -158,6 +158,11 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 /* Sits ON the 1px border rather than above it, so the pair reads as one edge
    and not as a rule with a second rule stacked on it. */
 .fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--t0);border-radius:2px 2px 0 0}
+/* Once the row has measured its current tab (SlideTabs) one bar slides under
+   it (.slide-ul, global.css), on the same 1px overlap, and the tab's own bar
+   stands down. */
+.fdx-tabs{--ul-c:var(--t0);--ul-in:10;--ul-drop:1px}
+.fdx-tabs[data-slide] .fdx-tab--on::after{content:none}
 .fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:560;color:var(--accent-ink);background:var(--accent-fill);border:1px solid var(--accent-fill);border-radius:var(--btn-radius);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}

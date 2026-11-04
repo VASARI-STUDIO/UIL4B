@@ -10,6 +10,7 @@ import { useLayoutEffect } from 'react'
 //
 //   --si-x / --si-y   the selected child's offset inside the container
 //   --si-w / --si-h   its size
+//   --si-wn           its width as a bare number (no unit)
 //   --si-r            its corner radius
 //
 // data-slide on the container is the state the CSS reads:
@@ -39,6 +40,9 @@ function measure(root, item) {
   s.setProperty('--si-x', `${on.offsetLeft}px`)
   s.setProperty('--si-y', `${on.offsetTop}px`)
   s.setProperty('--si-w', `${on.offsetWidth}px`)
+  // The same width as a bare number, for an indicator drawn 1px wide and
+  // stretched with scaleX so that it moves on the compositor.
+  s.setProperty('--si-wn', String(on.offsetWidth))
   s.setProperty('--si-h', `${on.offsetHeight}px`)
   s.setProperty('--si-r', getComputedStyle(on).borderTopLeftRadius)
   return true

@@ -728,6 +728,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* ─── Image Converter ─── */
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
 .pl-tab:hover{color:var(--t0)}
+/* Sliding tab underline (SlideTabs). useSlideIndicator measures the selected
+   tab and sets --si-x/-y/-h and --si-wn (a bare width) on the row; the row's
+   ::after is a 1px-wide bar stretched with scaleX and placed with translate, so
+   a move is a transform and nothing in the flow shifts. A bar sets its look in
+   custom properties: --ul-c colour, --ul-h thickness, --ul-in side inset as a
+   bare number of px, --ul-drop how far below the tab's foot the bar sits. It
+   also turns off its own per-tab underline under [data-slide]; without that
+   attribute (server render, a hidden row) the tab keeps its own underline.
+   "placed" draws the bar with no transition, "ready" animates its moves. */
+.slide-ul{position:relative}
+.slide-ul[data-slide]::after{content:"";position:absolute;left:0;top:0;width:1px;height:var(--ul-h,2px);background:var(--ul-c,currentColor);pointer-events:none;transform-origin:0 0;transform:translate(calc(var(--si-x) + var(--ul-in,0) * 1px),calc(var(--si-y) + var(--si-h) - var(--ul-h,2px) + var(--ul-drop,0px))) scaleX(calc(var(--si-wn) - var(--ul-in,0) * 2))}
+.slide-ul[data-slide="ready"]::after{transition:transform var(--dur-2) var(--ease-out)}
+html[data-reduced-motion="true"] .slide-ul[data-slide]::after{transition:none}
+@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .slide-ul[data-slide]::after{transition:none}}
+@media (forced-colors:active){.slide-ul[data-slide]::after{background:Highlight}}
 .pl-tab-count{font-size:var(--fs-caption);font-weight:560;font-variant-numeric:tabular-nums;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
 .pl-card-saves{color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums}

@@ -519,6 +519,12 @@
 }
 .spectrum .sp-utab { transition: color .18s ease; }
 .sp-utab[aria-pressed="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); }
+/* A row of underline tabs (SlideTabs): once the row has measured its selected
+   tab, a single bar slides under it (.slide-ul, global.css) and the tab stops
+   drawing its own underline. A row that has not measured keeps the tab's own. */
+.sp-utabs { --ul-c: var(--sp-ink); }
+.sp-utabs[data-slide] > .sp-utab[aria-pressed="true"],
+.sp-utabs[data-slide] > .sp-utab[aria-selected="true"] { border-bottom-color: transparent; }
 .sp-label { font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 
 /* 01 · Palette builder */

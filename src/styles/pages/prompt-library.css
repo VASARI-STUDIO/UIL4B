@@ -24,6 +24,10 @@
    the tab the visitor is already standing in. */
 .plib-page .pl-tab{min-height:44px;border-radius:0}
 .plib-page .pl-tab.active{color:var(--t0);border-bottom-color:var(--t0);font-weight:600}
+/* Once the row has measured the current tab (SlideTabs), one ink bar slides
+   under it (.slide-ul, global.css) and the tab stops drawing its own. */
+.plib-page .pl-tabs{--ul-c:var(--t0)}
+.plib-page .pl-tabs[data-slide] .pl-tab.active{border-bottom-color:transparent}
 .plib-page .pl-tab-count{border-radius:var(--radius-xs)}
 .plib-page .pl-tab.active .pl-tab-count{background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .plib-page .pl-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}

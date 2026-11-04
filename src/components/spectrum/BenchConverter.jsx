@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import ToolFoot from './ToolFoot'
 import PhIcon from './PhIcon'
+import SlideTabs from '../SlideTabs'
 import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
 import { navigatesThisTab } from '../../utils/handoffSlot'
@@ -256,7 +257,7 @@ export default function BenchConverter({ onResult }) {
   return (
     <>
     <div className="sp-panel-body sp-panel-body--pad sp-cv" ref={root}>
-      <div className="sp-modes" role="tablist" aria-label="Mode">
+      <SlideTabs className="sp-utabs sp-modes" value={mode} role="tablist" aria-label="Mode">
         {IMG_MODES.map(([id, label, , short], i) => (
           <button
             key={id}
@@ -276,7 +277,7 @@ export default function BenchConverter({ onResult }) {
             {short ? <span className="sp-mode-short" aria-hidden="true">{short}</span> : null}
           </button>
         ))}
-      </div>
+      </SlideTabs>
 
       <div className="sp-cv-panes">
         <div className={paneClass('compress', 'sp-conv')} {...paneProps('compress')}>
@@ -324,11 +325,11 @@ export default function BenchConverter({ onResult }) {
               </span>
             </div>
           </div>
-          <div className="sp-fmtrow" role="group" aria-label="Output format">
+          <SlideTabs className="sp-utabs sp-fmtrow" value={fmt} role="group" aria-label="Output format">
             {IMG_FORMATS.map(([label], i) => (
               <button key={label} type="button" className="sp-utab" aria-pressed={fmt === i} onClick={() => setFmt(i)}>{label}</button>
             ))}
-          </div>
+          </SlideTabs>
           <label className="sp-quality">
             <span className="sp-quality-row">
               <span>{lossless ? 'Lossless, quality not used' : 'Quality'}</span>
@@ -366,11 +367,11 @@ export default function BenchConverter({ onResult }) {
             <span className="sp-model-chip is-out">{target.label}</span>
             <span className="sp-model-unit">{target.metres ? `${MODEL_SOURCE.unit} → m` : `${MODEL_SOURCE.unit} → your unit`}</span>
           </div>
-          <div className="sp-fmtrow" role="group" aria-label="Output format">
+          <SlideTabs className="sp-utabs sp-fmtrow" value={outFmt} role="group" aria-label="Output format">
             {MODEL_OUTPUTS.map(({ id, label }, i) => (
               <button key={id} type="button" className="sp-utab" aria-pressed={outFmt === i} onClick={() => setOutFmt(i)}>{label}</button>
             ))}
-          </div>
+          </SlideTabs>
           <p className="sp-model-say">
             {target.metres
               ? 'Millimetres in, metres out, so it opens in Blender at the right size.'
@@ -397,11 +398,11 @@ export default function BenchConverter({ onResult }) {
             />
           </label>
           <div className="sp-frames-row">
-            <div role="group" aria-label="Frame count">
+            <SlideTabs className="sp-utabs" value={frameCount} role="group" aria-label="Frame count">
               {FRAME_COUNTS.map((n) => (
                 <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} frames</button>
               ))}
-            </div>
+            </SlideTabs>
             <small>{`${stripLen} crops of one sample photo`}</small>
           </div>
         </div>
@@ -411,11 +412,11 @@ export default function BenchConverter({ onResult }) {
             <img src={CONVERTER_SOURCE} alt="The photograph cropped to the chosen aspect ratio" width="1600" height="900" loading="lazy" decoding="async" style={{ aspectRatio: `${rw} / ${rh}` }} />
             <span className="sp-ratio-size">{rw} × {rh}</span>
           </div>
-          <div className="sp-fmtrow" role="group" aria-label="Aspect ratio">
+          <SlideTabs className="sp-utabs sp-fmtrow" value={ratioPreset} role="group" aria-label="Aspect ratio">
             {RATIO_PRESETS.map(([label], i) => (
               <button key={label} type="button" className="sp-utab" aria-pressed={ratioPreset === i} onClick={() => setRatioPreset(i)}>{label}</button>
             ))}
-          </div>
+          </SlideTabs>
           <span className="sp-ratio-half">{Math.round(rw / 2)} × {Math.round(rh / 2)} at 0.5×</span>
         </div>
       </div>
