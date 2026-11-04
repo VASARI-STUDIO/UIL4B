@@ -29,7 +29,7 @@
 // which are the part worth getting wrong-proof — are testable under
 // `node --test` without a browser or a network. The Firestore reads and writes
 // are in communityQueueApi.js.
-import { safeHttpUrl } from './urlSafety'
+import { safeHttpUrl } from './urlSafety.js'
 
 export const QUEUE_COLLECTION = 'community-submissions'
 
