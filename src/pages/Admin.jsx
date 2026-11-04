@@ -25,6 +25,7 @@ import {
   canReview, canSeeReporterEmail, canAssignModerators,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
+import { replyMailto } from '../utils/replyMailto'
 import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
 import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
@@ -317,7 +318,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
               rendered, saying what is withheld — a silently missing field
               reads as a report with no sender. */}
           {item.email && (canSeeEmail
-            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}</div>
+            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}{replyMailto(item) && <> · <a className="adm-reply-link" href={replyMailto(item)}>Reply by email</a></>}</div>
             : <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>From: <span style={{ fontStyle: 'italic' }}>address withheld from moderators</span></div>)}
 
           {/* WHO ACTED ON THIS.

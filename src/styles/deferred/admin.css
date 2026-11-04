@@ -108,6 +108,9 @@
 .adm-submission-title{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:2px}
 .adm-submission-body{padding:0 16px 16px;border-top:1px solid var(--border);padding-top:14px}
 .adm-submission-msg{font-size:13px;line-height:1.7;color:var(--t0);margin-bottom:12px;white-space:pre-wrap}
+/* Answers the sender from the owner's own mail app; a 44px target on touch. */
+.adm-reply-link{color:var(--accent-text);font-weight:600}
+@media(pointer:coarse){.adm-reply-link{display:inline-flex;align-items:center;min-height:44px}}
 .adm-submission-notes{background:var(--bg-2);border-radius:var(--radius-s);padding:12px;margin-bottom:12px}
 .adm-submission-notes-title{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);margin-bottom:8px}
 .adm-submission-actions{display:flex;gap:6px;flex-wrap:wrap}
