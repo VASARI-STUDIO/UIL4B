@@ -837,14 +837,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast:not(.show) .toast-action{pointer-events:none}
 @media(pointer:coarse){.toast-action{min-height:44px;margin:-8px 0}}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
-/* Success motion: the checkmark draws, which is the state ("done") being
-   said. The spring pop that scaled the tile from .5 went: it said nothing the
-   draw does not, and springy decoration is not used in this product. */
+/* Success motion: the icon tile scales in from half size while the checkmark
+   draws. Both stop under reduced motion. */
+.toast-success.show .toast-ico{animation:toast-pop var(--dur-2) var(--ease-entrance) both}
+@keyframes toast-pop{from{transform:scale(.5)}to{transform:scale(1)}}
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
 @keyframes toast-draw{to{stroke-dashoffset:0}}
+html[data-reduced-motion="true"] .toast-success.show .toast-ico{animation:none}
 html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-reduced-motion="true"] .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
 @media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .toast-success.show .toast-ico{animation:none}
   html:not([data-reduced-motion="false"]) .toast-success .toast-ico svg path,html:not([data-reduced-motion="false"]) .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
 }
 
