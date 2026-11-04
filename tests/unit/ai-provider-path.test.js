@@ -74,6 +74,7 @@ import {
   altTextCutoffReply,
   ALT_TEXT_CUTOFF_REFUND_CAP,
   ALT_TEXT_CUTOFF_ERRORS,
+  thinkingConfigFor,
 } from '../../api/_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
 import {
@@ -206,6 +207,8 @@ function loadAi({
     altTextOutcome: () => { throw new Error('not modelled here') },
     altTextCutoffReply: () => { throw new Error('not modelled here') },
     ALT_TEXT_CUTOFF_REFUND_CAP,
+    // The real, pure thinking-config picker the Gemini calls use.
+    thinkingConfigFor,
     // api/_lib/geoBlock.js — the real, pure region gate.
     geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     // api/_lib/emailGate.js — the real, pure email gate.
