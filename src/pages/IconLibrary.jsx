@@ -924,9 +924,24 @@ function probeDefaultPlate(ref, themePlate, done) {
 // a hairline on the plate's own edge (CSS) in place of the halo; transparent
 // marks stay unrounded and the halo follows the artwork's ink. A load the
 // browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
+// Logo.dev serves these brands only on their own white app-icon square, which
+// reads as a white box on the dark page. On dark, the tile shows the brand's
+// transparent mark from SVG Logos (CC0) instead. Brands whose only mark is dark
+// (PayPal, Visa, Notion, Anthropic) keep the plate, because their mark would
+// vanish on the dark ground. Copy and download still give the Logo.dev file.
+const DARK_LOGO_MARKS = Object.freeze({
+  'microsoft.com': 'microsoft-icon',
+  'meta.com': 'meta-icon',
+  'youtube.com': 'youtube-icon',
+  'shopify.com': 'shopify',
+  'salesforce.com': 'salesforce',
+  'airtable.com': 'airtable',
+})
+
 function LogoDevGlyph({ icon }) {
   const { theme } = useTheme()
   const key = `logodev:${icon.ref}:${theme}`
+  const darkMark = theme !== 'light' ? DARK_LOGO_MARKS[icon.ref] : null
   const [measured, setMeasured] = useState(null)
   const [plainKey, setPlainKey] = useState(null)
   const plain = plainKey === key
@@ -945,6 +960,20 @@ function LogoDevGlyph({ icon }) {
       }
     }
     setMeasured({ key, shape: glyphCache.get(key) })
+  }
+  if (darkMark) {
+    return (
+      <span className="ig-chip" data-mark-source="svg-logos">
+        <img
+          src={`https://api.iconify.design/logos/${darkMark}.svg`}
+          width="28"
+          height="28"
+          className="ig-logo"
+          loading="lazy"
+          alt={icon.name}
+        />
+      </span>
+    )
   }
   return (
     <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
