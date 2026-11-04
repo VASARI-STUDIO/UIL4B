@@ -531,8 +531,8 @@
   "feedback": {
     "title": "Feedback",
     "subtitle": "Help us make UIL4B even better. Chuck us your bugs, feature ideas, or a good yarn.",
-    "featureRequest": "Feature Request",
-    "bugReport": "Bug Report",
+    "featureRequest": "Feature request",
+    "bugReport": "Bug report",
     "general": "General",
     "helpRequest": "Help request",
     "send": "Send",

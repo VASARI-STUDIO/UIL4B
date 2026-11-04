@@ -57,7 +57,7 @@ test.describe('the feedback form opened for help', () => {
     await go(page, CONTACT_URL)
     await expectHelpCopy(page)
 
-    await page.getByRole('radio', { name: 'Feature Request' }).click()
+    await page.getByRole('radio', { name: 'Feature request' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Feedback', exact: true })).toBeVisible()
     await expect(message(page)).toHaveAttribute('placeholder', /what you think/i)
     await expect(page.getByRole('heading', { level: 1, name: 'Contact support' })).toHaveCount(0)
@@ -69,7 +69,7 @@ test.describe('the feedback form opened for help', () => {
   test('plain /feedback still opens as feedback, and choosing Help request changes the copy', async ({ page }) => {
     await go(page, '/feedback')
     await expect(page.getByRole('heading', { level: 1, name: 'Feedback', exact: true })).toBeVisible()
-    await expect(page.getByRole('radio', { name: 'Feature Request' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('radio', { name: 'Feature request' })).toHaveAttribute('aria-checked', 'true')
     await helpRadio(page).click()
     await expectHelpCopy(page)
   })
@@ -77,7 +77,7 @@ test.describe('the feedback form opened for help', () => {
   test('a draft typed under Help request survives switching types', async ({ page }) => {
     await go(page, CONTACT_URL)
     await message(page).fill('I could not export my palette.')
-    await page.getByRole('radio', { name: 'Bug Report' }).click()
+    await page.getByRole('radio', { name: 'Bug report' }).click()
     await expect(message(page)).toHaveValue('I could not export my palette.')
   })
 
