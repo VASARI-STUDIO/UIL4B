@@ -76,7 +76,7 @@ test.describe('palette gallery: Save to project', () => {
   test('signed out, Save to project opens the sign-in popup and stays put', async ({ page }) => {
     watch(page, 'a visitor saving a palette without an account')
     await go(page, '/discover/palettes')
-    const save = await saveButton(page)
+    await saveButton(page)
     const before = await page.evaluate(() => window.scrollY)
 
     await page.keyboard.press('Enter')
@@ -95,7 +95,7 @@ test.describe('palette gallery: Save to project', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/discover/palettes')
     const name = (await page.locator('.pgal-card .pgal-name').first().textContent()).trim()
-    const save = await saveButton(page)
+    await saveButton(page)
     const before = await page.evaluate(() => window.scrollY)
 
     await page.keyboard.press('Enter')
