@@ -11,9 +11,6 @@
 //     own flag describes as dead-ending on "Invalid selection". /plans had
 //     dropped it and scripts/site-pricing.mjs had already excluded it from the
 //     structured data. The front page was the last surface still selling it.
-//   · "Cancel any time" on the monthly row, which Plans.jsx removed under an
-//     approval flag because the Stripe Customer Portal has no cancellation flow
-//     enabled ([stripe-retention-config] is blocked).
 //   · a typed "$4/month" headline, next to a planLadder.js export documented as
 //     "the honest headline … never typed into copy".
 //
@@ -101,29 +98,6 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
     expect(toCheckout, 'a landing CTA skips /plans for checkout or the sign-up route').toBe(0)
     expect(BUYABLE.length, 'the ladder has nothing to buy, so /plans has nothing to show').toBeGreaterThan(0)
     expect(UNBUYABLE.length + BUYABLE.length).toBe(PLAN_LADDER.length)
-  })
-
-  test('the homepage does not promise a cancellation the billing portal cannot do', async ({ page }) => {
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page)
-
-    // textContent rather than innerText, for the reason 62-retired-taglines
-    // records at length: the claim is that the sentence is not on the page,
-    // including in a band the visitor has not scrolled to and including in
-    // sr-only text a screen reader would announce.
-    const bodyText = await page.evaluate(() => {
-      const clone = document.body.cloneNode(true)
-      clone.querySelectorAll('script, style, template, noscript').forEach((n) => n.remove())
-      return clone.textContent || ''
-    })
-
-    expect(bodyText.length, 'the homepage rendered almost nothing — this absence check would pass vacuously')
-      .toBeGreaterThan(500)
-    expect(
-      /cancel any time/i.test(bodyText),
-      'the homepage says "cancel any time". [stripe-retention-config] is blocked: the Stripe Customer Portal has no cancellation flow enabled, so there is no control behind that sentence. Plans.jsx removed the same line under a founder flag — put both back together when the portal is configured.',
-    ).toBe(false)
   })
 
   test('every tier the ladder calls purchasable has somewhere to go', async ({ page }) => {

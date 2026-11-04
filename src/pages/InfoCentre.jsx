@@ -254,15 +254,12 @@ const SECTIONS = [
             "Settings → Support" is corrected to "Settings → Plan and billing",
             which is the label Settings.jsx gives that tab (`{ id: 'support',
             label: 'Plan and billing' }`) — a visitor looking for "Support" would
-            not find it. And "or cancel" is deleted from the second sentence
-            on the same evidence /plans used to delete "cancel any time": the
-            Stripe portal has no cancellation flow enabled until the
-            [stripe-retention-config] owner action is done (pipeline.js,
-            status 'blocked'), so the Cancel plan button opens a portal with
-            nothing to cancel in it. The guard test reads that row's status,
-            so finishing the dashboard work retires the check. */}
+            not find it. The second sentence says the visitor can cancel
+            there: the Stripe portal the Cancel plan button opens has
+            cancellation on, at the end of the paid period, so Pro stays
+            until then. */}
         <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
-        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>.</p>
+        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing or cancel in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>. Pro stays on until the end of the period you&rsquo;ve paid for.</p>
       </>
     ),
   },
