@@ -435,7 +435,8 @@ test('the guidance is rendered, not hidden in a title tooltip', () => {
   // first-time user has: which one do I pick?
   assert.match(PAGE, /\{activeTone\.desc\}/)
   assert.match(PAGE, /\{activeTone\.when\}/)
-  assert.match(PAGE, /const activeTone = TONES\.find/)
+  assert.match(PAGE, /const activeTone = toneOf\(tone\)/)
+  assert.match(PAGE, /const toneOf = \(id\) => TONES\.find/)
   assert.match(CSS, /\.alt-field-help\s*\{/, 'the help text must be styled, not unstyled fallback')
 })
 
