@@ -17,6 +17,7 @@
 // `community-submissions` handed to the session double through `signIn`.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { TOAST_ACTION_MIN_MS } from '../../src/utils/toastDuration.js'
 
 const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>'
 
@@ -105,5 +106,117 @@ test.describe('community · status on your own submissions', () => {
     await expect(row('Icon passed'), 'an approved icon must not read as pending').not.toContainText('Pending review')
     await expect(row('Icon turned down')).toContainText('Not approved')
     await expect(row('Icon turned down'), 'a rejected icon must not read as pending').not.toContainText('Pending review')
+  })
+})
+
+const inQueue = (page) => page.evaluate(() =>
+  [...(window.__UIL4B_TEST_STORE__?.docs?.keys() || [])].filter(k => k.startsWith('community-submissions/')).length)
+const undoButton = (page) => page.locator('.toast.show .toast-action')
+
+test.describe('community · withdraw with undo', () => {
+  test('a design can be withdrawn, undone, and withdrawn again for good', async ({ page }) => {
+    watch(page, 'a member changing their mind about a design')
+    await signIn(page, {
+      plan: 'free',
+      docs: { 'community-submissions/d-1': designDoc({ name: 'Second Thoughts' }) },
+    })
+    await go(page, '/community')
+    await expect(gridCard(page, 'Second Thoughts')).toHaveCount(1)
+    expect(await inQueue(page), 'the seeded submission must be in the account to start with').toBe(1)
+
+    const withdraw = () => page.getByRole('button', { name: 'Withdraw Second Thoughts' })
+    await withdraw().click()
+    await expect(gridCard(page, 'Second Thoughts'), 'a withdrawn design leaves the grid at once').toHaveCount(0)
+    await expect(undoButton(page), 'the toast must offer to take it back').toBeVisible()
+    expect(await inQueue(page), 'the account copy must not go before the undo window closes').toBe(1)
+
+    await undoButton(page).click()
+    await expect(gridCard(page, 'Second Thoughts'), 'undo must bring the design back').toHaveCount(1)
+    // Past the window the first press would have used: it must stay.
+    await page.waitForTimeout(TOAST_ACTION_MIN_MS + 1500)
+    expect(await inQueue(page), 'an undone withdrawal must not delete the account copy').toBe(1)
+    await expect(gridCard(page, 'Second Thoughts')).toHaveCount(1)
+
+    await withdraw().click()
+    await expect(gridCard(page, 'Second Thoughts')).toHaveCount(0)
+    await expect.poll(() => inQueue(page), {
+      message: 'an unrevoked withdrawal must remove the account copy',
+      timeout: TOAST_ACTION_MIN_MS + 6000,
+    }).toBe(0)
+  })
+
+  test('an icon is not withdrawn until the undo window closes', async ({ page }) => {
+    watch(page, 'a member withdrawing an icon')
+    await signIn(page, {
+      plan: 'free',
+      docs: { 'community-submissions/i-1': iconDoc({ name: 'Second Thoughts icon' }) },
+    })
+    await go(page, '/community')
+    const row = queued(page).locator('li', { hasText: 'Second Thoughts icon' })
+    await expect(row).toBeVisible()
+
+    await row.getByRole('button', { name: /^Withdraw$/ }).click()
+    await expect(page.locator('li', { hasText: 'Second Thoughts icon' })).toHaveCount(0)
+    expect(await inQueue(page), 'the account copy must outlive the click, so undo has something to restore').toBe(1)
+
+    await undoButton(page).click()
+    await expect(row, 'undo must bring the icon back').toBeVisible()
+    expect(await inQueue(page)).toBe(1)
+  })
+
+  test('a rejected design can be withdrawn from Your submissions', async ({ page }) => {
+    watch(page, 'a member clearing away a design that was turned down')
+    await signIn(page, {
+      plan: 'free',
+      docs: { 'community-submissions/d-no': designDoc({ name: 'Turned Down Design', status: 'rejected' }) },
+    })
+    await go(page, '/community')
+    const row = queued(page).locator('li', { hasText: 'Turned Down Design' })
+    await row.getByRole('button', { name: /^Withdraw$/ }).click()
+    await expect(page.locator('li', { hasText: 'Turned Down Design' })).toHaveCount(0)
+    await expect.poll(() => inQueue(page), { timeout: TOAST_ACTION_MIN_MS + 6000 }).toBe(0)
+  })
+})
+
+test.describe('community · a design that did not reach the queue', () => {
+  test('a failed publish is marked Not sent and offers Retry', async ({ page }) => {
+    watch(page, 'a member whose design could not be sent')
+    await signIn(page, {
+      plan: 'free',
+      deny: [{ path: 'community-submissions', ops: ['set'] }],
+    })
+    await go(page, '/community')
+    await page.getByRole('button', { name: /Submit design/i }).first().click()
+    const dialog = page.getByRole('dialog', { name: /Submit a design/i })
+    await dialog.getByRole('textbox', { name: /^Name$/i }).fill('Offline Design')
+    await dialog.getByRole('button', { name: /^Submit design$/i }).click()
+    await expect(dialog).toHaveCount(0)
+
+    const card = gridCard(page, 'Offline Design')
+    await expect(card, 'the design stays in this browser, in the grid').toHaveCount(1)
+    await expect(card.locator('.ch-card-own'), 'a design the account does not hold must not read as pending')
+      .toContainText('Not sent')
+    await expect(card.locator('.ch-card-own')).not.toContainText('Pending review')
+    await expect(page.getByRole('button', { name: 'Retry sending Offline Design' })).toBeVisible()
+  })
+
+  test('Retry sends a design that was only ever in this browser', async ({ page }) => {
+    watch(page, 'a member retrying a design')
+    await signIn(page, { plan: 'free' })
+    await page.addInitScript(() => {
+      localStorage.setItem('vs-community-submissions', JSON.stringify([{
+        id: 'u1730000000000', name: 'Offline Design', author: 'Freya Free', category: 'Landing',
+        url: '#', c1: '#3B82F6', c2: '#8B5CF6', saves: 0, mine: true, createdAt: '2026-10-30T09:00:00.000Z',
+      }]))
+    })
+    await go(page, '/community')
+    const card = gridCard(page, 'Offline Design')
+    await expect(card.locator('.ch-card-own')).toContainText('Not sent')
+    expect(await inQueue(page), 'nothing has been sent yet').toBe(0)
+
+    await page.getByRole('button', { name: 'Retry sending Offline Design' }).click()
+    await expect(card.locator('.ch-card-own'), 'a sent design reads as pending review').toContainText('Pending review')
+    await expect(page.getByRole('button', { name: 'Retry sending Offline Design' }), 'a sent design has no Retry').toHaveCount(0)
+    expect(await inQueue(page), 'Retry must put the design in the account').toBe(1)
   })
 })

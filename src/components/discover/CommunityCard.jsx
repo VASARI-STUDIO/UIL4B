@@ -44,9 +44,12 @@ function HeartIcon({ filled }) {
   )
 }
 
-// `own` is passed only for the viewer's own submission: { label } is the status
-// tag ("Pending review", "Approved", "Not approved", "Not sent"). A curated card
-// passes nothing and renders exactly as before.
+// `own` is passed only for the viewer's own submission: `label` is the status
+// tag ("Pending review", "Approved", "Not approved", "Not sent"), `onWithdraw`
+// takes the submission back, and `onRetry` (present only while it has not
+// reached the review queue) sends it again. `busy` holds both while a send or a
+// withdrawal is in flight; `ready` false holds Retry until the account's own
+// list has been read. A curated card passes nothing and renders as before.
 export default function CommunityCard({ item, saved, count, onToggle, offline = false, own = null }) {
   const href = safeHttpUrl(item.url)
   const mono = monoInk(item.c1, item.c2)
@@ -138,6 +141,29 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
         {own && (
           <div className="ch-card-own">
             <span className="ch-card-tag ch-card-status">{own.label}</span>
+            <div className="ch-card-own-actions">
+              {own.onRetry && (
+                <button
+                  type="button"
+                  className="btn btn-s"
+                  onClick={own.onRetry}
+                  disabled={own.busy || own.ready === false}
+                  aria-busy={own.busy || undefined}
+                  aria-label={`Retry sending ${item.name}`}
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-s"
+                onClick={own.onWithdraw}
+                disabled={own.busy}
+                aria-label={`Withdraw ${item.name}`}
+              >
+                Withdraw
+              </button>
+            </div>
           </div>
         )}
       </div>

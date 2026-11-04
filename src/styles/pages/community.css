@@ -381,6 +381,23 @@
   color: var(--cm-ink);
   white-space: normal;
 }
+/* Retry and Withdraw share one row and never wrap: each takes half of whatever
+   the card gives them, down to the 150px phone card. */
+.ch-spectrum .ch-card-own-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+}
+.ch-spectrum .ch-card-own-actions .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  min-height: 34px;
+  padding-inline: 8px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+}
 
 /* The button is the 44px hit area; the dark pill the eye sees is its ::before,
    32px high, so the target is larger than the mark. */
@@ -634,7 +651,9 @@
    heart is 44px at every pointer (see above). */
 @media (pointer: coarse) {
   .ch-spectrum .ch-filter,
-  .ch-spectrum .ch-sort-btn { min-height: 44px; }
+  .ch-spectrum .ch-sort-btn,
+  .ch-spectrum .ch-card-own-actions .btn,
+  .ch-spectrum .ch-queue-row .btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

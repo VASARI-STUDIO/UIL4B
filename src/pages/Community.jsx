@@ -11,6 +11,7 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../utils/communityQueue'
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import { isPostLimit } from '../utils/communityLimits'
+import { TOAST_ACTION_MIN_MS } from '../utils/toastDuration'
 import {
   ICON_ACCEPT_ATTR, ICON_ACCEPT_LABEL, ICON_MAX_LABEL,
   appendIconSubmission, buildIconPayload, normaliseIconSvg,
@@ -332,11 +333,23 @@ export default function Community({ toast }) {
     else next.delete(id)
     return next
   }), [])
+  // Entries with a withdrawal waiting out its Undo window: hidden from every
+  // list at once, and deleted when the window closes (see `withdraw`).
+  const pendingWithdrawals = useRef(new Map())
+  const [hiddenIds, setHiddenIds] = useState(() => new Set())
+  const unhide = useCallback((id) => setHiddenIds((prev) => {
+    if (!prev.has(id)) return prev
+    const next = new Set(prev)
+    next.delete(id)
+    return next
+  }), [])
+
   // Whether each list has been asked of the account yet. A local-only entry is
   // "Not sent" only once the account has had its say; before that it may well
   // be there already, and sending it again would queue it twice.
   const [listsRead, setListsRead] = useState({ design: false, icon: false })
   const markRead = useCallback((kind) => setListsRead(prev => (prev[kind] ? prev : { ...prev, [kind]: true })), [])
+  const designsRead = !uid || listsRead.design
   const iconsRead = !uid || listsRead.icon
 
   useEffect(() => {
@@ -444,21 +457,28 @@ export default function Community({ toast }) {
   // A design a reviewer turned down does not stay among the browsable cards: it
   // is listed under "Your submissions" with its status, where its author can
   // see what happened and withdraw it.
-  const rejectedDesigns = useMemo(() => mine.filter(s => s.status === 'rejected'), [mine])
+  const rejectedDesigns = useMemo(
+    () => mine.filter(s => s.status === 'rejected' && !hiddenIds.has(s.id)),
+    [mine, hiddenIds],
+  )
   const all = useMemo(
-    () => [...mine.filter(s => s.status !== 'rejected'), ...COMMUNITY_DESIGNS],
-    [mine],
+    () => [...mine.filter(s => s.status !== 'rejected' && !hiddenIds.has(s.id)), ...COMMUNITY_DESIGNS],
+    [mine, hiddenIds],
   )
 
   // One list for everything in "Your submissions", newest first.
   const queueRows = useMemo(() => [
-    ...myIcons.map(s => ({ ...s, kind: 'icon' })),
+    ...myIcons.filter(s => !hiddenIds.has(s.id)).map(s => ({ ...s, kind: 'icon' })),
     ...rejectedDesigns.map(s => ({ ...s, kind: 'design' })),
-  ].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [myIcons, rejectedDesigns])
+  ].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [myIcons, rejectedDesigns, hiddenIds])
 
   // What a card needs to say where one of the viewer's own designs stands.
   const ownControls = (item) => ({
     label: submissionStatusLabel({ status: item.status, synced: item.synced, sending: busyIds.has(item.id) }),
+    busy: busyIds.has(item.id),
+    ready: designsRead,
+    onRetry: item.synced ? undefined : () => retryDesign(item),
+    onWithdraw: () => withdraw('design', item),
   })
 
   const visible = useMemo(() => {
@@ -526,6 +546,18 @@ export default function Community({ toast }) {
       setBusy(item.id, false)
     }
   }
+
+  // A design that never reached the queue stays in this browser, marked "Not
+  // sent"; this sends it again, the way an icon's Retry does.
+  const retryDesign = useCallback(async (item) => {
+    setBusy(item.id, true)
+    try {
+      const docId = await publishDesign(item)
+      if (docId) recordDesignPublished(item, docId)
+    } finally {
+      setBusy(item.id, false)
+    }
+  }, [publishDesign, recordDesignPublished, setBusy])
 
   // ── Icons ────────────────────────────────────────────────────────────────
   //
@@ -606,24 +638,64 @@ export default function Community({ toast }) {
   const retryIcon = sendIcon
 
   // The third of COMMUNITY_SUBMIT_REASONS — "You can withdraw anything you have
-  // submitted, at any time" — kept for real. The local copy goes either way; the
-  // account copy is deleted when there is one, and firestore.rules already allows
-  // an owner to delete their own submission.
-  const withdrawIcon = useCallback(async (item) => {
+  // submitted, at any time" — kept for real, for designs and icons alike. The
+  // local copy goes either way; the account copy is deleted when there is one,
+  // and firestore.rules already allows an owner to delete their own submission.
+  //
+  // WITHDRAWING IS NOT INSTANT. The entry leaves the page at once and the
+  // toast offers Undo; the delete itself waits out the toast's own window, so
+  // Undo has nothing to recreate and the account is never asked to take back a
+  // document it has already lost. Leaving the page settles whatever is waiting.
+  const commitWithdrawal = useCallback(async (kind, item, undo) => {
+    pendingWithdrawals.current.delete(item.id)
+    // The Undo is spent: take its toast down so it cannot be pressed too late.
+    window.dispatchEvent(new CustomEvent('uil4b:toast-dismiss', { detail: { onAction: undo } }))
     setBusy(item.id, true)
     try {
       if (item.docId) await deleteSubmission(item.docId)
-      setIconLocal(removeIconSubmission(item.id))
-      setServerIcons(prev => prev.filter(s => s.id !== item.id))
-      toast?.('Submission withdrawn')
+      if (kind === 'icon') {
+        setIconLocal(removeIconSubmission(item.id))
+        setServerIcons(prev => prev.filter(s => s.id !== item.id))
+      } else {
+        // Written straight to the store as well as to state: the state effect
+        // does not run once this page has been left.
+        writeCommunitySubmissions(readCommunitySubmissions().filter(s => s.id !== item.id))
+        setSubmissions(prev => prev.filter(s => s.id !== item.id))
+        setServerSubmissions(prev => prev.filter(s => s.id !== item.id))
+      }
     } catch {
       // The local copy is left alone: removing it while the account still holds
       // the submission would show the user a withdrawal that did not happen.
-      toast?.('Could not delete that.')
+      toast?.('Could not withdraw that. It is back in your list.', 'error')
     } finally {
+      unhide(item.id)
       setBusy(item.id, false)
     }
-  }, [toast, setBusy])
+  }, [toast, setBusy, unhide])
+
+  const withdraw = useCallback((kind, item) => {
+    if (pendingWithdrawals.current.has(item.id)) return
+    setHiddenIds(prev => new Set(prev).add(item.id))
+    const entry = { timer: null }
+    const undo = () => {
+      if (pendingWithdrawals.current.get(item.id) !== entry) return
+      clearTimeout(entry.timer)
+      pendingWithdrawals.current.delete(item.id)
+      unhide(item.id)
+    }
+    entry.commit = () => {
+      clearTimeout(entry.timer)
+      if (pendingWithdrawals.current.get(item.id) === entry) commitWithdrawal(kind, item, undo)
+    }
+    entry.timer = setTimeout(entry.commit, TOAST_ACTION_MIN_MS)
+    pendingWithdrawals.current.set(item.id, entry)
+    toast?.('Submission withdrawn', 'success', { action: { label: 'Undo', onAction: undo } })
+  }, [toast, commitWithdrawal, unhide])
+
+  useEffect(() => {
+    const waiting = pendingWithdrawals.current
+    return () => { for (const entry of [...waiting.values()]) entry.commit() }
+  }, [])
 
   // Ask a signed-out user to sign in BEFORE the submission form exists — the
   // form is never mounted for them, so nobody fills one in and only then
@@ -883,17 +955,15 @@ export default function Community({ toast }) {
                     Retry
                   </button>
                 )}
-                {s.kind === 'icon' && (
-                  <button
-                    type="button"
-                    className="btn btn-s"
-                    onClick={() => withdrawIcon(s)}
-                    disabled={busyIds.has(s.id)}
-                    aria-busy={busyIds.has(s.id) || undefined}
-                  >
-                    Withdraw
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn btn-s"
+                  onClick={() => withdraw(s.kind, s)}
+                  disabled={busyIds.has(s.id)}
+                  aria-busy={busyIds.has(s.id) || undefined}
+                >
+                  Withdraw
+                </button>
               </li>
             ))}
           </ul>
