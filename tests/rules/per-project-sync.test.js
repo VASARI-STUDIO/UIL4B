@@ -5,11 +5,9 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // WHY THIS RUNS AGAINST A PATCHED COPY
 // ═══════════════════════════════════════════════════════════════════════════
-// firestore.rules is founder-gated (docs/reference/human-validation-zones.md)
-// and cannot be staged from an agent branch — the auto-mode classifier refuses
-// it whether or not a permission is granted. #390 hit the same wall and answered
-// it the same way: the exact diff goes in the PR body under FOUNDER APPROVAL
-// NEEDED, and the tests that prove it run against a TEMPORARY COPY produced by
+// firestore.rules is approval-gated and is not edited directly: the exact diff
+// goes in the PR body for the owner to approve, and the tests that prove it run
+// against a TEMPORARY COPY produced by
 // applying the committed patch. The original is read and never written.
 //
 // So the patch is the single source of truth: a test here cannot pass against a

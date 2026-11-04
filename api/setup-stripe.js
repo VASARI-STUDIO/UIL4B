@@ -55,7 +55,7 @@ async function requireAdmin(req) {
 // checkout page for months after the server had been lowered to 30.
 //
 // The update is unconditional on the description ONLY — the name, prices and
-// everything else a founder may have tuned in the dashboard are left alone.
+// everything else an owner may have tuned in the dashboard are left alone.
 // Exported so tests/unit/stripe-product-truth.test.js can assert what THIS
 // function does to a live product, rather than what a copy of it would do.
 export async function findOrCreateProduct(stripe) {

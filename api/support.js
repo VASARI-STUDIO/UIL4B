@@ -178,14 +178,14 @@ export function stampReporter(entry, verifiedEmail) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
-// A site-wide ceiling on notification emails to the founder, on top of the
+// A site-wide ceiling on notification emails to the owner, on top of the
 // per-address limits above: many addresses together can still send a flood, and
 // every email spends Resend quota and sending reputation. Over the ceiling the
 // message is still stored and the sender still sees success, but no email goes.
 export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
 
 // One "the cap was reached" email an hour, so a spent cap is visible to the
-// founder instead of silent. Counted separately and never against MAIL_CAP.
+// owner instead of silent. Counted separately and never against MAIL_CAP.
 export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
 
 // Content reports have their own email allowance and their own notice, so a
@@ -348,12 +348,12 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
       if (verdict.contended) {
         // The counter could not be read or updated (an outage, contention, or a
         // missing salt in production): the allowance is not known to be spent,
-        // so this is neither logged as the cap nor announced to the founder.
+        // so this is neither logged as the cap nor announced to the owner.
         console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
         console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
-        // founder gets one notice an hour per allowance. It is exempt from the
+        // owner gets one notice an hour per allowance. It is exempt from the
         // caps and holds no user content.
         const notice = await consume(db, noticeCap)
         if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail, cap, label })

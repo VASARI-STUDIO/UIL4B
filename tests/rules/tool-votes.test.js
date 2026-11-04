@@ -2,7 +2,7 @@
 //
 //   npm run test:rules
 //
-// firestore.rules is founder-gated, so these run against the registry's PLANNED
+// firestore.rules is approval-gated, so these run against the registry's PLANNED
 // text (scripts/gated-patches.mjs fileTextThrough), the same way
 // gated-upload-queue.test.js does. A patch already applied is skipped and the
 // text comes back the same, so every assertion holds on both sides of
