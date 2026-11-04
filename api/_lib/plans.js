@@ -9,7 +9,7 @@ import { isAdminEmail } from './adminEmails.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THESE NUMBERS ARE SMALL — read before raising any of them
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder constraint: AI runs on FREE provider tiers only until the app earns.
+// Constraint: AI runs on FREE provider tiers only until the app earns.
 // Free tiers are metered PER PROJECT, not per user, so every signed-in user is
 // drawing from ONE shared bucket:
 //
@@ -134,13 +134,13 @@ export function hasLifetimeEntitlement(entitlement) {
   return entitlement?.active === true && !entitlement.revokedAt
 }
 
-// Founder/admin accounts get Pro entitlements without a Stripe subscription so
+// Admin accounts get Pro entitlements without a Stripe subscription so
 // the team can dog-food paid features. The email is read from a verified
 // Firebase ID token on the server, so a non-admin can't spoof their way in.
 //
 // THE LIST IS NOT HERE ANY MORE. It was a second copy of the literal in
-// api/_lib/admin.js — the defect that file's own header names — and both were
-// the founder's personal address in tracked, public source. It now comes from
+// api/_lib/admin.js — the defect that file's own header names — and both carried
+// a personal address in tracked, public source. It now comes from
 // the ADMIN_EMAILS environment variable, defined once in ./adminEmails.js,
 // which is a dependency-free module precisely so this one can import it without
 // dragging firebase-admin into every consumer of the plan table.
@@ -219,11 +219,8 @@ export function modelFor(plan, toolId) {
 //
 // The remaining half is not code: findOrCreateProduct now calls
 // stripe.products.update when a live product's description differs, but nothing
-// runs that until the founder POSTs /api/setup-stripe. That is logged in
-// docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in this
-// repository (.gitignore carries why). The DERIVATION below is the half that
-// protects a customer and it is all here; only the founder's runbook entry is
-// elsewhere.
+// runs that until the owner POSTs /api/setup-stripe. The DERIVATION below is
+// the half that protects a customer.
 export function proProductDescription(plan = PLANS.pro) {
   const daily = dailyLimitFor(plan, 'ai-default')
   const monthly = monthlyLimitFor(plan, 'ai-default')

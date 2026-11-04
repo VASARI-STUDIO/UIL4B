@@ -12,7 +12,7 @@
 // with docs/design/community-icon-rules.patch applied.
 //
 // It runs against firestore.rules as it stands, read and never written (the
-// file is founder-gated). Where the audit found current behaviour to be a bug,
+// file is approval-gated). Where the audit found current behaviour to be a bug,
 // the case is left out and a comment names the finding, so no test here
 // pins a bug as correct.
 //
