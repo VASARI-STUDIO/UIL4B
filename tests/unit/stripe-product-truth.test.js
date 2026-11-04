@@ -181,7 +181,7 @@ test('findOrCreateProduct CORRECTS a live product whose description is stale', a
   assert.equal(update[2].description, proProductDescription())
   assert.equal(result.description, proProductDescription())
 
-  // It corrects the DESCRIPTION and nothing else. A founder who renamed the
+  // It corrects the DESCRIPTION and nothing else. An owner who renamed the
   // product in the dashboard must not have that undone by a price update.
   assert.deepEqual(Object.keys(update[2]), ['description'])
   assert.ok(!stripe.calls.some((c) => c[0] === 'create'), 'it created a duplicate product')
@@ -198,18 +198,18 @@ test('findOrCreateProduct leaves a correct product completely alone', async () =
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4 · The founder's half is written down, and written down CORRECTLY
+// 4 · The owner's half is written down, and written down CORRECTLY
 // ─────────────────────────────────────────────────────────────────────────────
-// ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY ────────────────────
 // Public repository; that document is the current-state list of what is not yet
-// secured, so the founder keeps it on his machine and out of every clone
-// (.gitignore carries why). Only the founder's HALF of this file needs it. The
+// secured, so it stays on the owner's machine and out of every clone
+// (.gitignore carries why). Only the owner's HALF of this file needs it. The
 // derivation itself — that proProductDescription() matches what the server
 // enforces, and that findOrCreateProduct writes that exact string — is code on
 // both sides and still runs everywhere, which is the half that protects a
 // paying customer. What skips is the check that the runbook still quotes the
 // derived sentence, and it skips WITH A REASON: an absent document trivially
-// satisfies nothing, and a green line there would say the founder's copy had
+// satisfies nothing, and a green line there would say the owner's copy had
 // been verified when it had not been read at all.
 const OWNER_ACTIONS = path.join(process.cwd(), 'docs/OWNER-ACTIONS.md')
 const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)

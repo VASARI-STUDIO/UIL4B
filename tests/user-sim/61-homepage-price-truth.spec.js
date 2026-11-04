@@ -11,8 +11,8 @@
 //     own flag describes as dead-ending on "Invalid selection". /plans had
 //     dropped it and scripts/site-pricing.mjs had already excluded it from the
 //     structured data. The front page was the last surface still selling it.
-//   · "Cancel any time" on the monthly row, which Plans.jsx removed under a
-//     founder flag because the Stripe Customer Portal has no cancellation flow
+//   · "Cancel any time" on the monthly row, which Plans.jsx removed under an
+//     approval flag because the Stripe Customer Portal has no cancellation flow
 //     enabled ([stripe-retention-config] is blocked).
 //   · a typed "$4/month" headline, next to a planLadder.js export documented as
 //     "the honest headline … never typed into copy".

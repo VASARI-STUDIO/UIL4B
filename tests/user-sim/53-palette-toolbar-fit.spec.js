@@ -1,9 +1,9 @@
-// The Palette Builder toolbar, measured across the widths the founder reported.
+// The Palette Builder toolbar, measured across the widths reported.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-05, two screenshots.
+// Two reported screenshots.
 //   DESKTOP: the toolbar "is a run of icon-only buttons of uneven weight and
 //   spacing sitting beside two labelled buttons and a select, and it reads as
 //   unresolved rather than designed."

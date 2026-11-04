@@ -188,7 +188,7 @@ test.describe('the marketing footer is the design\'s', () => {
     await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
-    // The founder note and credit link sit beside it.
+    // The about note and credit link sit beside it.
     await expect(footer.locator('.app-footer-note')).toHaveCount(1)
     await expect(footer.locator('.sp-footer-attrib')).toHaveAttribute('href', 'https://dylan-coleman.com/')
     // Off the sales page the PROJECT links carry the page with them…

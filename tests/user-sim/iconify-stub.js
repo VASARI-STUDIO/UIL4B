@@ -118,7 +118,7 @@ export async function withholdSnapshots(page) {
  * fixture.
  *
  * This is a different outage from refuseIconify above, and the difference is
- * the whole point. On 2026-09-15 the founder reported the icon library broken;
+ * the whole point. The icon library was reported broken;
  * measured, all 24 catalogue requests returned 200 while every glyph came back
  * 429 from Cloudflare (error 1015, rate limited per IP). The API answers a
  * rate-limited glyph with text/plain, the browser had asked for an image, so

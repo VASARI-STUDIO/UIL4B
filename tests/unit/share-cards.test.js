@@ -247,12 +247,11 @@ test('THE ONE THAT KEEPS IT TRUE: every parent crumb points at a page that exist
   }
   // Stated by name, because it is the specific mistake being avoided.
   //
-  // `/create/contrast` JOINED THIS LIST on 2026-09-18 and it used to be the
-  // counter-example below it. Its parent was `/create/color`, the one Create
-  // category home that rendered a page; the founder deleted that landing when
-  // Spectrum became `/`, so all five colour tools are now in the same position
-  // as the four already named here — a category home that only redirects, and
-  // therefore no parent rather than a fabricated one.
+  // `/create/contrast` is on this list because its parent was `/create/color`,
+  // the one Create category home that used to render a page. That landing is
+  // gone now that Spectrum is `/`, so all five colour tools are in the same
+  // position as the four already named here: a category home that only
+  // redirects, and therefore no parent rather than a fabricated one.
   for (const tool of [
     '/create/font-pair', '/create/emoji', '/create/aspect-ratio', '/create/alt-text',
     '/create/contrast', '/create/palette', '/create/tint', '/create/gradient',

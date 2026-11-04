@@ -14,7 +14,7 @@
 //
 // Every limit and label below is IMPORTED from src/config/aiGeneration.js
 // rather than typed. A spec that hard-codes "1" would keep passing after the
-// founder changes the allowance, and would then be asserting the old product.
+// allowance changes, and would then be asserting the old product.
 //
 // THE STUB IS AT THE NETWORK, NOT IN THE COMPONENT. page.route intercepts
 // /api/ai, so the request body, the headers, the response handling, the meter

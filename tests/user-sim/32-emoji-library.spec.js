@@ -1,6 +1,6 @@
-// The Emoji Library, on the two symptoms the founder reported (2026-08-08):
-// "search returns nothing usable" and "the whole surface is laggy and slow to
-// render/load". The queue item asked which was cause and which was consequence.
+// The Emoji Library, on two reported symptoms: "search returns nothing usable"
+// and "the whole surface is laggy and slow to render/load". The open question
+// was which was cause and which was consequence.
 //
 // The answer, settled in #272 and confirmed here by measurement: they were
 // INDEPENDENT. The search failure was a data fault — the old filter matched a

@@ -46,7 +46,7 @@
 //      NOT a scroll container — `overflow:hidden` with a transform inside — so
 //      there is nothing for Lenis to hand it to. This asserts that rather than
 //      assuming it, because "the popup does not scroll, the page behind it
-//      does" is a founder-reported defect on this codebase and the inverse
+//      does" is a reported defect on this codebase and the inverse
 //      would be just as wrong.
 //
 // EVERY REDUCED-MOTION ASSERTION IS PAIRED WITH A MOTION-ON CONTROL in the same

@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder reported that the popup was "too small and not centred, so you
-// can't see where the sample markers are being placed on the image". The size
+// The popup was too small and not centred, so you couldn't see where the sample
+// markers are being placed on the image. The size
 // was real. Underneath it was a worse fault that the size was hiding:
 //
 // Every picker point is stored as a NORMALISED COORDINATE IN THE SOURCE IMAGE
@@ -220,8 +220,8 @@ test.describe('image to palette picker', () => {
 
   /* ── The loupe (eyedropper-needs-zoom) ───────────────────────────────────
    *
-   * Founder: "show me a large zoomed in view so i can [see] exactly what pixel
-   * im selecting". A 26px marker over a preview of a large photo covers a
+   * The picker needs a large zoomed-in view so you can see exactly what pixel is
+   * selected. A 26px marker over a preview of a large photo covers a
    * hundred source pixels, so the tool could not answer that.
    *
    * The assertion that matters is not that a loupe APPEARS — it is that the

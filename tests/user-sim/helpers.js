@@ -34,7 +34,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 //
 // It used to read `ADMIN_EMAILS` out of api/_lib/plans.js, and the argument for
 // doing so was real: the fixture and the live gate could not drift apart
-// without this suite noticing. That coupling went when the founder's personal
+// without this suite noticing. That coupling went when the owner's personal
 // address came out of tracked source — it is set in Vercel now, and a public
 // repo has nothing to read.
 //
@@ -49,8 +49,8 @@ import { servePalettePreview } from '../../api/_lib/library/preview.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { resolveReportDir } from './report-dir.js'
 
-// A RESERVED TEST DOMAIN, never the founder's real address. The whole point
-// of moving the allowlist out of source was that his personal address stopped
+// A RESERVED TEST DOMAIN, never the owner's real address. The whole point
+// of moving the allowlist out of source was that a personal address stopped
 // being published; reinstating it here would put it straight back into a
 // public repo through the test suite.
 //
@@ -212,7 +212,7 @@ export function watch(page, persona) {
  * counts against it, `useSubscription().isPro` follows the plan, the export
  * gate opens or does not, and `auth.currentUser` carries it for the hooks that
  * read roles off a token. Nothing in src/ is aware any of this is happening,
- * and src/contexts/AuthContext.jsx — which is founder-gated — is untouched.
+ * and src/contexts/AuthContext.jsx — which is approval-gated — is untouched.
  *
  * IT CANNOT EXIST IN A PRODUCTION BUILD. The doubles are wired in by a Vite
  * plugin that is only constructed under `--mode test`; a production build does
@@ -310,7 +310,7 @@ function seedProject(i, design) {
  *              SubscriptionContext reads over a snapshot — NOT by setting a
  *              flag. So `planForSubscription()` is the code being exercised,
  *              and a change to it changes what these tests see.
- *   admin      true to use the founder's address from api/_lib/plans.js.
+ *   admin      true to use the admin address from api/_lib/plans.js.
  *              Separate from `plan` on purpose: admin implies Pro through a
  *              DIFFERENT branch (the email allowlist), and conflating the two
  *              would make an admin-only failure look like a Pro failure.

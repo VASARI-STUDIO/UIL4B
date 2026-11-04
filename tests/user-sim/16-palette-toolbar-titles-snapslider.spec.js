@@ -1,4 +1,4 @@
-// Regression coverage for the second founder-reported Palette Builder batch.
+// Regression coverage for the second batch of reported Palette Builder bugs.
 //
 // Same rule as batch 1 (14-palette-slider-toolbar-gradient-stops.spec.js): each of these
 // shipped once because nothing measured the RENDERED result. These tests
@@ -27,14 +27,14 @@ import { openPaletteTools } from './palette-helpers.js'
  * them is not all dead and the difference matters to whoever reads this next.
  *
  * WHAT THEY GUARDED.
- *   a. 'the board opens on Auto' — the founder's own report: "make the mini
- *      palette builder on the homepage use the auto system — when you click
- *      continue in Palette Builder it's set to analogous." Continue was a bare
+ *   a. 'the board opens on Auto' — the mini palette builder on the homepage had
+ *      to use the auto system; "Continue in Palette Builder" opened on
+ *      analogous. Continue was a bare
  *      <Link> carrying nothing, so the board fell through to its own default of
  *      'analogous', a PAID system handed to a signed-out visitor.
- *   b. 'a click that opens a NEW TAB must not arm the board in THIS one' — his
- *      "somtimes i open the pallete builder and it has added many colours and
- *      its a different swatch." React Router's Link calls the caller's onClick
+ *   b. 'a click that opens a NEW TAB must not arm the board in THIS one' — the
+ *      palette builder sometimes opened with many extra colours and a different
+ *      swatch. React Router's Link calls the caller's onClick
  *      unconditionally and only then asks whether it will navigate, so a
  *      Ctrl/Cmd/Shift-click staged a draft in a tab that never moved, in a slot
  *      with no expiry, which then ambushed the next visit to /create/palette.
@@ -66,9 +66,9 @@ import { openPaletteTools } from './palette-helpers.js'
  */
 
 /* ── 3 · Column titles describe the colour in the slot ────────────────────────
- * Founder: "when I change the colour system the title of each colour should
- * change based on what is displayed in its slot — for example when I set it to
- * mono, the subtle swatch isn't what it's showing."
+ * When the colour system changes, the title of each colour should change based
+ * on what is displayed in its slot — for example in mono, the subtle swatch
+ * isn't what it's showing.
  * Was: the title was ROLES[i] — a hard-coded positional label that named the
  * SLOT and could never track the colour. */
 
@@ -228,8 +228,8 @@ test.describe('Adjust sliders · keyboard stepping', () => {
     await hue.focus()
 
     // The hue track is ±50, not ±180 — past about a fifth of the wheel the
-    // board stops being a variation of the chosen colour (founder decision,
-    // batch 4). A tenth of that range is 10°.
+    // board stops being a variation of the chosen colour.
+    // A tenth of that range is 10°.
     await page.keyboard.press('End')
     await expect(hue).toHaveValue('50')
     await page.keyboard.press('Home')
@@ -289,7 +289,7 @@ test.describe('Adjust sliders · keyboard stepping', () => {
     // This assertion changed in batch 3: it used to read `dragTo(6) → 0`, i.e.
     // the whole 8° radius collapsed onto the snap, so the value leapt by 8 the
     // moment the pointer crossed the boundary. That discontinuity is exactly
-    // what the founder saw on Temperature (7 → 0 → −7). Mid-radius values are
+    // what was seen on Temperature (7 → 0 → −7). Mid-radius values are
     // now nudged toward the snap, and the radius itself is the identity.
     await dragTo(3)
     await expect(hue, 'mid-radius is nudged, not swallowed').toHaveValue('2')

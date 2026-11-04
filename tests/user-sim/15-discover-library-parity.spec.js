@@ -48,20 +48,20 @@ test.describe('Discover libraries share one header', () => {
       const hero = page.locator('.dgh-hero')
       await expect(hero).toBeVisible()
       await expect(hero.getByRole('heading', { level: 1, name: library.title })).toBeVisible()
-      // THE DESCRIPTION IS ASSERTED GONE, NOT PRESENT (founder decision,
-      // 2026-09-13), and that is a reversal of what this line said. It used to
+      // THE DESCRIPTION IS ASSERTED GONE, NOT PRESENT, and that is a reversal of
+      // what this line said. It used to
       // read "Title + description are what make the two pages read as one
       // surface" and assert the paragraph was not empty. The paragraph is
       // exactly what stopped being shared: BOTH libraries ran one template
       // sentence, "...with a point of view ... make it yours.", and the parity
-      // it produced was the parity of a filled-in blank. The founder deleted
-      // both. What makes the two pages one surface is the shared component and
+      // it produced was the parity of a filled-in blank. Both have been
+      // deleted. What makes the two pages one surface is the shared component and
       // its rendered surface, which the two tests below this one measure
       // directly; a slot that is empty on both is still parity, and this
       // asserts the template cannot come back rather than asserting the slot.
       await expect(hero.locator('p')).toHaveCount(library.blurb ? 1 : 0)
-      // REGRESSION GUARD (#surface-headers-read-as-ai). The founder marked both
-      // of these "AI" on the Font Gallery masthead: a taxonomy eyebrow above an
+      // REGRESSION GUARD (#surface-headers-read-as-ai). Both
+      // of these read as AI on the Font Gallery masthead: a taxonomy eyebrow above an
       // h1 that already says it, and a display numeral counting the catalogue.
       // They are asserted GONE rather than merely un-asserted, so a future hero
       // edit cannot quietly reinstate them.
@@ -157,7 +157,7 @@ test.describe('Discover libraries share one header', () => {
       // compared separately below. It used to be read as
       // `getComputedStyle(el.querySelector('p'))` unconditionally, which throws
       // outright on a masthead with no description - and two of these four have
-      // none since the founder deleted the shared template sentence. Folding a
+      // none since the shared template sentence was removed. Folding a
       // null into the shape object instead would have been worse than throwing:
       // `{ pSize: null }` and `{ pSize: '19px' }` are unequal, so the parity
       // assertion would have started failing for a difference in CONTENT while
@@ -338,7 +338,7 @@ test.describe('Discover libraries share one header', () => {
 test.describe('the Palette Library carries the brand systems', () => {
   // ── WHICH VIEWER SEES A BRAND SYSTEM, SINCE THE TIER CAP ──────
   //
-  // The founder's rungs are 3 / 10 / everything, counted down the library in
+  // The tier rungs are 3 / 10 / everything, counted down the library in
   // its own order, and the brand systems sit after the 64 curated palettes. So
   // below the top rung no brand card renders AT ALL — not even a `free: true`
   // one. The flag still decides what the Palette Builder will LOAD (44 covers
@@ -499,8 +499,8 @@ test.describe('the Palette Library carries the brand systems', () => {
   })
 })
 
-// Founder request, 2026-09-03: "i sohuld also be able to access icon library
-// from the discober tab". The library itself did not move — it is still
+// The icon library is reachable from the Discover tab. The library itself did
+// not move — it is still
 // /create/icons, and #292/#306 had already dressed it in the shared Discover
 // browse language — so what is pinned here is the REACH: a visitor who is on
 // Discover, on a phone or a desktop, can get to it without going via Create.
@@ -511,8 +511,7 @@ test.describe('the Icon Library is reachable from Discover', () => {
 
     const card = page.locator('.surface-card', { hasText: 'Icon Library' }).first()
     await expect(card).toBeVisible()
-    // Live, not staged: a "Soon" badge here would be the same dead end the
-    // founder was reporting.
+    // Live, not staged: a "Soon" badge here would be a dead end.
     await expect(card.locator('.soon-badge')).toHaveCount(0)
     await expect(card).toHaveAttribute('href', '/create/icons')
 
@@ -535,7 +534,7 @@ test.describe('the Icon Library is reachable from Discover', () => {
     await go(page, '/discover')
 
     // Desktop: the Discover pill opens the mega-menu. Clicking, not hovering —
-    // the founder's 2026-09-02 direction is no hover-dependent affordances.
+    // affordances must not depend on hover.
     await page.getByRole('button', { name: 'Discover', exact: true }).first().click()
     const desktopRow = page.locator('a[href="/create/icons"]', { hasText: 'Icon Library' }).first()
     await expect(desktopRow).toBeVisible()

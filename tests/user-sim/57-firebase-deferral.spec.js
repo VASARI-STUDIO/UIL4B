@@ -65,7 +65,7 @@ test('the homepage boots through the Firebase access broker and renders real con
 test('the One Tap mount seam is live — the app still injects Google Identity Services', async ({ page }) => {
   // `src/components/oneTapMount.jsx` is the seam that lets a deferred build hold
   // One Tap back until the Firebase gate opens, WITHOUT editing the
-  // founder-gated `GoogleOneTap.jsx`. On the default build it must be a
+  // approval-gated `GoogleOneTap.jsx`. On the default build it must be a
   // transparent re-export, and the only way to see that from the browser is
   // that One Tap still does the one thing it does on a signed-out page: inject
   // the GIS script.

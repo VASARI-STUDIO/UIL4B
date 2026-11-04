@@ -157,8 +157,8 @@ test.describe('Brand kit walkthrough', () => {
     // ColorLanding, whose H1 is "One colour system, start to finish." — a page
     // of links. Step one has to be the tool.
     await expect(page).toHaveURL(/\/create\/palette$/)
-    // The h1 is sr-only while the page's lede is unwritten (founder struck the
-    // visible "Palette Generator"), so this asserts it is
+    // The h1 is sr-only while the page's lede is unwritten (the
+    // visible "Palette Generator" heading is removed), so this asserts it is
     // ATTACHED rather than visible — it still names the board via
     // aria-labelledby, and the visible proof that the right route arrived is
     // the seed chip below.
@@ -250,8 +250,8 @@ test.describe('Brand kit walkthrough', () => {
 
     await expect(card(page)).toBeVisible()
 
-    // NOT A MODAL, and this is the founder's actual requirement rather than a
-    // styling preference: "go straight into step 1 then provide a popup". The
+    // NOT A MODAL, and this is a behavioural requirement rather than a
+    // styling preference: the walkthrough goes straight into step 1, then shows a card. The
     // step behind has to remain usable WHILE the card is up. So: type into the
     // tool's own field with the card open and watch the tool respond.
     await setSeed(page, '#3366FF')
@@ -311,8 +311,8 @@ test.describe('Brand kit walkthrough', () => {
     await expect(rail(page)).toBeVisible()
     await expect(card(page)).toBeHidden()
 
-    // But it is not gone — the failure mode the founder-note item recorded
-    // about one-time popups is that they become unreachable.
+    // But it is not gone — the failure mode of one-time popups
+    // is that they become unreachable.
     await page.getByRole('button', { name: /What.s this\?/ }).click()
     await expect(card(page)).toBeVisible()
   })
@@ -469,7 +469,7 @@ test.describe('Brand kit walkthrough', () => {
   })
 
   test('the Palette page no longer offers Build UI system to anyone', async ({ page }) => {
-    // The other half of the same founder decision: the palette tool stops being
+    // The other half of the same decision: the palette tool stops being
     // a side door into system-building now that the nav is the front door.
     watch(page, 'designer looking for the removed UI system control')
     await fresh(page)

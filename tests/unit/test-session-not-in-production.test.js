@@ -166,7 +166,7 @@ test('the double is wired in for --mode test and for nothing else', async () => 
   )
 
   // Development is not a shipping build, but it is a running app with the
-  // founder's real Firebase project behind it, and nothing about a dev server
+  // real Firebase project behind it, and nothing about a dev server
   // should carry this either.
   const dev = names(factory({ mode: 'development', command: 'serve' }))
   assert.ok(!dev.includes(PLUGIN_NAME), `${PLUGIN_NAME} must not be active in development`)

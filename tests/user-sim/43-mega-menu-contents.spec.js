@@ -180,8 +180,8 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
-    // FOUNDER, 2026-09-14: "the build a brand kit graphic should show a page of
-    // what an export will look like maybe the page of colours". It used to be a
+    // The build-a-brand-kit graphic should show a page of what an export will look
+    // like, such as the page of colours. It used to be a
     // swatch rail plus "Ag" and "0123 abc" — the INGREDIENTS, never the
     // artefact — beside a card selling a flow whose whole point is what you get
     // at the end. It is page 2 of the style guide now.

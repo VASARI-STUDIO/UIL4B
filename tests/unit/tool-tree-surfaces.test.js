@@ -271,13 +271,12 @@ test('the footer names Create groups rather than typing their URLs', () => {
   // the guard is that they are no longer written by hand at all, so the next
   // one cannot be wrong.
   //
-  // THE LAST TYPED URL WENT ON 2026-09-18. `/create/color` survived here as the
-  // "Start with colour" CTA on the argument that it was a real page, and a hero
-  // button naming its own destination is not a category list guessing at four
-  // of them. The founder deleted that page with the Spectrum swap, so the URL
-  // became a bounce and a 301 and the CTA now asks the tree like every other
-  // row. The expected list is empty, which is the strongest form of this
-  // assertion: the file may not type a /create/ route at all.
+  // NO TYPED /create/ URL REMAINS. `/create/color` used to be typed here as the
+  // "Start with colour" CTA, on the argument that it was a real page. That page
+  // is gone (Spectrum is `/`), so the URL is a bounce and a 301, and the CTA now
+  // asks the tree like every other row. The expected list is empty, which is the
+  // strongest form of this assertion: the file may not type a /create/ route at
+  // all.
   const src = stripComments(read('src/components/AppFooter.jsx'))
   const createPaths = [...src.matchAll(/(['"])(\/create\/[a-z0-9-]+)\1/g)].map((m) => m[2])
   assert.deepEqual([...new Set(createPaths)], [],
@@ -291,8 +290,8 @@ test('the footer names Create groups rather than typing their URLs', () => {
 //
 // Three tests stood here and they are deleted, not re-pointed, because their
 // subject is deleted: src/pages/Home.jsx rendered a `.htool-head` category grid
-// and a five-row STEPS rail, and the founder replaced the whole page with
-// src/pages/Spectrum.jsx on 2026-09-18.
+// and a five-row STEPS rail, and the whole page was replaced by
+// src/pages/Spectrum.jsx.
 //
 // What they guarded is guarded elsewhere, which is why this is a deletion and
 // not a gap:

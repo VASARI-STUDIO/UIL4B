@@ -23,7 +23,7 @@
 // ── WHAT CHANGED, AND WHY THE STAKES WENT UP ────────────────────────────────
 //
 // The cards now PREVIEW THE PROMPT. Each free card renders `p.text` in full
-// inside a fixed-height window, because the founder asked the library to show
+// inside a fixed-height window, because the library shows
 // the artefact rather than a name for it. That makes the split the only thing
 // between a signed-out visitor and eight paid prompt texts, where before it was
 // the only thing between them and eight titles.
@@ -37,7 +37,7 @@
 //
 // ── AND WHAT CHANGED AGAIN WHEN THE GATE GREW A THIRD RUNG ─────
 //
-// The founder's tiers — 3 signed out, 10 with a free account, everything with
+// The tiers — 3 signed out, 10 with a free account, everything with
 // Pro — mean "free" is no longer one set. A signed-out visitor gets the first
 // three of the twelve flagged rows; an account gets the first ten. So the
 // withheld set is now bigger than the `free: false` set, and it CONTAINS ROWS

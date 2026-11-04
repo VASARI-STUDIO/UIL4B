@@ -22,7 +22,7 @@
 //   · Admin.jsx: drop `title={label}` from the TopList label: "hover title"
 //     fails; change the count back to `{rows.length} {unit}`: "top 8 of 10"
 //     fails.
-//   · Admin.jsx: put "docs/OWNER-ACTIONS.md" or "Founder-confirmed 31 Jul 2026"
+//   · Admin.jsx: put "docs/OWNER-ACTIONS.md" or a dated attribution
 //     back in the visible text: "no internal detail" fails.
 //   · CommunityCard.jsx: render the count unconditionally: "no zero" fails.
 //   · community.css: set `.ch-sub small` back to var(--cm-quiet) / 13px: "as
@@ -201,7 +201,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     })
 
     test('no internal detail in the admin text: no doc path, no dated attribution', async ({ page }) => {
-      // MUTATION: put "docs/OWNER-ACTIONS.md" or "Founder-confirmed 31 Jul 2026"
+      // MUTATION: put "docs/OWNER-ACTIONS.md" or a dated attribution
       // back into Admin.jsx's visible text.
       watch(page, 'the admin reading the setup checklist')
       await openAdmin(page, { roleEnabled: false })
