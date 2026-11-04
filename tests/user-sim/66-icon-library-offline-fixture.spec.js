@@ -93,7 +93,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   watch(page, 'designer opening the icon library')
   // SIGNED IN AS PRO, BECAUSE THE SUBJECT IS THE FIXTURE AND NOT THE PAYWALL.
   // /create/icons is tiered (src/data/iconPackTiers.js): a
-  // signed-out visitor browses five packs, not twenty-seven, so "one /collection
+  // signed-out visitor browses five packs, not thirty-one, so "one /collection
   // per pack the page browses on first paint" would be measuring the gate here
   // rather than the stub. Pro is the tier that browses everything, which is the
   // state this test has always been written against. The tiers are measured in
@@ -379,7 +379,7 @@ for (const theme of ['light', 'dark']) {
    packs that MUST have been fetched at that tier. */
 
 const OUTLINED = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
-const NEEDS_ACCOUNT = ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+const NEEDS_ACCOUNT = ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const NEEDS_PRO = ['simple-icons', 'logos', 'devicon', 'skill-icons', 'twemoji', 'noto',
   'openmoji', 'fluent-emoji', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons',
   'vscode-icons', 'token-branded']

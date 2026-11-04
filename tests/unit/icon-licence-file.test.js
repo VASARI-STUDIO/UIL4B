@@ -42,6 +42,25 @@ test('the two new packs name their notices exactly', () => {
   assert.ok(ming.includes('https://github.com/Richard9394/MingCute/blob/main/LICENSE'))
 })
 
+test('the four MIT packs of batch 2 name their notices exactly and link their own LICENSE', () => {
+  const expected = {
+    fluent: ['Copyright (c) 2020 Microsoft Corporation', 'https://github.com/microsoft/fluentui-system-icons/blob/main/LICENSE'],
+    pixelarticons: ['Copyright (c) 2019 Gerrit Halfmann', 'https://github.com/halfmage/pixelarticons/blob/master/LICENSE'],
+    'radix-icons': ['Copyright (c) 2022 WorkOS', 'https://github.com/radix-ui/icons/blob/master/LICENSE'],
+    bi: ['Copyright (c) 2019-2024 The Bootstrap Authors', 'https://github.com/twbs/icons/blob/main/LICENSE'],
+  }
+  for (const [prefix, [copyright, link]] of Object.entries(expected)) {
+    const file = licenceFileText([prefix])
+    assert.equal(ICON_PACK_CREDITS[prefix].spdx, 'MIT', `${prefix} is MIT`)
+    assert.ok(file.includes(copyright), `${prefix}: copyright line`)
+    assert.ok(file.includes('Permission is hereby granted, free of charge'), `${prefix}: MIT text`)
+    assert.ok(file.includes('The above copyright notice and this permission notice shall be included'), `${prefix}: the condition MIT sets`)
+    assert.ok(file.includes(link), `${prefix}: licence link`)
+    // The copyright line sits once in the credit and once under the MIT heading, not as a bare author name.
+    assert.ok(file.includes(`MIT License\n\n${copyright}`), `${prefix}: the MIT text opens with its own notice`)
+  }
+})
+
 test('Lucide also carries the MIT text for its Feather-derived icons; CC0 and CC BY point at their licence', () => {
   const lucide = licenceFileText(['lucide'])
   assert.ok(lucide.includes('Copyright (c) 2013-present Cole Bemis') && lucide.includes('Permission is hereby granted'))

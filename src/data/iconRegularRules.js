@@ -9,5 +9,10 @@ export const REGULAR_RULES = {
   mdi: n => !/-outline$/.test(n),
   'material-symbols': n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n),
   solar: n => /-bold(?:-duotone)?$/.test(n),
+  // Every Fluent glyph repeats at 10 to 48px; the 24px Regular one is one per concept.
+  fluent: n => /-24-regular$/.test(n),
+  bi: n => !/-fill$/.test(n),
+  // -sharp is a square-cornered alternate of the same glyph, -solid its fill.
+  pixelarticons: n => !/-(?:sharp|solid)$/.test(n),
 }
 export const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
