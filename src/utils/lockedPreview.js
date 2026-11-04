@@ -37,6 +37,21 @@
 // wrong data is worse than one that leaks. `slots` drives neutral, tokenised
 // shapes instead, which carry no colour information at all.
 
+// ── The one image a locked row has ──────────────────────────────────────────
+//
+// A locked palette or gradient card shows a blurred preview of its own row
+// (scripts/library/lockedThumbs.mjs, public/locked-previews/). It is not a
+// preview of the values: every colour is shifted 20 to 32 per channel before
+// it is drawn, by an amount keyed with a secret that is never committed, so the
+// image reads as the same family of colours while even a least-squares fit of
+// it lands 20 to 32 units away from the real ones on every channel
+// (tests/unit/locked-thumbs.test.js runs that fit on every file). That is the
+// ceiling: it hides values that are not public, but a row copied from a public
+// source (a brand's colours, a known gradient) can still be confirmed by
+// checking it against the image. It carries the row's order and its gradient's shape, which the
+// stub does not. It is an image on a card that only links to /plans, so none of
+// the copy, export or search paths above can reach it.
+
 // ── BE HONEST ABOUT THE CEILING ─────────────────────────────────────────────
 //
 // What this module guarantees is that a withheld row never reaches the PAGE:

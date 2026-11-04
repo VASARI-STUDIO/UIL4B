@@ -139,7 +139,7 @@ for (const theme of ['light', 'dark']) {
 test.describe('Locked previews', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  for (const theme of ['light', 'dark']) test(`a locked preview is lightly blurred and reveals no content, ${theme}`, async ({ page }) => {
+  for (const theme of ['light', 'dark']) test(`a locked preview is blurred and reveals no values, ${theme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: theme })
     // Signed out, the page shows 3 palettes and a sign-up call; the blurred cards stand in past the free rung's ten.
     watch(page, 'a free visitor meeting the locked palettes')
@@ -150,12 +150,20 @@ test.describe('Locked previews', () => {
     await card.scrollIntoViewIfNeeded()
     await expect(card).toBeVisible()
     const blur = await card.locator('.lockt-stripes').evaluate((el) => parseFloat((getComputedStyle(el).filter.match(/blur\(([\d.]+)px\)/) || [])[1]))
-    // Light enough to show the bands, heavy enough that nothing sharp is left.
+    // Light enough to make out the row, heavy enough that nothing sharp is left.
     expect(blur, 'blur radius in px').toBeGreaterThanOrEqual(4)
     expect(blur, 'blur radius in px').toBeLessThanOrEqual(10)
     const html = await card.evaluate((el) => el.outerHTML)
     expect(html, 'no colour value in the locked card').not.toMatch(/#[0-9a-f]{3,8}\b/i)
-    expect(html, 'no image or canvas in the locked card').not.toMatch(/<img|<canvas|url\(/i)
+    // The one image is the row's own soft preview, made and rounded at build time
+    // (scripts/library/lockedThumbs.mjs, spec 279); anything else is a leak.
+    expect(html, 'a canvas or CSS image in the locked card').not.toMatch(/<canvas|url\(/i)
+    const imgs = await card.locator('img').evaluateAll((els) => els.map((i) => ({ path: new URL(i.src).pathname, alt: i.getAttribute('alt') })))
+    expect(imgs.length, 'more than the one preview image in the locked card').toBeLessThanOrEqual(1)
+    for (const img of imgs) {
+      expect(img.path, 'an image that is not the locked preview').toMatch(/^\/locked-previews\/palettes\/[a-z0-9-]+\.png$/)
+      expect(img.alt, 'the preview is decoration').toBe('')
+    }
     const links = await card.locator('a').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
     expect(links, 'the only way out of a locked card is /plans').toEqual(['/plans'])
     await page.screenshot({ path: `${SHOTS}/palettes-locked-390-${theme}.png` })
