@@ -347,7 +347,9 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // plan is selected — which is the cheapest per month, i.e. the headline.
     const chosen = ladder.find((pl) => pl.id === headline.id)
     if (chosen.trialDays > 0) {
-      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays}`)
+      // The free days end on day N and the charge lands the day after.
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Days 1 to ${chosen.trialDays}:`)
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays + 1}:`)
     }
     await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
 

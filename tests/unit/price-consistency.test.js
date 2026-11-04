@@ -293,30 +293,33 @@ function normalise(text) {
   return formatMoney(amount, currency)
 }
 
+// The per-file half of the scan, split out so the positive control below can
+// run the identical code over an in-memory string instead of a file on disk.
+function scanSource(file, raw) {
+  const occurrences = []
+  // CSS has no line comments; JSON has no comments at all, but running the
+  // same string-aware pass over it is harmless and keeps one code path.
+  const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
+  const lines = raw.split('\n')
+  for (const match of code.matchAll(PRICE)) {
+    const line = code.slice(0, match.index).split('\n').length
+    occurrences.push({
+      file: rel(file),
+      line,
+      text: match[0],
+      source: (lines[line - 1] || '').trim(),
+      window: code.slice(
+        Math.max(0, match.index - WINDOW),
+        match.index + match[0].length + WINDOW,
+      ),
+    })
+  }
+  return occurrences
+}
+
 function scan() {
   const files = walk(SRC)
-  const occurrences = []
-
-  for (const file of files) {
-    const raw = fs.readFileSync(file, 'utf8')
-    // CSS has no line comments; JSON has no comments at all, but running the
-    // same string-aware pass over it is harmless and keeps one code path.
-    const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
-    const lines = raw.split('\n')
-    for (const match of code.matchAll(PRICE)) {
-      const line = code.slice(0, match.index).split('\n').length
-      occurrences.push({
-        file: rel(file),
-        line,
-        text: match[0],
-        source: (lines[line - 1] || '').trim(),
-        window: code.slice(
-          Math.max(0, match.index - WINDOW),
-          match.index + match[0].length + WINDOW,
-        ),
-      })
-    }
-  }
+  const occurrences = files.flatMap((file) => scanSource(file, fs.readFileSync(file, 'utf8')))
   return { files, occurrences }
 }
 
@@ -325,6 +328,13 @@ function excusedBy(hit) {
     (entry.file instanceof RegExp ? entry.file.test(hit.file) : entry.file === hit.file)
     && entry.context.test(hit.window)
   ))
+}
+
+// The verdict on one hit: not excused, and not an amount the ladder produces.
+function disagreesWithLadder(hit, allowed) {
+  if (excusedBy(hit)) return false
+  const label = normalise(hit.text)
+  return !(label && allowed.has(label))
 }
 
 const report = (hit) => {
@@ -336,11 +346,7 @@ const report = (hit) => {
 test('every price shown in src agrees with src/config/planLadder.js', () => {
   const allowed = allowedLabels()
   const { occurrences } = scan()
-  const offenders = occurrences.filter((hit) => {
-    if (excusedBy(hit)) return false
-    const label = normalise(hit.text)
-    return !(label && allowed.has(label))
-  })
+  const offenders = occurrences.filter((hit) => disagreesWithLadder(hit, allowed))
 
   assert.ok(offenders.length === 0,
     `${offenders.length} price${offenders.length === 1 ? '' : 's'} on screen `
@@ -378,20 +384,33 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   assert.ok(occurrences.length >= 18,
     `expected src/ to be full of price-shaped strings, found only ${occurrences.length}`)
 
-  // The stronger half of the bound: prices that were actually COMPARED, rather
-  // than waved through by the allowlist. If this drops, either the app stopped
-  // quoting prices in code or NOT_A_PLAN_PRICE has grown wide enough to swallow
-  // the thing it was meant to leave exposed.
+  // The other half of the bound is a positive control, not a count. The raw
+  // floor above only proves the scanner finds price-shaped text; it says
+  // nothing about whether the verdict still flags a wrong one. Surfaces render
+  // the ladder through its own arithmetic and type no amount by hand, so the
+  // population that survives the allowlist can legitimately be empty and a
+  // minimum on it would be the wrong thing to require.
   //
-  // The floor is 1 because /plans renders its "$0" through
-  // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the
-  // one literal left is Settings' "$0". A floor of 1 still fails if nothing is
-  // compared at all; the day Settings stops typing it too, this becomes a
-  // question about whether the scan has a job left.
-  const checked = occurrences.filter((hit) => !excusedBy(hit))
-  assert.ok(checked.length >= 1,
-    `only ${checked.length} price-shaped strings survived the allowlist to be checked `
-    + 'against the ladder — the guard is close to guarding nothing')
+  // Instead, run the same scanSource() and disagreesWithLadder() the guard uses
+  // over an in-memory fixture. Three amounts no tier can produce ($9, $13, $70)
+  // must be flagged, one the ladder does produce ($7, the monthly tier) must
+  // not, and a price quoted only in a comment must not be read at all. If the
+  // PRICE pattern, the stripper or the verdict goes blind, the sweep over src/
+  // would still pass on an empty result; this assertion fails.
+  const allowed = allowedLabels()
+  const fixture = [
+    'export const A = () => <p>Just $9 a month</p>',
+    "export const B = { total: '$13 billed quarterly' }",
+    'export const C = () => <p>From $70 a year</p>',
+    'export const D = () => <p>$7 billed monthly</p>',
+    '// a comment that quotes $99 is not on screen',
+  ].join('\n')
+  const hits = scanSource('src/pages/FixtureSurface.jsx', fixture)
+  assert.deepEqual(hits.map((hit) => hit.text), ['$9', '$13', '$70', '$7'],
+    'the scanner should read every typed amount in the fixture and skip the comment')
+  const flagged = hits.filter((hit) => disagreesWithLadder(hit, allowed)).map((hit) => hit.text)
+  assert.deepEqual(flagged, ['$9', '$13', '$70'],
+    'the verdict should flag exactly the amounts the ladder cannot produce')
 })
 
 test('the allowed set is derived from the ladder and is not empty', () => {
