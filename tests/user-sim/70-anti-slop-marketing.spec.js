@@ -34,7 +34,7 @@ import { expectRendered, go, watch } from './helpers.js'
 import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 import { AI_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_LIBRARIES, createTools } from '../../src/data/toolTree.js'
 import { SECTIONS } from '../../scripts/share-cards.mjs'
 import { sectionEyebrow } from '../../scripts/og-cards.mjs'
 
@@ -117,7 +117,7 @@ test.describe('the Discover landing', () => {
     await expect(hero.locator('.home-eyebrow'), 'the taxonomy eyebrow is back above the h1').toHaveCount(0)
     await expect(hero.locator('.home-hero-sub'), 'a lede is back under the h1').toHaveCount(0)
     // The derived status line and the way in survive.
-    const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
+    const live = DISCOVER_LIBRARIES.length
     await expect(hero.locator('.home-hero-hint')).toContainText(`${live} libraries open`)
     // THE WAY IN MOVED OUT OF THE HERO, and that is the change rather than a
     // loss. The hero carried a "Browse palettes" CTA above an index whose first
@@ -229,7 +229,7 @@ test.describe('the 404', () => {
     })
     expected.push({
       label: 'Discover',
-      desc: `${DISCOVER_GROUPS.filter((g) => !g.soon).length} libraries open`,
+      desc: `${DISCOVER_LIBRARIES.length} libraries open`,
       href: '/discover',
     })
 

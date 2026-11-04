@@ -36,7 +36,7 @@
 //   which is the same request taken one notch deeper — see the test.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
-import { DISCOVER_GROUPS } from '../../src/data/toolTree.js'
+import { DISCOVER_GROUPS, DISCOVER_LIBRARIES } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 
 const COMPRESSED = ['/discover', '/learn']
@@ -105,16 +105,16 @@ test.describe('the secondary landings stay compressed', () => {
   test('every hero count is read off the data rather than typed into the copy', async ({ page }) => {
     watch(page, 'visitor checking whether the numbers are true')
 
-    // The hero and cards share the registry's live and upcoming counts.
+    // The hero counts the libraries; the cards are every live row, Community included.
     await go(page, '/discover')
-    const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
+    const live = DISCOVER_LIBRARIES.length
     const discoverHint = await page.locator('.home-hero-hint').innerText()
     expect(discoverHint, 'the Discover hint no longer matches the group data')
       .toMatch(new RegExp(`\\b${live}\\b`))
     // Signed out, unfinished libraries are neither counted nor drawn.
     expect(discoverHint).not.toMatch(/still being built/i)
 
-    await expect(page.locator('.surface-card--link')).toHaveCount(live)
+    await expect(page.locator('.surface-card--link')).toHaveCount(DISCOVER_GROUPS.filter((g) => !g.soon).length)
     await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
     await go(page, '/learn')
