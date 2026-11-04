@@ -80,4 +80,26 @@ test.describe('Unsaved work is put aside, not lost', () => {
     expect(await read(page, PARKED)).toBeNull()
     await expect.poll(async () => (await readJson(page, CURRENT))?.palette?.colors).toEqual(WORK.palette.colors)
   })
+
+  test('Continue building on a project parks the unsaved design, names the project, and Undo restores it', async ({ page }) => {
+    watch(page, 'a designer opening another project over changed work')
+    const at = '2026-09-01T09:00:00.000Z'
+    const record = (id, name) => ({ id, name, design: JSON.parse(JSON.stringify(DEFAULT_DESIGN)), createdAt: at, updatedAt: at })
+    // The working design was opened from project A and then changed.
+    const changedA = { ...WORK, source: { projectId: 'proj-a' } }
+    await signIn(page, { plan: 'free', projects: [record('proj-a', 'Alpha'), record('proj-b', 'Bravo')] })
+    await seedWork(page, changedA)
+    await go(page, '/projects/proj-b')
+    const before = await settledWorking(page, WORK)
+
+    await page.getByRole('button', { name: 'Continue building' }).first().click()
+    await expect(page).toHaveURL(/\/create\//)
+
+    expect((await readJson(page, PARKED))?.design, 'A\'s changes are in the slot').toEqual(changedA)
+    expect((await readJson(page, CURRENT))?.source).toEqual({ projectId: 'proj-b' })
+    await expect(toast(page)).toContainText('Opened Bravo. Your unsaved work is put aside.')
+
+    expect(await pressActionAndReadWorking(page)).toBe(before)
+    expect(await read(page, PARKED)).toBeNull()
+  })
 })
