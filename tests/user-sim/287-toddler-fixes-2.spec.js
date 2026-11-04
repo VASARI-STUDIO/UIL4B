@@ -63,18 +63,23 @@ test.describe('palette gallery: Save to project', () => {
   async function saveButton(page) {
     const card = page.locator('.pgal-card').first()
     await expect(card).toBeVisible({ timeout: 20000 })
+    // Hover reveals the actions, then focus holds them open: a pointer click
+    // alone races the sticky nav and the actions' reveal transition.
     await card.hover()
-    return card.getByRole('button', { name: /^Save .* to a project$/ })
+    const save = card.getByRole('button', { name: /^Save .* to a project$/ })
+    await expect(save).toBeVisible()
+    await save.focus()
+    await frames(page)
+    return save
   }
 
   test('signed out, Save to project opens the sign-in popup and stays put', async ({ page }) => {
     watch(page, 'a visitor saving a palette without an account')
     await go(page, '/discover/palettes')
-    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }))
-    await frames(page)
+    const save = await saveButton(page)
     const before = await page.evaluate(() => window.scrollY)
 
-    await (await saveButton(page)).click()
+    await page.keyboard.press('Enter')
     await expect(loginDialog(page), 'the sign-in popup Like uses').toBeVisible()
     expect(new URL(page.url()).pathname, 'the gallery was left').toBe('/discover/palettes')
     await expect(page.locator('.toast.show')).toHaveCount(0)
@@ -90,11 +95,10 @@ test.describe('palette gallery: Save to project', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/discover/palettes')
     const name = (await page.locator('.pgal-card .pgal-name').first().textContent()).trim()
-    await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }))
-    await frames(page)
+    const save = await saveButton(page)
     const before = await page.evaluate(() => window.scrollY)
 
-    await (await saveButton(page)).click()
+    await page.keyboard.press('Enter')
     const toast = page.locator('.toast.show')
     await expect(toast).toContainText(`Saved ${name} to a new project`)
     expect(new URL(page.url()).pathname, 'a signed-in save must not leave the gallery').toBe('/discover/palettes')
@@ -127,14 +131,17 @@ test.describe('right-click feedback menu', () => {
     await go(page, '/discover/palettes')
     const stripe = page.locator('.pgal-stripe').first()
     await expect(stripe).toBeVisible({ timeout: 20000 })
-    await stripe.click({ button: 'right' })
-
     const head = page.locator('.fbx-menu .pop-head')
-    await expect(head).toBeVisible()
-    const text = (await head.textContent()).trim()
+    // The menu closes on any scroll, and the gallery can still settle after
+    // load, so open it again until one read lands while it is up.
+    let read
+    await expect(async () => {
+      if (!(await head.isVisible())) await stripe.click({ button: 'right' })
+      read = await head.evaluate((el) => ({ text: el.textContent.trim(), font: getComputedStyle(el).fontFamily }), null, { timeout: 2000 })
+    }).toPass({ timeout: 15000 })
+    const { text, font } = read
     expect(text, 'the head names the swatch by its accessible name').toMatch(/^Button: Copy #[0-9A-F]{6}$/i)
     expect(text, 'a CSS selector reached the visitor').not.toMatch(/pgal-stripe|^button\.|^\.|\[data-/)
-    const font = await head.evaluate((el) => getComputedStyle(el).fontFamily)
     expect(font.toLowerCase(), 'the head is a label, not mono').not.toMatch(/mono|consolas|courier/)
   })
 
@@ -186,8 +193,8 @@ test.describe('community submit dialogs on a phone', () => {
         for (const size of list) expect(size, `${what} is ${size}px`).toBeGreaterThanOrEqual(13)
       }
 
-      const close = dialog.getByRole('button', { name: 'Close' })
-      const box = await close.boundingBox()
+      // Layout size, not the painted box: the dialog scales in as it opens.
+      const box = await dialog.getByRole('button', { name: 'Close' }).evaluate((el) => ({ width: el.offsetWidth, height: el.offsetHeight }))
       expect(box.width, 'the close control is a 44px target').toBeGreaterThanOrEqual(44)
       expect(box.height).toBeGreaterThanOrEqual(44)
       await shot(page, `${d.action.replace(/\s/g, '-').toLowerCase()}-390`)
@@ -260,7 +267,7 @@ test.describe('icon search synonym hint', () => {
       (route) => route.fulfill({
         status: 200,
         contentType: 'application/json',
-        headers: { [ICONIFY_STUB_HEADER]: 'padlock-empty' },
+        headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
         body: JSON.stringify({ icons: [], total: 0, limit: 999, start: 0, collections: {} }),
       }),
     )
