@@ -8,8 +8,8 @@
 // WHAT THIS IS FOR
 // ═══════════════════════════════════════════════════════════════════════════
 // The changes are written, reviewed and tested, and none of them is in the
-// tree. Every one touches a file the Claude Code auto-mode classifier refuses
-// to stage, so an agent can produce the diff and cannot apply it. Before this
+// tree. Every one touches a file that automated commits may not stage, so
+// the diff can be written and tested but not applied. Before this
 // command, each change was pasted by hand into firestore.rules (or the other
 // gated file), once per change, into two files, in an order nobody had written
 // down.

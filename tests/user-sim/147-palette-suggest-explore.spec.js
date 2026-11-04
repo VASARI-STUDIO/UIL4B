@@ -1,6 +1,6 @@
 // PALETTE BUILDER: SUGGEST AND EXPLORE, AS ONE DOCKED PANEL OF SWATCH ROWS.
 //
-// The contract is the acceptance criteria of memory/designs/design-2026-10-31-suggest-explore.md.
+// The contract is the acceptance criteria of the suggest-and-explore design.
 //
 //   · Suggest (toolbar button "Suggest variations") and Explore ("Explore palettes
 //     and brands") share one panel slot. At 1024 and up it is an <aside

@@ -1,5 +1,5 @@
 // The Type Scale ladder, panel, phone sheet and default preview width
-// (fonts build spec, criteria 10 to 13; board card 42c6599fe4), the docked bar at
+// (fonts build spec, criteria 10 to 13), the docked bar at
 // 390, 768 and 1024+, and source order matching screen order below 1024.
 //
 // Test seam: the /create/type-scale page itself. Every check reads computed

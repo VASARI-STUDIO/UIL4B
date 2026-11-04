@@ -30,7 +30,7 @@
 //
 // RE-CHECKED 2026-09-04, still unresolved. Recorded so the third attempt starts
 // where this one stopped instead of re-running it:
-//   BLOCKED to every fetcher tried - plain curl, the agent fetch tool, AND a
+//   BLOCKED to every fetcher tried - plain curl, a server-side fetch, AND a
 //   real headless Chromium with a browser UA: pepsico.com (403),
 //   design.pepsico.com (403), contact.pepsico.com, investor.pepsico.com,
 //   pepsico.co.uk, pepsi.co.uk, pepsico.de, pepsicobeveragefacts.com. It is a

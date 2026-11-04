@@ -1,8 +1,8 @@
 // THE ONE COMMAND, GUARDED WHERE IT CAN SILENTLY STOP WORKING.
 //
 // `npm run apply:gated` is the owner's whole path to the approved changes they
-// cannot otherwise get: three of them edit files the Claude Code auto-mode
-// classifier refuses to stage, so no agent can commit them and no agent will
+// cannot otherwise get: three of them edit files that automated commits
+// may not stage, so no agent can commit them and no agent will
 // notice when they rot. The command is written once and run once, months later,
 // by somebody who cannot read the diff — which is the worst possible moment to
 // discover any of the following, and every one of them leaves the build green:
