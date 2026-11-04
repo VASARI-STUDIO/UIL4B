@@ -56,8 +56,12 @@ test.describe('Randomise with everything locked', () => {
     await page.getByRole('button', { name: /^Unlock / }).last().click()
     await page.waitForTimeout(3500) // let the first toast leave
     await expect(page.locator('.toast.show')).toHaveCount(0)
+    // The seed stays locked, so compare every column: the freed one changes.
+    const columns = () => page.locator('.plb-col').allTextContents()
+    const held = await columns()
     await page.locator('.plb-random').click()
-    await expect(page.locator('.toast.show')).not.toContainText(LOCKED_MSG)
+    await expect(page.locator('.toast.show', { hasText: LOCKED_MSG })).toHaveCount(0)
+    await expect.poll(columns, { message: 'one free swatch shuffles' }).not.toEqual(held)
     await expect(swatches(page).first()).toBeVisible()
   })
 })

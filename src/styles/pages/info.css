@@ -213,9 +213,10 @@
 /* A link inside a sentence stays the size of its words, so the line it sits in
  * does not change. To a finger it is 44px tall: an invisible strip centred on
  * the link, the same device the header controls use. The link is the only one
- * in its paragraph, so no neighbour shares the strip. */
+ * in its paragraph, so no neighbour shares the strip. It stays on one line: a
+ * link split across two lines would leave the strip on neither. */
 @media (pointer: coarse), (max-width: 767px) {
-  .ic-acc-body-inner a.ic-hit { position: relative; }
+  .ic-acc-body-inner a.ic-hit { position: relative; white-space: nowrap; }
   .ic-acc-body-inner a.ic-hit::after {
     content: "";
     position: absolute;
