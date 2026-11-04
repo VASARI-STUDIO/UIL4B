@@ -12,7 +12,8 @@ import AuthGate from '../components/AuthGate'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
 import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
-import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
+import { describeProvider } from '../utils/aiProvider'
+import ProviderBadge from '../components/ProviderBadge'
 import { RULE_CATEGORIES, PRESETS, buildPromptJson, buildPromptText } from '../data/promptRules'
 
 const TOOL_ID = 'prompts-ai'
@@ -508,20 +509,7 @@ export default function AiPromptGenerator({ toast }) {
                 <span className="pl-tag">{platformLabel(r.platform)}</span>
                 {r.style && <span className="pl-tag">{r.style}</span>}
                 {r.json && <span className="pl-tag">JSON</span>}
-                {(() => {
-                  const p = describeProvider(r.provider)
-                  if (!p) return null
-                  return (
-                    <span
-                      data-testid="ai-provider-badge"
-                      data-provider={p.id}
-                      style={providerBadgeStyle(p)}
-                      title={p.title}
-                    >
-                      {p.label}
-                    </span>
-                  )
-                })()}
+                <ProviderBadge provider={describeProvider(r.provider)} />
                 <span className="aipg-result-brief" title={r.description}>
                   {r.description.length > 60 ? r.description.slice(0, 60) + '…' : r.description}
                 </span>

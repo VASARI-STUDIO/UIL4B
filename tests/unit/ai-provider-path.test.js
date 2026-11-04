@@ -883,9 +883,11 @@ test('THE ONE THAT MATTERS: the prompt tool keeps `provider` and renders it', ()
       `${page} drops data.provider off the response again — the failover is invisible on this page`)
     assert.match(src, /describeProvider\(r\.provider\)/,
       `${page} stores the provider but never renders it, which is the same silence one step later`)
-    assert.match(src, /data-testid="ai-provider-badge"/,
-      `${page} renders the provider without a stable hook to find it by`)
+    assert.match(src, /<ProviderBadge provider=\{describeProvider\(r\.provider\)\}/,
+      `${page} describes the provider but does not render the badge`)
   }
+  assert.match(srcFile('components/ProviderBadge.jsx'), /data-testid="ai-provider-badge"/,
+    'the provider badge renders without a stable hook to find it by')
 })
 
 // ── the durable counters (pure) ──────────────────────────────────────────────
@@ -975,6 +977,22 @@ test('an intermittent primary is degraded, not ok and not failing', () => {
   const v = summariseProviderHealth([day('2026-09-03', { openrouterOk: 7, openrouterFail: 3, geminiOk: 3 })])
   assert.equal(v.status, 'degraded')
   assert.match(v.summary, /3 of 10/)
+})
+
+test('one healthy generation reads as the only one, not "all 1"', () => {
+  const one = summariseProviderHealth([day('2026-09-03', { openrouterOk: 1 })])
+  assert.equal(one.status, 'ok')
+  assert.match(one.summary, /^OpenRouter served the only generation in the last \d+ days\.$/)
+  const two = summariseProviderHealth([day('2026-09-03', { openrouterOk: 2 })])
+  assert.match(two.summary, /^OpenRouter served all 2 generations/)
+})
+
+test('the Brand Starter prompt asks for Australian English and no first person in the rationale', () => {
+  const src = fs.readFileSync(path.join(process.cwd(), AI_PATH), 'utf8')
+  const prompt = src.slice(src.indexOf('const STARTER_SYSTEM_PROMPT'), src.indexOf('async function runBrandStarter'))
+  assert.match(prompt, /Australian English/)
+  assert.match(prompt, /never as yourself: no "I", "we" or "my"/)
+  assert.doesNotMatch(prompt, /what you did about it/)
 })
 
 test('the panel says out loud when nothing will come and find the operator', () => {
