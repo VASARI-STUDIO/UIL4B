@@ -12,6 +12,7 @@ import {
   colourShares,
   extractPalette,
   hexToRgb,
+  isTruncatedPng,
   nextCandidate,
   oklabToRgb,
   pickPalette,
@@ -19,6 +20,8 @@ import {
   rankClusters,
   rgbToHex,
   rgbToOklab,
+  sampleRadius,
+  visibleShare,
 } from '../../src/utils/imagePalette.js'
 
 // Build an image from a function (x, y) -> [r, g, b, a?].
@@ -124,6 +127,13 @@ test('a small vivid accent survives among large neutral areas', () => {
   assert.ok(colours.some((c) => colourDistance(c.hex, ORANGE) < 0.02), colours.map((c) => c.hex).join(' '))
 })
 
+test('a flat page with a tiny accent keeps the accent', () => {
+  // 0.33% of the picture: a 40px square on 800x600, scaled down to 200x150.
+  const img = image(200, 150, (x, y) => (x >= 150 && x < 160 && y >= 105 && y < 115 ? hex('#FF5A1F') : hex('#FFFFFF')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(colours.some((c) => colourDistance(c.hex, '#FF5A1F') < 0.02), colours.map((c) => c.hex).join(' '))
+})
+
 test('no two colours are closer than the merge distance', () => {
   // A smooth gradient with grain: lots of near-identical shades.
   let seed = 7
@@ -207,6 +217,127 @@ test('averageHex reads a neighbourhood, skips transparent pixels, and clips at t
   assert.equal(averageHex(holes.data, 5, 5, 2, 2, 2), '#0A141E')
   assert.equal(averageHex(holes.data, 5, 5, 0, 0, 1), null)
   assert.equal(averageHex(img.data, 9, 9, 0, 0, 2), '#900000')   // a 3x3 corner window
+})
+
+// ── Flat art, small images and damaged files ─────────────────────────────────
+
+const deltaE = (a, b) => colourDistance(a, b) * 100        // OKLab x 100: about 1 is barely visible
+const TEAL = [42, 157, 143]
+const YELLOW = [233, 196, 106]
+const CORAL = [231, 111, 81]
+const mix = (a, b) => a.map((v, i) => Math.round((v + b[i]) / 2))
+
+// Three flat colours side by side on a transparent page, with the two things a
+// real logo has: a one-pixel blend where two colours meet, and a rim of partly
+// transparent pixels round the outside.
+function logo() {
+  return image(64, 64, (x, y) => {
+    if (x < 5 || x > 58 || y < 5 || y > 58) return [0, 0, 0, 0]
+    if (x === 5 || x === 58 || y === 5 || y === 58) return [...(x < 23 ? TEAL : x < 42 ? YELLOW : CORAL), 150]
+    if (x === 22) return [...mix(TEAL, YELLOW), 255]
+    if (x === 41) return [...mix(YELLOW, CORAL), 255]
+    return [...(x < 22 ? TEAL : x < 41 ? YELLOW : CORAL), 255]
+  })
+}
+
+test('a logo with anti-aliased edges and a transparent page gives exactly its three colours', () => {
+  const { status, colours } = extractPalette(logo(), 5)
+  assert.equal(status, 'ok')
+  assert.equal(colours.length, 3, colours.map((c) => c.hex).join(' '))
+  for (const want of [TEAL, YELLOW, CORAL]) {
+    const hexWant = rgbToHex(...want)
+    assert.ok(colours.some((c) => deltaE(c.hex, hexWant) <= 2), `${hexWant} is missing from ${colours.map((c) => c.hex).join(' ')}`)
+  }
+})
+
+test('every marker of a logo stands inside a flat area, so the readout is the colour', () => {
+  const img = logo()
+  const { colours } = extractPalette(img, 5)
+  for (const c of colours) {
+    // The 5x5 window round the marker is one colour all the way.
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        assert.deepEqual(rgbAt(img, c.px + dx, c.py + dy), hex(c.hex), `${c.hex} marker at ${c.px},${c.py}`)
+      }
+    }
+  }
+})
+
+test('a faded image with no fully opaque area still gives its colours', () => {
+  const img = image(30, 30, (x) => (x < 15 ? [...hex(RED), 200] : [...hex(BLUE), 200]))
+  const { colours } = extractPalette(img, 4)
+  assert.deepEqual(colours.map((c) => c.hex).sort(), [BLUE, RED].sort())
+})
+
+test('an 8x8 image of four blocks gives its four colours exactly', () => {
+  const blocks = [hex('#E63946'), hex('#2A9D8F'), hex('#E9C46A'), hex('#264653')]
+  const img = image(8, 8, (x, y) => blocks[(y < 4 ? 0 : 2) + (x < 4 ? 0 : 1)])
+  const { colours } = extractPalette(img, 5)
+  assert.deepEqual(colours.map((c) => c.hex).sort(), ['#264653', '#2A9D8F', '#E63946', '#E9C46A'])
+})
+
+test('on a tiny image a marker reads the one pixel it stands on, not its neighbours', () => {
+  const blocks = [hex('#E63946'), hex('#2A9D8F'), hex('#E9C46A'), hex('#264653')]
+  const img = image(8, 8, (x, y) => blocks[(y < 4 ? 0 : 2) + (x < 4 ? 0 : 1)])
+  assert.equal(sampleRadius(8, 8), 0)
+  const r = sampleRadius(img.width, img.height)
+  assert.equal(averageHex(img.data, 8, 8, 1, 1, r), '#E63946')
+  assert.equal(averageHex(img.data, 8, 8, 6, 6, r), '#264653')
+  // The old fixed 5x5 window crossed into the next block here.
+  assert.notEqual(averageHex(img.data, 8, 8, 3, 3, 2), '#E63946')
+})
+
+test('the sample radius grows with the image and tops out at 2', () => {
+  assert.equal(sampleRadius(8, 8), 0)
+  assert.equal(sampleRadius(500, 31), 0)       // the short side decides
+  assert.equal(sampleRadius(32, 32), 1)
+  assert.equal(sampleRadius(63, 400), 1)
+  assert.equal(sampleRadius(64, 64), 2)
+  assert.equal(sampleRadius(4000, 3000), 2)
+})
+
+test('a flat single-colour image returns that one colour, exactly', () => {
+  const { status, colours } = extractPalette(image(40, 40, () => hex('#336699')), 5)
+  assert.equal(status, 'flat')
+  assert.equal(colours.length, 1)
+  assert.equal(colours[0].hex, '#336699')
+})
+
+test('a five-band flag with a little noise stays within a barely visible step of each band', () => {
+  // Channel values sit mid-bucket (3 mod 8) so +-2 of noise never changes bucket.
+  const bands = [[227, 59, 67], [243, 251, 235], [171, 219, 227], [67, 123, 163], [27, 51, 91]]
+  let seed = 11
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+  const img = image(100, 100, (x, y) => bands[Math.floor(y / 20)].map((v) => v + Math.round((rnd() - 0.5) * 4)))
+  const { colours } = extractPalette(img, 5)
+  assert.equal(colours.length, 5, colours.map((c) => c.hex).join(' '))
+  for (const band of bands) {
+    const want = rgbToHex(...band)
+    assert.ok(colours.some((c) => deltaE(c.hex, want) <= 1), `${want} is missing from ${colours.map((c) => c.hex).join(' ')}`)
+  }
+})
+
+test('visibleShare tells an empty image from one with something in it', () => {
+  assert.equal(visibleShare(image(20, 20, () => [0, 0, 0, 0])), 0)
+  assert.equal(visibleShare(image(20, 20, () => [9, 9, 9, 255])), 1)
+  assert.equal(visibleShare(image(20, 20, (x) => (x < 5 ? [9, 9, 9, 255] : [9, 9, 9, 60]))), 0.25)
+  assert.equal(visibleShare({ data: new Uint8ClampedArray(0), width: 0, height: 0 }), 0)
+})
+
+test('averageHex prefers fully opaque pixels over the soft rim beside them', () => {
+  const img = image(5, 5, (x) => (x < 2 ? [...hex(RED), 255] : [...hex(BLUE), 180]))
+  assert.equal(averageHex(img.data, 5, 5, 2, 2, 2), RED)
+  const soft = image(5, 5, () => [...hex(BLUE), 180])
+  assert.equal(averageHex(soft.data, 5, 5, 2, 2, 2), BLUE)
+})
+
+test('a PNG with no IEND chunk is cut short; a complete one, or a non-PNG, is not', () => {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+  const iend = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+  assert.equal(isTruncatedPng(signature, new Array(64).fill(0xab)), true)
+  assert.equal(isTruncatedPng(signature, [...new Array(52).fill(7), ...iend]), false)
+  assert.equal(isTruncatedPng([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0], new Array(64).fill(0xab)), false)
+  assert.equal(isTruncatedPng([1, 2, 3], []), false)
 })
 
 // ── Putting picks on a board ─────────────────────────────────────────────────

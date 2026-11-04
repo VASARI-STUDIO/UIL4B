@@ -7,21 +7,32 @@
 //      convert them to OKLab, where straight-line distance is close to how
 //      different two colours look. Pixels with alpha < 128 are not colours of
 //      the image (a transparent logo has no black in it), so they are skipped.
-//   2. Cluster with k-means. The seeds follow k-means++ with a farthest-point
-//      rule, so a small vivid patch gets a seed of its own instead of being
-//      absorbed by the large neutral area around it.
+//      When the image has a real opaque area, pixels that are only partly
+//      transparent (the anti-aliased rim of a logo) are skipped too; otherwise
+//      every visible pixel counts, weighted by its alpha.
+//   2. Cluster. Flat art (a logo, a diagram, pixel art) has a handful of exact
+//      colours plus blends along the edges where they meet; those blends are not
+//      colours of the image. When a few colour buckets hold nearly all of the
+//      pixels, those buckets are the clusters and the blends are dropped.
+//      Anything else is clustered with k-means, whose seeds follow k-means++
+//      with a farthest-point rule, so a small vivid patch gets a seed of its own
+//      instead of being absorbed by the large neutral area around it.
 //   3. Merge clusters whose centres sit closer than MIN_DELTA.
 //   4. Rank what is left by population plus a chroma bonus, discounted by how
 //      close each candidate is to one already chosen. Population alone gives a
 //      palette of grey-blues for a sunset; the bonus is what keeps the orange.
-//   5. Give each cluster a representative pixel: a member of the cluster that
-//      is close to its centre in colour and, as a tie-break, close to its
-//      centre of mass in the picture. That is where a marker is placed.
+//   5. Give each cluster a representative pixel, which is where a marker is
+//      placed. For flat art it is the middle of the cluster's biggest flat
+//      region, so the marker stands on the colour and not on an edge. For a
+//      photo it is a member of the cluster that is close to its centre in colour
+//      and, as a tie-break, close to its centre of mass in the picture.
 // A seeded RNG makes the same image give the same answer every time.
 
 export const MIN_DELTA = 0.04            // closest two palette colours may be, in OKLab
 export const MAX_SAMPLE_PIXELS = 150000
 export const OPAQUE_ALPHA = 128
+export const SOLID_ALPHA = 250           // at or above this a pixel counts as fully opaque
+export const MIN_VISIBLE_SHARE = 0.005   // less visible than this and the image has no colours to offer
 export const MOODS = ['colourful', 'bright', 'muted', 'deep', 'dark']
 
 const MIN_SHARE = 0.001                  // a cluster must hold this much of the image to be offered
@@ -29,6 +40,11 @@ const SPREAD_SCALE = 0.25                // distance from the chosen set at whic
 const HUE_WEIGHT = 4                     // a step in hue counts for more than a step in lightness when judging spread
 const REP_SPATIAL_WEIGHT = 0.08          // how much picture position counts against colour when placing a marker
 const DEFAULT_SEED = 0x9e3779b1
+const SOLID_SHARE = 0.25                 // fully opaque pixels must be this share of the visible ones before partly transparent ones are dropped
+const BUCKET_SHIFT = 3                   // flat-art buckets: 32 levels per channel
+const FLAT_MAX_BUCKETS = 24              // more colour buckets than this is not flat art
+const FLAT_TOLERANCE = 6                 // largest per-channel step between neighbours that still counts as one flat area
+const FLAT_INTERIOR_MIN = 0.6            // share of pixels that must sit inside a flat area before edge blends are set aside
 
 // ── Colour maths ─────────────────────────────────────────────────────────────
 
@@ -99,28 +115,216 @@ export function mulberry32(seed) {
 
 // ── Pixel collection ─────────────────────────────────────────────────────────
 
-// The opaque pixels of `image` ({ data, width, height }) as parallel OKLab and
-// position arrays. A grid larger than MAX_SAMPLE_PIXELS is read on a stride.
-function collect(image) {
-  const { data, width, height } = image
-  if (!data || !(width > 0) || !(height > 0)) return { n: 0, total: 0, width: 0, height: 0 }
+// How much of `image` can be seen: the share of its grid pixels with alpha of
+// OPAQUE_ALPHA or more. Cheap (alpha only), so a caller can refuse an empty
+// image before doing any real work.
+export function visibleShare(image) {
+  const { data, width, height } = image || {}
+  if (!data || !(width > 0) || !(height > 0)) return 0
   const step = Math.max(1, Math.ceil(Math.sqrt((width * height) / MAX_SAMPLE_PIXELS)))
-  const cap = Math.ceil(width / step) * Math.ceil(height / step)
-  const L = new Float32Array(cap), A = new Float32Array(cap), B = new Float32Array(cap)
-  const X = new Uint16Array(cap), Y = new Uint16Array(cap)
-  let n = 0
+  let seen = 0
   let total = 0
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
       total++
+      if (data[(y * width + x) * 4 + 3] >= OPAQUE_ALPHA) seen++
+    }
+  }
+  return seen / total
+}
+
+// The usable pixels of `image` ({ data, width, height }) as parallel arrays:
+// OKLab, picture position, a weight, the 8-bit colour and its flat-art bucket.
+// A grid larger than MAX_SAMPLE_PIXELS is read on a stride (`step`; the grid is
+// `gw` by `gh` cells).
+// A pixel is usable when it is visible. If fully opaque pixels make up a real
+// part of what is visible, only those are used and each weighs 1: the partly
+// transparent rim of a logo is a blend with the page behind it, not a colour of
+// the logo. If the image has no such area (a faded watermark) every visible
+// pixel is used and weighs its alpha.
+function collect(image) {
+  const { data, width, height } = image
+  if (!data || !(width > 0) || !(height > 0)) return { n: 0, total: 0, visible: 0, width: 0, height: 0 }
+  const step = Math.max(1, Math.ceil(Math.sqrt((width * height) / MAX_SAMPLE_PIXELS)))
+  const gw = Math.ceil(width / step)
+  const gh = Math.ceil(height / step)
+  let visible = 0
+  let solid = 0
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const a = data[(y * width + x) * 4 + 3]
+      if (a >= OPAQUE_ALPHA) { visible++; if (a >= SOLID_ALPHA) solid++ }
+    }
+  }
+  const solidOnly = solid > 0 && solid >= SOLID_SHARE * visible
+  const minAlpha = solidOnly ? SOLID_ALPHA : OPAQUE_ALPHA
+  const cap = solidOnly ? solid : visible
+  const L = new Float32Array(cap), A = new Float32Array(cap), B = new Float32Array(cap)
+  const X = new Uint16Array(cap), Y = new Uint16Array(cap)
+  const W = new Float32Array(cap)
+  const cr = new Uint8Array(cap), cg = new Uint8Array(cap), cb = new Uint8Array(cap)
+  const K = new Uint16Array(cap)
+  let n = 0
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
       const i = (y * width + x) * 4
-      if (data[i + 3] < OPAQUE_ALPHA) continue
-      const [l, a, b] = rgbToOklab(data[i], data[i + 1], data[i + 2])
-      L[n] = l; A[n] = a; B[n] = b; X[n] = x; Y[n] = y
+      if (data[i + 3] < minAlpha) continue
+      const r = data[i], g = data[i + 1], b = data[i + 2]
+      const [l, a, ob] = rgbToOklab(r, g, b)
+      L[n] = l; A[n] = a; B[n] = ob; X[n] = x; Y[n] = y
+      W[n] = solidOnly ? 1 : data[i + 3] / 255
+      cr[n] = r; cg[n] = g; cb[n] = b
+      K[n] = ((r >> BUCKET_SHIFT) << 10) | ((g >> BUCKET_SHIFT) << 5) | (b >> BUCKET_SHIFT)
       n++
     }
   }
-  return { n, total, width, height, L, A, B, X, Y }
+  return { n, total: gw * gh, visible, width, height, step, gw, gh, L, A, B, X, Y, W, cr, cg, cb, K }
+}
+
+// The pixels of `px` flagged in `keep` (a 0/1 array over px.n), as a new set.
+function subset(px, keep) {
+  let n = 0
+  for (let i = 0; i < px.n; i++) if (keep[i]) n++
+  const out = { ...px, n }
+  for (const key of ['L', 'A', 'B', 'W']) out[key] = new Float32Array(n)
+  for (const key of ['X', 'Y', 'K']) out[key] = new Uint16Array(n)
+  for (const key of ['cr', 'cg', 'cb']) out[key] = new Uint8Array(n)
+  const keys = ['L', 'A', 'B', 'W', 'X', 'Y', 'K', 'cr', 'cg', 'cb']
+  let j = 0
+  for (let i = 0; i < px.n; i++) {
+    if (!keep[i]) continue
+    for (const key of keys) out[key][j] = px[key][i]
+    j++
+  }
+  return out
+}
+
+// ── Flat art ─────────────────────────────────────────────────────────────────
+
+// The colour buckets that hold at least `minShare` of the considered pixels
+// (those flagged in `keep`, or all), when there are few of them and together
+// they hold at least `cover` of the pixels. Null otherwise.
+function flatBuckets(px, keep, minShare, cover) {
+  const weight = new Float64Array(1 << (3 * (8 - BUCKET_SHIFT)))
+  let total = 0
+  for (let i = 0; i < px.n; i++) {
+    if (keep && !keep[i]) continue
+    weight[px.K[i]] += px.W[i]
+    total += px.W[i]
+  }
+  if (!total) return null
+  const real = []
+  let covered = 0
+  for (let key = 0; key < weight.length; key++) {
+    if (weight[key] >= minShare * total) { real.push(key); covered += weight[key] }
+  }
+  if (!real.length || real.length > FLAT_MAX_BUCKETS || covered < cover * total) return null
+  return real
+}
+
+// Pixels whose 3x3 neighbourhood is one flat colour (every neighbour within
+// FLAT_TOLERANCE per channel). A neighbour that is not in the set (transparent)
+// says nothing either way. Anti-aliased edges and blends are never inside.
+function interiorMask(px) {
+  const { n, gw, gh, step, X, Y, cr, cg, cb } = px
+  const cell = new Int32Array(gw * gh).fill(-1)
+  for (let i = 0; i < n; i++) cell[(Y[i] / step) * gw + X[i] / step] = i
+  const keep = new Uint8Array(n)
+  let count = 0
+  for (let i = 0; i < n; i++) {
+    const gx = X[i] / step, gy = Y[i] / step
+    let flat = true
+    for (let dy = -1; dy <= 1 && flat; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue
+        const nx = gx + dx, ny = gy + dy
+        if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue
+        const j = cell[ny * gw + nx]
+        if (j < 0) continue
+        if (Math.abs(cr[j] - cr[i]) > FLAT_TOLERANCE || Math.abs(cg[j] - cg[i]) > FLAT_TOLERANCE || Math.abs(cb[j] - cb[i]) > FLAT_TOLERANCE) {
+          flat = false
+          break
+        }
+      }
+    }
+    if (flat) { keep[i] = 1; count++ }
+  }
+  return { keep, count }
+}
+
+// Is `px` flat art? Two ways to be:
+//   - most pixels sit inside flat areas and those areas use a few buckets; the
+//     pixels along the edges between them are blends of two colours and are left
+//     out, so a blend never becomes a colour of its own, or
+//   - there is hardly any room for a flat area (an 8x8 icon, small pixel art)
+//     and a few buckets hold essentially every pixel.
+// Returns the pixels that are real colours with a bucket number for each, or
+// null for a photo or a gradient.
+function findFlat(px) {
+  const inside = interiorMask(px)
+  const real = inside.count >= FLAT_INTERIOR_MIN * px.n
+    // 0.1%: interior pixels hold no edge blends, so a small real accent (a 40px
+    // square on an 800x600 page is 0.33%) still counts as a colour.
+    ? flatBuckets(px, inside.keep, 0.001, 0.98)
+    : flatBuckets(px, null, 0.002, 0.995)
+  if (!real) return null
+  // The real colours are decided from the flat areas, but every pixel in one of
+  // those buckets counts toward its share, edge pixels included.
+  const slot = new Map(real.map((key, id) => [key, id]))
+  const kept = new Uint8Array(px.n)
+  for (let i = 0; i < px.n; i++) if (slot.has(px.K[i])) kept[i] = 1
+  const sub = subset(px, kept)
+  const assign = new Uint8Array(sub.n)
+  for (let i = 0, j = 0; i < px.n; i++) if (kept[i]) assign[j++] = slot.get(px.K[i])
+  return { px: sub, assign, kk: real.length }
+}
+
+// For every labelled cell of a gw x gh grid (label -1 is a gap), how far the
+// nearest cell of another label, a gap or the edge of the picture is, in whole
+// cells with diagonals counting as one. The deepest cell of a region is the
+// middle of its biggest flat part.
+function flatDepth(gw, gh, lab) {
+  const d = new Int32Array(gw * gh).fill(1 << 20)
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      const c = y * gw + x
+      const l = lab[c]
+      if (l < 0) continue
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy
+          if (!dx && !dy) continue
+          if (nx < 0 || ny < 0 || nx >= gw || ny >= gh || lab[ny * gw + nx] !== l) d[c] = 1
+        }
+      }
+    }
+  }
+  const relax = (c, o) => { if (lab[o] === lab[c] && d[o] + 1 < d[c]) d[c] = d[o] + 1 }
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      const c = y * gw + x
+      if (lab[c] < 0) continue
+      if (x > 0) relax(c, c - 1)
+      if (y > 0) {
+        relax(c, c - gw)
+        if (x > 0) relax(c, c - gw - 1)
+        if (x < gw - 1) relax(c, c - gw + 1)
+      }
+    }
+  }
+  for (let y = gh - 1; y >= 0; y--) {
+    for (let x = gw - 1; x >= 0; x--) {
+      const c = y * gw + x
+      if (lab[c] < 0) continue
+      if (x < gw - 1) relax(c, c + 1)
+      if (y < gh - 1) {
+        relax(c, c + gw)
+        if (x < gw - 1) relax(c, c + gw + 1)
+        if (x > 0) relax(c, c + gw - 1)
+      }
+    }
+  }
+  return d
 }
 
 // ── k-means ──────────────────────────────────────────────────────────────────
@@ -162,7 +366,7 @@ function seedCentres(px, k, rng) {
 }
 
 function kMeans(px, k, rng) {
-  const { n, L, A, B } = px
+  const { n, L, A, B, W } = px
   const seeds = seedCentres(px, Math.min(k, n), rng)
   const kk = seeds.length
   const cen = new Float64Array(kk * 3)
@@ -181,8 +385,8 @@ function kMeans(px, k, rng) {
       }
       if (assign[i] !== best || iter === 0) changed++
       assign[i] = best
-      sum[best * 3] += L[i]; sum[best * 3 + 1] += A[i]; sum[best * 3 + 2] += B[i]
-      cnt[best]++
+      sum[best * 3] += W[i] * L[i]; sum[best * 3 + 1] += W[i] * A[i]; sum[best * 3 + 2] += W[i] * B[i]
+      cnt[best] += W[i]
     }
     for (let c = 0; c < kk; c++) {
       if (!cnt[c]) continue
@@ -200,24 +404,32 @@ function kMeans(px, k, rng) {
 //   status  'ok' | 'flat' (one colour) | 'transparent' (nothing opaque) | 'empty'
 //   clusters  [{ hex, L, a, b, chroma, share, x, y, px, py }]  (x, y are 0-1)
 export function clusterImage(image, { count = 8, seed = DEFAULT_SEED } = {}) {
-  const px = collect(image)
-  if (!px.total) return { status: 'empty', clusters: [], opaque: 0 }
-  const opaque = px.n / px.total
-  if (!px.n || opaque < 0.005) return { status: 'transparent', clusters: [], opaque }
+  const all = collect(image)
+  if (!all.total) return { status: 'empty', clusters: [], opaque: 0 }
+  const opaque = all.visible / all.total
+  if (!all.n || opaque < MIN_VISIBLE_SHARE) return { status: 'transparent', clusters: [], opaque }
 
+  // Flat art keeps only its real colours; everything else goes to k-means.
+  const flat = findFlat(all)
+  const px = flat ? flat.px : all
   const k = Math.min(28, Math.max(12, count * 3 + 4))
-  const { assign, kk } = kMeans(px, k, mulberry32(seed))
+  const { assign, kk } = flat || kMeans(px, k, mulberry32(seed))
 
   // Per-cluster totals, then merge any pair that sits closer than MIN_DELTA.
-  const raw = Array.from({ length: kk }, () => ({ n: 0, l: 0, a: 0, b: 0, sx: 0, sy: 0 }))
+  const raw = Array.from({ length: kk }, () => ({ n: 0, w: 0, l: 0, a: 0, b: 0, sx: 0, sy: 0 }))
+  let weightAll = 0
   for (let i = 0; i < px.n; i++) {
     const c = raw[assign[i]]
-    c.n++; c.l += px.L[i]; c.a += px.A[i]; c.b += px.B[i]; c.sx += px.X[i]; c.sy += px.Y[i]
+    const w = px.W[i]
+    c.n++; c.w += w
+    c.l += w * px.L[i]; c.a += w * px.A[i]; c.b += w * px.B[i]
+    c.sx += px.X[i]; c.sy += px.Y[i]
+    weightAll += w
   }
   let groups = raw
     .map((c, id) => ({ ...c, ids: [id] }))
     .filter((c) => c.n > 0)
-  const centre = (g) => [g.l / g.n, g.a / g.n, g.b / g.n]
+  const centre = (g) => [g.l / g.w, g.a / g.w, g.b / g.w]
   for (;;) {
     let bi = -1, bj = -1, bd = MIN_DELTA
     for (let i = 0; i < groups.length; i++) {
@@ -231,7 +443,7 @@ export function clusterImage(image, { count = 8, seed = DEFAULT_SEED } = {}) {
     if (bi < 0) break
     const a = groups[bi], b = groups[bj]
     groups[bi] = {
-      n: a.n + b.n, l: a.l + b.l, a: a.a + b.a, b: a.b + b.b, sx: a.sx + b.sx, sy: a.sy + b.sy,
+      n: a.n + b.n, w: a.w + b.w, l: a.l + b.l, a: a.a + b.a, b: a.b + b.b, sx: a.sx + b.sx, sy: a.sy + b.sy,
       ids: [...a.ids, ...b.ids],
     }
     groups.splice(bj, 1)
@@ -242,16 +454,35 @@ export function clusterImage(image, { count = 8, seed = DEFAULT_SEED } = {}) {
   groups.forEach((g, gi) => g.ids.forEach((id) => { groupOf[id] = gi }))
   const centres = groups.map(centre)
   const spatial = groups.map((g) => [g.sx / g.n, g.sy / g.n])
-  const diag = Math.hypot(px.width, px.height) || 1
-  const bestScore = new Float64Array(groups.length).fill(Infinity)
   const bestPx = new Int32Array(groups.length).fill(-1)
-  for (let i = 0; i < px.n; i++) {
-    const gi = groupOf[assign[i]]
-    const [cl, ca, cb] = centres[gi]
-    const colourD = Math.hypot(px.L[i] - cl, px.A[i] - ca, px.B[i] - cb)
-    const spaceD = Math.hypot(px.X[i] - spatial[gi][0], px.Y[i] - spatial[gi][1]) / diag
-    const score = colourD + REP_SPATIAL_WEIGHT * spaceD
-    if (score < bestScore[gi]) { bestScore[gi] = score; bestPx[gi] = i }
+  if (flat) {
+    // Deepest pixel of the group's flat region wins; among equals, the one
+    // nearest the group's centre of mass.
+    const cellOf = (i) => (px.Y[i] / px.step) * px.gw + px.X[i] / px.step
+    const lab = new Int16Array(px.gw * px.gh).fill(-1)
+    for (let i = 0; i < px.n; i++) lab[cellOf(i)] = groupOf[assign[i]]
+    const depth = flatDepth(px.gw, px.gh, lab)
+    const bestDepth = new Int32Array(groups.length).fill(-1)
+    const bestSpace = new Float64Array(groups.length).fill(Infinity)
+    for (let i = 0; i < px.n; i++) {
+      const gi = groupOf[assign[i]]
+      const d = depth[cellOf(i)]
+      const space = Math.hypot(px.X[i] - spatial[gi][0], px.Y[i] - spatial[gi][1])
+      if (d > bestDepth[gi] || (d === bestDepth[gi] && space < bestSpace[gi])) {
+        bestDepth[gi] = d; bestSpace[gi] = space; bestPx[gi] = i
+      }
+    }
+  } else {
+    const diag = Math.hypot(px.width, px.height) || 1
+    const bestScore = new Float64Array(groups.length).fill(Infinity)
+    for (let i = 0; i < px.n; i++) {
+      const gi = groupOf[assign[i]]
+      const [cl, ca, cb] = centres[gi]
+      const colourD = Math.hypot(px.L[i] - cl, px.A[i] - ca, px.B[i] - cb)
+      const spaceD = Math.hypot(px.X[i] - spatial[gi][0], px.Y[i] - spatial[gi][1]) / diag
+      const score = colourD + REP_SPATIAL_WEIGHT * spaceD
+      if (score < bestScore[gi]) { bestScore[gi] = score; bestPx[gi] = i }
+    }
   }
 
   const clusters = groups.map((g, gi) => {
@@ -261,7 +492,7 @@ export function clusterImage(image, { count = 8, seed = DEFAULT_SEED } = {}) {
       hex: rgbToHex(...oklabToRgb(l, a, b)),
       L: l, a, b,
       chroma: Math.hypot(a, b),
-      share: g.n / px.n,
+      share: g.w / weightAll,
       pixels: g.n,
       px: px.X[rep], py: px.Y[rep],
       x: (px.X[rep] + 0.5) / px.width,
@@ -340,6 +571,7 @@ export function colourShares(image, hexes) {
   const labs = hexes.map(hexToOklab)
   const counts = new Array(hexes.length).fill(0)
   if (!px.n || !labs.length) return counts
+  let total = 0
   for (let i = 0; i < px.n; i++) {
     let best = 0
     let bestD = Infinity
@@ -347,26 +579,56 @@ export function colourShares(image, hexes) {
       const d = (px.L[i] - labs[c][0]) ** 2 + (px.A[i] - labs[c][1]) ** 2 + (px.B[i] - labs[c][2]) ** 2
       if (d < bestD) { bestD = d; best = c }
     }
-    counts[best]++
+    counts[best] += px.W[i]
+    total += px.W[i]
   }
-  return counts.map((c) => c / px.n)
+  return counts.map((c) => c / total)
 }
 
 // ── Sampling ─────────────────────────────────────────────────────────────────
 
+// How far from the marker's pixel a read reaches, for an image `width` by
+// `height` in its own pixels: 2 (a 5x5 window) for an ordinary photo, less as
+// the image gets small, 0 (the one pixel under the marker) below 32 pixels on
+// the short side. A 5x5 window on an 8x8 icon would read most of the icon.
+export function sampleRadius(width, height) {
+  return Math.max(0, Math.min(2, Math.floor(Math.min(width, height) / 32)))
+}
+
 // Mean colour of the (2r+1) square around (cx, cy) in a block of RGBA data,
 // ignoring transparent pixels. Null when nothing there is opaque. A marker reads
 // this rather than one pixel, so grain and anti-aliasing do not decide its colour.
+// Where the window holds fully opaque pixels only those count, so a marker near
+// the soft edge of a logo reads the logo and not the edge.
 export function averageHex(data, width, height, cx, cy, radius = 2) {
   let r = 0, g = 0, b = 0, n = 0
+  let sr = 0, sg = 0, sb = 0, sn = 0
   for (let y = Math.max(0, cy - radius); y <= Math.min(height - 1, cy + radius); y++) {
     for (let x = Math.max(0, cx - radius); x <= Math.min(width - 1, cx + radius); x++) {
       const i = (y * width + x) * 4
-      if (data[i + 3] < OPAQUE_ALPHA) continue
+      const a = data[i + 3]
+      if (a < OPAQUE_ALPHA) continue
       r += data[i]; g += data[i + 1]; b += data[i + 2]; n++
+      if (a >= SOLID_ALPHA) { sr += data[i]; sg += data[i + 1]; sb += data[i + 2]; sn++ }
     }
   }
+  if (sn) return rgbToHex(sr / sn, sg / sn, sb / sn)
   return n ? rgbToHex(r / n, g / n, b / n) : null
+}
+
+// ── Damaged files ────────────────────────────────────────────────────────────
+
+// A PNG cut short still decodes, as a blank image, and so looks like a picture
+// with nothing in it. Every complete PNG ends with an IEND chunk, so a file that
+// starts like a PNG (`head`, its first bytes) but has no IEND in `tail` (its
+// last bytes) was cut off.
+export function isTruncatedPng(head, tail) {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+  if (!head || head.length < signature.length || signature.some((byte, i) => head[i] !== byte)) return false
+  for (let i = 0; i + 4 <= (tail ? tail.length : 0); i++) {
+    if (tail[i] === 0x49 && tail[i + 1] === 0x45 && tail[i + 2] === 0x4e && tail[i + 3] === 0x44) return false
+  }
+  return true
 }
 
 // ── Moods ────────────────────────────────────────────────────────────────────

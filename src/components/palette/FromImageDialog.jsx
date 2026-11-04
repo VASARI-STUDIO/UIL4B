@@ -40,7 +40,7 @@ function MiniStrip({ hexes }) {
 
 export default function FromImageDialog({
   dialogRef, onClose, phone,
-  error, loading, status,
+  error, errorSeq, loading, status,
   src, aspect, sample,
   points, active, epoch, intro,
   stageRef, loupeRef,
@@ -61,6 +61,9 @@ export default function FromImageDialog({
   const sheetRef = useRef(null)
   const stripRef = useRef(null)
   const refocus = useRef(null)                   // slot index to focus after a Delete removes one
+  const errRef = useRef(null)
+  const hadError = useRef(false)
+  const [upscaled, setUpscaled] = useState(false) // the photo is drawn at least twice its own size
 
   const empty = !src
   const active0 = active != null ? points[active] : null
@@ -89,6 +92,21 @@ export default function FromImageDialog({
     sheetRef.current?.querySelector('[aria-selected="true"]')?.focus()
     return () => window.removeEventListener('keydown', onKey)
   }, [sheet])
+
+  // An error takes focus, so it is read out and focus stays inside the dialog
+  // (the Choose button it came from may be gone by now). When the message is
+  // cleared while it still holds focus, focus falls back to the way in.
+  useEffect(() => {
+    if (error) {
+      hadError.current = true
+      errRef.current?.focus()
+    } else if (hadError.current) {
+      hadError.current = false
+      if (document.activeElement === document.body) {
+        (dialogRef.current?.querySelector('.plb-imgchoose, .plb-imgpoint') || dialogRef.current)?.focus()
+      }
+    }
+  }, [error, errorSeq, dialogRef])
 
   // Delete removes the focused slot, which unmounts it, so focus is handed on.
   useEffect(() => {
@@ -185,7 +203,7 @@ export default function FromImageDialog({
   const notes = [
     lockedCount > 0 && (lockedCount === 1 ? '1 locked colour stays where it is.' : `${lockedCount} locked colours stay where they are.`),
     trimmed > 0 && `Your palette holds ${ceiling}. Only the first ${usedCount} colours will be used.`,
-    fewColours > 0 && `This photo has only ${fewColours} distinct colours.`,
+    fewColours > 0 && `This photo has only ${fewColours} distinct ${fewColours === 1 ? 'colour' : 'colours'}.`,
   ].filter(Boolean)
 
   const hint = (
@@ -239,7 +257,7 @@ export default function FromImageDialog({
                   <button type="button" className="btn btn-primary plb-imgchoose" onClick={onChoose}>Choose a photo</button>
                   <p className="plb-imgzone-f">JPG, PNG, WebP or GIF, up to 25 MB</p>
                 </div>
-                {error && <p className="plb-imgerr" role="alert">{error}</p>}
+                {error && <p className="plb-imgerr" role="alert" tabIndex={-1} ref={errRef}>{error}</p>}
                 <section className="plb-imgsamples" aria-labelledby={samplesId}>
                   <h3 className="plb-imgsamples-h" id={samplesId}>No photo handy? Try one of these</h3>
                   <ul className="plb-imgsamples-grid">
@@ -265,7 +283,14 @@ export default function FromImageDialog({
                     data-intro={intro}
                     onPointerDown={onStagePointerDown}
                   >
-                    <img src={src} alt="Your photo" className="plb-imgstage-img" draggable={false} />
+                    <img
+                      src={src}
+                      alt="Your photo"
+                      className="plb-imgstage-img"
+                      draggable={false}
+                      data-upscaled={upscaled}
+                      onLoad={(e) => setUpscaled(e.currentTarget.clientWidth >= 2 * e.currentTarget.naturalWidth)}
+                    />
                     {points.map((p, i) => (
                       <button
                         key={`${epoch}-${i}`}
@@ -306,7 +331,7 @@ export default function FromImageDialog({
                   <button type="button" className="plb-imglink" onClick={onReset}>Reset points</button>
                   <button type="button" className="plb-imglink" onClick={onRemovePhoto}>Remove photo</button>
                 </div>
-                {error && <p className="plb-imgerr" role="alert">{error}</p>}
+                {error && <p className="plb-imgerr" role="alert" tabIndex={-1} ref={errRef}>{error}</p>}
               </>
             )}
           </div>

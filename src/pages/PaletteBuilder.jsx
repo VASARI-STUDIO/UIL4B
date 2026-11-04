@@ -77,7 +77,7 @@ import { columnPair, handoffUrl, readingPair } from '../utils/contrastHandoff'
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 // Image → palette: the clustering, ranking and sampling live in a pure module.
-import { appendPicks, averageHex, clusterImage, colourShares, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters } from '../utils/imagePalette'
+import { appendPicks, averageHex, clusterImage, colourShares, isTruncatedPng, MIN_VISIBLE_SHARE, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters, sampleRadius, visibleShare } from '../utils/imagePalette'
 import FromImageDialog from '../components/palette/FromImageDialog'
 
 // The preview dialog, as its own chunk. The Preview button warms it on hover and
@@ -370,15 +370,23 @@ const IMG_SOURCE_MAX = 4096
 // The extraction reads a smaller copy. imagePalette caps the pixel count it
 // reads; this keeps the copy itself cheap to make and to scan.
 const IMG_ANALYSIS_MAX = 384
-// A marker reports the mean of the square this many pixels out from its point
-// (radius 2 is 5×5), so grain and anti-aliasing do not decide its colour.
-const IMG_SAMPLE_RADIUS = 2
 // Candidates ranked at load; "+" walks down this list.
 const IMG_CANDIDATES = 12
 const IMG_FORMATS = 'JPG, PNG, WebP or GIF'
 // Most markers the dialog holds, whatever the board's own ceiling is.
 const IMG_POINT_MAX = 8
 const IMG_HEIC = /\.(heic|heif)$/i
+const NO_COLOURS = 'This image has no visible colours. Try another.'
+
+// A PNG that was cut short decodes without complaint, as a blank image. Read the
+// first and last bytes of the file to tell it from a real picture of nothing.
+async function isCutShort(file) {
+  try {
+    const head = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+    const tail = new Uint8Array(await file.slice(Math.max(0, file.size - 64)).arrayBuffer())
+    return isTruncatedPng(head, tail)
+  } catch { return false }
+}
 
 // Decode with createImageBitmap, which decodes off the main thread and needs no
 // object URL, and fall back to an <img> for what it will not take (an SVG, or a
@@ -410,6 +418,7 @@ async function decodeImage(file) {
 // thumbnail of them: at 320px a 4000px-wide photo is one pixel in twelve, so the
 // loupe would draw one region and the readout would name another.
 async function loadImageData(file, maxSize = IMG_ANALYSIS_MAX) {
+  if (await isCutShort(file)) throw new Error('decode')
   const decoded = await decodeImage(file)
   try {
     const { image, width, height } = decoded
@@ -455,19 +464,22 @@ function sourcePixel(canvas, nx, ny) {
 }
 
 // Colour under a normalised (0–1) point, read at SOURCE resolution as the mean
-// of the IMG_SAMPLE_RADIUS neighbourhood (transparent pixels left out) — used
-// while dragging or nudging a picker point, and for the loupe's readout. Null
-// where nothing opaque is in reach.
+// of the neighbourhood `sampleRadius` reaches (transparent pixels left out), so
+// grain and anti-aliasing do not decide the colour. The reach is counted in the
+// image's own pixels and shrinks with the image: an 8×8 icon is read at one
+// pixel, a photo at 5×5. Used while dragging or nudging a picker point, and for
+// the loupe's readout. Null where nothing opaque is in reach.
 function sampleSourcePixel(canvas, nx, ny) {
   if (!canvas) return null
   const { px, py } = sourcePixel(canvas, nx, ny)
-  const x0 = Math.max(0, px - IMG_SAMPLE_RADIUS)
-  const y0 = Math.max(0, py - IMG_SAMPLE_RADIUS)
-  const w = Math.min(canvas.width - 1, px + IMG_SAMPLE_RADIUS) - x0 + 1
-  const h = Math.min(canvas.height - 1, py + IMG_SAMPLE_RADIUS) - y0 + 1
+  const radius = sampleRadius(canvas.width, canvas.height)
+  const x0 = Math.max(0, px - radius)
+  const y0 = Math.max(0, py - radius)
+  const w = Math.min(canvas.width - 1, px + radius) - x0 + 1
+  const h = Math.min(canvas.height - 1, py + radius) - y0 + 1
   try {
     const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(x0, y0, w, h).data
-    return averageHex(d, w, h, px - x0, py - y0, IMG_SAMPLE_RADIUS)
+    return averageHex(d, w, h, px - x0, py - y0, radius)
   } catch { return null }
 }
 
@@ -969,6 +981,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [imgSrc, setImgSrc] = useState('')      // object URL for the preview
   const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex, from }] normalised; `from` is the ranked candidate it came from, null once moved or tapped in
   const [imgError, setImgError] = useState('')
+  const [imgErrorSeq, setImgErrorSeq] = useState(0) // bumps on every error so the dialog moves focus to it even when the text repeats
   // The uploaded image's own width/height ratio. The stage is sized to it so a
   // point's normalised (x, y) in the SOURCE lands on the same spot of the
   // DISPLAYED image — see the CSS note on .plb-imgstage.
@@ -1627,6 +1640,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closePreview = useCallback(() => setPreview(null), [])
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
   const closeImageDialog = useCallback(() => { setImgOpen(false); setImgError('') }, [])
+  // Show an error in the dialog. The dialog moves focus onto it, so a refused
+  // file never leaves focus on the page behind the modal.
+  const showImageError = useCallback((message) => { setImgError(message); setImgErrorSeq(n => n + 1) }, [])
   // A fresh dialog lands on "Choose a photo", or on marker 1 once there is a photo.
   const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen, initialFocus: '.plb-imgchoose, .plb-imgpoint' })
   // Full screen on a phone, so the system Back button closes it instead of leaving the page.
@@ -1974,9 +1990,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (!file) return
     setImgError('')
     const heic = IMG_HEIC.test(file.name || '') || /^image\/hei[cf]/i.test(file.type)
-    if (!file.type.startsWith('image/') && !heic) { setImgError(`That file isn’t an image. Choose a ${IMG_FORMATS}.`); return }
+    if (!file.type.startsWith('image/') && !heic) { showImageError(`That file isn’t an image. Choose a ${IMG_FORMATS}.`); return }
     if (file.size > IMG_MAX_MB * 1024 * 1024) {
-      setImgError(`That photo is ${Math.ceil(file.size / 1048576)} MB. Choose one under ${IMG_MAX_MB} MB.`); return
+      showImageError(`That photo is ${Math.ceil(file.size / 1048576)} MB. Choose one under ${IMG_MAX_MB} MB.`); return
     }
     const seq = ++imgLoadSeq.current
     const stale = () => seq !== imgLoadSeq.current
@@ -1988,14 +2004,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     } catch {
       if (!stale()) {
         setImgLoading(false); setImgStatus('')
-        setImgError(heic
+        showImageError(heic
           ? 'This browser can’t open HEIC photos. Save it as JPG or PNG and try again.'
-          : 'We couldn’t read that photo. It may be damaged. Try another.')
+          : 'We couldn’t read that file. It looks damaged or isn’t a readable image. Try another.')
       }
       return
     }
     const { data, source, url, aspect } = loaded
     if (stale()) { URL.revokeObjectURL(url); return }
+    // An image with nothing visible in it is refused before it is shown, so it
+    // never flashes up and is gone again.
+    if (visibleShare(data) < MIN_VISIBLE_SHARE) {
+      URL.revokeObjectURL(url)
+      setImgLoading(false); setImgStatus('')
+      showImageError(NO_COLOURS)
+      return
+    }
     const ratio = Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10
     const first = !imgSourceRef.current
     if (first) {
@@ -2010,17 +2034,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     await nextPaint()
     if (stale()) { if (!first) URL.revokeObjectURL(url); return }
     const found = clusterImage(data, { count: PRO_MAX })
-    const refusal = found.status === 'transparent' || found.status === 'empty'
-      ? 'This image has no visible colours. Try another.'
-      : found.status === 'flat' ? 'This photo has only 1 distinct colour. Try another.' : ''
-    if (refusal) {
+    // A single flat colour is not refused: it comes back as one marker, with the
+    // "only 1 distinct colour" note. Only an image with nothing visible is.
+    if (found.status === 'transparent' || found.status === 'empty') {
       if (first) {
         imgDataRef.current = null; imgSourceRef.current = null
         setImgSrc(''); setImgAspect(16 / 10)
       } else {
         URL.revokeObjectURL(url)
       }
-      setImgLoading(false); setImgStatus(''); setImgError(refusal)
+      setImgLoading(false); setImgStatus(''); showImageError(NO_COLOURS)
       return
     }
     const ranked = rankClusters(found.clusters, { mood: moodArg(imgMoodRef.current), limit: IMG_CANDIDATES })
@@ -2057,7 +2080,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       await loadImageFile(new File([blob], sample.file, { type: blob.type }), sample)
     } catch {
       setImgLoading(false); setImgStatus('')
-      setImgError('Couldn’t load this photo. Try again')
+      showImageError('Couldn’t load this photo. Try again')
     }
   }
 
@@ -2237,7 +2260,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       if (imgOpen) {
         e.preventDefault()
         if (file) loadImageFileRef.current?.(file)
-        else setImgError('Nothing to paste. Copy an image first.')
+        else showImageError('Nothing to paste. Copy an image first.')
         return
       }
       if (!file) return
@@ -2251,7 +2274,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
-  }, [imgOpen, closeAllMenus])
+  }, [imgOpen, closeAllMenus, showImageError])
 
   // While the dialog is open a file dropped anywhere is kept out of the
   // browser's own handling (which would navigate to it and throw the palette
@@ -2326,8 +2349,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // The sampled neighbourhood (the marker reports its mean), outlined in both
     // inks so it survives any photo under it — a single white box vanishes on a
     // white pixel, which is exactly the pixel a user is most likely to be hunting for.
-    const x0 = (half - IMG_SAMPLE_RADIUS) * cell
-    const span = (2 * IMG_SAMPLE_RADIUS + 1) * cell
+    const radius = sampleRadius(src.width, src.height)
+    const x0 = (half - radius) * cell
+    const span = (2 * radius + 1) * cell
     ctx.lineWidth = 3
     ctx.strokeStyle = 'rgba(0,0,0,.75)'
     ctx.strokeRect(x0 - 1.5, x0 - 1.5, span + 3, span + 3)
@@ -2368,7 +2392,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )
     }
     if (!done) {
-      setImgError('Couldn’t apply these colours. Move a point onto a colour and try again.')
+      showImageError('Couldn’t apply these colours. Move a point onto a colour and try again.')
       return
     }
     setImgError('')
@@ -3917,6 +3941,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           onClose={closeImageDialog}
           phone={imgPhone}
           error={imgError}
+          errorSeq={imgErrorSeq}
           loading={imgLoading}
           status={imgMax ? `${IMG_POINT_MAX} is the most. Remove one to add another.` : imgStatus}
           src={imgSrc}
