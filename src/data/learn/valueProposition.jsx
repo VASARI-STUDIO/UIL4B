@@ -219,9 +219,8 @@ export default function ValueProposition() {
         </p>
         <p>
           <b>The evidence.</b> A review of 607 estimates from 150 articles found
-          an average of about 1.96 (Brown and others 2024). That is an average
-          over mostly money choices, not a constant. Later analyses put it lower,
-          and its size is still argued over. Gal and Rucker (2018) say the
+          an average of about 1.96 (Brown and others 2024). That is an average,
+          not a constant, and its size is still argued over. Gal and Rucker (2018) say the
           evidence does not show that losses outweigh gains overall. Mrkva and
           others (2020, 17,720 people) found the effect at every knowledge level,
           but smaller for experts.
@@ -630,8 +629,8 @@ export default function ValueProposition() {
             <b>United States.</b> The FTC rule on consumer reviews and
             testimonials took effect on 21 October 2024. It bans fake and
             AI-generated reviews, undisclosed insider reviews, review suppression
-            and fake follower counts, with penalties of up to US$53,088 per
-            violation.
+            and fake follower counts, and the FTC can seek civil penalties for
+            each violation.
           </li>
           <li>
             <b>European Union.</b> Annex I, points 23b and 23c, ban claiming
