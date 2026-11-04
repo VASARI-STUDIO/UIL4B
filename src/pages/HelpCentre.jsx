@@ -135,6 +135,13 @@ export default function HelpCentre() {
           {LIVE_TOOLS.length} tools open now
           {isAdmin && <> &middot; {SOON_TOOLS.length} still being built</>}
         </p>
+        {/* The way to a person. It opens the feedback form already set to a
+            help request, and sits up here so it does not depend on opening a
+            row below. */}
+        <p className="hlp-contact">
+          <span>Can&rsquo;t find what you need?</span>
+          <Link className="hlp-contact-link" to="/feedback?type=help">Contact support</Link>
+        </p>
       </header>
 
       <section className="hlr" id="faq" aria-labelledby="hlr-q">

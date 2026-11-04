@@ -140,6 +140,9 @@ export const RETIRED_ROUTES = Object.freeze([
   // incoming link (reason, ref) is merged in, at the edge and by
   // `mergeRedirectQuery` in the client router.
   ['/support', '/feedback?from=support'],
+  // Another name people guess for the same place. `type=help` opens the form on
+  // Help request with the support copy.
+  ['/contact', '/feedback?type=help'],
   ['/resources', '/discover'],
   ['/discover/resources', '/discover'],
   ['/prompts', '/discover/prompts'],

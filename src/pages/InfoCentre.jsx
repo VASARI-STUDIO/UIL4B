@@ -270,12 +270,16 @@ const SECTIONS = [
     id: 'troubleshooting',
     title: 'Troubleshooting',
     body: (
+      <>
       <ul>
         <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy. Give it a moment and try again.</li>
         <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
         <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
         <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
       </ul>
+      {/* Ends the list with the way to a person, set to a help request. */}
+      <p className="ic-still-stuck">Still stuck? <Link to="/feedback?type=help">Contact support</Link></p>
+      </>
     ),
   },
   {
