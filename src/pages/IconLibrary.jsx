@@ -131,7 +131,7 @@ const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
@@ -2930,7 +2930,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons']],
   },
   {
     label: 'Brand logos',

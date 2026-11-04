@@ -1,0 +1,27 @@
+{
+  "prefix": "bi",
+  "total": 20,
+  "title": "Bootstrap Icons",
+  "uncategorized": [
+    "house",
+    "search",
+    "person",
+    "gear",
+    "heart",
+    "heart-fill",
+    "star",
+    "star-fill",
+    "bell",
+    "bell-fill",
+    "calendar",
+    "check",
+    "x",
+    "plus",
+    "dash",
+    "arrow-right",
+    "arrow-left",
+    "download",
+    "upload",
+    "envelope"
+  ]
+}
