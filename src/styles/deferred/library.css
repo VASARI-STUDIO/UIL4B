@@ -1528,7 +1528,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
 /* Search focus was `--brand`. The ring is non-text, so the plain accent is
    right for it; the halo is the derived wash. */
-.lib-surface .lbry-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.lib-surface .lbry-search:focus-within{border-color:var(--accent)}
 
 /* The empty state's one action. It was an `--accent-strong` fill; an empty
    result is the user's own filter talking back, not the product asking for

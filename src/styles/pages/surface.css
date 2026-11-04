@@ -152,7 +152,7 @@
    bar with 44px segments, never a wrapping row of text. */
 .srf .lidx-tools { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; max-width: 520px; margin: 0 0 4px; }
 .srf .lidx-tools .lbry-search { flex: 0 0 auto; max-width: none; box-shadow: none; }
-.srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); }
 /* The fill is an opaque mix, not a translucent wash, so the link text is
    measured against one solid ground in both themes. */
 .srf .lidx-topics { display: flex; flex-wrap: nowrap; justify-content: stretch; gap: 0; border-radius: var(--radius-s); background: color-mix(in srgb, var(--t0) 5%, var(--bg-0)); font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }

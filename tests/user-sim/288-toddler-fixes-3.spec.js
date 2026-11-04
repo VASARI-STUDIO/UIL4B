@@ -7,9 +7,12 @@
 //   3. The palette library has one builder link per card and a skip link past
 //      the grid.
 //   4. /discover/prompts shows the not-found page to anyone but an admin.
+//   5. Search fields show a keyboard focus ring (the palette sliders already did).
 //   7. The palette Pro walls preview the seed on screen, not the saved history.
 //
 // MUTATIONS (each should fail the named test):
+//   * delete the `.lbry-search:has(input:focus-visible)` rule in global.css
+//       -> "the search field shows a ring on focus"
 //   * drop `notFound` from the /discover/prompts route in App.jsx
 //       -> "signed out: the not-found page, at the same address"
 //   * restore the `pgal-act` Builder link in PaletteGalleryGrid.jsx
@@ -228,5 +231,51 @@ test.describe('/discover/prompts: parked behind the admin check', () => {
     await go(page, '/discover/prompts')
     await expect(page.getByRole('heading', { level: 1, name: NOT_FOUND })).toHaveCount(0)
     expect(pathOf(page)).toBe('/discover/prompts')
+  })
+})
+
+// ── 5. Keyboard focus is visible on search fields and palette sliders ────────
+//
+// Already ringed before this change: the four palette Adjust sliders (a 2px
+// outline on the track), the Font Gallery preview field and its compare range.
+// Search fields drew only a border colour and a faint wash, and no outline.
+
+test.describe('keyboard focus rings', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  const outlineOf = (locator) => locator.evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) }
+  })
+
+  for (const route of ['/create/icons', '/discover/emoji', '/create/font-gallery']) {
+    test(`${route}: the search field shows a ring on focus`, async ({ page }) => {
+      watch(page, 'a keyboard user reaching the search field')
+      await go(page, route)
+      const field = page.locator('.lbry-search').first()
+      const input = field.locator('input')
+      await expect(input).toBeVisible({ timeout: 20000 })
+      expect(await outlineOf(field), 'no ring at rest').toMatchObject({ style: 'none' })
+      await input.focus()
+      const ring = await outlineOf(field)
+      expect(ring.style, 'a ring on the wrapper').not.toBe('none')
+      expect(ring.width).toBeGreaterThanOrEqual(2)
+    })
+  }
+
+  test('/create/palette: each Adjust slider shows a ring on its track', async ({ page }) => {
+    watch(page, 'a keyboard user adjusting the palette')
+    await go(page, '/create/palette?c=14224A,249EAF,F2C14E,2563EB,C0392B')
+    const sliders = page.locator('.plb-adjust').getByRole('slider')
+    await expect(sliders).toHaveCount(4)
+    for (let i = 0; i < 4; i += 1) {
+      await sliders.nth(i).focus()
+      const track = await sliders.nth(i).evaluate((el) => {
+        const s = getComputedStyle(el, '::-webkit-slider-runnable-track')
+        return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) }
+      })
+      expect(track.style, `slider ${i + 1} has a ring on its track`).not.toBe('none')
+      expect(track.width).toBeGreaterThanOrEqual(2)
+    }
   })
 })
