@@ -166,7 +166,7 @@ test('the signed-out cap spreads across every anon pack rather than slicing one'
 
 test('the signed-out cap fills whole rows: the 60 rounded up to the column count, never past 72', () => {
   assert.equal(ANON_ICON_CEILING, 72)
-  // The widths Dylan named: 1440 is 13 columns and shows 65.
+  // The widths that matter: 1440 is 13 columns and shows 65.
   assert.equal(anonCapForCols(13), 65)
   assert.equal(anonCapForCols(6), 60, '768')
   assert.equal(anonCapForCols(4), 60, '390 on the four-up phone grid')

@@ -36,7 +36,7 @@ import assert from 'node:assert/strict'
 import { PLAN_STATES, planStateOf, planSortKey, needsAttention, PLAN_STATE_ORDER } from '../../src/utils/adminUsers.js'
 
 // Every status the Stripe API documents for a subscription, and what each one
-// means for somebody standing in front of the founder's dashboard.
+// means for somebody standing in front of the admin dashboard.
 const STRIPE_STATUSES = [
   ['active', 'pro'],
   ['trialing', 'trial'],

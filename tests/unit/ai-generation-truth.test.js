@@ -100,7 +100,7 @@ test('the client mirror and the server module agree on every number', () => {
 })
 
 test('the founder’s stated requirement holds: Free is one per account, ever', () => {
-  // The literal ask, 2026-09-06: "free users will get 1 free usage". A change
+  // The ask is that a free account gets exactly one generation, ever. A change
   // that turns this into a daily or monthly refill is a pricing decision and
   // should fail here rather than ship quietly.
   assert.equal(SERVER_FREE, 1, 'the free allowance is no longer one generation')
@@ -431,13 +431,13 @@ test('THE ONE THAT MATTERS: api/ai.js registers the task and meters it on ONE bu
 //
 // So both assertions below now pin the new ordering, which is strictly stronger:
 // the reservation happens before the provider is reached (no window at all), and
-// the refund is what keeps the founder's rule true afterwards. Neither was
+// the refund is what keeps the one-use rule true afterwards. Neither was
 // relaxed to make the change pass — the race itself is covered behaviourally in
 // tests/unit/ai-quota-transaction.test.js, with two concurrent requests against
 // one bucket.
 
 test('THE ONE THAT MATTERS: a failed generation cannot consume the allowance', () => {
-  // Still an ORDERING assertion, and still the whole of the founder's rule —
+  // Still an ORDERING assertion, and still the whole of the one-use rule —
   // just a different ordering. Every failure path in runBrandStarter answers on
   // `res` itself; the runner callback turns that into `null`, and null is what
   // makes runMeteredTask hand the reserved unit back.
@@ -519,7 +519,7 @@ test('the count comes back on every answer, so the meter is never a guess', () =
 test('the counter lives where no client can reach it, and that needed no rules change', () => {
   // firestore.rules default-denies anything it does not match, which is the
   // property daily-usage and provider-health already rely on. Rules changes are
-  // founder-gated and published separately, so a change here that needed one
+  // approval-gated and published separately, so a change here that needed one
   // could not have shipped.
   const rules = read('firestore.rules')
   assert.doesNotMatch(rules, /daily-usage/,
@@ -629,8 +629,8 @@ test('THE ONE THAT MATTERS FOR THE HAND-OFF: the page uses the existing slots, n
 
 test('nothing is written into the user’s working design', () => {
   // The result is a suggestion. Writing straight into ProjectContext's `design`
-  // would silently replace work in progress, which is the founder's own
-  // "it has added many colours and it's a different swatch" in another form.
+  // would silently replace work in progress, the same as a palette opening
+  // with extra colours and a different swatch, in another form.
   for (const forbidden of ['setPalette', 'setFonts', 'setTypeScale', 'useProject']) {
     assert.ok(!PAGE_CODE.includes(forbidden),
       `BrandStarter.jsx calls ${forbidden} — a generator that overwrites the open project without asking`)
@@ -674,7 +674,7 @@ test('the tool still derives its allowance and refusal from shared config', () =
 })
 
 test('the beta label is a word, not a decoration', () => {
-  // The founder has called this product "AI generated" five times and a feature
+  // A product that reads as "AI generated" loses trust, and a feature
   // literally about AI is where that risk peaks. A badge that decorates itself
   // is doing marketing.
   const css = read('src/styles/global.css')

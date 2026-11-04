@@ -30,10 +30,9 @@ const playfair = {
 const rowFor = (font, key) => fontFacts(font).find(r => r.k === key)
 
 test('the dossier offers exactly the four tabs the founder asked for, in order', () => {
-  // FOUR now, not three. The founder asked for the example half to be SPLIT
-  // (2026-09-05): "1 tab showing Usage examples using some made mockup use
-  // cases, but ... a tab showing real world use applications for each font and
-  // an image to show it".
+  // FOUR now, not three. The example half is SPLIT into one tab of usage
+  // examples built from made-up mockup use cases and one tab showing real-world
+  // applications of each font, with an image to show it.
   //
   // The order is load-bearing and is pinned here rather than left to whoever
   // edits the array next: the two example tabs sit ADJACENT, so a reader meets

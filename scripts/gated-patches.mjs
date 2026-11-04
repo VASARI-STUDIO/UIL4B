@@ -1,4 +1,4 @@
-// THE FOUNDER-GATED CHANGES, IN ONE REGISTRY.
+// THE APPROVAL-GATED CHANGES, IN ONE REGISTRY.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHY THIS EXISTS
@@ -7,7 +7,7 @@
 // `firestore.rules`, `api/verify-admin.js` and `src/contexts/AuthContext.jsx`
 // are refused by the Claude Code auto-mode classifier — a guardrail inside the
 // tool, separate from and stricter than docs/reference/human-validation-zones.md,
-// which refuses AFTER the founder has said yes. So each change ships as a diff
+// which refuses AFTER the owner has said yes. So each change ships as a diff
 // that is committed, tested and unapplied, and somebody has to type it in.
 //
 // Hand-applied diffs across several files are as many chances to paste one into
@@ -16,7 +16,7 @@
 // it grants in a sentence a non-engineer can act on. Two things read it:
 //
 //   · scripts/apply-gated-patches.mjs  (`npm run apply:gated`) — the one
-//     command the founder runs.
+//     command the owner runs.
 //   · tests/unit/gated-patch-applier.test.js — which fails if any of them
 //     goes stale against its target, or if the applier stops covering one.
 //
@@ -63,7 +63,7 @@
 // that understands a moderator and a route that never mints one is precisely
 // the half-shipped state this row spent weeks in.
 //
-// The founder never sees this ordering problem, which is the point of the
+// The owner never sees this ordering problem, which is the point of the
 // command existing.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -101,7 +101,7 @@ export const RULE_MATCHER =
 /**
  * `git apply` rather than a hand-rolled splice, for the reason
  * scripts/firebase-deferral-trial.mjs gives: a patch verified by a bespoke
- * applier is a patch verified against something other than what the founder
+ * applier is a patch verified against something other than what the owner
  * will run. `--directory` makes every byte git writes land inside the scratch
  * directory, so the gated originals are read and never written.
  *
@@ -151,7 +151,7 @@ const FLAG_ON = 'export const PER_PROJECT_SYNC_ENABLED = true'
 /**
  * The feedback bounds are NOT a `.patch` file: they were written as anchored
  * find/replace pairs so tests/rules/firestore-rules-pending.test.js could run
- * the emulator against the result before the founder ever saw it. Reusing that
+ * the emulator against the result before the owner ever saw it. Reusing that
  * exact module is the whole reason to import from tests/ — a second copy of
  * these anchors would be a second thing to keep in step, and the copy the
  * emulator ran is the one that matters.
@@ -250,7 +250,7 @@ export const GATED_PATCHES = [
         file: 'api/verify-admin.js',
         // Asked of the RESULT, not of whether the patch still applies: the two
         // calls that make the role real are the reconciliation (which mints and
-        // un-mints the claim from the roster) and the founder-only assignment.
+        // un-mints the claim from the roster) and the owner-only assignment.
         detect: (text) => /reconcileModeratorClaim\(decoded\)/.test(lf(text))
           && /req\.body\?\.moderatorAction/.test(lf(text)),
         apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_ROUTE_PATCH), ctx) },
@@ -604,8 +604,8 @@ export async function planGatedPatches(opts = {}) {
  * One target file as it stands with everything up to and INCLUDING the named
  * patch applied — in memory, never on disk.
  *
- * The emulator suite needs this: firestore.rules is founder-gated, so the rules
- * a moderator test is about do not exist in the tree until the founder runs the
+ * The emulator suite needs this: firestore.rules is approval-gated, so the rules
+ * a moderator test is about do not exist in the tree until the owner runs the
  * command, and a test that only passed afterwards would prove nothing today and
  * break tomorrow. Running against the planned text makes the SAME assertions
  * hold on both sides of `npm run apply:gated`, because a patch that is already
@@ -614,7 +614,7 @@ export async function planGatedPatches(opts = {}) {
  * Through the registry rather than around it, for the reason the registry
  * exists: the order is load-bearing, two of the rules patches are unified diffs
  * whose context the others move, and a helper that applied one of them alone
- * would be verifying something other than what the founder will run.
+ * would be verifying something other than what the owner will run.
  *
  * LF, unconditionally. The emulator does not care and every caller compares.
  */
@@ -636,7 +636,7 @@ export async function fileTextThrough(id, file = 'firestore.rules') {
 
 /**
  * A unified diff of one file's before/after, headed with the repository-relative
- * path rather than the scratch one, so the founder reads a path that exists.
+ * path rather than the scratch one, so the reader sees a path that exists.
  */
 export async function diffOf(file, beforeText, afterText) {
   if (beforeText === afterText) return ''
@@ -692,7 +692,7 @@ export async function patchStates(opts = {}) {
   return out
 }
 
-/** The undo the founder is handed the moment anything goes wrong. */
+/** The undo handed over the moment anything goes wrong. */
 export function undoCommand(files = TARGET_FILES) {
   return `git checkout -- ${files.join(' ')}`
 }

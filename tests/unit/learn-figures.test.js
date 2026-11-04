@@ -371,7 +371,7 @@ test('the brand red and the error red really are indistinguishable', () => {
   assert.match(brandProse, /1\.03:1/)
 })
 
-/* ── the register the founder chose ──────────────────────────────────────── */
+/* ── the register ────────────────────────────────────────────────────────── */
 
 test('no guide slips into the first person or into marketing', () => {
   // Learn is neutral and factual, NOT a personal voice, so it can be written
@@ -379,7 +379,7 @@ test('no guide slips into the first person or into marketing', () => {
   // founder note, which is nothing but a personal voice, is deliberate.
   // Case-SENSITIVE for the pronoun "I": proseOf leaves the odd arrow-function
   // parameter behind, and `(i) =>` inside a table-building expression is not
-  // the founder's voice. Everything else is a word no reference register uses.
+  // a personal voice. Everything else is a word no reference register uses.
   const firstPersonI = /\bI\b/
   const firstPerson = /\b(?:we|we're|we've|our|ours|let's)\b/i
   const marketing = /\b(?:effortless|effortlessly|supercharge|unlock|seamless|game-chang|revolutionar|delightful|best-in-class|world-class|at scale)\b/i

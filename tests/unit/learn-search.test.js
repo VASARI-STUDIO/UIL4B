@@ -174,7 +174,7 @@ test('the index groups by the registry\'s TOPICS and every topic is a labelled s
 })
 
 test('the index copy stays in Learn\'s neutral register', () => {
-  // The founder's decision of 2026-09-05: neutral, no first person, no
+  // The decision: neutral, no first person, no
   // marketing. tests/unit/learn-figures.test.js holds the guides to it; this
   // holds the index that fronts them.
   // What is checked is the COPY: the JSX text after the component's `return (`

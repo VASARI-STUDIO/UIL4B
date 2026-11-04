@@ -148,7 +148,7 @@ test('no surface copy names a tool that was retired', () => {
   }
 })
 
-/* ── the register the founder chose ──────────────────────────────────────── */
+/* ── the register ────────────────────────────────────────────────────────── */
 
 test('neither surface writes in the first person or in marketing register', () => {
   // The same rule the Learn guides are held to: neutral and factual, not a

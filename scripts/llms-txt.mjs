@@ -19,7 +19,7 @@
 //
 // ── Everything below is read from the module that owns it ───────────────────
 //
-//   the value claim     src/data/positioning.js — the founder's own sentence,
+//   the value claim     src/data/positioning.js — the product's own sentence,
 //                       by the id SURFACE_LINE assigns to this surface
 //   the price + limits  scripts/site-pricing.mjs, which is what index.html's
 //                       <noscript> already prints — one sentence, two surfaces

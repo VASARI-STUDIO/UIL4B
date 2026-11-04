@@ -72,7 +72,7 @@ test('the generator is not vacuous: it lists real tools, real guides and real pa
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2 · The summary is the founder's line, by the id the module assigns
+// 2 · The summary is the positioning line, by the id the module assigns
 // ─────────────────────────────────────────────────────────────────────────────
 test('the summary opens on line(SURFACE_LINE.llmsSummary), verbatim', () => {
   const founder = line(SURFACE_LINE.llmsSummary)

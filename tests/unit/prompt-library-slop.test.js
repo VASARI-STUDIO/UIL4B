@@ -19,7 +19,7 @@
 // stripe.com and linear.app", whose heroes are neither of those things. Every
 // output of that prompt was going to look generated, and the prompt said so in
 // hex. It also asked for "premium and mesmerising", which is the vague-quality
-// register the founder has rejected twice by name.
+// register this library avoids by name.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // TWO CORRECTIONS THIS FILTER NEEDED BEFORE IT WAS HONEST

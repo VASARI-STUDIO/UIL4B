@@ -33,7 +33,7 @@ test('1 · Pro (an uncapped plan) is never counted at all', () => {
 })
 
 test('2 · the free cap of 3 stays silent until the last slot', () => {
-  // The shipped free tier. This is the case the founder will actually look at,
+  // The shipped free tier. This is the case a reader will actually look at,
   // so it is asserted literally rather than derived.
   assert.deepEqual(
     [0, 1, 2, 3, 4].map((used) => projectQuota(used, 3).state),

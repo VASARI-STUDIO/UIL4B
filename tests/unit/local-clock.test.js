@@ -54,8 +54,8 @@ test('the clock starts empty, so prerender cannot bake a timestamp into a shell'
 
 test('the clock reads the viewer’s own locale and zone, not a hardcoded one', () => {
   // `[]` as the locale argument means "use the browser's own preference", which
-  // is the entire point of the founder's request ("make it connect to their
-  // browser / computer"). A hardcoded 'en-GB' or 'en-US' would show a
+  // is the entire point (the clock follows the viewer's browser and computer).
+  // A hardcoded 'en-GB' or 'en-US' would show a
   // Brisbane-shaped date to everyone, and naming a timeZone would pin the hour.
   for (const fn of ['toLocaleDateString', 'toLocaleTimeString']) {
     const call = new RegExp(fn + '\\(\\s*\\[\\s*\\]')

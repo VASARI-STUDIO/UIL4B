@@ -1,9 +1,9 @@
 // What the right-click menu is allowed to learn about the element under the
 // pointer, and when it must keep its hands off the browser's own menu.
 //
-// Backlog `right-click-feedback` (founder request, 2026-09-02): a context-menu
+// The right-click feedback feature is a context-menu
 // action that opens feedback with details PREFILLED, so a report is easy to
-// find and replicate. Two constraints in that note are the reason this file
+// find and replicate. Two constraints are the reason this file
 // exists at all, and both are rules rather than rendering:
 //
 //   "a stable selector, not a DOM dump"  — a serialised DOM is unreadable in a

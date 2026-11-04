@@ -1,8 +1,7 @@
 // A BRAND LOCKUP IS NOT A SQUARE MARK.
 //
-// Founder, 2026-09-04: "check our rendering for alot of the icons, alot of the
-// icons are not rendering correctly", with a screenshot of /create/icons under
-// the Brand logos filter. Measured in a rendered browser at 1440x900 before the
+// The symptom: many icons rendered wrongly on /create/icons under the Brand
+// logos filter. Measured in a rendered browser at 1440x900 before the
 // fix: `logos/aerospike` painted 24 x 2.1px inside its 24 x 24 slot and
 // `logos/active-campaign` 24 x 2.4px. Every image loaded — this was never a
 // fetch failure — the grid was simply asking the Iconify API for a square
@@ -98,7 +97,7 @@ test('the wide treatment is worth having: every case gains real painted height',
       `${c.name}: ${c.before.toFixed(1)}px -> ${after.toFixed(1)}px is not the ~4x the fix claims`)
     assert.ok(after <= SLOT_H + 0.01, `${c.name} overflows the slot`)
   }
-  assert.equal(OLD_BOX, 24) // the box the founder's screenshot was taken in
+  assert.equal(OLD_BOX, 24) // the box the bug was reproduced in
 })
 
 test('an unreadable sample degrades to square, which is the pre-existing treatment', () => {

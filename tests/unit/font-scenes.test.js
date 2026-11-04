@@ -5,8 +5,8 @@ import {
   sceneIdsFor, sceneWeights, scenesFor, weightFor,
 } from '../../src/utils/fontScenes.js'
 
-// The founder asked three times (2026-08-08, 2026-08-15, 2026-09-04) for "real
-// world examples not the same UI examples for each one". Every test here guards
+// Each typeface must get real-world examples, not the same UI examples as every
+// other one. Every test here guards
 // one of the two ways that request can be betrayed: giving two different
 // typefaces the same examples, or giving one typeface an example that lies
 // about what it can do.
@@ -39,7 +39,7 @@ const thin = (font) => ({
   family: font.family, category: font.category, variants: font.variants,
 })
 
-// ── The defect the founder reported ─────────────────────────────────────────
+// ── The defect being guarded against ────────────────────────────────────────
 
 test('the four fixed scenes are gone — no two of these families get the same set', () => {
   const families = [playfair, roboto, lora, robotoSlab, robotoMono, pacifico, barcode]
@@ -63,7 +63,7 @@ test('the old fixed array is not what any family renders', () => {
 
 test('a display face wearing a serif category is treated as a display face', () => {
   // Playfair Display is category "Serif". Handing it a long-form reading column
-  // is EXACTLY the founder's complaint, and category alone cannot avoid it.
+  // is EXACTLY that failure, and category alone cannot avoid it.
   assert.equal(playfair.category, 'serif')
   assert.equal(familyRole(playfair).role, 'display')
   assert.equal(familyRole(playfair).basis, 'classifications')

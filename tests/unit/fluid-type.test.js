@@ -116,8 +116,8 @@ test('a built scale carries both sizes and a usable clamp for every step', () =>
     assert.ok(step.minPx > 0 && step.maxPx > 0, `${step.name} has real sizes`)
     assert.ok(step.css.length > 0, `${step.name} has CSS`)
     // The headline steps must genuinely differ between breakpoints — that is
-    // the founder's actual request ("a header1 on desktop and mobile will be
-    // different font sizes"), and a scale that produced identical values would
+    // the actual requirement (the headline has different font sizes on desktop
+    // and mobile), and a scale that produced identical values would
     // pass every other test here while failing the point of the feature.
     if (step.exp >= 2) {
       assert.ok(step.maxPx > step.minPx, `${step.name} must be larger on desktop than mobile`)

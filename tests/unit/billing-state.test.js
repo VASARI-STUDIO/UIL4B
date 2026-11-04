@@ -37,7 +37,7 @@ const DAY = 86_400_000
 // The real defect is upstream — a pure plan-resolution function reading an
 // ambient clock is untestable by construction. The fix is an injectable `now`
 // defaulting to `Date.now()`, which is additive and backwards-compatible, but
-// `api/_lib/plans.js` is founder-gated. Logged in src/data/pipeline.js.
+// `api/_lib/plans.js` is approval-gated.
 const NOW = Date.now()
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 

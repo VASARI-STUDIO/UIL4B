@@ -184,7 +184,7 @@ test('the two genuinely-missing pages are now advertised, and the thin one is no
   // understands the Create tree, so robotsFor('/learn') has always returned
   // `index,follow`; what excluded it was SOON_SURFACES in
   // scripts/route-matrix.mjs. That list is now empty, so the served shell and
-  // the hydrated page finally agree — which was the open founder question.
+  // the hydrated page finally agree.
   for (const route of ['/learn', ...LEARN_ARTICLE_ROUTES]) {
     assert.ok(routes.includes(route),
       `${route} is published Learn content and should be advertised`)
