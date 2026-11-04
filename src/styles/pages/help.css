@@ -77,6 +77,35 @@
   color: var(--cpg-faint);
   font-variant-numeric: tabular-nums;
 }
+/* The line that points to a person: a sentence and one link, which wraps under
+ * the sentence on a narrow screen. The link is a 44px-high target on every
+ * pointer and is underlined at rest, as the other links in running text are. */
+.hlp-contact {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--s-2);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--cpg-dim);
+}
+.hlp-contact-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+  text-underline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+@media (hover: hover) {
+  .hlp-contact-link:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+}
+.hlp-contact-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── The opening visual ──────────────────────────────────────────────────────
  * One value in, the eleven stops the product generates from it, the files

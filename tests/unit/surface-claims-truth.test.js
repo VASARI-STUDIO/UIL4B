@@ -155,7 +155,7 @@ test('/info reads its guide list from the registry rather than typing it', () =>
 
 test('/info links to no retired URL and to nothing without a title', () => {
   const retired = new Set(LEGACY_REDIRECTS.map(([from]) => from))
-  const links = [...INFO.matchAll(/to="(\/[^"]*)"/g)].map((m) => m[1].split('#')[0])
+  const links = [...INFO.matchAll(/to="(\/[^"]*)"/g)].map((m) => m[1].split('#')[0].split('?')[0])
   // POSITIVE CONTROL: the page links out to Settings and Projects at least.
   assert.ok(links.length >= 3, `only ${links.length} literal links found on /info — the extractor is broken`)
   for (const route of links) {
