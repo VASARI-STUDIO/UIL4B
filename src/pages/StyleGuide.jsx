@@ -55,7 +55,7 @@ const TOKENS = {
       { size: 14, weight: 600, label: 'Subtitle', tracking: '-.01em' },
       { size: 14, weight: 400, label: 'Body', tracking: '0' },
       { size: 12, weight: 400, label: 'Small', tracking: '0' },
-      { size: 10, weight: 700, label: 'Eyebrow / Label', tracking: '.08em' },
+      { size: 13, weight: 560, label: 'Eyebrow / Label', tracking: '0' },
     ],
   },
   spacing: [4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 64, 80],
@@ -154,7 +154,7 @@ export default function StyleGuide({ toast }) {
         <>
           {['backgrounds', 'text', 'accent', 'brand', 'borders', 'status'].map(group => (
             <div key={group} style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>{group}</h2>
+              <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12, textTransform: 'capitalize' }}>{group}</h2>
               <div className="card" style={{ padding: 16 }}>
                 {TOKENS.colours.filter(c => c.group === group).map(c => (
                   <Swatch key={c.var} varName={c.var} label={c.label} onCopy={copy} />
@@ -173,7 +173,7 @@ export default function StyleGuide({ toast }) {
       {section === 'typography' && (
         <>
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Font Families</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Font families</h2>
             <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {TOKENS.typography.families.map(f => (
                 <div key={f.var} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--border)', paddingBottom: 12, cursor: 'pointer' }} onClick={() => copy(`var(${f.var})`)}>
@@ -188,7 +188,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Type Scale</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Type scale</h2>
             <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {TOKENS.typography.scale.map(s => (
                 <div key={s.label} style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
@@ -204,12 +204,12 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Conventions</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Conventions</h2>
             <div className="card" style={{ padding: 16, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <ul style={{ paddingLeft: 20 }}>
                 <li><strong>Headings:</strong> {weightOf('Heading 1')} weight, negative letter-spacing (-.03em to -.04em)</li>
                 <li><strong>Body:</strong> {weightOf('Body')} weight, default tracking, 1.65 line-height</li>
-                <li><strong>Eyebrow / labels:</strong> 10px, {weightOf('Eyebrow / Label')} weight, uppercase, .08em tracking</li>
+                <li><strong>Eyebrow / labels:</strong> 13px, {weightOf('Eyebrow / Label')} weight, sentence case, default tracking</li>
                 <li><strong>Styles &amp; code:</strong> {familyOf('--font')} for UI and style names, {familyOf('--mono')} for numbers and technical values</li>
                 <li><strong>Subtitles:</strong> 14px, {weightOf('Subtitle')} weight for section headings in cards</li>
               </ul>
@@ -221,7 +221,7 @@ export default function StyleGuide({ toast }) {
       {section === 'spacing' && (
         <>
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Spacing Scale</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Spacing scale</h2>
             <div className="card" style={{ padding: 16 }}>
               {TOKENS.spacing.map(s => (
                 <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => copy(`${s}px`)}>
@@ -233,7 +233,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Border Radii</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Border radii</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
               {TOKENS.radii.map(r => (
                 <div key={r.var} className="card" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', flex: '1 1 120px' }} onClick={() => copy(`var(${r.var})`)}>
@@ -247,7 +247,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Shadows</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Shadows</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
               {TOKENS.shadows.map(s => (
                 <div key={s.var} className="card" style={{ padding: 20, textAlign: 'center', cursor: 'pointer', flex: '1 1 160px', boxShadow: `var(${s.var})` }} onClick={() => copy(`var(${s.var})`)}>
@@ -263,7 +263,7 @@ export default function StyleGuide({ toast }) {
       {section === 'components' && (
         <>
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Buttons</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Buttons</h2>
             <div className="card" style={{ padding: 20 }}>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
                 <button className="btn btn-accent">Primary</button>
@@ -279,7 +279,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Cards</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Cards</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px,100%), 1fr))', gap: 16 }}>
               <div className="card" style={{ padding: 20 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Standard Card</div>
@@ -297,7 +297,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Inputs</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Inputs</h2>
             <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 400 }}>
               <input type="text" placeholder="Standard input" />
               <select><option>Select option</option></select>
@@ -309,17 +309,17 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Badges & Tags</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Badges & tags</h2>
             <div className="card" style={{ padding: 20, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'var(--accent-bg)', color: 'var(--accent-text)' }}>Default</span>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,.1)', color: 'var(--ok)' }}>Success</span>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(245,158,11,.1)', color: 'var(--warn)' }}>Warning</span>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(239,68,68,.1)', color: 'var(--err)' }}>Error</span>
+              <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 8px', borderRadius: 4, background: 'var(--accent-bg)', color: 'var(--accent-text)' }}>Default</span>
+              <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,.1)', color: 'var(--ok)' }}>Success</span>
+              <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 8px', borderRadius: 4, background: 'rgba(245,158,11,.1)', color: 'var(--warn)' }}>Warning</span>
+              <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 8px', borderRadius: 4, background: 'rgba(239,68,68,.1)', color: 'var(--err)' }}>Error</span>
             </div>
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Section Header</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Section header</h2>
             <div className="card" style={{ padding: 20 }}>
               <div className="sec-h">
                 <div className="sec-h-eyebrow">Eyebrow Label</div>
@@ -337,7 +337,7 @@ export default function StyleGuide({ toast }) {
       {section === 'patterns' && (
         <>
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Modal / Popup Pattern</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Modal / popup pattern</h2>
             <div className="card" style={{ padding: 20, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <div style={{ fontWeight: 700, color: 'var(--t0)', marginBottom: 8 }}>Standard modal structure (Font Gallery pattern):</div>
               <pre style={{ fontFamily: 'var(--mono)', fontSize: 11, background: 'var(--bg-2)', padding: 16, borderRadius: 'var(--radius-s)', overflow: 'auto', marginBottom: 12 }}>{`<div className="fg-detail-overlay" onClick={onClose}>
@@ -358,7 +358,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Tab Navigation</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Tab navigation</h2>
             <div className="card" style={{ padding: 20, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <div style={{ fontWeight: 700, color: 'var(--t0)', marginBottom: 8 }}>Standard tab bar:</div>
               <pre style={{ fontFamily: 'var(--mono)', fontSize: 11, background: 'var(--bg-2)', padding: 16, borderRadius: 'var(--radius-s)', overflow: 'auto', marginBottom: 12 }}>{`<div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
@@ -375,7 +375,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Status & Feedback</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Status & feedback</h2>
             <div className="card" style={{ padding: 20, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <ul style={{ paddingLeft: 20 }}>
                 <li><strong>Toast:</strong> Bottom-centre, 3s auto-dismiss, via toast() hook</li>
@@ -388,7 +388,7 @@ export default function StyleGuide({ toast }) {
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Layout Rules</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', marginBottom: 12 }}>Layout rules</h2>
             <div className="card" style={{ padding: 20, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <ul style={{ paddingLeft: 20 }}>
                 <li><strong>Sidebar:</strong> 248px wide (--sw), fixed left, collapsible on mobile</li>

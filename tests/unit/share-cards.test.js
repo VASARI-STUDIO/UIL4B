@@ -35,6 +35,7 @@ import {
   cardFor,
   cardUrl,
   toolNamesFor,
+  twitterCardUrl,
 } from '../../scripts/share-cards.mjs'
 import {
   breadcrumbFor,
@@ -42,13 +43,14 @@ import {
   crumbName,
   parentOf,
 } from '../../scripts/route-schema.mjs'
-import { railSections, readHero, readTokens } from '../../scripts/og-cards.mjs'
+import { readTokens } from '../../scripts/og-cards.mjs'
 
 const REPO = process.cwd()
 const ORIGIN = 'https://uil4b.com'
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
 const previews = (f) => path.join(REPO, 'public', 'previews', f)
-const built = fs.existsSync(path.join(REPO, 'dist', 'index.html'))
+const DIST = process.env.DIST_DIR || 'dist'
+const built = fs.existsSync(path.join(REPO, DIST, 'index.html'))
 
 // Read one meta tag's content out of a served document, by VALUE rather than by
 // matching the whole tag. index.html writes `content="...">` and prerender's
@@ -158,42 +160,15 @@ test('THE STALENESS ONE: the committed cards were drawn from today\'s tokens', a
     + 'so a card is advertising the wrong tools. Run `npm run og:cards`.')
 })
 
-test('THE OTHER STALENESS ONE: the homepage card quotes the homepage', async () => {
-  // ── What this is for ─────────────────────────────────────────────────────
-  //
-  // The homepage card used to be hand-made art sitting outside the generator,
-  // and it drifted exactly the way a hand-made artefact does: it advertised
-  // "No more tab hoarding" for weeks after the homepage stopped saying it —
-  // src/pages/Onboarding.jsx records that line being removed from the anonymous
-  // sales page. The front door's share card promised a sentence that appeared
-  // nowhere on the page it linked to, and nothing could notice.
-  //
-  // The card is now drawn from Home.jsx's own hero, and this is what makes a
-  // hero rewrite fail loudly here instead of silently mis-selling the product.
-  const manifest = JSON.parse(read('public/previews/cards.json'))
-  const hero = await readHero()
-  assert.deepEqual(manifest.hero, hero,
-    'the homepage hero has changed since the front-door card was drawn, so the '
-    + 'card is quoting a headline the page no longer shows. Run `npm run og:cards`.')
-
-  // The highlighted phrase is the claim the page stakes itself on, so the card
-  // has to carry it as a highlight rather than flattening it into plain words.
-  assert.ok(hero.headline.some((run) => run.hi && run.text.length > 2),
-    'the homepage no longer highlights a phrase in its h1 — the card composition '
-    + 'in og-cards.mjs assumes one and would print an unremarkable sentence')
-})
-
-test('the homepage rail names every toolkit area exactly once', () => {
-  // The rail is the front-door card's whole claim: this is the toolkit, not one
-  // area of it. A hue losing its section, or two sections claiming one hue,
-  // would quietly shrink that claim.
-  const rail = railSections()
-  assert.equal(rail.length, 6, `the rail shows ${rail.length} areas, expected 6`)
-  assert.equal(new Set(rail.map((r) => r.hue)).size, 6, 'a hue appears twice in the rail')
-  assert.equal(new Set(rail.map((r) => r.label)).size, 6, 'two rail bands carry the same label')
-  // Plans is deliberately absent: it reuses the colour hue and owns no band.
-  assert.ok(!rail.some((r) => r.label === 'Plans'),
-    'Plans has taken a rail band, but it shares --hue-colour and owns none')
+test('the default card and its X card are the brand kit own files', () => {
+  // The homepage card is committed as the kit exported it (logo on ivory), not
+  // drawn by og-cards.mjs, so it is not in cards.json. X gets the 2:1 card.
+  const og = pngSize(previews(DEFAULT_CARD.file))
+  assert.deepEqual(og, { width: 1200, height: 630 })
+  const x = pngSize(previews(DEFAULT_CARD.twitterFile))
+  assert.deepEqual(x, { width: 1200, height: 600 })
+  assert.equal(JSON.parse(read('public/previews/cards.json')).hero, undefined,
+    'cards.json still records a homepage hero the generator no longer draws')
 })
 
 test('no card is heavy enough to be dropped or to cost a reader real bandwidth', () => {
@@ -228,11 +203,11 @@ test('the built shells carry the card dimensions too', {
   skip: !built && 'run `npm run build` first',
 }, () => {
   for (const route of prerenderRoutes()) {
-    const html = read(`dist${route}/index.html`)
+    const html = read(`${DIST}${route}/index.html`)
     assert.equal(meta(html, 'property', 'og:image:width'), '1200',
-      `dist${route}/index.html does not declare its card width`)
+      `${DIST}${route}/index.html does not declare its card width`)
     assert.equal(meta(html, 'property', 'og:image:height'), '630',
-      `dist${route}/index.html does not declare its card height`)
+      `${DIST}${route}/index.html does not declare its card height`)
   }
 })
 
@@ -291,7 +266,8 @@ test('THE ONE THAT KEEPS IT TRUE: every parent crumb points at a page that exist
 })
 
 test('crumb names come from the page\'s own title, without the site name', () => {
-  assert.equal(crumbName('/create/contrast'), 'Colour Contrast Checker')
+  assert.equal(crumbName('/create/contrast'), 'Color Contrast Checker for WCAG AA and AAA')
+  assert.equal(crumbName('/learn'), 'Learn')
   assert.equal(crumbName('/discover'), 'Discover')
   assert.equal(crumbName('/nope'), null)
   // No crumb repeats the site name on every level.
@@ -315,8 +291,8 @@ test('NO INVENTED STRUCTURED DATA: no shell claims a rating, a review or stock',
   // Read out of the BUILT shells, not the source, because that is the document
   // a crawler receives and the only place a claim can actually be made.
   const forbidden = ['aggregateRating', 'ratingValue', 'reviewCount', 'ratingCount', 'availability']
-  const shells = ['dist/index.html', 'dist/404.html',
-    ...prerenderRoutes().map((r) => `dist${r}/index.html`)]
+  const shells = [`${DIST}/index.html`, `${DIST}/404.html`,
+    ...prerenderRoutes().map((r) => `${DIST}${r}/index.html`)]
   let checked = 0
   for (const shell of shells) {
     const html = read(shell)
@@ -340,14 +316,17 @@ test('NO FAQPage on /help, and the built shell proves it', {
   //
   // THE SECOND REASON IS GONE AND THIS TEST CHANGED WITH IT. It used to quote
   // `{tab === 'faq' && <FAQTab />}` to keep "the answers are not in the DOM"
-  // checkable. /help is no longer a tabbed document: HELP_ANSWERS renders
-  // unconditionally. Asserting the old conditional would now be asserting that
-  // a page stays worse so a comment can stay true, so what is pinned instead is
-  // the pair of facts that are actually load-bearing today — the answers ARE
-  // rendered on load, and no shell claims a FAQPage anyway.
+  // checkable. /help is no longer a tabbed document: every job's answer is
+  // rendered on load (the closed ones are only `hidden`). Asserting the old
+  // conditional would now be asserting that a page stays worse so a comment
+  // can stay true, so what is pinned instead is the pair of facts that are
+  // actually load-bearing today — the answers ARE rendered on load, and no
+  // shell claims a FAQPage anyway.
   const help = read('src/pages/HelpCentre.jsx')
-  assert.match(help, /HELP_ANSWERS\.map\(/,
-    'HelpCentre.jsx no longer renders the answers from HELP_ANSWERS')
+  assert.match(help, /jobs\.map\(/,
+    'HelpCentre.jsx no longer renders the answers from HELP_JOBS')
+  assert.match(help, /<Panel key=\{job\.id\}/,
+    'HelpCentre.jsx no longer renders every job\'s answer on load')
   assert.ok(!/tab === 'faq'/.test(help),
     'the FAQ is behind a tab again — reason 2 in route-schema.mjs was retired on the '
     + 'basis that it is not, so restore that reason or restore this render')
@@ -355,8 +334,8 @@ test('NO FAQPage on /help, and the built shell proves it', {
   // Not just /help: no shell anywhere may claim a FAQPage. The old assertion
   // read one file, so a FAQPage emitted onto every route would have passed
   // everywhere except the one page it was written about.
-  const shells = ['dist/index.html', 'dist/404.html',
-    ...prerenderRoutes().map((r) => `dist${r}/index.html`)]
+  const shells = [`${DIST}/index.html`, `${DIST}/404.html`,
+    ...prerenderRoutes().map((r) => `${DIST}${r}/index.html`)]
   let checked = 0
   for (const shell of shells) {
     assert.ok(!read(shell).includes('FAQPage'), `${shell} claims a FAQPage it does not render`)
@@ -372,13 +351,13 @@ test('the built shells carry the images and the breadcrumbs', {
   // functions; this tests that prerender.mjs actually used them.
   const routes = prerenderRoutes()
   for (const route of routes) {
-    const html = read(`dist${route}/index.html`)
+    const html = read(`${DIST}${route}/index.html`)
     const card = cardFor(route)
     const src = cardUrl(ORIGIN, card)
     assert.equal(meta(html, 'property', 'og:image'), src,
-      `dist${route}/index.html does not point og:image at ${card.file}`)
-    assert.equal(meta(html, 'name', 'twitter:image'), src,
-      `dist${route}/index.html does not point twitter:image at ${card.file}`)
+      `${DIST}${route}/index.html does not point og:image at ${card.file}`)
+    assert.equal(meta(html, 'name', 'twitter:image'), twitterCardUrl(ORIGIN, card),
+      `${DIST}${route}/index.html does not point twitter:image at ${card.file}`)
     assert.equal(meta(html, 'property', 'og:image:alt'), card.alt,
       `dist${route}/index.html describes a different card than it shows`)
     const wantsCrumb = !!breadcrumbFor(route, ORIGIN)

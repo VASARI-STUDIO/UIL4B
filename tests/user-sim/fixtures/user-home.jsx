@@ -10,10 +10,11 @@
 //
 // Mounted directly rather than through src/pages/Projects.jsx, so it imports the
 // page's stylesheet itself.
-import { StrictMode, useState } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
-import ProjectTile from '../../../src/components/userhome/ProjectTile'
+import ContinueCard from '../../../src/components/userhome/ContinueCard'
+import ProjectRows from '../../../src/components/userhome/ProjectRows'
 import { DEFAULT_DESIGN } from '../../../src/data/designDefaults'
 import '../../../src/styles/global.css'
 import '../../../src/styles/pages/projects.css'
@@ -47,10 +48,7 @@ function archived() {
 }
 
 export function UserHomeFixture() {
-  const [icons, setIcons] = useState({})
-  // The fixture's stand-in for updateProject: the icon rides on the project.
-  const [log, setLog] = useState('')
-  const projects = [complete(), halfBuilt(), untouched(), archived()].map((p) => (icons[p.id] ? { ...p, icon: icons[p.id] } : p))
+  const projects = [complete(), halfBuilt(), untouched(), archived()]
 
   return (
     <MemoryRouter>
@@ -58,16 +56,9 @@ export function UserHomeFixture() {
         <main className="app-page" id="main">
           <div className="uh">
             <div className="uh-main">
-              <p id="fixture-log" role="status">{log}</p>
-              <div className="uh-grid">
-                {projects.map((p) => (
-                  <ProjectTile
-                    key={p.id}
-                    project={p}
-                    onPickIcon={(id, glyph) => { setIcons((m) => ({ ...m, [id]: glyph })); setLog(`Icon ${id} ${glyph}`) }}
-                  />
-                ))}
-              </div>
+              
+              <ContinueCard project={projects[0]} />
+              <ProjectRows projects={projects.slice(1)} total={projects.length} />
             </div>
           </div>
         </main>

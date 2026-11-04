@@ -119,15 +119,14 @@ test('the modal sends a source the server actually accepts', () => {
 })
 
 test('context rides in an existing field, so no API change was needed', () => {
-  // api/support.js destructures a fixed set of fields and drops anything else,
-  // and /api is a Human Validation Zone. Folding the context into `message`
-  // makes the proposal's "no new backend if the existing support path can carry
-  // it" literally true — no route change, no rules change, nothing to review.
+  // api/support.js destructures a fixed set of fields and drops anything else.
+  // The captured context is folded into `message`; the two routing choices
+  // travel as their own allow-listed fields.
   const modal = read('src/components/FeedbackModal.jsx')
   assert.match(modal, /message: withReportContext\(/)
   const api = read('api/support.js')
-  assert.match(api, /const \{ type, subject, message, email, source \} = req\.body/,
-    'the server contract must be unchanged')
+  assert.match(api, /const \{ type, subject, message, email, source, category, severity \} = req\.body/,
+    'the server contract is these fields and no others')
 })
 
 // ── The right-click capture (backlog `right-click-feedback`) ────────────────

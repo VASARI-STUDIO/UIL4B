@@ -3,11 +3,19 @@
 // utils/uiKitExport.js. Loaded on demand from the export panel, so none of this
 // (the template is about 75 KB) reaches anyone who never exports a kit.
 
-import template from '../templates/uiKit.html?raw'
-import { renderUiKit, kitFontRequests } from './uiKitExport.js'
+import { renderUiKit, kitFontRequests, KIT_CHROME } from './uiKitExport.js'
 import { loadKitFonts, loadPublisherFonts } from './kitFonts.js'
 import { fetchFontCatalog } from './googleFonts.js'
 import { readLogo } from './brandLogo.js'
+
+// The kit's layouts, loaded one at a time so the others never reach the page.
+// Keys are the live ids in src/config/exportTemplates.js.
+const KIT_TEMPLATES = Object.freeze({
+  studio: () => import('../templates/kit/studio.html?raw'),
+  manual: () => import('../templates/kit/manual.html?raw'),
+  showcase: () => import('../templates/kit/showcase.html?raw'),
+})
+const DEFAULT_KIT_TEMPLATE = 'studio'
 
 async function catalogWithin(ms, signal) {
   try {
@@ -25,19 +33,22 @@ async function catalogWithin(ms, signal) {
  * Resolves { blob, filename, missing } — `missing` lists families that could
  * not be embedded, which the document itself also states.
  */
-export async function buildUiKit(design, { tier, onStage = () => {}, signal } = {}) {
+export async function buildUiKit(design, { tier, template: templateId = DEFAULT_KIT_TEMPLATE, onStage = () => {}, signal, projectName = '', fileProject = projectName } = {}) {
+  const id = Object.hasOwn(KIT_TEMPLATES, templateId) ? templateId : DEFAULT_KIT_TEMPLATE
+  const load = KIT_TEMPLATES[id]
   onStage('fonts')
-  const [catalog, publisher, mark] = await Promise.all([
+  const [catalog, publisher] = await Promise.all([
     catalogWithin(2500, signal),
-    loadPublisherFonts({ signal }),
-    fetch('/favicon.svg', { signal }).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+    loadPublisherFonts({ signal, families: KIT_CHROME[id] }),
   ])
   const fonts = await loadKitFonts(kitFontRequests(design), { signal, catalog })
   onStage('building')
+  const template = (await load()).default
   const { html, filename, missing } = renderUiKit(design, {
     tier,
+    projectName,
+    fileProject,
     template,
-    markSvg: mark,
     fonts,
     ...publisher,
     logo: tier === 'pro' ? readLogo(design) : null,

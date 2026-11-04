@@ -8,6 +8,7 @@
 //   · at 390 the section tabs never wrap into a grid.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 async function openSection(page, id) {
   await page.locator(`#settab-${id}`).click()
@@ -21,7 +22,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Edit' }).nth(1).click()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     await section.getByPlaceholder('Enter new email').fill('new.address@uil4b.test')
     await section.getByRole('button', { name: 'Next' }).click()
     await section.getByPlaceholder('Enter your password to confirm').fill('hunter22')
@@ -39,7 +40,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Edit' }).nth(1).click()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     await section.getByPlaceholder('Enter new email').fill('new.address@uil4b.test')
     await section.getByRole('button', { name: 'Next' }).click()
     await section.getByPlaceholder('Enter your password to confirm').fill('hunter22')
@@ -49,7 +50,8 @@ test.describe('settings — account', () => {
     // The link went to the NEW inbox, and the account still has the old address.
     const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
     expect(mail).toEqual([{ kind: 'change-email', to: 'new.address@uil4b.test' }])
-    await expect(section.locator('.settings-row-value').nth(1)).toHaveText('free.user@uil4b.test')
+    const emailRow = section.locator('.settings-row', { has: page.getByText('Email address', { exact: true }) })
+    await expect(emailRow.locator('.settings-row-value')).toHaveText('free.user@uil4b.test')
   })
 
   test('cancelling account deletion puts focus back on the button that opened it', async ({ page }) => {
@@ -72,7 +74,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Change' }).last().click()
+    await section.getByRole('button', { name: 'Change password' }).click()
     await section.getByRole('button', { name: 'Email me a password reset link' }).click()
     await expect(section.getByRole('alert')).toContainText('could not be sent')
   })
@@ -97,7 +99,7 @@ test.describe('settings — billing', () => {
     await expect(alert).toContainText('nothing about your plan has changed')
   })
 
-  test('checkout never prints "null" when the price list lacks this currency', async ({ page }) => {
+  test('checkout with no live price in this currency says pricing is unreachable, never "null"', async ({ page }) => {
     watch(page, 'a buyer whose currency the price service does not list')
     await page.route('**/api/get-prices*', (r) => r.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: {}, quarterly: {}, yearly: {} }),
@@ -107,7 +109,21 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
-    await expect(note).toContainText('price for this billing period')
+    await expect(note).toContainText('Stripe didn’t answer')
+  })
+
+  test('checkout for a cadence with no live price says so while another cadence is live', async ({ page }) => {
+    watch(page, 'a buyer whose yearly price is not live')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: {}, yearly: {} })),
+    }))
+    await signIn(page, { plan: 'free' })
+    await go(page, '/checkout?plan=yearly')
+    const note = page.locator('.checkout-plan-note')
+    await expect(note).toBeVisible()
+    await expect(note).not.toContainText('null')
+    await expect(note).toContainText(/price for \w+ yet\./)
+    await expect(note).not.toContainText('Stripe didn’t answer')
   })
 
   test('a quarterly-or-monthly subscription is never called "Billed monthly" on a guess', async ({ page }) => {
@@ -115,9 +131,13 @@ test.describe('settings — billing', () => {
     await signIn(page, { plan: 'pro', subscription: { status: 'active', interval: 'month', currentPeriodEnd: Date.now() + 60 * 86400e3, cancelAtPeriodEnd: false } })
     await go(page, '/settings')
     await openSection(page, 'support')
-    const meta = page.locator('#set-support .sub-active-meta')
-    await expect(meta).toContainText('Renews')
-    await expect(meta).not.toContainText('Billed monthly')
+    // The record has no interval count, so the cadence is unknown: the Billing
+    // cycle row is left out rather than guessed. The next payment still shows.
+    const plan = page.locator('#set-support .sub-active')
+    await expect(plan.getByText('Next payment', { exact: true })).toBeVisible()
+    await expect(plan.getByText('Billing cycle', { exact: true }), 'a cadence was guessed').toHaveCount(0)
+    await expect(plan).not.toContainText('Monthly')
+    await expect(plan).not.toContainText('Billed monthly')
   })
 
   test('a subscription that records its count names the cadence', async ({ page }) => {
@@ -125,7 +145,8 @@ test.describe('settings — billing', () => {
     await signIn(page, { plan: 'pro', subscription: { status: 'active', interval: 'month', intervalCount: 3, currentPeriodEnd: Date.now() + 60 * 86400e3, cancelAtPeriodEnd: false } })
     await go(page, '/settings')
     await openSection(page, 'support')
-    await expect(page.locator('#set-support .sub-active-meta')).toContainText('Billed every three months')
+    const cycle = page.locator('#set-support .settings-row--fact', { has: page.getByText('Billing cycle', { exact: true }) })
+    await expect(cycle.locator('.settings-row-value')).toHaveText('Every three months')
   })
 })
 
@@ -156,7 +177,7 @@ test.describe('settings — mobile first', () => {
   test('the billing cadence row never wraps, even at 320', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 })
     watch(page, 'a free account comparing cadences on a small phone')
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } }) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } })) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
     await openSection(page, 'support')

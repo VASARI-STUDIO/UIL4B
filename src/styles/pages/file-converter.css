@@ -4,13 +4,13 @@
  * last does NOT make it last: Vite orders chunk CSS by the dependency graph, so
  * a shared deferred sheet can land after it (commit 8d30f37a measured exactly
  * that on /create/gradient). The root scope is what makes these rules win —
- * including over the old `.fc-tabs` / `.fc-alpha` / `.fc-drop` rules that still
+ * including over the old `.fc-tabs` / `.fc-drop` rules that still
  * sit in global.css, which this lane may not edit.
  *
  * ── THE TOOL PATTERN ─────────────────────────────────────────────────────────
  *
  * The root is also the ToolLayout root (`.tl.fc`): the sticky tool toolbar
- * carries the name, the Alpha tag and the way to the 3D Model Converter, so the page
+ * carries the name and the way to the 3D Model Converter, so the page
  * has no hero. The mode tabs sit under it as a row of pills. Each mode's
  * bench is the canvas column beside a side column that holds the settings
  * card and, under it, the run's action bar (Convert / Build / Extract). At
@@ -59,26 +59,6 @@
   --fc-bar-h: 55px;
   --fc-pad: clamp(12px, 2vw, 20px);
   min-width: 0;
-}
-
-/* The Alpha tag rides the toolbar row. */
-
-/* A status tag, not a badge: mono, hairline, neutral ink. It was a filled
-   `--accent-strong` chip, the loudest object in the header. */
-.fc .fc-alpha {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 4px 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t2);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
 }
 
 /* ── Modes ────────────────────────────────────────────────────────────────── */
@@ -139,6 +119,29 @@
   line-height: 1.55;
   color: var(--tl-dim);
 }
+
+/* The phone's intro: one 44px row that opens to the paragraph. */
+.fc .fc-howto summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tl-dim);
+}
+.fc .fc-howto summary::-webkit-details-marker { display: none; }
+.fc .fc-howto summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 10px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.fc .fc-howto[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.fc .fc-howto summary:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.fc .fc-howto[open] .fc-about { padding-bottom: 8px; }
 
 .fc .fc-3d-note {
   margin: 20px 0 0;
@@ -211,12 +214,12 @@
 .fc .fc-eyebrow {
   display: block;
   margin: 0;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
   line-height: 1.3;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -229,6 +232,11 @@
 }
 
 .fc .fc-pair > div { display: grid; gap: 8px; min-width: 0; }
+
+/* The size limit's longest label ("Full HD — 1920 px") needs most of the row; the
+   export scale's longest is "@0.25x". Equal halves cut the first one off. This
+   comes before the 480px rule below, which stacks the pair and wins by order. */
+.fc .fc-pair--size { grid-template-columns: minmax(0, 1fr) 104px; }
 
 .fc .fc-row { display: flex; align-items: center; gap: 10px; }
 
@@ -263,6 +271,127 @@
 .fc .fc-field--num {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Segmented choices (Video tab) ────────────────────────────────────────────
+   One tray per question; every option divides the row, so nothing wraps and
+   nothing scrolls sideways. The selected option is told apart by ground,
+   elevation and ink together, never colour alone. Options are 38px: one height
+   per tier, the same as .fc-field. */
+
+.fc .fc-seg-wrap { display: grid; gap: 8px; min-width: 0; }
+
+.fc .fc-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  max-width: 520px;
+  background: var(--inp);
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.fc .fc-seg-opt {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 4px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--t2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease-out, color var(--dur-1) ease-out;
+}
+
+.fc .fc-seg-opt[aria-checked="true"] {
+  color: var(--t0);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+}
+
+@media (hover: hover) {
+  .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--t0); background: var(--hvr); }
+}
+
+.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.fc .fc-seg-opt[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+.fc .fc-seg--shape .fc-seg-opt { min-height: 52px; font-size: 11px; }
+
+.fc .fc-seg--speed .fc-seg-opt { font-variant-numeric: tabular-nums; }
+
+.fc .fc-seg-glyph { width: 16px; height: 16px; flex: none; }
+
+/* The sliding selected option. Segmented measures the checked option
+   (useSlideIndicator) and sets --si-x/-y/-w/-h/-r on the tray; the tray's
+   ::before is the selected look (ground, shadow, hairline) and moves with a
+   transform, so nothing in the flow shifts. While [data-slide] is on, the
+   checked option paints only its label; without it (server render, no script)
+   the option keeps its own look. "placed" draws the pill with no transition,
+   "ready" animates its moves. */
+.fc .fc-seg { position: relative; isolation: isolate; }
+.fc .fc-seg[data-slide]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  width: var(--si-w);
+  height: var(--si-h);
+  border-radius: var(--si-r, var(--radius-pill));
+  background: var(--bg-1);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+  transform: translate(var(--si-x), var(--si-y));
+  pointer-events: none;
+}
+.fc .fc-seg[data-slide="ready"]::before {
+  transition: transform .18s var(--fc-ease), width .18s var(--fc-ease), height .18s var(--fc-ease);
+}
+.fc .fc-seg[data-slide] .fc-seg-opt[aria-checked="true"] { background: transparent; box-shadow: none; }
+@media (forced-colors: active) {
+  .fc .fc-seg[data-slide]::before { content: none; }
+  .fc .fc-seg[data-slide] .fc-seg-opt[aria-checked="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+
+/* Chained with .fc-btn so it outranks the button's own weight and hover. */
+.fc .fc-btn.fc-toggle { font-weight: 500; }
+
+/* The same selected look as a segmented option: ground, hairline and ink. */
+.fc .fc-toggle[aria-pressed="true"],
+.fc .fc-toggle[aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--t0);
+  background: var(--bg-1);
+  border-color: transparent;
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+}
+
+/* Flip horizontal and vertical stay side by side at every width. */
+.fc .fc-flip-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fc .fc-flip-pair .fc-btn { min-width: 0; padding-inline: 8px; white-space: nowrap; }
+
+/* One line, so the action bar's height never changes with its text. */
+.fc .fc-consequence {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fc .fc-range { display: flex; align-items: center; gap: 8px; }
@@ -502,8 +631,8 @@
 
 .fc .fc-meta {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   color: var(--t2);
@@ -533,10 +662,8 @@
 /* The output readout. One line, under the controls it explains, and quiet
    enough that it reads as a status rather than another control. */
 .fc .fc-outsize {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+  display: grid;
+  gap: 4px;
   margin-top: 4px;
   padding-top: 10px;
   font-size: 12.5px;
@@ -544,12 +671,26 @@
   border-top: 1px dashed var(--border);
 }
 
+/* The sizes stay on one line (the value gives way before it wraps), and the
+   note under them holds a line of its own whether or not it has words, so the
+   block is the same height with the note and without. */
+.fc .fc-outsize-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fc .fc-outsize-line .fc-outsize-v { min-width: 0; overflow-wrap: anywhere; }
+
+.fc .fc-outsize-cap { min-height: 1.45em; }
+
 .fc .fc-outsize-k {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -624,6 +765,111 @@
   border-radius: var(--radius-xl);
 }
 
+/* The editor's stage: a box with the media's own ratio, so the crop overlay's
+   percentages land on the picture and never on letterbox bars. Before the file
+   has said its size it is 16:9, and snaps once to the real ratio. */
+.fc .fc-vstage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100%, calc(420px * var(--src-w, 16) / var(--src-h, 9)));
+  aspect-ratio: var(--src-w, 16) / var(--src-h, 9);
+  margin-inline: auto;
+  background: var(--bg-3);
+  border-radius: var(--radius-xl);
+}
+
+.fc .fc-vstage > video,
+.fc .fc-vstage > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The kept part of the picture; the outside is dimmed by the shadow, which the
+   stage's overflow clips. Never animated: it follows the controls at once. */
+.fc .fc-crop-keep {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  outline: 1px solid var(--t0);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--bg-0) 62%, transparent);
+}
+
+/* The custom crop box. It takes the pointer (the plain keep outline above does
+   not) and turns off touch scrolling, so a finger drags the box and not the page. */
+.fc .fc-crop-box {
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fc .fc-crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+
+.fc .fc-crop-box[data-disabled] { cursor: not-allowed; }
+
+/* Four corner handles. Each is a 44 px hit area sitting inside its corner, so
+   the stage's clipping never cuts one in half; the drawn mark is the bracket. */
+.fc .fc-crop-dot {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  touch-action: none;
+}
+
+.fc .fc-crop-dot::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--t0);
+}
+
+.fc .fc-crop-dot--nw { top: 0; left: 0; cursor: nwse-resize; }
+.fc .fc-crop-dot--ne { top: 0; right: 0; cursor: nesw-resize; }
+.fc .fc-crop-dot--sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.fc .fc-crop-dot--se { bottom: 0; right: 0; cursor: nwse-resize; }
+.fc .fc-crop-dot--nw::after { top: 0; left: 0; border-width: 3px 0 0 3px; }
+.fc .fc-crop-dot--ne::after { top: 0; right: 0; border-width: 3px 3px 0 0; }
+.fc .fc-crop-dot--sw::after { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+.fc .fc-crop-dot--se::after { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+/* Left / Top / Width / Height: two by two at every width. */
+.fc .fc-box-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fc .fc-box-grid > div { display: grid; gap: 8px; min-width: 0; }
+
+.fc .fc-seg--view { max-width: 240px; }
+
+/* The After view: the saved picture on the checkerboard, then play and the scrubber on one row. */
+.fc .fc-preview { display: grid; gap: 10px; min-width: 0; }
+
+.fc .fc-scrub-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.fc .fc-scrub-row .fc-btn { flex: none; min-width: 76px; }
+
+.fc .fc-scrub {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--accent-mid);
+}
+
+.fc .fc-scrub:disabled { opacity: .55; cursor: not-allowed; }
+
 .fc .fc-source-card {
   display: flex;
   flex-wrap: wrap;
@@ -647,10 +893,10 @@
 .fc .fc-facts > div { display: grid; gap: 2px; min-width: 0; }
 
 .fc .fc-facts dt {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t3);
 }
 
@@ -747,8 +993,8 @@
 .fc .fc-transport .fc-btn { min-width: 76px; }
 
 .fc .fc-transport-pos {
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
   color: var(--t1);
 }
@@ -806,8 +1052,8 @@
   left: 4px;
   min-width: 20px;
   padding: 2px 5px;
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   line-height: 1.3;
   text-align: center;
   color: var(--t0);
@@ -825,8 +1071,8 @@
 
 .fc .fc-frame-sel {
   margin-right: 4px;
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   color: var(--t1);
 }
 
@@ -874,6 +1120,8 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
   }
+  /* A focused field must not end up behind the pinned action bar. */
+  .fc .fc-inspector .fc-field { scroll-margin-bottom: 120px; }
   .fc .fc-actionbar {
     position: sticky;
     bottom: 0;
@@ -889,11 +1137,21 @@
 
 @media (max-width: 640px) {
   .fc .fc-video { max-height: 260px; }
+  .fc .fc-vstage { width: min(100%, calc(260px * var(--src-w, 16) / var(--src-h, 9))); }
 }
 
 @media (max-width: 480px) {
   .fc .fc-grid { grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); }
   .fc .fc-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* On a phone the fixed tab bar covers the bottom edge, so the pinned action bar
+   rests on top of it. The tab bar already pads for the home indicator. */
+@media (max-width: 767px) {
+  html.has-tabbar .fc .fc-actionbar {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px;
+  }
 }
 
 /* Touch: every control this page draws reaches 44px under a coarse pointer
@@ -902,9 +1160,12 @@
   .fc { --fc-bar-h: 63px; }
   .fc .fc-tab,
   .fc .fc-btn,
+  .fc .fc-btn--quiet,
   .fc .fc-field,
   .fc .fc-bg-pick { min-height: 44px; }
   .fc .fc-field { height: 44px; }
+  .fc .fc-seg-opt { min-height: 44px; }
+  .fc .fc-seg--shape .fc-seg-opt { min-height: 52px; }
   .fc .fc-remove { width: 44px; height: 44px; top: 12px; right: 12px; }
   .fc .fc-check { min-height: 44px; }
   .fc .fc-check input { width: 24px; height: 24px; }
@@ -917,8 +1178,54 @@
    spellings the app uses. */
 html[data-reduced-motion="true"] .fc .fc-btn:active:not(:disabled) { transform: none; }
 html[data-reduced-motion="true"] .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fc .fc-seg[data-slide]::before { transition: none !important; }
   html:not([data-reduced-motion="false"]) .fc .fc-btn:active:not(:disabled) { transform: none; }
   html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+}
+
+/* ── Edit list (Video tab) ────────────────────────────────────────────────────
+   Undo, Redo and the edits so far in one row that never wraps. Below 480px the
+   buttons shrink to their icons (the name stays on the button for assistive
+   tech); the line gives way with an ellipsis. */
+.fc .fc-editbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-width: 0; }
+
+.fc .fc-editbtn { flex: none; padding-inline: 12px; white-space: nowrap; }
+
+.fc .fc-editbtn svg { width: 16px; height: 16px; flex: none; }
+
+.fc .fc-btn.fc-editbtn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; background: transparent; border-color: var(--border); }
+
+.fc .fc-btn.fc-editbtn[aria-disabled="true"]:active { transform: none; }
+
+.fc .fc-editline {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--t1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fc .fc-editline-k { margin-right: 6px; color: var(--t3); }
+
+@media (max-width: 480px) {
+  .fc .fc-editbtn { min-width: 44px; padding-inline: 0; }
+  .fc .fc-editbtn-text {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+}
+
+/* The toast clears the pinned action bar. FileConverter measures the bar into
+   --fc-bar-live and marks <html> while it is on screen. */
+@media (max-width: 767px) {
+  html.fc-has-bar.has-tabbar .toast {
+    bottom: calc(var(--tabbar-h) + var(--fc-bar-live, 0px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom));
+  }
 }

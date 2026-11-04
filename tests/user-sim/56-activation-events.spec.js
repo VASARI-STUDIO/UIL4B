@@ -30,6 +30,7 @@
 
 import { test, expect } from './base.js'
 import { go, watch, ready } from './helpers.js'
+import { showTypeScaleCode } from './type-scale-view.js'
 
 /** The design-analytics blob this browser has written so far. */
 const usage = page => page.evaluate(() => {
@@ -142,13 +143,32 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
 
-    // The export lives in the developer view; the designer view is what mounts
-    // first. Only one of the two is ever in the DOM (they are a ternary, not a
-    // hidden sibling), so this is a real navigation, not a reveal.
-    await page.locator('#tsc-tab-developer').click()
+    // Copy CSS sits in the toolbar in every layout; the Code drawer (the Code
+    // view, below the split) is where the text being copied can be read.
+    await showTypeScaleCode(page)
     const copy = page.locator('.tsc-copy-primary')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
+    await clipboard(page).toMatch(/font-size|--/)
+
+    await counter(page, 'activation:type-scale:export').toBe(1)
+  })
+
+  test('the type scale counts the Code drawer\'s own Copy button as its export', async ({ page }) => {
+    watch(page, 'developer copying from the code drawer')
+    await allowClipboard(page)
+    await go(page, '/create/type-scale')
+    await ready(page, '/create/type-scale')
+
+    expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
+
+    expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
+    // Opening the drawer is reading, not exporting: the counter must stay unset.
+    expect(
+      (await usage(page))['activation:type-scale:export'],
+      'opening the code drawer is not a finished piece of work',
+    ).toBe(undefined)
+    await page.locator('.tsc-drawer-copy').click()
     await clipboard(page).toMatch(/font-size|--/)
 
     await counter(page, 'activation:type-scale:export').toBe(1)
@@ -162,10 +182,21 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:gradient:export'], 'nothing recorded yet').toBe(undefined)
 
-    const copy = page.locator('.grd .tl-primary .tl-btn')
+    // THE DISCRIMINATION. The toolbar primary is Save or share now. Opening it
+    // and copying a link is not an export: the counter must stay unset.
+    await page.getByRole('button', { name: 'Save or share' }).click()
+    await page.getByRole('button', { name: 'Copy link to this gradient' }).click()
+    await clipboard(page).toMatch(/\/create\/gradient\?gs=/)
+    expect(
+      (await usage(page))['activation:gradient:export'],
+      'copying a link is not a finished piece of work',
+    ).toBe(undefined)
+
+    // THE EXPORT. The code well's Copy button writes the CSS.
+    const copy = page.locator('.grd-copy')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
-    await clipboard(page).toMatch(/gradient/i)
+    await clipboard(page).toMatch(/^background: .*gradient/i)
 
     await counter(page, 'activation:gradient:export').toBe(1)
   })
@@ -180,9 +211,10 @@ test.describe('activation fires from the export, not from its neighbours', () =>
     await go(page, '/create/tint')
     await ready(page, '/create/tint')
 
-    const copy = page.getByRole('button', { name: 'Copy variables' }).first()
+    const copy = page.getByRole('menuitem', { name: 'Copy CSS' })
     // POSITIVE CONTROL: this page really does copy — otherwise "no activation"
     // would be true of a page with no working controls at all.
+    await page.locator('.tl-export-btn').click()
     await expect(copy, 'the tint tool has a copy control').toBeVisible()
     await copy.click()
     await clipboard(page).toMatch(/#[0-9a-f]{6}/i)

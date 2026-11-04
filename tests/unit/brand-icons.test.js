@@ -1,43 +1,29 @@
-// The site icons.
+// The site icons: the brand kit's files, with the favicon placed on a whole-pixel
+// grid and its ICO drawn from the SVG by scripts/favicon-ico.mjs.
 //
-// ── What was broken ─────────────────────────────────────────────────────────
+// Two failure modes this file guards:
 //
-// public/favicon.svg was 491 bytes and the ONLY icon the site shipped, and it
-// drew its mark with <text>L4B</text> in `font-family: Inter, system-ui, …`.
-// Inter is not one of the faces this project ships — it self-hosts Geist, Geist
-// Mono and Caveat — so the mark fell back to whatever the visitor's OS supplied
-// and rendered a DIFFERENT SHAPE ON EVERY MACHINE. Three glyphs set at 248px in
-// a 512 viewport, then shown at 16px, is a smudge whichever face won.
+// A MARK THAT DEPENDS ON THE VIEWER. The favicon must contain no text and name
+// no font: a mark whose outline is chosen by the visitor's font stack is not a
+// mark. (An earlier favicon set <text> in Inter, which this project never
+// shipped, and drew a different shape on every machine.)
 //
-// It also used #3B82F6 and #0A0A0A, neither of which is a token here. And there
-// was no ICO, so /favicon.ico — which browsers and link scrapers request off
-// the site root with no <link> telling them to — returned nothing; no
-// apple-touch-icon, so an iOS home-screen save used a SCREENSHOT of the page;
-// and no manifest, so an Android shortcut invented its own icon.
-//
-// ── The two failure modes this file exists for ─────────────────────────────
-//
-// A MARK THAT DEPENDS ON THE VIEWER. The first test below is the one that
-// matters: the favicon must contain no text and name no font, ever again.
-//
-// A GENERATED, COMMITTED ARTEFACT GOING STALE. Same contract as the share
-// cards: scripts/brand-icons.mjs writes public/brand-icons.json recording the
-// accent and the geometry the icons were drawn from, and the staleness test
-// re-reads those from source and compares.
+// A LINKED ICON THAT DOES NOT EXIST. Browsers and scrapers fail silently on a
+// 404 icon, so every file index.html and the manifest name is checked here.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { createHash } from 'node:crypto'
-import { MARK, pointAt } from '../../scripts/brand-mark.mjs'
-import {
-  APPLE_SIZE,
-  ICON_FILES,
-  ICO_SIZES,
-  MANIFEST_SIZE,
-  MASKABLE_SCALE,
-  readIconTokens,
-} from '../../scripts/brand-icons.mjs'
+import zlib from 'node:zlib'
+import { logoMarkup } from '../../src/config/brandLogo.js'
+
+const ICO_SIZES = [16, 32, 48, 64]
+const APPLE_SIZE = 180
+const ICON_FILES = ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'site.webmanifest']
+const MANIFEST_ICONS = [
+  ['web-app-192.png', 192, 'any'], ['web-app-512.png', 512, 'any'],
+  ['web-app-maskable-192.png', 192, 'maskable'], ['web-app-maskable-512.png', 512, 'maskable'],
+]
 
 const REPO = process.cwd()
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
@@ -57,72 +43,109 @@ function pngHeader(file) {
   }
 }
 
+/** Alpha at any pixel of a PNG payload, decoded for real (8-bit, not interlaced). */
+function pngAlpha(png) {
+  assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG', 'not a PNG payload')
+  const width = png.readUInt32BE(16)
+  const height = png.readUInt32BE(20)
+  const depth = png.readUInt8(24)
+  const colourType = png.readUInt8(25)
+  assert.equal(depth, 8, `PNG bit depth ${depth} is not covered by this decoder`)
+  assert.equal(png.readUInt8(28), 0, 'interlaced PNG is not covered by this decoder')
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colourType]
+  assert.ok(channels, `PNG colour type ${colourType} is not covered by this decoder`)
+
+  const idat = []
+  let trns = null
+  for (let o = 8; o < png.length;) {
+    const len = png.readUInt32BE(o)
+    const type = png.subarray(o + 4, o + 8).toString('ascii')
+    const data = png.subarray(o + 8, o + 8 + len)
+    if (type === 'IDAT') idat.push(data)
+    if (type === 'tRNS') trns = data
+    o += 12 + len
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat))
+  const stride = width * channels
+  const rows = []
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[y * (stride + 1)]
+    const line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)))
+    const prev = y ? rows[y - 1] : Buffer.alloc(stride)
+    for (let i = 0; i < stride; i += 1) {
+      const a = i >= channels ? line[i - channels] : 0
+      const b = prev[i]
+      const c = i >= channels ? prev[i - channels] : 0
+      let add = 0
+      if (filter === 1) add = a
+      else if (filter === 2) add = b
+      else if (filter === 3) add = (a + b) >> 1
+      else if (filter === 4) {
+        const p = a + b - c
+        const pa = Math.abs(p - a)
+        const pb = Math.abs(p - b)
+        const pc = Math.abs(p - c)
+        add = pa <= pb && pa <= pc ? a : pb <= pc ? b : c
+      } else assert.equal(filter, 0, `unknown PNG filter ${filter}`)
+      line[i] = (line[i] + add) & 255
+    }
+    rows.push(line)
+  }
+  const alphaAt = (x, y) => {
+    const row = rows[y]
+    if (colourType === 6) return row[x * 4 + 3]
+    if (colourType === 4) return row[x * 2 + 1]
+    if (colourType === 3) return trns && row[x] < trns.length ? trns[row[x]] : 255
+    return 255 // grey or RGB with no alpha channel: every pixel is opaque
+  }
+  return { width, height, alphaAt }
+}
+
+/** Alpha at the four corners of a PNG payload. */
+function pngCornerAlpha(png) {
+  const { width, height, alphaAt } = pngAlpha(png)
+  return [alphaAt(0, 0), alphaAt(width - 1, 0), alphaAt(0, height - 1), alphaAt(width - 1, height - 1)]
+}
+
+/** Alpha at the four corners of a BMP payload (the DIB form an ICO entry uses). */
+function bmpCornerAlpha(dib) {
+  const headerSize = dib.readUInt32LE(0)
+  const width = dib.readInt32LE(4)
+  const height = dib.readInt32LE(8) / 2 // an ICO's DIB height covers the image and its AND mask
+  const bpp = dib.readUInt16LE(14)
+  assert.ok(bpp === 32 || bpp === 24, `BMP icon at ${bpp} bits per pixel is not covered by this decoder`)
+  const xorStride = Math.ceil((width * bpp) / 32) * 4
+  const andStride = Math.ceil(width / 32) * 4
+  const xorStart = headerSize
+  const andStart = xorStart + xorStride * height
+  const at = (x, y) => {
+    const fromBottom = height - 1 - y // rows are stored bottom-up
+    if (bpp === 32) return dib[xorStart + fromBottom * xorStride + x * 4 + 3]
+    const masked = (dib[andStart + fromBottom * andStride + (x >> 3)] >> (7 - (x & 7))) & 1
+    return masked ? 0 : 255
+  }
+  return [at(0, 0), at(width - 1, 0), at(0, height - 1), at(width - 1, height - 1)]
+}
+
 // ── The mark ────────────────────────────────────────────────────────────────
 
 test('THE ONE THAT MATTERS: the favicon draws no text and names no font', () => {
-  // The whole defect, stated as a rule rather than as today's code. A mark whose
-  // outline is chosen by the viewer's font stack is not a mark, and this is the
-  // only place that can be enforced.
   const svg = read('public/favicon.svg')
-  assert.ok(!/<text[\s>]/i.test(svg),
-    'favicon.svg contains a <text> element. The mark must be paths and circles: '
-    + 'text renders in whatever face the visitor happens to have.')
-  assert.ok(!/font-family|font-size|font-weight/i.test(svg),
-    'favicon.svg names a font. Nothing in an icon may depend on a typeface.')
-  // And it is actually drawing something.
-  assert.match(svg, /<path\b/, 'favicon.svg has no path — the ring is missing')
-  assert.equal((svg.match(/<circle\b/g) || []).length, 2,
-    'favicon.svg should carry exactly two circles: the centre dot and the satellite')
+  assert.ok(!/<text[s>]/i.test(svg), 'favicon.svg contains <text>; the mark must be paths')
+  assert.ok(!/font-family|font-size|font-weight/i.test(svg), 'favicon.svg names a font')
+  assert.equal((svg.match(/<path[ >]/g) || []).length, 2, 'favicon.svg should carry the two symbol paths')
 })
 
-test('the favicon is drawn in the brand accent and nothing else', async () => {
-  const { accent } = await readIconTokens()
-  const svg = read('public/favicon.svg')
-  const colours = [...svg.matchAll(/(?:fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)].map((m) => m[1].toUpperCase())
-  assert.ok(colours.length >= 3, 'favicon.svg declares almost no colours — is it still drawing the mark?')
-  for (const c of new Set(colours)) {
-    assert.ok(c === accent || c === '#FFFFFF',
-      `favicon.svg paints ${c}, which is neither --accent (${accent}) nor the white it `
-      + 'knocks the mark out in. The old file hard-coded #3B82F6, a blue this project never had.')
-  }
-  assert.ok(colours.includes(accent), `favicon.svg never uses --accent (${accent})`)
+test('the favicon draws the same symbol the components draw', () => {
+  // One geometry source: src/config/brandLogo.js. A hand edit to either side fails here.
+  const symbol = logoMarkup('symbol').match(/d="([^"]+)"/g)
+  const fav = read('public/favicon.svg').match(/d="([^"]+)"/g)
+  assert.deepEqual(fav, symbol)
 })
 
-test('the mark stays on the pixel grid at 16px, which is the size it is used at', () => {
-  // Designing at 512 and hoping is what produced the smudge this replaces. Every
-  // band across the middle of the mark must be a whole device pixel at 16px, so
-  // on a 32 grid every band must be an even number of units.
-  const { ring, dot, grid } = MARK
-  const outer = ring.r + ring.stroke / 2
-  const inner = ring.r - ring.stroke / 2
-  const bands = {
-    margin: grid / 2 - outer,
-    stroke: ring.stroke,
-    moat: inner - dot.r,
-    dotDiameter: dot.r * 2,
-  }
-  for (const [name, units] of Object.entries(bands)) {
-    assert.ok(units >= 2, `the ${name} band is ${units} units — under 1px at 16px, so it disappears`)
-    assert.equal(units % 2, 0,
-      `the ${name} band is ${units} units, which is a half pixel at 16px and will blur`)
-  }
-})
-
-test('the ring break actually clears the satellite', () => {
-  // The satellite sits ON the ring's centre line, so if the break is too narrow
-  // the two merge into a blob and the mark loses the feature that distinguishes
-  // it from a plain target.
-  const { ring, satellite } = MARK
-  const half = (Math.atan2(satellite.r, ring.r) * 180) / Math.PI
-  const leading = (satellite.bearing - half) - ring.gapFrom
-  const trailing = ring.gapTo - (satellite.bearing + half)
-  assert.ok(leading > 4, `only ${leading.toFixed(1)}° of clearance before the satellite`)
-  assert.ok(trailing > 4, `only ${trailing.toFixed(1)}° of clearance after the satellite`)
-  // And the satellite is on the ring's line, which is what makes it read as
-  // sitting IN the break rather than floating beside it.
-  const p = pointAt(MARK.cx, MARK.cy, ring.r, satellite.bearing)
-  const d = Math.hypot(p.x - MARK.cx, p.y - MARK.cy)
-  assert.ok(Math.abs(d - ring.r) < 0.01, 'the satellite has left the ring line')
+test('the boot shell in index.html carries the same lockup the components draw', () => {
+  assert.ok(read('index.html').includes(logoMarkup('lockup')),
+    'index.html boot-mark SVG has drifted from src/config/brandLogo.js')
 })
 
 // ── The files ───────────────────────────────────────────────────────────────
@@ -159,6 +182,49 @@ test('favicon.ico is a real multi-size ICO, not a renamed PNG', () => {
   }
 })
 
+test('every image inside favicon.ico is transparent at its four corners', () => {
+  // The mark is the bare symbol. A background tile would show as an opaque
+  // corner, and a tab strip would then draw a coloured square around the mark.
+  // Each directory entry is decoded, whichever container it uses (PNG or BMP).
+  const b = bin('public/favicon.ico')
+  const count = b.readUInt16LE(4)
+  assert.ok(count > 0, 'favicon.ico holds no images')
+  for (let i = 0; i < count; i += 1) {
+    const o = 6 + i * 16
+    const size = b.readUInt32LE(o + 8)
+    const offset = b.readUInt32LE(o + 12)
+    const payload = b.subarray(offset, offset + size)
+    const isPng = payload.subarray(1, 4).toString('ascii') === 'PNG'
+    const corners = isPng ? pngCornerAlpha(payload) : bmpCornerAlpha(payload)
+    assert.deepEqual(corners, [0, 0, 0, 0],
+      `favicon.ico image ${i} (${b.readUInt8(o) || 256}px) has an opaque corner; the mark must not sit on a tile`)
+  }
+})
+
+test('the SVG favicon recolours for a dark browser chrome and draws no background tile', () => {
+  const svg = read('public/favicon.svg')
+  assert.match(svg, /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{[^}]*\{[^}]*fill\s*:/i,
+    'favicon.svg has no dark prefers-color-scheme rule; a dark-ink mark vanishes on a dark tab strip')
+  assert.ok(!/<rect[\s>/]/i.test(svg), 'favicon.svg draws a <rect>; the mark must not sit on a background tile')
+})
+
+test('the SVG favicon puts every straight edge of the mark on a whole pixel at 16, 32 and 48px', () => {
+  // The mark's straight edges sit at these coordinates in its own units: the
+  // left edge, the gap between the two strokes, the inner corner, the top and the
+  // foot. Between pixels, a tab-size render softens each one into a grey column.
+  const svg = read('public/favicon.svg')
+  const view = Number(svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) /)[1])
+  const placed = svg.match(/transform="translate\(([\d.]+) ([\d.]+)\) scale\(([\d.]+)\)"/)
+  assert.ok(placed, 'favicon.svg no longer places the mark with translate(x y) scale(s)')
+  const [, tx, ty, s] = placed.map(Number)
+  const near = (v) => Math.abs(v - Math.round(v)) < 1e-6
+  for (const px of [16, 32, 48]) {
+    const k = px / view
+    for (const x of [0, 100, 125, 225]) assert.ok(near((tx + x * s) * k), `x=${x} lands at ${(tx + x * s) * k}px at ${px}px`)
+    for (const y of [0, 125, 200]) assert.ok(near((ty + y * s) * k), `y=${y} lands at ${(ty + y * s) * k}px at ${px}px`)
+  }
+})
+
 test('apple-touch-icon is 180px, square and opaque', () => {
   const h = pngHeader(pub('apple-touch-icon.png'))
   assert.equal(h.width, APPLE_SIZE)
@@ -171,25 +237,18 @@ test('apple-touch-icon is 180px, square and opaque', () => {
   assert.ok(!read('public/favicon.svg').includes('apple'), 'sanity: wrong file read')
 })
 
-test('the manifest icon fits the maskable safe zone', () => {
-  const h = pngHeader(pub('icon-512.png'))
-  assert.equal(h.width, MANIFEST_SIZE)
-  assert.equal(h.height, MANIFEST_SIZE)
-
-  // Android crops a maskable icon to a shape of its choosing and only
-  // guarantees the middle 80%. The mark's furthest point is the outer edge of
-  // the satellite; scaled, it has to stay inside that circle or the launcher
-  // will shave a bite out of the logo.
-  const furthest = (MARK.ring.r + MARK.satellite.r) * MASKABLE_SCALE
-  const safeRadius = MARK.grid * 0.4
-  assert.ok(furthest <= safeRadius,
-    `the mark reaches ${furthest.toFixed(2)} units but the maskable safe radius is ${safeRadius}`)
-
+test('the manifest names the four web-app icons, and each is the size it claims', () => {
   const manifest = JSON.parse(read('public/site.webmanifest'))
-  const icon = manifest.icons.find((i) => i.src === '/icon-512.png')
-  assert.ok(icon, 'site.webmanifest does not name /icon-512.png')
-  assert.equal(icon.sizes, `${MANIFEST_SIZE}x${MANIFEST_SIZE}`)
-  assert.match(icon.purpose, /\bmaskable\b/, 'the manifest icon is not declared maskable')
+  assert.equal(manifest.icons.length, MANIFEST_ICONS.length)
+  for (const [file, size, purpose] of MANIFEST_ICONS) {
+    const icon = manifest.icons.find((i) => i.src === `/${file}`)
+    assert.ok(icon, `site.webmanifest does not name /${file}`)
+    assert.equal(icon.sizes, `${size}x${size}`)
+    assert.equal(icon.purpose, purpose)
+    const h = pngHeader(pub(file))
+    assert.equal(h.width, size)
+    assert.equal(h.height, size)
+  }
 })
 
 test('the manifest does not promise an app the product is not', () => {
@@ -210,7 +269,7 @@ test('the manifest does not promise an app the product is not', () => {
 test('index.html links every icon, with absolute hrefs', () => {
   const html = read('index.html')
   const links = {
-    'icon (svg)': /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg">/,
+    'icon (svg)': /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg" sizes="any">/,
     'icon (ico)': /<link rel="icon" href="\/favicon\.ico"/,
     'apple-touch-icon': /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png">/,
     manifest: /<link rel="manifest" href="\/site\.webmanifest">/,
@@ -280,32 +339,21 @@ test('the runtime chrome tint reads the token instead of restating it', () => {
     'the runtime theme-color should read --bg-0 rather than hard-code the grounds')
 })
 
-// ── Staleness ───────────────────────────────────────────────────────────────
-
-test('THE STALENESS ONE: the committed icons were drawn from today\'s sources', async () => {
-  // A committed PNG cannot fail a build when the brand moves underneath it, so
-  // the generator records what it drew FROM and this compares against source.
-  const manifest = JSON.parse(read('public/brand-icons.json'))
-  const { accent, ground } = await readIconTokens()
-
-  assert.equal(manifest.accent, accent,
-    'the accent has moved since the icons were drawn, so the favicon is the wrong '
-    + 'blue. Run `npm run icons`.')
-  assert.equal(manifest.ground, ground,
-    'the light ground has moved since the manifest was written. Run `npm run icons`.')
-  assert.deepEqual(manifest.mark, JSON.parse(JSON.stringify(MARK)),
-    'the mark geometry in scripts/brand-mark.mjs has changed since the icons were '
-    + 'drawn, so the ICO and the PNGs no longer match the SVG. Run `npm run icons`.')
-  assert.equal(manifest.maskableScale, MASKABLE_SCALE)
-
-  // And the SVG itself, so a hand-edit to the committed file is caught too —
-  // the rasters are renderings OF it and would silently disagree.
-  // Normalised the same way the generator does: core.autocrlf is true, so the
-  // file is LF in the repo and CRLF in the working tree, and hashing raw bytes
-  // would fail on a clean checkout rather than on a real edit.
-  const sha = createHash('sha256')
-    .update(read('public/favicon.svg').replace(/\r\n/g, '\n')).digest('hex')
-  assert.equal(manifest.faviconSvgSha256, sha,
-    'public/favicon.svg has been edited by hand since the rasters were generated, '
-    + 'so favicon.ico and the PNGs no longer show the same mark. Run `npm run icons`.')
+test('the 16px image in favicon.ico is drawn from the pixel-snapped SVG, not left stale', () => {
+  // Read off the ICO itself, so an SVG change without `npm run icons:ico` fails
+  // here. At 16px the mark's left stroke fills columns 2-5 from row 4, the gap
+  // between the strokes is column 6, and nothing sits above row 4 or left of 2.
+  const ico = bin('public/favicon.ico')
+  const count = ico.readUInt16LE(4)
+  const entry = [...Array(count)].map((_, i) => 6 + 16 * i).find((o) => ico[o] === 16)
+  assert.ok(entry !== undefined, 'favicon.ico has no 16px image')
+  const png = ico.subarray(ico.readUInt32LE(entry + 12), ico.readUInt32LE(entry + 12) + ico.readUInt32LE(entry + 8))
+  const { alphaAt } = pngAlpha(png)
+  for (let x = 0; x < 16; x += 1) assert.equal(alphaAt(x, 3), 0, `row 3 is above the mark, but x=${x} has alpha`)
+  for (let y = 0; y < 16; y += 1) assert.equal(alphaAt(1, y), 0, `column 1 is left of the mark, but y=${y} has alpha`)
+  for (let x = 2; x <= 5; x += 1) assert.equal(alphaAt(x, 4), 255, `the top edge of the left stroke is soft at x=${x}`)
+  for (let y = 4; y <= 8; y += 1) {
+    assert.equal(alphaAt(2, y), 255, `the left edge is soft at y=${y}`)
+    assert.equal(alphaAt(6, y), 0, `the gap between the strokes is filled at y=${y}`)
+  }
 })

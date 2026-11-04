@@ -10,6 +10,7 @@ import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
+import { isPostLimit } from '../utils/communityLimits'
 import {
   ICON_ACCEPT_ATTR, ICON_ACCEPT_LABEL, ICON_MAX_LABEL,
   appendIconSubmission, buildIconPayload, normaliseIconSvg,
@@ -403,14 +404,18 @@ export default function Community({ toast }) {
     [serverIcons, iconLocal],
   )
 
-  const toggleSave = useCallback((id) => {
-    setSaves(prev => {
-      const next = new Set(prev)
+  // Saves belong to an account: signed out, a press asks to sign in first. The
+  // stored set is read again after the wait, because signing in may have
+  // merged the account's saves into it.
+  const toggleSave = useCallback(async (id) => {
+    if (!await requireLogin('save designs', { free: true, signup: true })) return
+    setSaves(() => {
+      const next = loadSaves()
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }, [])
+  }, [requireLogin])
 
   // A saved item gets +1 on its displayed count so the ranking reacts to the
   // user's own save — exactly the "ranking by saves" behaviour, illustratively.
@@ -454,10 +459,13 @@ export default function Community({ toast }) {
     try {
       await publishToQueue({ ...queued, localId: item.id })
       toast?.('Design submitted for review')
-    } catch {
+    } catch (err) {
       // Never claim it reached the queue when it did not. The local copy is
-      // kept, so nothing the user made is lost.
-      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+      // kept, so nothing the user made is lost. A refusal by the post limits
+      // gets its own words, because trying again at once cannot work.
+      toast?.(isPostLimit(err)
+        ? `${err.message} Your design is saved in this browser.`
+        : 'Saved locally — we could not reach the review queue. Try again later.')
     }
   }
 
@@ -489,11 +497,15 @@ export default function Community({ toast }) {
     }
     try {
       return await publishToQueue({ ...queued, localId: item.id })
-    } catch {
+    } catch (err) {
       // Never claim it reached the queue when it did not. Until the founder
       // publishes docs/design/community-icon-rules.patch, firestore.rules does
       // not know the 'icon' kind and this is the branch every submission takes.
-      toast?.('Saved locally — we could not reach the review queue. Try again later.')
+      // A refusal by the post limits says so instead; the icon stays unsynced
+      // and can be sent again once the limit allows.
+      toast?.(isPostLimit(err)
+        ? `${err.message} Your icon is saved in this browser and can be sent again later.`
+        : 'Saved locally — we could not reach the review queue. Try again later.')
       return null
     }
   }, [user, toast])

@@ -34,6 +34,7 @@
 // layout tests directly against this file) will not. Matches the convention
 // already used by colorHandoff.js, paletteAdjust.js and the rest.
 import { readDesign, typeLadder, contrast, inkFor, grade } from './styleGuideExport.js'
+import { fmtRatio } from './exportTemplates/shared.js'
 
 // A4 at 96dpi. The sheet is authored at these dimensions and scaled up at draw
 // time, so every measurement below reads in familiar CSS pixels.
@@ -133,7 +134,7 @@ export function buildStyleGuideLayout(design, { projectName = 'Design System', w
       // Contrast evidence under each swatch: the number, and what it passes.
       const onWhite = contrast(hex, '#FFFFFF')
       ops.push({
-        op: 'text', text: `${round(onWhite)}:1 on white · ${grade(onWhite)}`,
+        op: 'text', text: `${fmtRatio(onWhite)}:1 on white · ${grade(onWhite)}`,
         x, y: top + cellH + 16,
         font: `400 10px ${JSON.stringify(d.body)}`, fill: MUTED, maxWidth: cellW,
       })

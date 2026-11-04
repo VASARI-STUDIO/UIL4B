@@ -64,6 +64,14 @@ export function onAuthStateChanged(auth, next, error, complete) {
 
 export function signOut(auth) {
   if (!isFakeAuth(auth)) return realSignOut(auth)
+  // `authFail: { signOut: code }` makes the call reject; a spec clears
+  // window.__UIL4B_TEST_SESSION__.authFail to let a retry succeed.
+  const refused = authFailFor('signOut')
+  if (refused) return Promise.reject(refused)
+  // `__UIL4B_TEST_AUTH__.delays.signOut = ms` holds the call, so a spec can read
+  // the page while a sign-out is in flight.
+  const wait = fakeAuth.delays.signOut || 0
+  if (wait) return new Promise((resolve) => setTimeout(resolve, wait)).then(() => auth.signOut())
   return auth.signOut()
 }
 
@@ -83,6 +91,9 @@ const refuse = (what) => Promise.reject(authError(
 
 export function signInWithEmailAndPassword(auth, email, password) {
   if (!isFakeAuth(auth)) return realSignInWithEmailAndPassword(auth, email, password)
+  // A session declared with lateSignIn is waiting to be signed in; the form
+  // completes it. Any other session has nothing to check a password against.
+  if (auth.awaitingLateSignIn?.()) return Promise.resolve({ user: auth.signInNow() })
   return refuse('Signing in with a password')
 }
 
@@ -138,8 +149,17 @@ export function updateEmail(user, newEmail) {
  * flag; only `reload()` brings it onto the user, as the real SDK does. */
 export function sendEmailVerification(user, settings) {
   if (!isFakeUser(user)) return realSendEmailVerification(user, settings)
+  // `sendEmailVerificationWithReturn` refuses only a send that carries a return
+  // address, as Firebase does for a domain it has not authorised; the plain
+  // send that follows is let through.
+  const refusedReturn = settings ? authFailFor('sendEmailVerificationWithReturn') : null
+  if (refusedReturn) {
+    fakeAuth.verifySends.push({ withReturn: true, refused: true })
+    return Promise.reject(refusedReturn)
+  }
   const refused = authFailFor('sendEmailVerification')
   if (refused) return Promise.reject(refused)
+  fakeAuth.verifySends.push({ withReturn: !!settings, refused: false })
   fakeAuth.mail.push({ kind: 'verify-email', to: user.email })
   return Promise.resolve()
 }
@@ -156,12 +176,21 @@ export function verifyBeforeUpdateEmail(user, newEmail, settings) {
 export function reload(user) {
   if (!isFakeUser(user)) return realReload(user)
   user.emailVerified = fakeAuth.account.emailVerified === true
+  fakeAuth.reloads += 1
   return Promise.resolve()
 }
 
+/* Every call is counted in `fakeAuth.calls` (read from a spec as
+ * `window.__UIL4B_TEST_AUTH__.calls`), and `delays.updatePassword` holds the
+ * answer back that many ms, so a spec can click again while the first call is
+ * still in flight. Both are inert unless a spec sets them. */
 export function updatePassword(user, newPassword) {
   if (!isFakeUser(user)) return realUpdatePassword(user, newPassword)
-  return Promise.resolve()
+  fakeAuth.calls.push('updatePassword')
+  const refused = authFailFor('updatePassword')
+  if (refused) return Promise.reject(refused)
+  const wait = fakeAuth.delays.updatePassword || 0
+  return wait ? new Promise((resolve) => setTimeout(resolve, wait)) : Promise.resolve()
 }
 
 /* Reauthentication SUCCEEDS for a declared session, and that is a decision.
@@ -173,6 +202,8 @@ export function updatePassword(user, newPassword) {
  * read a resolved reauthentication as proof the password was right. */
 export function reauthenticateWithCredential(user, credential) {
   if (!isFakeUser(user)) return realReauthenticateWithCredential(user, credential)
+  const refused = authFailFor('reauthenticateWithCredential')
+  if (refused) return Promise.reject(refused)
   return Promise.resolve({ user, providerId: 'password', operationType: 'reauthenticate' })
 }
 

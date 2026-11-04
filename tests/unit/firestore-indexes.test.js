@@ -17,6 +17,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
+import { queueOrderField } from '../../src/utils/communityLimits.js'
 
 const ROOT = process.cwd()
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -25,6 +26,9 @@ const indexes = JSON.parse(read('firestore.indexes.json')).indexes
 const firebaseJson = JSON.parse(read('firebase.json'))
 
 const QUEUE_API = 'src/utils/communityQueueApi.js'
+const ADMIN_PAGE = 'src/pages/Admin.jsx'
+const ANALYTICS = 'src/utils/analytics.js'
+const AGG_COLLECTION_RE = /AGGREGATE_COLLECTION\s*=\s*'analytics-daily'/
 const queueApi = stripJs(read(QUEUE_API))
 const collectionName = /QUEUE_COLLECTION\s*=\s*'([^']+)'/.exec(stripJs(read('src/utils/communityQueue.js')))[1]
 
@@ -35,6 +39,12 @@ function functionBody(src, name) {
   const end = src.indexOf('\n}', start)
   return src.slice(start, end + 2)
 }
+
+// A query sorts on a literal field or on queueOrderField(), which is createdAt
+// until the community limits ship and submittedAt after. The index file has to
+// serve both, so that call expands to both fields.
+const ORDER_BY = /orderBy\(\s*(?:'([^']+)'|(queueOrderField)\(\))\s*,\s*'(asc|desc)'/
+const orderFields = (m) => (m[1] ? [m[1]] : [queueOrderField(false), queueOrderField(true)])
 
 /**
  * Index field lists a function's query needs. A `where` guarded by an `if (...)`
@@ -51,19 +61,20 @@ function requiredShapes(body) {
     assert.equal(m[2], '==', `${m[1]}: only equality filters are modelled here`)
     ;(/\bif\s*\(/.test(line) ? optional : required).push(m[1])
   }
-  const sort = /orderBy\(\s*'([^']+)'\s*,\s*'(asc|desc)'/.exec(body)
+  const sort = ORDER_BY.exec(body)
   assert.ok(sort, 'query has no orderBy')
+  const dir = sort[3] === 'desc' ? 'DESCENDING' : 'ASCENDING'
   const shapes = []
   for (let mask = 0; mask < (1 << optional.length); mask++) {
     const eq = [...required, ...optional.filter((_, i) => mask & (1 << i))]
-    shapes.push({ eq, sortField: sort[1], dir: sort[2] === 'desc' ? 'DESCENDING' : 'ASCENDING' })
+    for (const sortField of orderFields(sort)) shapes.push({ eq, sortField, dir })
   }
   return shapes
 }
 
-function hasIndex({ eq, sortField, dir }) {
+function hasIndex({ eq, sortField, dir }, collection = collectionName) {
   return indexes.some((ix) => {
-    if (ix.collectionGroup !== collectionName || ix.queryScope !== 'COLLECTION') return false
+    if (ix.collectionGroup !== collection || ix.queryScope !== 'COLLECTION') return false
     const f = ix.fields
     if (f.length !== eq.length + 1) return false
     const last = f[f.length - 1]
@@ -81,8 +92,41 @@ test('firebase.json points Firestore at firestore.indexes.json', () => {
 
 test('listQueue (admin community queue) has its composite index', () => {
   const shapes = requiredShapes(functionBody(queueApi, 'listQueue'))
-  assert.deepEqual(shapes, [{ eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' }])
+  assert.deepEqual(shapes, [
+    { eq: ['status'], sortField: 'createdAt', dir: 'DESCENDING' },
+    { eq: ['status'], sortField: 'submittedAt', dir: 'DESCENDING' },
+  ])
   for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
+})
+
+test('the Admin Prompts tab query (community-prompts, one status, newest first) has its composite index', () => {
+  const src = stripJs(read(ADMIN_PAGE))
+  assert.ok(/collection\(db,\s*'community-prompts'\)/.test(src), 'the Admin prompts query moved; update this case')
+  const loader = src.slice(src.indexOf('const loadPrompts'), src.indexOf('const selectPromptFilter'))
+  assert.ok(/where\(\s*'status'\s*,\s*'=='/.test(loader), 'the Admin prompts query lost its status filter')
+  const sort = ORDER_BY.exec(loader)
+  assert.ok(sort && sort[3] === 'desc', 'the Admin prompts query no longer sorts newest first')
+  for (const sortField of orderFields(sort)) {
+    assert.ok(hasIndex({ eq: ['status'], sortField, dir: 'DESCENDING' }, 'community-prompts'),
+      `community-prompts needs a status ASC + ${sortField} DESC index in firestore.indexes.json`)
+  }
+})
+
+test('the Admin overview range read (analytics-daily, day >= since, newest day first) needs no composite index', () => {
+  const src = stripJs(read(ANALYTICS))
+  const start = src.indexOf('export async function getAggregateAnalytics(')
+  assert.notEqual(start, -1, 'getAggregateAnalytics moved; update this case')
+  const body = src.slice(start, src.indexOf('\n}', start) + 2)
+  // The range bound and the sort sit on the SAME field. Firestore serves a range filter plus an
+  // orderBy on that one field from the automatic single-field index, so no entry is needed. If the
+  // sort moved to another field, or a second inequality appeared, this would need a composite index.
+  const wheres = [...body.matchAll(/\bwhere\(\s*'([^']+)'\s*,\s*'([^']+)'/g)]
+  assert.deepEqual(wheres.map((m) => [m[1], m[2]]), [['day', '>=']], 'the range read must be one day >= filter')
+  const sort = ORDER_BY.exec(body)
+  assert.ok(sort && sort[1] === 'day' && sort[3] === 'desc', 'the range read must sort by day, newest first')
+  assert.ok(AGG_COLLECTION_RE.test(src), 'the analytics-daily collection name moved; update this case')
+  assert.ok(!indexes.some((ix) => ix.collectionGroup === 'analytics-daily'),
+    'analytics-daily now has a composite index; this query does not need one, so check the case still holds')
 })
 
 test('listMySubmissions has an index with and without the kind filter', () => {
@@ -113,7 +157,7 @@ function sourceFiles(dir) {
 }
 
 test('no other src/ or api/ query combines where with orderBy, or filters on two inequality fields, unaccounted for', () => {
-  const COVERED = new Set([QUEUE_API])
+  const COVERED = new Set([QUEUE_API, ADMIN_PAGE, ANALYTICS])
   const INEQUALITY = new Set(['<', '<=', '>', '>=', '!=', 'not-in'])
   const orderedWhere = []
   const multiInequality = []
@@ -127,5 +171,5 @@ test('no other src/ or api/ query combines where with orderBy, or filters on two
   assert.deepEqual(orderedWhere.filter((r) => !COVERED.has(r)), [],
     'a where + orderBy query needs an entry in firestore.indexes.json and a case in this test')
   assert.deepEqual(multiInequality, [], 'inequality filters on different fields need a composite index')
-  assert.deepEqual(orderedWhere, [...COVERED], 'the covered file no longer holds a where + orderBy query')
+  assert.deepEqual([...orderedWhere].sort(), [...COVERED].sort(), 'the covered file no longer holds a where + orderBy query')
 })

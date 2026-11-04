@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { toastDuration } from '../utils/toastDuration'
 
-export function useToast() {
+export function useToast({ listen = true } = {}) {
   const [message, setMessage] = useState('')
   const [type, setType] = useState('success')
   const [visible, setVisible] = useState(false)
   const [action, setAction] = useState(null)
   const timer = useRef(null)
   const lastMs = useRef(0)
+  const actionRef = useRef(null)
 
   useEffect(() => {
     return () => clearTimeout(timer.current)
@@ -30,6 +31,7 @@ export function useToast() {
     setMessage(msg)
     setType(kind)
     setAction(act)
+    actionRef.current = act
     setVisible(true)
     clearTimeout(timer.current)
     const ms = toastDuration(msg, kind, { action: !!act })
@@ -39,14 +41,32 @@ export function useToast() {
 
   // Components with no toast of their own (the header) ask for one with
   //   window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type } }))
+  // `detail.action` ({ label, onAction }) adds the action button, and the
+  // listener marks `detail.handled` so a sender can tell a toast was shown.
+  // `listen: false` is for a caller that shows its own toast on demand.
   useEffect(() => {
+    if (!listen) return undefined
     const onToast = (event) => {
-      const { message: msg, type: kind } = event.detail || {}
-      if (msg) toast(msg, kind)
+      const { message: msg, type: kind, action: act } = event.detail || {}
+      if (!msg) return
+      event.detail.handled = true
+      toast(msg, kind, act ? { action: act } : null)
     }
     window.addEventListener('uil4b:toast', onToast)
     return () => window.removeEventListener('uil4b:toast', onToast)
-  }, [toast])
+  }, [toast, listen])
+
+  // A sender whose action no longer applies (a retry for an account that has
+  // signed out) takes its own toast down: `detail.onAction` names the action.
+  useEffect(() => {
+    if (!listen) return undefined
+    const onDismiss = (event) => {
+      const onAction = event.detail?.onAction
+      if (onAction && actionRef.current?.onAction === onAction) dismiss()
+    }
+    window.addEventListener('uil4b:toast-dismiss', onDismiss)
+    return () => window.removeEventListener('uil4b:toast-dismiss', onDismiss)
+  }, [dismiss, listen])
 
   const hold = useCallback(() => { clearTimeout(timer.current) }, [])
   const release = useCallback(() => {

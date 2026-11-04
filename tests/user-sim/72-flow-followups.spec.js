@@ -20,7 +20,7 @@
 //      saves up to 3 projects — go Pro for unlimited." for 1.8 seconds.
 //   4  Toasts. Duplicate at the cap: `toast-error` shown for 1,862ms, zero
 //      buttons, pointer-events:none.
-//   5  /settings opened on "Subscription".
+//   5  /settings opened on "Plan and billing".
 //   6  The gate's "Not now? Closing this changes nothing" line:
 //      display:none at 390 on both the gate and the signup variant. The gate
 //      ended at y=785 of 844; the signup dialog at 822 with "Already have an
@@ -343,7 +343,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('5 — settings opens on Account, and remembers the section you chose', () => {
   for (const size of [PHONE, DESK]) {
-    test(`${size[0]}px: Account first; Subscription is remembered across a reload`, async ({ browser }) => {
+    test(`${size[0]}px: Account first; Plan and billing is remembered across a reload`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a free account opening its settings (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 1 })
@@ -357,10 +357,17 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
         await expect(current).toHaveText(/Account/)
         await page.locator('#settab-support').click()
         await expect(page.locator('#set-support')).toBeVisible()
-        await go(page, '/settings')
-        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
-        await page.locator('#settab-support').click()
-        await expect(page.locator('#set-support')).toBeVisible()
+        // An open section is a history entry, so a reload keeps it open; Back
+        // then shows the list with it as the current row.
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#set-support'), 'a reload keeps the open section').toBeVisible()
+        await page.goBack()
+        await expect(page.locator('.settings-nav')).toBeVisible()
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
+        // A fresh visit opens on the list, with the remembered row current.
+        await go(page, '/settings?fresh=1')
+        await expect(page.locator('.settings-nav')).toBeVisible()
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
         await context.close()
         return
       }
@@ -369,10 +376,10 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
       await expect(page.locator('#set-account')).toBeVisible()
       await expect(page.locator('#set-support')).toBeHidden()
 
-      await page.getByRole('tab', { name: 'Subscription' }).click()
+      await page.getByRole('tab', { name: 'Plan and billing' }).click()
       await expect(page.locator('#set-support')).toBeVisible()
       await go(page, '/settings')
-      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Subscription/)
+      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Plan and billing/)
       await context.close()
     })
   }
@@ -405,9 +412,9 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
       await saveBtn.click()
       const dialog = page.getByRole('dialog', { name: /Create your free account/i })
       await expect(dialog).toBeVisible()
-      const foot = dialog.locator('.ui-login-aside-foot')
+      const foot = dialog.getByRole('button', { name: 'Not now' })
       await expect(foot).toBeVisible()
-      await expect(foot).toContainText(/Not now\? Closing this changes nothing/)
+      await expect(foot).toBeVisible()
       const [footBox, dialogBox] = await Promise.all([foot.boundingBox(), dialog.boundingBox()])
       expect(footBox.y + footBox.height, 'the line must sit inside the dialog\'s visible box').toBeLessThanOrEqual(dialogBox.y + dialogBox.height + 1)
       expect(footBox.y + footBox.height, 'and above the bottom of the screen').toBeLessThanOrEqual(PHONE[1])
@@ -443,9 +450,9 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     const signup = page.getByRole('dialog', { name: /Create your free account/i })
     await expect(signup).toBeVisible()
     await expect(signup).not.toHaveClass(/ui-login--interrupt/)
-    await expect(signup.locator('.ui-login-aside-foot')).toBeHidden()
+    await expect(signup.getByRole('button', { name: 'Not now' })).toBeVisible()
     await expect.poll(() => signup.evaluate((el) => el.scrollHeight - el.clientHeight), 'nothing on the sign-up pane may sit below the fold').toBe(0)
-    await expect(signup.getByRole('button', { name: /Already have an account/ })).toBeVisible()
+    await expect(signup.getByRole('button', { name: /Have an account\? Log in/ })).toBeVisible()
     await context.close()
   })
 })
@@ -483,7 +490,9 @@ test.describe('7 — an onboarded account typing /onboarding lands on its home',
 // 8 — the shared dialog hook hands focus back a frame later
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('8 — the dialog hook hands focus back a frame after the close, not inside it', () => {
-  for (const size of [PHONE, DESK]) {
+  // Desktop only: the floating Feedback button is not drawn below 768px, and it
+  // is the opener this test returns focus to.
+  for (const size of [DESK]) {
     // Neither the project detail nor New project is a dialog, so the dialog this
     // hook serves on /projects is the Feedback form, opened from the floating
     // Feedback button (FeedbackModal uses the same useModalDialog).

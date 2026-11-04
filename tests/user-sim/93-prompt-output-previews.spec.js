@@ -14,15 +14,19 @@
 // It is asserted on the RENDERED attribute rather than in the source, because
 // what matters is what the browser was handed.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS } from '../../src/data/promptPreviewAssets.js'
+
+// parked: only an admin can open /discover/prompts, so every page here signs in as the admin.
+// The admin plan is Pro, so this file says nothing about Free or signed-out gating.
 
 const withPreview = COMMUNITY_PROMPTS.filter((p) => PROMPT_PREVIEW_IDS.includes(p.id))
 
 async function openLibrary(browser, width = 1280) {
   const context = await browser.newContext({ viewport: { width, height: 1000 } })
   const page = await context.newPage()
+  await signIn(page, { admin: true })
   watch(page, 'a visitor browsing the prompt library for something to copy')
   await go(page, '/discover/prompts')
   await expect(page.locator('.pl-card').first()).toBeVisible()
@@ -40,6 +44,13 @@ test.describe('the prompt library shows its outputs', () => {
 
     // Every poster must actually load. A broken <img> here is a grey box where
     // the product's shop window should be, and it would not fail any other test.
+    // Wait for each one to settle first: a card that starts playing mounts its
+    // animated poster (a few hundred KB), and one still downloading is not broken.
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('[data-preview-kind="output"] img')].every((img) => img.complete),
+      null,
+      { timeout: 15_000 },
+    ).catch(() => {})
     const broken = await page.evaluate(() => {
       const out = []
       for (const img of document.querySelectorAll('[data-preview-kind="output"] img')) {

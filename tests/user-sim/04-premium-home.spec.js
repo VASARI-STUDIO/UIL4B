@@ -227,7 +227,7 @@ test.describe('premium homepage', () => {
      * its primary CTA is a link to that tool's live route. */
     const rail = page.locator('.sp-rail-row')
     await expect(rail).toHaveCount(4)
-    await expect(rail).toHaveText([/Palette builder/, /Icon library/, /Font gallery/, /File conversion/])
+    await expect(rail).toHaveText([/Palette Builder/, /Icon Library/, /Font Gallery/, /File Converter/])
 
     const lede = (await page.locator('.sp-bench-lede').innerText()).toLowerCase()
     expect(lede, 'the bench lede no longer states the tool count the tree gives')

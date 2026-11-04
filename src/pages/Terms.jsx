@@ -21,8 +21,8 @@
 //       https://mobbin.com/sites/sections/9d751164-5282-43ef-8f89-ec642922c329  Intercom
 //       https://mobbin.com/sites/sections/99c5b5d0-94d4-4e79-8ff3-6afadd19f8a3  Customer.io
 //       https://mobbin.com/sites/sections/5a9e5e01-f8ab-4890-af79-e3f9dbee7515  Harvest
-//     and the ones that cannot fit a rail put a numbered index at the top
-//     instead, which is exactly what this rail becomes below 1000px:
+//     and the ones that cannot fit a rail put the contents at the top instead,
+//     which is what the rail becomes below 1000px (see LegalContents):
 //       https://mobbin.com/sites/sections/25be7dfb-8c1f-4647-92fe-4c673a7ad04d  TIDAL
 //       https://mobbin.com/sites/sections/e9dbc73f-fc73-437a-8cf9-ac04a6031b7b  Shopify
 //
@@ -50,18 +50,20 @@
 // id cut from the rendered title would change with the language and every
 // bookmark to it would break.
 import { useI18n } from '../contexts/I18nContext'
+import LegalContents, { BackToContents } from '../components/legal/LegalContents'
 import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
 
 /* Each row names the keys it renders and nothing else. `items` marks the one
    clause that is a list rather than a paragraph; `contact` marks the one that
-   ends in a mailto. Both were already true of this page — they are recorded
-   here so the renderer below has no per-section special cases in its markup. */
+   ends in a mailto; `more` is a further paragraph after `text`. They are
+   recorded here so the renderer below has no per-section special cases in its
+   markup. A `more` key missing from a locale falls back to English. */
 const SECTIONS = [
   { id: 'terms-s1', title: 'terms.s1Title', text: 'terms.s1Text' },
   { id: 'terms-s2', title: 'terms.s2Title', text: 'terms.s2Text' },
   { id: 'terms-s3', title: 'terms.s3Title', text: 'terms.s3Text' },
-  { id: 'terms-s4', title: 'terms.s4Title', text: 'terms.s4Text' },
+  { id: 'terms-s4', title: 'terms.s4Title', text: 'terms.s4Text', more: 'terms.s4AiText' },
   { id: 'terms-s5', title: 'terms.s5Title', intro: 'terms.s5Intro', items: 'terms.s5Items' },
   { id: 'terms-s6', title: 'terms.s6Title', text: 'terms.s6Text' },
   { id: 'terms-s7', title: 'terms.s7Title', text: 'terms.s7Text' },
@@ -79,29 +81,14 @@ export default function Terms() {
       </header>
 
       <div className="cpg-split">
-        <div className="cpg-rail-col">
-          {/* `aria-label`, not a visible heading: the rail is a landmark whose
-              own name says what it is, and a heading above it would add a
-              ninth entry to a document whose headings are numbered 1–8. */}
-          <nav className="cpg-rail lgl-toc" aria-label="On this page">
-            <ol>
-              {SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <a className="cpg-rail-row" href={`#${s.id}`}>
-                    <span className="cpg-rail-label">{t(s.title)}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        </div>
+        <LegalContents items={SECTIONS.map((s) => ({ id: s.id, label: t(s.title) }))} />
 
         <div className="legal-card lgl-doc">
           {SECTIONS.map((s) => {
             const items = s.items ? t(s.items) : null
             return (
               <section className="lgl-sec" id={s.id} key={s.id}>
-                <h2 className="legal-h lgl-h">{t(s.title)}</h2>
+                <h2 className="legal-h lgl-h" tabIndex={-1}>{t(s.title)}</h2>
                 {s.intro && <p className="lgl-p">{t(s.intro)}</p>}
                 {items && (
                   <ul className="lgl-list">
@@ -119,6 +106,8 @@ export default function Terms() {
                     )}
                   </p>
                 )}
+                {s.more && <p className="lgl-p">{t(s.more)}</p>}
+                <BackToContents />
               </section>
             )
           })}

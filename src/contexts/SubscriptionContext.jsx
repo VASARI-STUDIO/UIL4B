@@ -24,7 +24,15 @@ const BILLING_INTERVALS = new Set(['monthly', 'yearly'])
 // quote it to support and the founder can find the exact log line.
 function billingError(data, status, fallback) {
   const base = data?.error || `${fallback} (server returned ${status})`
-  return new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
+  const error = new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
+  // The server's machine-readable reason (e.g. 'email-unverified'), so a page
+  // can offer the right next step instead of only showing the sentence.
+  if (data?.code) error.code = data.code
+  // The HTTP status and reference id, so a page can word the failure itself
+  // instead of showing the server's text.
+  error.status = status
+  if (data?.correlationId) error.correlationId = data.correlationId
+  return error
 }
 
 // Free-tier save allowance — the single source of truth for BOTH enforcement
@@ -166,7 +174,9 @@ export function SubscriptionProvider({ children }) {
 
   // Creates an embedded Checkout session and returns its client_secret, used by
   // the /checkout page to mount Stripe's <EmbeddedCheckout />.
-  const createCheckoutSession = useCallback(async (interval = 'monthly') => {
+  // `onSession`, when given, receives the server's answer (the currency the
+  // session was created in) next to the client secret this returns.
+  const createCheckoutSession = useCallback(async (interval = 'monthly', onSession) => {
     if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
     const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
@@ -177,6 +187,7 @@ export function SubscriptionProvider({ children }) {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw billingError(data, res.status, 'Checkout failed')
+    if (typeof onSession === 'function') onSession(data)
     return data.clientSecret
   }, [])
 

@@ -1,10 +1,7 @@
-// The defect sweep — the leftovers of the two August 2026 QA audits.
+// The defect sweep — layout checks from two QA audits.
 //
 // The responsive audit (M1, M6, N1–N8) and the mobile audit (S3, S4, S5, S10,
-// and S16 above 768px) — both deleted 2026-09-05; what each number was and what
-// holds it now is in docs/qa/defect-register-2026-08.md,
-// minus everything PR #263 and PR #271 already landed and minus every
-// homepage-scoped finding (the founder is reworking that surface separately).
+// and S16 above 768px). Homepage-scoped findings are not covered here.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY EVERY ASSERTION HERE IS RENDERED GEOMETRY
@@ -29,12 +26,12 @@ import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
-// EVERY CREATE PATH BELOW IS A `/create/*` URL, and that is not cosmetic. PR
-// #266 moved the Create tools (/emoji → /create/emoji, /color/palette →
+// EVERY CREATE PATH BELOW IS A `/create/*` URL, and that is not cosmetic. The
+// Create tools moved (/emoji → /create/emoji, /color/palette →
 // /create/palette, and 22 more — src/data/legacyRoutes.js has the table) and
-// gave every retired URL a 301. Playwright FOLLOWS a redirect, so this file went
-// on passing while exercising the redirect rather than the route, and nothing in
-// the run said so. A route that has to be redirected to before it can be
+// every retired URL gets a 301. Playwright FOLLOWS a redirect, so a test on an
+// old URL would pass while exercising the redirect rather than the route, and
+// nothing in the run would say so. A route that has to be redirected to before it can be
 // measured is not the route the test claims to cover, and the day one of those
 // 301s is dropped the test would start measuring a 404 shell instead.
 
@@ -108,11 +105,10 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
   // is unchanged and browses signed out, which is what most of this file is
   // about.
   if (as) await signIn(page, as)
-  // One Tap used to be routed here, per page. It is stubbed for the whole suite
-  // in base.js now — on the context, so it covers this hand-built one too — and
-  // this copy is gone rather than racing it: a page route takes precedence over
-  // a context route, so leaving it would have made the per-spec stub the silent
-  // winner. Same reasoning, one place; see base.js.
+  // One Tap is not stubbed here. It is stubbed for the whole suite in base.js,
+  // on the context, so it covers this hand-built one too. A per-page stub would
+  // race it: a page route takes precedence over a context route, so the
+  // per-spec stub would be the silent winner. One place; see base.js.
   await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
@@ -120,14 +116,13 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
   // Landed on the route it asked for, not on a redirect's destination. This is
   // the guard for the staleness above: without it a retired path in the table
   // keeps passing, silently, on whatever the 301 sends it to.
-  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path)
+  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path.split('#')[0])
   return { ctx, page }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // /info accordion regions have an accessible name
 // ─────────────────────────────────────────────────────────────────────────────
-// Found while landing S9 in PR #271 and deliberately left for its own commit.
 // Each panel's `aria-labelledby` named the panel's OWN id, so the region was
 // labelled by itself and computed no accessible name — a screen-reader user
 // opening one heard "region" and nothing that said which of the twelve it was.
@@ -169,22 +164,22 @@ test('/info · every accordion panel is a region with its section name', async (
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// S16 above 768px · the half of it PR #271 scoped out
+// S16 above 768px · the half the phone test does not cover
 // ─────────────────────────────────────────────────────────────────────────────
 // 24-mobile-overhaul.spec.js pins the phone half of S16 (≤768px). This is the
-// rest: 3 to 5 of the 9 specimens were still cut from 769px upward, showing
-// 31–59% of the string, on the reasoning that those viewports are wider. Being
-// wider was not enough.
+// rest: from 769px upward, being wider than a phone is not enough on its
+// own, because specimens can still be cut (3 to 5 of the 9, showing 31–59% of
+// the string).
 //
-// Measured on BOTH axes for the same reason the phone test does: the old fault
-// clipped horizontally, a line clamp would clip vertically, and a width-only
+// Measured on BOTH axes for the same reason the phone test does: the fault
+// clips horizontally, a line clamp would clip vertically, and a width-only
 // check calls the second one clean. The assertion is the fraction of the string
 // that renders.
 //
 // 1024x768 is in the list and is the worst case — worse than 769 — because the
-// two-column grid arrives at 981px and takes 340px back. That grid belongs to
-// PR #263; this test asserts the specimen is whole whatever width the grid ends
-// up giving it, so it should hold across that merge rather than fight it.
+// two-column grid arrives at 981px and takes 340px back. This test asserts the
+// specimen is whole whatever width the grid gives it, so it does not depend on
+// the grid's column widths.
 
 const TSC_WIDE = [[769, 900], [800, 600], [834, 1194], [844, 390], [900, 900], [980, 900], [1024, 768], [1180, 820], [1280, 900], [1440, 900]]
 
@@ -216,11 +211,10 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // ─────────────────────────────────────────────────────────────────────────────
 // S3 / S4 · chip rows that were scrollers with no affordance
 // ─────────────────────────────────────────────────────────────────────────────
-// Fifth, sixth and — via the shared Library tray PR #254 introduced — seventh
-// instances of one shape in this stylesheet: a row of options turned into
+// One shape recurs across this stylesheet: a row of options turned into
 // `overflow-x:auto` with the scrollbar suppressed, which under touch emulation
-// paints nothing at all to say it scrolls. S1, S2 and S8 were the same and were
-// fixed by wrapping in PR #271.
+// paints nothing at all to say it scrolls. S1, S2 and S8 are the same shape and
+// are fixed by wrapping.
 //
 // Counting chips in the DOM proves nothing — they were all present the whole
 // time. What is asserted is how many sit inside their own container's box.
@@ -233,15 +227,12 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS TEST CARRIES A SELECTOR PER SURFACE
 // ─────────────────────────────────────────────────────────────────────────────
-// It used to hard-code `.pl-chips` / `.pl-chip` for all four routes, because all
-// four genuinely shared that markup when it was written. PR #254 then rebuilt
-// /discover/gradients on the shared Library components while this branch waited
-// to merge, and that surface now renders `.lbry-filters` / `.lbry-filter` and no
-// `.pl-chips` at all. The old selector stopped matching anything.
+// A single hard-coded `.pl-chips` / `.pl-chip` pair would match nothing on a
+// surface built on the shared Library components: /discover/gradients renders
+// `.lbry-filters` / `.lbry-filter` and no `.pl-chips` at all.
 //
 // Two idioms are live, so the table names each surface's own container and item
-// classes rather than assuming one shape for all of them. That is the part that
-// went stale, so it is the part the table has to record.
+// classes rather than assuming one shape for all of them.
 //
 // THE ROW AND ITEM COUNTS ARE BOTH ASSERTED, and that is deliberate:
 //
@@ -279,18 +270,17 @@ const TRAY_WIDTHS = [320, 390, 1180]
 const COLLAPSED_WIDTHS = [768, 834]
 
 // The original `.pl-chips` idiom — one wrapping row of outlined pills — no
-// longer has a browse consumer. /create/emoji and /create/icons left it for the
-// shared Library tray, and #323 took the Prompt Library, the last one, with
-// them. The measurement did not go away: every surface that used to be here is
-// in FILTER_TRAYS below, asked the same question through the shared selectors.
+// longer has a browse consumer. /create/emoji, /create/icons and the Prompt
+// Library all use the shared Library tray. Every browse surface is in
+// FILTER_TRAYS below, asked the same question through the shared selectors.
 //
 // `.pl-chip` itself is still live OUTSIDE this suite's scope (BoxShadow presets,
 // Projects folders, the AI prompt and alt-text pickers, ColorStudio's
 // named-library switch). None of them is a browse filter row, which is what
 // this block measures, so none of them belongs in it.
 
-// The shared Library segmented tray (PR #254), which replaced the chip row on
-// the browse surfaces. /discover/gradients mounts TWO trays — 8 mood options and
+// The shared Library segmented tray, which is the filter row on the browse
+// surfaces. /discover/gradients mounts TWO trays — 8 mood options and
 // 4 type options — so it is the surface the single-row shape could not describe.
 // /discover/palettes is here for the reason the list above is
 // wider than the audit: the tray is shared CSS, and a fix measured on one
@@ -299,15 +289,15 @@ const COLLAPSED_WIDTHS = [768, 834]
 // [path, box, item, expandedRows, expandedChips, onlyWidths, collapsedTriggers]
 //
 // The last field exists because a surface's EXPANDED tray count and its
-// COLLAPSED trigger count stopped being the same number on 2026-09-07. It
-// defaults to `expandedRows`, so every row that was correct before still is.
+// COLLAPSED trigger count are not always the same number. It defaults to
+// `expandedRows`.
 const FILTER_TRAYS = [
-  // ONE expanded tray since 2026-09-16 — Type, 4 chips. Mood (8 options) is a
+  // ONE expanded tray — Type, 4 chips. Mood (8 options) is a
   // labelled menu at every width, as on palettes below and for the same
   // measured reason: beside the type tray it wrapped the sticky toolbar to
-  // two rows (122px) at 1024. Two triggers in the collapsed band, as before.
+  // two rows (122px) at 1024. Two triggers in the collapsed band.
   ['/discover/gradients', '.lbry-filters', '.lbry-filter', 1, 4, null, 2],
-  // TWO GROUPS since 2026-09-07, with two different shapes on purpose.
+  // TWO GROUPS, with two different shapes on purpose.
   // Collection (All palettes / Curated / Brand) is the page's primary split and
   // stays a visible segmented row — that is the one expanded tray with 3 chips
   // measured here. Mood is a nine-value facet and is a labelled menu at EVERY
@@ -315,37 +305,34 @@ const FILTER_TRAYS = [
   // sticky toolbar to 314px at 320px wide and wrapped it to two rows at 1280.
   // The two together are the two triggers the collapsed test below counts.
   ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 3, null, 2],
-  // The two Create libraries the founder asked to match the galleries. Emoji
+  // The two Create libraries, which match the galleries. Emoji
   // carries the widest tray in the app — 12 categories — which is what makes it
   // the surface any tray regression shows up on first.
   // EMOJI IS MEASURED NARROW ONLY, and that is a statement about the fix rather
   // than an exemption. Its tray wants 1478px — twelve categories each carrying a
   // glyph, a label and a count — so it needs 1928px of toolbar row before it
   // fits beside a capped search field and the skin-tone control. No desktop
-  // anyone has offers that, and until 2026-09-04 the tray simply wrapped and
-  // took the toolbar to 213px against 68px on the icon tab: a 145px jump on a
-  // tab switch, on one page, which is what the founder reported. It now
-  // collapses to its trigger wherever it does not fit, so at 1180px there is no
+  // anyone has offers that, so the tray collapses to its trigger wherever it
+  // does not fit. Wrapping would take the toolbar to 213px against 68px on the
+  // icon tab: a 145px jump on a tab switch, on one page. At 1180px there is no
   // expanded tray to measure and the surface is asserted in the collapsed test
   // below instead.
   //
-  // AND SINCE 2026-09-13 THERE IS NO EXPANDED TRAY AT ANY WIDTH, which is why
-  // this row now names zero rows, zero chips and no widths at all. "Below 641
-  // it is a full-width column stack and the chips are all there" is what this
-  // row used to check at 320 and 390, and that turned out to be the defect
-  // rather than the baseline: twelve chips wrapped to SEVEN rows at 320 and six
-  // at 390, took the toolbar to 414px — 49% of an 844px phone — and put ZERO
-  // emoji on the first screen at 320, 360, 390 and 430. An emoji library
-  // showing no emoji.
+  // THERE IS NO EXPANDED TRAY AT ANY WIDTH, which is why this row names zero
+  // rows, zero chips and no widths at all. Showing the chips as a full-width
+  // column stack below 641 would be the defect rather than the baseline:
+  // twelve chips wrap to SEVEN rows at 320 and six at 390, take the toolbar to
+  // 414px — 49% of an 844px phone — and put ZERO emoji on the first screen at
+  // 320, 360, 390 and 430. An emoji library showing no emoji.
   //
-  // So this surface took the same decision `/discover/palettes` took for mood
+  // So this surface makes the same decision as `/discover/palettes` mood
   // nine rows above, for the same reason and with a larger facet: twelve values
   // is a labelled menu at EVERY width. It contributes a trigger and no chip
   // row, so the expanded measurement has nothing to measure and the collapsed
   // test below owns the surface — `collapsedTriggers` is stated explicitly
   // because it can no longer default to the (now zero) group count.
   //
-  // Coverage did not shrink: 87-tools-breakpoints asserts this trigger, its
+  // Coverage: 87-tools-breakpoints asserts this trigger, its
   // `aria-haspopup`/`aria-expanded` contract and the absence of the tray at all
   // ten breakpoints in both themes, and hit-tests every option in the open menu.
   ['/create/emoji', '.lbry-filters', '.lbry-filter', 0, 0, [], 1],
@@ -354,10 +341,12 @@ const FILTER_TRAYS = [
   // groups step past the trigger form into the one Filters control — the
   // no-wrap S4 test above asserts that form.
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7, null, 0],
-  // #323 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
-  // — sort (2 options) and category (All + 5) — which is why the totals column
-  // exists rather than a per-row count.
-  ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],
+  // /discover/prompts is not in this table any more. Its list state has its own
+  // toolbar (`.pl-toolbar`: category chips, then Sort and Access as segmented
+  // radios, behind a Filters button on a phone), not the shared Library tray, so
+  // these selectors would match nothing. The same questions — one line, nothing
+  // outside its box, nothing lost behind the collapse — are asked of it by the
+  // Prompt Library toolbar tests below, with its own selectors.
 ]
 
 // chipRowDamage() lived here: it measured trays that were ALLOWED to wrap,
@@ -380,7 +369,8 @@ const FILTER_TRAYS = [
 //   · and whatever left the row is still reachable: a phone has a Filters
 //     control whenever it has a group that is not on the quick row.
 // Font Gallery is on the shared tool toolbar now; 100-tool-toolbar-one-row holds it.
-const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons', '/discover/prompts']
+// /discover/prompts has its own toolbar and its own test, right after this one.
+const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons']
 const NO_WRAP_WIDTHS = [320, 390, 1024, 1180, 1440]
 
 test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost', async ({ browser }) => {
@@ -398,7 +388,16 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         const bar = [...document.querySelectorAll('.lbry-toolbar')].find(vis)
         if (!bar) return null
         const row = bar.querySelector(':scope > .lbry-toolbar-row')
-        const tops = [...row.children].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+        // The Palette Library's phone toolbar (<= 640px) is two deliberate rows: the search field alone on
+        // the first, the collection switch, Filters and Create sharing the second. The rule is that the
+        // CONTROLS share a line, so the search is taken out of that count and checked to sit above them.
+        const twoRow = location.pathname === '/discover/palettes' && window.innerWidth <= 640
+        const centre = (e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)
+        const tops = [...row.children].filter(vis).filter((e) => !(twoRow && e.classList.contains('lbry-search'))).map(centre)
+        const quickEl = twoRow ? bar.querySelector(':scope > .lbry-toolbar-quick') : null
+        if (quickEl && vis(quickEl)) tops.push(centre(quickEl))
+        const searchEl = twoRow ? row.querySelector(':scope > .lbry-search') : null
+        const searchAbove = !twoRow || (!!searchEl && vis(searchEl) && tops.every((t) => t > searchEl.getBoundingClientRect().bottom - 1))
         const trays = [...bar.querySelectorAll('.lbry-filters')].filter(vis).map((t) => {
           const quick = !!t.closest('.lbry-toolbar-quick')
           const tb = t.getBoundingClientRect()
@@ -413,6 +412,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         })
         return {
           rowLines: new Set(tops).size,
+          searchAbove,
           trays,
           filtersBtn: !!bar.querySelector('.lbry-filtersbtn'),
           stage: bar.dataset.stage,
@@ -422,6 +422,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
       await ctx.close()
       if (!r) { damage.push(`${path} @${w}px: no toolbar rendered`); continue }
       if (r.rowLines !== 1) damage.push(`${path} @${w}px: the toolbar row wraps onto ${r.rowLines} lines (stage ${r.stage})`)
+      if (!r.searchAbove) damage.push(`${path} @${w}px: the search field is not on its own row above the controls`)
       for (const t of r.trays) {
         if (!t.chips) damage.push(`${path} @${w}px: tray “${t.name}” is empty`)
         if (t.lines > 1) damage.push(`${path} @${w}px: tray “${t.name}” wraps onto ${t.lines} lines`)
@@ -434,11 +435,99 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
   expect(damage, damage.join('\n')).toEqual([])
 })
 
-// THE TAB SWITCH THE FOUNDER REPORTED, measured as one number.
+// THE PROMPT LIBRARY'S OWN TOOLBAR (`.pl-toolbar`), the same questions.
+//
+// It has two states. On the overview it is the search field alone. In the list
+// (`#all`) it adds Category chips, then Sort and Access as segmented radios; at
+// 640px and below those three groups sit behind a "Filters" button that opens
+// them inline. Asked of it at a phone, a tablet and two desktops:
+//
+//   · the toolbar's main row is ONE line (the search field and, on a phone,
+//     the Filters button share a top);
+//   · on a phone the groups are CLOSED until Filters is pressed, and pressing
+//     it makes every option reachable: nothing the collapse hides is lost;
+//   · the options on screen all sit inside the toolbar's box;
+//   · on a desktop the Category chips share one line, and Sort and Access share
+//     one;
+//   · the page never scrolls sideways.
+//
+// 11 options is the count the page renders today: All + 5 categories, Popular /
+// Newest, Any / Free / Pro. The number is asserted so a selector that matches
+// nothing cannot pass.
+const PROMPT_WIDTHS = [320, 390, 1024, 1440]
+const PROMPT_OPTIONS = 11
+
+async function promptToolbar(page) {
+  return page.evaluate(() => {
+    const vis = (e) => e && e.offsetParent !== null && e.getBoundingClientRect().width > 0
+    const bar = document.querySelector('.pl-toolbar')
+    const bb = bar.getBoundingClientRect()
+    const mainRow = [...bar.querySelectorAll('.pl-tb-search input[type="search"], .pl-filters-btn')].filter(vis)
+      .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+    const opts = [...bar.querySelectorAll('.pl-tb-body input[type="radio"]')].filter(vis)
+    const lines = (sel) => new Set([...bar.querySelectorAll(sel)].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top))).size
+    return {
+      mainLines: new Set(mainRow).size,
+      filtersBtn: vis(bar.querySelector('.pl-filters-btn')),
+      expanded: bar.querySelector('.pl-filters-btn')?.getAttribute('aria-expanded') ?? null,
+      bodyShown: vis(bar.querySelector('.pl-tb-body')),
+      options: opts.length,
+      outside: opts.filter((o) => { const b = o.getBoundingClientRect(); return b.right > bb.right + 0.5 || b.left < bb.left - 0.5 }).length,
+      catLines: lines('.pl-tb-cat input[type="radio"]'),
+      sortAccessLines: lines('.pl-tb-sortacc input[type="radio"]'),
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }
+  })
+}
+
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
+test('S4 · the Prompt Library toolbar is one line at any width, and the Filters button loses nothing', async ({ browser }) => {
+  budget(PROMPT_WIDTHS.length * 2)
+  const damage = []
+  for (const w of PROMPT_WIDTHS) {
+    const phone = w <= 640
+    // The overview: the search field alone, one line, no groups yet.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts', '.pl-toolbar', { touch: phone, as: { admin: true } })
+      const r = await promptToolbar(page)
+      await ctx.close()
+      if (r.mainLines !== 1) damage.push(`overview @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (r.options || r.filtersBtn) damage.push(`overview @${w}px: the overview shows filter controls (${r.options} options, Filters button ${r.filtersBtn})`)
+      if (r.overflowX > 1) damage.push(`overview @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+    }
+    // The list: the three groups.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts#all', '.pl-toolbar', { touch: phone, as: { admin: true } })
+      let r = await promptToolbar(page)
+      if (r.mainLines !== 1) damage.push(`list @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (phone) {
+        if (!r.filtersBtn) damage.push(`list @${w}px: a phone has no Filters button`)
+        if (r.expanded !== 'false') damage.push(`list @${w}px: Filters starts ${r.expanded === 'true' ? 'open' : 'without aria-expanded'}`)
+        if (r.bodyShown || r.options) damage.push(`list @${w}px: the groups are on screen before Filters is pressed (${r.options} options)`)
+        await page.locator('.pl-filters-btn').click()
+        r = await promptToolbar(page)
+        if (r.expanded !== 'true') damage.push(`list @${w}px: Filters did not report that it opened`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: opening Filters shows ${r.options} of ${PROMPT_OPTIONS} options — something was lost behind the collapse`)
+        if (r.mainLines !== 1) damage.push(`list @${w}px: opening Filters broke the toolbar row onto ${r.mainLines} lines`)
+      } else {
+        if (r.filtersBtn) damage.push(`list @${w}px: a ${w}px screen shows a Filters button it does not need`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: ${r.options} of ${PROMPT_OPTIONS} options are on screen`)
+        if (r.catLines !== 1) damage.push(`list @${w}px: the Category chips wrap onto ${r.catLines} lines`)
+        if (r.sortAccessLines !== 1) damage.push(`list @${w}px: Sort and Access are on ${r.sortAccessLines} lines`)
+      }
+      if (r.outside) damage.push(`list @${w}px: ${r.outside} option(s) outside the toolbar`)
+      if (r.overflowX > 1) damage.push(`list @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+      await ctx.close()
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// THE TAB SWITCH, measured as one number.
 //
 // /create/icons and /create/emoji mount the same component and toggle `hidden`,
-// so a difference in toolbar height is one page moving under the cursor. It was
-// 68px against 213px at 1440 on 2026-09-04. The tray collapsing when it does not
+// so a difference in toolbar height is one page moving under the cursor (68px
+// against 213px at 1440 when the tray wraps). The tray collapsing when it does not
 // fit is what removes the difference, so this asserts the OUTCOME (the two
 // toolbars agree) rather than the mechanism, and separately that the collapse
 // did not simply throw the options away.
@@ -446,8 +535,8 @@ test('S4 · the Icon and Emoji toolbars are the same height on a desktop, and th
   budget(2)
   const heights = {}
   for (const path of ['/create/icons', '/create/emoji']) {
-    // A FINE POINTER, deliberately, unlike the rest of this block. The founder
-    // reported this "on a standard desktop", and under coarse-pointer metrics
+    // A FINE POINTER, unlike the rest of this block. This is the standard
+    // desktop case, and under coarse-pointer metrics
     // the two tabs legitimately differ by 4px: @media(pointer:coarse) floors
     // .lbry-filter at the WCAG 44px target, which makes the icon tray 50px tall
     // against the 46px collapsed trigger on the emoji side. That is the touch
@@ -576,10 +665,15 @@ test('S4 · in the 641–980 band each Library filter collapses to a trigger tha
 
 const STC_WIDTHS = [320, 360, 390, 430, 480, 560, 768]
 
-// Each role is one family row on the rebuilt screen (D:928-942) —
-// name, token, its preset select and its ten steps. What S3 held (nothing of a
-// role spills out of that role's row, and no row becomes a sideways scroller)
-// is held for the new row.
+// Each role is one family row — name, meaning, token, its preset chips and its
+// ten steps (plus Blue / Purple on Information). What S3 held (nothing of a role
+// spills out of that role's row, and no row becomes a sideways scroller) is held
+// for the new row. The chips wrap onto further lines rather than scroll, so the
+// chip group is held to its row too, and to the seven it must list (six presets
+// and Custom).
+//
+// MUTATION: give `.stc-chips` `flex-wrap: nowrap; overflow-x: auto` in
+// semantic-color.css, or drop the `.stc-fam` wrapper from a row, and this goes red.
 test('S3 · every Semantic Colour role, preset and ramp is inside its own row', async ({ browser }) => {
   budget(STC_WIDTHS.length)
   const damage = []
@@ -591,18 +685,28 @@ test('S3 · every Semantic Colour role, preset and ramp is inside its own row', 
       for (const row of rows) {
         const rb = row.getBoundingClientRect()
         if (row.scrollWidth > row.clientWidth + 1) scrollers++
-        for (const el of row.querySelectorAll('.stc-fam-preset, .stc-cell')) {
+        for (const el of row.querySelectorAll('.stc-chips, .stc-chips .tl-pill, .stc-cell')) {
           total++
           const b = el.getBoundingClientRect()
           if (b.right > rb.right + 0.5 || b.left < rb.left - 0.5) outside++
         }
+        for (const group of row.querySelectorAll('.stc-chips')) {
+          if (group.scrollWidth > group.clientWidth + 1) scrollers++
+        }
       }
-      return { rows: rows.length, outside, total, scrollers, ramps: document.querySelectorAll('.stc-ramp').length, presets: document.querySelectorAll('.stc-fam-preset').length }
+      const groups = [...document.querySelectorAll('.stc-fam .stc-chips')]
+      return {
+        rows: rows.length, outside, total, scrollers,
+        ramps: document.querySelectorAll('.stc-ramp').length,
+        presets: groups.length,
+        chipCounts: groups.map((g) => g.querySelectorAll('.tl-pill').length),
+      }
     })
     await ctx.close()
     expect(r.rows, `${w}px: no role rows rendered at all`).toBeGreaterThan(0)
     expect(r.rows, `${w}px: expected one row per ramp`).toBe(r.ramps)
-    expect(r.presets, `${w}px: expected one preset control per role`).toBe(r.rows)
+    expect(r.presets, `${w}px: expected one preset chip group per role`).toBe(r.rows)
+    expect(r.chipCounts, `${w}px: each role lists its six presets and Custom`).toEqual(r.chipCounts.map(() => 7))
     if (r.outside) damage.push(`${w}px: ${r.outside} of ${r.total} controls outside their role's row`)
     if (r.scrollers) damage.push(`${w}px: ${r.scrollers} role row(s) are horizontal scrollers`)
   }
@@ -649,7 +753,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   // On a touch screen the FAB is not drawn at all (feedback lives in the menus),
   // so the compact form is a mouse-and-short-window case.
   for (const [w, h] of FAB_SHORT) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
@@ -658,13 +762,13 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
     if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
   }
   for (const [w, h] of FAB_ROOMY) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
   }
   {
-    const { ctx, page } = await open(browser, 844, 390, '/discover/prompts', '.lbry-toolbar')
+    const { ctx, page } = await open(browser, 844, 390, '/discover/palettes', '.lbry-toolbar')
     const f = await fabState(page)
     await ctx.close()
     if (f && (f.w || f.h)) damage.push(`844x390 touch: the FAB is drawn (${f.w}x${f.h}) where the menus carry feedback`)
@@ -675,16 +779,16 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
 const FAB_COVER = [
   // Waits on the toolbar, not a chip: in the 641–980 band the trays collapse
   // to triggers, so no `.lbry-filter` is rendered at some of these shapes.
-  ['/discover/prompts', '.lbry-toolbar', [...FAB_SHORT, [390, 844]]],
-  ['/sitemap', '.smap-link-a', [[320, 568], [360, 560], [390, 640], [390, 844], [844, 390]]],
+  ['/discover/prompts', '.pl-toolbar', [...FAB_SHORT, [390, 844]]],
 ]
 
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
   budget(FAB_COVER.reduce((n, [, , shapes]) => n + shapes.length, 0))
   const damage = []
   for (const [path, waitFor, shapes] of FAB_COVER) {
     for (const [w, h] of shapes) {
-      const { ctx, page } = await open(browser, w, h, path, waitFor)
+      const { ctx, page } = await open(browser, w, h, path, waitFor, { as: { admin: true } })
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
       // Every rectangle below is read from a live layout, so the page has to
       // have stopped moving first. 500ms was a guess at how long that takes.
@@ -711,6 +815,53 @@ test('S5 / S10 · the FAB never permanently covers a control', async ({ browser 
       await ctx.close()
       if (covered.length) damage.push(`${path} ${w}x${h}: ${covered.length} control(s) still fully covered at the scroll end — ${covered.join(', ')}`)
     }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// /sitemap wears the /tools shell (Spectrum nav and footer), which carries feedback
+// in its own menus, so it draws no floating button to cover anything. This pins
+// that, so a button that comes back is measured by FAB_COVER rather than shipped
+// unchecked.
+test('S5 / S10 · /sitemap draws no feedback FAB', async ({ browser }) => {
+  budget(2)
+  for (const [w, h] of [[390, 844], [1440, 900]]) {
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    const fabs = await page.locator('.global-feedback-btn').count()
+    await ctx.close()
+    expect(fabs, `${w}x${h}: /sitemap draws the feedback FAB`).toBe(0)
+  }
+})
+
+// /sitemap is one long list of link rows. Each row is the whole target: at least
+// 44px tall and as wide as the list that holds it, so the thumbnail, the title,
+// the route line and the arrow all hit the same link and a thumb never has to
+// find a small word.
+const SMAP_ROW_SHAPES = [[320, 568], [390, 844], [844, 390], [1024, 768], [1440, 900]]
+
+test('S10 · every /sitemap row is a full-width target at least 44px tall', async ({ browser }) => {
+  budget(SMAP_ROW_SHAPES.length)
+  const damage = []
+  for (const [w, h] of SMAP_ROW_SHAPES) {
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    await settle(page)
+    const { rows, bad } = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('li[data-route] > a.spt-row')]
+      const bad = []
+      for (const a of links) {
+        const r = a.getBoundingClientRect()
+        const list = a.closest('ul').getBoundingClientRect()
+        const name = (a.querySelector('b')?.textContent || a.getAttribute('href')).trim().slice(0, 28)
+        if (r.height < 44) bad.push(`${name} is ${Math.round(r.height)}px tall`)
+        if (Math.abs(r.width - list.width) > 1 || Math.abs(r.left - list.left) > 1) {
+          bad.push(`${name} is ${Math.round(r.width)}px wide in a ${Math.round(list.width)}px list`)
+        }
+      }
+      return { rows: links.length, bad }
+    })
+    await ctx.close()
+    if (rows < 30) damage.push(`${w}x${h}: only ${rows} link rows found on the map`)
+    if (bad.length) damage.push(`${w}x${h}: ${bad.slice(0, 4).join('; ')}${bad.length > 4 ? ` (+${bad.length - 4} more)` : ''}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
@@ -921,19 +1072,48 @@ test('N2 · the gradient stop hex input shows its whole value', async ({ browser
 // already clean and the fix must not disturb them.
 
 const FG_WIDTHS = [320, 360, 380, 430]
+// Under 768 the band's name starts at 40px and may shrink to 32px, not further
+// (Fonts build spec, section 1). Long names shrink to that floor and are then
+// CLIPPED, so a name is only ever cut off once it has nowhere left to shrink to.
+const FG_PHONE_FLOOR = 32
 
-test('N1 · no font family name is truncated down to the 320px floor', async ({ browser }) => {
+test('N1: a font family name is only clipped once it has shrunk to its floor, down to 320px', async ({ browser }) => {
   budget(FG_WIDTHS.length)
   const damage = []
+  const atFloor = []
   for (const w of FG_WIDTHS) {
     const { ctx, page } = await open(browser, w, 900, '/create/font-gallery', '.fg-card-name')
-    const r = await truncationCensus(page, '.fg-card-name')
+    // A band's name only mounts once its face has loaded, and a face only loads
+    // when its band nears the screen, so bring the first page into view band by
+    // band (two frames each, not a timer) before counting.
+    await page.evaluate(async () => {
+      for (const card of document.querySelectorAll('.fg-card')) {
+        card.scrollIntoView()
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      }
+    })
+    await expect.poll(() => page.locator('.fg-card-name').count(), { message: `${w}px: expected the font bands to have named themselves` }).toBeGreaterThan(20)
+    const r = await page.evaluate(() => {
+      const cut = []
+      let total = 0
+      for (const el of document.querySelectorAll('.fg-card-name')) {
+        total++
+        if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) {
+          cut.push({ text: el.textContent.trim(), needs: el.scrollWidth, has: el.clientWidth, px: parseFloat(getComputedStyle(el).fontSize) })
+        }
+      }
+      return { total, cut }
+    })
     await ctx.close()
     expect(r.total, `${w}px: expected the font cards to have rendered`).toBeGreaterThan(20)
-    if (r.cut.length) {
-      damage.push(`${w}px: ${r.cut.length} of ${r.total} family names truncated — "${r.cut[0].text}" needs ${r.cut[0].needs}px, has ${r.cut[0].has}px`)
+    for (const c of r.cut) {
+      if (c.px > FG_PHONE_FLOOR + 0.5) damage.push(`${w}px: "${c.text}" is clipped at ${c.px}px, above the ${FG_PHONE_FLOOR}px floor (needs ${c.needs}px, has ${c.has}px)`)
+      else atFloor.push(`${w}px "${c.text}" ${c.needs}>${c.has}`)
     }
   }
+  // Names cut off AT the floor are what the spec asks for, but a reader loses
+  // their last letters, so put them in the report rather than hide them.
+  if (atFloor.length) test.info().annotations.push({ type: 'clipped at the floor', description: atFloor.join('; ') })
   expect(damage, damage.join('\n')).toEqual([])
 })
 
@@ -951,23 +1131,21 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 // while quietly making the grid 262% taller, and this suite has been caught by a
 // fix that helped the page and hurt the cards before.
 //
-// THE NAME AND META SELECTORS WERE STALE, in the same way and by the same PR as
-// S4's above. PR #254 moved this card's anatomy onto the shared `LibraryCard`,
-// so the footer lines are `.lbry-card-name` / `.lbry-card-meta` and `.grg-name`
-// / `.grg-meta` no longer exist. Unlike S4 that did not fail: the census loops
-// over `querySelectorAll`, which returned nothing, so it found no truncation and
-// reported none, at all nine widths, for as long as it took to notice. Both are
-// scoped through `.grg-card` — the shared class is on four surfaces now, and
-// this test is about this one — and the per-card counts below are asserted so a
-// third rename cannot make it vacuous again instead of red.
+// THE NAME AND META SELECTORS. This card's anatomy is the shared `LibraryCard`,
+// so the footer lines are `.lbry-card-name` / `.lbry-card-meta`, not `.grg-name`
+// / `.grg-meta`. A stale selector would not fail: the census loops over
+// `querySelectorAll`, which would return nothing, so it would find no
+// truncation and report none at every width. Both are scoped through
+// `.grg-card` — the shared class is on four surfaces, and this test is about
+// this one — and the per-card counts below are asserted so a selector rename
+// turns the test red instead of leaving it vacuous.
 
-/* 1024 AND 1280 WERE ADDED AFTER THE SWEEP MISSED A LIVE DEFECT.
+/* 1024 AND 1280 ARE IN THE LIST BECAUSE A LIST ENDING AT 1180 CAN MISS A DEFECT.
  *
- * The founder's rule here is that no gradient name or meta line is truncated at
- * ANY width. This list stopped at 1180, and when the library restyle bumped the
- * card name from 14px to 16px it cut **13 of 100 names at 1280** and one at
- * 1024 — neither width swept, so the sweep stayed green while the rule was
- * being broken on the commonest desktop size there is.
+ * The rule here is that no gradient name or meta line is truncated at
+ * ANY width. With the name as a single-line 16px label, 13 of 100 names were
+ * cut at 1280 and one at 1024; a list that stopped at 1180 would have stayed
+ * green while the rule was broken on the commonest desktop size there is.
  *
  * The narrow widths below are where a card is tightest, which is the intuition
  * that built this list. It is the wrong intuition: the name's room is decided by
@@ -1047,14 +1225,14 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder report 2026-08-24 · Palette Builder on a short DESKTOP viewport
+// Palette Builder on a short DESKTOP viewport
 // ─────────────────────────────────────────────────────────────────────────────
-// "there are still clipping issues on the pallete builder on smaller desktop
-// screens and other shapes like 4:3".
+// Symptom: clipping on the Palette Builder on smaller desktop screens and
+// other shapes like 4:3.
 //
 // Both audits swept WIDTH at a fixed 900px height and only went short at PHONE
-// widths, so this combination — desktop width, short viewport — was never
-// tested. It is not exotic: a 1024x768 or 1366x768 screen with browser chrome
+// widths, so this combination — desktop width, short viewport — needs its own
+// test. It is not exotic: a 1024x768 or 1366x768 screen with browser chrome
 // leaves roughly a 608px viewport, and that is inside the broken band.
 //
 // The fault is vertical, and it is the same SHAPE as the two blockers this
@@ -1161,14 +1339,18 @@ const PLB_HIT = `(roots) => {
   const misses = []
   let tested = 0
   for (const el of controls) {
+    // Each control is brought to the middle of the screen first, as a person
+    // scrolls to what they want to press. Hit-testing it where the page happened
+    // to rest let a control whose centre-line fell within a pixel of the fixed
+    // tab bar read the bar instead; which row landed there changed with how the
+    // names above wrapped, so the result followed the random palette, not the page.
+    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
     const b = el.getBoundingClientRect()
     // Only points actually on screen can be pressed; skip the rest rather
-    // than counting them as either pass or fail. The test is made one pixel
-    // inside each bar's edge: the browser hit-tests the bar a fraction of a
-    // pixel beyond its box, so a centre-line that lands within a pixel of the
-    // phone tab bar already reads the bar, not the control. Which row lands
-    // there changes with how the rows above wrap, so without the pixel the
-    // result depends on the palette and the fonts, not on the page.
+    // than counting them as either pass or fail (a control the page cannot
+    // scroll to the middle, at the very top or bottom, can still sit under a
+    // bar). The test is made one pixel inside each bar's edge, as the browser
+    // hit-tests a bar a fraction of a pixel beyond its box.
     const y = b.top + b.height / 2
     if (y < top + 1 || y > bottom - 1) continue
     tested++
@@ -1275,7 +1457,13 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
 // a phone: the fixed menu stays between the header and tab bar, and scrolling
 // it brings every action fully into that band with a clear cue for more below.
 test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a short phone', async ({ browser }) => {
-  budget(PLB_VIEWPORTS.length)
+  // Six page loads, but also 30 menu opens, each walking every item (scroll,
+  // measure, hit-test) and then a keyboard pass. Counting only the loads gave
+  // 51s while CI measured 34-47s for this test on branches that never touched
+  // the menu, so one more menu item (Nearest named colours) tipped it over.
+  // Budget the menus too: 5 per viewport, 2s each, derived from the same loop.
+  const MENU_BUDGET_MS = 2000
+  test.setTimeout(15000 + PLB_VIEWPORTS.length * (LOAD_BUDGET_MS + 5 * MENU_BUDGET_MS))
   const damage = []
   for (const [w, h] of PLB_VIEWPORTS) {
     const { ctx, page } = await open(browser, w, h, '/create/palette', '.plb-col')
@@ -1345,9 +1533,9 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
 })
 
 // THE PACK LABEL UNDER EVERY ICON CELL.
-// The 2026-09-01 audit found /create/icons repeating a tiny pack label under
-// every cell; #298 dropped it below 980px and left it above, where it still
-// drew "LUCIDE" under all 120 cells of the default single-pack grid. A word
+// /create/icons must not repeat a tiny pack label under every cell: a label
+// shown above 980px would draw "LUCIDE" under all 120 cells of the default
+// single-pack grid. A word
 // identical across the whole grid discriminates nothing, and it was costing a
 // line to the one thing that does discriminate - the icon's own name.
 // Both halves are asserted, because only the pair is the actual rule. Dropping
@@ -1362,7 +1550,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // The rule is "name the pack only when the result set holds more than one",
   // and it needs a genuinely SINGLE-pack default grid to be falsifiable. Since
   // the pack tiers landed (src/data/iconPackTiers.js) that is a Pro viewer: one
-  // browses 250 names from each of 25 packs, so the first page of 120 cells is
+  // browses 250 names from each of 27 packs, so the first page of 120 cells is
   // all Lucide. A signed-out viewer gets the 60-icon sample — twelve from each
   // of five outlined packs — which genuinely mixes packs and therefore SHOULD
   // label every cell, so it satisfies the rule by the other branch and measures
@@ -1381,6 +1569,9 @@ test('the icon grid labels the pack only when the results actually mix packs', a
       labels: visible.length,
       words: [...new Set(visible.map((n) => n.textContent.trim().toLowerCase()))],
       fontSize: visible[0] ? Math.round(parseFloat(getComputedStyle(visible[0]).fontSize)) : null,
+      textTransform: visible[0] ? getComputedStyle(visible[0]).textTransform : null,
+      whiteSpace: visible[0] ? getComputedStyle(visible[0]).whiteSpace : null,
+      tracking: visible[0] ? parseFloat(getComputedStyle(visible[0]).letterSpacing) || 0 : null,
     }
   })
 
@@ -1393,20 +1584,18 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // is about, and it cannot drift with the layout.
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
   await expect.poll(async () => (await read()).cells, { timeout: 20000 }).toBeGreaterThan(20)
+  // The grid on screen before the filter lands is also
+  // populated and can still carry the label, so wait for the label to go, not just for cells: it has to settle
+  // on none, and a label that stays fails here at the timeout.
+  await expect.poll(async () => (await read()).words, {
+    message: 'a single-pack grid must not repeat one pack name under every cell',
+    timeout: 10000,
+  }).toEqual([])
   const single = await read()
   expect(single.cells, 'the Lucide grid should be populated').toBeGreaterThan(20)
-  expect(single.words, 'a single-pack grid must not repeat one pack name under every cell')
-    .toEqual([])
 
-  // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
-  // It is a cross-pack collection, so the pack menu goes back to All first.
+  // All packs genuinely mixes packs, so every cell names its own.
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
-  // At this width the group is its one-line trigger (the toolbar never wraps),
-  // so the chip lives in the menu it opens.
-  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
-  if (await trig.count()) await trig.click()
-  const chip = page.getByRole('button', { name: /Brand logos/i }).first()
-  await chip.click()
   await expect.poll(async () => (await read()).words.length, {
     message: 'a mixed-pack result set must still name each cell’s pack',
     timeout: 20000,
@@ -1414,8 +1603,28 @@ test('the icon grid labels the pack only when the results actually mix packs', a
 
   const mixed = await read()
   expect(mixed.labels, 'every cell in a mixed set carries its pack').toBe(mixed.cells)
-  // 9px was below the smallest size in the type scale; --fs-micro is 11px.
-  expect(mixed.fontSize, 'the pack label must not sit under the type scale floor')
-    .toBeGreaterThanOrEqual(11)
+  // The hover label is 12px UI sans, on a second line under the cell's name.
+  expect(mixed.fontSize, 'the pack label is 12px')
+    .toBe(12)
+  expect(mixed.textTransform, 'quiet label: normal case').toBe('none')
+  expect(mixed.whiteSpace, 'the pack label stays on one line').toBe('nowrap')
+  expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
+
+  // A GROUP is the other mixed set, and it names its packs once each in a heading row instead.
+  // Brand logos holds logo.dev marks alongside glyph packs, so it is a cross-pack collection.
+  // At this width the group is its one-line trigger (the toolbar never wraps),
+  // so the chip lives in the menu it opens.
+  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  if (await trig.count()) await trig.click()
+  await page.getByRole('button', { name: /Brand logos/i }).first().click()
+  await expect.poll(() => page.locator('.ig .ig-pack-head').count(), {
+    message: 'a grouped mixed set opens each pack under a heading',
+    timeout: 20000,
+  }).toBeGreaterThan(1)
+  const grouped = await read()
+  expect(grouped.cells, 'the Brand logos group is populated').toBeGreaterThan(20)
+  expect(grouped.labels, 'no cell draws its own pack label under a heading row').toBe(0)
+  const unnamed = await page.locator('.ig .ic').evaluateAll((els) => els.filter((el) => !/^(Customise|Copy) .+, .+$/.test(el.getAttribute('aria-label') || '')).length)
+  expect(unnamed, 'every cell still names its pack to a screen reader').toBe(0)
   await ctx.close()
 })

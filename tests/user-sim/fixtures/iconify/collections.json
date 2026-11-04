@@ -298,5 +298,29 @@
     "height": 72,
     "category": "Emoji",
     "palette": true
+  },
+  "mingcute": {
+    "name": "MingCute Icon",
+    "total": 20,
+    "samples": [
+      "home-1-line",
+      "arrow-right-line",
+      "search-line"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "carbon": {
+    "name": "Carbon",
+    "total": 20,
+    "samples": [
+      "home",
+      "settings",
+      "user"
+    ],
+    "height": 32,
+    "category": "UI 16px / 32px",
+    "palette": false
   }
 }

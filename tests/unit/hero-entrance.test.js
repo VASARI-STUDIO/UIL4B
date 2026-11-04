@@ -25,6 +25,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { stripCss, stripJs } from '../helpers/strip-comments.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -99,10 +100,22 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   // preloaded nowhere, and the preload test below is the one that cares which
   // faces are on the first-paint path.
   for (const f of [
+    'public/fonts/geist-mono-latin.woff2', 'public/fonts/geist-mono-latin-ext.woff2',
+    // Geist's sans files are no longer declared by the site; the UI kit export
+    // embeds them as its own interface face (src/utils/kitFonts.js).
     'public/fonts/geist-latin.woff2', 'public/fonts/geist-latin-ext.woff2',
-    'public/fonts/geist-mono-latin.woff2', 'public/fonts/geist-mono-latin-ext.woff2'
   ]) {
     assert.ok(fs.existsSync(path.join(process.cwd(), f)), `${f} is missing`)
+  }
+  // SWITZER (the UI face since 2026-10-27) IS NOT IN THE REPOSITORY. It is
+  // downloaded into public/fonts/switzer/ by scripts/fetch-switzer.mjs, which
+  // `npm run build`, `test:unit` and `test:users` run first. CI and Vercel get it
+  // from the same hook. A missing file here means the fetch did not run, not that
+  // someone deleted a font.
+  for (const f of ['Switzer-Variable.woff2', 'Switzer-VariableItalic.woff2']) {
+    const full = path.join(process.cwd(), 'public', 'fonts', 'switzer', f)
+    assert.ok(fs.existsSync(full), `public/fonts/switzer/${f} is missing - run \`npm run fonts:fetch\` (it is downloaded, never committed)`)
+    assert.equal(fs.readFileSync(full).subarray(0, 4).toString('latin1'), 'wOF2', `${f} is not a WOFF2 file`)
   }
   // OFL 1.1 permits redistribution; shipping the font means shipping the licence
   // — AND THE RIGHT ONE. This named `public/fonts/OFL.txt`, a single combined
@@ -113,12 +126,32 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   // assertion, so the check has been failing on a tree where the licensing is
   // now correct. Asserted per family, derived from the .woff2 files this test
   // already lists, so the next face to arrive brings its own notice or fails.
-  for (const family of ['GEIST', 'GEIST-MONO', 'CAVEAT']) {
+  for (const family of ['GEIST', 'GEIST-MONO', 'CAVEAT']) { // GEIST: still embedded by the UI kit export
     const licence = `public/fonts/${family}-OFL.txt`
     assert.ok(fs.existsSync(path.join(process.cwd(), licence)), `${licence} is missing`)
     assert.match(fs.readFileSync(path.join(process.cwd(), licence), 'utf8'), /^Copyright \d{4} /,
       `${licence} does not open on the copyright line OFL 1.1 asks travel with the font`)
   }
+})
+
+test('Switzer is never committed, and its licence pointer travels with the fetch script', () => {
+  // The ITF Free Font License v2.0 allows self-hosting on our own site and bans
+  // putting the font in a public repository, subsetting it, converting it and
+  // passing it on. The repository is public. So the folder must stay gitignored
+  // and nothing under it may be tracked, whatever else changes.
+  const ignore = read('.gitignore')
+  assert.match(ignore, /^public\/fonts\/switzer\/\s*$/m, 'public/fonts/switzer/ must stay in .gitignore')
+  let tracked = null
+  try {
+    tracked = execFileSync('git', ['ls-files', 'public/fonts/switzer'], { cwd: process.cwd(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch { /* no git (a source tarball): the .gitignore check above is the guard */ }
+  if (tracked !== null) assert.equal(tracked, '', `Switzer files are tracked by git: ${tracked}`)
+
+  assert.ok(fs.existsSync(path.join(process.cwd(), 'scripts', 'fetch-switzer.mjs')), 'scripts/fetch-switzer.mjs is missing')
+  assert.match(read('scripts/SWITZER-LICENCE.md'), /ITF Free Font License/, 'the licence pointer must name the licence')
+  // The build runs the fetch, so Vercel and CI both get the file.
+  const scripts = JSON.parse(read('package.json')).scripts
+  assert.match(scripts.prebuild || '', /fetch-switzer/, '`npm run build` must run the Switzer fetch first')
 })
 
 test('both families are preloaded, in CORS mode', () => {
@@ -130,7 +163,7 @@ test('both families are preloaded, in CORS mode', () => {
   // CAVEAT IS DELIBERATELY ABSENT. It is the handwritten annotation and nothing
   // else, it is below the fold on one route, and preloading a third face would
   // spend first-paint budget on decoration.
-  for (const want of [/geist-latin\.woff2/, /geist-mono-latin\.woff2/]) {
+  for (const want of [/fonts\/switzer\/Switzer-Variable\.woff2/, /geist-mono-latin\.woff2/]) {
     const link = links.find((l) => want.test(l))
     assert.ok(link, `no preload for ${want}`)
     assert.match(link, /as="font"/)
@@ -158,6 +191,15 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
+    // 'Switzer Fallback' is a metric-matched stand-in for the swap period: a
+    // local() Arial with size-adjust and ascent/descent overrides. It has no
+    // file to load, but it still declares a range and swap (the Learn
+    // font-loading table reads every rule and needs both).
+    if (/font-family:\s*'Switzer Fallback'/.test(f)) {
+      assert.match(f, /src:\s*local\(/, 'the fallback must be a local() face, never a download')
+      assert.match(f, /size-adjust:/, 'the fallback is only worth having if it is size-adjusted')
+      assert.match(f, /ascent-override:/)
+    }
     const single = /font-family:\s*'Caveat'/.test(f)
     if (single) {
       assert.match(f, /font-weight:\s*500\b/, 'Caveat ships one static weight, 500')

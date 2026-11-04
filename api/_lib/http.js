@@ -31,3 +31,21 @@ export function failRequest(res, { status = 500, scope, message, err = null, con
   })
   return res.status(status).json({ error: message, correlationId })
 }
+
+// Refuses a request that carries a query key the route does not read. A shared
+// cache keys a response on the full query string, so `?x=<random>` on a public
+// route makes every request a miss and the function does the expensive work each
+// time. A repeated key (`?c=a&c=b`) is a second spelling of the same request and
+// is refused too. Returns true when it has answered, so the caller just returns:
+//   if (refuseUnexpectedQuery(req, res, ['c', 'img'])) return
+export function refuseUnexpectedQuery(req, res, allowed = []) {
+  const query = req.query || {}
+  for (const key of Object.keys(query)) {
+    if (!allowed.includes(key) || Array.isArray(query[key])) {
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(400).json({ error: 'Unexpected query parameter' })
+      return true
+    }
+  }
+  return false
+}

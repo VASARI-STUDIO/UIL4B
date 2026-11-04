@@ -61,8 +61,30 @@ export default function useSmoothScroll() {
     // and keeps out at the boundary too. Most overlay bodies already set it; the
     // ones that go through useModalDialog/usePopover now get it from the
     // `[data-lenis-prevent]` rule in global.css.
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: true, allowNestedScroll: true })
+    // In-page links ride a fixed-length tween, not the wheel's lerp. A lerp covers a
+    // share of the remaining distance per frame, so how long a jump takes grows with
+    // how far it goes: a contents link to a heading 4000px down was still 60px short
+    // of its landing line half a second after the click. 0.45s ends every jump inside
+    // that half second, whatever the distance.
+    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: { duration: 0.45 }, allowNestedScroll: true })
     setLenis(lenis)
+
+    // Lenis measures the page once and re-measures on a ResizeObserver that waits
+    // 250ms. A lazy page mounts just after the loading shell, so a contents link
+    // clicked in that window was clamped to the shell's height and stopped short.
+    // Measuring again on the way down, before Lenis's own click handler (bubble
+    // phase on the same window) reads the limit, makes every in-page jump land.
+    const remeasureBeforeAnchor = (event) => {
+      if (event.target instanceof Element && event.target.closest('a[href*="#"]')) lenis.resize()
+    }
+    window.addEventListener('click', remeasureBeforeAnchor, true)
+
+    // A lerped scroll ends when the rounded value equals the rounded target. A
+    // target on an exact half pixel (a heading at 4138.5) is approached from
+    // one side and never rounds to it, so the scroll never completes and the
+    // page stays "scrolling". Every target is a whole pixel instead.
+    const fromTo = lenis.animate.fromTo.bind(lenis.animate)
+    lenis.animate.fromTo = (from, to, options) => fromTo(from, Math.round(to), options)
 
     let rafId = 0
     const raf = (time) => {
@@ -73,6 +95,7 @@ export default function useSmoothScroll() {
 
     return () => {
       cancelAnimationFrame(rafId)
+      window.removeEventListener('click', remeasureBeforeAnchor, true)
       lenis.destroy()
       setLenis(null)
     }

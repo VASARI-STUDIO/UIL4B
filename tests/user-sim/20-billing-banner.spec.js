@@ -101,30 +101,25 @@ async function withFailingCard(page) {
 }
 
 test.describe('billing banner layout', () => {
-  test('does not cover the feedback button at 320px', async ({ page }) => {
+  test('at 320px the feedback button is not drawn and the banner fits', async ({ page }) => {
     watch(page, 'a Pro user with a failing card on a small phone')
     await page.setViewportSize({ width: 320, height: 800 })
     await withFailingCard(page)
 
+    // Below 768px the floating feedback button is not drawn (global.css), so the
+    // banner has nothing to cover; what is left to hold is that the button is
+    // really gone and the banner is wholly on screen.
     const result = await page.evaluate(() => {
       const banner = document.querySelector('.bill-banner').getBoundingClientRect()
-      const fab = document.querySelector('.global-feedback-btn')?.getBoundingClientRect()
-      if (!fab) return { fab: false }
-      // Geometry is the symptom; hit-testing is the actual user consequence.
-      const hit = document.elementFromPoint((fab.left + fab.right) / 2, (fab.top + fab.bottom) / 2)
+      const fab = document.querySelector('.global-feedback-btn')
       return {
-        fab: true,
-        overlaps: !(banner.right < fab.left || banner.left > fab.right
-          || banner.bottom < fab.top || banner.top > fab.bottom),
-        clickReachesFab: !!hit?.closest('.global-feedback-btn'),
+        fabDrawn: !!fab && getComputedStyle(fab).display !== 'none',
         withinViewport: banner.left >= 0 && banner.right <= window.innerWidth && banner.top >= 0,
         horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
       }
     })
 
-    expect(result.fab, 'the feedback FAB must be present for this test to mean anything').toBe(true)
-    expect(result.overlaps, 'the banner must not sit on top of the feedback FAB').toBe(false)
-    expect(result.clickReachesFab, 'a click on the FAB must still reach the FAB').toBe(true)
+    expect(result.fabDrawn, 'the floating feedback button is not drawn at 320px').toBe(false)
     expect(result.withinViewport, 'the banner must be fully on screen at 320px').toBe(true)
     expect(result.horizontalOverflow, 'the banner must not force the page sideways').toBe(false)
   })

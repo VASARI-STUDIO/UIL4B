@@ -36,9 +36,10 @@ const MONO = /Geist Mono/
 const FIELDS = [
   {
     route: '/create/contrast', sel: '.cc-hex-input', name: 'contrast checker hex field',
-    // The drawn pair footer's field: 0 8px, r10.
-    want: { fontFamily: MONO, padding: '0px 8px', borderRadius: '10px' },
-    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', borderRadius: '12px' },
+    // The pair bar's field: 0 12px. Its r12 equals the reset's radius, so radius
+    // is no longer evidence either way; the padding and the mono face are.
+    want: { fontFamily: MONO, padding: '0px 12px' },
+    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px' },
   },
   {
     route: '/create/tint', sel: '.tt-hex-input', name: 'tint tool hex field',

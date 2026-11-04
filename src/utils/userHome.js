@@ -93,7 +93,18 @@ export function partsPresent(design, defaults = DEFAULT_DESIGN) {
 
   const tints = Array.isArray(d.tints?.scale) && d.tints.scale.length > 0
 
-  return { palette, 'type-scale': typeScale, fonts, tints }
+  // A part kept as it was is a choice too: the Brand kit walkthrough records
+  // the parts the person moved past with Next (`design.chosen`), because a
+  // palette, face pair or type scale left on its defaults cannot be told apart
+  // from "never opened" by comparing values alone. Only a literal `true` counts.
+  const chosen = d.chosen && typeof d.chosen === 'object' ? d.chosen : {}
+
+  return {
+    palette: palette || chosen.palette === true,
+    'type-scale': typeScale || chosen['type-scale'] === true,
+    fonts: fonts || chosen.fonts === true,
+    tints: tints || chosen.tints === true,
+  }
 }
 
 /**

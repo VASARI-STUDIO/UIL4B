@@ -31,6 +31,7 @@
 // the nine other locales this app ships.
 import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
+import LegalContents, { BackToContents } from '../components/legal/LegalContents'
 import { KEY_PURPOSES } from '../utils/dataExport'
 import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
@@ -79,7 +80,7 @@ function StorageSection() {
               <tr key={row.key}>
                 <td data-label="Key"><span className="storage-key">{row.key}</span></td>
                 <td className="storage-purpose" data-label="Purpose">{row.purpose}</td>
-                <td data-label="Personal data"><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
+                <td data-label="Personal data"><span className="sr-only">Personal data: </span><span className={`storage-pii ${row.pii}`}>{row.pii === 'yes' ? 'Yes' : row.pii === 'local' ? 'Account-bound' : 'No'}</span></td>
               </tr>
             ))}
           </tbody>
@@ -115,7 +116,18 @@ function VercelSection() {
   )
 }
 
-/* Three of the eleven clauses have no translation key — they were written
+/* The font tools and the kit export request font files and licences from
+   Google Fonts and jsDelivr in the visitor's browser, so those hosts see the
+   request like any web request. */
+function FontHostsSection() {
+  return (
+    <p className="lgl-p">
+      The font tools and kit export load fonts from Google Fonts and jsDelivr, which receive your IP address and browser details when they do.
+    </p>
+  )
+}
+
+/* Four of the twelve clauses have no translation key — they were written
    directly into the page — so they carry a literal `heading` and a `render`
    instead of a key. They stay in the document order they were in: between
    clause 3 (how we use your information) and clause 4 (storage and security),
@@ -127,6 +139,7 @@ const SECTIONS = [
   { id: 'privacy-storage', heading: 'What we store on your device', render: StorageSection },
   { id: 'privacy-aggregate', heading: 'Aggregate usage counts', render: AggregateSection },
   { id: 'privacy-vercel', heading: 'Vercel Web Analytics', render: VercelSection },
+  { id: 'privacy-fonts', heading: 'Fonts from Google Fonts and jsDelivr', render: FontHostsSection },
   { id: 'privacy-s4', title: 'privacy.s4Title', intro: 'privacy.s4Text', items: 'privacy.s4Items' },
   { id: 'privacy-s5', title: 'privacy.s5Title', intro: 'privacy.s5Intro', items: 'privacy.s5Items' },
   { id: 'privacy-s6', title: 'privacy.s6Title', items: 'privacy.s6Items' },
@@ -134,7 +147,12 @@ const SECTIONS = [
 ]
 
 export default function Privacy() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
+  // The four clauses written straight into this page have no translation, so
+  // under any non-English locale they are English text inside a page whose
+  // `lang` is something else. Marking them lets a screen reader pick the right
+  // voice; the text itself is unchanged.
+  const clauseLang = (s) => (s.render && !lang.startsWith('en') ? 'en' : undefined)
 
   return (
     <div className="sec cpg lgl">
@@ -147,32 +165,20 @@ export default function Privacy() {
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
-        <h1 className="cpg-h1">Privacy &amp; <em>data</em>.</h1>
+        <h1 className="cpg-h1">Privacy &amp; data.</h1>
         <p className="cpg-cap lgl-updated">{t('privacy.lastUpdated')}</p>
       </header>
 
       <div className="cpg-split">
-        <div className="cpg-rail-col">
-          <nav className="cpg-rail lgl-toc" aria-label="On this page">
-            <ol>
-              {SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <a className="cpg-rail-row" href={`#${s.id}`}>
-                    <span className="cpg-rail-label">{s.heading || t(s.title)}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        </div>
+        <LegalContents items={SECTIONS.map((s) => ({ id: s.id, label: s.heading || t(s.title), lang: clauseLang(s) }))} />
 
         <div className="legal-card lgl-doc">
           {SECTIONS.map((s) => {
             const items = s.items ? t(s.items) : null
             const Body = s.render
             return (
-              <section className="lgl-sec" id={s.id} key={s.id}>
-                <h2 className="legal-h lgl-h">{s.heading || t(s.title)}</h2>
+              <section className="lgl-sec" id={s.id} key={s.id} lang={clauseLang(s)}>
+                <h2 className="legal-h lgl-h" tabIndex={-1}>{s.heading || t(s.title)}</h2>
                 {Body && <Body />}
                 {s.text && <p className="lgl-p">{t(s.text)}</p>}
                 {s.intro && <p className="lgl-p">{t(s.intro)}</p>}
@@ -193,6 +199,7 @@ export default function Privacy() {
                     </p>
                   </>
                 )}
+                <BackToContents />
               </section>
             )
           })}

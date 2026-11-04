@@ -14,6 +14,7 @@
 // MUTATION: point the logo back at '/projects' on the dashboard, or put the Back
 // to the site link back into PillNav.jsx, or drop aria-disabled from the empty
 // Export: the matching test below goes red.
+import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { readFile } from 'node:fs/promises'
@@ -26,11 +27,13 @@ test('a fresh palette exports the colours on screen without saving the random dr
   const savedBefore = await page.evaluate(() => localStorage.getItem('vs-current-design'))
   await expect(page.locator('.pnav-export')).not.toHaveAttribute('aria-disabled', 'true')
   await page.locator('.pnav-export').click()
-  await page.getByRole('radio', { name: /^JSON tokens/ }).click()
+  await chooseFormat(page, 'json')
   const downloaded = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export JSON', exact: true }).click()
+  await primaryButton(page).click()
   const tokens = JSON.parse(await readFile(await (await downloaded).path(), 'utf8'))
-  const exported = Object.values(tokens.color).filter((token) => token.$root)
+  // Palette colours come first under color, in palette order; the interface
+  // roles after them are references or derived values.
+  const exported = Object.values(tokens.color).filter((token) => token.$root).slice(0, colours.length)
     .map((token) => token.$root.$value.hex.toUpperCase())
   expect(exported).toEqual(colours)
   expect(await page.evaluate(() => localStorage.getItem('vs-current-design'))).toBe(savedBefore)
@@ -105,7 +108,7 @@ test.describe('app header actions', () => {
     const exportBtn = page.locator('.pnav-export')
     await expect(exportBtn).not.toHaveAttribute('aria-disabled', 'true')
     await exportBtn.click()
-    await expect(page.getByRole('dialog', { name: 'Export your design system' })).toBeVisible()
+    await expect(exportPanel(page)).toBeVisible()
   })
 
   test('a fresh empty converter explains why Export is unavailable', async ({ page }) => {
@@ -151,7 +154,8 @@ test.describe('app header actions', () => {
     const exportBtn = page.locator('.pnav-export')
     await expect(exportBtn).not.toHaveAttribute('aria-disabled', 'true')
     await exportBtn.click()
-    await expect(page.getByRole('dialog', { name: 'Export your design system' })).toBeVisible()
+    await expect(exportPanel(page)).toBeVisible()
+    await expect(exportPanel(page).getByRole('heading', { level: 2 }), 'the popup is named for the saved project').toHaveText('Export Seeded Project 2')
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design'))))
       .toEqual(savedDesign)
   })

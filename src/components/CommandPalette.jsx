@@ -4,8 +4,7 @@ import { getCategory, localiseTools, localiseCategories } from '../data/tools'
 import { categoryPillFor, offerableCategories, queryCommandIndex } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
-import { useAuth } from '../contexts/AuthContext'
-import { isAdminEmail } from '../utils/constants'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import useModalDialog from '../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 // The stylesheet families this surface needs, split out of the one
@@ -46,10 +45,9 @@ export default function CommandPalette({ open, onClose }) {
     return () => { vv.removeEventListener('resize', sync); root.style.removeProperty('--vvh') }
   }, [open])
   const { recent } = useWorkspace()
-  const { user } = useAuth()
   const { t } = useI18n()
 
-  const isAdmin = isAdminEmail(user?.email)
+  const { isAdmin } = useIsAdmin()
   // Hide tools still in the workshop from search for everyone but admins.
   // `soon` is toolTree.js's own flag, reaching here through the derived index
   // — the same one the mega-menu dims and CreateTool.jsx renders the 🤫
@@ -85,12 +83,14 @@ export default function CommandPalette({ open, onClose }) {
     // One shared query implementation — see queryCommandIndex in data/tools.
     // The homepage command bar calls the same function over the same index.
     const hit = queryCommandIndex(q, { tools: lTools, categories: lCats, actions: quickActions })
-    const tools = hit.tools.map(tl => ({ kind: 'tool', ...tl }))
+    const tools = hit.tools.filter(tl => !tl.guide).map(tl => ({ kind: 'tool', ...tl }))
+    const guides = hit.tools.filter(tl => tl.guide).map(tl => ({ kind: 'tool', ...tl }))
     const cats = hit.categories.map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
     const actions = hit.actions.map(a => ({ kind: 'action', ...a }))
 
     const out = []
     if (tools.length) out.push({ label: t('common.tools'), items: tools })
+    if (guides.length) out.push({ label: 'Guides', items: guides })
     if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
     if (actions.length) out.push({ label: t('cmd.actions'), items: actions })
     return out
@@ -163,7 +163,15 @@ export default function CommandPalette({ open, onClose }) {
             onChange={e => { setQuery(e.target.value); setHighlight(0) }}
             onKeyDown={onKey}
           />
-          <span className="cp-kbd" aria-hidden="true">esc</span>
+          {/* A real button, not a key hint: a phone has no Esc key. The "esc"
+              text shows on a pointer-and-keyboard screen, an X on touch; the
+              name is the same either way. */}
+          <button type="button" className="cp-kbd" aria-label={t('common.close')} onClick={onClose}>
+            <span className="cp-kbd-key" aria-hidden="true">esc</span>
+            <svg className="cp-kbd-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="cp-results" ref={listRef} id={`${uid}-list`} role="listbox" aria-label={t('common.tools') || 'Results'}>
@@ -178,7 +186,7 @@ export default function CommandPalette({ open, onClose }) {
                 const cat = item.kind === 'tool' ? getCategory(item.category) : null
                 // Same rule as the homepage bar - see categoryPillFor.
                 const catLabel = item.kind === 'tool' ? categoryPillFor(item, cat, t) : null
-                const icon = item.kind === 'category' ? getCategory(item.id)?.icon : (cat?.icon || (
+                const icon = item.kind === 'category' ? getCategory(item.id)?.icon : ((item.guide && item.icon) || cat?.icon || (
                   <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></>
                 ))
                 return (

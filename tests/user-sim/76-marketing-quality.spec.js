@@ -31,48 +31,54 @@ async function settle(page) {
 }
 
 // ── FINDING 1 ──────────────────────────────────────────────────────────────
-// /sitemap printed a route beside every page name in a
-// `grid-template-columns:1fr auto` row, with `white-space:nowrap` on the route.
-// Grid will not size an auto column below its min-content and nowrap makes a
-// route's min-content its FULL width, so `/create/component-designer` (172px)
-// took 172px of a card whose inner width is 227px and the row overflowed.
-//
-// The route was painted 75px OUTSIDE the card's right border at EVERY width
-// from 1024 to 1920 — .smap-cat is overflow:visible, so it simply ran over the
-// edge — and at 1136 through 1320 it pushed the whole PAGE into a horizontal
+// /sitemap prints a route under every page name. A route is one unit per path
+// segment (each ends on a slash, with a <wbr> after it), so a line can break
+// only after a "/". A segment wider than the row's text column is the one case
+// that can still push a route past the row, and the page into a horizontal
 // scrollbar.
 //
-// THE CARD IS THE AXIS, NOT THE VIEWPORT. .smap-grid is
-// `auto-fill minmax(260px,1fr)`, so a card is 227-652px wide at every viewport
-// and 1920 is one of the worst cases. That is why the breakpoint sweeps that
-// walked this page never caught it, and why the fix is flex-wrap on the row
-// rather than another media query.
-test.describe('/sitemap keeps every route inside its card', () => {
-  // 1136 and 1280 are where the page scrolled sideways; 1024 and 1920 are
-  // where the route escaped its card without moving the page, which is the
-  // half a scrollWidth assertion alone would miss.
-  for (const width of [1024, 1097, 1120, 1136, 1280, 1440, 1920]) {
-    test(`no route escapes its card at ${width}`, async ({ page }) => {
+// The row is the axis, not the viewport: rows sit in a list one column wide at
+// narrow widths and beside a group rail at wide ones, so the available width
+// changes at every breakpoint and at 200% zoom. The checks below measure each
+// route against its own row and read the alignment of the row's text lines.
+test.describe('/sitemap keeps every route inside its row', () => {
+  // 320 and 390 are where the narrowest rows meet the longest routes; 1136 and
+  // 1280 are where the old page scrolled sideways.
+  for (const width of [320, 390, 1024, 1097, 1120, 1136, 1280, 1440, 1920]) {
+    test(`no route escapes its row at ${width}`, async ({ page }) => {
       watch(page, PERSONA)
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/sitemap')
       await settle(page)
 
-      const escaped = await page.evaluate(() => {
-        const out = []
-        for (const a of document.querySelectorAll('.smap-link-a')) {
-          const card = a.closest('.smap-cat')
-          const route = a.querySelector('.smap-link-route')
-          if (!card || !route) continue
-          const cardBox = card.getBoundingClientRect()
-          const routeBox = route.getBoundingClientRect()
-          // 20px is .smap-cat's padding — the card's content edge.
-          const over = routeBox.right - (cardBox.right - 20)
-          if (over > 0.5) out.push(`${route.textContent} overflows by ${over.toFixed(1)}px`)
+      const { checked, escaped, misaligned } = await page.evaluate(() => {
+        const escaped = []
+        const misaligned = []
+        let checked = 0
+        for (const li of document.querySelectorAll('li[data-route]')) {
+          const row = li.querySelector('.spt-row')
+          const text = row && row.querySelector('.spt-row-text')
+          const route = text && text.querySelector('.spt-route')
+          if (!route) continue
+          checked++
+          const rowBox = row.getBoundingClientRect()
+          const textBox = text.getBoundingClientRect()
+          // Every segment must sit inside the row's text column, which is itself inside the row.
+          for (const seg of route.querySelectorAll('.spt-route-seg')) {
+            const b = seg.getBoundingClientRect()
+            const over = Math.max(b.right - textBox.right, textBox.left - b.left, b.right - rowBox.right)
+            if (over > 0.5) escaped.push(`${li.getAttribute('data-route')} ${seg.textContent} overflows by ${over.toFixed(1)}px`)
+          }
+          // The title, note and route share one left edge.
+          const lefts = [text.querySelector('.spt-lbl'), text.querySelector('.spt-note'), route]
+            .filter(Boolean).map((el) => el.getBoundingClientRect().left)
+          if (Math.max(...lefts) - Math.min(...lefts) > 0.5) misaligned.push(`${li.getAttribute('data-route')} lines start at ${lefts.map((n) => n.toFixed(1)).join(' / ')}`)
         }
-        return out
+        return { checked, escaped, misaligned }
       })
-      expect(escaped, `routes painted outside their card at ${width}`).toEqual([])
+      expect(checked, 'the map should list its rows').toBeGreaterThan(40)
+      expect(escaped, `routes painted outside their row at ${width}`).toEqual([])
+      expect(misaligned, `row text lines out of line at ${width}`).toEqual([])
     })
   }
 
@@ -107,27 +113,32 @@ test.describe('/sitemap keeps every route inside its card', () => {
     await ctx.close()
   })
 
-  // The route is the thing a developer came to this page for, so the fix must
-  // not have quietly solved the overflow by hiding or truncating it. Every
-  // route is still rendered in full, and still matches the row's data-route.
-  test('every route is still shown in full', async ({ page }) => {
-    watch(page, PERSONA)
-    await page.setViewportSize({ width: 1136, height: 900 })
-    await go(page, '/sitemap')
-    await settle(page)
-    const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.smap-link')).map((li) => {
-      const route = li.querySelector('.smap-link-route')
-      const cs = route ? getComputedStyle(route) : null
-      return {
-        declared: li.getAttribute('data-route'),
-        shown: route ? route.textContent.trim() : null,
-        clipped: cs ? cs.textOverflow === 'ellipsis' || cs.overflow === 'hidden' : false,
-      }
-    }))
-    expect(rows.length).toBeGreaterThan(40)
-    expect(rows.filter((r) => r.shown !== r.declared)).toEqual([])
-    expect(rows.filter((r) => r.clipped)).toEqual([])
-  })
+  // The route is the thing a developer came to this page for, so a route must
+  // never be hidden or truncated to make it fit. Every route is rendered in
+  // full, matches the row's data-route, and sits in an element that does not clip.
+  for (const width of [320, 1136]) {
+    test(`every route is still shown in full at ${width}`, async ({ page }) => {
+      watch(page, PERSONA)
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/sitemap')
+      await settle(page)
+      const rows = await page.evaluate(() => Array.from(document.querySelectorAll('li[data-route]')).map((li) => {
+        const route = li.querySelector('.spt-route')
+        const els = route ? [route, ...route.querySelectorAll('.spt-route-seg')] : []
+        return {
+          declared: li.getAttribute('data-route'),
+          shown: route ? route.textContent.trim() : null,
+          clipped: els.some((el) => {
+            const cs = getComputedStyle(el)
+            return cs.textOverflow === 'ellipsis' || cs.overflow === 'hidden' || el.scrollWidth > el.clientWidth + 1
+          }),
+        }
+      }))
+      expect(rows.length).toBeGreaterThan(40)
+      expect(rows.filter((r) => r.shown !== r.declared)).toEqual([])
+      expect(rows.filter((r) => r.clipped)).toEqual([])
+    })
+  }
 })
 
 // ── FINDING 2 ──────────────────────────────────────────────────────────────

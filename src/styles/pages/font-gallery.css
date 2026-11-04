@@ -17,19 +17,11 @@
 .fg-page{min-width:0;padding-bottom:var(--s-4)}
 :where(.fg-page) .fg-more-btn--primary{color:var(--accent-fg);background:var(--accent-fill);border-color:var(--accent-fill)}
 :where(.fg-page) .fg-more-btn--primary:hover:not(:disabled){background:var(--brand-soft);border-color:var(--brand-soft);color:var(--accent-fg)}
-:where(.fg-page) .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:12px;font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:max(var(--fs-caption),12px);font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-tray-actions{display:flex;gap:8px;flex-shrink:0}
-:where(.fg-page) .fg-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fg-fade var(--dur-2) var(--ease-entrance)}
-:where(.fg-page) .fg-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0;padding:26px 28px 18px;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-detail-controls{flex-shrink:0;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--bg-1)}
-:where(.fg-page) .fg-detail-body{flex:1;min-height:0;overflow-y:auto;padding:24px 28px 4px}
-@media (max-width:980px){
-  :where(.fg-page) .fg-detail-head{padding:22px 22px 16px}
-  :where(.fg-page) .fg-detail-controls{padding:13px 22px}
-  :where(.fg-page) .fg-detail-body{padding:20px 22px 4px}
-}
+:where(.fg-page) .fg-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:max(40px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(40px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow-y:auto;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fg-fade var(--dur-2) var(--ease-entrance)}
 @media (max-width:560px){
-  :where(.fg-page) .fg-overlay{padding:16px 10px}
+  :where(.fg-page) .fg-overlay{padding:max(16px,env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
 }
 @media (max-width:380px){
   :where(.fg-page) .fg-compare-tray-actions .fg-more-btn{flex:1}
@@ -37,33 +29,15 @@
 @media (pointer:coarse){
   :where(.fg-page) .fg-compare-chip{min-height:44px}
 }
-:where(.fg-page) .fg-card{gap:13px;padding:18px 0 16px;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-card:hover{background:var(--hvr)}
-:where(.fg-page) .fg-card:hover .lbry-card-shot{transform:none;box-shadow:none}
-:where(.fg-page) .fg-card-name{font-size:16px;line-height:1.3;letter-spacing:-.015em}
-:where(.fg-page) .fg-card-info{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:capitalize}
-:where(.fg-page) .fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
-@media (max-width:720px){
-  :where(.fg-page) .fg-card .lbry-card-foot{padding-left:34px}
-}
-:where(.fg-page) .fg-count{margin:0 0 14px;font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:.02em}
-:where(.fg-page) .fg-grid{margin:0 0 var(--s-5);padding:0;list-style:none}
-:where(.fg-page) .fg-card-preview{display:flex;flex-direction:column;gap:10px;overflow:hidden;font-family:var(--fg-ff)}
-:where(.fg-page) .fg-card-preview--pending{font-family:var(--font)}
-:where(.fg-page) .fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
-:where(.fg-page) .fg-card-skeleton--sample{width:76%;height:52px}
-:where(.fg-page) .fg-card-skeleton--body{width:92%;height:38px}
-:where(.fg-page) .fg-card-sample{display:block;flex:0 0 auto;height:52px;font-size:42px;line-height:52px;letter-spacing:-.02em;color:var(--t0);font-weight:var(--fg-fw-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-:where(.fg-page) .fg-card-pangram{display:-webkit-box;flex:0 0 auto;height:38px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:19px;font-weight:var(--fg-fw-b);color:var(--t1)}
-:where(.fg-page) .fg-card-compare{z-index:2;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-0);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-:where(.fg-page) .fg-card-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-:where(.fg-page) .fg-card-compare:hover{border-color:var(--bh);color:var(--t0)}
-:where(.fg-page) .fg-card-compare--on{background:var(--t0);border-color:var(--t0);color:var(--bg-0)}
+:where(.fg-page) .fg-card-skeleton{display:block;flex:0 0 auto;position:relative;overflow:hidden;border-radius:var(--radius-xs);background:var(--bg-2)}
+/* The pulse lives on an overlay, so the block's own computed style holds still. */
+:where(.fg-page) .fg-card-skeleton::after{content:"";position:absolute;inset:0;background:var(--bg-0);opacity:0;animation:fg-pulse 1.2s ease-in-out infinite alternate}
+@keyframes fg-pulse{from{opacity:0}to{opacity:.45}}
 :where(.fg-page) .fg-sentinel{height:1px}
 :where(.fg-page) .fg-more{display:flex;justify-content:center;margin-bottom:var(--s-5)}
-:where(.fg-page) .fg-compare-tray{position:sticky;bottom:14px;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
+:where(.fg-page) .fg-compare-tray{position:sticky;bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
 :where(.fg-page) .fg-compare-tray-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-:where(.fg-page) .fg-compare-tray-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+:where(.fg-page) .fg-compare-tray-label{font-family:var(--font);font-size:max(var(--fs-caption),10px);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 :where(.fg-page) .fg-compare-chip:hover{border-color:var(--bh);color:var(--t0)}
 :where(.fg-page) .fg-compare-chip svg{opacity:.6}
 :where(.fg-page) .fg-compare{max-width:1100px;padding:28px}
@@ -73,7 +47,7 @@
 :where(.fg-page) .fg-compare-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 :where(.fg-page) .fg-compare-input{flex:1;min-width:200px;min-height:38px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
 :where(.fg-page) .fg-compare-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-:where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--t2);font-weight:600}
+:where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:max(var(--fs-caption),11px);color:var(--t2);font-weight:600;font-variant-numeric:tabular-nums}
 :where(.fg-page) .fg-compare-control input[type=range]{width:120px;accent-color:var(--accent)}
 :where(.fg-page) .fg-compare-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
 :where(.fg-page) .fg-compare-col{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
@@ -82,112 +56,27 @@
 :where(.fg-page) .fg-compare-col-name:hover{color:var(--accent-text)}
 :where(.fg-page) .fg-compare-col-remove{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-col-remove:hover{border-color:var(--err);color:var(--err-strong)}
-:where(.fg-page) .fg-compare-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize}
+:where(.fg-page) .fg-compare-meta{font-family:var(--font);font-size:max(var(--fs-caption),10px);color:var(--t2);text-transform:none}
 :where(.fg-page) .fg-compare-sample{min-height:96px;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw-h);line-height:1.25;letter-spacing:-.01em;word-break:break-word;overflow:hidden}
 :where(.fg-page) .fg-compare-charset{padding-top:8px;border-top:1px solid var(--border);color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw-b);font-size:15px;line-height:1.5}
-:where(.fg-page) .fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:11px;font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
+:where(.fg-page) .fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:max(var(--fs-caption),11px);font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-copy:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-:where(.fg-page) .fg-detail-id{min-width:0}
-:where(.fg-page) .fg-detail-hero{margin:0 0 12px;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(30px,5vw,52px);font-weight:var(--fg-fw);line-height:1.1;letter-spacing:-.03em;word-break:break-word}
-:where(.fg-page) .fg-detail-facts{display:flex;gap:6px;margin:0;flex-wrap:wrap}
-:where(.fg-page) .fg-tag--scripts{max-width:100%;text-transform:none;letter-spacing:.03em}
-:where(.fg-page) .fg-detail-field{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-:where(.fg-page) .fg-detail-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-:where(.fg-page) .fg-detail-field>span{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
-:where(.fg-page) .fg-detail-field input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
-:where(.fg-page) .fg-detail-field input::placeholder{color:var(--t3)}
-:where(.fg-page) .fg-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill)}
-:where(.fg-page) .fg-weight-rows{margin:0;padding:0;list-style:none}
-:where(.fg-page) .fg-weight-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-weight-row:last-child{border-bottom:0}
-:where(.fg-page) .fg-weight-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:25px;line-height:1.3;letter-spacing:-.015em}
-:where(.fg-page) .fg-weight-tag{flex-shrink:0;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-variant-numeric:tabular-nums}
-:where(.fg-page) .fg-weight-tag strong{color:var(--t2);font-weight:700}
-:where(.fg-page) .fg-charset{color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:21px;line-height:1.8;letter-spacing:.02em;word-break:break-all}
-:where(.fg-page) .fg-pair-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-:where(.fg-page) .fg-pair-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
-:where(.fg-page) .fg-pair-card:hover{border-color:var(--bh)}
-:where(.fg-page) .fg-pair-preview{display:flex;flex-direction:column;gap:8px;min-height:112px;padding:16px;background:var(--bg-1)}
-:where(.fg-page) .fg-pair-heading{color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw-h);font-size:24px;line-height:1.1;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis}
-:where(.fg-page) .fg-pair-body{color:var(--t1);font-family:var(--fg-pair-ff);font-weight:var(--fg-pair-fw);font-size:13px;line-height:1.55}
-:where(.fg-page) .fg-pair-reason{margin:0;padding:10px 14px 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
-:where(.fg-page) .fg-pair-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:10px 14px 12px}
-:where(.fg-page) .fg-pair-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-:where(.fg-page) .fg-pair-apply{flex-shrink:0;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11.5px;font-weight:600;border-radius:var(--radius-pill);border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
-:where(.fg-page) .fg-pair-apply:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-:where(.fg-page) .fg-detail-btn{display:inline-flex;align-items:center;min-height:38px;padding:9px 15px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
-:where(.fg-page) .fg-detail-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-:where(.fg-page) .fg-detail-btn--primary{color:var(--accent-ink);background:var(--accent-fill);border-color:var(--accent-fill)}
-:where(.fg-page) .fg-detail-btn--primary:hover{background:var(--accent-fill-hover);border-color:var(--accent-fill-hover);color:var(--accent-ink)}
-:where(.fg-page) .fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:12.5px;color:var(--t1);line-height:1.5}
+:where(.fg-page) .fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:max(var(--fs-caption),12.5px);color:var(--t1);line-height:1.5}
 :where(.fg-page) .fg-loading-note-spinner{flex-shrink:0;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:fg-spin .7s linear infinite}
 @media (max-width:560px){
-  :where(.fg-page) .fg-detail-head{padding:18px 18px 14px}
-  :where(.fg-page) .fg-detail-controls{padding:12px 18px}
-  :where(.fg-page) .fg-detail-body{padding:18px 18px 4px}
-  :where(.fg-page) .fg-detail-hero{font-size:30px}
   :where(.fg-page) .fg-compare{padding:18px}
-  :where(.fg-page) .fg-charset{font-size:16px}
-  :where(.fg-page) .fg-weight-row{align-items:flex-start;flex-direction:column-reverse;gap:2px;padding:10px 0}
-  :where(.fg-page) .fg-weight-line{max-width:100%;font-size:21px}
-  :where(.fg-page) .fg-detail-btn{flex:1 1 46%;justify-content:center}
 }
 @media (max-width:380px){
   :where(.fg-page) .fg-compare-tray{flex-direction:column;align-items:stretch}
 }
-@media (pointer:coarse){
-  :where(.fg-page) .fg-card-compare{width:44px;height:44px;opacity:1}
+/* The phone tab bar is fixed along the bottom, so a tray that sticks to the
+   viewport edge sits under it. Stick above the bar instead (same offset the
+   feedback button and billing banner use). */
+@media (max-width:767px){
+  html.has-tabbar :where(.fg-page) .fg-compare-tray{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
 }
 .fg-page{padding-bottom:72px}
 :where(.fg-page) .fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-:where(.fg-page) .fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
-:where(.fg-page) .fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
-:where(.fg-page) .fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
-:where(.fg-page) .fg-card-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-:where(.fg-page) .fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
-:where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
-:where(.fg-page) .fg-card-skeleton--sample{height:var(--fg-line)}
-:where(.fg-page) .fg-card-skeleton--body{height:24px}
-:where(.fg-page) .fg-card-skeleton--ladder{width:44%;height:26px}
-:where(.fg-page) .fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
-:where(.fg-page) .fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
-:where(.fg-page) .fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
-:where(.fg-page) .fg-card-step{font-weight:var(--fg-fw)}
-:where(.fg-page) .fg-card-compare{position:static;opacity:1;transform:none}
-:where(.fg-page) .fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
-.fg-page .typ-loading{min-height:0;padding:var(--s-6) var(--s-5) var(--s-5)}
-:where(.fg-page) .fg-grid--skeleton{--lbry-col-min:100%}
-:where(.fg-page) .fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
-:where(.fg-page) .fg-skel-row:last-child{border-bottom-color:transparent}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
-:where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
-@media (min-width:721px) and (max-width:959px){
-  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:48px}
-  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;line-clamp:2;white-space:normal}
-}
-@media (max-width:720px){
-  :where(.fg-page) .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
-  :where(.fg-page) .fg-card-index{padding-top:2px;font-size:10px}
-  :where(.fg-page) .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
-  :where(.fg-page) .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
-  :where(.fg-page) .fg-card-scripts{display:none}
-  :where(.fg-page) .fg-card-pangram,:where(.fg-page) .fg-card-skeleton--body{height:40px}
-  :where(.fg-page) .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
-  :where(.fg-page) .fg-card-ladder,:where(.fg-page) .fg-card-skeleton--ladder{height:24px}
-  :where(.fg-page) .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}
-  :where(.fg-page) .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--sample{width:72%}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--body{width:90%}
-  :where(.fg-page) .fg-skel-row .fg-card-skeleton--ladder{width:56%}
-}
-:where(.fg-page) .fg-grid{
-  border:1px solid var(--border);
-  border-radius:var(--radius-l);
-  overflow:hidden;
-  background:var(--card);
-}
-:where(.fg-page) .fg-card:last-child{border-bottom-color:transparent}
 
 
 .fg-page {
@@ -195,85 +84,16 @@
   --fg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
 }
 
-.fg-page .fg-count { font-size: 10.5px; letter-spacing: .14em; color: var(--t2); }
 
-/* ── The specimen list: one ruled table ──────────────────────────────────── */
-
-.fg-page .fg-grid {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  background: var(--card);
-  box-shadow: var(--shadow-s);
-}
-
-/* library.css draws every .lbry-card as its own bordered, rounded card. A row
-   in this list is a band between two rules; the rules are the structure. */
-.fg-page .fg-grid .fg-card.lbry-card {
-  gap: 13px;
-  padding: 18px 0 16px;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  transition: background-color var(--dur-1) ease;
-}
-
-.fg-page .fg-grid .fg-card.lbry-card:last-child { border-bottom-color: transparent; }
-
-.fg-page .fg-grid .fg-card.lbry-card:hover { background: var(--fg-wash); border-color: var(--border); }
-
-.fg-page .fg-grid .fg-card.lbry-card:last-child:hover { border-bottom-color: transparent; }
-
-/* The foot clears the rank gutter again, so the name sits under the specimen
-   that names it (type.css's 56px, which library.css's 18px foot padding had
-   overridden). */
-.fg-page .fg-card.lbry-card .lbry-card-foot { align-items: baseline; padding: 0 22px 0 56px; }
-
-.fg-page .fg-card.lbry-card .lbry-card-name { font-size: 16px; font-weight: 560; }
-
-.fg-page .fg-card.lbry-card .lbry-card-meta,
-.fg-page .fg-card-info { color: var(--t2); }
-
-.fg-page .fg-card-index { color: var(--t2); font-weight: 500; }
-
-.fg-page .fg-card-scripts { color: var(--t2); }
-
-.fg-page .fg-grid .fg-card--comparing.lbry-card,
-.fg-page .fg-grid .fg-card--comparing.lbry-card:hover {
-  background: var(--fg-wash);
-  box-shadow: inset 3px 0 0 var(--t0);
-}
-
-.fg-page .fg-card-compare {
-  width: 32px;
-  height: 32px;
-  color: var(--t1);
-  background: var(--card);
-  border: 1px solid var(--bh);
-  border-radius: var(--btn-radius);
-}
-
-.fg-page .fg-card-compare:hover { color: var(--t0); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
-
-.fg-page .fg-card-compare--on,
-.fg-page .fg-card-compare--on:hover { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
-
-.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-@media (max-width: 720px) {
-  .fg-page .fg-card.lbry-card .lbry-card-foot { padding: 0 16px 0 34px; }
-}
 
 /* ── Buttons: show more, the tray, the onward links ──────────────────────── */
 
 .fg-page .fg-more-btn,
-.fg-page .fg-detail-btn,
-.fg-page .fg-compare-copy,
-.fg-page .fg-pair-apply {
+.fg-page .fg-compare-copy {
   min-height: 40px;
   padding: 8px 15px;
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size:max(var(--fs-caption),12.5px);
   font-weight: 560;
   color: var(--t0);
   background: transparent;
@@ -282,26 +102,20 @@
   transition: color var(--dur-1) ease, background-color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
-.fg-page .fg-pair-apply { min-height: 36px; padding: 6px 12px; }
-
 .fg-page .fg-more-btn:hover:not(:disabled),
-.fg-page .fg-detail-btn:hover,
-.fg-page .fg-compare-copy:hover,
-.fg-page .fg-pair-apply:hover {
+.fg-page .fg-compare-copy:hover {
   color: var(--t0);
   background: var(--hvr);
   border-color: color-mix(in srgb, var(--t0) 34%, transparent);
 }
 
-.fg-page .fg-more-btn--primary,
-.fg-page .fg-detail-btn--primary {
+.fg-page .fg-more-btn--primary {
   color: var(--accent-ink);
   background: var(--accent-fill);
   border-color: var(--accent-fill);
 }
 
-.fg-page .fg-more-btn--primary:hover:not(:disabled),
-.fg-page .fg-detail-btn--primary:hover {
+.fg-page .fg-more-btn--primary:hover:not(:disabled) {
   color: var(--accent-ink);
   background: var(--accent-fill-hover);
   border-color: var(--accent-fill-hover);
@@ -312,7 +126,7 @@
   box-shadow: 0 2px 4px -2px rgba(10, 10, 11, .08), 0 22px 44px -24px rgba(10, 10, 11, .32);
 }
 
-.fg-page .fg-compare-tray-label { font-weight: 500; letter-spacing: .14em; }
+.fg-page .fg-compare-tray-label { font-weight: 500; letter-spacing: normal; }
 
 .fg-page .fg-compare-chip {
   min-height: 34px;
@@ -332,7 +146,6 @@
   background: rgba(8, 8, 12, .52);
 }
 
-.fg-page .fg-detail,
 .fg-page .fg-compare {
   border-radius: var(--radius-3xl);
   box-shadow: 0 2px 4px -2px rgba(6, 6, 12, .12), 0 32px 80px -24px rgba(6, 6, 12, .42);
@@ -350,34 +163,15 @@
 .fg-page .fg-detail-close:hover { color: var(--t0); background: var(--hvr); }
 
 .fg-page .fg-detail-label {
+  font-family: var(--font);
+  font-size: max(var(--fs-caption), 10px);
   font-weight: 500;
-  letter-spacing: .14em;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t2);
 }
 
 .fg-page .fg-compare-title { font-weight: 560; letter-spacing: -.025em; }
-
-/* Facts, not pills: the category, the weight count and the scripts are
-   metadata, so they take the hairline tag at the small radius. */
-.fg-page .fg-tag {
-  padding: 4px 9px;
-  font-weight: 500;
-  letter-spacing: .1em;
-  color: var(--t2);
-  border-radius: var(--radius-xs);
-}
-
-.fg-page .fg-detail-field {
-  border-radius: var(--radius);
-}
-
-.fg-page .fg-detail-field:focus-within { box-shadow: 0 0 0 3px var(--accent-wash-4); }
-
-.fg-page .fg-detail-field > span { font-weight: 500; letter-spacing: .14em; color: var(--t2); }
-
-.fg-page .fg-pair-card { border-radius: var(--radius-l); }
-
-.fg-page .fg-pair-name { font-weight: 560; }
 
 .fg-page .fg-compare-input { border-radius: var(--radius-s); }
 
@@ -399,8 +193,6 @@
 
 .fg-page .fg-more-btn:focus-visible,
 .fg-page .fg-compare-chip:focus-visible,
-.fg-page .fg-detail-btn:focus-visible,
-.fg-page .fg-pair-apply:focus-visible,
 .fg-page .fg-compare-copy:focus-visible,
 .fg-page .fg-compare-col-name:focus-visible,
 .fg-page .fg-compare-col-remove:focus-visible,
@@ -409,8 +201,7 @@
   outline-offset: 2px;
 }
 
-.fg-page .fg-compare:focus-visible,
-.fg-page .fg-detail:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Touch floors ─────────────────────────────────────────────────────────── */
 
@@ -419,73 +210,58 @@
   .fg-page .fg-detail-close { width: 44px; height: 44px; }
   .fg-page .fg-compare-col-remove { width: 44px; height: 44px; }
   .fg-page .fg-more-btn,
-  .fg-page .fg-detail-btn,
   .fg-page .fg-compare-copy,
-  .fg-page .fg-pair-apply,
   .fg-page .fg-compare-chip { min-height: 44px; }
 }
 
 /* ── Press feedback, with the house reduced-motion pair ──────────────────── */
 
 .fg-page .fg-more-btn:active,
-.fg-page .fg-detail-btn:active,
 .fg-page .fg-card-compare:active { transform: scale(.97); }
 
 html[data-reduced-motion="true"] .fg-page .fg-more-btn:active,
-html[data-reduced-motion="true"] .fg-page .fg-detail-btn:active,
 html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fg-page .fg-more-btn:active,
-  html:not([data-reduced-motion="false"]) .fg-page .fg-detail-btn:active,
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-compare:active { transform: none; }
 }
 
-/* ── The field strip: search and the preview words ──────────────────────── */
-.fg-page .fg-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin: 0 0 4px;
-}
-.fg-page .fg-controls .lbry-search { max-width: none; margin: 0; }
+/* ── Toolbar controls: category pills, search, preview text, size ─────────
+   The category pills stay on one line; every field is a fixed width so the
+   toolbar can measure it. */
+.fg-page .tl-toolbar .fg-cats { flex-wrap: nowrap; }
+.fg-page .tl-toolbar .fg-search { --search-h: 36px; flex: 0 0 auto; width: 220px; }
+.fg-page .fg-search input { font-size: 13px; }
 .fg-page .fg-preview-field {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 200px;
   min-width: 0;
-  min-height: 44px;
+  height: 36px;
   padding: 0 14px;
   border: 1px solid var(--tl-line);
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--t0) 3%, transparent);
+  transition: border-color var(--dur-1) var(--ease-standard);
 }
 .fg-page .fg-preview-field:focus-within { border-color: var(--tl-line-on); }
-.fg-page .fg-preview-k {
-  flex: 0 0 auto;
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--tl-faint);
-}
+.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 .fg-page .fg-preview-field input {
   flex: 1;
   min-width: 0;
-  height: 42px;
+  height: 100%;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--tl-ink);
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 13px;
   box-shadow: none;
 }
 .fg-page .fg-preview-field input:focus { outline: none; }
-.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
-
-/* ── Toolbar: the category pills stay on one line; the size control ───── */
-.fg-page .tl-toolbar .fg-cats { flex-wrap: nowrap; }
+.fg-page .fg-preview-k { flex: 0 0 auto; font-size:max(var(--fs-caption),12.5px); color: var(--tl-dim); }
 .fg-page .fg-size {
   display: inline-flex;
   align-items: center;
@@ -493,35 +269,522 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--tl-line);
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
 }
-.fg-page .fg-size-k { font-size: 12.5px; color: var(--tl-dim); }
+.fg-page .fg-size-k { font-size:max(var(--fs-caption),12.5px); color: var(--tl-dim); }
 .fg-page .fg-size input[type="range"] { width: 96px; min-width: 0; margin: 0; accent-color: var(--t0); }
-.fg-page .fg-size-v { min-width: 36px; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-align: right; }
+.fg-page .fg-size-v { min-width: 44px; font-family: var(--mono); font-size: max(var(--fs-caption), 11px); color: var(--tl-ink); text-align: right; }
 .tl-sheet-layer .fg-size,
-.fg-page .tl-pop .fg-size { width: 100%; }
+.fg-page .tl-pop .fg-size,
+.tl-sheet-layer .fg-preview-field,
+.fg-page .tl-pop .fg-preview-field { width: 100%; }
 .tl-sheet-layer .fg-size input[type="range"],
 .fg-page .tl-pop .fg-size input[type="range"] { flex: 1; width: auto; }
 .tl-sheet-layer .fg-cats,
 .fg-page .tl-pop .fg-cats { flex-wrap: wrap; }
 
+/* The second toolbar row (tablet and phone): search, and on a tablet the pair
+   link. It never wraps. */
+.fg-page .fg-bar2 {
+  --search-h: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin: 0 0 4px;
+}
+.fg-page .fg-bar2 .fg-search { flex: 1 1 auto; min-width: 0; margin: 0; max-width: none; }
+.fg-page .fg-bar2 .fg-pair-link { flex: 0 0 auto; }
 @media (max-width: 767px) {
-  .fg-page .fg-controls { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .fg-page .fg-bar2 { --search-h: 44px; }
 }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .fg-page .fg-preview-field input,
-  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+  .tl-sheet-layer .fg-preview-field input,
+  .fg-page .fg-search input { font-size: 16px; }
 }
 @media (pointer: coarse) {
-  .fg-page .fg-preview-field input { height: 44px; font-size: 16px; }
-  .fg-page .fg-controls .lbry-search input { font-size: 16px; }
+  .fg-page .fg-preview-field input,
+  .tl-sheet-layer .fg-preview-field input,
+  .fg-page .fg-search input { font-size: 16px; }
+  .fg-page .fg-preview-field,
+  .tl-sheet-layer .fg-preview-field,
+  .fg-page .fg-size,
+  .tl-sheet-layer .fg-size { height: 44px; }
+  .fg-page .tl-toolbar .fg-search,
+  .fg-page .fg-bar2 { --search-h: 44px; }
   .fg-page .fg-cats,
   .tl-sheet-layer .fg-cats { gap: 8px; }
   .fg-page .fdx-tab { min-height: 44px; }
-  .fg-page .fg-size,
-  .tl-sheet-layer .fg-size { height: 44px; }
   /* A one-word category ("All") is narrower than a finger. */
   .fg-page .fg-cats .tl-pill,
   .tl-sheet-layer .fg-cats .tl-pill { min-width: 44px; justify-content: center; }
+}
+
+/* ── The count line ───────────────────────────────────────────────────────── */
+.fg-page {
+  /* The body's own padding, so the bands can run past it to the edges and
+     their contents can line up with the count and the toolbar again. */
+  --fg-pad: clamp(12px, 2vw, 20px);
+  --fg-padl: max(var(--fg-pad), env(safe-area-inset-left, 0px));
+  --fg-padr: max(var(--fg-pad), env(safe-area-inset-right, 0px));
+}
+.fg-page .fg-count {
+  margin: 12px 0;
+  padding-inline: var(--fg-padl) var(--fg-padr);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bands: a hairline between each, no container ─────────────────────────
+   Every band is the same fixed height (the size times a ratio, set on
+   `.fg-results`), and every part is placed inside it, so nothing changes size
+   when a face arrives, when a name is typed or when the wake shows. */
+.fg-page .fg-results { margin-inline: calc(-1 * var(--fg-pad)); }
+.fg-page .fg-grid { margin: 0 0 var(--s-5); padding: 0; border-top: 1px solid var(--border); }
+
+.fg-page :is(.fg-card, .fg-skel-row) {
+  /* Wide values; the tablet and phone ones follow. */
+  --fg-y-max: 20px;
+  --fg-pangram: 20px;
+  --fg-steps: 14px;
+  --fg-y: min(var(--fg-y-max), calc(var(--fg-name, 96px) * .25));
+  --fg-line: calc(var(--fg-name, 96px) * 1.1);
+  --fg-right: calc(var(--fg-padr) + 56px);
+  box-sizing: border-box;
+  height: var(--fg-band, 240px);
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 1023px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 16px; --fg-pangram: 18px; --fg-steps: 13px; }
+}
+@media (max-width: 767px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 12px; --fg-pangram: 13px; --fg-steps: 11px; }
+}
+@media (max-width: 359px) {
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-pangram: 11px; }
+}
+
+.fg-page .fg-card {
+  /* The wake flips these four; everything inside reads them. */
+  --fg-ground: transparent;
+  --fg-ink: var(--t0);
+  --fg-ink-2: var(--t1);
+  --fg-back: var(--bg-0);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--fg-ground);
+  transition: background-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card--comparing { box-shadow: inset 3px 0 0 var(--t0); }
+
+.fg-page .fg-card-open {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+
+/* The name: top-left, in its own face, at band size. `--fg-fit` is the scale
+   FontGallery's useFitName sets for a long name; it never goes below the floor,
+   and what still does not fit is clipped, never ended with an ellipsis. */
+.fg-page .fg-card-preview {
+  position: absolute;
+  top: var(--fg-y);
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  height: var(--fg-line);
+  overflow-x: clip;
+  overflow-y: visible;
+  font-family: var(--fg-ff);
+}
+.fg-page .fg-card-preview--pending { font-family: var(--font); }
+/* The placeholder sits centred in the name's line box (.7 of a 1.1 line) without
+   changing the box's display, so a card reads the same before and after its face. */
+.fg-page .fg-card-preview--pending .fg-card-skeleton--sample { margin-top: calc(var(--fg-name, 96px) * .2); }
+.fg-page .fg-card-name {
+  display: block;
+  font-size: calc(var(--fg-name, 96px) * var(--fg-fit, 1));
+  font-weight: var(--fg-fw-h);
+  line-height: var(--fg-line);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  color: var(--fg-ink);
+  transition: color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card-skeleton--sample { width: min(48%, 520px); height: calc(var(--fg-name, 96px) * .7); }
+
+.fg-page .fg-card-meta {
+  position: absolute;
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  bottom: var(--fg-y);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--fg-ink-2);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--dur-1) var(--ease-standard);
+}
+
+/* The wake's contents: always laid out, so only their opacity changes. */
+.fg-page .fg-card-reveal {
+  position: absolute;
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  /* Starts below the name's descender room (p, g, y, j, q, script tails run
+     under the line box), so the pangram never meets them. */
+  top: calc(var(--fg-y) + var(--fg-line) + var(--fg-name, 96px) * .14);
+  bottom: calc(var(--fg-y) + 24px);
+  container: fg-reveal / size;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  font-family: var(--fg-ff);
+  color: var(--fg-ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease-standard);
+}
+@media (max-width: 767px) {
+  /* The pangram and the weights line together need 31px; 24px of clearance
+     below left too little. */
+  .fg-page .fg-card-reveal { bottom: calc(var(--fg-y) + 18px); gap: 0; }
+}
+.fg-page .fg-card-pangram {
+  flex: 0 0 auto;
+  font-size: var(--fg-pangram);
+  font-weight: var(--fg-fw-b);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.fg-page .fg-card-weights {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px 18px;
+  font-size: var(--fg-steps);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.fg-page .fg-card-step { font-weight: var(--fg-fw); }
+
+/* The reveal's room follows the Size choice while its type does not, so a line
+   that does not fit whole is dropped (weights first, then the pangram) rather
+   than cut mid-glyph. Each limit is a line's height plus the gap: wide 26 and
+   48; tablet 24 and 44; phone 17 and 31 (the fixed sizes above, at 1.3). Hidden
+   lines leave the layout, but the reveal is its own box, so nothing else moves. */
+@media (min-width: 1024px) {
+  @container fg-reveal (height < 50px) { .fg-page .fg-card-weights { display: none; } }
+  @container fg-reveal (height < 27px) { .fg-page .fg-card-pangram { display: none; } }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  @container fg-reveal (height < 46px) { .fg-page .fg-card-weights { display: none; } }
+  @container fg-reveal (height < 25px) { .fg-page .fg-card-pangram { display: none; } }
+}
+@media (max-width: 767px) {
+  @container fg-reveal (height < 33px) { .fg-page .fg-card-weights { display: none; } }
+  @container fg-reveal (height < 18px) { .fg-page .fg-card-pangram { display: none; } }
+}
+
+/* The reveal: the pangram and the weights fade in on the same transparent
+   band. Hover waits 80ms, so a pointer crossing the list does not strobe it;
+   keyboard focus shows it at once. Only opacity changes; no box moves and the
+   ground and ink stay as they are at rest. */
+.fg-page .fg-card:has(:focus-visible) .fg-card-reveal { opacity: 1; }
+@media (hover: hover) {
+  .fg-page .fg-card:hover .fg-card-reveal { opacity: 1; }
+  /* Tiles hide the reveal, so a hovered tile shows its name in the link colour. */
+  .fg-page .fg-grid--tiles .fg-card:hover .fg-card-name { color: var(--tl-link); }
+  .fg-page .fg-card:hover,
+  .fg-page .fg-card:hover :is(.fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare) { transition-delay: 80ms; }
+}
+
+/* Compare: 44px, on the band's right edge, centred on the name. */
+.fg-page .fg-card-compare {
+  position: absolute;
+  z-index: 2;
+  right: var(--fg-padr);
+  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - 22px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--fg-ink-2);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--fg-ink) 34%, transparent);
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .fg-page .fg-card-compare:hover { color: var(--fg-ink); border-color: color-mix(in srgb, var(--fg-ink) 60%, transparent); }
+}
+.fg-page .fg-card-compare--on,
+.fg-page .fg-card-compare--on:hover { color: var(--fg-back); background: var(--fg-ink); border-color: var(--fg-ink); }
+
+/* Loading: the same bands, drawn empty. */
+.fg-page .fg-skel-row { padding: var(--fg-y) var(--fg-padr) 0 var(--fg-padl); }
+.fg-page .fg-skel-row .fg-card-skeleton--sample { margin-top: calc(var(--fg-name, 96px) * .2); }
+
+/* Empty: one plain band between two hairlines. */
+.fg-page .fg-empty {
+  margin: 0 0 var(--s-5);
+  padding: 40px var(--fg-padr) 40px var(--fg-padl);
+  background: transparent;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+}
+
+/* No transitions at all under reduced motion: the wake switches at once. */
+html[data-reduced-motion="true"] .fg-page .fg-card-skeleton::after { animation: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page .fg-card-skeleton::after { animation: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
+}
+
+/* ── The compare tray ─────────────────────────────────────────────────────
+   A bar fixed to the foot of the screen, full width. On a phone it stands on
+   the tab bar (its bottom edge is the bar's top edge); toasts and the feedback
+   button ride above it through `html.fg-tray`. 390 and 768 show the names and
+   Compare N; 1440 shows chips with ×, Clear and Compare N. */
+.fg-page,
+html.fg-tray { --fg-tray-h: 60px; }
+.fg-page .fg-compare-tray {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  gap: 12px;
+  height: calc(var(--fg-tray-h) + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  padding: 0 var(--fg-padr) env(safe-area-inset-bottom, 0px) var(--fg-padl);
+  background: var(--bg-1);
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 767px) {
+  html.has-tabbar .fg-page .fg-compare-tray {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    height: var(--fg-tray-h);
+    padding-bottom: 0;
+  }
+}
+.fg-page .fg-compare-tray-label { flex: 0 0 auto; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t1); }
+.fg-page .fg-compare-tray-chips { flex: 1 1 auto; flex-wrap: nowrap; overflow: hidden; }
+.fg-page .fg-compare-tray-actions { align-items: center; }
+.fg-page .fg-compare-tray .fg-more-btn { min-height: 44px; border-radius: var(--radius-pill); }
+.fg-page .fg-compare-tray .fg-more-btn:disabled,
+.fg-page .fg-sheet-btn:disabled { opacity: .45; cursor: not-allowed; }
+.fg-page .fg-compare-chip { flex: 0 0 auto; min-height: 36px; border-radius: var(--radius-pill); }
+@media (pointer: coarse) { .fg-page .fg-compare-chip { min-height: 44px; } }
+.fg-page .fg-compare-chip-name { font-family: var(--fg-ff, var(--font)); font-size: 14px; font-weight: 400; }
+.fg-page .fg-compare-tray-names { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.3; color: var(--t1); }
+.fg-page .fg-compare-tray-name { font-family: var(--fg-ff, var(--font)); font-size: 15px; color: var(--t0); }
+.fg-page .fg-compare-head-actions { display: flex; align-items: center; gap: 8px; }
+.fg-page .fg-compare-clear { border-radius: var(--radius-pill); }
+html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 60px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 60px) + 20px + env(safe-area-inset-bottom, 0px)); }
+/* The page and the scroll snap both leave room for the tray, so the last band
+   and a focused control are never hidden behind it. */
+html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px + env(safe-area-inset-bottom, 0px)); }
+html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
+@media (max-width: 767px) {
+  /* The body already reserves the tab bar, so only the tray is added here. */
+  html.fg-tray .fg-page { padding-bottom: calc(var(--fg-tray-h, 60px) + 24px); }
+  html.fg-tray.has-tabbar { scroll-padding-bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + env(safe-area-inset-bottom, 0px) + 8px); }
+  html.fg-tray.has-tabbar body .toast { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 12px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
+  html.fg-tray.has-tabbar body .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--fg-tray-h, 60px) + 14px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── The list / grid toggle ───────────────────────────────────────────────── */
+.fg-page .fg-view { display: inline-flex; align-items: center; gap: 8px; }
+.fg-page .fg-view-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-view-btn.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+@media (hover: hover) {
+  .fg-page .fg-view-btn:not(.is-on):hover { background: var(--hvr); }
+}
+.fg-page .fg-view-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-view-btn:active { transform: scale(.97); }
+.fg-page .fg-view-btn:disabled { opacity: .45; cursor: not-allowed; }
+@media (pointer: coarse) {
+  .fg-page .fg-view-btn { width: 44px; height: 44px; }
+}
+
+/* ── Grid view: 4, 3 and 2 columns of the same bands ─────────────────────────
+   The name wraps in its cell (two lines at most) instead of shrinking, and
+   keeps 60px clear on the right for the compare button. The wake's reveal has
+   no room here, so a tile stays as it is at rest. The grid is one pixel wider than its
+   parent so the last column's hairline falls outside the clip. */
+.fg-page .fg-results--tiles { overflow-x: clip; }
+.fg-page .fg-grid--tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: calc(100% + 1px); }
+@media (max-width: 1023px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) {
+  --fg-y: var(--fg-y-max);
+  --fg-line: calc(var(--fg-gname, 56px) * 2.2);
+  --fg-right: 64px;
+  height: calc(var(--fg-gname, 56px) * 2.2 + var(--fg-y) * 2 + 30px);
+  border-right: 1px solid var(--border);
+}
+@media (max-width: 767px) {
+  .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) { --fg-right: 58px; }
+}
+.fg-page .fg-grid--tiles .fg-card-name {
+  font-size: calc(var(--fg-gname, 56px) * var(--fg-fit, 1));
+  line-height: 1.1;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  max-height: 2.2em;
+  overflow: hidden;
+}
+/* The meta line runs to the cell's edge, past the compare button's column. */
+.fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); text-overflow: ellipsis; white-space: nowrap; }
+.fg-page .fg-grid--tiles .fg-card-preview { overflow: hidden; }
+.fg-page .fg-grid--tiles .fg-card-reveal { display: none; }
+.fg-page .fg-grid--tiles .fg-card-compare { right: 10px; top: var(--fg-y); }
+
+/* ── The Filters sheet ───────────────────────────────────────────────────────
+   A modal bottom sheet on a phone, a centred dialog from 768px. It sits above
+   the tab bar. Every control applies at once; the foot says what is showing. */
+.fg-page .fg-sheet-layer { position: fixed; inset: 0; z-index: 140; font-family: var(--font); color: var(--t0); }
+.fg-page .fg-sheet-scrim { position: absolute; inset: 0; background: var(--scrim, rgba(3, 3, 4, .6)); }
+.fg-page .fg-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(94dvh, 800px);
+  box-sizing: border-box;
+  background: var(--card);
+  border-top: 1px solid var(--bh);
+  border-radius: 22px 22px 0 0;
+  animation: fg-sheet-up var(--dur-3) var(--ease-entrance);
+}
+/* On a phone the sheet follows a downward drag of its head (`--fg-drag`, set by
+   the component) and eases back when let go; while the finger is down it tracks
+   with no lag. It stops at 480px wide so a landscape phone does not stretch it. */
+@media (max-width: 767px) {
+  .fg-page .fg-sheet { max-width: 480px; margin-inline: auto; transform: translateY(var(--fg-drag, 0px)); transition: transform 200ms var(--ease-standard); }
+  .fg-page .fg-sheet.is-dragging { transition: none; }
+}
+.fg-page .fg-sheet:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@keyframes fg-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@media (min-width: 768px) {
+  .fg-page .fg-sheet { inset: 0; margin: auto; height: fit-content; max-height: min(92dvh, 820px); width: min(480px, calc(100vw - 48px)); border: 1px solid var(--bh); border-radius: var(--radius-3xl); animation: fg-fade var(--dur-2) var(--ease-entrance); }
+}
+.fg-page .fg-sheet-grab { display: block; flex: 0 0 auto; width: 36px; height: 4px; margin: 8px auto 0; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
+@media (min-width: 768px) { .fg-page .fg-sheet-grab { display: none; } }
+/* The drag zone: the grab bar and the head, at least a thumb tall. It only
+   claims touch on a phone, where it can be dragged. */
+.fg-page .fg-sheet-drag { flex: 0 0 auto; min-height: 44px; }
+@media (max-width: 767px) { .fg-page .fg-sheet-drag { touch-action: none; } }
+.fg-page .fg-sheet-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px)); }
+.fg-page .fg-sheet-title { margin: 0; font-size: 20px; font-weight: 560; letter-spacing: -.02em; line-height: 1.2; }
+.fg-page .fg-sheet-x { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--t0); background: transparent; border: 1px solid var(--bh); border-radius: var(--radius-pill); cursor: pointer; transition: background-color var(--dur-1) var(--ease-standard); }
+.fg-page .fg-sheet-body { display: grid; flex: 1 1 auto; gap: 20px; min-height: 0; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 20px max(20px, env(safe-area-inset-left, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+.fg-page .fg-sheet-group { display: grid; gap: 10px; min-width: 0; }
+.fg-page .fg-sheet-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fg-page .fg-sheet-k { font-size: 13px; line-height: 1.3; color: var(--t1); }
+.fg-page .fg-sheet-v { font-size: 13px; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fg-page .fg-sheet-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.fg-page .fg-sheet-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.fg-page .fg-sheet-pill,
+.fg-page .fg-sheet-btn {
+  min-height: 44px;
+  padding: 0 20px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.2;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-sheet-pill--face { min-height: 52px; font-family: var(--fg-ff, var(--font)); font-size: 18px; font-weight: 400; }
+.fg-page .fg-sheet-pill.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+.fg-page .fg-sheet-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: var(--accent-fill); }
+@media (hover: hover) {
+  .fg-page .fg-sheet-pill:not(.is-on):hover,
+  .fg-page .fg-sheet-btn:not(.fg-sheet-btn--primary):not(:disabled):hover,
+  .fg-page .fg-sheet-x:hover { background: var(--hvr); }
+  .fg-page .fg-sheet-btn--primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+}
+.fg-page .fg-sheet-pill:focus-visible,
+.fg-page .fg-sheet-btn:focus-visible,
+.fg-page .fg-sheet-x:focus-visible,
+.fg-page .fg-sheet-range:focus-visible,
+.fg-page .fg-sheet-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-sheet-pill:active,
+.fg-page .fg-sheet-btn:not(:disabled):active { transform: scale(.97); }
+.fg-page .fg-sheet-range { width: 100%; height: 44px; margin: 0; accent-color: var(--t0); }
+.fg-page .fg-sheet-field { box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; font-family: var(--font); font-size: 16px; color: var(--t0); background: var(--inp); border: 1px solid var(--bh); border-radius: var(--radius-l); }
+.fg-page .fg-sheet-field { scroll-margin-block: 24px; }
+.fg-page .fg-sheet-field::placeholder { color: var(--t2); }
+.fg-page .fg-sheet-foot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--border); }
+.fg-page .fg-sheet-btn { min-height: 48px; }
+
+/* Reduced motion: the sheet fades in and the press scale is dropped. */
+html[data-reduced-motion="true"] .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
 }

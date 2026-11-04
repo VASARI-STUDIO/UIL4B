@@ -216,9 +216,13 @@ test('the 404 page keeps the user on the URL they typed', () => {
 
 test('the 404 offers a route back, including the way to report the broken link', () => {
   const src = read('src/pages/NotFound.jsx')
-  for (const to of ['/', '/sitemap', '/feedback']) {
+  for (const to of ['/', '/sitemap']) {
     assert.ok(src.includes(`to="${to}"`), `the 404 should link to ${to}`)
   }
+  // The report link carries the broken path, so it is built, not literal.
+  assert.ok(src.includes('to={`/feedback?${report}`}'), 'the 404 should link to /feedback with the broken path')
+  assert.ok(/new URLSearchParams\(\{ type: 'bug', page: pathname \}\)/.test(src),
+    'the report link should open as a bug report carrying the path')
 })
 
 test('the client and the prerendered shell agree on the 404 copy', () => {

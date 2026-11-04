@@ -64,11 +64,10 @@ test('public/llms.txt is exactly what scripts/llms-txt.mjs writes — no hand-ed
 
 test('the generator is not vacuous: it lists real tools, real guides and real pages', () => {
   // Positive control. An equality test passes for two empty strings.
-  const { tools, learn, browse, more, soon } = llmsRoutes()
+  const { tools, learn, browse, more } = llmsRoutes()
   assert.ok(tools.length >= 10, `only ${tools.length} tools listed`)
   assert.equal(learn.length, LEARN_ARTICLES.length, 'the Learn section does not list every published guide')
   assert.ok(browse.length >= 3 && more.length >= 4)
-  assert.ok(soon.length >= 1, 'nothing is Soon any more — the Optional section has stopped discriminating')
   assert.ok(COMMITTED.length > 2000, 'the committed file is implausibly short')
 })
 
@@ -157,9 +156,9 @@ test('no unbuilt export format is described as available, and the Pro ones are n
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4 · What is listed is live, and what is Soon is not listed as a tool
+// 4 · What is listed is live, and what is Soon is not listed at all
 // ─────────────────────────────────────────────────────────────────────────────
-test('every tool listed is live and prerendered; every Soon tool is under Optional and nowhere else', () => {
+test('every tool listed is live and prerendered; no Soon tool appears anywhere in the file', () => {
   const live = new Set(createTools().filter((t) => !t.soon).map((t) => t.route))
   const soon = createTools().filter((t) => t.soon)
   assert.ok(soon.length > 0)
@@ -178,13 +177,11 @@ test('every tool listed is live and prerendered; every Soon tool is under Option
       `the live tool ${t.label} (${t.route}) is missing from the Tools section`)
   }
 
-  const optional = COMMITTED.split('\n## Optional\n')[1]
-  assert.ok(optional, 'the Optional section is gone')
+  // Hidden from visitors means hidden from crawlers too: not under Tools, not
+  // under an "Optional" disclosure, not by bare route and not by URL.
+  assert.ok(!/## Optional/.test(COMMITTED), 'llms.txt still has a section for unfinished tools')
   for (const t of soon) {
-    assert.ok(optional.includes(`(${t.route})`), `the Soon tool ${t.label} is not disclosed under Optional`)
-    assert.ok(!toolsSection.includes(t.route), `the Soon tool ${t.label} is listed as a live tool`)
-    assert.ok(!COMMITTED.includes(`https://uil4b.com${t.route}`),
-      `the Soon tool ${t.label} is advertised by absolute URL`)
+    assert.ok(!COMMITTED.includes(t.route), `the Soon tool ${t.label} (${t.route}) is named in llms.txt`)
   }
   assert.ok(live.size >= 10)
 })

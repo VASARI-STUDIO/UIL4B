@@ -13,8 +13,8 @@
 // anchor jump). A rail that lags a window, sticks after a fling, only updates
 // in one direction or lights two rows fails one of these.
 //
-// Mobile first: the same walk runs at 390, where the rail sits
-// above the windows rather than beside them but still lights the one in view.
+// At 1000px and below there is no scroll-lit rail: the bench is a tool switcher
+// (see 144-home-phone-layouts), so this walk runs on the wide layout only.
 import { test, expect } from './base.js'
 import { go, watch, wheelToRest, restAfterMove } from './helpers.js'
 
@@ -74,7 +74,7 @@ async function walk(page, dy, where) {
   return seen
 }
 
-for (const width of [390, 1440]) {
+for (const width of [1440]) {
   test.describe(`the bench rail at ${width}px`, () => {
     test.use({ viewport: { width, height: width === 390 ? 844 : 900 } })
     test.beforeEach(async ({ page }) => { watch(page, 'a visitor reading the bench on the sales page') })
@@ -115,6 +115,45 @@ test.describe('the bench rail rows as anchors', () => {
       await restAfterMove(page, from, `pressing rail row ${i + 1}`)
       const nearest = await expectRailTracks(page, `after pressing rail row ${i + 1}`)
       expect(nearest, `pressing rail row ${i + 1} brought window ${nearest + 1} into view`).toBe(i)
+    }
+  })
+})
+
+test.describe('the bench rail rows are two-line, 64px rows', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+  test.beforeEach(async ({ page }) => { watch(page, 'a visitor reading the rail beside the bench') })
+
+  // At 1001px and up each row is the tool's name over a one-line summary of what
+  // the window holds. The row is 64px tall (a 44px target plus the second line),
+  // the name is 15px and the summary 13px, and neither wraps.
+  test('each row is 64px, with the tool name over one summary line, and nothing wraps', async ({ page }) => {
+    await go(page, '/')
+    const rows = page.locator('.sp-rail-row')
+    await expect(rows, 'the rail no longer has its four rows').toHaveCount(4)
+    const geometry = await rows.evaluateAll((els) => els.map((row) => {
+      const label = row.querySelector('.sp-rail-label')
+      const sum = row.querySelector('.sp-rail-sum')
+      return {
+        height: Math.round(row.getBoundingClientRect().height * 10) / 10,
+        label: label?.textContent.trim() || '',
+        labelSize: label ? getComputedStyle(label).fontSize : '',
+        summary: sum?.textContent.trim() || '',
+        sumSize: sum ? getComputedStyle(sum).fontSize : '',
+        // The summary is one line: its height is under two lines of its own size, and it is not clipped sideways.
+        sumLines: sum ? Math.round(sum.getBoundingClientRect().height / (parseFloat(getComputedStyle(sum).fontSize) * 1.3)) : 0,
+        sumClipped: sum ? sum.scrollWidth > sum.clientWidth : true,
+        labelBeforeSummary: label && sum ? !!(label.compareDocumentPosition(sum) & Node.DOCUMENT_POSITION_FOLLOWING) : false,
+      }
+    }))
+    for (const [i, g] of geometry.entries()) {
+      expect(g.height, `rail row ${i + 1} is not 64px tall`).toBe(64)
+      expect(g.label, `rail row ${i + 1} has no tool name`).not.toBe('')
+      expect(g.summary, `rail row ${i + 1} has no summary line`).not.toBe('')
+      expect(g.labelSize, `rail row ${i + 1} name is not 15px`).toBe('15px')
+      expect(g.sumSize, `rail row ${i + 1} summary is not 13px`).toBe('13px')
+      expect(g.sumLines, `rail row ${i + 1} summary wraps`).toBe(1)
+      expect(g.sumClipped, `rail row ${i + 1} summary is cut off at rest`).toBe(false)
+      expect(g.labelBeforeSummary, `rail row ${i + 1} summary is not under the name`).toBe(true)
     }
   })
 })

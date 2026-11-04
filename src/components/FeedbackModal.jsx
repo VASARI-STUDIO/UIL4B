@@ -1,5 +1,8 @@
+import Toast from './Toast'
+import { useToast } from '../hooks/useToast'
+import { useI18n } from '../contexts/I18nContext'
 import MenuSelect from './tool/MenuSelect'
-import { useState, useRef, useEffect, useCallback, useId } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore, useCallback, useId } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildReportContext, withReportContext, contextRows, omitContext } from '../utils/reportContext'
@@ -8,9 +11,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
+import { FEEDBACK_ROUTING } from '../utils/feedbackRouting'
+import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { requestIdFor, postSupport } from '../utils/supportRequest'
+import {
+  requestIdFor, recoverFeedbackDraft, guardSupportUnload, staleDelivery,
+  modalFeedbackSend, SUPPORT_MESSAGE_MAX,
+} from '../utils/supportRequest'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -20,7 +29,7 @@ const TYPES = [
     label: 'Feedback',
     icon: (<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
     selects: [
-      { key: 'category', label: 'Topic', options: ['General', 'UI / Design', 'Performance', 'Pricing', 'Something else'] },
+      { key: 'category', label: 'Topic', options: FEEDBACK_ROUTING.feedback.category },
     ],
     subjectLabel: 'Subject',
     subjectPlaceholder: 'Brief summary',
@@ -32,8 +41,8 @@ const TYPES = [
     label: 'Bug',
     icon: (<><path d="M8 2l1.88 1.88" /><path d="M14.12 3.88L16 2" /><path d="M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 014-4h4a4 4 0 014 4v3c0 3.3-2.7 6-6 6" /><path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4" /><path d="M22 13h-4" /><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" /></>),
     selects: [
-      { key: 'category', label: 'Area', options: ['Colour Studio', 'Typography / Fonts', 'Icons', 'File Converter', 'AI Tools', 'Account / Login', 'Billing', 'Other'] },
-      { key: 'severity', label: 'Severity', options: ['Minor — cosmetic', 'Major — feature broken', "Blocking — can't use the app"] },
+      { key: 'category', label: 'Area', options: FEEDBACK_ROUTING.bug.category },
+      { key: 'severity', label: 'Severity', options: FEEDBACK_ROUTING.bug.severity },
     ],
     subjectLabel: 'What went wrong?',
     subjectPlaceholder: 'e.g. Export button not working',
@@ -45,7 +54,7 @@ const TYPES = [
     label: 'Feature',
     icon: (<><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></>),
     selects: [
-      { key: 'category', label: 'Area', options: ['A brand-new tool', 'Improve an existing tool', 'Export / integration', 'Other'] },
+      { key: 'category', label: 'Area', options: FEEDBACK_ROUTING.feature.category },
     ],
     subjectLabel: 'Feature name',
     subjectPlaceholder: 'e.g. Dark mode scheduling',
@@ -57,7 +66,7 @@ const TYPES = [
     label: 'Help',
     icon: (<><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>),
     selects: [
-      { key: 'category', label: 'Topic', options: ['Getting started', 'Using a specific tool', 'Account', 'Billing', 'Other'] },
+      { key: 'category', label: 'Topic', options: FEEDBACK_ROUTING.help.category },
     ],
     subjectLabel: 'Subject',
     subjectPlaceholder: 'Brief summary',
@@ -71,48 +80,100 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // P-002: the report carries where the user was, so acting on it does not
   // start with a round trip asking which page they meant.
   const location = useLocation()
+  // Right-click and the Menu key are not there on a touch-first device, so the
+  // tip that names them is left out (the markup differs, not just the style).
+  const coarsePointer = useMediaQuery('(pointer: coarse)')
   const { isPro } = useSubscription()
   const { theme } = useTheme()
   const { reducedMotion } = useAppearance()
+  const delivery = useSyncExternalStore(modalFeedbackSend.subscribe, modalFeedbackSend.getSnapshot)
+  const sentHeadingRef = useRef(null)
+  const retryRef = useRef(null)
+  const visibleRef = useRef(false)
+  useEffect(() => { visibleRef.current = open }, [open])
+  const { t } = useI18n()
+  // Own toast only for a failure that lands where the page has none (the
+  // chromeless routes), and only while it shows: every other page keeps the
+  // app's single toast.
+  const notification = useToast({ listen: false })
+  const [ownToast, setOwnToast] = useState(false)
+  useEffect(() => {
+    if (!ownToast || notification.visible) return undefined
+    const id = setTimeout(() => setOwnToast(false), 400)
+    return () => clearTimeout(id)
+  }, [ownToast, notification.visible])
   const titleId = useId()
   const capId = useId()
 
-  const [typeId, setTypeId] = useState('feedback')
-  const [selections, setSelections] = useState({}) // { category, severity }
-  const [subject, setSubject] = useState('')
-  const [message, setMessage] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState(false)
+  const [typeId, setTypeId] = useState(() => delivery.status === 'sent' ? 'feedback' : delivery.draft?.typeId ?? 'feedback')
+  const [selections, setSelections] = useState(() => delivery.status === 'sent' ? {} : delivery.draft?.selections ?? {}) // { category, severity }
+  const [subject, setSubject] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.subject ?? '')
+  const [message, setMessage] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.message ?? '')
+  // The return address of someone who is not signed in. Optional, and cleared
+  // whenever the dialog opens afresh so it is never carried to the next person.
+  const [contact, setContact] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.contact ?? '')
+  const [contactError, setContactError] = useState('')
+  const sending = delivery.status === 'sending'
+  const sent = sending || delivery.status === 'sent'
+  const error = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
   // What we propose to attach, frozen at the moment the dialog opened, and the
   // keys the user has switched off. Frozen rather than recomputed at submit
   // time so the list they approved is byte-for-byte the list that is sent —
   // a disclosure that can drift between being read and being acted on is not
   // a disclosure.
-  const [capture, setCapture] = useState({})
-  const [removed, setRemoved] = useState([])
+  const [capture, setCapture] = useState(() => delivery.status === 'sent' ? {} : delivery.draft?.capture ?? {})
+  const [removed, setRemoved] = useState(() => delivery.status === 'sent' ? [] : delivery.draft?.removed ?? [])
 
   const overlayRef = useRef(null)
   const firstControlRef = useRef(null)
+  const messageRef = useRef(null)
+  const contactRef = useRef(null)
 
   // Send bookkeeping, held in refs so a second submit in the same tick sees it
   // (state would still read the old value):
   //   sendingRef  an attempt is in flight
-  //   attemptRef  the request id in use and the exact content it was made for,
-  //               so a retry of unchanged content reuses the id (the server
-  //               stores it once) and an edited message gets a new one
-  //   genRef      bumped whenever the form is reset, so an attempt that
-  //               finishes after a reset does not touch the new form
-  const sendingRef = useRef(false)
-  const attemptRef = useRef(null)
-  const genRef = useRef(0)
+  //   attemptRef  the request id in use; bodyRef freezes the submitted payload
+  const sendingRef = useRef(delivery.status === 'sending')
+  const attemptRef = useRef(delivery.status === 'sent' ? null : delivery.draft?.attempt || null)
+  const bodyRef = useRef(delivery.body)
+  const overlayDownRef = useRef(false)
+  const overlaySuppressedRef = useRef(false)
+  const overlayTimerRef = useRef(null)
+  useEffect(() => {
+    return () => {
+      visibleRef.current = false
+      clearTimeout(overlayTimerRef.current)
+    }
+  }, [])
+  useEffect(() => guardSupportUnload(sending || (open && !!error)), [sending, open, error])
+  // An account change drops whatever a send still holds: see App.jsx.
 
+  useEffect(() => modalFeedbackSend.subscribe(() => {
+    const current = modalFeedbackSend.getSnapshot()
+    const draft = current.draft
+    bodyRef.current = current.body
+    sendingRef.current = current.status === 'sending'
+    attemptRef.current = current.status === 'sent' ? null : draft?.attempt || null
+    if (draft && current.status !== 'sent') {
+      setTypeId(draft.typeId)
+      setSelections(draft.selections)
+      setCapture(draft.capture)
+      setRemoved(draft.removed)
+      setSubject(draft.subject)
+      setMessage(draft.message)
+      setContact(draft.contact ?? '')
+    } else if (current.status === 'sent') {
+      setSubject('')
+      setMessage('')
+    }
+  }), [])
   // Has this opening already been initialised? The open effect below depends on
   // every value it captures — which is correct, and what the linter wants — but
   // it must still run only ONCE per opening: re-running it because the user
   // flipped the theme mid-sentence would reset every field and wipe what they
   // had written. The flag turns a value-change re-run into a no-op.
   const initialisedRef = useRef(false)
+  const seedRef = useRef(seed)
 
   const activeType = TYPES.find(t => t.id === typeId) || TYPES[0]
   // Label/value rows in the canonical order, straight from the same module
@@ -129,22 +190,23 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   }
 
   const resetFields = useCallback(() => {
+    if (sendingRef.current) return
+    bodyRef.current = null
     setSelections({})
     setSubject('')
     setMessage('')
-    setSent(false)
-    setError(false)
-    setSending(false)
+    modalFeedbackSend.reset()
     sendingRef.current = false
     attemptRef.current = null
-    genRef.current += 1
   }, [])
 
-  // Scroll lock, Escape, the focus trap and focus restoration all come from the
-  // shared hook. This modal had the first two and neither of the last two: it
-  // declared aria-modal="true" while Tab walked straight out of it, and closing
-  // dropped focus to the top of the document rather than back to the button
-  // that opened it — from a dialog reachable on every page in the app.
+  // Back to a fresh form, with focus in the message field rather than lost to the page.
+  const sendAnother = () => {
+    resetFields()
+    requestAnimationFrame(() => messageRef.current?.focus())
+  }
+
+  // Share scroll locking, focus trapping and focus restoration with other dialogs.
   const dialogRef = useModalDialog(onClose, { enabled: open })
   // Back closes the dialog (audit A3) and the page behind it is inert (A12).
   useCloseOnBack(!!open, onClose)
@@ -153,9 +215,31 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // Fully reset (including the chosen type) whenever the modal is freshly opened,
   // and focus the first control.
   useEffect(() => {
-    if (!open) { initialisedRef.current = false; return undefined }
-    if (initialisedRef.current) return undefined
+    if (!open) {
+      initialisedRef.current = false
+      // A landed message does not outlive its dialog, including one that lands
+      // after the dialog was closed.
+      modalFeedbackSend.settle()
+      return undefined
+    }
+    if (initialisedRef.current && seedRef.current === seed) return undefined
+    // Opening onto a landed message (or a seed over an old failure) starts
+    // clean; the reset changes the status, which re-runs this effect.
+    if (staleDelivery(delivery.status, seed)) {
+      modalFeedbackSend.reset()
+      return undefined
+    }
+    if (delivery.status !== 'idle') {
+      initialisedRef.current = true
+      return undefined
+    }
     initialisedRef.current = true
+    seedRef.current = seed
+    // Closing must neither cancel delivery nor discard a failed message.
+    if (recoverFeedbackDraft(bodyRef, attemptRef, seed)) {
+      const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
+      return () => cancelAnimationFrame(raf)
+    }
     // A right-click on something broken already told us this is a bug report;
     // making the user say so again is a step for nothing.
     setTypeId(seed?.typeId || 'feedback')
@@ -165,6 +249,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     if (seed?.subject) setSubject(seed.subject)
     if (seed?.message) setMessage(seed.message)
     setRemoved([])
+    setContact('')
+    setContactError('')
     setCapture(buildReportContext({
       pathname: location.pathname,
       tool: resolveTool(location.pathname)?.tool?.label || null,
@@ -187,41 +273,61 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // dialog is announced, then the first control takes focus.
     const raf = requestAnimationFrame(() => firstControlRef.current?.focus())
     return () => cancelAnimationFrame(raf)
-  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user])
+  }, [open, seed, resetFields, location.pathname, theme, reducedMotion, isPro, user, delivery.status])
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) return
+    if (delivery.status === 'failed') retryRef.current?.focus()
+    else if (delivery.status === 'sending' || delivery.status === 'sent') sentHeadingRef.current?.focus()
+  }, [delivery.status, open])
 
   const selectType = (id) => {
     setTypeId(id)
     setSelections({}) // routing dropdowns are type-specific
-    setError(false)
   }
 
-  const handleSubmit = async (e) => {
+  const send = (body, retry = true) => {
+    const draft = { typeId, selections, subject, message, contact, capture, removed, attempt: attemptRef.current }
+    overlaySuppressedRef.current = true
+    clearTimeout(overlayTimerRef.current)
+    overlayTimerRef.current = setTimeout(() => { overlaySuppressedRef.current = false }, 400)
+    return modalFeedbackSend.send(body, draft, {
+      retry,
+      visible: () => visibleRef.current,
+      notify: (status, onAction) => {
+        const detail = {
+          message: t(status === 429 ? 'feedback.rateLimit' : 'feedback.submitError'),
+          type: 'error',
+          action: { label: t('feedback.tryAgain'), onAction },
+        }
+        window.dispatchEvent(new CustomEvent('uil4b:toast', { detail }))
+        if (detail.handled) return
+        setOwnToast(true)
+        notification.toast(detail.message, 'error', { action: detail.action })
+      },
+    })
+  }
+
+  const handleSubmit = (e) => {
     e.preventDefault()
     if (!message.trim() || sendingRef.current) return
 
-    sendingRef.current = true
-    const gen = genRef.current
-    setSending(true)
-    setError(false)
+    // Checked here so a mistyped address is named as one, rather than arriving
+    // as the generic "didn't send" the server's 400 would turn into.
+    if (!user && !isContactEmail(contact)) {
+      setContactError('That email address does not look right. Correct it, or clear the field to send without one.')
+      contactRef.current?.focus()
+      return
+    }
+    setContactError('')
 
-    const email = user?.email || ''
+    const email = user?.email || contact.trim()
     const payload = {
       type: typeId,
       category: selectedValue('category'),
       ...(typeId === 'bug' ? { severity: selectedValue('severity') } : {}),
       subject: subject.trim(),
-      // P-002: every report now carries WHERE the user was. Without it a report
-      // arrives as free text with no route, no tool and no state, so acting on
-      // one means asking "which page were you on?" — and most people never
-      // reply to that. It is also the proposal's own mitigation for low-quality
-      // volume: capture the context so the user need not describe it.
-      //
-      // `omitContext` is applied HERE, at the only point where anything leaves
-      // the browser, so an unticked row is absent from the request body, from
-      // the localStorage copy below and from the store — not merely hidden in
-      // the panel above.
+      // Omitted context stays out of the request and the local copy.
       message: withReportContext(message.trim(), omitContext(capture, removed)),
       email,
       // 'inline' is a value api/support.js actually accepts. 'feedback-modal'
@@ -238,32 +344,23 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // message updates this record rather than adding another.
     saveFeedback({ ...payload, id: requestId })
 
-    const ok = await postSupport({ ...payload, name: userProfile?.displayName || '', requestId })
-
-    // The form was reset (reopened, or "Send another") while this was in flight.
-    if (gen !== genRef.current) return
-
-    sendingRef.current = false
-    setSending(false)
-    // Fail loud: a silently-lost support request is the worst outcome for a
-    // feedback channel — only surface success when the request actually landed.
-    if (ok) {
-      attemptRef.current = null
-      setSent(true)
-    } else {
-      setError(true)
-    }
+    bodyRef.current = { ...payload, name: userProfile?.displayName || '', requestId }
+    void send(bodyRef.current)
   }
 
   const onOverlayClick = (e) => {
-    if (e.target === overlayRef.current) onClose()
+    if (overlayDownRef.current && e.target === overlayRef.current && !overlaySuppressedRef.current) onClose()
+    overlayDownRef.current = false
   }
 
   return (
-    <div
+    <>
+      {ownToast && <Toast {...notification} onDismiss={notification.dismiss} onHold={notification.hold} onRelease={notification.release} />}
+      {open && <div
       ref={overlayRef}
       className="fb-overlay"
-      onMouseDown={onOverlayClick}
+      onMouseDown={e => { overlayDownRef.current = e.target === overlayRef.current }}
+      onClick={onOverlayClick}
     >
       <div
         className="fb-modal"
@@ -282,22 +379,41 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </button>
         </div>
 
-        {sent ? (
+        {error ? (
           <div className="fb-success">
+            <p className="fb-error" role="alert">{error}</p>
+            <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
+            <div className="fb-success-actions fb-again">
+              <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
+              <button type="button" className="btn" onClick={() => {
+                recoverFeedbackDraft(bodyRef, attemptRef)
+                modalFeedbackSend.edit()
+                requestAnimationFrame(() => messageRef.current?.focus())
+              }}>{t('feedback.editMessage')}</button>
+            </div>
+          </div>
+        ) : sent ? (
+          <div className="fb-success" role="status">
             <div className="fb-success-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h3 className="fb-success-title">Thanks — we&apos;ve got it</h3>
-            <p className="fb-success-text">Your {activeType.label.toLowerCase()} submission has been received and will be reviewed.</p>
+            <h3 className="fb-success-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h3>
+            <p className="fb-success-text">{sending ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
+            {/* Whether a reply is possible, which is a fact about what was sent. */}
+            <p className="fb-success-text fb-success-reply">
+              {delivery.body?.email
+                ? t('feedback.replyAddress', { email: delivery.body.email })
+                : t('feedback.noReplyAddress')}
+            </p>
             <div className="fb-success-actions">
-              <button type="button" className="btn" onClick={resetFields}>Send another</button>
+              <button type="button" className="btn" onClick={sendAnother} disabled={sending}>Send another</button>
               <button type="button" className="btn btn-accent" onClick={onClose}>Close</button>
             </div>
           </div>
         ) : (
-          <form className="fb-body" onSubmit={handleSubmit}>
+          <form className="fb-body" onSubmit={handleSubmit} noValidate>
             <div className="fb-field">
               <div className="fb-label">Type</div>
               <div className="fb-types" role="group" aria-label="Submission type">
@@ -353,11 +469,13 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               </label>
               <textarea
                 id="fb-message"
+                ref={messageRef}
                 className="fb-textarea"
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 placeholder={activeType.messagePlaceholder}
                 rows={5}
+                maxLength={SUPPORT_MESSAGE_MAX}
                 required
               />
             </div>
@@ -397,7 +515,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
                     )
                   })}
                 </ul>
-                {!seed?.element && (
+                {!seed?.element && !coarsePointer && (
                   // Discoverability without a hover affordance: the tip appears
                   // in the one place where its value is obvious, and only when
                   // they did not already arrive by the gesture it describes.
@@ -409,11 +527,27 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
               </div>
             )}
 
-            {user && <div className="fb-sending-as">Sending as {user.email}</div>}
-
-            {error && (
-              <div role="alert" className="fb-error">
-                Something went wrong sending that. Please check your connection and try again.
+            {user ? <div className="fb-sending-as">Sending as {user.email}</div> : (
+              <div className="fb-field">
+                <label className="fb-label" htmlFor="fb-contact">
+                  Email <span className="fb-optional">(so we can reply)</span>
+                </label>
+                <input
+                  id="fb-contact"
+                  ref={contactRef}
+                  type="email"
+                  className="fb-input"
+                  value={contact}
+                  onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  maxLength={CONTACT_EMAIL_MAX}
+                  aria-invalid={!!contactError}
+                  aria-describedby={contactError ? 'fb-contact-error' : 'fb-contact-hint'}
+                />
+                {contactError
+                  ? <p className="fb-error" id="fb-contact-error" role="alert">{contactError}</p>
+                  : <p className="fb-hint" id="fb-contact-hint">Optional. Without an email we can read your message but can&rsquo;t reply.</p>}
               </div>
             )}
 
@@ -426,6 +560,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
           </form>
         )}
       </div>
-    </div>
+    </div>}
+    </>
   )
 }

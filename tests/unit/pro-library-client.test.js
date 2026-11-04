@@ -6,7 +6,10 @@
 // Each test builds its own copy with createProLibrary, so no state carries over.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createProLibrary, libraryKey } from '../../src/utils/proLibrary.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { createProLibrary, libraryKey, deriveLibraryStatus } from '../../src/utils/proLibrary.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 import { repairAfterSettle } from '../../src/utils/accountSync.js'
 import { getPrompts } from '../../src/utils/promptStore.js'
 
@@ -334,4 +337,57 @@ test('with no uid, or when no saved id is missing a copy, nothing waits for the 
   })
   await repairAfterSettle({ data: {} }, complete, { uid: 'u1', loadCatalog: async () => [FREE_PROMPT], onProLibrary })
   assert.equal(subscribed, 0, 'nothing missing, no wait')
+})
+
+// ── The status the pages branch on ───────────────────────────────────────────
+// deriveLibraryStatus is the pure half of src/hooks/useProLibrary.js.
+
+test('a signed-in account whose plan is unresolved is resolving, never idle, so no wall shows', () => {
+  assert.equal(deriveLibraryStatus({ wanted: true, enabled: false, resolving: true }), 'resolving')
+})
+
+test('a cold anonymous visitor, or an account that resolved to free, is idle and sees the wall at once', () => {
+  assert.equal(deriveLibraryStatus({ wanted: true, enabled: false, resolving: false }), 'idle')
+  assert.equal(deriveLibraryStatus({}), 'idle')
+})
+
+test('a caller that has not asked for the library is idle even while the plan resolves', () => {
+  assert.equal(deriveLibraryStatus({ wanted: false, enabled: false, resolving: true }), 'idle')
+  assert.equal(deriveLibraryStatus({ wanted: false, enabled: true, cached: true }), 'idle')
+})
+
+test('an enabled library walks loading, ready, error and refused in that precedence', () => {
+  const base = { wanted: true, enabled: true }
+  assert.equal(deriveLibraryStatus({ ...base }), 'loading')
+  assert.equal(deriveLibraryStatus({ ...base, cached: true }), 'ready')
+  assert.equal(deriveLibraryStatus({ ...base, failed: true }), 'error')
+  assert.equal(deriveLibraryStatus({ ...base, denied: true }), 'refused')
+  assert.equal(deriveLibraryStatus({ ...base, cached: true, denied: true }), 'ready', 'a library in hand wins')
+})
+
+test('a 403 shows as refused, and Retry (clear the denial, ask again) recovers', async () => {
+  let code = 403
+  const ctx = setup({ respond: (url) => (code === 403 ? answer(403, { error: 'Pro plan required' }) : okFor(url)) })
+  const { library } = ctx
+  const key = libraryKey('u1', 'prompts')
+  assert.equal(await loadAndAnswer(ctx, 'prompts', 'u1'), 'denied')
+  const statusNow = () => deriveLibraryStatus({
+    wanted: true, enabled: true, cached: library.hasCachedLibrary(key), denied: library.isLibraryDenied(key),
+  })
+  assert.equal(statusNow(), 'refused')
+
+  // What the hook's retry does: forget the denial, then load again.
+  code = 200
+  library.clearLibraryDenied(key)
+  assert.equal(statusNow(), 'loading')
+  assert.equal(await loadAndAnswer(ctx, 'prompts', 'u1'), 'ready')
+  assert.equal(statusNow(), 'ready')
+})
+
+test('the hook derives resolving from the session hint and the plan, and retry clears the denial', () => {
+  const src = stripComments(fs.readFileSync(path.join(process.cwd(), 'src/hooks/useProLibrary.js'), 'utf8'))
+  assert.ok(/authLoading === true && readSessionHint\(\)/.test(src), 'a returning session must read as resolving while auth loads')
+  assert.ok(/uid != null && planKnown !== true/.test(src), 'a signed-in account with an unknown plan must read as resolving')
+  assert.ok(/const retry = useCallback\(\(\) => \{[\s\S]*?clearLibraryDenied\(key\)[\s\S]*?setAttempt/.test(src), 'retry must clear the denial and bump the attempt')
+  assert.ok(/\[enabled, kind, uid, key, failedKey, attempt\]/.test(src), 'the fetch effect must depend on the attempt')
 })

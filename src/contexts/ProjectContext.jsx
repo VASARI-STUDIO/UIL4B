@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
+import { projectSnapshot } from '../utils/designPatch'
 
 const ProjectContext = createContext()
 
@@ -140,6 +141,10 @@ export function ProjectProvider({ children }) {
   // What each per-project document on the account holds, as of the last pull
   // or push. See writeRemoteProjects(): it limits a push to what changed here.
   const storedRef = useRef(new Map())
+  // The account whose first pull has finished, whether it worked or not. A
+  // device with no local copy of an account's projects has an empty list until
+  // then, so "no such project" cannot be said before it (see projectsLoading).
+  const [pulledUid, setPulledUid] = useState(null)
 
   // Auto-persist current design
   useEffect(() => {
@@ -209,11 +214,9 @@ export function ProjectProvider({ children }) {
     }
     const id = newId()
     const base = opts.blank ? DEFAULT_DESIGN : design
-    // `identityName` names the kit in the saved copy as well, for callers that
-    // set the working design's identity in the same event.
-    const snapshot = typeof opts.identityName === 'string'
-      ? { ...base, identity: { ...(base.identity || {}), name: opts.identityName } }
-      : base
+    // `identityName` and `patch` fold a caller's same-event changes into the
+    // saved copy (see utils/designPatch.js).
+    const snapshot = projectSnapshot(base, opts)
     const project = {
       id,
       name: name.trim() || `Project ${new Date().toLocaleDateString()}`,
@@ -274,11 +277,18 @@ export function ProjectProvider({ children }) {
     })
     return copy.id
   }, [userKey, allProjects, projectLimit])
-  const updateProject = useCallback((id, patch) => {
+  // `opts.touch === false` writes the patch and leaves `updatedAt` alone. "Last edited" and the
+  // workspace's lead project are read from `updatedAt`, so a change that is not an edit of the
+  // design (the icon) must not move a project to the front. The caller stamps its own field
+  // (`iconAt`) so the change still syncs.
+  const updateProject = useCallback((id, patch, opts) => {
     if (!userKey) return
+    const touch = opts?.touch !== false
     setAllProjects(prev => {
       const list = prev[userKey] || []
-      const next = list.map(p => p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p)
+      const next = list.map(p => p.id === id
+        ? { ...p, ...patch, ...(touch ? { updatedAt: new Date().toISOString() } : null) }
+        : p)
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
@@ -469,6 +479,7 @@ export function ProjectProvider({ children }) {
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
+        setPulledUid(uid)
         // Release the suppression shortly after the merge settles so the next
         // genuine local edit can push — and then PUSH ONCE, unprompted.
         //
@@ -554,6 +565,9 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
+    // True from sign-in until the account's projects have been read once. The
+    // list above may be missing projects that exist on the account until then.
+    projectsLoading: !!uid && pulledUid !== uid,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,
@@ -566,9 +580,9 @@ export function ProjectProvider({ children }) {
     saveProject,
     duplicateProject,
     overwriteProject,
-    // Exported for the workspace's project icon, which is stored
-    // ON the project so it syncs with it. It stamps updatedAt like every other
-    // edit, which is what lets the change win a merge on the next device.
+    // Exported for the workspace's project icon, which is stored ON the project so it syncs with
+    // it. An icon write passes { touch: false } and stamps `iconAt` instead of `updatedAt`, so
+    // choosing an icon never changes when a project was last edited.
     updateProject,
     renameProject,
     loadProject,

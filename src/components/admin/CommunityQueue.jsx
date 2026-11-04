@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listQueue, decideSubmission, deleteSubmission } from '../../utils/communityQueueApi'
 import { gradientCss } from '../../data/gradientGallery'
+import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
 import IconSubmissionPreview from '../discover/IconSubmissionPreview'
 
 // The community review queue — the thing that did not exist.
@@ -38,21 +39,31 @@ function Preview({ item }) {
   if (item.kind === 'icon' && typeof p.svg === 'string' && p.svg) {
     return <IconSubmissionPreview svg={p.svg} name={item.name} size={30} />
   }
-  if (item.kind === 'gradient' && Array.isArray(p.stops) && p.stops.length >= 2) {
-    // Rendered with the same gradientCss the library uses, so a reviewer sees
-    // exactly what would be published rather than an approximation.
-    return (
-      <span
-        className="cq-preview cq-preview--gradient"
-        ref={(el) => el && el.style.setProperty('--cq-grad', gradientCss(p.type || 'Linear', p.angle ?? 90, p.stops))}
-        aria-label={`${p.type || 'Linear'} gradient, ${p.stops.length} stops`}
-      />
-    )
+  if (item.kind === 'gradient') {
+    // The payload is client-written and this runs in the admin session, so it is
+    // drawn only after the same clean-up the library applies: hex-only colours,
+    // a numeric angle, a known type, a bounded stop list. One that does not
+    // describe a real gradient gets no preview.
+    const g = sanitizeGradientSubmission({ type: p.type, angle: p.angle ?? 90, stops: p.stops })
+    if (g) {
+      // Rendered with the same gradientCss the library uses, so a reviewer sees
+      // exactly what would be published rather than an approximation.
+      return (
+        <span
+          className="cq-preview cq-preview--gradient"
+          ref={(el) => el && el.style.setProperty('--cq-grad', gradientCss(g.type, g.angle, g.stops))}
+          aria-label={`${g.type} gradient, ${g.stops.length} stops`}
+        />
+      )
+    }
   }
-  if (Array.isArray(p.colors) && p.colors.length) {
+  // Palette swatches take the same rule: a value that is not a plain hex colour
+  // is never handed to the stylesheet.
+  const swatches = Array.isArray(p.colors) ? p.colors.filter(c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) : []
+  if (swatches.length) {
     return (
-      <span className="cq-preview cq-preview--palette" aria-label={`${p.colors.length} colours`}>
-        {p.colors.slice(0, 6).map((c, i) => (
+      <span className="cq-preview cq-preview--palette" aria-label={`${swatches.length} colours`}>
+        {swatches.slice(0, 6).map((c, i) => (
           <i key={i} ref={(el) => el && el.style.setProperty('--cq-sw', c)} />
         ))}
       </span>

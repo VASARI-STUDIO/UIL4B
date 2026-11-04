@@ -42,6 +42,8 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
+import { chooseFormat, exportPanel, categoryRadio, primaryButton } from './export-rows.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -79,8 +81,8 @@ test.describe('a signed-in free account', () => {
     // presence is proof the session was accepted, not just that a page loaded.
     const note = page.getByTestId('project-quota-note')
     await expect(note, 'a signed-in free account must be told its allowance').toBeVisible()
-    // The workspace's plan strip: "Project slots  3 of 3".
-    await expect(note).toContainText('Project slots')
+    // The workspace's plan strip: "Projects  3 of 3".
+    await expect(note).toContainText('Projects')
     await expect(note).toContainText(`${CAP} of ${CAP}`)
 
     const said = await saveAProject(page, 'One Too Many')
@@ -144,25 +146,25 @@ test.describe('a signed-in Pro account', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/settings')
     // /settings opens on Account (#436 follow-up 5); the plan is said on the
-    // Subscription panel.
-    await page.getByRole('tab', { name: 'Subscription' }).click()
+    // Plan and billing panel.
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
 
     // /settings is a signed-in surface that had no rendered coverage at all.
     // This sentence is rendered from `subscription.status` on users/{uid},
     // read over a Firestore snapshot — so it is also the positive control for
     // the no-network test below: nothing else in the app could produce it.
-    await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
-    await expect(page.getByText(/Billed monthly/i)).toBeVisible()
+    await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
+    await expect(page.locator('#set-support .settings-row--fact', { hasText: 'Billing cycle' })).toContainText('Monthly')
   })
 
   test('a free account sees the free subscription panel at the same URL — the control', async ({ page }) => {
     watch(page, 'a free account checking their subscription')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
-    await page.getByRole('tab', { name: 'Subscription' }).click()
-    await expect(page.getByText(/You're on UIL4B Pro/i)).toHaveCount(0)
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
+    await expect(page.getByText(/You.re on UIL4B Pro/i)).toHaveCount(0)
     // Something must be there, or the assertion above is about a blank page.
-    await expect(page.getByRole('heading', { name: /Subscription/i }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Plan and billing/i }).first()).toBeVisible()
   })
 })
 
@@ -172,8 +174,8 @@ test.describe('the export gate, driven', () => {
   // dialog can never hold a worker.
   async function openExportPanel(page) {
     await page.getByRole('button', { name: 'Export', exact: true }).click()
-    await expect(page.getByRole('dialog', { name: /Export your design system/i })).toBeVisible()
-    await page.getByRole('radio', { name: /Design system book/i }).click()
+    await expect(exportPanel(page)).toBeVisible()
+    await chooseFormat(page, 'book')
   }
 
   test('a free account is walled, by the wall that names this document', async ({ browser }) => {
@@ -186,9 +188,11 @@ test.describe('the export gate, driven', () => {
     await openExportPanel(page)
 
     await expect(
-      page.locator('.exp-fmt-pro').first(),
-      'the book row must carry its Pro badge for a free account',
+      categoryRadio(page, 'Book').locator('.xd-pro'),
+      'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
+    await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
+    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
 
     const action = page.getByRole('button', { name: /Unlock with Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()
@@ -213,17 +217,36 @@ test.describe('the export gate, driven', () => {
     await go(page, WORKED_BOARD)
     await openExportPanel(page)
 
-    await expect(page.locator('.exp-fmt-pro'), 'Pro sees no Pro badges').toHaveCount(0)
+    await expect(primaryButton(page), 'the plan has loaded and the button names the export').toHaveText('Export PDF')
+    await expect(page.locator('.xd-pro'), 'Pro sees no Pro badges').toHaveCount(0)
+    await expect(page.locator('.xd-lock'), 'and no lock over the preview').toHaveCount(0)
+
+    // The book is built by the server (POST /api/ai?export=document); the preview
+    // server has no /api, so the answer is stubbed with the real generator's
+    // output. The server's own rules are in tests/unit/export-document.test.js.
+    const asked = []
+    await page.route('**/api/ai?export=document', async (route) => {
+      asked.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
+      const html = buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, format: 'book', html }) })
+    })
 
     const [book] = await Promise.all([
       context.waitForEvent('page'),
-      page.getByRole('button', { name: /^Export book$/i }).click(),
+      primaryButton(page).click(),
     ])
     await book.waitForLoadState('domcontentloaded')
-    // The generated artefact, not a page about it. buildDesignSystemBook titles
-    // the document "<project> — Design System".
-    await expect(book).toHaveTitle(/Design System/i)
+    // The window is reserved inside the click and is blank (then labelled "Preparing
+    // your design system book…") until the server answers, so its title alone proves
+    // nothing, and the request may not have been made yet when the window appears.
+    // The generated artefact is what shows the round trip finished.
     await expect(book.locator('.cv-title')).toBeVisible()
+    // The print window takes the PDF's file name as its title, so Save as PDF
+    // offers the same name the file list shows.
+    await expect(book).toHaveTitle(/-book$/)
+    expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
+    expect(asked[0].auth).toMatch(/^Bearer .+/)
+    expect(asked[0].body.format).toBe('book')
     await context.close()
   })
 })
@@ -339,8 +362,8 @@ test('a signed-in session makes no request to any Firebase host', async ({ page 
   await signIn(page, { plan: 'pro', projects: 2 })
 
   await go(page, '/settings')
-  await page.getByRole('tab', { name: 'Subscription' }).click()
-  await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
+  await page.getByRole('tab', { name: 'Plan and billing' }).click()
+  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
 
   await go(page, '/projects')
   await expect(page.getByText('Seeded Project 1').first()).toBeVisible()
@@ -365,8 +388,8 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
   watch(page, 'a designer signing out from their account settings')
   await signIn(page, { plan: 'pro' })
   await go(page, '/settings')
-  await page.getByRole('tab', { name: 'Subscription' }).click()
-  await expect(page.getByText(/You're on UIL4B Pro/i)).toBeVisible()
+  await page.getByRole('tab', { name: 'Plan and billing' }).click()
+  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
 
   await page.getByRole('tab', { name: 'Account' }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -379,7 +402,7 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
     'the Account section only exists for a signed-in visitor, so it must go',
   ).toHaveCount(0)
   await expect(
-    page.getByText(/You're on UIL4B Pro/i),
+    page.getByText(/You.re on UIL4B Pro/i),
     'and the Pro entitlement must go with the session that carried it',
   ).toHaveCount(0)
   await expect

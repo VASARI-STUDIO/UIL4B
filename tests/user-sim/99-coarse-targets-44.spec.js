@@ -36,13 +36,25 @@ async function hitArea(page, selector) {
 const CASES = [
   { route: '/community', sels: ['.ch-filter', '.ch-sort-btn', '.ch-heart'] },
   { route: '/settings', signin: true, sels: ['.settings-nav-item'] },
-  { route: '/create/alt-text', sels: ['[data-tool-toolbar] .tl-btn--accent', '.alt-field', '.alt-length .tl-pill'] },
+  { route: '/create/alt-text', sels: ['[data-tl-dock] button', '.alt-field', '.alt-length .tl-pill'] },
   { route: '/create/auto-builder', sels: ['.bs-btn--primary'] },
   // The output-format choices: the radio itself is the whole tile, so the
   // control a finger lands on is 44px tall, not a 20px box inside a label.
   { route: '/create/3d-converter', sels: ['.v3d-out input'] },
   { route: '/create/tint', sels: ['.tt-iconbtn', '.tt-picker', '.tt-hex-input'] },
-  { route: '/login', sels: ['.ui-login-x'] },
+  // The /login page: the Google button and the wall's pause button (a phone
+  // gets the band, which carries it).
+  { route: '/login', sels: ['.auth-google-btn', '.aw-pause'] },
+  // The sign-in dialog's close control, opened from the header's Menu.
+  {
+    route: '/learn/help',
+    label: '/learn/help (sign-in dialog)',
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Open menu' }).click()
+      await page.locator('.pnav-sheet').getByRole('button', { name: 'Log in', exact: true }).click()
+    },
+    sels: ['.ui-login-x'],
+  },
   { route: '/projects', signin: true, sels: ['.uh-card-name'] },
   // The sales page's bench header and the sales footer's link rows.
   { route: '/', sels: ['.sp-shuffle'] },
@@ -50,12 +62,13 @@ const CASES = [
 ]
 
 for (const c of CASES) {
-  test(`${c.route}: ${c.sels.join(', ')} reach 44px under a coarse pointer`, async ({ browser }) => {
+  test(`${c.label || c.route}: ${c.sels.join(', ')} reach 44px under a coarse pointer`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
     const page = await ctx.newPage()
     watch(page, 'someone on a phone reaching for a small control')
     if (c.signin) await signIn(page, { plan: 'free', projects: 2 })
     await go(page, c.route)
+    if (c.open) await c.open(page)
     // POSITIVE CONTROL: the context really is a coarse pointer.
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
     for (const sel of c.sels) {
@@ -122,5 +135,78 @@ test('/create/palette: the tools sheet dividers run straight', async ({ browser 
   for (const row of divided) {
     expect(row.radii, `"${row.label}" bends its divider into rounded corners`).toEqual(['0px', '0px'])
   }
+  await ctx.close()
+})
+
+// The bench's Shuffle is a 36px icon button (drawn size, by design) whose 44px
+// hit area is an invisible ::after ring. The generic probe above only samples
+// the four points on the centre's axes; this one measures the ring as a SQUARE:
+// all four corners of a 44px box land on the button, a point well outside it
+// does not (so a stray full-width overlay cannot pass), and a real touch tap at
+// a corner of the ring shuffles the seed.
+test('/: Shuffle is drawn 36px, its ring is 44px, and a tap on the ring corner shuffles', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  const page = await ctx.newPage()
+  watch(page, 'someone on a phone tapping the shuffle button')
+  await go(page, '/')
+  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+  const shuffle = page.locator('.sp-panel .sp-shuffle').first()
+  await expect(shuffle).toBeVisible({ timeout: 15000 })
+  await shuffle.scrollIntoViewIfNeeded()
+
+  const m = await shuffle.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const ring = getComputedStyle(el, '::after')
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const lands = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && (hit === el || el.contains(hit)) }
+    return {
+      drawn: [Math.round(r.width), Math.round(r.height)],
+      ring: [parseFloat(ring.width), parseFloat(ring.height)],
+      ringPosition: ring.position,
+      corners: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
+      outside: [[-26, 0], [26, 0], [0, -26], [0, 26]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
+      cx, cy,
+    }
+  })
+  expect(m.drawn, 'the Shuffle button is no longer drawn at 36 x 36').toEqual([36, 36])
+  expect(m.ringPosition, 'the hit ring is not an absolutely positioned ::after').toBe('absolute')
+  expect(m.ring, 'the ::after hit ring is not 44 x 44').toEqual([44, 44])
+  expect(m.corners, 'a corner of the 44px square misses the button').toEqual([true, true, true, true])
+  expect(m.outside, 'the hit area reaches well past 44px').toEqual([false, false, false, false])
+
+  const name = page.locator('.sp-panel .sp-seed-name b').first()
+  const before = await name.innerText()
+  await page.touchscreen.tap(m.cx + 20, m.cy + 20)
+  await expect(name, 'a tap on the ring corner did not shuffle the seed').not.toHaveText(before)
+  await ctx.close()
+})
+
+// On a phone the links a reader uses to move on are 44px tall, whether or not the
+// pointer reports as coarse: the guide's Sources list, the topic chips on the hub
+// and the "go" link on each principle.
+test('a phone at 390: Learn Sources, hub topic chips and /learn/principles .prn-go are 44px tall', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  const page = await ctx.newPage()
+  watch(page, 'someone on a phone moving on from a guide')
+  const heights = (sel) => page.locator(sel).evaluateAll((els) => els
+    .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
+    .map((e) => Math.round(e.getBoundingClientRect().height)))
+
+  await go(page, '/learn/colour-contrast')
+  await page.locator('.lart-sources summary').click()
+  const sources = await heights('.lart-sources li a')
+  expect(sources.length, 'no Sources link was painted').toBeGreaterThan(0)
+  for (const h of sources) expect(h, 'a Sources link is under 44px').toBeGreaterThanOrEqual(44)
+
+  await go(page, '/learn')
+  const chips = await heights('.lidx-topics a')
+  expect(chips.length, 'no hub topic chip was painted').toBeGreaterThan(0)
+  for (const h of chips) expect(h, 'a hub topic chip is under 44px').toBeGreaterThanOrEqual(44)
+
+  await go(page, '/learn/principles')
+  const gos = await heights('.prn-go')
+  expect(gos.length, 'no .prn-go link was painted').toBeGreaterThan(0)
+  for (const h of gos) expect(h, 'a .prn-go link is under 44px').toBeGreaterThanOrEqual(44)
   await ctx.close()
 })

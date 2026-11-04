@@ -9,12 +9,13 @@
 //   signed-in session (helpers.js signIn), so every test below drives the real
 //   route; the fixture is used once, for four card states side by side.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered, signIn } from './helpers.js'
+import { go, watch, expectRendered, signIn, routePalettePreview } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { cheapestPerMonth, resolvePlanLadder } from '../../src/config/planLadder.js'
 import { createTools } from '../../src/data/toolTree.js'
+import { GLYPHS } from '../../src/components/userhome/workspaceGlyphs.js'
 import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
+import { exportPanel } from './export-rows.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -55,7 +56,8 @@ test.describe('the front door', () => {
     // count of zero was then true of every page in the app, so the flash test
     // was asserting nothing at all while passing. It names the element that
     // would actually flash now.
-    await expect(page.locator('.spectrum')).toHaveCount(0)
+    // The workspace now wears .spectrum too (.uh.spectrum), so the sales page is the .spectrum that is not .uh.
+    await expect(page.locator('.spectrum:not(.uh)')).toHaveCount(0)
   })
 
   test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
@@ -148,6 +150,7 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
   // visitor straight here, and sign-up happens only when they save.
   test('the tools, the library and the sign-in are all on the page; the plan is not', async ({ page }) => {
     watch(page, 'a visitor arriving from "Open the toolkit"')
+    await routePalettePreview(page)
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
@@ -157,18 +160,35 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
 
     // Start something: every tile a real tool route, none gated.
     const start = page.locator('.uh-start')
-    await expect(start.getByRole('link', { name: /Palette Builder/ })).toHaveAttribute('href', '/create/palette')
-    const hrefs = await start.locator('.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
-    expect(hrefs).toEqual(['/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons', '/discover/palettes'])
+    await expect(start.getByRole('link', { name: /^Palette/ })).toHaveAttribute('href', '/create/palette')
+    // The links only (the Palette row is the first row now, not a lead tile): the "All thirteen tools" row beside them is a button the phone shows (see 141).
+    // The Palette Library is not one of them: its link lives in New in Discover.
+    const hrefs = await start.locator('a.uh-tool').evaluateAll((n) => n.map((a) => a.getAttribute('href')))
+    expect(hrefs).toEqual(['/create/palette', '/create/gradient', '/create/tint', '/create/semantic-color', '/create/contrast', '/create/icons'])
+    await expect(start.locator('.uh-tool--all'), 'the phone-only row is not drawn at a laptop width').toBeHidden()
 
-    // The recent-projects slot holds the sign-in, in the design's empty card's shape.
-    const card = page.locator('.uh-empty.uh-signin')
-    await expect(card.getByRole('heading', { level: 3 })).toHaveText('Sign in to keep what you build')
+    // The sign-in sits in Today (the rail), under the date and time. It is a line of text, not a
+    // heading: the section's own heading is "Today".
+    const today = page.getByRole('region', { name: 'Today' })
+    const card = today.locator('.uh-signin')
+    await expect(card.locator('.uh-signin-title')).toHaveText('Sign in to keep what you build')
     await expect(card.getByRole('button', { name: 'Sign in' })).toBeVisible()
+    // A visitor is not offered the starter or the first-palette card: those are for an account with no projects.
+    await expect(page.getByTestId('starter-card')).toHaveCount(0)
+    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
 
     // New in Discover: four real library palettes and the way to the rest.
     await expect(page.locator('.uh-disc-card')).toHaveCount(4)
-    await expect(page.getByRole('link', { name: 'Browse all' })).toHaveAttribute('href', '/discover/palettes')
+    await expect(page.getByRole('link', { name: 'Browse the Palette Library' })).toHaveAttribute('href', '/discover/palettes')
+    // A visitor cannot open the Pro palettes, so those cards draw the server's blurred picture under
+    // "Opens with Pro" (the pictures load as they scroll into view), never the text fallback.
+    const locked = page.locator('.uh-disc-card.is-locked')
+    const lockedCount = await locked.count()
+    expect(lockedCount, 'no locked card for a visitor: the picture check measured nothing').toBeGreaterThan(0)
+    await page.locator('.uh-disc').scrollIntoViewIfNeeded()
+    await expect(page.locator('.uh-disc-lock.is-ready'), 'a locked card\'s picture did not arrive').toHaveCount(lockedCount)
+    await expect(locked.locator('.uh-disc-lock-label')).toHaveText(Array(lockedCount).fill('Opens with Pro'))
+    await expect(page.locator('.uh-disc-note')).toHaveCount(0)
   })
 
   test('Sign in opens the login popup where they are, instead of sending them to /login', async ({ page }) => {
@@ -230,7 +250,9 @@ test.describe('"All … tools" opens the Create menu', () => {
     watch(page, 'a phone visitor opening every tool')
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await page.locator('.uh-alltools').click()
+    // On a phone the heading's button gives way to a row at the foot of the four tools.
+    await expect(page.locator('.uh-alltools')).toBeHidden()
+    await page.getByRole('button', { name: /^All \w+ tools$/ }).click()
     await expect(page.locator('.pnav-sheet')).toBeVisible()
     await context.close()
   })
@@ -251,7 +273,7 @@ test.describe('the plan strip reads the real plan', () => {
     await expect(strip).toContainText('Free plan')
     await expect(strip.locator('.uh-meter').first()).toContainText(`2 of ${AI_LIMITS.free.daily}`)
     await expect(page.getByRole('meter', { name: 'AI generations today' })).toHaveAttribute('aria-valuenow', '2')
-    await expect(page.getByTestId('project-quota-note')).toContainText('Project slots')
+    await expect(page.getByTestId('project-quota-note')).toContainText('Projects')
     await expect(page.getByTestId('project-quota-note')).toContainText(`2 of ${FREE_SAVE_LIMITS.projects}`)
   })
 
@@ -268,7 +290,7 @@ test.describe('the plan strip reads the real plan', () => {
     await expect(page.locator('.uh-pro'), 'nothing to sell a Pro account').toHaveCount(0)
   })
 
-  test('the Pro panel’s control: a free account is shown it, priced from the plan ladder, with no false perk', async ({ page }) => {
+  test('the Pro panel’s control: a free account is shown it, priced only if a live price exists, with no false perk', async ({ page }) => {
     watch(page, 'a free account reading the Pro panel')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
@@ -276,10 +298,15 @@ test.describe('the plan strip reads the real plan', () => {
 
     const pro = page.locator('.uh-pro')
     await expect(pro).toBeVisible()
-    const cheapest = cheapestPerMonth(resolvePlanLadder())
-    const cta = pro.getByRole('link', { name: `Upgrade for ${cheapest.perMonthLabel}/mo` })
+    // The price is the live one in the visitor's currency, so this run (no
+    // price service) shows no amount; it must never show the USD fallback.
+    // Exactly "See Pro": a looser pattern (Upgrade for \S+/mo) would also pass the
+    // bare "$4" of the USD fallback, which is the fault this guards.
+    const cta = pro.getByRole('link', { name: 'See Pro', exact: true })
     await expect(cta, 'every upgrade CTA goes to /plans').toHaveAttribute('href', '/plans')
     const text = await pro.innerText()
+    expect(text, 'the panel opens on its heading, with no "UIL4B Pro" label above it').not.toMatch(/UIL4B Pro/)
+    expect((await pro.locator('.uh-pro-copy > *').first().getAttribute('id')), 'the heading is the first thing in the panel').toBe('uh-pro-h')
     expect(text, 'there is no version history').not.toMatch(/version history/i)
     expect(text, 'there is no cancel flow').not.toMatch(/cancel/i)
     expect(text).toContain(`${AI_LIMITS.pro.daily} generations a day`)
@@ -297,32 +324,37 @@ test.describe('a recent project card is read off the project', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    const done = page.locator('.proj-card', { hasText: 'Violet Lime' })
-    await expect(done.locator('.uh-card-tag')).toHaveText('Ready')
-    await expect(done.locator('.uh-card-line')).toHaveText('Edited 2 hours ago, 4 of 4 parts')
-    await expect(done.locator('.uh-card-strip > span'), 'the strip is the project’s own five colours').toHaveCount(5)
-    await expect(done.locator('.uh-card-name')).toHaveAttribute('href', '/projects/p-done')
+    // The newest project that is not archived leads, as a card of its own.
+    const lead = page.locator('.proj-card', { hasText: 'Violet Lime' })
+    await expect(lead.locator('.uh-card-line')).toHaveText('Ready · Edited 2 hours ago')
+    await expect(lead.locator('.uh-plate rect.spt-step'), 'the lead plate is the project’s own five colours').toHaveCount(5)
+    await expect(lead.locator('.uh-parts > li')).toHaveText([
+      'Colour, done, 5 colours', 'Type, done, Fraunces over Manrope', 'Type scale, done, 17px, Perfect fourth', 'Tints, done, 6 steps',
+    ])
+    await expect(lead.locator('.uh-card-name')).toHaveAttribute('href', '/projects/p-done')
+    await expect(lead.locator('.uh-card-name')).toHaveAttribute('data-project', 'Violet Lime')
 
-    const partial = page.locator('.proj-card', { hasText: 'Harbour Rebrand' }).first()
-    await expect(partial.locator('.uh-card-tag')).toHaveText('In progress')
-    await expect(partial.locator('.uh-card-line')).toContainText('1 of 4 parts')
-
-    await expect(page.locator('.proj-card', { hasText: 'Old Harbour' }).locator('.uh-card-tag')).toHaveText('Archived')
-    // "Recent": newest first, whatever order the account stored them in.
-    expect(await page.locator('.uh-card-title').allInnerTexts()).toEqual(['Violet Lime', 'Harbour Rebrand', 'Old Harbour'])
+    // The others are rows: parts out of four, then when it was edited, each a link to its page.
+    const partial = page.locator('.proj-card', { hasText: 'Harbour Rebrand' })
+    await expect(partial.locator('.uh-card-line')).toHaveText('1 of 4 parts · Edited 1 day ago')
+    await expect(partial.locator('.uh-card-name')).toHaveAttribute('href', '/projects/p-half')
+    const oldRow = page.locator('.proj-card', { hasText: 'Old Harbour' })
+    await expect(oldRow.locator('.uh-card-line'), 'an archived project says so before its parts').toHaveText('Archived · 1 of 4 parts · Edited 6 days ago')
+    await expect(oldRow.locator('.uh-card-name')).toHaveAttribute('href', '/projects/p-old')
+    // "Recent": newest first, whatever order the account stored them in, archived last.
+    expect(await page.locator('.proj-card .uh-card-title').allInnerTexts()).toEqual(['Violet Lime', 'Harbour Rebrand', 'Old Harbour'])
   })
 
-  test('the pencil opens six icons, and the one chosen survives a reload', async ({ page }) => {
+  test('the icon is chosen on the project’s page, and the workspace shows the one chosen after a reload', async ({ page }) => {
     watch(page, 'a designer giving a project its own icon')
     await signIn(page, { plan: 'free', projects: [complete()] })
-    await go(page, '/projects')
-    await expectRendered(page, '/projects')
+    await go(page, '/projects/p-done')
+    await expectRendered(page, '/projects/p-done')
 
-    await page.getByRole('button', { name: 'Change icon for Violet Lime' }).click()
     const picker = page.getByRole('group', { name: 'Icon for Violet Lime' })
     await expect(picker.getByRole('button')).toHaveCount(6)
     await picker.getByRole('button', { name: 'Use the flask icon' }).click()
-    await expect(picker).toHaveCount(0)
+    await expect(picker.getByRole('button', { name: 'Use the flask icon' })).toHaveAttribute('aria-pressed', 'true')
     // ON THE PROJECT, so it syncs to the account — not a
     // per-browser key beside it.
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test']?.[0]?.icon))
@@ -331,62 +363,129 @@ test.describe('a recent project card is read off the project', () => {
       { message: 'the icon must reach the account', timeout: 10_000 }).toBe('flask')
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vs-project-icons') || '{}')['p-done'])).toBeUndefined()
 
+    // The workspace has no picker of its own any more (the pencil and its popover are gone); it
+    // shows the chosen glyph as the badge on the project's card.
     await page.reload()
-    await expectRendered(page, '/projects')
-    await page.getByRole('button', { name: 'Change icon for Violet Lime' }).click()
+    await expectRendered(page, '/projects/p-done')
     await expect(page.getByRole('button', { name: 'Use the flask icon' })).toHaveAttribute('aria-pressed', 'true')
-    // Escape closes it and hands focus back to the pencil.
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('group', { name: 'Icon for Violet Lime' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Change icon for Violet Lime' })).toBeFocused()
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.getByRole('button', { name: /Change icon/ }), 'the workspace no longer offers a picker').toHaveCount(0)
+    await expect(page.locator('.proj-card', { hasText: 'Violet Lime' }).locator('.uh-badge path')).toHaveAttribute('d', GLYPHS.flask)
+  })
+
+  // An icon is not an edit of the design: "Edited 1 day ago" and the lead both read updatedAt, so
+  // choosing an icon for an older project must leave both alone. The choice stamps iconAt instead,
+  // which is what the account sync compares (held in tests/unit/project-sync.test.js).
+  test('choosing an icon for an older project does not make it the lead or change when it was edited', async ({ page }) => {
+    watch(page, 'a designer giving their older project an icon')
+    const lead = complete()
+    const older = half()
+    await signIn(page, { plan: 'free', projects: [lead, older] })
+    await go(page, '/projects/p-half')
+    await expectRendered(page, '/projects/p-half')
+    const before = Date.now()
+    await page.getByRole('group', { name: 'Icon for Harbour Rebrand' }).getByRole('button', { name: 'Use the flask icon' }).click()
+
+    const stored = () => page.evaluate(() => (JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test'] || []).find((p) => p.id === 'p-half'))
+    await expect.poll(async () => (await stored())?.icon).toBe('flask')
+    const kept = await stored()
+    expect(kept.updatedAt, 'the icon moved "last edited"').toBe(older.updatedAt)
+    expect(Date.parse(kept.iconAt), 'the icon carries its own stamp, set now').toBeGreaterThanOrEqual(before - 1000)
+    // The account's copy carries both: the old edit time, and the stamp that lets the icon win a merge.
+    await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/projects/p-half')?.project?.icon),
+      { message: 'the icon must reach the account', timeout: 10_000 }).toBe('flask')
+    const account = await page.evaluate(() => window.__UIL4B_TEST_STORE__?.get('users/test-uid-free/projects/p-half'))
+    expect(account.project.updatedAt).toBe(older.updatedAt)
+    expect(account.project.iconAt).toBe(kept.iconAt)
+
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-continue-name'), 'the icon made it the lead').toHaveText('Violet Lime')
+    await expect(page.locator('.uh-row-meta')).toHaveText('1 of 4 parts · Edited 1 day ago')
+  })
+
+  test('an edit that is not an icon still moves "last edited": renaming a project takes the lead', async ({ page }) => {
+    watch(page, 'a designer renaming their older project')
+    const older = half()
+    await signIn(page, { plan: 'free', projects: [complete(), older] })
+    await go(page, '/projects/p-half')
+    await expectRendered(page, '/projects/p-half')
+    await page.getByRole('button', { name: 'Actions for Harbour Rebrand' }).click()
+    await page.getByRole('button', { name: 'Rename', exact: true }).click()
+    await page.getByRole('textbox', { name: /Rename Harbour Rebrand/i }).fill('Harbour Two')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-continue-name'), 'a rename is an edit, so it leads').toHaveText('Harbour Two')
+    await expect(page.locator('.uh-dash-main > .uh-continue .uh-meta')).toHaveText('In progress · Edited just now')
+    const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test'] || []).find((p) => p.id === 'p-half'))
+    expect(stored.iconAt, 'a rename does not stamp the icon').toBeUndefined()
   })
 
   test('the fixture’s four states read the way the page reads them', async ({ page }) => {
     watch(page, 'the card in every state it can be in')
     await go(page, FIXTURE)
-    await expect(page.locator('.uh-card-tag')).toHaveText(['Ready', 'In progress', 'In progress', 'Archived'])
-    await expect(page.locator('.uh-card-line').nth(0)).toHaveText('Edited 25 minutes ago, 4 of 4 parts')
-    await expect(page.locator('.uh-card-line').nth(2)).toHaveText('Edited 6 days ago, 0 of 4 parts')
+    // The lead card, then the other three as rows, in the order the fixture lists them.
+    await expect(page.locator('.proj-card .uh-card-line')).toHaveText([
+      'Ready · Edited 25 minutes ago',
+      '1 of 4 parts · Edited 3 hours ago',
+      'Colour not set · 0 of 4 parts · Edited 6 days ago',
+      'Archived · 1 of 4 parts · Edited 3 hours ago',
+    ])
+    await expect(page.locator('.proj-card .uh-card-title')).toHaveText(['Violet Lime', 'Harbour Rebrand', 'Default Project', 'Old Harbour'])
   })
 })
 
 /* ── The empty state ──────────────────────────────────────────────────────── */
 
 test.describe('a new account', () => {
-  test('sees the design\'s empty card, minus the sentence that is not true', async ({ page }) => {
+  test('sees the first-palette card, and not the old starter', async ({ page }) => {
     watch(page, 'a new account on its first visit')
     await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    const empty = page.locator('.uh-empty').filter({ hasText: 'No projects yet' })
-    await expect(empty).toContainText('Start with a colour and the rest of the project follows.')
+    const card = page.getByTestId('first-palette-card')
+    await expect(card.getByRole('heading', { level: 2, name: 'Turn one colour into a full palette' })).toBeVisible()
+    await expect(card).toContainText('Pick a colour or paste a hex code. You get the shades, text colours and contrast checks, and you can keep it here.')
+    await expect(card.getByText('Example: built from one colour')).toBeVisible()
+    // The old starter, its four-step list and its walkthrough button are gone for an account with no project.
+    await expect(page.getByTestId('starter-card')).toHaveCount(0)
+    await expect(page.getByText('Start your first project')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(0)
+    await expect(page.locator('.uh-steps')).toHaveCount(0)
+    await expect(page.getByText('No projects yet'), 'an account with no projects is not told it has none').toHaveCount(0)
     // Projects sync to a signed-in account, so "Nothing leaves the browser
     // until you export it" was false and is gone.
     await expect(page.locator('main')).not.toContainText('Nothing leaves the browser')
-    await empty.getByRole('button', { name: 'Start a project' }).click()
-    await expect(page, 'the empty card goes straight into the Palette Builder').toHaveURL(/\/create\/palette$/)
+    await card.getByRole('link', { name: 'Make your first palette' }).click()
+    await expect(page, 'the card goes straight into the Palette Builder').toHaveURL(/\/create\/palette$/)
+    await expect(page.locator('.plb-coach'), 'and opens the first-palette coach').toBeVisible()
   })
 
-  test('the first control, New project, is on the first screen of a 320px phone', async ({ browser }) => {
-    // The design's layout puts "Start something" above the recent projects, so on a
-    // phone the empty card is below the fold. What must not be is the way to
-    // make a project: the title row's New project opens the same dialog.
-    const context = await browser.newContext({ viewport: { width: 320, height: 568 } })
-    const page = await context.newPage()
-    watch(page, 'a new account on a small phone')
-    await signIn(page, { plan: 'free', projects: 0 })
-    await go(page, '/projects')
-    await expectRendered(page, '/projects')
-    const m = await page.getByRole('button', { name: 'New project' }).evaluate((el) => {
-      const r = el.getBoundingClientRect()
-      const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
-      return { bottom: r.bottom, vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }
+  // With no project the card's own button is the first control: the title row's New project is
+  // hidden on a phone (the page shows the one under the work, which is below the card).
+  for (const [width, height] of [[390, 844], [360, 740]]) {
+    test(`the first control, Make your first palette, is on the first screen of a ${width}px phone`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height } })
+      const page = await context.newPage()
+      watch(page, 'a new account on a phone')
+      await signIn(page, { plan: 'free', projects: 0 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      const m = await page.getByRole('link', { name: 'Make your first palette' }).evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+        return { top: r.top, bottom: r.bottom, vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }
+      })
+      expect(m.scrolled).toBe(0)
+      // The whole button is on the first screen, with nothing (the tab bar, Feedback) painted over it.
+      expect(m.bottom, `the button ends at y=${Math.round(m.bottom)}`).toBeLessThanOrEqual(m.vh)
+      expect(m.hit, 'something paints over the button').toBe(true)
+      await context.close()
     })
-    expect(m.scrolled).toBe(0)
-    expect(m.bottom).toBeLessThanOrEqual(m.vh)
-    expect(m.hit, 'something paints over New project').toBe(true)
-    await context.close()
-  })
+  }
 })
 
 /* ── The project page ─────────────────────────────────────────────────────── */
@@ -397,7 +496,7 @@ test.describe('a project’s own page', () => {
     await signIn(page, { plan: 'free', projects: [complete(), half()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await page.locator('.uh-card-name', { hasText: 'Violet Lime' }).click()
+    await page.locator('.uh-card-name[data-project="Violet Lime"]').click()
     await expect(page).toHaveURL(/\/projects\/p-done$/)
 
     await expect(page.getByRole('heading', { level: 1, name: 'Violet Lime' })).toBeVisible()
@@ -413,8 +512,9 @@ test.describe('a project’s own page', () => {
 
     // THE EXPORT BAR TELLS THE TRUTH: CSS, JSON and Tailwind export are not built.
     await expect(page.locator('.pjd-export-line')).not.toContainText(/CSS|JSON|Tailwind/)
-    await page.getByRole('button', { name: 'Export project' }).click()
-    await expect(page.getByRole('dialog').filter({ has: page.locator('#exp-title') })).toBeVisible()
+    await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project' }).click()
+    await expect(exportPanel(page)).toBeVisible()
+    await expect(exportPanel(page).getByRole('heading', { level: 2 }), 'the popup is named for the project').toHaveText('Export Violet Lime')
   })
 
   test('an empty slot says so and opens the tool that fills it, with THIS project loaded', async ({ page }) => {
@@ -442,7 +542,7 @@ test.describe('a project’s own page', () => {
     await signIn(page, { plan: 'free', projects: [half()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await page.locator('.uh-card-name', { hasText: 'Harbour Rebrand' }).tap()
+    await page.locator('.uh-card-name[data-project="Harbour Rebrand"]').tap()
     await expect(page).toHaveURL(/\/projects\/p-half$/)
     await page.getByRole('button', { name: 'Continue building' }).tap()
     await expect(page).toHaveURL(/\/create\/type-scale$/)
@@ -516,9 +616,8 @@ test.describe('the project menu', () => {
 
 test.describe('"Start something" opens every tool for a visitor with no account', () => {
   for (const [label, path] of [
-    ['Palette Builder', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
-    ['Semantic', '/create/semantic-color'], ['Contrast', '/create/contrast'], ['Icon set', '/create/icons'],
-    ['Palette Library', '/discover/palettes'],
+    ['Palette', '/create/palette'], ['Gradient', '/create/gradient'], ['Tint', '/create/tint'],
+    ['Semantic Colour', '/create/semantic-color'], ['Contrast Checker', '/create/contrast'], ['Icon Library', '/create/icons'],
   ]) {
     test(`${label} opens ${path} with no sign-in asked`, async ({ page }) => {
       watch(page, `a signed-out visitor opening ${label} from the workspace`)
@@ -545,7 +644,7 @@ test.describe('at the free cap, New project explains the cap instead of opening'
     const refusal = page.getByTestId('project-create-refusal')
     await expect(refusal).toBeVisible()
     await expect(refusal).toContainText(`Free plan saves up to ${FREE_SAVE_LIMITS.projects} projects`)
-    await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+    await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
     await expect(page, 'a project that could never be saved is not opened').toHaveURL(/\/projects$/)
     await expect(page.locator('.toast-success.show')).toHaveCount(0)
     await page.waitForTimeout(2500)
@@ -566,12 +665,12 @@ test.describe('at the free cap, New project explains the cap instead of opening'
 
 test.describe('the dashboard says what day it is, from the viewer\u2019s own machine', () => {
 
-  test('a local date and time sits above "Your workspace", and does not announce itself', async ({ page }) => {
+  test('a local date and time sits in Today, date over time, and does not announce itself', async ({ page }) => {
     watch(page, 'a returning user glancing at the workspace')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    const clock = page.locator('.uh-clock')
+    const clock = page.getByRole('region', { name: 'Today' }).locator('.uh-clock')
     await expect(clock).toBeVisible()
     await expect(clock).toHaveJSProperty('tagName', 'TIME')
     const iso = await clock.getAttribute('datetime')
@@ -579,8 +678,9 @@ test.describe('the dashboard says what day it is, from the viewer\u2019s own mac
     const weekday = await page.evaluate(() => new Date().toLocaleDateString([], { weekday: 'long' }))
     await expect(clock).toContainText(weekday)
     await expect(clock).not.toHaveAttribute('aria-live', /.+/)
-    const [c, h] = await Promise.all([clock.boundingBox(), page.locator('.uh-h1').boundingBox()])
-    expect(c.y + c.height, 'the clock sits above the title').toBeLessThanOrEqual(h.y + 1)
+    const [date, time] = await Promise.all([clock.locator('.uh-today-date').boundingBox(), clock.locator('.uh-today-time').boundingBox()])
+    expect(date.y + date.height, 'the date sits above the time').toBeLessThanOrEqual(time.y + 1)
+    await expect(clock.locator('.uh-today-time')).toHaveText(/^\d{1,2}[:.]\d{2}/)
   })
 })
 
@@ -601,26 +701,40 @@ test.describe('New in Discover shows the newest palettes', () => {
 })
 
 test.describe('a project icon lives on the project', () => {
-  test('an icon this browser kept under the old key moves onto the project', async ({ page }) => {
-    watch(page, 'a returning designer whose icon was stored the old way')
+  const legacyIcon = async (page) => {
     await page.addInitScript(() => {
       try {
         if (!localStorage.getItem('vs-project-icons')) localStorage.setItem('vs-project-icons', JSON.stringify({ 'p-done': 'compass' }))
       } catch { /* private mode */ }
     })
     await signIn(page, { plan: 'free', projects: [complete()] })
+  }
+  const storedIcon = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test']?.[0]?.icon)
+
+  test('an icon this browser kept under the old key moves onto the project when its page opens', async ({ page }) => {
+    watch(page, 'a returning designer whose icon was stored the old way')
+    await legacyIcon(page)
+    await go(page, '/projects/p-done')
+    await expectRendered(page, '/projects/p-done')
+    await expect.poll(() => storedIcon(page)).toBe('compass')
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vs-project-icons') || '{}')['p-done'])).toBeUndefined()
+    await expect(page.getByRole('button', { name: 'Use the compass icon' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  // The workspace runs the same migration (useProjectIcons), so the card's badge is right without a
+  // visit to the project's page.
+  test('an icon kept under the old key shows on the workspace card straight away', async ({ page }) => {
+    watch(page, 'a returning designer whose icon was stored the old way')
+    await legacyIcon(page)
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-projects') || '{}')['free.user@uil4b.test']?.[0]?.icon))
-      .toBe('compass')
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vs-project-icons') || '{}')['p-done'])).toBeUndefined()
-    await page.getByRole('button', { name: 'Change icon for Violet Lime' }).click()
-    await expect(page.getByRole('button', { name: 'Use the compass icon' })).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => storedIcon(page), { timeout: 5000 }).toBe('compass')
+    await expect(page.locator('.proj-card', { hasText: 'Violet Lime' }).locator('.uh-badge path')).toHaveAttribute('d', GLYPHS.compass)
   })
 })
 
 test.describe('the workspace lists recent exports', () => {
-  test('an export on record is a row: type, name, size, when', async ({ page }) => {
+  test('an export on record is a row in the rail: type, name, when', async ({ page }) => {
     watch(page, 'a designer coming back to find the file they exported')
     await page.addInitScript(() => {
       try {
@@ -632,14 +746,13 @@ test.describe('the workspace lists recent exports', () => {
     await signIn(page, { plan: 'free', projects: [complete()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    const section = page.getByRole('region', { name: 'Recent exports' })
+    const section = page.locator('aside.uh-rail').getByRole('region', { name: 'Recent exports' })
     await expect(section).toBeVisible()
     const row = section.getByRole('listitem')
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('CSS')
     await expect(row).toContainText('violet-lime-tokens.css')
-    await expect(row).toContainText('2.0 KB')
-    await expect(row).toContainText('5M AGO')
+    await expect(row).toContainText('5m ago')
   })
 
   test('with nothing exported, no empty section is drawn', async ({ page }) => {
@@ -647,7 +760,7 @@ test.describe('the workspace lists recent exports', () => {
     await signIn(page, { plan: 'free', projects: [complete()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await expect(page.locator('.uh-card').first()).toBeVisible()
+    await expect(page.locator('.proj-card').first()).toBeVisible()
     await expect(page.getByRole('region', { name: 'Recent exports' })).toHaveCount(0)
   })
 })

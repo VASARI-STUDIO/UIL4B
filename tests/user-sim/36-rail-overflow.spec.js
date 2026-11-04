@@ -106,7 +106,7 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
   })
 })
 
-//   A6  /create/gradient at 1440px. The preset strip is sixteen named gradients
+//   A6  /create/gradient at 1440px. The preset strip (sixteen gradients then, twelve now) sat
 //       in one `grid-auto-flow:column` row: 2422px of tiles inside a 1142px box,
 //       so SEVEN showed and 1280px of library sat behind the 34px fade with no
 //       scrollbar - on a page that had ~300px of empty ground under the card.
@@ -115,7 +115,7 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
 test.describe('the whole preset library is on screen on a desktop (A6)', () => {
   test.use({ viewport: DESKTOP })
 
-  test('all sixteen gradient presets are visible at 1440px, with no gesture', async ({ page }) => {
+  test('every gradient preset is visible at 1440px, with no gesture', async ({ page }) => {
     watch(page, 'a designer picking a gradient on a laptop')
     await go(page, '/create/gradient')
     await expectRendered(page)
@@ -138,11 +138,11 @@ test.describe('the whole preset library is on screen on a desktop (A6)', () => {
       }
     })
 
-    expect(report.total, 'the curated set should still be sixteen presets').toBeGreaterThanOrEqual(16)
+    expect(report.total, 'the starter grid holds exactly the twelve presets').toBe(12)
     expect(report.needsScroll, 'the preset library should not need a horizontal gesture at 1440px').toBe(false)
     expect(report.masked, 'a set that fits must not claim there is more behind a fade').toBe(false)
     expect(report.offscreen, 'presets sitting past the right edge').toEqual([])
-    expect(report.rows, 'sixteen presets should wrap into rows, not run off in one').toBeGreaterThan(1)
+    expect(report.rows, 'twelve presets at 1440px are 6x2: two rows, no short one').toBe(2)
   })
 })
 
@@ -198,14 +198,20 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
   // the primary and never leaves the row, undo/redo are the last actions to
   // go, then Randomise. Reset palette is an Extra tools row, one named tap away with
   // no swipe. What is asserted is exactly that, at the audit's widths.
+  // Redo (priority 4) leaves the row before Undo and Randomise (5) do: on the
+  // row from 360 (measured: the row has room for it from between 340 and 360 now
+  // that Save or share is in the dock), in Extra tools at 320.
+  // Below 768 Save or share is not on the row at all: it is the button in the
+  // dock fixed to the foot of the screen (`[data-tl-dock]`), which is where the
+  // thumb is, and still whole on screen.
   const ON_ROW = [
     ['Randomise', '.plb-random'],
     ['Undo', '.plb-undo'],
-    ['Redo', '.plb-redo'],
     ['Save or share', '.plb-save'],
   ]
+  const REDO_ON_ROW_FROM = 360
 
-  for (const width of [390, 640, 641, 834]) {
+  for (const width of [320, 390, 640, 641, 834]) {
     test(`Save, Undo and Randomise need no swipe, and Reset is one named tap, at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: width < 700 ? 844 : 1112 })
       watch(page, `someone finishing a palette on a ${width}px screen`)
@@ -218,25 +224,31 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
         const vw = document.documentElement.clientWidth
         const out = {}
         for (const [name, sel] of pairs) {
-          const btn = el.querySelector(sel)
+          // The primary is in the dock on a phone, and then must not also be on the row.
+          const inDock = name === 'Save or share' && vw < 768
+          if (inDock && el.querySelector(sel)) { out[name] = { missing: true, doubled: true }; continue }
+          const btn = (inDock ? document.querySelector('[data-tl-dock]') : el).querySelector(sel)
           if (!btn || btn.offsetParent === null) { out[name] = { missing: true }; continue }
           const b = btn.getBoundingClientRect()
           out[name] = { inside: b.left >= -1 && b.right <= vw + 1 && b.width > 0, box: [Math.round(b.left), Math.round(b.right)] }
         }
         return { vw, controls: out, scrolls: el.scrollWidth > el.clientWidth + 1 }
-      }, ON_ROW)
+      }, width >= REDO_ON_ROW_FROM ? [...ON_ROW, ['Redo', '.plb-redo']] : ON_ROW)
 
       expect(report.scrolls, 'the toolbar is a row, never a scroller').toBe(false)
-      for (const [name] of ON_ROW) {
+      for (const name of Object.keys(report.controls)) {
         const c = report.controls[name]
-        expect(c.missing, `${name} should be on the toolbar row at ${width}px`).toBeFalsy()
+        expect(c.missing, `${name} should be ${name === 'Save or share' && width < 768 ? 'in the dock only' : 'on the toolbar row'} at ${width}px${c.doubled ? ' (it is also on the row)' : ''}`).toBeFalsy()
         expect(c.inside, `${name} must be whole on screen at ${width}px: ${JSON.stringify(c.box)} of ${report.vw}`).toBe(true)
       }
 
       // Reset: the overflow names it, and pressing it resets.
       const before = await page.locator('.plb-col .plb-hex').allTextContents()
       await bar.getByRole('button', { name: 'Extra tools' }).click()
-      await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Reset palette' }).click()
+      const tools = page.getByRole('dialog', { name: 'Extra tools' })
+      // Redo is never lost: where it is off the row, it is a named row here.
+      if (width < REDO_ON_ROW_FROM) await expect(tools.getByRole('button', { name: 'Redo', exact: true }), `Redo is off the row at ${width}px, so Extra tools must list it`).toBeVisible()
+      await tools.getByRole('button', { name: 'Reset palette' }).click()
       await expect.poll(async () => (await page.locator('.plb-col .plb-hex').allTextContents()).join()).not.toBe(before.join())
     })
   }
@@ -252,9 +264,14 @@ test.describe('the journey can be finished, and undone, on a touch device (A5)',
     const bar = page.locator('.plb [data-tool-toolbar]')
     await expect(bar).not.toHaveClass(/is-measuring/)
 
-    for (const name of ['Undo', 'Redo', 'Randomise', 'Extra tools', 'Save or share']) {
+    for (const name of ['Undo', 'Randomise', 'Suggest variations', 'Extra tools']) {
       await expect(bar.getByRole('button', { name, exact: true })).toHaveCount(1)
     }
+    // Save or share is the dock's button on a phone, under the same name, and not on the row.
+    await expect(page.locator('[data-tl-dock]').getByRole('button', { name: 'Save or share', exact: true })).toHaveCount(1)
+    await expect(bar.getByRole('button', { name: 'Save or share', exact: true })).toHaveCount(0)
+    // Redo is on the row at 390 under the same name; at 320 it is in Extra tools (above).
+    await expect(bar.getByRole('button', { name: 'Redo', exact: true })).toHaveCount(1)
     const labelHidden = await bar.evaluate((el) => ({
       randomise: getComputedStyle(el.querySelector('.plb-random .tl-btn-label')).display,
       tools: getComputedStyle(el.querySelector('.tl-more-btn .tl-btn-label')).display,

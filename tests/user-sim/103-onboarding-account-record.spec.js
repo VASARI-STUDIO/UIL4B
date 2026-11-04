@@ -68,6 +68,57 @@ test.describe('onboarding is decided by the account record', () => {
     })
   }
 
+  // A SLOW ACCOUNT READ, FROM A BROWSER THAT HAS NEVER SEEN THIS PERSON.
+  //
+  // Empty localStorage apart from the session hint a returning visitor has, no
+  // `vs-onboarded`, and a profile read that answers after SLOW_MS. Until it
+  // answers the app only holds a default profile, which carries no record and
+  // so must not be taken for "owes onboarding". The read is proved still
+  // pending by the missing local mirror, so the assertion is about the wait and
+  // not about a read that happened to be quick.
+  const SLOW_MS = 4000
+  const slow = [{ path: `users/${UID}`, ms: SLOW_MS }]
+
+  for (const target of [SIGNED_IN_HOME, '/', '/create/palette']) {
+    test(`a finished account on a fresh browser asking for ${target} is never shown onboarding while its profile is slow`, async ({ page }) => {
+      watch(page, 'an established account, new device, slow profile read')
+      await recordRoutes(page)
+      await signIn(page, {
+        plan: 'free', onboarded: false, returning: true, uid: UID, email: EMAIL,
+        docs: accountDoc({ completedAt: Date.now() - 30 * 86_400_000 }),
+        slowReads: slow,
+      })
+      await go(page, target)
+      // The visit is on screen and the account has not answered yet.
+      expect(await flag(page), 'the profile had already answered, so the wait was not exercised').toBeNull()
+      const expected = target === '/' ? SIGNED_IN_HOME : target
+      await settleOn(page, expected)
+      expect(await routes(page), 'onboarding was painted while the account had not answered').not.toContain('/onboarding')
+      // Now let the read land and confirm the answer does not undo the above.
+      await expect.poll(() => flag(page), 'the account completion was never mirrored locally', { timeout: SLOW_MS * 3 }).toBe('1')
+      await page.waitForTimeout(300)
+      expect(await routes(page), 'onboarding was painted after the account answered').not.toContain('/onboarding')
+      await expect(page).toHaveURL(new RegExp(`${expected}/?$`))
+      await expect(page.getByTestId('onboarding-first-win')).toHaveCount(0)
+    })
+  }
+
+  test('the same slow read does not hide an account that owes onboarding: it is sent once the account answers', async ({ page }) => {
+    // The other half of the guard above. If every account were waved through
+    // regardless of its record, the cases above would pass; this one would not.
+    watch(page, 'a new account on a new device, slow profile read')
+    await recordRoutes(page)
+    await signIn(page, {
+      plan: 'free', onboarded: false, returning: true, uid: UID, email: EMAIL,
+      docs: accountDoc({ openedAt: Date.now() - 86_400_000 }),
+      slowReads: slow,
+    })
+    await go(page, '/')
+    expect(await flag(page)).toBeNull()
+    await settleOn(page, '/onboarding')
+    await expect(page.getByTestId('onboarding-first-win')).toBeVisible()
+  })
+
   test('an account from before the record existed is not sent to onboarding', async ({ page }) => {
     watch(page, 'a long-standing account with no onboarding record, new device')
     await recordRoutes(page)

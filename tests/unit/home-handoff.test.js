@@ -24,6 +24,7 @@ import {
   setImageHandoff,
   setPendingImages,
 } from '../../src/utils/imageHandoff.js'
+import { SIZE_PRESETS } from '../../src/utils/imageResize.js'
 import {
   DEFAULT_ICON_DRAFT,
   ICON_DRAFT_NAMES,
@@ -94,6 +95,18 @@ test('the draft vocabulary is exactly the options the converter can apply', () =
   assert.deepEqual(DRAFT_COMPRESSIONS.map((c) => c.id), ['lossless', 'high', 'balanced'])
   // Only PNG genuinely stores every pixel in this converter.
   assert.deepEqual(DRAFT_FORMATS.filter((f) => f.lossless).map((f) => f.id), ['image/png'])
+})
+
+test('every draft size is a converter size preset with the same name, so "2K" means one size', () => {
+  for (const r of DRAFT_RESOLUTIONS.filter((d) => d.maxDim > 0)) {
+    const preset = SIZE_PRESETS.find((p) => p.id === r.maxDim)
+    assert.ok(preset, `${r.label} (${r.maxDim} px) has no matching converter size preset`)
+    assert.equal(
+      preset.label.split(' — ')[0], r.label,
+      `draft "${r.label}" lands in the converter as "${preset.label}"`,
+    )
+    assert.ok(r.detail.includes(`${r.maxDim} px`), `${r.label} detail "${r.detail}" disagrees with ${r.maxDim}`)
+  }
 })
 
 test('an unsupported or tampered draft value falls back to the default', () => {

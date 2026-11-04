@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, SlidePills,
 } from '../components/tool/ToolLayout'
 import { AI_LIMITS } from '../config/plans'
 import { useAuth } from '../contexts/AuthContext'
@@ -12,12 +12,15 @@ import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
 import {
-  AI_IMAGE_CONSENT, AI_REGION_TITLE, AI_REGION_ALT_BODY, AI_REGION_PANEL,
+  AI_IMAGE_SENT, AI_TERMS_PATH, AI_REGION_TITLE, AI_REGION_ALT_BODY, AI_REGION_PANEL,
 } from '../config/aiImageConsent'
 import useAiRegion, { regionBlockedNow } from '../hooks/useAiRegion'
 import { isRegionRefusal } from '../utils/aiRegion'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
+import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
+import { isEmailUnverifiedReply, beginVerifyRun, refuseForVerify, verifyRetryTarget } from '../utils/aiEmailGate'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -135,6 +138,14 @@ export default function AltTextGenerator({ toast }) {
   const [context, setContext] = useState('')
   const [tone, setTone] = useState('concise')
   const [busy, setBusy] = useState(false)
+  // Set when /api/ai refuses an unverified email. `verifyStop` ends the running
+  // batch at once (every remaining image would get the same refusal), and
+  // `verifyRetry` remembers what to repeat once the address is verified: the
+  // whole batch, or the one card that was pressed.
+  const [verifyNeeded, setVerifyNeeded] = useState(false)
+  const verifyStop = useRef(false)
+  const verifyRetry = useRef(null)
+  const verifyRun = { setNeeded: setVerifyNeeded, stop: verifyStop, retryRef: verifyRetry }
   const fileInputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const { plan, isPro } = useSubscription()
@@ -254,6 +265,13 @@ export default function AltTextGenerator({ toast }) {
         setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: data.error || AI_REGION_TITLE } : p))
         return false
       }
+      if (isEmailUnverifiedReply(r.status, data)) {
+        // Not an error on the card: the card goes back to ready, and the prompt
+        // above the dropzone says what to do.
+        refuseForVerify(verifyRun, item.id)
+        setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'ready', error: null } : p))
+        return false
+      }
       // A failed reply that still used the allowance says so, and is counted
       // here the same as a success so the local tracker agrees with the server.
       if (!r.ok && data.quotaSpent === true) recordUsage(ALT_TEXT_TOOL_ID)
@@ -283,24 +301,36 @@ export default function AltTextGenerator({ toast }) {
   // One card's Generate or Retry: the same account check as the batch.
   const generateOne = async (item) => {
     if (!(await ensureAccount())) return
+    beginVerifyRun(verifyRun, null)
     await generateForItem(item)
   }
 
   const generateAll = async () => {
     if (!(await ensureAccount())) return
     setBusy(true)
+    beginVerifyRun(verifyRun, { id: null, batch: true })
     const targets = items.filter(it => it.status === 'ready' || it.status === 'error')
     let done = 0
     for (let i = 0; i < targets.length; i++) {
       if (await generateForItem(targets[i])) done++
       // A region refusal is final for every remaining card, so stop here.
       if (regionBlockedNow()) break
+      if (verifyStop.current) break
       if (i < targets.length - 1) await delay(4500)
     }
     setBusy(false)
     // The count is what LANDED. Nothing landed: the cards carry the reason,
     // and a toast announcing a success that did not happen is the fault above.
     if (done > 0) toast?.(`Generated ${done} alt text${done === 1 ? '' : 's'}`)
+  }
+
+  // The address is verified and the token is fresh: repeat what was refused.
+  const retryAfterVerify = () => {
+    const target = verifyRetryTarget(verifyRetry.current, items)
+    setVerifyNeeded(false)
+    verifyRetry.current = null
+    if (target.kind === 'batch') generateAll()
+    else if (target.kind === 'one') generateOne(target.item)
   }
 
   const copyOne = async (it) => {
@@ -436,9 +466,14 @@ export default function AltTextGenerator({ toast }) {
             </section>
           ) : (
           <>
+          {verifyNeeded && <VerifyEmailPrompt onVerified={retryAfterVerify} />}
           {/* The line saying where an uploaded image goes sits here, between the
-              allowance and the dropzone, and describes the dropzone. */}
-          <p id="alt-ai-consent" className="ai-image-consent">{AI_IMAGE_CONSENT}</p>
+              allowance and the dropzone, and describes the dropzone. What the
+              provider may do with it is in the Terms, linked rather than
+              repeated. */}
+          <p id="alt-ai-consent" className="ai-image-consent">
+            {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link>
+          </p>
           <div
             aria-describedby="alt-ai-consent"
             className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
@@ -529,6 +564,16 @@ export default function AltTextGenerator({ toast }) {
                   {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
                   {it.altText && (
                     <>
+                      {/* The label heads the text it describes, and stays once the
+                          user edits it: the edit starts from the model's wording.
+                          The length rides the same row, so the foot is only the
+                          two actions. */}
+                      <div className="alt-card-result-h">
+                        <AiLabel what="alt text" />
+                        <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
+                          {it.altText.length} chars
+                        </span>
+                      </div>
                       <AutoGrowTextarea
                         className="alt-card-text"
                         aria-label={`Alt text for ${it.name}`}
@@ -536,9 +581,6 @@ export default function AltTextGenerator({ toast }) {
                         onChange={(e) => editAlt(it.id, e.target.value)}
                       />
                       <div className="alt-card-actions">
-                        <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
-                          {it.altText.length} chars
-                        </span>
                         <button type="button" className="alt-btn" onClick={() => copyOne(it)}>Copy</button>
                         <button type="button" className="alt-btn" onClick={() => generateOne(it)} disabled={busy}>Retry</button>
                       </div>
@@ -581,7 +623,7 @@ export default function AltTextGenerator({ toast }) {
           </ToolSection>
 
           <ToolSection label="Length" labelId="alt-tone-label" className="alt-length">
-            <div className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label">
+            <SlidePills className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label" value={tone}>
               {TONES.map(t => (
                 <button
                   key={t.id}
@@ -597,7 +639,7 @@ export default function AltTextGenerator({ toast }) {
                   {t.label}
                 </button>
               ))}
-            </div>
+            </SlidePills>
             <p className="alt-field-help" id="alt-tone-help">
               <strong>{activeTone.desc}.</strong> {activeTone.when}
             </p>

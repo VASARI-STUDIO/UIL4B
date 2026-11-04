@@ -1,8 +1,8 @@
 // ICON LIBRARY: THE PREVIEW GROUND AND THE ONE-ROW TOOLBAR.
 //
-// 1. With the default icon colour the customizer's preview sits on the page's
-//    own background in both themes, not on a fixed dark or white gradient. A
-//    chosen colour keeps a contrast ground.
+// 1. The customizer's preview sits on the page's own background in both themes by
+//    default, never on a gradient. The ground is its own control (the Background
+//    switch): choosing a colour never changes it, and the choice is remembered.
 //    Coloured icons (flags, brand and colour packs) always sit on that same page
 //    ground, and the grid draws them with no white box behind: the chip around
 //    a coloured glyph is a transparent slot in both themes. Ink that matches the
@@ -11,9 +11,11 @@
 // 2. The toolbar above the grid stays on one row at every width, each control
 //    is whole (a visible control is never narrower than its glyph and padding
 //    say), and on a coarse pointer every control is at least 44px both ways.
+import { readFileSync } from 'node:fs'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
+import { ICON_PACK_CREDITS } from '../../src/data/iconPackCredits.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const WIDTHS = [320, 360, 390, 640, 641, 768, 961, 999, 1440]
 
@@ -40,7 +42,10 @@ test.describe('the customizer preview ground', () => {
       watch(page, `someone opening an icon in ${scheme} mode`)
       await openCustomizer(page)
       await expect(page.locator('.icust-panel').getByRole('button', { name: 'Default', exact: true })).toHaveCount(0)
-      await expect(page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg button.active')).toHaveCount(0)
+      // Exactly one colour chip is selected, and with nothing picked it is Text colour.
+      const chips = page.getByRole('radiogroup', { name: 'Colour', exact: true })
+      await expect(chips.getByRole('radio', { checked: true })).toHaveCount(1)
+      await expect(chips.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
       const { bg, image, page: pageBg } = await stageAndPage(page)
       expect(image, 'the stage is painting a gradient').toBe('none')
       expect(bg, 'the stage is not the page background').toBe(pageBg)
@@ -48,19 +53,116 @@ test.describe('the customizer preview ground', () => {
     })
   }
 
-  test('a chosen colour keeps a contrast ground, and Reset brings the page ground back', async ({ browser }) => {
+  test('a chosen colour never changes the ground; only the Background switch does, and it is remembered', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
     watch(page, 'someone picking white for an icon')
     await openCustomizer(page)
-    await page.getByRole('button', { name: 'White', exact: true }).click()
-    const picked = await stageAndPage(page)
-    expect(picked.image, 'white on the page ground would be invisible').not.toBe('none')
-    await page.getByRole('button', { name: 'Reset to default', exact: true }).click()
-    const back = await stageAndPage(page)
-    expect(back.bg).toBe(back.page)
+    const stage = page.locator('.icust-stage')
+    await expect(stage).toHaveClass(/icust-stage--page/)
+    const before = await stageAndPage(page)
+    for (const chip of ['White', 'Black', 'Text colour']) {
+      await page.getByRole('radio', { name: chip, exact: true }).click()
+      await expect(page.getByRole('radio', { name: chip, exact: true })).toBeChecked()
+      await expect(stage, `pressing ${chip} changed the ground`).toHaveClass(/icust-stage--page/)
+      expect((await stageAndPage(page)).bg, `pressing ${chip} repainted the ground`).toBe(before.bg)
+    }
+    // Reset clears the colour but is not a ground control either.
+    await page.getByRole('radio', { name: 'White', exact: true }).click()
+    await page.getByRole('button', { name: 'Reset', exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Text colour', exact: true })).toBeChecked()
+    await expect(stage).toHaveClass(/icust-stage--page/)
+    expect((await stageAndPage(page)).bg, 'a colour press moved the ground').toBe(before.bg)
+    const grounds = page.getByRole('radiogroup', { name: 'Background' })
+    await grounds.getByRole('radio', { name: 'Dark', exact: true }).click()
+    await expect(stage).toHaveClass(/icust-stage--dark/)
+    expect((await stageAndPage(page)).image).toBe('none')
+    // Closed and reopened: the ground survives.
+    await page.keyboard.press('Escape')
+    await page.locator('.ig .ic').first().click()
+    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--dark/)
     await ctx.close()
   })
+})
+
+// THE GROUND SWITCH DOES NOT SHIFT THE CONTROLS, AND EACH GROUND IS A VISIBLE STEP.
+//
+// A contrast note that arrives (Black on the dark page) must not push the Colour
+// chips, and the fixed ground that matches the theme must be clearly distinct
+// from the page ground, so pressing it changes what the stage looks like.
+const luminance = (rgb) => {
+  const [r, g, b] = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map((v) => {
+    const c = Number(v) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const ratio = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+test.describe('the ground switch', () => {
+  for (const scheme of ['light', 'dark']) {
+    for (const width of [390, 1440]) {
+      test(`a contrast note does not move the colour chips, and the matching fixed ground is a visible step, ${scheme} ${width}`, async ({ browser }) => {
+        const touch = width <= 768
+        const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width, height: 900 }, hasTouch: touch, isMobile: touch })
+        const page = await ctx.newPage()
+        watch(page, `someone changing the ground at ${width}px in ${scheme} mode`)
+        await openCustomizer(page)
+        const chip = (name) => page.getByRole('radio', { name, exact: true })
+        const note = page.locator('.icust-ground-note')
+        const top = async (name) => (await chip(name).boundingBox()).y
+        // The size rail sits under the note, in the stage's column. Wider than a phone sheet the stage
+        // gives room to a note and takes it back; on the sheet (640 and below) the stage stays its 168px
+        // and the note's lines are held in the note's own box. Either way the rail (and the chips in the
+        // other column) never move.
+        const railTop = async () => (await page.locator('.icust-size').boundingBox()).y
+        const stageHeight = async () => (await page.locator('.icust-stage').boundingBox()).height
+
+        // Above 640 no band is held while there is no note: the box is empty and the stage keeps the room.
+        await chip('Text colour').click()
+        await expect(note.locator('p')).toHaveCount(0)
+        const quietChips = await top('Black')
+        const quietRail = await railTop()
+        const quietStage = await stageHeight()
+        if (width <= 640) expect(quietStage, 'the phone stage is taller than its 168px').toBeLessThanOrEqual(172)
+        // The icon colour that is hard to see on this theme's page raises the note.
+        await chip(scheme === 'dark' ? 'Black' : 'White').click()
+        await expect(note.locator('p')).toBeVisible()
+        expect(await top('Black'), 'the contrast note moved the colour chips').toBe(quietChips)
+        expect(await railTop(), 'the contrast note moved the size rail').toBeCloseTo(quietRail, 0)
+        if (width <= 640) expect(await stageHeight(), 'the contrast note resized the phone stage').toBeCloseTo(quietStage, 0)
+        // Back to Text colour: still nothing moves.
+        await chip('Text colour').click()
+        await expect(note.locator('p')).toHaveCount(0)
+        expect(await top('Black')).toBe(quietChips)
+
+        // The help line is the same height for every choice.
+        const help = page.locator('.icust-colour-help')
+        const textHelp = (await help.boundingBox()).height
+        await chip('Black').click()
+        expect((await help.boundingBox()).height, 'the help line changed height with the choice').toBe(textHelp)
+
+        // The ground matching the theme is a clear step from the page, and Page is a split.
+        const grounds = page.getByRole('radiogroup', { name: 'Background' })
+        const pageBg = await page.evaluate(() => getComputedStyle(document.querySelector('.icust-stage')).backgroundColor)
+        await grounds.getByRole('radio', { name: scheme === 'dark' ? 'Dark' : 'Light', exact: true }).click()
+        const fixedBg = await page.evaluate(() => getComputedStyle(document.querySelector('.icust-stage')).backgroundColor)
+        expect(ratio(pageBg, fixedBg), `${pageBg} against ${fixedBg}`).toBeGreaterThanOrEqual(1.2)
+        const half = await page.evaluate(() => {
+          const sw = document.querySelector('.icust-ground-sw--page')
+          const own = getComputedStyle(sw)
+          const halfStyle = getComputedStyle(sw, '::before')
+          return { own: own.backgroundColor, other: halfStyle.backgroundColor, image: `${own.backgroundImage} ${halfStyle.backgroundImage}` }
+        })
+        expect(half.own, 'the Page swatch is one flat colour').not.toBe(half.other)
+        expect(half.image, 'the Page swatch paints a gradient').not.toMatch(/gradient/)
+        await ctx.close()
+      })
+    }
+  }
 })
 
 // COLOURED ICONS: NO WHITE BOX.
@@ -68,7 +170,7 @@ test.describe('the customizer preview ground', () => {
 // A coloured-pack glyph sits in a transparent slot, and the customizer shows it
 // on the page ground. Circle Flags is a paid pack, so the viewer is Pro; the
 // fixture serves its names, and the slot is drawn whether or not the artwork has
-// arrived. While it is pending the slot is a faint tint (spec 113 owns that), so
+// arrived. While it is pending the slot paints nothing (spec 113 owns that), so
 // the paint checks below look at slots whose glyph has loaded: that is the
 // resting state a reader sees.
 
@@ -90,6 +192,13 @@ const choosePack = async (page, pack) => {
   }
 }
 
+// My icons is a pinned toggle at the toolbar's right end, not a pack-menu entry.
+const openMyIcons = async (page) => {
+  const mine = page.locator('.ig-toolbar button.ig-mine')
+  await mine.click()
+  await expect(mine).toHaveAttribute('aria-pressed', 'true')
+}
+
 const openFlagGrid = async (browser, scheme, width) => {
   const touch = width <= 768
   const ctx = await browser.newContext({
@@ -108,7 +217,7 @@ const openFlagGrid = async (browser, scheme, width) => {
   return { ctx, page }
 }
 
-// A chip whose glyph has arrived: it has left the pending skeleton (--wait).
+// A chip whose glyph has arrived: it has left the pending, empty slot (--wait).
 const LOADED_CHIP = '.ig .ic .ig-chip:not(.ig-chip--wait):has(img)'
 
 const chipPaint = (page) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((c) => {
@@ -259,7 +368,7 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
 
       await page.locator('.ig .ic').first().click()
       await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
-      await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+      await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--page/)
       const { bg, image, page: pageBg } = await stageAndPage(page)
       expect(image, 'the flag stage is painting a gradient').toBe('none')
       expect(bg, 'the flag stage is not the page background').toBe(pageBg)
@@ -272,8 +381,15 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await page.locator('.ig .ic').first().click()
     await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20000 })
-    // The Colour row has nothing to tint: a fixed Default and a note.
-    await expect(page.getByText('Original colours', { exact: true })).toBeVisible()
+    // The Colour row has nothing to tint: plain text, no Default pill or track.
+    const original = page.getByText('Original colours', { exact: true })
+    await expect(original).toBeVisible()
+    await expect(original).toHaveClass(/icust-value/)
+    await expect(original).toHaveCSS('font-style', 'normal')
+    await expect(original).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    const colourRow = page.locator('.icust-row').filter({ has: original })
+    await expect(colourRow.locator('.icust-seg')).toHaveCount(0)
+    await expect(colourRow.getByText('Default', { exact: true })).toHaveCount(0)
     // The markup is fetched on open; copying before it lands would copy nothing.
     await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
     const copy = page.getByRole('button', { name: /^Copy SVG$/ })
@@ -333,16 +449,18 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
       const actions = {
         'Copy SVG': page.getByRole('button', { name: 'Copy SVG', exact: true }),
         Save: page.getByRole('button', { name: 'Save to project', exact: true }),
-        Download: page.getByRole('button', { name: 'Download', exact: true }),
-        'the code box': page.locator('.icust-code-box'),
+        Download: page.getByRole('button', { name: 'Download SVG', exact: true }),
+        'the code Copy': page.locator('.icust-code-copy'),
       }
+      // The code sits in a closed disclosure; open it so the clicks below really land on its Copy.
+      await page.locator('.icust-code-sum').click()
       for (const [label, button] of Object.entries(actions)) {
         await expect(button, `${label} is live with no markup`).toBeDisabled()
         await expect(button, `${label} does not say it is busy`).toHaveAttribute('aria-busy', 'true')
       }
       // A click that lands anyway (force skips the actionability wait) does nothing.
       await actions['Copy SVG'].click({ force: true, timeout: 2000 }).catch(() => {})
-      await actions['the code box'].click({ force: true, timeout: 2000 }).catch(() => {})
+      await actions['the code Copy'].click({ force: true, timeout: 2000 }).catch(() => {})
       await expect(page.getByRole('button', { name: /Copied!/ }), 'it claimed to copy nothing').toHaveCount(0)
       expect(await page.evaluate(() => window.__clipboardWrites), 'the clipboard was written with no markup').toEqual([])
 
@@ -370,10 +488,11 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     const page = await ctx.newPage()
     watch(page, 'someone browsing the default mono icons')
     await go(page, '/create/icons')
-    await expect(page.locator('.ig .ic img').first()).toBeVisible({ timeout: 20000 })
+    // A mono icon is an inline <svg><use></svg> cell of the page's sprite (an <img> only when it falls back).
+    await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
     const m = await page.evaluate(() => {
-      const img = document.querySelector('.ig .ic img')
-      return { chip: !!img.closest('.ig-chip'), inv: img.classList.contains('ig-inv') }
+      const glyph = document.querySelector('.ig .ic :is(img, svg.ig-sym)')
+      return { chip: !!glyph.closest('.ig-chip'), inv: glyph.classList.contains('ig-inv') }
     })
     expect(m.chip, 'a mono icon is wrapped in a coloured-icon slot').toBe(false)
     expect(m.inv, 'a mono icon lost its dark-mode ink').toBe(true)
@@ -401,22 +520,34 @@ const FLAG_INK = {
   jp: '<path fill="#fefefe" d="M3 3h18v18H3z"/>',
   de: '<path fill="#050505" d="M3 3h18v18H3z"/>',
 }
-const serveInk = (page) => page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
-  const url = new URL(route.request().url())
-  const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
-  const icons = {}
-  for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
-    const body = (prefix === 'logos' && INK[n]) || (prefix === 'circle-flags' && FLAG_INK[n]) || coloured
-    icons[n] = { body }
-  }
-  return route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    // Stamped so the suite's Iconify audit counts this as the fixture, not a leak.
-    headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
-    body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
+const serveInk = async (page) => {
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/(logos|circle-flags)\/[^/]+\.svg$/.test(u.pathname), route => {
+    const [, prefix, filename] = new URL(route.request().url()).pathname.split('/')
+    const name = filename.replace(/\.svg$/, '')
+    const body = (prefix === 'logos' ? INK[name] : FLAG_INK[name]) || coloured
+    return route.fulfill({
+      contentType: 'image/svg+xml',
+      headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+      body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`,
+    })
   })
-})
+  await page.route(/\/[^/]+\.json\?.*icons=/, (route) => {
+    const url = new URL(route.request().url())
+    const prefix = url.pathname.replace(/^\//, '').replace(/\.json$/, '')
+    const icons = {}
+    for (const n of (url.searchParams.get('icons') || '').split(',').filter(Boolean)) {
+      const body = (prefix === 'logos' && INK[n]) || (prefix === 'circle-flags' && FLAG_INK[n]) || coloured
+      icons[n] = { body }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // Stamped so the suite's Iconify audit counts this as the fixture, not a leak.
+      headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+      body: JSON.stringify({ prefix, width: 24, height: 24, icons, aliases: {} }),
+    })
+  })
+}
 
 const openLogos = async (browser, scheme) => {
   const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } })
@@ -433,10 +564,13 @@ const openLogos = async (browser, scheme) => {
 const chipOf = (page, name) => page.locator(`.ig .ic[aria-label="Customise ${name}"] .ig-chip`)
 
 test.describe('ink that matches the page ground gets a halo, never a box', () => {
-  test('dark theme: near-black marks get the light halo, white and coloured ones do not', async ({ browser }) => {
+  test('dark theme: single-colour near-black marks show in the theme ink, not a ring; white and coloured ones are untouched', async ({ browser }) => {
     const { ctx, page } = await openLogos(browser, 'dark')
-    await expect(chipOf(page, 'github-icon')).toHaveClass(/ig-chip--halo-light/)
-    await expect(chipOf(page, 'vercel-icon')).toHaveClass(/ig-chip--halo-light/)
+    // One near-black colour is drawn in the page ink like a mono icon: solid, no ring.
+    for (const name of ['github-icon', 'vercel-icon']) {
+      await expect(chipOf(page, name)).not.toHaveClass(/halo/)
+      await expect(chipOf(page, name).locator('img')).toHaveClass(/ig-inv/)
+    }
     await expect(chipOf(page, 'apple')).not.toHaveClass(/halo/)
     await expect(chipOf(page, 'gitlab')).not.toHaveClass(/halo/)
     // The halo is a filter on the glyph; the slot itself is still not a box.
@@ -444,11 +578,12 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       const c = document.querySelector('.ig .ic[aria-label="Customise github-icon"] .ig-chip')
       return { filter: getComputedStyle(c.querySelector('img')).filter, bg: getComputedStyle(c).backgroundImage }
     })
-    expect(m.filter, 'the near-black mark has no shape edge').toContain('#ig-edge-light')
-    expect(m.bg, 'the halo mark got a box').toBe('none')
-    // The customiser stage carries the same halo for the same mark.
+    expect(m.filter, 'the near-black mark is not drawn in the page ink').toBe('invert(1)')
+    expect(m.bg, 'the mark got a box').toBe('none')
+    // A one-colour mark uses the theme ink once opened in the customizer.
     await page.locator('.ig .ic[aria-label="Customise github-icon"]').click()
-    await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+    await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible()
+    await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo-light/)
     await ctx.close()
   })
 
@@ -463,11 +598,7 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await ctx.close()
   })
 
-  // MUTATION: let the customiser stage sample whatever it is showing (drop the
-  // `data:` check in `onStageImgLoad`) and this fails: while the markup is still
-  // on its way the stage shows the remote image, which cannot be read back, so a
-  // near-black mark is cached as mid-tone and never gets its halo.
-  test('a near-black logo opened before its markup arrives still gets the halo', async ({ browser }) => {
+  test('a one-colour logo opened before its markup arrives switches to plain ink', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
     const page = await ctx.newPage()
     watch(page, 'someone opening a logo before its markup has loaded')
@@ -475,8 +606,20 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
     await serveInk(page)
     let release
     const held = new Promise((resolve) => { release = resolve })
-    // Registered after serveInk, so it sees the request first and hands it on.
+    // Registered after serveInk, so it sees the request first and hands it on. Two
+    // things carry the markup: the grid's batch (logos.json) and the customiser's own
+    // fetch of the .svg. Both are held; the stage's <img> of the same .svg is a
+    // different resource type and loads straight away, so the picture is on screen
+    // while the markup is still unknown. (The customiser's fetch gives up after 3s, so
+    // everything before release() has to stay quick.)
     await page.route(/\/logos\.json\?.*icons=/, async (route) => { await held; await route.fallback() })
+    await page.route(
+      (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/logos\/[^/]+\.svg$/.test(u.pathname),
+      async (route) => {
+        if (route.request().resourceType() === 'fetch') await held
+        await route.fallback()
+      },
+    )
     try {
       await go(page, '/create/icons')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
@@ -487,8 +630,16 @@ test.describe('ink that matches the page ground gets a halo, never a box', () =>
       // The remote image has loaded and been looked at before the markup is released.
       await expect.poll(() => stage.locator('.icust-stage-img').evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 20000 }).toBe(true)
       await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+      // Whether the logo has colours is unknown yet, so the Colour row shows nothing
+      // (no Default, no "Original colours") rather than flashing and switching. Its
+      // label stays, so the form has no blank spot.
+      const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+      await expect(colourRow.locator('label')).toBeVisible()
+      await expect(colourRow.locator('.icust-value')).toBeHidden()
+      await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
       release()
-      await expect(stage, 'the near-black logo lost its halo').toHaveClass(/icust-stage--halo-light/, { timeout: 20000 })
+      await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible()
+      await expect(stage).not.toHaveClass(/icust-stage--halo-light/)
     } finally { release(); await ctx.close() }
   })
 
@@ -552,7 +703,7 @@ test.describe('saved icons', () => {
       await page.evaluate((list) => localStorage.setItem('vs-custom-icons', JSON.stringify(list)), seeded)
       await go(page, '/create/icons')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-      await choosePack(page, 'custom')
+      await openMyIcons(page)
       const mono = page.locator('.ig .ic', { hasText: 'Custom (mono 1)' }).locator('.ig-chip')
       const flag = page.locator('.ig .ic', { hasText: 'Custom (flag 1)' }).locator('.ig-chip')
       await expect(mono).toBeVisible({ timeout: 20000 })
@@ -591,10 +742,13 @@ test.describe('saved icons', () => {
         await expect(flagChip, `${flagName} got a halo`).not.toHaveClass(/halo/)
       }
 
-      // The customiser stage carries the halo for the same saved logo.
+      // A saved one-colour logo opens in the customiser as plain ink: colour
+      // controls, no "Original colours" default, and no halo on the stage.
       const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
       await page.locator('.ig .ic', { hasText: pick }).click()
-      await expect(page.locator('.icust-stage')).toHaveClass(scheme === 'dark' ? /icust-stage--halo-light/ : /icust-stage--halo-dark/, { timeout: 20000 })
+      await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible({ timeout: 20000 })
+      await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
+      await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo/)
       await page.keyboard.press('Escape')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic .ig-chip').first()
@@ -615,16 +769,19 @@ const measureToolbar = (page) => page.evaluate(() => {
       const r = e.getBoundingClientRect()
       return { name: e.getAttribute('aria-label') || e.textContent.trim() || e.className, w: r.width, h: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
     })
-  const add = tb.querySelector('.ig-addbtn')
+  const mine = tb.querySelector('button.ig-mine')
   const slot = tb.querySelector('.lbry-toolbar-action')
   return {
     coarse: matchMedia('(pointer:coarse)').matches,
     rowH: rr.height, rowRight: rr.right, rowLeft: rr.left,
     pageOverflow: document.documentElement.scrollWidth - innerWidth,
     controls,
-    addW: add ? add.getBoundingClientRect().width : null,
+    addOnToolbar: tb.querySelectorAll('.ig-addbtn').length,
+    mineW: mine ? mine.getBoundingClientRect().width : null,
+    // The pack menu sits in the action slot on the row; on a phone it moves to the Filters sheet, so no slot.
     slotW: slot ? slot.getBoundingClientRect().width : null,
-    addLabelVisible: add ? (() => { const l = add.querySelector('.ig-addbtn-label'); const r = l.getBoundingClientRect(); return r.width > 8 && r.height > 8 })() : null,
+    mineLabelVisible: mine ? (() => { const l = mine.querySelector('.ig-mine-label'); const r = l.getBoundingClientRect(); return r.width > 8 && r.height > 8 })() : null,
+    mineAtRightEnd: mine ? Math.round(rr.right - mine.getBoundingClientRect().right) : null,
   }
 })
 
@@ -640,7 +797,7 @@ test.describe('the icon toolbar', () => {
         watch(page, `someone browsing icons at ${w}px`)
         await go(page, '/create/icons')
         await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
-        await expect(page.locator('.ig-addbtn')).toBeVisible()
+        await expect(page.locator('.ig-toolbar button.ig-mine')).toBeVisible()
         await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Outlined/ })).toHaveCount(0)
         await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Solid/ })).toHaveCount(0)
         const m = await measureToolbar(page)
@@ -655,10 +812,14 @@ test.describe('the icon toolbar', () => {
           expect(c.left, `${c.name} starts before the toolbar`).toBeGreaterThanOrEqual(m.rowLeft - 1)
         }
         expect(m.pageOverflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
-        // The Add icon control is a whole control, not a sliver.
-        expect(m.addW, 'Add icon is squeezed').toBeGreaterThanOrEqual(44)
-        expect(m.slotW, 'the action slot is squeezed').toBeGreaterThanOrEqual(44)
-        if (w > 640) expect(m.addLabelVisible, 'the Add icon word is clipped').toBe(true)
+        // Add icon is not on the toolbar; the pinned My icons toggle is, whole, at the row's right end.
+        expect(m.addOnToolbar, 'Add icon is back on the toolbar').toBe(0)
+        expect(m.mineW, 'the My icons toggle is missing or squeezed').toBeGreaterThanOrEqual(44)
+        expect(m.mineAtRightEnd, 'My icons does not hold the right end of the row').toBeLessThanOrEqual(1)
+        // The pack menu's slot, when the pack menu is on the row (a phone keeps it in the Filters sheet).
+        if (m.slotW !== null) expect(m.slotW, 'the pack menu slot is squeezed').toBeGreaterThanOrEqual(44)
+        if (w > 640) expect(m.mineLabelVisible, 'the My icons word is clipped').toBe(true)
+        else expect(m.mineLabelVisible, 'on a phone the My icons word is hidden and the glyph stays').toBe(false)
         if (touch) {
           expect(m.coarse).toBe(true)
           for (const c of m.controls) {
@@ -672,11 +833,26 @@ test.describe('the icon toolbar', () => {
   }
 })
 
+// A one-icon logos catalogue. The page reads a pack list from this site first
+// (/iconify/collections/logos.json) and only then from Iconify, so both are
+// answered with the same body.
 const adobeCatalogue = async (page) => {
-  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname === '/logos/adobe.svg'), route => {
+    const url = new URL(route.request().url())
+    return route.fulfill({
+      contentType: url.pathname.endsWith('.svg') ? 'image/svg+xml' : 'application/json',
+      headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+      body: url.pathname.endsWith('.svg')
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${coloured}</svg>`
+        : JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons: { adobe: { body: coloured } } }),
+    })
+  })
+  const answer = route => route.fulfill({
     contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
     body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: ['adobe'] }),
-  }))
+  })
+  await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', answer)
+  await page.route(u => u.pathname.match(SNAPSHOT_PATH_RE)?.[1] === 'logos', answer)
 }
 
 const openAdobeGrid = async (page) => {
@@ -699,6 +875,61 @@ const openAdobeGrid = async (page) => {
   await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', 'Customise adobe')
 }
 
+for (const [name, body, multicolour] of [
+  ['github-icon', '<path fill="#161614" d="M3 3h18v18H3z"/>', false],
+  ['apple', '<path d="M3 3h18v18H3z"/>', false],
+  ['gitlab', coloured, true],
+]) {
+  test(`colour controls follow the artwork for logos:${name}`, async ({ page }) => {
+    await signIn(page, { plan: 'pro' })
+    await page.addInitScript(() => {
+      window.__copiedSvg = ''
+      navigator.clipboard.writeText = text => { window.__copiedSvg = text; return Promise.resolve() }
+    })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname.startsWith('/logos/')), route => {
+      const url = new URL(route.request().url())
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`
+      const icons = Object.fromEntries((url.searchParams.get('icons') || '').split(',').map(n => [n, { body }]))
+      return route.fulfill({
+        contentType: url.pathname.endsWith('.svg') ? 'image/svg+xml' : 'application/json',
+        headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
+        body: url.pathname.endsWith('.svg') ? svg : JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons }),
+      })
+    })
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
+      contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1' },
+      body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 1, uncategorized: [name] }),
+    }))
+    await go(page, '/create/icons')
+    await choosePack(page, 'logos')
+    await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
+    await expect(page.locator('.icust-code-copy')).toBeEnabled()
+    const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+    await expect(colour.getByText('Default', { exact: true })).toHaveCount(0)
+    await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
+    await expect(colour.getByRole('radio', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.getByRole('radio', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
+    await expect(colour.locator('.cpk-trigger')).toHaveCount(multicolour ? 0 : 1)
+    if (multicolour) return
+    await colour.getByRole('radio', { name: 'Black', exact: true }).click()
+    await expect(page.locator('.icust-code code')).toContainText('color="#000000"')
+    await expect.poll(async () => decodeURIComponent(await page.locator('.icust-stage-img').getAttribute('src'))).toContain('color="#000000"')
+    await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+    const copied = await page.evaluate(() => window.__copiedSvg)
+    expect(copied).toContain('color="#000000"')
+    expect(copied).not.toContain('#161614')
+    const downloaded = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download SVG', exact: true }).click()
+    const stream = await (await downloaded).createReadStream()
+    const chunks = []
+    for await (const chunk of stream) chunks.push(chunk)
+    const output = Buffer.concat(chunks).toString('utf8')
+    expect(output).toContain('color="#000000"')
+    expect(output).toContain('fill="#000000"')
+    expect(output).not.toContain('#161614')
+  })
+}
+
 for (const scheme of ['dark', 'light']) {
   for (const width of [390, 1440, 1920]) {
     test(`coloured grid and adobe preview use the page ground at ${width} ${scheme}`, async ({ browser }) => {
@@ -718,12 +949,12 @@ for (const scheme of ['dark', 'light']) {
         const stage = await stageAndPage(page)
         expect(stage.bg).toBe(stage.page)
         expect(stage.image).toBe('none')
-        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--theme/)
+        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--page/)
         await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--light/)
-        const colourSeg = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) }).locator('.icust-seg')
-        await expect(colourSeg.getByRole('button')).toHaveCount(0)
-        await expect(colourSeg).toHaveText('Default')
-        await expect(colourSeg.locator('.active')).toHaveCount(1)
+        const colourRow = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+        await expect(colourRow.getByRole('button')).toHaveCount(0)
+        await expect(colourRow.locator('.icust-seg')).toHaveCount(0)
+        await expect(colourRow.locator('.icust-value')).toHaveText('Original colours')
         expect(await page.locator('.icust-stage-img').getAttribute('src')).toMatch(/^data:/)
       } finally { await ctx.close() }
     })
@@ -731,19 +962,21 @@ for (const scheme of ['dark', 'light']) {
 }
 
 for (const weight of ['Regular', 'Bold', 'Fill', 'Duo']) {
-  test(`Default colour is offered only for Duo, when browsing ${weight}`, async ({ page }) => {
+  test(`Original colour is offered only for Duo, when browsing ${weight}`, async ({ page }) => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     const seg = page.getByRole('group', { name: 'Icon weight' })
     await seg.getByRole('button', { name: new RegExp(`^${weight}`) }).click()
     await expect(page.locator('.ig .ic').first()).toBeVisible()
     if (weight !== 'Regular') {
-      await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', weight === 'Duo' ? /-duotone$/ : weight === 'Bold' ? /-bold$/ : /-(fill|solid|filled)$/)
+      await expect(page.locator('.ig .ic').first()).toHaveAttribute('aria-label', weight === 'Duo' ? /-duotone(, [^,]+)?$/ : weight === 'Bold' ? /-bold(, [^,]+)?$/ : /-(fill|solid|filled)(, [^,]+)?$/)
     }
     await page.locator('.ig .ic').first().click()
     const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-    await expect(colour.getByRole('button', { name: 'Default', exact: true })).toHaveCount(weight === 'Duo' ? 1 : 0)
-    if (weight !== 'Duo') await expect(colour.locator('.icust-seg button.active')).toHaveCount(0)
+    await expect(colour.getByRole('radio', { name: 'Original', exact: true })).toHaveCount(weight === 'Duo' ? 1 : 0)
+    // Text colour is the default; on a duotone icon it is called Original.
+    await expect(colour.getByRole('radio', { checked: true })).toHaveCount(1)
+    await expect(colour.getByRole('radio', { name: weight === 'Duo' ? 'Original' : 'Text colour', exact: true })).toBeChecked()
   })
 }
 
@@ -751,23 +984,36 @@ for (const fail of [false, true]) {
   test(`an uncached coloured preview shows a loading indicator${fail ? ' and an error' : ' until its image loads'}`, async ({ page }) => {
     let release
     const pending = new Promise(resolve => { release = resolve })
-    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || /\/logos\/.*\.svg$/.test(u.pathname)), async route => {
-      await pending
-      if (fail) await route.fulfill({ status: 404, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: 'refused' }, body: 'Missing' })
-      else await route.fallback()
-    })
     try {
       await openAdobeGrid(page)
+      // Registered after the catalogue fixture, so it sees the requests first (the last route added runs first).
+      await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || /\/logos\/.*\.svg$/.test(u.pathname)), async route => {
+        await pending
+        if (fail) await route.fulfill({ status: 404, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: 'refused' }, body: 'Missing' })
+        else await route.fallback()
+      })
       await page.locator('.ig .ic').first().click()
       const stage = page.locator('.icust-stage')
       await expect(stage.getByRole('status')).toHaveText('Loading\u2026')
-      await expect(stage.locator('.icust-stage-wait')).toBeVisible()
+      // The waiting slot holds the stage's 112px inspection box but paints no square of its own.
+      const wait = stage.locator('.icust-stage-wait')
+      await expect(wait).toHaveCount(1)
+      const waitPaint = await wait.evaluate(e => {
+        const s = getComputedStyle(e)
+        const r = e.getBoundingClientRect()
+        return { bg: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow, animation: s.animationName, width: r.width, height: r.height }
+      })
+      expect({ ...waitPaint, width: 0, height: 0 }).toEqual({ bg: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none', animation: 'none', width: 0, height: 0 })
+      expect(waitPaint.width).toBeCloseTo(112, 1)
+      expect(waitPaint.height).toBeCloseTo(112, 1)
       await expect(stage.getByRole('status').locator('.sr-only')).toHaveCSS('clip', 'rect(0px, 0px, 0px, 0px)')
       const reserved = await stage.boundingBox()
       release()
       if (fail) await expect(stage.getByRole('status')).toHaveText('Couldn\u2019t load this icon.')
       else {
-        await expect(stage.locator('img')).toBeVisible()
+        // The final art only: the waiting slot may itself be an <img> until then.
+        await expect(stage.locator('img.icust-stage-img:not(.icust-stage-wait)')).toBeVisible()
+        await expect(stage.locator('.icust-stage-wait')).toHaveCount(0)
         await expect(stage.getByRole('status')).toHaveCount(0)
       }
       expect(Math.abs((await stage.boundingBox()).height - reserved.height)).toBeLessThan(0.5)
@@ -775,7 +1021,7 @@ for (const fail of [false, true]) {
   })
 }
 
-test('a saved duotone icon reopens with the Default colour button', async ({ page }) => {
+test('a saved duotone icon reopens with the Original colour chip', async ({ page }) => {
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Duo/ }).click()
@@ -793,10 +1039,157 @@ test('a saved duotone icon reopens with the Default colour button', async ({ pag
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-custom-icons') || '[]')
     .some(icon => /-duotone$/.test(icon.base)))).toBe(true)
   await page.keyboard.press('Escape')
-  await choosePack(page, 'custom')
+  await openMyIcons(page)
   const saved = page.locator('.ig-mysec').filter({ has: page.getByRole('heading', { name: 'Saved', exact: true }) }).locator('.ic').first()
   await expect(saved).toContainText(/Custom \(.*-duotone 1\)/)
   await saved.click()
   const colour = page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
-  await expect(colour.getByRole('button', { name: 'Default', exact: true })).toBeVisible()
+  await expect(colour.getByRole('radio', { name: 'Original', exact: true })).toBeChecked()
+})
+
+test('the pack menu has one Interface group and borrows no style word from the Weight and Coloured chips', async ({ page }) => {
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ig .ic').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Icon pack' }).click()
+  const list = page.locator('.menu-select-list[role="listbox"]')
+  await expect(list).toBeVisible()
+  const headings = list.locator('.pop-head')
+  // PRESENCE first, so an empty menu cannot pass the absences below.
+  await expect(headings.filter({ hasText: /^Interface$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos$/ })).toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Interface/ }), 'the Interface group is not split in two').toHaveCount(1)
+  await expect(headings.filter({ hasText: /^Brand logos/ })).toHaveCount(1)
+  for (const word of [/line/i, /filled?/i, /solid/i, /outlined/i, /colou?red/i]) {
+    await expect(headings.filter({ hasText: word }), `a group heading says ${word}`).toHaveCount(0)
+  }
+  // Stroke and fill-only packs now sit together under the one heading.
+  const interfaceGroup = list.getByRole('group', { name: 'Interface', exact: true })
+  for (const pack of ['Lucide', 'Material Design', 'BoxIcons']) {
+    await expect(interfaceGroup.getByRole('option', { name: pack }), `${pack} is under Interface`).toHaveCount(1)
+  }
+  await expect(list.getByRole('group', { name: 'Brand logos', exact: true }).getByRole('option', { name: 'Simple Icons' })).toHaveCount(1)
+})
+
+
+for (const width of [1440, 390]) {
+  test(`Flags keeps packs contiguous and names sorted at ${width}px`, async ({ page }) => {
+    watch(page, `someone browsing the Flags group at ${width}px`)
+    await page.setViewportSize({ width, height: width === 1440 ? 500 : 900 })
+    const packs = ['circle-flags', 'flag', 'flagpack', 'cif']
+    // The grid labels a cell with the set's real name, not its Iconify prefix.
+    const packLabels = { 'circle-flags': 'Circle Flags', flag: 'Flag Icons', flagpack: 'Flagpack', cif: 'Currency Flags' }
+    const collections = new Map(packs.map(pack => [pack,
+      JSON.parse(readFileSync(new URL(`./fixtures/iconify/collection/${pack}.json`, import.meta.url), 'utf8')),
+    ]))
+    // Keep the first loaded page inside one pack so later packs cannot mask missing labels.
+    if (width === 1440) {
+      const circleFlags = collections.get('circle-flags')
+      circleFlags.uncategorized = Array.from({ length: 180 }, (_, i) => `flag-${String(i).padStart(3, '0')}`)
+      circleFlags.total = circleFlags.uncategorized.length
+      // The page reads a pack's list from the site's own copy first, so the shortened list is served there too.
+      await page.route(url => url.pathname === '/iconify/collections/circle-flags.json',
+        route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(circleFlags) }))
+      await page.route(url => ICONIFY_HOSTS.includes(url.hostname)
+        && url.pathname === '/collection' && url.searchParams.get('prefix') === 'circle-flags',
+      route => route.fulfill({
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*', [ICONIFY_STUB_HEADER]: '1' },
+        body: JSON.stringify(circleFlags),
+      }))
+    }
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    const filters = page.getByRole('button', { name: /^Filters\b/ })
+    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    const flags = page.getByRole('button', { name: 'Flags', exact: true })
+    const groupMenu = page.getByRole('button', { name: /^Group\b/ })
+    // The toolbar mounts after the first paint and steps through its layout stages, so wait
+    // until it shows some way in to the groups before reading which one it chose. A bare
+    // isVisible() answers for the instant it is asked: on a slow runner that was before the
+    // toolbar existed, and the test then waited 30 s for a Group menu this layout never draws.
+    await expect(filters.or(groupMenu).or(flags).first()).toBeVisible()
+    const inPanel = await filters.isVisible()
+    if (inPanel) await filters.click()
+    if (!await flags.isVisible()) await groupMenu.click()
+    await flags.click()
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    else if (inPanel) await filters.click()
+
+    const expected = packs.flatMap(pack => {
+      const data = collections.get(pack)
+      return data.uncategorized.slice().sort().map(name => ({ pack, name }))
+    })
+    const cells = page.locator('.ig .ic:not(.ig-skel)')
+    // A grouped grid names each pack once, in a heading row, and draws no label on a cell.
+    const headNames = page.locator('.ig .ig-pack-head .ig-pack-name')
+    if (width === 1440) {
+      await expect(cells).toHaveCount(120)
+      const firstCell = cells.first()
+      await expect(headNames, 'the first page is one pack, under one heading').toHaveText(['Circle Flags'])
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
+      const firstHeight = await firstCell.evaluate(cell => cell.getBoundingClientRect().height)
+      // Focus retains the original cell while rows above the viewport are windowed.
+      await firstCell.focus()
+      await page.locator('.ig-sentinel').scrollIntoViewIfNeeded()
+      await expect(cells).toHaveCount(expected.length)
+      await cells.nth(180).scrollIntoViewIfNeeded()
+      expect(await firstCell.evaluate(cell => cell.getBoundingClientRect().height)).toBe(firstHeight)
+      await page.evaluate(() => window.scrollTo(0, 0))
+    }
+    await expect(cells).toHaveCount(expected.length)
+    await expect(cells.locator('.ic-name')).toHaveText(expected.map(icon => icon.name))
+    // Packs stay contiguous: one heading each, in group order, named as the footer credits the pack...
+    await expect.poll(() => headNames.allTextContents()).toEqual(packs.map(pack => ICON_PACK_CREDITS[pack].name))
+    await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    // ...and a cell still says which pack it is from to anyone who focuses it.
+    await expect.poll(() => cells.evaluateAll(els => els.map(el => el.getAttribute('aria-label'))))
+      .toEqual(expected.map(icon => `Customise ${icon.name}, ${packLabels[icon.pack]}`))
+    if (width === 1440) {
+      await choosePack(page, 'circle-flags')
+      await expect(cells).toHaveCount(120)
+      await expect(cells.locator('.ic-pack')).toHaveCount(0)
+    }
+  })
+}
+
+// TEXT COLOUR IS CURRENTCOLOR. With the default chip selected the copied file holds
+// currentColor and writes no colour of its own; picking Black writes it.
+test('Text colour copies currentColor with no colour on the root; Black writes one', async ({ browser }) => {
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+  const page = await ctx.newPage()
+  watch(page, 'someone copying an icon in the default colour')
+  await openCustomizer(page)
+  await expect(page.locator('.icust-code code')).toContainText('<svg', { timeout: 20000 })
+  const copy = async () => {
+    await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+    await expect(page.getByRole('button', { name: /Copied!/ })).toBeVisible()
+    return page.evaluate(() => navigator.clipboard.readText())
+  }
+  const plain = await copy()
+  expect(plain.match(/<svg[^>]*>/)?.[0] || '', 'a colour was written onto the root').not.toMatch(/\s(color|fill|stroke)="#/)
+  expect(plain, 'currentColor is gone from the file').toContain('currentColor')
+  await page.getByRole('radio', { name: 'Black', exact: true }).click()
+  await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeVisible({ timeout: 5000 })
+  await expect.poll(copy, { timeout: 10000 }).toContain('color="#000000"')
+  await ctx.close()
+})
+
+test.describe('the contrast note button', () => {
+  test('pressing it hands focus to the ground it chose, not to the page', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    watch(page, 'a keyboard user taking the note up on its offer')
+    await openCustomizer(page)
+    await page.getByRole('radio', { name: 'Black', exact: true }).click()
+    const fix = page.getByRole('button', { name: 'Show on Light', exact: true })
+    await fix.focus()
+    await page.keyboard.press('Enter')
+    const light = page.getByRole('radiogroup', { name: 'Background' }).getByRole('radio', { name: 'Light', exact: true })
+    await expect(light).toBeChecked()
+    await expect(light, 'focus fell to the page when the note went away').toBeFocused()
+    await ctx.close()
+  })
 })

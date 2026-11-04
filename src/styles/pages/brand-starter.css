@@ -35,12 +35,12 @@
   align-self: center;
   flex: 0 0 auto;
   padding: 4px 8px;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
   line-height: 1;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t2);
   background: transparent;
   border: 1px solid var(--border);
@@ -85,6 +85,10 @@
 
 .bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--accent-fill-hover); border-color: transparent; }
 
+/* A primary that is off is a neutral surface with its label in secondary ink, not
+   the accent faded to a pale tint: the label stays at 3:1 or better in both themes. */
+.bs-page .bs-btn--primary:disabled { opacity: 1; color: var(--t2); background: var(--bg-3); border-color: var(--border); }
+
 /* ── The workbench ────────────────────────────────────────────────────────── */
 
 /* Higher than the shared `.tl .tl-main` grid on purpose: this column is a
@@ -105,11 +109,11 @@
   border-bottom: 1px solid var(--border);
 }
 
-.bs-page .bs-allowance-plan { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--t3); }
+.bs-page .bs-allowance-plan { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
 
 .bs-page .bs-allowance-figure { color: var(--t1); }
 
-.bs-page .bs-allowance-left { margin-left: auto; font-family: var(--mono); color: var(--t2); }
+.bs-page .bs-allowance-left { margin-left: auto; font-family: var(--font); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 /* THE QUOTA WALL. A strip attached to the composer, not a modal over the tool.
    Mobbin: Base44 puts the month-limit notice on the top edge of the prompt
@@ -192,6 +196,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   resize: vertical;
+  max-height: 50vh;
+  overflow-y: auto;
 }
 
 .bs-page .bs-field:hover:not(:disabled) { border-color: var(--bh); }
@@ -208,7 +214,7 @@
    A field that silently stops accepting characters reads as broken, so the cap
    is rendered rather than only enforced.
    https://mobbin.com/flows/64163e57-f2de-456b-89d8-e6ff18316f55 */
-.bs-page .bs-count { font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.bs-page .bs-count { font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .bs-page .bs-note { max-width: 70ch; margin: 0; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
 
@@ -256,7 +262,7 @@
 
 .bs-page .bs-band-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 16px; }
 
-.bs-page .bs-band-n { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--t3); }
+.bs-page .bs-band-n { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--t3); font-variant-numeric: tabular-nums; }
 
 .bs-page .bs-band-label { margin: 0; font-size: var(--fs-h5); font-weight: 560; color: var(--t0); }
 
@@ -288,9 +294,9 @@
    the page's own face is a claim about a typeface nobody can see. */
 .bs-page .bs-specimen-face { margin: 0 0 6px; line-height: 1.25; color: var(--t0); overflow-wrap: anywhere; }
 
-.bs-page .bs-specimen-meta { margin: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--t2); }
+.bs-page .bs-specimen-meta { margin: 0; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--t2); }
 
-.bs-page .bs-scale-figure { margin: 0 0 14px; font-family: var(--mono); font-size: var(--fs-body-s); color: var(--t1); }
+.bs-page .bs-scale-figure { margin: 0 0 14px; font-family: var(--font); font-size: var(--fs-body-s); color: var(--t1); }
 
 .bs-page .bs-ladder { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
 
@@ -318,7 +324,7 @@
 
 .bs-page .bs-sample-band { min-width: 0; }
 
-.bs-page .bs-sample-n { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; color: var(--t3); }
+.bs-page .bs-sample-n { font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; color: var(--t3); font-variant-numeric: tabular-nums; }
 
 .bs-page .bs-sample-label { display: inline; margin: 0 0 0 8px; font-size: 12.5px; font-weight: 560; color: var(--t1); }
 
@@ -328,9 +334,9 @@
 
 .bs-page .bs-sample-chip { width: 100%; min-width: 34px; height: 34px; border-radius: var(--radius-s); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t0) 12%, transparent); }
 
-.bs-page .bs-sample-role { font-size: 10.5px; font-weight: 560; color: var(--t2); white-space: nowrap; }
+.bs-page .bs-sample-role { font-size: 12px; font-weight: 560; color: var(--t2); white-space: nowrap; }
 
-.bs-page .bs-sample-hex { font-family: var(--mono); font-size: 10px; color: var(--t2); }
+.bs-page .bs-sample-hex { font-family: var(--mono); font-size: 12px; color: var(--t2); }
 
 .bs-page .bs-sample-pair { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--t1); }
 
@@ -340,7 +346,7 @@
 
 .bs-page .bs-sample-scale li { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--t1); }
 
-.bs-page .bs-sample-px { font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.bs-page .bs-sample-px { font-family: var(--mono); font-size: 12px; color: var(--t2); }
 
 /* ── Widths, touch, motion ────────────────────────────────────────────────── */
 

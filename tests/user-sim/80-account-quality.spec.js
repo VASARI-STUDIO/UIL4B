@@ -51,7 +51,7 @@ test.describe('checkout states a price it cannot confirm', () => {
       const amount = page.locator('.checkout-plan-amount')
       const note = page.locator('.checkout-plan-note')
       await expect(amount).toHaveText('Unavailable')
-      await expect(note).toHaveText('Live pricing is unreachable · no price can be shown right now')
+      await expect(note).toHaveText('Stripe didn’t answer, so no checkout can start.')
 
       // The exact string the defect produced, asserted as absent by name so a
       // regression is unmistakable rather than merely "not Unavailable".
@@ -173,7 +173,7 @@ test.describe('projects states only quotas the product enforces', () => {
       watch(page, `a ${plan} user looking for the folders that used to be here`)
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+      await expect(page.locator('.proj-card')).toHaveCount(2)
 
       await expect(page.locator('.proj-folders'), 'the chip row is gone').toHaveCount(0)
       await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
@@ -202,8 +202,8 @@ test.describe('projects states only quotas the product enforces', () => {
     // Removing the false quota must not have taken the true one with it.
     const quota = page.locator('[data-testid="project-quota-note"]')
     await expect(quota).toBeVisible()
-    // The workspace's plan strip: "Project slots  3 of 3".
-    await expect(quota).toContainText('Project slots')
+    // The workspace's plan strip: "Projects  3 of 3".
+    await expect(quota).toContainText('Projects')
     await expect(quota).toContainText('3 of 3')
   })
 })

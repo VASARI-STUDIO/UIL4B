@@ -1,10 +1,11 @@
-import { Children, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Children, memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LibrarySearch from './LibrarySearch'
 import { ToolbarModeContext } from './toolbarMode'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import usePopover from '../../hooks/usePopover'
+import useToolbarPeek from './useToolbarPeek'
 
 // The control block that sits between a Library masthead and its grid: search,
 // then any number of filter groups, then an optional action.
@@ -53,6 +54,9 @@ import usePopover from '../../hooks/usePopover'
 // under the search: one scrollable chip row plus a filter sheet. Every other
 // group lives in the sheet. A chip row that scrolls sideways is a row that
 // never grows, which is the property wanted; a row of chips that wraps is not.
+//
+// A phone does not stick the bar; scrolling back up brings it back for a while
+// instead (useToolbarPeek.js).
 
 const PHONE_QUERY = '(max-width:640px)'
 // The wide floor is not the search field's comfortable width; it is how narrow
@@ -71,10 +75,15 @@ function FiltersGlyph() {
   )
 }
 
-export default function LibraryToolbar({
+function LibraryToolbar({
   search,
   count,
   action,
+  // A node that stays at the row's right end at every stage and is never moved
+  // into the Filters panel (the Icon Library's My icons toggle). Giving one also
+  // sends a phone's `action` straight to the sheet, so the row holds search,
+  // Filters and the pinned control only.
+  pinned,
   extra,
   children,
   // Index into `children` of the group a phone keeps on screen as a
@@ -94,7 +103,7 @@ export default function LibraryToolbar({
   const quickGroup = quickIndex >= 0 ? groups[quickIndex] : null
   const panelGroups = quickIndex >= 0 ? groups.filter((_, i) => i !== quickIndex) : groups
 
-  const minStage = phone ? 2 : 0
+  const minStage = phone ? (pinned && action ? 3 : 2) : 0
   const [stage, setStage] = useState(minStage)
   // Crossing the phone query starts the climb again from the new floor. The two
   // modes count the search field at different floors and put different things
@@ -164,7 +173,7 @@ export default function LibraryToolbar({
     obs.observe(row)
     for (const el of row.children) obs.observe(el)
     return () => obs.disconnect()
-  }, [decide, effective, phone, groups.length, count, action])
+  }, [decide, effective, phone, groups.length, count, action, pinned])
 
   // A font swap changes every option's width, so every cached need is stale.
   // Cleared ONCE, when the fonts settle: clearing on every stage change would
@@ -191,8 +200,19 @@ export default function LibraryToolbar({
   const rowMode = effective >= 1 ? 'collapse' : 'auto'
   const showFiltersButton = effective >= 2 && hasPanel
 
+  const barRef = useRef(null)
+  const { peek, slot } = useToolbarPeek(barRef, { frozen: open })
+
   return (
-    <div className={`lbry-toolbar${className ? ` ${className}` : ''}`} data-stage={effective}>
+    <>
+    {peek && slot && <div className="lbry-toolbar-spacer" style={{ height: slot.height }} aria-hidden="true" />}
+    <div
+      ref={barRef}
+      className={`lbry-toolbar${className ? ` ${className}` : ''}`}
+      data-stage={effective}
+      data-peek={peek && slot ? peek : undefined}
+      style={peek && slot ? { '--peek-left': `${slot.left}px`, '--peek-w': `${slot.width}px` } : undefined}
+    >
       <div className="lbry-toolbar-row" ref={rowRef}>
         {search && (
           <LibrarySearch
@@ -221,24 +241,33 @@ export default function LibraryToolbar({
           />
         )}
         {action && effective < 3 && <div className="lbry-toolbar-action">{action}</div>}
+        {pinned && <div className="lbry-toolbar-pinned">{pinned}</div>}
       </div>
       {quickGroup && (
         <ToolbarModeContext.Provider value="expand">
-          <div className="lbry-toolbar-quick">{quickGroup}</div>
+          <div className="lbry-toolbar-quick rail-overflow">{quickGroup}</div>
         </ToolbarModeContext.Provider>
       )}
       {extra && <div className="lbry-toolbar-row lbry-toolbar-row--extra">{extra}</div>}
     </div>
+    </>
   )
 }
 
+// Memoised so a page that renders for its own reasons (a scroll window, a copy
+// flash) does not re-run the toolbar's measuring; a page that passes stable
+// props gets the skip, one that does not renders exactly as before.
+export default memo(LibraryToolbar)
+
 // The one control the groups collapse into, and the panel it opens.
 function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action }) {
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
   // Escape back to the trigger, edge flipping). Phone: a modal bottom sheet
   // (useModalDialog — focus trap, Escape, scroll lock, focus returned).
-  const { triggerRef, popRef } = usePopover(open && !phone, close)
-  const sheetRef = useModalDialog(close, { enabled: open && phone })
+  const { triggerRef, popRef } = usePopover(open && !phone, close, { initialFocus: keyboardOpen ? firstControl : ':scope' })
+  const sheetRef = useModalDialog(close, { enabled: open && phone, initialFocus: keyboardOpen ? firstControl : null })
   const panelId = `lbry-panel-${useId().replace(/:/g, '')}`
 
   // The sheet is portalled so no ancestor's backdrop-filter or transform can
@@ -266,6 +295,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
         aria-controls={open ? panelId : undefined}
         data-active={activeFilters > 0}
         onClick={(event) => {
+          setKeyboardOpen(event.detail === 0)
           setHost(event.currentTarget.closest('[role="dialog"]') || document.body)
           setOpen((o) => !o)
         }}

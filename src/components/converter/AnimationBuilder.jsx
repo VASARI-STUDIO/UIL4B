@@ -51,6 +51,13 @@ function drawFrame(ctx, frame, w, h, fill) {
 
 let nextId = 0
 
+/** Let go of the frames held for Undo: their object URLs are no longer needed. */
+function dropCleared(ref) {
+  if (!ref.current) return
+  new Set(ref.current.frames.map(f => f.url)).forEach(u => URL.revokeObjectURL(u))
+  ref.current = null
+}
+
 export default function AnimationBuilder({ toast }) {
   const gatedDownload = useGatedDownload()
   const [frames, setFrames] = useState([]) // { id, name, url, img, w, h }
@@ -75,6 +82,7 @@ export default function AnimationBuilder({ toast }) {
   // which the next run reset to false, let a cancelled run wake up and encode.
   const runRef = useRef(0)
   const loops = useRef(0)
+  const cleared = useRef(null) // the frames Clear all just removed, kept for Undo
   // THE RESULT IS BROUGHT INTO VIEW. On a one-column bench the result sits
   // under the frame strip and Build sits in the action bar pinned to the
   // bottom of the screen, so a finished build could otherwise land out of
@@ -118,6 +126,7 @@ export default function AnimationBuilder({ toast }) {
     urls.forEach(u => URL.revokeObjectURL(u))
     if (r?.url) URL.revokeObjectURL(r.url)
     if (j) { runRef.current++; resetFfmpeg() }
+    dropCleared(cleared)
   }, [])
 
   // ── Adding frames ─────────────────────────────────────────────────────────
@@ -150,6 +159,7 @@ export default function AnimationBuilder({ toast }) {
     if (files.length > take.length) toast(`Added ${take.length} — an animation here holds up to ${MAX_FRAMES} frames`, 'info')
     if (!loaded.length) return
     const wasEmpty = live.current.frames.length === 0
+    dropCleared(cleared)
     setFrames(prev => [...prev, ...loaded])
     if (wasEmpty) {
       setSelected(0)
@@ -234,8 +244,14 @@ export default function AnimationBuilder({ toast }) {
     setAnnounce(rest.length ? `Frame ${i + 1} removed, ${rest.length} left` : 'All frames removed')
   }
 
+  // Clearing every frame is one press next to Build, so it can be taken back:
+  // the frames (and their object URLs) are held until Undo, the next clear, new
+  // frames arriving, or leaving the page.
   const clearAll = () => {
-    new Set(frames.map(f => f.url)).forEach(u => URL.revokeObjectURL(u))
+    if (!frames.length) return
+    dropCleared(cleared)
+    const kept = { frames, selected, width }
+    cleared.current = kept
     if (result?.url) URL.revokeObjectURL(result.url)
     setFrames([])
     setResult(null)
@@ -243,6 +259,19 @@ export default function AnimationBuilder({ toast }) {
     setSelected(0)
     setCursor(0)
     setWidth(null)
+    toast(`Cleared ${frames.length} frame${frames.length > 1 ? 's' : ''}`, 'info', {
+      action: {
+        label: 'Undo',
+        onAction: () => {
+          if (cleared.current !== kept || live.current.frames.length) return
+          cleared.current = null
+          setFrames(kept.frames)
+          setSelected(kept.selected)
+          setCursor(0)
+          setWidth(kept.width)
+        },
+      },
+    })
   }
 
   const onStripDrop = (e, to) => {
@@ -472,6 +501,7 @@ export default function AnimationBuilder({ toast }) {
           <input id="fc-an-width" className="fc-field fc-field--num" type="number" min={16} max={MAX_ANIMATION_SIDE} value={effWidth} disabled={busy}
             onChange={e => setWidth(e.target.value === '' ? '' : Math.max(0, Math.min(MAX_ANIMATION_SIDE, Math.round(+e.target.value))))}
             onBlur={() => setWidth(width === '' || !(Number(width) > 0) ? lastWidth.current : Math.max(16, Number(width)))} />
+          <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side</p>
           <div className="fc-outsize">
             <span className="fc-outsize-k">Output</span>
             <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px — the first frame sets the shape</span>

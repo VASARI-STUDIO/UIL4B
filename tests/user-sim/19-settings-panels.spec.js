@@ -8,8 +8,32 @@
 // panel is a blank page, and a blank page is indistinguishable from a crash.
 import { test, expect } from './base.js'
 import { go, restingScrollY, signIn, watch } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 test.describe('settings panels', () => {
+  test('signed in, the sections run Account, Plan and billing, Appearance, Language, Your data, Privacy', async ({ page }) => {
+    watch(page, 'a free account reading the settings sections in order')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const tabs = page.getByRole('tab')
+    await expect(tabs).toHaveCount(6)
+    const ids = await tabs.evaluateAll((els) => els.map((el) => el.id.replace('settab-', '')))
+    expect(ids).toEqual(['account', 'support', 'accessibility', 'language', 'data', 'privacy'])
+    const names = await tabs.evaluateAll((els) => els.map((el) => el.textContent.trim()))
+    expect(names).toEqual(['Account', 'Plan and billing', 'Appearance', 'Language', 'Your data', 'Privacy'])
+  })
+
+  test('signed out with nothing remembered, the selected tab is Appearance', async ({ page }) => {
+    watch(page, 'a signed-out visitor with no remembered section')
+    await go(page, '/settings')
+
+    await expect(page.getByRole('tab')).toHaveCount(5)
+    await expect(page.getByRole('tab', { selected: true })).toHaveAttribute('id', 'settab-accessibility')
+    await expect(page.locator('#set-accessibility')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Appearance', level: 2 })).toBeVisible()
+  })
+
   test('opens on a real panel, never blank', async ({ page }) => {
     watch(page, 'a visitor opening settings')
     await go(page, '/settings')
@@ -60,6 +84,7 @@ test.describe('settings panels', () => {
     // note. A trial CTA you cannot use, beneath a line telling you that.
     watch(page, 'a signed-out visitor landing on settings')
     await go(page, '/settings')
+    await page.getByRole('tab', { name: 'Plan and billing' }).click()
 
     await expect(page.getByRole('button', { name: /free trial/i })).toHaveCount(0)
     await expect(page.locator('.sub-billing-toggle')).toHaveCount(0)
@@ -85,15 +110,15 @@ test.describe('settings panels', () => {
       const amount = (await pro.locator('.sub-tier-amount').innerText()).trim()
       expect(amount, `${billing}: the Pro price is blank`).not.toBe('')
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
-      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Stripe didn’t answer')
     }
   })
 
-  // THE SERVICE ANSWERS, BUT NOT FOR THIS CURRENCY. `serviceAvailable` is true
-  // and the amount is still null (usePrices only formats a number), and the
-  // yearly line printed "AUD · null/mo" under "Unavailable". The monthly one
-  // claimed "billed monthly" for a price it could not show.
-  test('signed in, a live price list without this currency never prints "null"', async ({ page }) => {
+  // THE SERVICE ANSWERS, BUT WITH NO LIVE PRICE FOR THIS CURRENCY ON ANY
+  // CADENCE. That is the outage, not one missing cadence: the amount slot says
+  // "Unavailable", the sentence is the outage one, Retry is offered, and the
+  // line never prints "null".
+  test('signed in, a price list with no live cadence says pricing is unreachable and offers Retry', async ({ page }) => {
     watch(page, 'a free account whose currency the price service does not list')
     await page.route('**/api/get-prices*', (r) => r.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: {}, quarterly: {}, yearly: {} }),
@@ -109,12 +134,37 @@ test.describe('settings panels', () => {
       // POSITIVE CONTROL: this is the no-amount state, not a loaded price.
       await expect(pro.locator('.sub-tier-amount'), `${billing}: a price was found after all`).toHaveText('Unavailable')
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
-      await expect(pro.locator('.sub-tier-sub'), `${billing}: the missing price is not said`).toContainText('price for this billing period')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Stripe didn’t answer')
+      await expect(pro.getByRole('button', { name: 'Retry live pricing' }), `${billing}: no Retry`).toBeVisible()
     }
+  })
+
+  // A LIVE MONTHLY PRICE BUT NONE FOR YEARLY. Only the yearly line is
+  // unavailable: it says so for the currency, offers no Retry (the service is
+  // not down) and never prints "null"; monthly still prices.
+  test('signed in, a cadence without a live price says so while the other still prices', async ({ page }) => {
+    watch(page, 'a free account whose yearly price is not live')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability({ monthly: { usd: 7 }, quarterly: {}, yearly: {} })),
+    }))
+    await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const pro = page.locator('.sub-tier-pro')
+    await expect(pro).toBeVisible()
+    await page.getByRole('tab', { name: /Monthly/ }).click()
+    await expect(pro.locator('.sub-tier-amount'), 'monthly has a live price').toContainText('7')
+    await page.getByRole('tab', { name: /Yearly/ }).click()
+    await expect(pro.locator('.sub-tier-amount'), 'yearly was priced after all').toHaveText('Unavailable')
+    await expect(pro.locator('.sub-tier-sub')).not.toContainText('null')
+    await expect(pro.locator('.sub-tier-sub')).toContainText(/price for \w+ yet\./)
+    await expect(pro.locator('.sub-tier-sub')).not.toContainText('Stripe didn’t answer')
+    await expect(pro.getByRole('button', { name: 'Retry live pricing' })).toHaveCount(0)
   })
 })
 
-// Every section tab carries its icon. The Subscription tab's section id is
+// Every section tab carries its icon. The Plan and billing tab's section id is
 // 'support' (Plans.jsx deep-links to it), but NavIcon matched 'subscription',
 // so that one tab alone rendered without a glyph.
 test('every Settings section tab has its icon', async ({ page }) => {
@@ -122,8 +172,8 @@ test('every Settings section tab has its icon', async ({ page }) => {
   await signIn(page, { plan: 'free' })
   await go(page, '/settings')
   const tabs = page.locator('.settings-nav-item')
-  // POSITIVE CONTROL: the tab list rendered, Subscription among it.
-  await expect(tabs.filter({ hasText: 'Subscription' })).toHaveCount(1)
+  // POSITIVE CONTROL: the tab list rendered, Plan and billing among it.
+  await expect(tabs.filter({ hasText: 'Plan and billing' })).toHaveCount(1)
   const bare = await tabs.evaluateAll((els) => els.filter((el) => !el.querySelector('svg')).map((el) => el.textContent.trim()))
   expect(bare, 'these section tabs have no icon').toEqual([])
 })

@@ -48,6 +48,10 @@
   --tl-ease: cubic-bezier(.23, 1, .32, 1);
   --tl-pad: clamp(12px, 2vw, 18px);
   --tl-gap: clamp(12px, 1.6vw, 18px);
+  /* The toolbar's height: 9px padding top and bottom, a 36px button, a 1px rule.
+     A tool that fits the viewport in one frame subtracts it. Keep it in step with
+     .tl-toolbar and .tl-btn below (the coarse 44px button is set in the media rule). */
+  --tl-bar-h: 55px;
 
   /* Full bleed under the fixed nav. The margins cancel .rail-content's padding
      (24px / --page-inline / --s-9, global.css) exactly as the palette board
@@ -77,7 +81,7 @@
   gap: 10px;
   flex-wrap: nowrap;
   min-width: 0;
-  padding: 9px var(--tl-pad);
+  padding: 9px max(var(--tl-pad), env(safe-area-inset-right, 0px)) 9px max(var(--tl-pad), env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, var(--bg-0) 82%, transparent);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -106,14 +110,30 @@
   white-space: nowrap;
   color: var(--tl-ink);
 }
-/* From 360px the tool's name never truncates: the row's actions move into the
+/* From 400px the tool's name never shrinks: the row's actions move into the
    overflow first (ToolToolbar measures the name at its full width). */
-@media (min-width: 360px) {
+@media (min-width: 400px) {
   :is(.tl, .tl-sheet-layer) .tl-title { flex-shrink: 0; }
 }
+/* Below 400px, when the actions are all in the overflow and back, name, More
+   and the primary still do not fit, the name takes a second line (two 15px
+   lines are the 36px button height, so the row does not grow) and only a third
+   line is cut with an ellipsis. ToolToolbar measures the name on one line
+   (.is-measuring), so the actions leave first. */
+@media (max-width: 399px) {
+  :is(.tl, .tl-sheet-layer) .tl-toolbar:not(.is-measuring) .tl-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+}
 :is(.tl, .tl-sheet-layer) .tl-meta {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   color: var(--tl-dim);
   white-space: nowrap;
 }
@@ -177,7 +197,7 @@
   max-height: min(82dvh, 640px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  padding: 8px max(12px, env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left,0px));
   border-radius: 22px 22px 0 0;
   border-top: 1px solid var(--tl-line-2);
   background: var(--card);
@@ -185,7 +205,7 @@
 }
 .tl-sheet-layer .tl-sheet-grab { display: block; width: 36px; height: 4px; margin: 2px auto 8px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
 .tl-sheet-layer .tl-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px 6px; }
-.tl-sheet-layer .tl-sheet-title { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--tl-faint); }
+.tl-sheet-layer .tl-sheet-title { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 .tl-sheet-layer .tl-sheet-x {
   display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
   border: 0; border-radius: var(--btn-radius); background: transparent; color: var(--tl-ink); cursor: pointer;
@@ -216,7 +236,7 @@
 }
 :is(.tl, .tl-sheet-layer) .tl-menu-row .tl-ico { flex: 0 0 auto; color: var(--tl-dim); }
 :is(.tl, .tl-sheet-layer) .tl-menu-row-label { flex: 1; min-width: 0; }
-:is(.tl, .tl-sheet-layer) .tl-menu-row-hint { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
+:is(.tl, .tl-sheet-layer) .tl-menu-row-hint { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); }
 :is(.tl, .tl-sheet-layer) .tl-menu-row[aria-pressed="true"] { background: var(--tl-row-on); }
 :is(.tl, .tl-sheet-layer) .tl-menu-row[disabled],
 :is(.tl, .tl-sheet-layer) .tl-menu-row[aria-disabled="true"] { color: color-mix(in srgb, var(--t0) 40%, transparent); cursor: not-allowed; }
@@ -228,9 +248,11 @@
    straight to both edges instead of bending into the row's radius. */
 :is(.tl, .tl-sheet-layer) .tl-menu-custom + .tl-menu-row { border-top-left-radius: 0; border-top-right-radius: 0; }
 :is(.tl, .tl-sheet-layer) .tl-menu-custom .tl-select { width: 100%; }
+/* The hairline between a tool's own actions and the built-in feedback row. */
+:is(.tl, .tl-sheet-layer) .tl-menu-sep { height: 1px; margin: 4px 0; background: var(--tl-hair); }
 .tl-sheet-layer .tl-menu-row { min-height: 48px; font-size: 15px; }
 @media (hover: hover) and (pointer: fine) {
-  :is(.tl, .tl-sheet-layer) .tl-menu-row:hover:not([disabled]) { background: var(--tl-wash-2); }
+  :is(.tl, .tl-sheet-layer) .tl-menu-row:hover:not([disabled]):not([aria-disabled="true"]) { background: var(--tl-wash-2); }
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
@@ -289,7 +311,6 @@
 :is(.tl, .tl-sheet-layer) .tl-kbd {
   font-family: var(--mono);
   font-size: 9.5px;
-  letter-spacing: .08em;
   padding: 3px 7px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--t0) 8%, transparent);
@@ -316,6 +337,10 @@
   cursor: pointer;
   transition: background .16s ease, border-color .16s ease;
 }
+/* In a toolbar row the select takes the buttons' radius, so a row of controls
+   shares one height (36px, 44px on touch) and one corner. In a panel it keeps
+   the field radius. */
+:is(.tl, .tl-sheet-layer) .tl-toolbar .tl-select { border-radius: var(--btn-radius); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-within { border-color: color-mix(in srgb, var(--t0) 30%, transparent); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 :is(.tl, .tl-sheet-layer) .tl-select-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
@@ -375,12 +400,12 @@
 :is(.tl, .tl-sheet-layer) .tl-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 12px; }
 :is(.tl, .tl-sheet-layer) .tl-sec-label {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 9.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 400;
   line-height: 1.3;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--tl-faint);
 }
 
@@ -409,12 +434,54 @@
 :is(.tl, .tl-sheet-layer) .tl-pills--block { flex-wrap: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-pills--block .tl-pill { flex: 1; justify-content: center; padding: 9px 12px; border-radius: var(--btn-radius); }
 
+/* The sliding pill. useSlideIndicator measures the selected pill and sets
+   --si-x/-y/-w/-h/-r on the group; the group's ::before is the selected look
+   (border + wash) and moves with a transform, so nothing in the flow shifts.
+   While [data-slide] is on, the selected pill itself paints nothing but its
+   label; without it (server render, no script) the pill keeps its own look.
+   "placed" draws the pill with no transition (first paint, a resize), "ready"
+   animates its moves. 180ms, ease-out. */
+:is(.tl, .tl-sheet-layer) .tl-pills { position: relative; isolation: isolate; }
+:is(.tl, .tl-sheet-layer) .tl-pills[data-slide]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  width: var(--si-w);
+  height: var(--si-h);
+  border: 1px solid var(--tl-line-on);
+  border-radius: var(--si-r, 999px);
+  background: var(--tl-wash-on);
+  transform: translate(var(--si-x), var(--si-y));
+  pointer-events: none;
+}
+:is(.tl, .tl-sheet-layer) .tl-pills[data-slide="ready"]::before {
+  transition: transform .18s var(--tl-ease), width .18s var(--tl-ease), height .18s var(--tl-ease);
+}
+:is(.tl, .tl-sheet-layer) .tl-pills[data-slide] .tl-pill.is-on { border-color: transparent; background: transparent; box-shadow: none; }
+:where(html[data-reduced-motion="true"]) :is(.tl, .tl-sheet-layer) .tl-pills[data-slide]::before { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) :is(.tl, .tl-sheet-layer) .tl-pills[data-slide]::before { transition: none !important; }
+}
+@media (forced-colors: active) {
+  :is(.tl, .tl-sheet-layer) .tl-pills[data-slide]::before { content: none; }
+  :is(.tl, .tl-sheet-layer) .tl-pills[data-slide] .tl-pill.is-on { border: 2px solid Highlight; }
+}
+
 /* ── Slider rows ─────────────────────────────────────────────────────────── */
 :is(.tl, .tl-sheet-layer) .tl-slider { display: flex; align-items: center; gap: 12px; min-width: 0; }
 :is(.tl, .tl-sheet-layer) .tl-slider-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-k { width: 56px; flex: 0 0 auto; }
 :is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-v { width: 42px; text-align: right; flex: 0 0 auto; }
+/* On a phone or a touch screen the small mono labels (slider values, the
+   OKLCH/Step pills) are 12px, the floor for text read at arm's length. */
+@media (max-width: 767px), (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-slider-v,
+  :is(.tl, .tl-sheet-layer) .tl-pill--mono { font-size: 12px; }
+}
 :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -488,20 +555,96 @@
 }
 @media (max-width: 767px) {
   .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
+  /* The More button is always on the row (it holds "Send feedback"), so with
+     its label gone it is a square like the back arrow, not a padded pill. */
+  .tl .tl-toolbar .tl-more-btn { width: 36px; padding: 0; }
 }
-/* Below the 390 phone the row tightens its gaps and gutters, so a whole tool
-   name and a labelled primary still share one line. At 360, with every action
-   already in the overflow, back + name + More + primary are all that is left;
-   a 6px gap left them under 3px from the screen edge, which text that measures
-   slightly wider on another platform used up. 4px buys back 6px. */
-@media (max-width: 380px) {
-  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: 8px; }
+@media (max-width: 767px) and (pointer: coarse) {
+  .tl .tl-toolbar .tl-more-btn { width: 44px; }
 }
+/* Under 360px the title may shorten ("Contrast Che..."), and a back pill that
+   names its destination ("Palette") is what crowds it. The arrow stays and the
+   link keeps its name ("Back to palette") from its aria-label. */
+@media (max-width: 359px) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--back { width: 36px; padding: 0; }
+  :is(.tl, .tl-sheet-layer) .tl-btn--back .tl-btn-label { display: none; }
+}
+@media (max-width: 359px) and (pointer: coarse) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--back { width: 44px; }
+}
+/* On a phone the row tightens its gutters, so a whole tool name and a labelled
+   primary still share one line. The gap between neighbours stays at 8px, the
+   floor for two touch targets; a row that no longer fits at that gap moves its
+   lowest-priority actions into the overflow rather than closing the gap. */
+@media (max-width: 400px) {
+  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 8px; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
+}
+
+/* ── The phone dock (ToolLayout's `.tl-dock`) ────────────────────────────────
+   Below 768px the toolbar's primary sits in a bar fixed to the foot of the
+   screen. Its height is one token, --tool-dock-h: hairline 1px + 12px + the
+   44px control + the bottom padding, which clears the home indicator. Over the
+   phone tab bar that bar has already cleared it, so the padding drops to 12px
+   and the dock rides --tool-dock-bottom above it.
+
+   --tl-dock-h is the same height on the layout root, and 0 unless the dock is
+   showing (`tl--docked`), so the body's padding follows the bar exactly.
+   Layers: above the toolbar (30), under every sheet, menu and tab bar (70+). */
+:root {
+  --tool-dock-pad: max(12px, env(safe-area-inset-bottom, 0px));
+  --tool-dock-h: calc(57px + var(--tool-dock-pad));
+  --tool-dock-bottom: 0px;
+}
+.tl { --tl-dock-h: 0px; }
+.tl .tl-dock { display: none; }
+@media (max-width: 767px) {
+  html.has-tabbar {
+    --tool-dock-pad: 12px;
+    --tool-dock-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+  .tl .tl-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: var(--tool-dock-bottom);
+    z-index: 50;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    height: var(--tool-dock-h);
+    /* The page gutter (16px on a phone, and never under the safe-area inset), so the primary clears the screen edge. */
+    padding: 12px var(--page-inline) var(--tool-dock-pad);
+    background: var(--tl-page);
+    border-top: 1px solid var(--tl-hair);
+  }
+  /* The keyboard is up: the bar stays mounted (the primary keeps its state) but is not drawn. */
+  .tl .tl-dock.is-away { display: none; }
+  /* The primary fills the bar, whether it is a button or a wrapper around one. */
+  .tl .tl-dock > * { flex: 1 1 auto; min-width: 0; }
+  .tl .tl-dock .tl-btn--accent { flex: 1 1 auto; height: 44px; min-height: 44px; }
+  .tl.tl--docked { --tl-dock-h: var(--tool-dock-h); }
+  .tl.tl--docked .tl-body { padding-bottom: calc(clamp(12px, 2vw, 20px) + var(--tl-dock-h)); }
+  .tl.tl--docked .tl-body--bleed { padding-bottom: var(--tl-dock-h); }
+
+  /* Everything else that floats at the foot of the screen rides above the dock. */
+  html.has-tool-dock:not(.bkit-on) { scroll-padding-bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 8px); }
+  html.has-tool-dock:not(.bkit-on) body .toast { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 12px + var(--toast-lift)); }
+  html.has-tool-dock:not(.bkit-on) body .global-feedback-btn { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 14px); }
+  html.has-tool-dock:not(.bkit-on) body .bill-banner { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 20px); }
+}
+@media (max-width: 520px) {
+  html.has-tool-dock:not(.bkit-on) body .bill-banner { bottom: calc(var(--tool-dock-bottom) + var(--tool-dock-h) + 74px); }
+}
+/* The brand kit walkthrough's bar owns the foot of the screen; the primary is
+   back in the toolbar, and this covers the frame before the layout notices. */
+html.bkit-on .tl .tl-dock { display: none; }
+html.bkit-on .tl { --tl-dock-h: 0px; }
 
 /* Coarse pointers: every control reaches the 44px floor the touch specs hold
    (57-create-tool-target-size, 99-coarse-targets-44). The design draws 36px
    for a mouse; on a finger the same control grows, nothing else moves. */
 @media (pointer: coarse) {
+  .tl { --tl-bar-h: 63px; }
   :is(.tl, .tl-sheet-layer) .tl-btn,
   :is(.tl, .tl-sheet-layer) .tl-select { height: 44px; min-height: 44px; }
   :is(.tl, .tl-sheet-layer) .tl-btn--square { width: 44px; }
@@ -528,4 +671,38 @@
    High Contrast flattens — give it a border the OS must paint. */
 @media (forced-colors: active) {
   :is(.tl, .tl-sheet-layer) .tl-pill.is-on { border: 2px solid Highlight; }
+}
+
+/* ── Export menu (ExportMenu.jsx) ─────────────────────────────────────────
+   The button is .tl-btn--accent, or .tl-btn--quiet beside another primary; the list reuses the overflow's
+   popover (.tl-pop) and bottom sheet (.tl-sheet) and its rows (.tl-menu-row),
+   with pill rows to match the button. */
+.tl .tl-export { position: relative; display: flex; align-items: center; }
+.tl-export-caret { margin-right: -3px; }
+.tl-export-btn[aria-expanded="true"] .tl-export-caret { transform: rotate(180deg); }
+:is(.tl, .tl-sheet-layer) .tl-export-pop { min-width: 196px; padding: 6px; border-radius: 24px; }
+:is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row { border-radius: var(--radius-pill); padding-inline: 14px; }
+:is(.tl, .tl-sheet-layer) .tl-export-rows .tl-menu-row:focus-visible {
+  background: var(--tl-wash-2);
+  outline-offset: -2px;
+}
+@media (pointer: coarse) {
+  .tl .tl-export-rows .tl-menu-row { min-height: 44px; }
+}
+
+/* ── Save-to-project dialog (SaveToProjectDialog.jsx) ───────────────────────
+   Chrome is the global .ui-modal; the dialog renders inside the tool root, so
+   only the form is styled here. */
+.tl-save-form { display: grid; gap: 14px; }
+.tl-save-summary { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.tl-save-field { display: grid; gap: 6px; }
+.tl-save-field > span { font-size: 11.5px; font-weight: 600; color: var(--t1); }
+.tl-save-field input { width: 100%; }
+.tl-save-err { margin: 0; font-size: 12px; font-weight: 500; color: var(--err-strong); }
+.tl-save-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.tl-save-actions .btn { justify-content: center; }
+@media (pointer: coarse) {
+  .tl-save-actions .btn,
+  .tl-save-x { min-height: 44px; }
+  .tl-save-x { min-width: 44px; }
 }

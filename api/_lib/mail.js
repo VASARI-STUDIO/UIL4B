@@ -12,14 +12,11 @@
 //
 // ── WHY THE DEFAULT IS STILL THE SANDBOX ─────────────────────────────────────
 //
-// The founder created admin@uil4b.com on 2026-09-14, and a mailbox is not a
-// verified sending domain. Until SPF, DKIM and a return path exist on uil4b.com
-// (docs/OWNER-ACTIONS.md §4.10 — that register is local-only since 2026-09-16
-// and is not in this repository; see .gitignore for the decision and the
-// reason), Resend REFUSES to send as admin@uil4b.com — the API
-// returns an error and the mail is simply lost. Hard-coding the new address
-// today would therefore silently break the founder's own feedback notifications,
-// which currently work.
+// A mailbox is not a verified sending domain. Until SPF, DKIM and a return path
+// exist on uil4b.com, Resend REFUSES to send as support@uil4b.com — the API
+// returns an error and the mail is simply lost. Hard-coding that address as the
+// sender would therefore silently break the feedback notifications, which
+// currently work.
 //
 // So the sender is an env var with the sandbox as its fallback: nothing changes
 // until MAIL_FROM is set in Vercel, and on the day the domain verifies, one
@@ -27,15 +24,15 @@
 //
 // ── WHAT DOES CHANGE TODAY ───────────────────────────────────────────────────
 //
-// `reply_to` is admin@uil4b.com NOW, and it needs no verified domain — it is a
+// `reply_to` is support@uil4b.com, and it needs no verified domain — it is a
 // header on a message sent by someone else, not a claim to be that someone. So
-// from this commit, hitting reply on any notification reaches the real mailbox
-// instead of a Resend sandbox address that accepts nothing.
+// hitting reply on any notification reaches the real mailbox instead of a
+// Resend sandbox address that accepts nothing.
 
 import { cleanKey } from './env.js'
 
 /** The mailbox a human should reach by hitting reply. */
-export const REPLY_TO = 'admin@uil4b.com'
+export const REPLY_TO = 'support@uil4b.com'
 
 /** Resend's sandbox sender — deliverable only to the account owner. */
 const SANDBOX_FROM = 'UIL4B <onboarding@resend.dev>'
@@ -43,7 +40,7 @@ const SANDBOX_FROM = 'UIL4B <onboarding@resend.dev>'
 /**
  * The From header for outbound mail.
  *
- * Set `MAIL_FROM` in Vercel to `UIL4B <admin@uil4b.com>` once uil4b.com is a
+ * Set `MAIL_FROM` in Vercel to `UIL4B <support@uil4b.com>` once uil4b.com is a
  * verified sending domain in Resend. Until then this returns the sandbox, which
  * is what the product has always sent and what actually arrives.
  *
@@ -58,9 +55,8 @@ export function mailFrom(env = process.env) {
 
 /**
  * True once the sender has been pointed at a real uil4b.com address, which is
- * the only way this code can tell that the domain work in §4.10 is done.
- * Reported by the diagnostic so the founder can see it from the admin page
- * rather than by reading a dashboard.
+ * the only way this code can tell that the domain is verified.
+ * Reported by the diagnostic so the admin page shows it without a dashboard.
  */
 export function sendingDomainConfigured(env = process.env) {
   return /@uil4b\.com>?\s*$/i.test(mailFrom(env))

@@ -134,10 +134,15 @@ test('the page reaches the extractor through the virtual module, lazily, and han
   assert.match(config, /from '\.\/scripts\/learn-search-text\.mjs'/)
 
   const page = read('src/components/LearnGuideIndex.jsx')
-  assert.ok(page.includes(`import('${VIRTUAL_ID}')`),
-    `LearnGuideIndex.jsx must import ${VIRTUAL_ID} DYNAMICALLY — a static import puts 51 KB of prose on the landing's first paint`)
-  assert.ok(!new RegExp(`^import .* from '${VIRTUAL_ID}'`, 'm').test(page),
-    'LearnGuideIndex.jsx imports the search text statically')
+  // The module holds only the ADDRESS of the JSON file, so a static import of it
+  // costs a string; the 51 KB of prose is fetch()ed on focus. A dynamic import()
+  // of the text would turn a failed load into a vite:preloadError page reload.
+  assert.match(page, new RegExp(`^import searchTextUrl from '${VIRTUAL_ID}'`, 'm'),
+    `LearnGuideIndex.jsx must import the address from ${VIRTUAL_ID}`)
+  assert.ok(/fetch\(searchTextUrl\)/.test(page),
+    'LearnGuideIndex.jsx must fetch() the search text; an import() failure reloads the page and wipes the query')
+  assert.ok(!/import\(\s*['"]virtual:learn-search-text/.test(page),
+    'LearnGuideIndex.jsx imports the search text as a JS chunk again')
   assert.match(page, /searchGuides\(query, LEARN_ARTICLES, bodies \|\| \{\}\)/,
     'the component no longer hands the loaded bodies to searchGuides — the search has silently become title-only')
   assert.match(page, /onFocus=\{ensureBodies\}/, 'the bodies are not requested on focus, so the first keystroke pays for the fetch')

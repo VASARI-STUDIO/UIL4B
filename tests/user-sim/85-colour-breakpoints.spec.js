@@ -408,30 +408,33 @@ test.describe('the palette board across the width matrix', () => {
 })
 
 test.describe('the contrast checker says nothing it cannot stand behind', () => {
-  test('the live preview is a specimen, and no specimen is in the heading outline', async ({ browser }) => {
+  test('the live preview is a picture, and none of its text is in the heading outline', async ({ browser }) => {
     for (const theme of ['light', 'dark']) {
       const { ctx, page } = await at(browser, 1280, { theme })
       await go(page, '/create/contrast')
-      await expect(page.locator('.cc-preview')).toBeVisible()
+      await expect(page.locator('.cc-frame')).toBeVisible()
+      await expect(page.locator('.cc-pv[data-scene="interface"] .ro-title')).toBeVisible()
       await settled(page)
 
       const read = await page.evaluate(() => ({
         headings: [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => h.textContent.trim()),
-        specimenTags: [...document.querySelectorAll('.cc-spec-h, .cc-spec-large, .cc-spec-body')].map((e) => e.tagName),
-        specimenText: [...document.querySelectorAll('.cc-preview')].map((e) => e.innerText).join(' '),
+        specimenTags: [...document.querySelectorAll('.cc-pv .ro-title, .cc-pv .ro-lab, .cc-pv .ro-help, .cc-pv .ro-meta')].map((e) => e.tagName),
+        inViewHeadings: document.querySelectorAll('.cc-pv h1, .cc-pv h2, .cc-pv h3, .cc-pv h4, .cc-pv h5, .cc-pv h6').length,
+        specimenText: [...document.querySelectorAll('.cc-frame')].map((e) => e.innerText).join(' '),
         body: document.body.innerText,
       }))
 
       // POSITIVE CONTROL. Every assertion under this line is an absence, and a
       // page that never rendered has an empty body that satisfies all of them.
       expect(read.headings.length, `${theme}: the page has headings`).toBeGreaterThanOrEqual(2)
-      expect(read.specimenTags.length, `${theme}: the specimen rows painted`).toBe(3)
+      expect(read.specimenTags.length, `${theme}: the preview's text rows painted`).toBeGreaterThanOrEqual(4)
       expect(read.specimenText.length, `${theme}: the preview has text in it`).toBeGreaterThan(60)
 
-      // A specimen is not a section of this document — "Sample heading" is a
-      // picture of a heading (the design's drawn copy, D:731), not an h2.
-      expect(read.specimenTags, `${theme}: no specimen row is a heading`).not.toContain('H2')
-      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Common pairs in this kit'])
+      // The preview is not a section of this document: its page title is a picture of
+      // a heading, not an h2. The legend's own heading is the page's, so it is listed.
+      expect(read.specimenTags, `${theme}: no preview row is a heading`).not.toContain('H2')
+      expect(read.inViewHeadings, `${theme}: no heading inside the preview`).toBe(0)
+      expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Pairs to check'])
 
       // The claim the founder retired, and the tagline beside it.
       expect(read.body, `${theme}`).not.toContain('Free while in beta')
@@ -440,20 +443,29 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
     }
   })
 
-  // The page must name its content. On the drawn screen that is
-  // the specimen, a region, and the side card — the ratio, the tests and both
-  // fields — a named complementary landmark.
-  test('the specimen and the instrument are both named landmarks', async ({ browser }) => {
+  // The page must name its content: the preview is a named image, the side card
+  // (the ratio and the tests) is a named complementary landmark, and the two
+  // colour fields sit in their own named group in the main column, above the
+  // preview and outside the side card.
+  test('the preview and the instrument are both named', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/contrast')
-    await expect(page.locator('.cc-preview')).toBeVisible()
+    await expect(page.locator('.cc-frame')).toBeVisible()
     const instrument = page.getByRole('complementary', { name: 'Contrast result' })
-    const specimen = page.getByRole('region', { name: 'Preview of the pair' })
+    const specimen = page.getByRole('img', { name: /^Interface example painted in your text and background colours/ })
     await expect(instrument).toHaveCount(1)
     await expect(specimen).toHaveCount(1)
-    await expect(instrument.locator('#cc-fg')).toHaveCount(1)
-    await expect(instrument.locator('#cc-bg')).toHaveCount(1)
-    await expect(specimen.locator('.cc-spec-body')).toHaveCount(1)
+    const fields = page.getByRole('group', { name: 'Colours to check' })
+    await expect(fields).toHaveCount(1)
+    await expect(fields.getByRole('textbox', { name: 'Text colour' })).toHaveCount(1)
+    await expect(fields.getByRole('textbox', { name: 'Background colour' })).toHaveCount(1)
+    await expect(instrument.locator('.cc-ratio-num')).toHaveCount(1)
+    await expect(instrument.locator('.cc-check')).toHaveCount(5)
+    await expect(instrument.locator('#cc-fg')).toHaveCount(0)
+    await expect(specimen.locator('.ro-title')).toHaveCount(1)
+    // The fields come first: above the specimen in the page.
+    const [fieldsTop, specimenTop] = await Promise.all([fields, specimen].map((l) => l.evaluate((e) => e.getBoundingClientRect().top)))
+    expect(fieldsTop, 'the colour fields sit above the preview').toBeLessThan(specimenTop)
     await ctx.close()
   })
 
@@ -472,7 +484,9 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       }))
     // POSITIVE CONTROL: swap, the Text/Background pair, both fields, the pairs.
     expect(radii.length).toBeGreaterThan(8)
-    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair/.test(x.cls))
+    // A palette swatch is its chip with the role name under it. The legend chips are multi-line toggle cards, like the pair cards, not
+    // action buttons. They show on the first view now that it is Interface.
+    const buttons = radii.filter((x) => x.tag === 'BUTTON' && !/cpk-trigger|cc-pair|cc-lg-chip|cc-swatch/.test(x.cls))
     expect(buttons.length, 'no buttons were measured').toBeGreaterThan(2)
     expect(buttons.filter((x) => x.r + 0.5 < Math.min(x.w, x.h) / 2), 'buttons that are not pills').toEqual([])
     expect(radii.filter((x) => x.tag === 'INPUT' && x.r >= 20 && x.w > x.h + 4), 'fields drawn as pills').toEqual([])
@@ -498,14 +512,36 @@ test.describe('the gradient stop row under a thumb', () => {
     expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'stop controls under 44px').toEqual([])
     await ctx.close()
   })
+
+  // The angle wheel, its number field, the Tints button and the Explore button
+  // are new targets on the same page: each takes a real 44px under a coarse
+  // pointer, and the field is 16px so iOS does not zoom when it is focused.
+  test('the angle wheel, angle field, Tints button and Explore button are 44px on a phone', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.grd-stop')).toHaveCount(3)
+    const read = await page.evaluate(() => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      boxes: ['.grd-wheel', '.grd-angle-input', '.grd-tints-btn', '.grd-explore-cta'].map((sel) => {
+        const el = document.querySelector(sel)
+        const b = el?.getBoundingClientRect()
+        return { sel, found: !!el, w: Math.round(b?.width ?? 0), h: Math.round(b?.height ?? 0), font: el ? parseFloat(getComputedStyle(el).fontSize) : 0 }
+      }),
+    }))
+    expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
+    expect(read.boxes.filter((b) => !b.found), 'every target must exist on the page').toEqual([])
+    expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'targets under 44px').toEqual([])
+    expect(read.boxes.find((b) => b.sel === '.grd-angle-input').font, 'the angle field must be 16px or more').toBeGreaterThanOrEqual(16)
+    await ctx.close()
+  })
 })
 
-// The design's App design reads each palette column from its left edge; the
-// board used to centre name, hex and role, so five labels drifted sideways
-// with the length of each name. And a phone reaches lock / copy / more only
-// through the column's 32px tools, which a coarse pointer now gets at 44.
+// Each palette column's name, hex and role sit centred on the column, so the
+// five label stacks share one centre line whatever the length of a name. And a
+// phone reaches lock / copy / more only through the column's 32px tools, which
+// a coarse pointer now gets at 44.
 test.describe('the palette board, read and pressed', () => {
-  test('from 769px every column’s label stack starts at the same left edge as its column', async ({ browser }) => {
+  test('from 769px every column’s label stack is centred on its column', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440)
     await go(page, '/create/palette')
     await expect(page.locator('.plb-col')).toHaveCount(5)
@@ -513,15 +549,16 @@ test.describe('the palette board, read and pressed', () => {
     const cols = await page.locator('.plb-col').evaluateAll((els) => els.map((col) => {
       const c = col.getBoundingClientRect()
       const name = col.querySelector('.plb-name')
-      const n = name.getBoundingClientRect()
-      return { inset: Math.round(n.left - c.left), align: getComputedStyle(name).textAlign }
+      // The text's own ink box, so a centred block of full column width can't pass.
+      const r = document.createRange(); r.selectNodeContents(name)
+      const t = r.getBoundingClientRect()
+      return { off: Math.abs((t.left + t.right) / 2 - (c.left + c.right) / 2), align: getComputedStyle(name).textAlign, narrower: t.width < c.width - 24 }
     }))
     expect(cols.length).toBe(5)
     for (const c of cols) {
-      expect(c.align, 'name is set flush-left').toBe('left')
-      // The column's own inline padding, not a centred offset that varies
-      // with the length of the name.
-      expect(c.inset).toBeLessThanOrEqual(24)
+      expect(c.align, 'name is centred').toBe('center')
+      expect(c.narrower, 'the name is shorter than its column, so centring is visible').toBe(true)
+      expect(c.off, 'the name sits on the column centre line').toBeLessThanOrEqual(2)
     }
     await ctx.close()
   })

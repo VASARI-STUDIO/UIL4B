@@ -54,7 +54,7 @@ import { reportUpgradeGate } from '../../contexts/ProModalContext'
 
 // Padlock. Decorative everywhere it is used — the surrounding copy already says
 // the row is locked, so announcing it again is noise.
-function LockGlyph() {
+export function LockGlyph() {
   return (
     <svg className="lockt-glyph" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

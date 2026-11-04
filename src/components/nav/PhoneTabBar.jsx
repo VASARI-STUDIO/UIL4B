@@ -51,7 +51,7 @@ function which(pathname) {
   return null
 }
 
-export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, onNavigate, createOpen, accountOpen }) {
+export default function PhoneTabBar({ signedIn, loading, onCreate, onAccount, onSignIn, onNavigate, createOpen, accountOpen }) {
   const { pathname } = useLocation()
   const current = which(pathname)
 
@@ -77,6 +77,7 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
       <button
         type="button"
         className={'pnav-tab' + (current === 'create' ? ' is-current' : '')}
+        aria-current={current === 'create' ? 'page' : undefined}
         aria-haspopup="dialog"
         aria-expanded={!!createOpen}
         onClick={onCreate}
@@ -91,10 +92,23 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
       {/* Signed in, You opens the account switcher in the menu
           sheet: this account, the others remembered here, Add account,
           settings and sign-out. */}
-      {signedIn ? (
+      {/* While the account loads, You is not yet "open the account" or "sign
+          in": it waits (aria-disabled keeps it in the Tab order and announced). */}
+      {loading ? (
         <button
           type="button"
           className={'pnav-tab' + (current === 'you' ? ' is-current' : '')}
+          aria-current={current === 'you' ? 'page' : undefined}
+          aria-disabled="true"
+        >
+          <UserGlyph />
+          <span>You</span>
+        </button>
+      ) : signedIn ? (
+        <button
+          type="button"
+          className={'pnav-tab' + (current === 'you' ? ' is-current' : '')}
+          aria-current={current === 'you' ? 'page' : undefined}
           aria-haspopup="dialog"
           aria-expanded={!!accountOpen}
           onClick={onAccount}

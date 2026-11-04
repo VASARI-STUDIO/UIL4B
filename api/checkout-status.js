@@ -26,6 +26,9 @@ export default async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  // The body carries the buyer's email and plan state, so no shared cache may
+  // keep it. Set before any return so the error responses are covered too.
+  res.setHeader('Cache-Control', 'private, no-store')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })

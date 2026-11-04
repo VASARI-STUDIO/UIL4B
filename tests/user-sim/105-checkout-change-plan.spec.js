@@ -8,6 +8,9 @@
 //   · at 390px the group is one row of targets at least 44px tall
 //   · signed out, the page renders and only the payment form asks for a login;
 //     at 390px that ask sits above the features list
+//   · at 390px the features list is folded and the payment panel comes before
+//     "Back to settings" in the page and so in the tab order; at 1440px the
+//     list is open
 //   · a quick monthly, yearly, monthly ends on one live monthly form, asks for
 //     no session for the monthly it passed through, and sends one
 //     checkout_started; a failed request for a period already left is ignored
@@ -25,6 +28,7 @@
 // session tests skip in a keyless build.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { PLAN_LADDER } from '../../src/config/planLadder.js'
 import { formatCurrency } from '../../src/utils/currency.js'
 
@@ -42,7 +46,7 @@ test.use({ locale: 'en-US' })
 
 async function stubPrices(page) {
   await page.route('**/api/get-prices', (route) => route.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify(PRICES),
+    status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(PRICES)),
   }))
 }
 
@@ -133,6 +137,37 @@ test.describe('changing billing period at checkout', () => {
     expect(back.height, 'Back to Plans is shorter than 44px on a phone').toBeGreaterThanOrEqual(44)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow, 'the page scrolls sideways at 390px').toBeLessThanOrEqual(0)
+  })
+
+  test('at 390px the features list is folded, the payment panel comes before Back to settings, and the form starts on the first screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openCheckout(page, 'yearly')
+    const included = page.locator('.checkout-included')
+    await expect(included, 'the features list starts folded on a phone').not.toHaveAttribute('open', /.*/)
+    await expect(included.locator('.checkout-features')).toBeHidden()
+    const form = await page.locator('.checkout-form').boundingBox()
+    const back = await page.getByRole('link', { name: 'Back to settings' }).boundingBox()
+    expect(form.y, 'the payment panel sits below Back to settings').toBeLessThan(back.y)
+    expect(form.y, 'the payment panel starts below the first screen').toBeLessThan(844)
+    // Tab order is DOM order (WCAG 2.4.3), so the sheet cannot reorder the
+    // link below the panel by CSS alone: the panel must come first in the DOM.
+    const formFirst = await page.locator('.checkout-form').evaluate((el) => {
+      const link = [...document.querySelectorAll('a')].find((a) => a.textContent.includes('Back to settings'))
+      return !!(el.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)
+    })
+    expect(formFirst, 'Back to settings comes before the payment panel in the tab order').toBe(true)
+
+    await included.locator('summary').click()
+    await expect(included.locator('.checkout-features')).toBeVisible()
+  })
+
+  test('at 1440px the features list is open and has no summary to fold it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openCheckout(page, 'yearly')
+    const included = page.locator('.checkout-included')
+    await expect(included, 'the features list is folded at 1440px').toHaveAttribute('open', /.*/)
+    await expect(included.locator('.checkout-features')).toBeVisible()
+    await expect(included.locator('summary')).toBeHidden()
   })
 
   test('a period with no saving shows no empty saving line and its switch stays 48px', async ({ page }) => {
@@ -382,8 +417,8 @@ test.describe('changing billing period at checkout', () => {
     await expect(login, 'one log-in button, not two').toHaveCount(1)
     await expect(login).toBeVisible()
     const button = await login.boundingBox()
-    const features = await page.locator('.checkout-features').boundingBox()
-    expect(button.y + button.height, 'the log-in comes after the features list on a phone').toBeLessThanOrEqual(features.y)
+    const features = await page.locator('.checkout-included').boundingBox()
+    expect(button.y + button.height, 'the log-in comes before the features list on a phone').toBeLessThanOrEqual(features.y)
     expect(button.height).toBeGreaterThanOrEqual(44)
     await login.click()
     await expect(page.getByRole('dialog', { name: 'Log in to continue' })).toBeVisible()
@@ -457,3 +492,69 @@ async function embedOrSkip(page) {
   test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
   return mounted
 }
+
+// A price the service only serves from its fallback table is not a price: the
+// summary says so and the payment form is never built, so no session is asked
+// for and nothing is charged that the buyer was not shown.
+test.describe('a cadence with no live price', () => {
+  test('opens no payment form and asks for no session', async ({ page }) => {
+    let sessionRequests = 0
+    await page.route('**/api/create-checkout', async (route) => {
+      sessionRequests += 1
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clientSecret: 'cs_test_stub_monthly' }) })
+    })
+    await stubStripe(page)
+    watch(page, PERSONA)
+    await signIn(page, { plan: 'free' })
+    await page.route('**/api/get-prices', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(withAvailability({
+        ...PRICES,
+        source: { ...PRICES.source, [LADDER.monthly.liveKey]: 'fallback' },
+        [LADDER.monthly.liveKey]: { usd: 7 },
+      })),
+    }))
+    await go(page, '/checkout?plan=monthly')
+    await expectRendered(page)
+
+    const summary = page.locator('.checkout-summary-card')
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText('Unavailable')
+    await expect(summary).toContainText('No USD price for Monthly yet.')
+    await expect(page.locator('.checkout-form')).toContainText('Checkout unavailable')
+    await expect(page.locator('.checkout-form [data-stub-session]'), 'a payment form opened with no live price').toHaveCount(0)
+    // The other cadence is live and still buyable.
+    await period(page, LADDER.yearly.label).click()
+    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
+    await expect(page.locator('.checkout-form')).not.toContainText('Checkout unavailable')
+    expect(sessionRequests, 'a session was requested for the cadence with no live price').toBe(0)
+  })
+
+  test('a currency Stripe refuses (409) is shown as the refusal, not retried', async ({ page }) => {
+    const bodies = []
+    await page.route('**/api/create-checkout', async (route) => {
+      bodies.push(JSON.parse(route.request().postData() || '{}'))
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Checkout cannot be opened in AUD for this account right now. No payment session was created and nothing was charged.' }),
+      })
+    })
+    await stubStripe(page)
+    await openCheckout(page, 'yearly', { ownStubs: true })
+    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+    const refused = page.locator('.checkout-form', { hasText: 'nothing was charged' })
+    await expect(notConfigured.or(refused)).toBeVisible()
+    test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
+
+    await expect(refused).toContainText('Checkout unavailable')
+    // The refusal is announced and focused, so it is not missed below the fold.
+    const alert = page.getByRole('alert').filter({ hasText: 'nothing was charged' })
+    await expect(alert).toBeVisible()
+    await expect(alert, 'the refusal was not given focus').toBeFocused()
+    await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible()
+    expect((await alert.getByRole('button', { name: 'Try again' }).boundingBox()).height, 'Try again is under 44px').toBeGreaterThanOrEqual(44)
+    await expect(page.locator('.checkout-form [data-stub-session]')).toHaveCount(0)
+    expect(bodies.length, 'the refused session was requested again').toBe(1)
+  })
+})

@@ -10,6 +10,8 @@
 // display name, photo, provider ids — never a password or a token). Nothing in
 // this module talks to Firebase; it only shapes that list for the menu.
 
+import { initialsOf } from './initials.js'
+
 /** Up to five remembered accounts are kept (AuthContext MAX_KNOWN_ACCOUNTS). */
 export const MAX_LISTED = 5
 
@@ -37,11 +39,7 @@ export function accountLabel(acct) {
 
 /** One or two initials for an avatar with no photo. */
 export function accountInitials(acct) {
-  const src = (acct?.displayName || acct?.email || '').trim()
-  const parts = src.split(/[\s@.]+/).filter(Boolean)
-  const first = parts[0]?.[0] || 'U'
-  const second = parts.length > 1 ? parts[1][0] : ''
-  return (first + second).toUpperCase()
+  return initialsOf(acct?.displayName, acct?.email)
 }
 
 /** How a remembered account will ask for its sign-in, said on its row. */

@@ -7,9 +7,10 @@ import { fetchFontCatalog } from '../utils/googleFonts'
 //
 //   loading   — `status === 'loading'`, the first fetch is in flight.
 //   ready     — the catalog resolved. `source` says whether it's the real thing.
-//   degraded  — `source === 'fallback'`: Google and the /api/fonts proxy both
-//               failed, so the bundled list is standing in. The tool still
-//               works; the UI must say so and offer `retry()`.
+//   degraded  — `source === 'fallback'`: the static catalogue file and the
+//               /api/fonts proxy both failed (and no saved copy exists), so the
+//               bundled list is standing in. The tool still works; the UI must
+//               say so and offer `retry()`.
 //   offline   — `online === false`, tracked live off the browser's own events.
 //
 // `retry()` forces a genuine re-fetch (both the in-memory and localStorage

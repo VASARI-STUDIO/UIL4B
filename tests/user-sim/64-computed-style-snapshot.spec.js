@@ -102,9 +102,50 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { go } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 
 const BASELINE_FILE = path.join(process.cwd(), 'tests', 'user-sim', 'fixtures', 'computed-style-baseline.json')
 const UPDATING = process.env.UPDATE_STYLE_BASELINE === '1'
+// UPDATE_STYLE_ROUTES=/create/font-gallery re-measures only the named routes and
+// leaves every other route in the fixture byte for byte as it was. It exists for
+// a slice that repaints one page on purpose: regenerating all 24 on one machine
+// would also rewrite the other 23 with that machine's platform values.
+const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) => r.trim()).filter(Boolean)
+// Elements a redesigned route gained. They join the measure only while
+// regenerating; once they are in the fixture they are compared like any other.
+const ADDED_SELECTORS = {
+  // The guide shell's contents (rail from 1080, disclosure below), the content
+  // column and the end-of-guide rows. Each is painted at only one of the two
+  // widths, so the other width simply carries fewer rows.
+  '/learn/brand-colour': ['.lart-main', '.lart-toc-h', '.lart-toc-nav', '.lart-toc-m', '.lart-toc-m-name', '.lart-toc-m-count',
+    '.lart-chev', '.lart-prose', '.lart-onward-row', '.lart-onward-text', '.lart-onward-kicker', '.lart-onward-title',
+    '.lart-onward-go', '.lart-sources'],
+  // Below 768px a Create tool's primary is in the dock fixed to the foot of the screen, not
+  // the toolbar (`.tl-primary` is not rendered at 390 any more). The dock takes its place
+  // in the measure at 390; it is not mounted at 1440.
+  '/create/palette': ['.tl-dock'],
+  '/create/semantic-color': ['.tl-dock'],
+  '/create/gradient': ['.tl-dock'],
+  '/create/tint': ['.tl-dock'],
+  '/create/contrast': ['.tl-dock'],
+  '/create/alt-text': ['.tl-dock'],
+  '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
+    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
+  // /sitemap now wears the /tools shell and none of its old class names exist, so the
+  // frozen list would keep only the few shell classes. These are the page's own hooks.
+  '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
+    '.spt-gtile', '.spt-gmeta', '.spt-gdesc', '.spt-rows', '.spt-row', '.spt-row--text', '.spt-thumb', '.spt-row-text',
+    '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
+    '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
+    '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
+  // /learn/help is a job list beside one answer. The old section and answer
+  // classes are gone; these are the router's own hooks. The stage is painted
+  // from 960px only, so the phone width carries fewer rows.
+  '/learn/help': ['.hlp-hero', '.hlp-h1', '.hlp-lede', '.hlp-hint', '.hlr-q', '.hlr-grid', '.hlr-jobs', '.hlr-job', '.hlr-tick',
+    '.hlr-stage', '.hlr-ans', '.hlr-h2', '.hlr-lede', '.hlr-demo', '.hlr-seed', '.hlr-seed-pick', '.hlr-seed-hex', '.hlr-strip',
+    '.hlr-stop', '.hlr-stop-sw', '.hlr-stop-n', '.hlr-read', '.hlr-leaves', '.hlr-btn', '.hlr-btn--ink', '.hlr-seg', '.hlr-ladder',
+    '.hlr-note', '.hlr-search', '.hlr-icons', '.hlr-drop', '.hlr-store', '.hlr-more', '.hlr-allow', '.hlr-bar'],
+}
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))
 const { props: PROPS, widths: WIDTHS, routes: ROUTES } = baseline
@@ -233,9 +274,15 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
       if (p === 'padding') for (const q of ['top', 'right', 'bottom', 'left']) inline.add('padding-' + q)
       if (p === 'margin') for (const q of ['top', 'right', 'bottom', 'left']) inline.add('margin-' + q)
     }
+    // Inline custom properties that carry a time, an index or a digit count and feed no colour
+    // (the home hero's stagger origin, the bench rail's tab index, the proof figures' width).
+    // Counting them as tints would drop every colour value under the home hero from the comparison.
+    // The sliding pill (useSlideIndicator) writes --si-x/-y/-w/-h/-r, a measured box, on every pill group:
+    // geometry, not a colour, so the --si- family is not a tint either.
+    const NOT_A_TINT = new Set(['--sp-arrive-at', '--sp-i', '--sp-digits'])
     let tinted = false
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      for (const p of n.style) if (p.startsWith('--')) { tinted = true; break }
+      for (const p of n.style) if (p.startsWith('--') && !p.startsWith('--si-') && !NOT_A_TINT.has(p)) { tinted = true; break }
       if (tinted) break
     }
     // `font-family` joins the colour list, and for exactly the reason the list
@@ -271,6 +318,20 @@ async function settledSnapshot(page, selectors) {
   return snap
 }
 
+/* /plans IS MEASURED WITH A LIVE PRICE, NOT WITH NO ANSWER AT ALL.
+ *
+ * The suite's preview has no serverless functions, so /api/get-prices never
+ * answers. /plans refuses to quote a price it was not given (it says
+ * "Unavailable" and offers "Retry live pricing" instead of a Pro checkout
+ * button), so with no answer the page paints the fail-closed state and the
+ * Pro button (`.pr-cta--pro`) is not there to measure. What a buyer is offered
+ * is the paid layout, so that is the one this snapshot guards: the route is
+ * answered with production's own shape, as the plans specs do. The fail-closed
+ * state itself is pinned by 114-pricing-fail-closed. */
+const STUBBED_PRICES = {
+  '/plans': { source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } },
+}
+
 async function openSettled(browser, route, width, selectors) {
   // A fresh context per width. Resizing an open page re-runs the media queries
   // but keeps whatever state the first width left behind, and this suite has
@@ -278,6 +339,11 @@ async function openSettled(browser, route, width, selectors) {
   const context = await browser.newContext({ viewport: { width, height: 900 } })
   try {
     const page = await context.newPage()
+    if (STUBBED_PRICES[route]) {
+      await page.route('**/api/get-prices', (r) => r.fulfill({
+        status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(STUBBED_PRICES[route])),
+      }))
+    }
     // `go()` rather than page.goto: it carries the readiness wait that tells a
     // rendered route apart from the lazy-chunk fallback, which measures as a
     // full page (421 characters of chrome) and would be snapshotted as one.
@@ -311,13 +377,14 @@ const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools
 const updated = {}
 
 for (const route of routeNames) {
+  if (UPDATING && ONLY_ROUTES.length && !ONLY_ROUTES.includes(route)) continue
   test(`computed styles are unchanged on ${route}`, async ({ browser }) => {
     test.setTimeout(120_000)
     const perWidth = {}
     for (const width of WIDTHS) {
       const stored = ROUTES[route][String(width)]
       const expected = Object.fromEntries(Object.entries(stored).map(([s, v]) => [s, asObject(v)]))
-      const selectors = Object.keys(expected)
+      const selectors = [...new Set([...Object.keys(expected), ...(UPDATING ? ADDED_SELECTORS[route] || [] : [])])]
       expect(selectors.length, `${route} @${width} has no elements to measure`).toBeGreaterThan(0)
 
       const actual = await openSettled(browser, route, width, selectors)
@@ -347,11 +414,12 @@ for (const route of routeNames) {
 
 test.afterAll(async () => {
   if (!UPDATING) return
-  if (Object.keys(updated).length !== routeNames.length) {
+  const wanted = ONLY_ROUTES.length ? ONLY_ROUTES.length : routeNames.length
+  if (Object.keys(updated).length !== wanted) {
     // A partial rewrite would silently shrink the fixture, which is the failure
     // mode this file's own positive control exists to catch.
     console.log(
-      `baseline NOT written: this worker measured ${Object.keys(updated).length}/${routeNames.length} routes. `
+      `baseline NOT written: this worker measured ${Object.keys(updated).length}/${wanted} routes. `
       + 'Re-run the regeneration with --workers=1.',
     )
     return
@@ -365,7 +433,8 @@ test.afterAll(async () => {
     lines.push(`  ${JSON.stringify(route)}: {`)
     WIDTHS.forEach((w, wi) => {
       lines.push(`   "${w}": {`)
-      const rows = Object.entries(updated[route][w])
+      // A route that was not re-measured keeps the fixture's own rows.
+      const rows = Object.entries((updated[route] || ROUTES[route])[w])
       rows.forEach(([sel, vals], i) => {
         lines.push(`    ${JSON.stringify(sel)}: ${JSON.stringify(vals)}${i === rows.length - 1 ? '' : ','}`)
       })
@@ -375,5 +444,5 @@ test.afterAll(async () => {
   })
   lines.push(' }', '}', '')
   fs.writeFileSync(BASELINE_FILE, lines.join('\n'))
-  console.log(`baseline rewritten: ${routeNames.length} routes`)
+  console.log(`baseline rewritten: ${wanted} of ${routeNames.length} routes measured`)
 })

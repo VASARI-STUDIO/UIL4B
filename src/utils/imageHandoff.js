@@ -22,7 +22,7 @@ export const IMAGE_HANDOFF_VERSION = 1
 
 export const DRAFT_RESOLUTIONS = [
   { id: '4k', label: '4K', detail: 'Longest edge 3840 px', maxDim: 3840 },
-  { id: '2k', label: '2K', detail: 'Longest edge 1920 px', maxDim: 1920 },
+  { id: '2k', label: '2K', detail: 'Longest edge 2560 px', maxDim: 2560 },
   { id: 'original', label: 'Original', detail: 'Keep the source size', maxDim: 0 },
 ]
 

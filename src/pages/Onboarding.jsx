@@ -2,8 +2,10 @@ import { useRef, useEffect, useState } from 'react'
 import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
+import { FIRST_PALETTE_STATE } from '../utils/paletteCoach'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
+import { BrandLockup } from '../components/BrandLogo'
 
 // Where a brand-new account lands when it does NOT pick a starting point.
 //
@@ -19,6 +21,9 @@ const FIRST_RUN_DESTINATION = '/projects'
 
 const ONBOARDED_KEY = 'vs-onboarded'
 const RESUME_KEY = 'vs-resume-after-onboarding'
+
+// /checkout itself, with or without a plan, but not /checkout/return.
+const isCheckoutTarget = (target) => target === '/checkout' || (typeof target === 'string' && target.startsWith('/checkout?'))
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT HAPPENED TO THE SURVEY
@@ -67,7 +72,7 @@ function ArrowIcon() {
 }
 
 export default function Onboarding() {
-  const { user, userProfile, profileLoaded, updateProfile, loading } = useAuth()
+  const { user, userProfile, profileLoaded, updateProfile, loading, signupVerification, emailVerificationOwed } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const headingRef = useRef(null)
@@ -87,6 +92,17 @@ export default function Onboarding() {
   // tabIndex={-1} to be programmatically focusable without becoming a tab stop.
   useEffect(() => {
     headingRef.current?.focus()
+  }, [])
+
+  // The "check your inbox" line is announced by a status region that is already
+  // on the page when the text arrives: a region that mounts holding its text is
+  // usually not read, and the heading takes focus on mount, so a person on a
+  // screen reader would otherwise never hear it. The line follows one frame
+  // after the screen.
+  const [lineReady, setLineReady] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setLineReady(true))
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   // Onboarding only makes sense for a signed-in user. While auth is still
@@ -116,6 +132,13 @@ export default function Onboarding() {
   }
 
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
+  // Said only to the account that just signed up with a password and whose
+  // address is still unproved; 'pending' reads as sent, as the send is under way.
+  const verifyLine = emailVerificationOwed && user?.email && signupVerification
+    ? (signupVerification === 'failed'
+        ? "Your verification link didn't send. You can resend it from the bar at the top once you've picked."
+        : `Check your inbox: we sent a verification link to ${user.email}.`)
+    : null
 
   const markOnboardingComplete = (extra = null) => completeOnboarding(updateProfile, extra)
 
@@ -149,16 +172,18 @@ export default function Onboarding() {
   // the artefact the sign-up dialog promised them ("your palettes, type scales
   // and gradients, kept").
   //
-  // The stashed resume target is DROPPED, exactly as the old pricing step's
-  // Free button dropped a stashed checkout intent: choosing a start here is a
-  // newer and more specific statement of intent than whatever they clicked
-  // before the account existed.
+  // A stashed checkout wins over the pick: someone who signed up by clicking a
+  // Pro button came to pay, so they go on to that checkout and the pick is still
+  // recorded. Any other stashed target is dropped, because choosing a start here
+  // is a newer and more specific statement of intent than the page they were on.
   const chooseFirstWin = (win) => {
     setLeaving(true)
     persist({ firstWin: win.id })
     recordFirstWin(win.id)
-    takeResumeTarget()
-    navigate(win.route)
+    const resume = takeResumeTarget()
+    if (isCheckoutTarget(resume)) { navigate(resume); return }
+    // The palette card opens the builder with its first-palette coach (utils/paletteCoach.js).
+    navigate(win.route, win.id === 'palette' ? { state: FIRST_PALETTE_STATE } : undefined)
   }
 
   // Declined all three. Onboarding is still COMPLETE — the screen was answered
@@ -184,17 +209,20 @@ export default function Onboarding() {
     <div className="onb">
       <div className="onb-card" id="main" tabIndex={-1}>
         <div className="onb-top">
-          <div className="onb-brand">UIL4B</div>
+          <div className="onb-brand"><BrandLockup label="UI L4B" /></div>
         </div>
 
         {/* One screen, so there is no progress bar and no corner Skip: a row of
             dots that is always full says nothing, and a "Skip" beside a "Not
             now" that does the identical thing is two names for one action. */}
         <div className="onb-step onb-firstwin-step" data-testid="onboarding-first-win">
-          <div className="onb-greeting">You're in, <em>{firstName}</em> <span aria-hidden="true">👋</span></div>
+          <div className="onb-greeting">You're in, <em>{firstName}</em></div>
+          <div role="status">
+            {lineReady && verifyLine && <p className={`onb-greeting onb-verify-line${signupVerification === 'failed' ? ' onb-verify-line--failed' : ''}`} data-testid="onboarding-verify-line">{verifyLine}</p>}
+          </div>
           <h1 className="onb-q" ref={headingRef} tabIndex={-1}>What do you want to make first?</h1>
           <p className="onb-sub">
-            Whichever you pick opens next. You can switch at any time — nothing here is locked in.
+            Whichever you pick opens next. You can switch at any time.
           </p>
 
           <div className="onb-options onb-firstwin-options">
@@ -216,7 +244,7 @@ export default function Onboarding() {
           </div>
 
           <button type="button" className="onb-back" onClick={skipFirstWin}>
-            Not now — take me to my projects
+            Not now, take me to my projects
           </button>
 
           {/* The pricing STEP is gone; the pricing is not hidden. Shortening the

@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 // ── WHAT THIS PAGE IS ALLOWED TO READ FROM utils/analytics ────────────────
 // getAggregateAnalytics() is the only cross-user reader in that module: it sums
 // the `analytics-daily` documents every signed-in session writes, so what it
@@ -14,8 +14,9 @@ import { Link } from 'react-router-dom'
 // server user list cannot be read, and it says on screen that that is what it
 // is showing. A labelled fallback is not a headline figure.
 import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getAggregateAnalytics, resetPageAnalytics, toolUsageRows } from '../utils/analytics'
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '../utils/firebase'
+import { createPromptLoader, promptReadErrorText, ADMIN_PROMPT_DEFAULT_FILTER, ADMIN_PROMPT_FILTERS, ADMIN_PROMPT_LIMIT } from '../utils/adminPromptQuery'
 import CommunityQueue from '../components/admin/CommunityQueue'
 import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } from '../utils/feedbackQueueApi'
 import { useModerationRole } from '../hooks/useModerationRole'
@@ -24,8 +25,13 @@ import {
   canReview, canSeeReporterEmail, canAssignModerators,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
+import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
+import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
+import { ADMIN_RANGES, DEFAULT_RANGE_ID, parseRangeId, rangeWindow, inWindow } from '../utils/adminRange'
 import { isAdminEmail } from '../utils/constants'
+import { accountProviderIds } from '../utils/authSwitch'
+import { stashPriceDraft, takePriceDraft, overlayDraft } from '../utils/priceDraftStash'
 // No internal planning data is imported by this page, statically or
 // dynamically, and there is no code path from it to any such module.
 import { firstWinById } from '../utils/firstWin'
@@ -34,6 +40,7 @@ import { promptTagList, promptTagString } from '../utils/promptStore'
 import { PLAN_STATES, planStateOf, planSortKey, PLAN_STATE_ORDER } from '../utils/adminUsers'
 import { toCsv } from '../utils/csv'
 import { cadenceOf } from '../utils/billingCadence'
+import { isUnverifiedReporter } from '../utils/contentReport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -56,8 +63,8 @@ const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--info)', done: 
 // The tints are color-mix() on the signal tokens rather than rgba() literals,
 // so they track both themes and any future change to the signal ramp.
 const STATUS_BGS = { new: 'color-mix(in srgb,var(--warn) 12%,transparent)', 'in-progress': 'color-mix(in srgb,var(--info) 12%,transparent)', done: 'color-mix(in srgb,var(--ok) 12%,transparent)' }
-const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--info)' }
-const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--info) 12%,transparent)' }
+const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--info)', report: 'var(--t1)' }
+const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--info) 12%,transparent)', report: 'color-mix(in srgb,var(--t1) 10%,transparent)' }
 const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--accent-soft)', 'var(--t3)']
 
 // ── TEN TABS, AUDITED, SIX LEFT ───────────────────────────────────────────
@@ -104,6 +111,7 @@ function FilterGlyph({ id }) {
     feature: <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />,
     general: <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20l1.2-5.1A8.5 8.5 0 1 1 21 11.5z" />,
     help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+    report: <><path d="M5 21V4" /><path d="M5 4h12l-2.5 4L17 12H5" /></>,
     new: <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />,
     'in-progress': <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>,
     done: <polyline points="4 12.5 10 18.5 20 6.5" />,
@@ -172,7 +180,7 @@ function DonutChart({ segments, size = 120 }) {
         <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontFamily="var(--mono)" fontSize="19" fontWeight="600">{total}</text>
         {/* The word stays exactly as it was. Uppercasing it would have been a
             styling decision that edits a string, and strings on this page are
-            the founder's. Mono and tracking carry the treatment instead. */}
+            left as written. Mono and tracking carry the treatment instead. */}
         <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontFamily="var(--mono)" fontSize="8.5" letterSpacing=".1em">total</text>
       </svg>
       <div className="adm-donut-legend">
@@ -197,20 +205,29 @@ function DonutChart({ segments, size = 120 }) {
  * localStorage — with nothing on either card to tell them apart. One component
  * that is only ever handed aggregate rows cannot develop that difference again.
  */
-function TopList({ title, rows, unit, empty }) {
+const TOP_LIST_SHOWN = 8
+
+function TopList({ title, rows, unit, empty, range, wide = false }) {
   const max = Math.max(1, ...rows.map(r => r[1]))
+  // Only the first TOP_LIST_SHOWN rows are drawn, so a longer list says so.
+  const countLabel = rows.length > TOP_LIST_SHOWN
+    ? `top ${TOP_LIST_SHOWN} of ${rows.length} ${unit}`
+    : `${rows.length} ${unit}`
   return (
     <div className="adm-card">
       <div className="adm-card-header">
-        <span className="adm-card-title">{title}</span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
+        <span className="adm-card-heading">
+          <span className="adm-card-title">{title}</span>
+          <span className="adm-card-range">{range}</span>
+        </span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{countLabel}</span>
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
-          <div className="adm-bar">
-            {rows.slice(0, 8).map(([label, count]) => (
+          <div className={`adm-bar adm-top-list${wide ? ' adm-top-list--wide' : ''}`}>
+            {rows.slice(0, TOP_LIST_SHOWN).map(([label, count]) => (
               <div key={label} className="adm-bar-row">
-                <span className="adm-bar-label">{label}</span>
+                <span className="adm-bar-label" title={label}>{label}</span>
                 <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
                 <span className="adm-bar-value">{count}</span>
               </div>
@@ -224,13 +241,16 @@ function TopList({ title, rows, unit, empty }) {
 
 // Per-tool usage as two separate numbers: how often the tool was opened and how
 // often something was then done in it. The bar follows Opened.
-function ToolUsageCard({ rows }) {
+function ToolUsageCard({ rows, range }) {
   const max = Math.max(1, ...rows.map(r => r.opened))
   return (
     <div className="adm-card" data-testid="adm-tool-usage">
       <div className="adm-card-header">
-        <span className="adm-card-title">Tools</span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} tools</span>
+        <span className="adm-card-heading">
+          <span className="adm-card-title">Tools</span>
+          <span className="adm-card-range">{range}</span>
+        </span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length > TOP_LIST_SHOWN ? `top ${TOP_LIST_SHOWN} of ${rows.length} tools` : `${rows.length} tools`}</span>
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
@@ -241,7 +261,7 @@ function ToolUsageCard({ rows }) {
               <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Opened</span>
               <span className="adm-bar-value" style={{ color: 'inherit', fontFamily: 'inherit', fontWeight: 500 }}>Used</span>
             </div>
-            {rows.slice(0, 8).map(({ id, opened, used }) => (
+            {rows.slice(0, TOP_LIST_SHOWN).map(({ id, opened, used }) => (
               <div key={id} className="adm-bar-row" data-tool={id}>
                 <span className="adm-bar-label" title={id}>{id}</span>
                 <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(opened / max) * 100}%` }} /></div>
@@ -288,7 +308,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
       {expanded && (
         <div className="adm-submission-body">
           <div className="adm-submission-msg">{item.message}</div>
-          {/* The reporter's address is founder-only (utils/moderation.js,
+          {/* The reporter's address is limited to the founder role (utils/moderation.js,
               canSeeReporterEmail). It arrives through /api/support from a
               PUBLIC form with no session, so it is personal data handed to the
               site owner and not verified to belong to the sender. A moderator
@@ -297,7 +317,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
               rendered, saying what is withheld — a silently missing field
               reads as a report with no sender. */}
           {item.email && (canSeeEmail
-            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong></div>
+            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}</div>
             : <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>From: <span style={{ fontStyle: 'italic' }}>address withheld from moderators</span></div>)}
 
           {/* WHO ACTED ON THIS.
@@ -457,15 +477,15 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         {editing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Title</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Title</label>
               <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', fontSize: 13 }} />
             </div>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Prompt Text</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Prompt text</label>
               <textarea value={text} onChange={e => setText(e.target.value)} style={{ width: '100%', minHeight: 100, resize: 'vertical', fontSize: 12 }} />
             </div>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.06em', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
+              <label style={{ fontSize: 13, fontWeight: 560, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>Tags (comma-separated)</label>
               <input value={tags} onChange={e => setTags(e.target.value)} style={{ width: '100%', fontSize: 12 }} placeholder="e.g. landing-page, hero, modern" />
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -550,6 +570,9 @@ const roundLikeDefault = (x, reference) => {
 // Human label for an interval key, derived so a new interval needs no edit here.
 const intervalLabel = (id) => id.charAt(0).toUpperCase() + id.slice(1)
 
+// What the panel says when the server has ended this admin session.
+const SESSION_ENDED_COPY = 'Your session ended. Sign in again.'
+
 function StripeSetupPanel({ toast }) {
   const [config, setConfig] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -558,6 +581,17 @@ function StripeSetupPanel({ toast }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [autoFill, setAutoFill] = useState(true)
+  // The route wants a sign-in from the last few minutes before it changes a
+  // price, or says the session was ended: `signInIssue` holds which of the two
+  // codes ('reauth-required' | 'session-revoked') the route answered, or ''.
+  const [signInIssue, setSignInIssue] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
+  // True when the draft was put back after a sign-in.
+  const [restored, setRestored] = useState(false)
+  // Set when the route refuses a change of more than 10x; holds its message so
+  // the admin can confirm the amount is meant.
+  const [bigChange, setBigChange] = useState('')
+  const { logout, user } = useAuth()
 
   const authedFetch = useCallback(async (opts = {}) => {
     const { auth: fbAuth } = await import('../utils/firebase')
@@ -597,7 +631,11 @@ function StripeSetupPanel({ toast }) {
       const kind = res.headers.get('content-type') || 'no content type'
       throw new Error(`The Stripe settings route answered ${res.status} with ${kind} rather than JSON`)
     }
-    if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+    if (!res.ok) {
+      // The route's `code` (reauth-required, session-revoked,
+      // price-change-too-large) is what the Save handler acts on.
+      throw Object.assign(new Error(data.error || `Server returned ${res.status}`), { code: data.code })
+    }
     return data
   }, [])
 
@@ -627,15 +665,20 @@ function StripeSetupPanel({ toast }) {
         const data = await authedFetch({ method: 'GET' })
         if (cancelled) return
         setConfig(data)
-        setDraft(buildDraft(data))
+        // A draft parked before a sign-in comes back once, over the live prices.
+        const parked = takePriceDraft(window.sessionStorage, user?.uid)
+        setDraft(overlayDraft(buildDraft(data), parked))
+        if (parked) setRestored(true)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (cancelled) return
+        if (err.code === 'session-revoked' || err.code === 'reauth-required') setSignInIssue(err.code)
+        else setError(err.message)
       } finally {
         if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [authedFetch, buildDraft])
+  }, [authedFetch, buildDraft, user?.uid])
 
   // #12 auto-fill: editing one cell scales every other currency, in every
   // interval, off its default ratio. The edited cell keeps the raw string so
@@ -670,8 +713,8 @@ function StripeSetupPanel({ toast }) {
   // here and needs no edit in this file.
   const intervals = useMemo(() => Object.keys(config?.defaults || {}), [config])
 
-  const save = async () => {
-    setSaving(true); setError(''); setResult(null)
+  const save = async (force = false) => {
+    setSaving(true); setError(''); setResult(null); setSignInIssue(''); setBigChange(''); setRestored(false)
     try {
       // Every interval the route validates, or it answers 400 and nothing is
       // created. This used to post monthly and yearly only.
@@ -680,16 +723,79 @@ function StripeSetupPanel({ toast }) {
         prices[interval] = {}
         for (const [code, amt] of Object.entries(draft[interval])) prices[interval][code] = Number(amt)
       }
-      const data = await authedFetch({ method: 'POST', body: JSON.stringify({ prices }) })
+      const data = await authedFetch({ method: 'POST', body: JSON.stringify(force ? { prices, force: true } : { prices }) })
       setResult(data)
       toast?.('Prices saved to Stripe')
     } catch (err) {
-      setError(err.message)
-      toast?.('Save failed: ' + err.message, 'error')
+      if (err.code === 'reauth-required' || err.code === 'session-revoked') {
+        setSignInIssue(err.code)
+        toast?.(err.code === 'session-revoked' ? SESSION_ENDED_COPY : 'Sign in again to change prices', 'error')
+      } else if (err.code === 'price-change-too-large') {
+        setBigChange(err.message)
+      } else {
+        setError(err.message)
+        toast?.('Save failed: ' + err.message, 'error')
+      }
     } finally {
       setSaving(false)
     }
   }
+
+  // "Sign in again". An account that signs in with Google alone and was only
+  // asked for a fresher sign-in re-proves itself in a popup and keeps its
+  // session, so nothing unmounts. Every other case (a password account, or a
+  // session the server ended) signs out; the draft is parked in sessionStorage
+  // first and put back by the load effect after the next sign-in.
+  const signInAgain = async () => {
+    setSigningIn(true)
+    try {
+      if (signInIssue === 'reauth-required') {
+        try {
+          const { auth: fbAuth } = await import('../utils/firebase')
+          const fbUser = fbAuth.currentUser
+          const providers = accountProviderIds(fbUser)
+          if (fbUser && providers.includes('google.com') && !providers.includes('password')) {
+            const { loadAuthSdk } = await import('../utils/firebaseAccess')
+            const A = await loadAuthSdk()
+            await A.reauthenticateWithPopup(fbUser, new A.GoogleAuthProvider())
+            // The cached token still carries the old auth_time; ask for a new one.
+            await fbUser.getIdToken(true)
+            setSignInIssue('')
+            toast?.('Signed in again. Save the prices again.')
+            return
+          }
+        } catch (err) {
+          // A closed popup is a decision, not a failure: stay on this card.
+          if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return
+          // Anything else falls through to the sign-out route below.
+        }
+      }
+      if (draft) stashPriceDraft(window.sessionStorage, user?.uid, draft)
+      await logout()
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  // Shown in place of the price table when loading it was refused, and above
+  // the Save button when a save was. The copy differs by cause: a session the
+  // server ended is not the same as one that is merely too old to move prices.
+  const signInCard = signInIssue ? (
+    <div className="adm-card adm-verify-error" role="alert" style={{ marginBottom: 16 }}>
+      <div className="adm-card-body">
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>
+          {signInIssue === 'session-revoked' ? 'Session ended' : 'Sign in again to change prices'}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--t1)', marginBottom: 12 }}>
+          {signInIssue === 'session-revoked'
+            ? SESSION_ENDED_COPY
+            : 'Price changes need a sign-in from the last 5 minutes. Nothing was saved. Sign in again, then save.'}
+          {draft ? ' Your price edits are kept.' : ''}
+        </div>
+        <button className="btn btn-accent" onClick={signInAgain} disabled={signingIn}>{signingIn ? 'Signing in...' : 'Sign in again'}</button>
+      </div>
+    </div>
+  ) : null
 
   return (
     <div className="adm-section">
@@ -698,6 +804,8 @@ function StripeSetupPanel({ toast }) {
       </div>
       {loading ? (
         <div className="adm-card"><div className="adm-empty">Loading current prices...</div></div>
+      ) : !config && signInCard ? (
+        signInCard
       ) : !config ? (
         <div className="adm-card adm-verify-error">
           <div className="adm-card-body">
@@ -773,11 +881,30 @@ function StripeSetupPanel({ toast }) {
                 Auto-fill other currencies — edit one price and every currency, in every plan, recalculates from the approved ladder by the same ratio
               </label>
               <div className="adm-stripe-actions">
-                <button className="btn btn-accent" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Prices to Stripe'}</button>
+                <button className="btn btn-accent" onClick={() => save()} disabled={saving}>{saving ? 'Saving...' : 'Save Prices to Stripe'}</button>
                 <button className="btn btn-s" onClick={() => setDraft(buildDraft({ ...config, prices: {} }))} disabled={saving}>Reset to defaults</button>
               </div>
             </div>
           </div>
+
+          {signInCard}
+
+          {restored && (
+            <p className="adm-stripe-tip" role="status">Your unsaved price edits were restored. Check them, then save.</p>
+          )}
+
+          {bigChange && (
+            <div className="adm-card adm-verify-error" role="alert" style={{ marginBottom: 16 }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 4 }}>Check this price</div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', marginBottom: 12 }}>{bigChange}</div>
+                <div className="adm-stripe-actions" style={{ marginTop: 0 }}>
+                  <button className="btn btn-accent" onClick={() => save(true)} disabled={saving}>Save anyway</button>
+                  <button className="btn btn-s" onClick={() => setBigChange('')} disabled={saving}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="adm-card adm-verify-error" style={{ marginBottom: 16 }}>
@@ -864,9 +991,9 @@ function countryFromLocation(location) {
 const flagEmoji = (iso2) => iso2.replace(/./g, ch => String.fromCodePoint(0x1F1A5 + ch.charCodeAt(0)))
 const countryName = (iso2) => { try { return regionNames?.of(iso2) || iso2 } catch { return iso2 } }
 
-// The founder's own row. He is a founder by verified email against a
-// server-side allowlist, which outranks any claim, so offering to "make" him a
-// moderator would be offering him less than he has.
+// The row of an admin with the founder role. Such an account is a founder by
+// verified email against a server-side allowlist, which outranks any claim, so
+// offering to "make" it a moderator would be offering it less than it has.
 const isFounderRow = (u) => isAdminEmail(u?.email)
 
 function EyeIcon({ off }) {
@@ -882,7 +1009,7 @@ function EyeIcon({ off }) {
 }
 
 // Email hidden behind an eye toggle — first few characters visible, the rest
-// blurred, so the founder can screen-share the dashboard without leaking PII.
+// blurred, so an admin can screen-share the dashboard without leaking PII.
 function MaskedEmail({ email, revealed, onToggle }) {
   if (!email) return <span style={{ color: 'var(--t3)' }}>—</span>
   const cut = Math.min(3, email.indexOf('@') > 0 ? email.indexOf('@') : 3)
@@ -919,8 +1046,8 @@ const ACCESS_RANK = { founder: 0, moderator: 1, user: 2, unknown: 3 }
  * for them before they moved into the detail panel.
  *
  * ── WHY THIS IS A FILTER AND NOT THREE COLUMNS ─────────────────────────────
- * The signup questionnaire was cut to a single question (#436 took out the
- * role and attribution questions as answers nobody read). So an account made
+ * The signup questionnaire asks a single question (role and attribution
+ * questions were answers nobody read). So an account made
  * since then has ONE answer and an older one has three, and three fixed
  * columns printed a field of em-dashes across the newest half of the table.
  *
@@ -954,7 +1081,7 @@ const USER_SORTS = {
 }
 
 // The four states the tiles above the table filter to. Each one is a QUESTION
-// the founder actually asks of this list, and each is a real subset of it —
+// an admin actually asks of this list, and each is a real subset of it —
 // Mobbin: HubSpot's Users & Teams puts its counts in tiles above the table and
 // makes each one a way into the rows it counted, rather than a figure to read
 // and then go filtering for by hand
@@ -1000,7 +1127,7 @@ function UsersPanel({ localUsers, toast, role }) {
   // The moderator roster, as a Set of uids. null = NOT READ YET, and it renders
   // as "checking" rather than as "nobody holds the role" — the same distinction
   // the feedback panel was fixed for, in the one place where getting it wrong
-  // would have the founder appointing somebody who is already appointed.
+  // would have an admin appointing somebody who is already appointed.
   const [roster, setRoster] = useState(null)
   const [rosterError, setRosterError] = useState('')
   // ── Whether the deployed route can grant the role at all ──────────────────
@@ -1008,15 +1135,17 @@ function UsersPanel({ localUsers, toast, role }) {
   // · false = it is not.
   //
   // THREE STATES, NOT TWO, AND THIS IS THE WHOLE POINT. api/verify-admin.js is
-  // founder-gated: it ships only once `npm run apply:gated` has been run and
-  // the site redeployed. The UNPATCHED route does not reject `moderatorAction`
-  // — it has never heard of it — so it falls through to its ordinary 200 and a
-  // button wired to `res.ok` would report a grant that never happened, on the
-  // one screen in this product where a false success is a security statement.
+  // gated: the roster half ships only once `npm run apply:gated` has been run
+  // and the site redeployed. A route without it does not reject
+  // `moderatorAction` — it has never heard of it — so it falls through to its
+  // ordinary 200 and a button wired to `res.ok` would report a grant that never
+  // happened, on the one screen in this product where a false success is a
+  // security statement. Until the probe sees the roster half, the grant and
+  // revoke buttons stay hidden.
   //
-  // So the probe is a POSITIVE signal rather than the absence of an error: the
-  // patched route returns `role` as a string on every one of its exits and the
-  // unpatched one returns it on none of them.
+  // So the probe is a POSITIVE signal rather than the absence of an error: a
+  // route that handles the action returns `role` as a string on every one of
+  // its exits and one that does not returns it on none of them.
   const [roleEnabled, setRoleEnabled] = useState(null)
   const [busyUid, setBusyUid] = useState(null)
   // { uid, grant } — the decision waiting on the confirmation step. ONE piece
@@ -1066,7 +1195,7 @@ function UsersPanel({ localUsers, toast, role }) {
   // ── The roster ────────────────────────────────────────────────────────────
   // Read separately from the user list because the route answers one question
   // per call: `moderatorAction` returns early, before `includeUsers` is read.
-  // Founder-only, so a moderator who somehow reached this tab does not even
+  // Restricted to the founder role, so a moderator who somehow reached this tab does not even
   // request the list of who else holds the role.
   const loadRoster = useCallback(async () => {
     if (!canAssignModerators(role)) return
@@ -1080,7 +1209,7 @@ function UsersPanel({ localUsers, toast, role }) {
         body: JSON.stringify({ moderatorAction: 'list' }),
       })
       const data = await res.json().catch(() => ({}))
-      // The probe. An unpatched route answers this call with its ordinary
+      // The probe. A route without the roster half answers this call with its ordinary
       // handshake — 200, no `role`, no roster array — which is not an error and
       // must not be reported as one.
       if (res.ok && typeof data.role !== 'string') {
@@ -1242,7 +1371,7 @@ function UsersPanel({ localUsers, toast, role }) {
   )
 
   // User · Plan · Joined · Last seen · Location · Details, plus Access when the
-  // founder is the one reading. Counted once so the empty row cannot go out of
+  // reader has the founder role. Counted once so the empty row cannot go out of
   // step with the header again.
   const COLUMNS = founderView ? 7 : 6
 
@@ -1332,7 +1461,7 @@ function UsersPanel({ localUsers, toast, role }) {
                     <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
                     {' '}The rules understand a moderator, but this deployment cannot grant one yet, so
                     {' '}nothing on this screen offers to appoint anybody. Enabling it is an owner
-                    {' '}action &mdash; the steps are in docs/OWNER-ACTIONS.md &sect;1.3.
+                    {' '}action.
                   </>
                 : roster === null
                   ? (rosterError
@@ -1434,7 +1563,7 @@ function UsersPanel({ localUsers, toast, role }) {
                                 <div className="adm-detail-cols">
                                   <section className="adm-detail-sec">
                                     <h4>Account</h4>
-                                    {/* The two handles the founder needs to act on
+                                    {/* The two handles an admin needs to act on
                                         this person anywhere else — Firebase console,
                                         Stripe, a support reply. Neither was reachable
                                         from this page before; the uid was not rendered
@@ -1646,7 +1775,13 @@ export default function Admin({ toast }) {
   const [subSort, setSubSort] = useState('newest')
   const [expandedId, setExpandedId] = useState(null)
   const [pendingPrompts, setPendingPrompts] = useState([])
-  const [promptFilter, setPromptFilter] = useState('pending')
+  const [promptFilter, setPromptFilter] = useState(ADMIN_PROMPT_DEFAULT_FILTER)
+  // The refresh callback below has no dependencies, so it reads the filter here.
+  const promptFilterRef = useRef(ADMIN_PROMPT_DEFAULT_FILTER)
+  // '' = fine. Non-empty = the last prompts read FAILED, so an empty list is
+  // not "no prompts" (same rule as feedbackError above).
+  const [promptsError, setPromptsError] = useState('')
+  const [promptsLoading, setPromptsLoading] = useState(true)
   // Cross-user aggregate (server-read). null = loading, object = loaded.
   const [aggregate, setAggregate] = useState(null)
   const [aggregateLoaded, setAggregateLoaded] = useState(false)
@@ -1658,28 +1793,69 @@ export default function Admin({ toast }) {
   const [confirmPageReset, setConfirmPageReset] = useState(false)
   const [resettingPages, setResettingPages] = useState(false)
 
+  // The overview's date range lives in the URL (?range=90d) so a reload or a
+  // shared link lands on the same window. The default is left out of the query.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rangeId = parseRangeId(searchParams.get('range'))
+  const selectRange = (next) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (next === DEFAULT_RANGE_ID) params.delete('range')
+      else params.set('range', next)
+      return params
+    }, { replace: true })
+  }
+  // Re-derived on every refresh so a tab left open past midnight moves its window.
+  const range = useMemo(() => rangeWindow(rangeId), [rangeId, refreshedAt]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Only the newest aggregate read may report: a slow read for a range the
+  // admin has already left must not overwrite the figures for the current one.
+  const aggregateRead = useRef(0)
+
+  // One status at a time, newest first, capped (see utils/adminPromptQuery.js).
+  // Reading the whole collection pulled every spam prompt, with its inline
+  // media, into the moderator's browser.
+  // The newest read is the only one allowed to report (createPromptLoader).
+  const loadPrompts = useMemo(() => createPromptLoader({
+    read: async (spec) => {
+      const constraints = spec.status ? [where('status', '==', spec.status)] : []
+      const promptSnap = await getDocs(query(
+        collection(db, 'community-prompts'),
+        ...constraints,
+        orderBy(queueOrderField(), 'desc'),
+        limit(spec.max),
+      ))
+      const list = promptSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+      return mergeUnstamped(list, await listUnstamped('community-prompts', spec.status), spec.max)
+    },
+    onStart: (spec, { clear }) => {
+      setPromptsLoading(true)
+      setPromptsError('')
+      // A switch empties the list, so the previous filter's rows never sit
+      // under the new button while its read is in flight.
+      if (clear) setPendingPrompts([])
+    },
+    onList: (list) => { setPendingPrompts(list); setPromptsLoading(false) },
+    onError: (err) => {
+      // A query that needs a composite index that has not been deployed lands
+      // here, as does an offline admin: say so rather than show "no prompts".
+      console.error('admin: could not read community prompts', err?.code || err?.message)
+      setPendingPrompts([])
+      setPromptsLoading(false)
+      setPromptsError(promptReadErrorText(err))
+    },
+  }), [])
+
+  const selectPromptFilter = (next) => {
+    promptFilterRef.current = next
+    setPromptFilter(next)
+    loadPrompts(next, { clear: true })
+  }
+
   const refresh = useCallback(async () => {
     // The profile cache, and ONLY as the Users tab's labelled fallback for
     // when the server list cannot be read. Nothing on this page states a
     // figure from it. See the import note at the top of the file.
     setData(getAnalyticsSummary())
-    // Cross-user aggregate from Firestore (safe-empty on failure). Non-blocking
-    // relative to the localStorage data above, which renders immediately.
-    setAggregateLoaded(false)
-    setAggregateError('')
-    // A FAILED READ IS NOT ZERO. This used to swallow the error and substitute
-    // an empty result, so a permissions failure, an offline admin or a bad
-    // service account all rendered as "0 views" — visually identical to a site
-    // nobody visited. On the one page whose entire job is telling you what is
-    // true, the most expensive thing it can do is state a confident number it
-    // does not have. The error is kept and shown instead.
-    getAggregateAnalytics(30)
-      .then(agg => { setAggregate(agg); setAggregateError('') })
-      .catch(err => {
-        setAggregate(null)
-        setAggregateError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      })
-      .finally(() => setAggregateLoaded(true))
     const localFeedback = getFeedback()
     const merged = [...localFeedback]
     // A REFUSED READ IS NOT AN EMPTY QUEUE — the same fault the aggregate block
@@ -1702,12 +1878,35 @@ export default function Admin({ toast }) {
       setFeedbackError(String(err?.message || err || 'Unknown error').slice(0, 200))
     }
     setFeedback(merged)
-    try {
-      const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
-      setPendingPrompts(promptSnap.docs.map(d => ({ ...d.data(), id: d.id })))
-    } catch { /* firestore unavailable */ }
+    await loadPrompts(promptFilterRef.current)
     setRefreshedAt(Date.now())
-  }, [])
+  }, [loadPrompts])
+
+  // Cross-user aggregate from Firestore for the chosen range. Separate from
+  // refresh() so changing the range re-reads only this and not the feedback
+  // and prompt queues.
+  const loadAggregate = useCallback(() => {
+    const read = ++aggregateRead.current
+    const win = rangeWindow(rangeId)
+    setAggregateLoaded(false)
+    setAggregateError('')
+    // A FAILED READ IS NOT ZERO. This used to swallow the error and substitute
+    // an empty result, so a permissions failure, an offline admin or a bad
+    // service account all rendered as "0 views" — visually identical to a site
+    // nobody visited. On the one page whose entire job is telling you what is
+    // true, the most expensive thing it can do is state a confident number it
+    // does not have. The error is kept and shown instead.
+    return getAggregateAnalytics(win.days, { since: win.startDay })
+      .then(agg => { if (read === aggregateRead.current) { setAggregate(agg); setAggregateError('') } })
+      .catch(err => {
+        if (read !== aggregateRead.current) return
+        setAggregate(null)
+        setAggregateError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      })
+      .finally(() => { if (read === aggregateRead.current) setAggregateLoaded(true) })
+  }, [rangeId])
+
+  const reloadAll = () => { refresh(); loadAggregate() }
 
   const [serverVerified, setServerVerified] = useState(false)
   const [verifyError, setVerifyError] = useState('')
@@ -1780,6 +1979,11 @@ export default function Admin({ toast }) {
     if (effectiveUnlocked) refresh()
   }, [effectiveUnlocked, refresh])
 
+  // Runs on arrival and again whenever the range changes.
+  useEffect(() => {
+    if (effectiveUnlocked) loadAggregate()
+  }, [effectiveUnlocked, loadAggregate])
+
   // ── Derived data ──
 
   // Submission stats
@@ -1817,10 +2021,22 @@ export default function Admin({ toast }) {
     return counts
   }, [feedback])
 
+  // The overview's feedback cards cover the chosen range only, by the day each
+  // report was filed. The Submissions tab and its badge still list everything.
+  const rangeFeedback = useMemo(() => feedback.filter(f => inWindow(f.createdAt, range)), [feedback, range])
+  const rangeFeatures = useMemo(() => rangeFeedback.filter(f => f.type === 'feature'), [rangeFeedback])
+  const rangeOpenBugs = useMemo(() => rangeFeedback.filter(f => f.type === 'bug' && f.status !== 'done'), [rangeFeedback])
+  // Open bugs filed before the window: still open, so the card says they exist
+  // rather than letting a short range make the list look clean.
+  const olderOpenBugs = useMemo(
+    () => feedback.filter(f => f.type === 'bug' && f.status !== 'done' && !inWindow(f.createdAt, range)).length,
+    [feedback, range],
+  )
+
   const feedbackDonut = useMemo(() => {
-    const types = ['bug', 'feature', 'general', 'help']
-    return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: feedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
-  }, [feedback])
+    const types = ['bug', 'feature', 'general', 'help', 'report']
+    return types.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: rangeFeedback.filter(f => f.type === t).length })).filter(d => d.value > 0)
+  }, [rangeFeedback])
 
   // ── Handlers ──
 
@@ -1905,7 +2121,9 @@ export default function Admin({ toast }) {
   }
 
   const exportCSV = () => {
-    const cols = ['createdAt', 'type', 'status', 'subject', 'message', 'email', 'source', 'adminNotes']
+    // The same gate as the card's From line: a moderator's file carries no
+    // address column, so the export cannot hand over what the screen withholds.
+    const cols = ['createdAt', 'type', 'status', 'subject', 'message', ...(canSeeReporterEmail(role) ? ['email'] : []), 'source', 'adminNotes']
     const rows = [...feedback].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     // The sharpest of the three: /api/support accepts subject, message and
     // email UNAUTHENTICATED, and this file is opened by an admin — the attacker
@@ -1927,7 +2145,7 @@ export default function Admin({ toast }) {
     setResettingPages(false)
     setConfirmPageReset(false)
     toast(ok ? 'Page analytics reset' : 'Local data cleared — server reset failed', ok ? 'success' : 'error')
-    refresh()
+    reloadAll()
   }
 
   // ── Lock screen ──
@@ -1982,7 +2200,7 @@ export default function Admin({ toast }) {
               Updated <span className="mono">{new Date(refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </span>
           )}
-          <button className="btn btn-s" onClick={refresh}>Refresh</button>
+          <button className="btn btn-s" onClick={reloadAll}>Refresh</button>
           <button className="btn btn-s" onClick={exportCSV}>Export CSV</button>
         </div>
       </div>
@@ -2034,8 +2252,8 @@ export default function Admin({ toast }) {
           The tablist was already correct — roving tabindex, arrow keys,
           aria-selected, a real focus ring — but there was no tabpanel and no
           aria-controls anywhere on the route. A screen reader was told "tab,
-          selected" and then offered nothing to move into. Found by the
-          2026-09-18 independent review, measured: [role=tabpanel] count 0,
+          selected" and then offered nothing to move into. Measured
+          before the fix: [role=tabpanel] count 0,
           every aria-controls null.
 
           Settings.jsx renders all six of ITS panels and hides the inactive
@@ -2060,12 +2278,31 @@ export default function Admin({ toast }) {
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
+          {/* The range every figure below reports on. One row that never wraps:
+              the labels shorten under 640px so all six stay on a single line. */}
+          <div className="adm-range" role="group" aria-label="Date range for the overview">
+            {ADMIN_RANGES.map(r => (
+              <button
+                key={r.id}
+                type="button"
+                className="adm-range-btn"
+                aria-pressed={rangeId === r.id}
+                aria-label={r.label}
+                data-range={r.id}
+                onClick={() => selectRange(r.id)}
+              >
+                <span className="adm-range-long" aria-hidden="true">{r.label}</span>
+                <span className="adm-range-short" aria-hidden="true">{r.short}</span>
+              </button>
+            ))}
+          </div>
+
           {/* Category — audience (all users, server aggregate) */}
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Audience</div>
               <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                All users · server totals · last 30 days
+                All users · server totals · {range.phrase}
                 {!confirmPageReset && (
                   <button className="btn btn-s" onClick={() => setConfirmPageReset(true)} style={{ fontSize: 10 }}>Reset page analytics</button>
                 )}
@@ -2116,7 +2353,7 @@ export default function Admin({ toast }) {
                   </p>
                   <p className="mono" style={{ fontSize: 10.5, color: 'var(--t3)', textAlign: 'center', margin: '6px 0 0', wordBreak: 'break-word' }}>{aggregateError}</p>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                    <button type="button" className="btn btn-s" onClick={refresh}>Retry</button>
+                    <button type="button" className="btn btn-s" onClick={loadAggregate}>Retry</button>
                   </div>
                 </div>
               </div>
@@ -2135,22 +2372,22 @@ export default function Admin({ toast }) {
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.totalViews)}</div>
                     <div className="adm-stat-label">Total Page Views</div>
-                    <div className="adm-stat-sub">All signed-in users</div>
+                    <div className="adm-stat-sub">All signed-in users · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.byPath.length)}</div>
                     <div className="adm-stat-label">Distinct Pages</div>
-                    <div className="adm-stat-sub">With recorded views</div>
+                    <div className="adm-stat-sub">With recorded views · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.byTool.reduce((s, t) => s + t[1], 0))}</div>
                     <div className="adm-stat-label">Tool Actions</div>
-                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types used</div>
+                    <div className="adm-stat-sub">{aggregate.byTool.length} tool types used · {range.phrase}</div>
                   </div>
                   <div className="adm-stat">
                     <div className="adm-stat-value">{fmtNum(aggregate.days.length)}</div>
                     <div className="adm-stat-label">Active Days</div>
-                    <div className="adm-stat-sub">In last 30 days</div>
+                    <div className="adm-stat-sub">Days with traffic · {range.phrase}</div>
                   </div>
                 </div>
                 {/* THE FOUR RANKED LISTS, ALL FROM THE SAME AGGREGATE.
@@ -2165,16 +2402,16 @@ export default function Admin({ toast }) {
                   <TopList
                     title="Top Pages"
                     unit="pages"
-                    empty="No page data yet"
+                    empty="No page data yet" range={range.phrase}
                     rows={aggregate.byPath.map(([path, n]) => [path === 'root' ? '/' : path.replace(/_/g, '/'), n])}
                   />
-                  <ToolUsageCard rows={toolUsageRows(aggregate)} />
-                  <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} />
-                  <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} />
+                  <ToolUsageCard rows={toolUsageRows(aggregate)} range={range.phrase} />
+                  <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} range={range.phrase} />
+                  <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} range={range.phrase} />
                   {/* The funnel counters share the daily document with the tool
                       counters but are not tool usage, so they get their own list. */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} />
+                    <TopList title="Funnel" unit="stages" empty="No funnel events yet" rows={aggregate.funnel} range={range.phrase} wide />
                   </div>
                 </div>
               </>
@@ -2185,28 +2422,28 @@ export default function Admin({ toast }) {
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Feedback &amp; Community</div>
-              <span className="adm-cat-desc">Submissions across all devices</span>
+              <span className="adm-cat-desc">Submissions across all devices · {range.phrase}</span>
             </div>
             <div className="adm-grid-3">
               <div className="adm-card">
                 <div className="adm-card-header">
-                  <span className="adm-card-title">Submissions by Type</span>
+                  <span className="adm-card-heading"><span className="adm-card-title">Submissions by Type</span><span className="adm-card-range">{range.phrase}</span></span>
                 </div>
                 <div className="adm-card-body">
                   {feedbackDonut.length > 0
                     ? <DonutChart segments={feedbackDonut} />
-                    : <div className="adm-empty">No submissions yet</div>}
+                    : <div className="adm-empty">No submissions in the {range.phrase}</div>}
                 </div>
               </div>
 
             <div className="adm-card">
               <div className="adm-card-header">
-                <span className="adm-card-title">Feature Requests</span>
-                <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{feedback.filter(f => f.type === 'feature').length} total</span>
+                <span className="adm-card-heading"><span className="adm-card-title">Feature Requests</span><span className="adm-card-range">{range.phrase}</span></span>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rangeFeatures.length} filed</span>
               </div>
               <div className="adm-card-body">
                 <div className="adm-list">
-                  {feedback.filter(f => f.type === 'feature').slice(-6).reverse().map((f, i) => (
+                  {rangeFeatures.slice(-6).reverse().map((f, i) => (
                     <div key={f.id || i} className="adm-list-row">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--t0)', marginBottom: 2 }}>{f.subject || 'No subject'}</div>
@@ -2215,18 +2452,18 @@ export default function Admin({ toast }) {
                       <span className="adm-badge" style={{ color: STATUS_COLORS[f.status], background: STATUS_BGS[f.status] }}>{STATUS_LABELS[f.status]}</span>
                     </div>
                   ))}
-                  {feedback.filter(f => f.type === 'feature').length === 0 && <div className="adm-empty" style={{ padding: 16 }}>No feature requests yet</div>}
+                  {rangeFeatures.length === 0 && <div className="adm-empty" style={{ padding: 16 }}>No feature requests in the {range.phrase}</div>}
                 </div>
               </div>
             </div>
 
             <div className="adm-card">
               <div className="adm-card-header">
-                <span className="adm-card-title">Open Bugs</span>
+                <span className="adm-card-heading"><span className="adm-card-title">Open Bugs</span><span className="adm-card-range">filed in the {range.phrase}</span></span>
               </div>
               <div className="adm-card-body">
                 <div className="adm-feed">
-                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').map(f => (
+                  {rangeOpenBugs.map(f => (
                     <div key={f.id} className="adm-feed-item">
                       <span className="adm-feed-dot" style={{ background: STATUS_COLORS[f.status] }} />
                       <div className="adm-feed-body">
@@ -2235,10 +2472,15 @@ export default function Admin({ toast }) {
                       </div>
                     </div>
                   ))}
-                  {feedback.filter(f => f.type === 'bug' && f.status !== 'done').length === 0 && (
+                  {rangeOpenBugs.length === 0 && (
                     <div style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--ok)' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      No open bugs
+                      No open bugs filed in the {range.phrase}
+                    </div>
+                  )}
+                  {olderOpenBugs > 0 && (
+                    <div className="adm-card-range" data-testid="adm-older-bugs" style={{ padding: '4px 12px' }}>
+                      {olderOpenBugs} older open {olderOpenBugs === 1 ? 'bug is' : 'bugs are'} not shown. Widen the range to see {olderOpenBugs === 1 ? 'it' : 'them'}.
                     </div>
                   )}
                 </div>
@@ -2262,7 +2504,7 @@ export default function Admin({ toast }) {
               <div className="adm-card-header">
                 <span className="adm-card-title">AI provider health</span>
                 <span style={{ fontSize: 11, color: 'var(--t3)' }}>
-                  {aiHealth?.windowDays ? `last ${aiHealth.windowDays} days` : 'live'}
+                  {aiHealth?.windowDays ? `last ${aiHealth.windowDays} days · fixed, not set by the range` : 'live'}
                 </span>
               </div>
               <div className="adm-card-body">
@@ -2317,7 +2559,7 @@ export default function Admin({ toast }) {
                   {[
                     { label: 'Firebase Auth configured', ok: true, note: 'Enable Email/Password + Google providers in Firebase Console' },
                     { label: 'Firestore database created', ok: true, note: 'Set region to australia-southeast1 (Sydney) in Firebase Console' },
-                    { label: 'Firestore security rules published', ok: true, note: 'Founder-confirmed 31 Jul 2026; re-test and republish after any rules change' },
+                    { label: 'Firestore security rules published', ok: true, note: 'Re-test and republish after any rules change' },
                     { label: 'Feedback/support email notifications', ok: false, note: 'Externally unverified — configure RESEND_API_KEY + SUPPORT_NOTIFY_EMAIL in Vercel, then submit test feedback' },
                     { label: 'Google Sheets mirror (optional)', ok: false, note: 'Server-only configuration is not visible here — verify in Vercel and submit test feedback if used' },
                     { label: 'Custom domain', ok: true, note: 'uil4b.com configured' },
@@ -2408,16 +2650,16 @@ export default function Admin({ toast }) {
           <div className="adm-sub-toolbar">
             <input type="search" className="adm-search" placeholder="Search subject, message, email…" value={subSearch} onChange={e => setSubSearch(e.target.value)} />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {['all', 'bug', 'feature', 'general', 'help'].map(t => (
+              {['all', 'bug', 'feature', 'general', 'help', 'report'].map(t => (
                 <button
                   key={t}
                   className={`adm-time-btn${filterType === t ? ' active' : ''}`}
                   onClick={() => setFilterType(prev => (prev === t ? 'all' : t))}
                   title={filterType === t && t !== 'all' ? 'Click again to clear' : undefined}
-                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  style={{ textTransform: 'capitalize', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 >
                   <FilterGlyph id={t} />
-                  {t === 'all' ? 'All Types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
+                  {t === 'all' ? 'All types' : t}{typeCounts[t] ? ` · ${typeCounts[t]}` : ''}
                 </button>
               ))}
               <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
@@ -2427,7 +2669,7 @@ export default function Admin({ toast }) {
                   className={`adm-time-btn${filterStatus === s ? ' active' : ''}`}
                   onClick={() => setFilterStatus(prev => (prev === s ? 'all' : s))}
                   title={filterStatus === s && s !== 'all' ? 'Click again to clear' : undefined}
-                  style={{ textTransform: 'uppercase', letterSpacing: '.04em', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  style={{ textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 >
                   <FilterGlyph id={s} />
                   {s === 'all' ? 'All' : STATUS_LABELS[s]}{statusCounts[s] ? ` · ${statusCounts[s]}` : ''}
@@ -2493,22 +2735,37 @@ export default function Admin({ toast }) {
       {tab === 'prompts' && (
         <div className="adm-section">
           <div className="adm-section-h">
-            <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length})</div>
+            <div className="adm-section-title"><span className="adm-section-bar" />Community Prompts ({pendingPrompts.length}{pendingPrompts.length >= ADMIN_PROMPT_LIMIT ? '+' : ''})</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {['pending', 'approved', 'rejected', 'all'].map(f => (
-                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => setPromptFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {ADMIN_PROMPT_FILTERS.map(f => (
+                <button key={f} className={`adm-time-btn${promptFilter === f ? ' active' : ''}`} onClick={() => selectPromptFilter(f)} style={{ textTransform: 'capitalize' }}>
                   {f}
                 </button>
               ))}
             </div>
           </div>
+          {promptsError && (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }} role="alert">
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The prompts could not be read
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{promptsError}</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  The list below is empty because the read failed, not because there are no prompts.
+                </div>
+              </div>
+            </div>
+          )}
           {pendingPrompts
             .filter(p => promptFilter === 'all' || p.status === promptFilter)
             .map(prompt => (
               <PromptAdminCard key={prompt.id} prompt={prompt} setPendingPrompts={setPendingPrompts} toast={toast} />
             ))}
-          {pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
-            <div className="adm-card"><div className="adm-empty">No {promptFilter === 'all' ? '' : promptFilter} prompts yet.</div></div>
+          {!promptsError && pendingPrompts.filter(p => promptFilter === 'all' || p.status === promptFilter).length === 0 && (
+            <div className="adm-card"><div className="adm-empty">
+              {promptsLoading ? 'Loading prompts…' : `No ${promptFilter === 'all' ? '' : promptFilter} prompts yet.`}
+            </div></div>
           )}
         </div>
       )}

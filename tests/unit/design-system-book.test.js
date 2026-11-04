@@ -22,6 +22,7 @@ import {
 } from '../../src/utils/designSystemBook.js'
 import { contrast, grade } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES, resolveUpgradeTarget } from '../../src/config/dialogExport.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 // Block comments AND line comments go before any assertion runs. A source
@@ -120,13 +121,13 @@ test('every section opening is numbered and titled', () => {
 test('every colour states a role, a name and three notations', () => {
   // designsystems.com: a chip with a hex under it is not documentation. This is
   // the difference between a swatch grid and a specification.
-  assert.match(BOOK, /PRIMARY/, 'the harmony-aware role label')
-  assert.match(BOOK, /ANALOGOUS −30°/, 'roles follow the colour SYSTEM, not a fixed list')
-  assert.match(BOOK, /<dt>HEX<\/dt><dd>#1F4B8E<\/dd>/)
+  assert.match(BOOK, /<p class="sw-role">Primary<\/p>/, 'the harmony-aware role label')
+  assert.match(BOOK, /<p class="sw-role">Analogous −30°<\/p>/, 'roles follow the colour SYSTEM, not a fixed list')
+  assert.match(BOOK, /<dt>Hex<\/dt><dd>#1F4B8E<\/dd>/)
   assert.match(BOOK, /<dt>RGB<\/dt><dd>31, 75, 142<\/dd>/)
   assert.match(BOOK, /<dt>HSL<\/dt><dd>216, 64%, 34%<\/dd>/)
   // The deterministic editorial name, not a hex repeated as a title.
-  assert.match(BOOK, /class="bd-name">[A-Z][a-z]+ [A-Z][a-z]+</)
+  assert.match(BOOK, /class="sw-name">[A-Z][a-z]+ [A-Z][a-z]+</)
 })
 
 test('the contrast figures agree with the free style guide exactly', () => {
@@ -139,7 +140,7 @@ test('the contrast figures agree with the free style guide exactly', () => {
   assert.ok(BOOK.includes(grade(ratio)), 'and the grade derived from it')
   // The matrix measures every pair, including against paper and ink.
   assert.match(BOOK, /class="mx"/)
-  assert.ok(BOOK.includes(String(contrast('#1F4B8E', '#0D2540'))), 'a palette-to-palette pair is measured')
+  assert.ok(BOOK.includes(contrast('#1F4B8E', '#0D2540').toFixed(2)), 'a palette-to-palette pair is measured')
 })
 
 test('the matrix carries pass or fail in WEIGHT, never in colour', () => {
@@ -158,18 +159,18 @@ test('the type ladder is set in the real families at the specified sizes', () =>
   assert.match(BOOK, /Inter/, 'the body family')
   assert.match(BOOK, /48\.8px/, 'the Display step at a 1.25 ratio from 16px')
   assert.match(BOOK, /3\.05rem/, 'and the same step in rem')
-  // The specimen is CLAMPED so it cannot print cut in half. The first cut of
-  // this shipped "Displa" and "Headin" at a 62px clamp.
-  assert.match(BOOK, /font-size:44px/, 'the clamp is applied to the largest step')
-  assert.match(BOOK, /Specimens above 44px are shown reduced/, 'and the book says so')
+  // At a 1.25 ratio the whole scale fits its table, so every specimen prints at its true size.
+  assert.match(BOOK, /font-size:48\.8px/, 'the Display specimen is set at its true size')
+  assert.doesNotMatch(BOOK, /font-size:44px/, 'no step is capped at 44px')
+  assert.doesNotMatch(BOOK, /Specimens are reduced/, 'and nothing says it was reduced')
 })
 
-test('the gradient is specified so it can be rebuilt, not eyeballed', () => {
+test('the gradient is specified so it can be rebuilt', () => {
   // The copyable declaration, the stop table, and the angle stated in prose —
   // all three, because a gradient you cannot rebuild exactly is a picture.
   assert.match(BOOK, /linear-gradient\(135deg, #1F4B8E 0%, #3FA9A0 100%\)/)
   assert.match(BOOK, /background: linear-gradient\(135deg/, 'a copyable CSS declaration')
-  assert.match(BOOK, /blend at 135°/, 'the angle is stated in the section lede')
+  assert.match(BOOK, /Linear gradient at 135°, 2 stops./, 'the angle and stop count are stated in the section lede')
   assert.match(BOOK, /<td class="num">#3FA9A0<\/td>\s*<td class="num">100%<\/td>/, 'every stop is specified')
 })
 
@@ -205,19 +206,25 @@ test('a half-written design produces a shorter book, never a broken one', () => 
     assert.ok(pageCount(html) >= 5, `${label}: still a book`)
     // Always a cover and a colophon, whatever is missing from the system.
     assert.match(html, /class="pg pg-cover"/, `${label}: has a cover`)
-    assert.match(html, /How this book was made/, `${label}: has a colophon`)
+    assert.ok(html.includes('<h3>Colophon</h3>'), `${label}: has a colophon`)
   }
 })
 
-test('a single colour does not produce a page carrying one stretched band', () => {
-  // A plain chunk of six at five-per-page gives a page of five and a page of
-  // ONE — a full page holding a single band, which is the most obviously
-  // unfinished thing a book can do.
-  const six = { ...DESIGN, palette: { ...DESIGN.palette, colors: ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666'] } }
-  const html = buildDesignSystemBook(six, { projectName: 'Six', date: AT })
-  const perPage = html.split('<div class="bands">').slice(1)
-    .map(chunk => (chunk.match(/class="bd"/g) || []).length)
-  assert.deepEqual(perPage, [3, 3], 'six colours split evenly, not 5 + 1')
+test('a single colour does not produce a page carrying one stretched swatch', () => {
+  // The palette pages hold the primary across a full row and the rest in rows of three.
+  // Six colours must not leave a last page with ONE swatch on it, the most obviously
+  // unfinished thing a book can do. Counted per palette page, not per row.
+  const hexes = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777', '#888888', '#999999', '#AAAAAA', '#BBBBBB', '#CCCCCC', '#DDDDDD']
+  for (const n of [3, 5, 6, 8, 10, 13]) {
+    const palette = { ...DESIGN, palette: { ...DESIGN.palette, colors: hexes.slice(0, n) } }
+    const html = buildDesignSystemBook(palette, { projectName: 'Pages', date: AT })
+    const perPage = html.split('<section class="pg').slice(1)
+      .filter((page) => page.includes('class="sws"'))
+      .map((page) => (page.match(/class="sw[ "]/g) || []).length)
+    assert.ok(perPage.length >= 1, `${n} colours: the swatches are on palette pages`)
+    assert.equal(perPage.reduce((a, c) => a + c, 0), n, `${n} colours: every colour is on a page once`)
+    for (const count of perPage) assert.ok(count >= 2, `${n} colours: a palette page carries ${count} swatch, not a stretched one`)
+  }
 })
 
 test('the book is self-contained: no script, no image, no stylesheet but fonts', () => {
@@ -241,15 +248,11 @@ test('the Pro book carries no watermark and has no degraded free variant', () =>
   assert.ok(!/watermark/.test(src), 'the generator has no watermark option to get wrong')
 })
 
-test('the colophon states the boundary instead of filling it with placeholders', () => {
+test('the colophon states the scope in one plain sentence', () => {
   // A full identity manual carries logo construction, imagery, tone of voice
-  // and applied examples. This system holds none of them, so the book names
-  // what it does not cover rather than inventing pages of it.
-  assert.match(BOOK, /What it does not/)
-  assert.match(BOOK, /logo\s*\n?\s*construction, imagery direction, tone of voice/)
-  // "placeholders" is deliberately NOT in this list: the colophon's own honest
-  // sentence uses the word, and a test that forbids naming the problem would
-  // force the book to stop explaining itself.
+  // and applied examples. This system holds none of them, so the colophon says
+  // what the book covers and nothing else is stubbed in.
+  assert.match(BOOK, /This book covers colour, type and tokens. Logo construction, imagery and tone of voice aren't part of this system./)
   assert.ok(!/Lorem ipsum|TBD|Coming soon/i.test(BOOK), 'nothing is stubbed')
 })
 
@@ -265,7 +268,11 @@ test('project names and font families cannot inject markup', () => {
 
 /* ── 4 · the entitlement gate, asserted on comment-stripped source ──────── */
 
-const PANEL = stripComments(read('src/components/ExportPanel.jsx'))
+// The engine that makes the file (gates, request, activation) and the dialog that offers it.
+const RUNNER = stripComments(read('src/hooks/useExportRunner.js'))
+const DIALOG = stripComments(read('src/components/export/ExportDialog.jsx'))
+const NAV = stripComments(read('src/components/export/ExportNav.jsx'))
+const STEPS = stripComments(read('src/components/export/ExportSteps.jsx'))
 
 test('the book is a Pro format and the flag drives badge AND gate', () => {
   // The DECLARATION moved to src/config/exportFormats.js on 2026-09-05 so the
@@ -280,66 +287,92 @@ test('the book is a Pro format and the flag drives badge AND gate', () => {
 
   // The CONSUMPTION stays here: one flag for both, so a format can never be
   // badged-but-ungated.
-  assert.match(PANEL, /f\.pro && !isPro && <span className="exp-fmt-pro">Pro<\/span>/)
-  assert.match(PANEL, /const locked = Boolean\(activeFormat\?\.pro\) && !isPro/)
-  // …and the panel must still be rendering the table this test just inspected.
-  assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
-    'ExportPanel no longer renders the shared table, so the flags asserted above drive nothing')
+  // A row is Pro (its category's `pro` is every file's `pro`, pinned in
+  // tests/unit/export-v3.test.js) and the viewer is not.
+  const bookRow = EXPORT_TYPES.flatMap((t) => t.categories).find((c) => c.files.includes('book'))
+  assert.equal(bookRow?.pro, true, 'the book sits in a row that is not marked Pro')
+  assert.match(NAV, /\{showTags && \(c\.pro \? <ExportProTag className="xd-pro" \/> : /, 'a Pro row no longer carries the Pro tag')
+  assert.match(DIALOG, /showTags=\{!isPro && !checking\}/, 'the tag is shown to an account that is already Pro, or while the plan loads')
+  // The same flag drives the lock, in the dialog and in the dock under it.
+  assert.match(DIALOG, /const locked = cat\.pro && !isPro/)
+  assert.match(STEPS, /const locked = cat\.pro && !isPro/)
+  assert.match(RUNNER, /if \(fmt\.pro && !isPro\) return goUpgrade\(/, 'the engine no longer gates on the format\'s own flag')
+  // …and the dialog must still be rendering the table this test just inspected.
+  assert.match(DIALOG, /types=\{EXPORT_TYPES\}/,
+    'ExportDialog no longer renders the shared table, so the flags asserted above drive nothing')
 })
 
 test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   // This is the test the whole feature rests on. The gate must be inside the
   // function that builds the file, not merely on the button — a relabelled
   // button is a hint, and runExport is reachable without it.
-  const gate = PANEL.indexOf("?.pro && !isPro")
+  const gate = RUNNER.indexOf('fmt.pro && !isPro')
   assert.ok(gate > -1, 'runExport must check the paid flag against the live entitlement')
 
-  const build = PANEL.indexOf("import('../utils/designSystemBook')")
-  assert.ok(build > -1, 'the generator is loaded somewhere in this file')
+  // The generator is not in the browser at all: the engine asks the server for the
+  // finished document, so the request is the "build" this gate must precede.
+  const build = RUNNER.indexOf('requestExportDocument(')
+  assert.ok(build > -1, 'the engine asks the server for the document somewhere in this file')
 
   // ORDER IS THE ASSERTION. If the gate ever moves below the import, or is
   // deleted, a free user reaches the artefact and this goes red.
   assert.ok(gate < build,
     'the entitlement check must precede loading and running the book generator')
 
-  // And it must bail rather than fall through. The wall goes
-  // to /plans (every Pro CTA goes to /plans, never a
-  // modal or a login popup).
-  assert.match(PANEL.slice(gate, build), /navigate\('\/plans'\)\s*\n\s*return/,
-    'the gate sends the viewer to /plans and returns without exporting')
+  // And it must bail rather than fall through. The wall goes to /plans, or for a
+  // signed-in account with a saved project straight to the trial checkout (never a
+  // modal or a login popup): goUpgrade navigates, and the gate returns its result.
+  assert.match(RUNNER.slice(gate, build), /^fmt\.pro && !isPro\) return goUpgrade\(/,
+    'the gate sends the viewer on to /plans or checkout and returns without exporting')
+  assert.match(RUNNER, /const goUpgrade = [\s\S]*?navigate\(target\.to\)\s*\r?\n\s*return \{ status: 'upgrade'/,
+    'goUpgrade no longer navigates and stops')
+  // A visitor with no account and anyone without a saved project land on /plans.
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: null, signedIn: false }).to, '/plans')
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: 'p1', signedIn: false }).to, '/plans')
+  assert.equal(resolveUpgradeTarget({ formatId: 'book', projectId: null, signedIn: true }).to, '/plans')
 })
 
 test('the gate is NAMED so the funnel can say which wall converted', () => {
   // P-001: without a `gate` id, trackUpgradeGate falls back to the modal title,
   // which groups every wall in the product into one number.
-  assert.match(PANEL, /gate: 'design-system-book-export'/)
+  assert.match(RUNNER, /gate: 'design-system-book-export'/)
+  // The book's PNG and HTML are the same wall, so they report the book's id.
+  assert.match(RUNNER, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/)
 })
 
 test('the gate goes to /plans, and asks for no account first', () => {
   // A Pro CTA never opens a login popup or a modal, so
   // the entitlement check now precedes the account check.
-  assert.ok(!/useProModal/.test(PANEL), 'the export wall must not raise the upgrade modal')
-  const pro = PANEL.indexOf('?.pro && !isPro')
-  const account = PANEL.indexOf('requireExportAccount(')
+  for (const [name, src] of [['useExportRunner', RUNNER], ['ExportDialog', DIALOG], ['ExportSteps', STEPS]]) {
+    assert.ok(!/useProModal/.test(src), `${name}: the export wall must not raise the upgrade modal`)
+  }
+  const pro = RUNNER.indexOf('fmt.pro && !isPro')
+  const account = RUNNER.indexOf('requireExportAccount(')
   assert.ok(pro > -1 && account > -1 && pro < account, 'the Pro gate must run before the account gate')
 })
 
 test('a free user is told what they are hitting before they click', () => {
   // P-003, the founder verdict: every gate EXPLICIT rather than silent. The
   // button says so itself, so the modal is a confirmation and not a surprise.
-  assert.match(PANEL, /locked \? 'Unlock with Pro'/)
+  assert.match(STEPS, /else if \(locked\) label = .*'Unlock with Pro'/)
 })
 
 test('the book reports its own activation, not the style guide’s', () => {
   // Otherwise the paid deliverable is averaged into the free one and the single
   // number meant to say whether the product was useful stops distinguishing.
-  assert.match(PANEL, /activation = 'design-system-book'/)
-  assert.match(PANEL, /trackActivation\(activation, 'export'\)/)
+  assert.match(RUNNER, /activation: 'design-system-book'/)
+  assert.match(RUNNER, /activation = doc\.activation/)
+  assert.match(RUNNER, /trackActivation\(activation, 'export'\)/)
 })
 
-test('the generator is loaded on demand, off the homepage JS budget', () => {
-  assert.match(PANEL, /await import\('\.\.\/utils\/designSystemBook'\)/,
-    'a static import would put the whole book in the main bundle')
+test('the generator is not in the browser: the export engine and dialog never import it', () => {
+  // It used to be a lazy import, which still shipped the book to every visitor
+  // who read the bundle. Now the server builds it (api/_lib/exportDocument.js);
+  // tests/unit/export-document.test.js walks the whole import graph.
+  for (const [name, src] of [['useExportRunner', RUNNER], ['ExportDialog', DIALOG], ['ExportSteps', STEPS]]) {
+    assert.ok(!/designSystemBook/.test(src), `${name} names the book generator again`)
+  }
+  assert.match(RUNNER, /requestExportDocument\(\{ format: documentKey, design, projectName, template: chosenTemplates\[documentKey\] \}/)
 })
 
 test('the downloaded artefact never receives the print bootstrap', () => {
@@ -348,6 +381,8 @@ test('the downloaded artefact never receives the print bootstrap', () => {
   // every downloaded book would carry executable code.
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/window\.print|<script/.test(src), 'the generator emits no script')
-  assert.match(PANEL, /const printBook = \(html, filename\) => \{[\s\S]*?html\.replace\(/,
-    'the bootstrap is applied in the panel, to a copy')
+  assert.match(RUNNER, /withPrintBootstrap\(html, \{ title \}\)/, 'the bootstrap is applied in the export engine, to a copy')
+  const util = stripComments(read('src/utils/exportDocument.js'))
+  assert.match(util, /export function withPrintBootstrap\(html, \{ title = '' \} = \{\}\) \{[\s\S]*?return named\.replace\(/,
+    'the bootstrap is applied by replace, to the copy handed in')
 })

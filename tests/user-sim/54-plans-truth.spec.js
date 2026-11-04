@@ -25,6 +25,7 @@
 // fails the build for any spec that reaches past it.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import {
   EXPORT_FORMATS,
   freeFormats,
@@ -59,7 +60,7 @@ const cellText = (cell) => cell.evaluate((td) => {
 const stubPrices = (page) => page.route('**/api/get-prices', (route) => route.fulfill({
   status: 200,
   contentType: 'application/json',
-  body: JSON.stringify({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } }),
+  body: JSON.stringify(withAvailability({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } })),
 }))
 const ledgerRow = (page, label) =>
   page.locator('.pr-row', { has: page.locator('th', { hasText: new RegExp(`^${label}$`) }) })
@@ -257,11 +258,11 @@ test.describe('/plans says what it claims', () => {
     await expectRendered(page)
 
     await expect(page.getByRole('heading', { level: 1 }))
-      .toHaveText('Improve your design systems for less than 1 coffee per month.')
+      .toHaveText(/^Improve your design systems for less than 1 cup of coffee\s+per month\.$/)
 
     await expect(page.locator('.pr-hero .pr-sub')).toHaveText(
-      `Pro lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, `
-      + `opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`,
+      `Pro opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems and every icon pack and library, `
+      + `lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, and takes the UIL4B line off your exports.`,
     )
     // The line for what both plans share counts the real tools.
     await expect(page.locator('.pr-row--same .pr-c--same')).toContainText(`All ${numberWord(TOOL_COUNT)} tools.`)

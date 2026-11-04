@@ -30,7 +30,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
-import { needsEmailVerification } from '../utils/emailVerification'
+import { needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
 import { createAccountRetry } from '../utils/accountRetry'
 
 const AuthContext = createContext()
@@ -181,6 +181,10 @@ export function AuthProvider({ children }) {
   // Held in state because `reload()` updates the flag on the same User object,
   // which would not re-render anything that read it.
   const [emailVerified, setEmailVerified] = useState(false)
+  // What became of the link sent at signup: 'pending' while it is on its way,
+  // then 'sent' or 'failed'. Onboarding says which; null for every other
+  // session, so only a brand-new password account is ever told.
+  const [signupVerification, setSignupVerification] = useState(null)
   const profileRef = useRef(null)
   const authEpochRef = useRef(0)
 
@@ -274,6 +278,7 @@ export function AuthProvider({ children }) {
       } else {
         setFirebaseUser(null)
         setEmailVerified(false)
+        setSignupVerification(null)
         setProfile(null)
         profileRef.current = null
         setProfileSyncError(null)
@@ -312,6 +317,13 @@ export function AuthProvider({ children }) {
     onboarding: profile.onboarding || null,
   } : null
 
+  // The name the person gave, and nothing made up from their email. `userProfile.displayName`
+  // falls back to the email prefix and then to "User", so it cannot tell a greeting whether
+  // there is a real name to use. '' means none was ever given.
+  const profileName = (profile?.displayName || '').trim()
+  // When the account was created (ms), from the sign-in record; null when it has not said.
+  const accountCreatedAt = Date.parse(firebaseUser?.metadata?.creationTime) || null
+
   // Every action below is URGENT: a person is waiting on it, so it opens the
   // deferral gate instead of queueing behind it.
   const login = useCallback(async (email, password) => {
@@ -328,8 +340,16 @@ export function AuthProvider({ children }) {
     // Establishes that the address belongs to the person signing up. A send
     // that fails does not fail the signup: Settings keeps offering the link
     // until the address is verified.
-    A.sendEmailVerification(cred.user).catch((error) => {
+    setSignupVerification('pending')
+    // The result is dropped if the account changed or signed out while the send
+    // was in flight: it belongs to the account that asked.
+    const sentFor = cred.user.uid
+    const stillSentFor = () => A.auth.currentUser?.uid === sentFor
+    sendVerificationLink(A, cred.user, window.location.origin).then(() => {
+      if (stillSentFor()) setSignupVerification('sent')
+    }).catch((error) => {
       console.error('AuthContext: verification email was not sent', { code: error?.code })
+      if (stillSentFor()) setSignupVerification('failed')
     })
     const p ={ ...DEFAULT_PROFILE, displayName: displayName || '', email, onboarding: openOnboardingRecord(Date.now()) }
     setCachedProfile(cred.user.uid, p)
@@ -458,21 +478,26 @@ export function AuthProvider({ children }) {
   const sendVerificationEmail = useCallback(async () => {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     const A = await loadAuthSdk()
-    await A.sendEmailVerification(firebaseUser)
+    await sendVerificationLink(A, firebaseUser, window.location.origin)
   }, [firebaseUser])
 
   // The link is opened in another tab or on another device, so the flag here
-  // only changes when the account is re-read. Returns the fresh value.
+  // only changes when the account is re-read. Returns the fresh value, or null
+  // when the account changed mid-read. A failed read, or a failed refresh of
+  // the ID token, rejects: every caller already catches, and the AI tools'
+  // verify prompt must not retry a request on a token that still says the
+  // address is unverified.
   const refreshEmailVerified = useCallback(async () => {
     if (!firebaseUser) return false
     const A = await loadAuthSdk()
-    await A.reload(firebaseUser)
-    if (firebaseUser !== A.auth.currentUser) return false
-    const verified = firebaseUser.emailVerified === true
+    // Roles and the server's gate read the ID token, which carries its own copy
+    // of the flag, so reloadVerified mints a fresh token as soon as the address
+    // is verified. The flag below flips only once that has worked: anything
+    // that reacts to "verified" then finds a token that agrees with it.
+    const verified = await reloadVerified(A, firebaseUser)
+    // The account changed while this was reading: nothing to report.
+    if (verified === null) return null
     setEmailVerified(verified)
-    // Roles are read from the ID token, which carries its own copy of the
-    // flag, so a fresh token is minted as soon as the address is verified.
-    if (verified) await firebaseUser.getIdToken(true).catch(() => {})
     return verified
   }, [firebaseUser])
 
@@ -548,7 +573,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, userProfile, loading, profileLoaded,
+      user, userProfile, loading, profileLoaded, profileName, accountCreatedAt,
       profileSyncError, dismissProfileSyncError,
       pendingOnboarding, clearPendingOnboarding,
       login, signup, logout, resetPassword, loginWithGoogle, loginWithGoogleCredential,
@@ -556,7 +581,7 @@ export function AuthProvider({ children }) {
       updateProfile, updateDisplayName, updateEmail, updatePassword, deleteAccount,
       isGoogleOnlyAccount,
       emailVerificationOwed: needsEmailVerification(firebaseUser, emailVerified),
-      sendVerificationEmail, refreshEmailVerified,
+      sendVerificationEmail, refreshEmailVerified, signupVerification,
     }}>
       {children}
     </AuthContext.Provider>

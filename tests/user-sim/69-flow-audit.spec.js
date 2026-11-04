@@ -51,8 +51,10 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
+import { chooseFormat, exportPanel, primaryButton, actionLabel, categoryRadio } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
+import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
@@ -116,7 +118,7 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       await expect(dialog).toBeVisible()
       // Says WHAT was interrupted and WHAT HAPPENS NEXT, in that order.
       await expect(dialog).toContainText(/about to save this palette/i)
-      await expect(dialog).toContainText(/hands you straight back to it/i)
+      await expect(dialog).toContainText(/you'll come back to this page/i)
       // The fast path has focus the moment it opens.
       expect(await focused(page), 'focus must land on the one-click path').toMatch(/Continue with Google/)
 
@@ -147,8 +149,8 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start a project' })).toHaveCount(1)
+      await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -163,7 +165,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await expect(page.locator('.toast.show')).toContainText('Project saved')
 
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+      await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
       await context.close()
     })
   }
@@ -188,7 +190,7 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
       // Not a success. The tick must not be drawn over a refusal.
       await expect(page.locator('.toast-success.show')).toHaveCount(0)
       // And it STAYS. The toast this replaced was gone in 1.8 seconds.
@@ -307,7 +309,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account reading the Pro offer')
     const prices = { monthly: { usd: 7 }, yearly: { usd: 48 } }
-    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prices) }))
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(prices)) }))
     await signIn(page, { plan: 'free' })
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
@@ -496,6 +498,9 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     jpeg: /-style-guide\.jpg$/,
     css: /\.tokens\.css$/,
     json: /\.tokens\.json$/,
+    tailwind: /-tailwind\.css$/,
+    contrast: /-contrast-pairs\.csv$/,
+    'contrast-json': /-contrast-pairs\.json$/,
   }
 
   test('every free format produces a file named for the format', async ({ browser }) => {
@@ -507,22 +512,22 @@ test.describe('flow 4 — each live free format downloads under its own name', (
 
     for (const fmt of FREE_LIVE) {
       await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-      const panel = page.getByRole('dialog', { name: /Export your design system/i })
+      const panel = exportPanel(page)
       await expect(panel).toBeVisible()
-      await page.getByRole('radio', { name: new RegExp(fmt.name.replace(/[()]/g, '\\$&'), 'i') }).click()
-      const cta = panel.locator('.exp-foot button').last()
+      await chooseFormat(page, fmt.id)
+      const cta = primaryButton(page)
       // The label says what will happen, not what it costs.
-      await expect(cta).toContainText(/^Export /)
+      await expect(cta).toHaveText(actionLabel(fmt.id))
       await expect(cta).not.toContainText(/Pro|Soon/)
       const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
-      // The kit stays open only to report a font it could not embed (the font
-      // hosts are live network here); that notice follows a finished export.
-      if (fmt.id === 'kit' && await panel.getByRole('status').count()) {
-        await panel.getByRole('button', { name: 'Close', exact: true }).click()
-      }
-      // The panel closes after a successful export; the page is still the tool.
+      // The popup stays open after a finished export and says so in its status line
+      // (the kit's line can instead carry a font it could not embed: the font hosts
+      // are live network here), so a second file is one more click.
+      await expect(cta, `${fmt.name}: the button offers another go`).toHaveText('Export again')
+      await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
+      await page.keyboard.press('Escape')
       await expect(panel).toHaveCount(0)
     }
     await context.close()
@@ -534,8 +539,11 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-    await page.getByRole('radio', { name: /Brand guidelines/i }).click()
-    await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')
+    await expect(exportPanel(page)).toBeVisible()
+    await chooseFormat(page, 'guidelines')
+    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
+    await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.
     await page.getByRole('button', { name: /Unlock with Pro/i }).click()
@@ -595,6 +603,9 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
       const go_ = page.getByRole('button', { name: /Permanently delete/i })
       await expect(go_, 'no password, no delete').toBeDisabled()
       await page.keyboard.type('hunter22')
+      // The password alone is not enough: the "I understand" box is the second step.
+      await expect(go_, 'a password without the box').toBeDisabled()
+      await page.getByLabel(/I understand/).check()
       await expect(go_).toBeEnabled()
       // The way back is as plain as the way through.
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()

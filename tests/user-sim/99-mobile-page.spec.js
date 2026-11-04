@@ -105,27 +105,20 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const menu = page.locator('.spnav-menu')
     await expect(menu).toHaveAttribute('data-menu', 'in')
     await expect(menu.locator('.spnav-rail .spnav-mi')).toHaveText(['Tools', 'Pricing', 'On mobile', 'Open the toolkit ↗'])
-    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    await expect(menu.locator('.spnav-mi-note')).toHaveText('Every core tool is free, forever')
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'the menu\'s scroll lock outlived it').not.toBe('hidden')
     await ctx.close()
   })
 
-  test('Tools from /mobile lands ON the bench of the sales page', async ({ page }) => {
+  test('Tools from /mobile opens the /tools page', async ({ page }) => {
     await go(page, '/mobile')
     await page.locator('.spnav-quiet-link', { hasText: 'Tools' }).click()
-    await expect(page).toHaveURL(/\/home#bench$/)
-    // Mutation: skip lenis.resize() in landOnHash → Lenis clamps to the /mobile
-    // page's own scroll limit (measured stopping at 1186px) and the section
-    // stays far below the fold.
-    await expect.poll(async () => page.evaluate(() => {
-      const r = document.getElementById('bench')?.getBoundingClientRect()
-      return r ? Math.round(r.top) : null
-    }), { message: 'the bench never came to the top of the viewport' }).toBeLessThan(200)
-    const top = await page.evaluate(() => document.getElementById('bench').getBoundingClientRect().top)
-    expect(top, 'the section landed under the fixed nav').toBeGreaterThanOrEqual(0)
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /home#bench.
+    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
   test('Pricing is the design\'s separate Pricing screen, /plans', async ({ page }) => {
@@ -174,15 +167,14 @@ test.describe('the back gesture and the menu', () => {
     await expect(page).toHaveURL(/127\.0\.0\.1:\d+\/$/)
   })
 
-  test('a section link in the menu scrolls there without pushing over the menu\'s entry', async ({ page }) => {
+  test('Tools in the menu closes it and opens the /tools page', async ({ page }) => {
     await go(page, '/')
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.locator('.spnav-menu .spnav-mi', { hasText: 'Tools' }).click()
+    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /#bench and the page stays the sales page.
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    await expect(page).toHaveURL(/#bench$/)
-    await expect.poll(async () => page.evaluate(() => Math.round(document.getElementById('bench').getBoundingClientRect().top)),
-      { message: 'the bench never came up' }).toBeLessThan(200)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
@@ -192,8 +184,8 @@ test.describe('the marketing footer is the design\'s', () => {
     const footer = page.locator('footer.sp-footer')
     // TOOLS / PROJECT / LEGAL are the design's (1606-1629); EXPLORE carries the
     // destinations AppFooter reaches that the design's three do not.
-    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['TOOLS', 'PROJECT', 'EXPLORE', 'LEGAL'])
-    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['Colour', 'Type', 'Assets', 'Imagery'])
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Legal'])
+    await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
     // The founder note and credit link sit beside it.
@@ -274,6 +266,7 @@ test.describe('the phone row', () => {
 test.describe('reduced motion', () => {
   test('nothing moves: no word entrance, no menu stagger, no exit wait', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 1440, { reducedMotion: 'reduce' })
+    await page.clock.install()
     await go(page, '/mobile')
     // Mutation: drop prefersReducedMotion() from heroLit → .is-in lands.
     await expect(page.locator('.spm-hero')).not.toHaveClass(/is-in/)
@@ -282,8 +275,16 @@ test.describe('reduced motion', () => {
     const running = await page.evaluate(() => (document.getAnimations?.() || [])
       .filter((a) => a.playState === 'running' && a.effect?.target?.closest?.('.spnav-menu')).length)
     expect(running, 'the menu still animates under reduced motion').toBe(0)
+    // "Leaves at once" is proved on a frozen clock, not a wall-clock budget: a
+    // 150ms real-time wait failed on a loaded CI runner while the menu was still
+    // on its way out. With time stopped, only 50 virtual ms pass, well short of
+    // the design's 260ms exit, so the menu can only be gone if the exit wait was
+    // skipped. Mutation: use MENU_EXIT_MS under reduced motion in SpectrumNav
+    // and the menu stays, so this times out.
+    await page.clock.pauseAt(new Date(Date.now() + 60_000))
     await page.keyboard.press('Escape')
-    await expect(page.locator('.spnav-menu')).toHaveCount(0, { timeout: 150 })
+    await page.clock.runFor(50)
+    await expect(page.locator('.spnav-menu')).toHaveCount(0)
     await ctx.close()
   })
 })

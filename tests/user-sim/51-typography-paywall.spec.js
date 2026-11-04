@@ -29,6 +29,7 @@
 // the controls stop working the file fails rather than passing vacuously.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { showTypeScaleCode } from './type-scale-view.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 
 const GALLERY = '/create/font-gallery'
@@ -187,6 +188,7 @@ test.describe('Typography: browsing stays free under every view', () => {
     watch(page, 'a developer taking tokens out of the type tools signed out')
 
     await go(page, PAIR)
+    await page.locator('.fpr-delivery > summary').click()
     const pairExport = await page.locator('#fpr-export').innerText()
     expect(pairExport.length, 'Font Pair produced no CSS signed out').toBeGreaterThan(80)
     expect(pairExport, 'the pairing export lost its font-family tokens').toContain('--font-heading')
@@ -195,12 +197,13 @@ test.describe('Typography: browsing stays free under every view', () => {
     expect(await page.locator(LOCKED).count(), 'Font Pair rendered a locked placeholder').toBe(0)
 
     await go(page, SCALE)
-    // The export lives in the developer half of the audience tabs.
-    const dev = page.locator('#tsc-tab-developer')
-    if (await dev.count()) await dev.click()
+    // At 1440 the export is in the Code drawer; below the split it is the Code
+    // view of the Scale / Page / Code switch.
+    expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
     const scaleExport = await page.locator('#tsc-export').innerText()
     expect(scaleExport.length, 'Type Scale produced no tokens signed out').toBeGreaterThan(120)
     await expect(page.getByRole('button', { name: /^Copy (CSS|config|SCSS)$/i })).toBeEnabled()
+    await expect(page.locator('.tsc-drawer-copy'), 'the drawer carries its own copy button').toBeEnabled()
     expect(await page.locator(LOCKED).count(), 'Type Scale rendered a locked placeholder').toBe(0)
   })
 })

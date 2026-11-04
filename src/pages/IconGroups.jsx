@@ -12,7 +12,7 @@ import {
   PREMADE_ICON_GROUPS, glyphRequestPlan, groupById, groupNeeds, groupPacks, groupRoute, parseIconRef,
 } from '../data/iconGroups'
 import { viewerTier } from '../data/iconPackTiers'
-import { packCredit } from '../data/iconPackCredits'
+import { creditRows, packCredit } from '../data/iconPackCredits'
 import { partsPresent } from '../utils/userHome'
 import { normalizeHex } from '../utils/colorFormats'
 import { glyphFor, loadGroupGlyphs } from '../utils/iconGroupGlyphs'
@@ -122,13 +122,6 @@ function useProjectColours() {
   }, [design])
 }
 
-function licencesText(group) {
-  return groupPacks(group).map((p) => {
-    const c = packCredit(p)
-    return c ? `${c.name} — ${c.author} — ${c.licenceName} (${c.licenceUrl})\n${c.url}\n${c.licenceAsks}\n` : p
-  }).join('\n')
-}
-
 function GroupView({ group, tier, onCopy }) {
   const { requireLogin } = useLoginPrompt()
   const requireExportAccount = useExportGate()
@@ -162,7 +155,9 @@ function GroupView({ group, tier, onCopy }) {
       const dir = zip.folder(`${group.id}-icons`)
       entries.forEach((e, i) => dir.file(`svg/${names[i]}.svg`, groupIconSvg(e.glyph, { color, stroke })))
       dir.file(`${group.id}-sprite.svg`, groupSprite(entries, { color, stroke }))
-      dir.file('LICENSES.txt', licencesText(group))
+      // Loaded here, not at the top: the Apache text is 11 KB and only an export needs it.
+      const { licenceFileText } = await import('../data/iconLicenceTexts')
+      dir.file('LICENSES.txt', licenceFileText(groupPacks(group)))
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -272,12 +267,21 @@ function GroupView({ group, tier, onCopy }) {
   )
 }
 
-export default function IconGroups({ onCopy }) {
+const NO_ROWS = []
+
+export default function IconGroups({ onCopy, onCredits }) {
   const { isPro } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const tier = viewerTier({ user, isPro, resolving: authLoading })
   const [params] = useSearchParams()
   const group = groupById(params.get('group'))
+  // The licences of the sets in an open group, reported to the footer's notice.
+  // The index and a locked group show no glyphs to credit.
+  const rows = useMemo(
+    () => (group && !groupNeeds(group, tier) ? creditRows(groupPacks(group)) : NO_ROWS),
+    [group, tier],
+  )
+  useEffect(() => { onCredits?.(rows) }, [onCredits, rows])
   return (
     <div className="igp-page">
       {group

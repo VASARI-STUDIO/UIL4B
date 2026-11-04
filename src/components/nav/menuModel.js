@@ -5,7 +5,7 @@
 // are not typed: each is counted here from the data the menus list, so the
 // sentence cannot be wrong on the day a tool ships.
 import { createTools, DISCOVER_GROUPS } from '../../data/toolTree'
-import { LEARN_ARTICLES, readingMinutes } from '../../data/learnIndex'
+import { LEARN_ARTICLES } from '../../data/learnIndex'
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
   'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
@@ -18,6 +18,11 @@ export function numberWord(n) {
 /** Live = opens a working tool today: not Soon, and not Beta. */
 export function liveCreateToolCount() {
   return createTools().filter((t) => !t.soon && !t.beta).length
+}
+
+/** Beta = opens a working tool with a stated limit: listed, not Soon, flagged beta. */
+export function betaCreateToolCount() {
+  return createTools().filter((t) => !t.soon && t.beta).length
 }
 
 export function liveLibraryCount() {
@@ -34,9 +39,20 @@ export function publishedGuideCount() {
  * + Your library; Guides | Foundations + Growth and help), while the tree deals
  * each group into its own column, so every column after the first is stacked
  * into one. Presentation only: the tree's own shape is untouched.
+ *
+ * `showSoon: false` drops every unfinished row first, and any column or stack
+ * that leaves empty, so a visitor who may not see unfinished pages is never
+ * shown a heading over nothing.
  */
-export function menuStacks(section) {
-  const cols = section.columns || []
+export function menuStacks(section, { showSoon = true } = {}) {
+  const all = section.columns || []
+  const cols = showSoon
+    ? all
+    : all
+      .map((stack) => stack
+        .map((col) => ({ ...col, tools: col.tools.filter((t) => !t.soon) }))
+        .filter((col) => col.tools.length))
+      .filter((stack) => stack.length)
   if (section.id === 'create' || cols.length <= 2) return cols
   return [cols[0], cols.slice(1).flat()]
 }
@@ -44,7 +60,10 @@ export function menuStacks(section) {
 /** The foot's left-hand line (NAV[i][2] in the file). */
 export function menuFootNote(section) {
   if (section.id === 'create') {
-    return `${numberWord(liveCreateToolCount())} live tools across colour, type, icons, media and AI.`
+    const live = numberWord(liveCreateToolCount())
+    const beta = betaCreateToolCount()
+    const betaPart = beta ? ` and ${numberWord(beta).toLowerCase()} in beta` : ''
+    return `${live} live tools${betaPart}, across colour, type, icons, media and AI.`
   }
   if (section.id === 'discover') return `${numberWord(liveLibraryCount())} libraries, free to browse.`
   return `${numberWord(publishedGuideCount())} published guides, more on the way.`
@@ -52,6 +71,7 @@ export function menuFootNote(section) {
 
 /** "View all create tools" — the file builds it the same way (line 2082). */
 export function menuViewAll(section) {
+  if (section.id === 'learn') return 'See all guides'
   return `View all ${section.label.toLowerCase()} tools`
 }
 
@@ -66,7 +86,7 @@ export function menuPromo(section) {
   }
   if (section.id === 'discover') {
     return {
-      title: 'Palettes, gradients, fonts, icons and prompts',
+      title: 'Palettes, gradients, fonts, icons and buttons',
       blurb: `${numberWord(liveLibraryCount())} libraries you can open without an account, each with a way straight into the tool that finishes the job.`,
       cta: 'Open Discover',
       href: '/discover',
@@ -78,13 +98,4 @@ export function menuPromo(section) {
     cta: 'Read the guides',
     href: '/learn',
   }
-}
-
-/** The Learn pane: every published guide, its route and its reading time. */
-export function menuGuides() {
-  return LEARN_ARTICLES.map((a) => ({
-    label: a.title,
-    to: `/learn/${a.slug}`,
-    mins: `${readingMinutes(a.words)} MIN`,
-  }))
 }

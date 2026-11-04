@@ -1,0 +1,201 @@
+/* Sundial (Sundial.jsx): an energy dashboard painted with the user's palette.
+ *
+ * Colour comes only from --pv-* (set by the dialog) and the --sd-* inks the
+ * scene works out per palette (the now label and the three alert rows). Layout is a container query on .sd, never the
+ * viewport: wide 960+, mid 600 to 959, narrow under 600.
+ * Type: 12 / 13 / 15 / 17 / 20 / 28px, plus one display figure in clamp().
+ * Figures and axes are Geist Mono (already global); everything else is Geist,
+ * loaded here only, so it is fetched only when this example opens. */
+
+@font-face{font-family:'PV Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+.sd{
+  container:sd / inline-size;
+  isolation:isolate;
+  min-height:100%;
+  background:var(--pv-canvas);
+  color:var(--pv-text);
+  font-family:'PV Geist','Switzer Fallback',system-ui,sans-serif;
+  font-size:13px;
+  line-height:1.5;
+  font-variant-numeric:tabular-nums;
+}
+.sd :where(h3,p,ul,figure,figcaption){margin:0;padding:0;font:inherit}
+.sd :where(ul){list-style:none}
+.sd :where(*,*::before,*::after){box-sizing:border-box}
+.sd-ico{flex:none;display:block}
+
+/* ── Top bar ── */
+.sd-top{
+  display:flex;align-items:center;gap:var(--s-4);
+  min-height:56px;padding:var(--s-2) var(--s-5);
+  background:var(--pv-surface);border-bottom:1px solid var(--pv-border);
+}
+.sd-brand{display:inline-flex;align-items:center;gap:var(--s-2);font-size:15px;font-weight:600;letter-spacing:-.01em}
+.sd-site{color:var(--pv-muted)}
+.sd-day{margin-left:auto;font-weight:600}
+.sd-sample{font-size:12px;color:var(--pv-muted)}
+
+.sd-seg{display:inline-flex;padding:2px;border:1px solid var(--pv-border);border-radius:8px;background:var(--pv-canvas)}
+.sd-seg>span{padding:2px var(--s-3);border-radius:6px;font-size:13px;color:var(--pv-muted)}
+.sd-seg>span.is-on{background:var(--pv-raised);color:var(--pv-text);font-weight:600}
+.sd-seg--lead{display:none}
+
+/* ── Grid ── */
+.sd-grid{
+  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+  gap:var(--s-5);padding:var(--s-5);
+}
+.sd-lead{grid-column:1 / span 8;min-width:0}
+.sd-side{grid-column:9 / span 4;display:flex;flex-direction:column;gap:var(--s-5);min-width:0}
+.sd-table{grid-column:1 / -1}
+
+.sd-panel{padding:var(--s-4) var(--s-5);background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:12px;min-width:0}
+.sd-label{font-size:13px;color:var(--pv-muted)}
+.sd-meta{font-size:13px;color:var(--pv-muted)}
+.sd-h{font-size:17px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+
+/* ── Lead: the one big figure, then the curve ── */
+.sd-fig{
+  margin-top:var(--s-1);
+  font-family:'Geist Mono',ui-monospace,monospace;font-weight:500;
+  font-size:clamp(40px,5cqi,56px);line-height:1;letter-spacing:-.04em;
+}
+.sd-fig small{font-size:20px;letter-spacing:0;color:var(--pv-muted)}
+.sd-credit{display:inline-flex;align-items:center;gap:var(--s-1);margin-top:var(--s-2);font-weight:600;color:var(--pv-success-ink)}
+.sd-credit .sd-ico{width:12px;height:12px}
+
+.sd-chart{
+  display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:260px auto auto;
+  column-gap:var(--s-2);margin-top:var(--s-5);
+}
+.sd-yaxis{position:relative;grid-row:1}
+.sd-yaxis>span,
+.sd-xaxis>span{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:var(--pv-muted)}
+.sd-yaxis>span{position:absolute;right:0;transform:translateY(-50%)}
+.sd-yaxis>span:nth-child(1){top:0}
+.sd-yaxis>span:nth-child(2){top:33.333%}
+.sd-yaxis>span:nth-child(3){top:66.667%}
+.sd-yaxis>span:nth-child(4){top:100%}
+
+.sd-plot{position:relative;grid-row:1;grid-column:2;border-bottom:1px solid var(--pv-border-strong)}
+.sd-grid-l{position:absolute;left:0;right:0;height:0;border-top:1px solid var(--sd-line)}
+.sd-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;animation:sd-reveal 600ms cubic-bezier(.23,1,.32,1) both}
+
+.sd-area{stroke:none}
+.sd-area--solar{fill:var(--pv-primary)}
+.sd-area--battery{fill:var(--pv-secondary)}
+.sd-area--grid{fill:var(--pv-deep)}
+.sd-edge,.sd-seam{fill:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.sd-seam{stroke:var(--pv-surface);stroke-width:2}
+.sd-actual .sd-area--solar{stroke:var(--sd-solar-edge);stroke-width:1;vector-effect:non-scaling-stroke}
+.sd-forecast .sd-area{opacity:.35}
+.sd-edge{stroke-width:1.5;stroke-dasharray:4 3}
+.sd-edge--solar{stroke:var(--pv-primary)}
+.sd-edge--battery{stroke:var(--pv-secondary)}
+.sd-edge--grid{stroke:var(--pv-deep)}
+
+.sd-tag{
+  position:absolute;z-index:1;transform:translate(-50%,calc(-100% - 6px));
+  display:inline-flex;align-items:center;gap:var(--s-1);
+  padding:0 var(--s-2);border-radius:6px;background:var(--pv-surface);border:1px solid var(--pv-border);
+  font-size:12px;font-weight:600;white-space:nowrap;
+}
+/* Ends 6px short of the now line, which sits at this tag's left value. */
+.sd-tag--before-now{transform:translate(calc(-100% - 6px),calc(-100% - 6px))}
+.sd-tag>i{width:8px;height:8px;border-radius:2px}
+.sd-tag>i[data-role="primary"]{background:var(--pv-primary)}
+.sd-tag>i[data-role="secondary"]{background:var(--pv-secondary)}
+.sd-tag>i[data-role="deep"]{background:var(--pv-deep)}
+
+.sd-now{position:absolute;top:0;bottom:0;z-index:2;width:0}
+.sd-now-line{position:absolute;top:0;bottom:0;left:-1px;width:2px;background:var(--pv-accent)}
+.sd-now-dot{position:absolute;top:-3px;left:-6px;width:12px;height:12px;border-radius:50%;background:var(--pv-accent);box-shadow:0 0 0 2px var(--pv-surface)}
+.sd-now-t{
+  position:absolute;top:-28px;left:0;transform:translateX(-50%);
+  padding:0 var(--s-1);background:var(--pv-canvas);
+  font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;font-weight:600;white-space:nowrap;color:var(--sd-now-ink);
+}
+
+.sd-xaxis{position:relative;grid-column:2;height:24px}
+.sd-xaxis>span{position:absolute;top:var(--s-1);transform:translateX(-50%)}
+.sd-xaxis>span:first-child{transform:none}
+.sd-xaxis>span:last-child{transform:translateX(-100%)}
+.sd-cap{grid-column:2;font-size:12px;color:var(--pv-muted)}
+
+/* ── Side: battery ring and alerts ── */
+.sd-battery{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
+.sd-ring{position:relative;width:120px;height:120px}
+.sd-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.sd-ring circle{fill:none;stroke-width:10}
+.sd-ring-track{stroke:var(--pv-raised)}
+.sd-ring-arc{stroke:var(--pv-accent);stroke-linecap:round;animation:sd-arc 600ms cubic-bezier(.23,1,.32,1) both}
+.sd-ring-v{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:'Geist Mono',ui-monospace,monospace;font-size:28px;font-weight:500;letter-spacing:-.03em;line-height:1;
+}
+.sd-ring-v small{font-size:15px;color:var(--pv-muted)}
+.sd-ring-v{grid-auto-flow:column;justify-content:center;align-items:baseline;align-content:center}
+
+.sd-alerts{display:flex;flex-direction:column;gap:var(--s-3)}
+.sd-alist{display:flex;flex-direction:column;gap:var(--s-2)}
+.sd-alert{display:flex;gap:var(--s-2);align-items:flex-start;padding:var(--s-2) var(--s-3);border-radius:8px;font-size:13px}
+.sd-alert .sd-ico{margin-top:2px}
+.sd-alert b{font-weight:600}
+.sd-alert u{text-underline-offset:2px;font-weight:600}
+.sd-alert[data-tone="warning"]{background:var(--pv-warning-tint);color:var(--sd-warning-ink)}
+.sd-alert[data-tone="error"]{background:var(--pv-error-tint);color:var(--sd-error-ink)}
+.sd-alert[data-tone="info"]{background:var(--pv-info-tint);color:var(--sd-info-ink)}
+
+/* ── Table ── */
+.sd-thead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-1) var(--s-4);margin-bottom:var(--s-3)}
+.sd-row{
+  display:grid;grid-template-columns:minmax(120px,1.2fr) 80px minmax(0,2.4fr) 80px;
+  align-items:center;gap:var(--s-4);padding:var(--s-2) 0;border-top:1px solid var(--pv-border);
+}
+.sd-row--head{border-top:0;font-size:12px;color:var(--pv-muted)}
+.sd-row--total{font-weight:600;border-top-color:var(--pv-border-strong)}
+.sd-num{text-align:right;font-family:'Geist Mono',ui-monospace,monospace}
+.sd-row--head .sd-num{font-family:inherit}
+.sd-src{display:inline-flex;align-items:center;gap:var(--s-2)}
+.sd-key{width:10px;height:10px;border-radius:3px}
+.sd-key[data-role="primary"],.sd-bar>i[data-role="primary"]{background:var(--pv-primary)}
+.sd-key[data-role="secondary"],.sd-bar>i[data-role="secondary"]{background:var(--pv-secondary)}
+.sd-key[data-role="deep"],.sd-bar>i[data-role="deep"]{background:var(--pv-deep)}
+.sd-share{display:flex;align-items:center;gap:var(--s-3);min-width:0}
+.sd-bar{position:relative;flex:1;height:8px;border-radius:4px;background:var(--pv-subtle);overflow:hidden}
+.sd-bar>i{position:absolute;inset:0 auto 0 0;border-radius:4px;box-shadow:2px 0 0 var(--pv-surface)}
+.sd-pct{width:36px;text-align:right;font-family:'Geist Mono',ui-monospace,monospace;color:var(--pv-muted)}
+
+/* ── Mid: the side column becomes two halves under the lead ── */
+@container sd (max-width:959px){
+  .sd-lead,.sd-side{grid-column:1 / -1}
+  .sd-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);align-items:start}
+  .sd-row{grid-template-columns:minmax(110px,1.2fr) 72px minmax(0,2fr)}
+  .sd-chg{display:none}
+}
+
+/* ── Narrow: wordmark and day, the switch under the figure, one column ── */
+@container sd (max-width:599px){
+  .sd-top{padding:var(--s-2) var(--s-4);gap:var(--s-3)}
+  .sd-site,.sd-sample,.sd-seg--top{display:none}
+  .sd-seg--lead{display:inline-flex;margin-top:var(--s-4)}
+  .sd-grid{gap:var(--s-4);padding:var(--s-4)}
+  .sd-side{grid-template-columns:1fr}
+  .sd-chart{grid-template-columns:24px minmax(0,1fr);grid-template-rows:200px auto auto}
+  .sd-xaxis>span:not(.is-6){display:none}
+  .sd-panel{padding:var(--s-4)}
+  .sd-row{grid-template-columns:minmax(0,1fr) 72px}
+  .sd-share{display:none}
+}
+
+/* ── Signature moment: the day draws in to now, the ring fills with it ── */
+@keyframes sd-reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes sd-arc{from{stroke-dasharray:0 100}}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .sd-svg,
+  html:not([data-reduced-motion="false"]) .sd-ring-arc{animation:none}
+}
+html[data-reduced-motion="true"] .sd-svg,
+html[data-reduced-motion="true"] .sd-ring-arc{animation:none}

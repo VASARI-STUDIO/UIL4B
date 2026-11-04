@@ -106,7 +106,7 @@ for (const rung of RUNGS) {
       // line is the one number a visitor reads before deciding the library is
       // small rather than metered.
       await expect(page.locator(CARD)).toHaveCount(rung.cap)
-      await expect(page.locator('.drh-head p')).toHaveText(`${rung.cap} gradients`)
+      await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_GRADIENTS.length} gradients · ${rung.cap} shown`)
       const names = await page.locator('.grg-card .lbry-card-name, .grg-card h3').allInnerTexts()
       expect(names.map((n) => n.trim()).sort()).toEqual(OPEN.map((g) => g.name).sort())
     })

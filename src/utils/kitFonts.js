@@ -193,11 +193,11 @@ export async function loadKitFonts(requests, { fetch: fetchImpl = globalThis.fet
   return out
 }
 
-/** The publisher's own faces, Geist and Geist Mono, from our origin. */
-export async function loadPublisherFonts({ fetch: fetchImpl = globalThis.fetch, signal } = {}) {
+/** The publisher's own faces from our origin: the kit layout's chrome families, Geist and Geist Mono by default. */
+export async function loadPublisherFonts({ fetch: fetchImpl = globalThis.fetch, signal, families = ['Geist', 'Geist Mono'] } = {}) {
   const get = withTimeout(fetchImpl, signal)
   const fonts = []
-  for (const family of ['Geist', 'Geist Mono']) {
+  for (const family of families) {
     const entry = SELF_HOSTED[family]
     const faces = []
     for (const [file, subset] of entry.files) {
@@ -207,7 +207,7 @@ export async function loadPublisherFonts({ fetch: fetchImpl = globalThis.fetch, 
     fonts.push({ family, axis: entry.axis, faces })
   }
   const texts = []
-  for (const family of ['Geist', 'Geist Mono']) {
+  for (const family of families) {
     const res = await get(`/fonts/${SELF_HOSTED[family].license}`)
     if (res) texts.push(await res.text())
   }

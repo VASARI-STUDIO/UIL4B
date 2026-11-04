@@ -33,6 +33,12 @@
   color: var(--tl-dim);
 }
 
+.alt-page .ai-image-consent a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
 .alt-page .alt-btn {
@@ -193,11 +199,11 @@
 .alt-page .alt-example-tag {
   display: inline-block;
   padding: 3px 7px;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   border-radius: var(--radius-xs);
 }
 
@@ -265,7 +271,7 @@
 
 .alt-page .alt-card-name { flex: 1; min-width: 0; overflow: hidden; font-weight: 540; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
 
-.alt-page .alt-card-size { flex-shrink: 0; font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.alt-page .alt-card-size { flex-shrink: 0; font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .alt-page .alt-card-status { font-size: 12.5px; font-weight: 540; color: var(--t1); }
 
@@ -299,9 +305,12 @@
 
 .alt-page .alt-card-text:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
 
+/* The label and the length sit above the text they describe. */
+.alt-page .alt-card-result-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
 .alt-page .alt-card-actions { display: flex; align-items: center; gap: 8px; }
 
-.alt-page .alt-card-count { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.alt-page .alt-card-count { font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .alt-page .alt-card-count.over { color: var(--warn-strong); }
 

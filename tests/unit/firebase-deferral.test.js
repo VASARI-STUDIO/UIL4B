@@ -145,7 +145,6 @@ const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
   // sourcemap in a production build. The `vanished` half of the assertion below
   // is what caught it: a name left in this list after its file is gone makes the
   // test red, which is the property that keeps the list honest.
-  'src/components/prompt/SubmitPromptPanel.jsx',
   'src/utils/communityQueueApi.js',
   'src/utils/feedbackQueueApi.js',
   'src/utils/mediaUpload.js',

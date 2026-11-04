@@ -164,9 +164,7 @@ test('the word reveal has a visible resting state', () => {
 test('the hero does not wait on a scroll observer to become visible', () => {
   // `[data-reveal]` starts at opacity:0 in global.css. On the fold that would
   // blank the largest paint of the prerendered shell until hydration.
-  assert.ok(!/className=\{heroLit \? 'sp-hero is-in' : 'sp-hero'\}[\s\S]{0,80}data-reveal/.test(PAGE),
-    'the hero carries data-reveal, which starts it at opacity:0')
-  const heroTag = /<header className=\{heroLit[^>]*>/.exec(PAGE)
+  const heroTag = /<header\s[^>]*heroLit[^>]*>/.exec(PAGE)
   assert.ok(heroTag, 'the hero header no longer toggles its own entrance class')
   assert.ok(!heroTag[0].includes('data-reveal'), 'the hero header has grown a data-reveal attribute')
   assert.ok(PAGE.includes('data-hero-prepainted'),
@@ -273,12 +271,24 @@ test('every glyph the page asks for is one the page ships', () => {
 
 test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
   // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+no="(\d\d)"\s+name="([^"]+)"/g)].map((m) => `${m[1]} ${m[2]}`)
-  assert.deepEqual(names, ['01 Palette builder', '02 Icon library', '03 Font Gallery', '04 File converter'])
-  const panels = [...BENCH_SRC.matchAll(/data-panel="(\d)"/g)].map((m) => m[1])
-  assert.deepEqual(panels, ['0', '1', '2', '3'], 'the bench no longer renders four [data-panel] windows')
-  assert.match(BENCH_SRC, /const RAIL = \['Palette builder', 'Icon library', 'Font gallery', 'File conversion'\]/,
-    'the rail no longer lists the design\'s four rows')
+  // The windows carry no title bar now: their names live on the rail list and in each article's aria-label.
+  const names = [...(/const RAIL = \[([^\]]+)\]/.exec(BENCH_SRC)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
+  assert.ok(!BENCH_SRC.includes('sp-panel-bar') && !BENCH_SRC.includes('sp-panel-name'), 'the bench draws a window title bar again')
+  assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
+  // One `windows` list feeds both layouts, and each entry is wrapped once in a
+  // [data-panel] article numbered by its place in the list.
+  const list = /const windows = \[([\s\S]*?)\n {2}\]/.exec(BENCH_SRC)
+  assert.ok(list, 'the bench no longer builds its four windows as one list')
+  const entries = [...list[1].matchAll(/<(PalettePanel|IconPanel|FontPanel|BenchConverter)\b/g)].map((m) => m[1])
+  assert.deepEqual(entries, ['PalettePanel', 'IconPanel', 'FontPanel', 'BenchConverter'], 'the bench windows are not the four tools, in order')
+  assert.equal([...BENCH_SRC.matchAll(/data-panel=\{i\}/g)].length, 1, 'the bench no longer numbers its [data-panel] windows from the list')
+  assert.match(BENCH_SRC, /const RAIL = \['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'\]/,
+    'the rail no longer lists the four tools by their own names, matching the window titles')
+  // No fake window chrome, no duplicate numbering, no glyph-as-icon marks.
+  for (const gone of ['sp-panel-lights', 'sp-panel-no', 'sp-fontrow-no', 'sp-rail-mark']) {
+    assert.ok(!BENCH_SRC.includes(gone), `the bench renders .${gone} again`)
+  }
+  assert.ok(!/['"`>](?:●|✓|\+)['"`<]/.test(BENCH_SRC), 'the bench draws a unicode glyph as an icon again')
   // AI Studio is not one of the design's windows.
   assert.ok(!/AI Studio/.test(BENCH_SRC), 'the bench has an AI Studio window again')
 })
@@ -301,7 +311,7 @@ test('the Compress panel describes compressing, not converting', () => {
   const copy = CONVERTER_SRC
     .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
     .replace(/file-converter|3d-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter</g, '')
+    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter<|label: 'File Converter'/g, '')
     .replace(/A machined bracket turning, converted from/g, '')
   const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
   assert.deepEqual(left, [], 'the Compress panel still says "convert"')
@@ -377,7 +387,8 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   // so each card must sit in a wrapper that also holds the cards after it.
   const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
   assert.equal(nests, 3, 'the exports stack no longer nests its three cards (A ⊃ B ⊃ C)')
-  const order = ['<Card index={0}', '<div className="sp-stack-nest">', '<Card index={1}', '<Card index={2}', 'sp-stack-pad--tail']
+  // Card 1 is the OneCard, card 2 a PlateCard and card 3 the ShelfCard (each builds its own <Card>).
+  const order = ['<OneCard index={0}', '<div className="sp-stack-nest">', '<PlateCard index={1}', '<ShelfCard index={2}', 'sp-stack-pad--tail']
   let at = EXPORTS_SRC.indexOf('<div className="sp-stack-nest">')
   for (const needle of order) {
     const next = EXPORTS_SRC.indexOf(needle, at)

@@ -17,6 +17,7 @@
 
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
+import { settleTypeScaleView, showTypeScaleLadder, showTypeScalePage } from './type-scale-view.js'
 
 // The visible one. Type Scale keeps a second, hidden ladder in no case, but the
 // rail and the ladder both carry `.seg-label` and `.tsc-select`, and a
@@ -63,14 +64,27 @@ test.describe('Type Scale · the overhaul', () => {
 
   test('the scale bar is the two numbers, and they drive the ladder', async ({ page }) => {
     watch(page, 'designer choosing a base and a ratio')
-    await go(page, '/create/type-scale')
 
-    // The bar sits ABOVE the grid, so the controls that make the scale are
-    // adjacent to the ladder they drive at every width — which is what the
-    // 1344px column reorder used to buy for the rail, and no longer has to.
-    const barTop = await page.locator('.tsc-scale-bar').evaluate(el => el.getBoundingClientRect().top)
-    const ladderTop = await page.locator('.tsc-ladder').evaluate(el => el.getBoundingClientRect().top)
-    expect(barTop, 'the scale bar leads the ladder').toBeLessThan(ladderTop)
+    // The controls that make the scale are adjacent to the ladder they drive at
+    // every width. Stacked, the bar is above the ladder. In the 1440 split the
+    // panel is the column beside the ladder, so the bar cannot be above it: it
+    // has to start level with it instead, not below it or after it.
+    for (const [w, h] of [[1440, 900], [1200, 900], [768, 1024]]) {
+      await page.setViewportSize({ width: w, height: h })
+      await go(page, '/create/type-scale')
+      const layout = await settleTypeScaleView(page)
+      const bar = await page.locator('.tsc-scale-bar').evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, left: r.left } })
+      const ladder = await page.locator('.tsc-ladder').evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, right: r.right } })
+      if (layout === 'split') {
+        expect(w, 'only the 1440 window is split').toBe(1440)
+        expect(bar.left, `${w}px: the split puts the bar beside the ladder`).toBeGreaterThanOrEqual(ladder.right - 1)
+        expect(bar.top, `${w}px: beside the ladder, the scale bar starts level with it`).toBeLessThanOrEqual(ladder.top + 40)
+      } else {
+        expect(bar.top, `${w}px: the scale bar leads the ladder`).toBeLessThan(ladder.top)
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/type-scale')
 
     // WIRING. The ratio is a control in the bar; the range beside it and the
     // top row of the ladder are both computed from it. At the default
@@ -79,11 +93,11 @@ test.describe('Type Scale · the overhaul', () => {
     // 20 x 1.5^6 = 227.81 -> 228.
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(range).toHaveText('10px – 61px')
+    await expect(range).toHaveText('9 steps, 10px to 61px')
     await expect(largest).toContainText('61px')
 
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(range).toHaveText('7px – 182.5px')
+    await expect(range).toHaveText('9 steps, 7px to 182.5px')
     await expect(largest).toContainText('182.5px')
 
     // And the base, from its own control in the same bar.
@@ -94,12 +108,12 @@ test.describe('Type Scale · the overhaul', () => {
     await expect(largest).toContainText('228px')
   })
 
-  test('the ladder comes before the rail, at every width', async ({ page }) => {
+  test('the panel is a card above the ladder when stacked, and the ladder is the left column beside it', async ({ page }) => {
     watch(page, 'designer on a laptop and on a phone')
 
-    // The rail used to lead in the DOM. Below 1344px this page is a single
-    // column, so that put ~330px of families and a closed disclosure between
-    // the scale bar and the thing it describes on most screens.
+    // Below 1024 the panel (Base, Ratio, families) leads, in the source as well
+    // as on screen: 187-type-scale-ladder checks the source order. From 1024 the
+    // ladder takes the wide left column and the panel the right.
     for (const [w, h] of [[1440, 900], [1200, 900], [768, 1024], [390, 844]]) {
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
@@ -112,40 +126,53 @@ test.describe('Type Scale · the overhaul', () => {
         // Two columns: the ladder takes the wide left column.
         expect(order.outLeft, `${w}px: the ladder is the left column`).toBeLessThan(order.cfgLeft)
       } else {
-        expect(order.outTop, `${w}px: the ladder is above the rail`).toBeLessThan(order.cfgTop)
+        expect(order.cfgTop, `${w}px: the panel (Base, Ratio, families) is a card above the ladder when stacked`).toBeLessThan(order.outTop)
       }
     }
   })
 
-  test('preview text replaces the specimen in the ladder and in the page preview', async ({ page }) => {
-    watch(page, 'designer checking the scale against their own words')
-    await go(page, '/create/type-scale')
+  // At 1440 the ladder and the page are side by side; at 1024 Page is a view of
+  // its own behind the switch. The control has to drive both previews either way.
+  for (const [w, h] of [[1440, 900], [1024, 800]]) {
+    test(`preview text replaces the specimen in the ladder and in the page preview at ${w}`, async ({ page }) => {
+      watch(page, 'designer checking the scale against their own words')
+      await page.setViewportSize({ width: w, height: h })
+      await go(page, '/create/type-scale')
 
-    // The homepage Typography panel and Font Pair have both had this control
-    // all along. The tool whose only job is judging sizes did not.
-    const rows = page.locator('.tsc-row-text')
-    await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
-    await expect(page.locator('.tsc-article-h1')).toHaveText('A page set on this scale')
+      // The homepage Typography panel and Font Pair have both had this control
+      // all along. The tool whose only job is judging sizes did not.
+      const rows = page.locator('.tsc-row-text')
+      await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
+      await showTypeScalePage(page)
+      await expect(page.locator('.tsc-article-h1')).toHaveText('A page set on this scale')
+      await showTypeScaleLadder(page)
 
-    await page.getByLabel('Preview text').fill('Checkout · 3 items')
+      // Exact: the 390 settings sheet's name also contains "preview text".
+      await page.getByLabel('Preview text', { exact: true }).fill('Checkout · 3 items')
 
-    // WIRING, and the point of the control: EVERY step takes the words, so the
-    // question "is this size usable for this string" can be asked at all nine.
-    const count = await rows.count()
-    for (let i = 0; i < count; i++) {
-      await expect(rows.nth(i)).toHaveText('Checkout · 3 items')
-    }
-    // One string, both previews.
-    await expect(page.locator('.tsc-article-h1')).toHaveText('Checkout · 3 items')
+      // WIRING, and the point of the control: EVERY step takes the words, so the
+      // question "is this size usable for this string" can be asked at all nine.
+      const count = await rows.count()
+      expect(count).toBe(9)
+      for (let i = 0; i < count; i++) {
+        await expect(rows.nth(i)).toHaveText('Checkout · 3 items')
+      }
+      // One string, both previews.
+      await showTypeScalePage(page)
+      await expect(page.locator('.tsc-article-h1')).toHaveText('Checkout · 3 items')
+      await showTypeScaleLadder(page)
 
-    // Emptying it falls back to the pangram rather than to nothing.
-    await page.getByLabel('Preview text').fill('')
-    await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
-  })
+      // Emptying it falls back to the pangram rather than to nothing.
+      await page.getByLabel('Preview text', { exact: true }).fill('')
+      await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
+    })
+  }
 
   test('fine tuning is closed on arrival and every control is still reachable', async ({ page }) => {
     watch(page, 'designer who needs letter spacing')
     await go(page, '/create/type-scale')
+    // At 1440 the Scale / Page / Code switch is gone, so any tab here is a stray.
+    expect(await settleTypeScaleView(page)).toBe('split')
 
     const toggle = page.getByRole('button', { name: 'Fine tuning' })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -153,7 +180,7 @@ test.describe('Type Scale · the overhaul', () => {
     // Closed means closed: nothing inside is reachable, and in particular the
     // fluid/fixed pair must not answer to the preview width switch's class.
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(0)
-    await expect(visible(page, '.tsc-width-btn')).toHaveCount(3)
+    await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(page.locator('#tsc-round')).toBeHidden()
 
     await toggle.click()
@@ -165,9 +192,15 @@ test.describe('Type Scale · the overhaul', () => {
       await expect(page.locator(`#${id}`), `${id} survives the disclosure`).toBeVisible()
     }
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(2)
+    // Opening the disclosure adds buttons, never tabs.
+    await expect(page.getByRole('tab')).toHaveCount(0)
 
-    // And it still drives the maths from in there.
+    // And it still drives the maths from in there. The ladder prints each size to
+    // one decimal, so the top step (61.04) reads 61px with or without rounding; the
+    // second step shows it: 16 x 1.25^5 = 48.83 reads 49px rounded and 48.8px not.
+    const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
+    await expect(second).toContainText('49px')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('61.04px')
+    await expect(second).toContainText('48.8px')
   })
 })

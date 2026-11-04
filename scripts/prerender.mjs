@@ -34,14 +34,16 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { SITE_ORIGIN, canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
-import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
-import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
+import { DEFAULT_CARD, cardFor, cardUrl, twitterCardUrl } from './share-cards.mjs'
+import { articleJsonLd, breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 import { buildLlmsTxt } from './llms-txt.mjs'
 import { HOME_SHELL_ROUTES, applyHomeShell, assertHomeShellApplied } from './home-shell.mjs'
+import { applyPageShell, assertPageShellApplied, guideFor, shellContentFor, wantsPageShell } from './page-shell.mjs'
+import { renderGuideBodies } from './guide-html.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 /* WHICH BUILD TO PRERENDER. Defaults to `dist`, so `npm run build` and every
@@ -154,7 +156,7 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
     sub('og:image:alt', /<meta\s+property="og:image:alt"\s+content="[^"]*"\s*\/?>/,
       `<meta property="og:image:alt" content="${attr(card.alt)}" />`)
     sub('twitter:image', /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/?>/,
-      `<meta name="twitter:image" content="${attr(src)}" />`)
+      `<meta name="twitter:image" content="${attr(twitterCardUrl(ORIGIN, card))}" />`)
   }
 
   // ── Per-route structured data ─────────────────────────────────────────────
@@ -225,6 +227,10 @@ async function main() {
   const allMisses = new Set()
   const untitled = []
 
+  // The Learn guides, rendered once. Skipped when the matrix holds no guide, so
+  // a run over a trimmed route list never starts the renderer for nothing.
+  const guideBodies = routes.some((r) => guideFor(r)) ? await renderGuideBodies() : {}
+
   for (const route of routes) {
     const title = PAGE_TITLES[route]
     const description = PAGE_DESCRIPTIONS[route] || DEFAULT_DESCRIPTION
@@ -244,7 +250,7 @@ async function main() {
       robots: robotsFor(route),
       canonical: canonicalUrl(route),
       card: cardFor(route),
-      schema: breadcrumbJsonLd(route, ORIGIN),
+      schema: breadcrumbJsonLd(route, ORIGIN) + articleJsonLd(route, ORIGIN),
     })
     misses.forEach(m => allMisses.add(m))
 
@@ -259,10 +265,21 @@ async function main() {
     // It is scoped to the two sales-page URLs and the 404 shell never sees it.
     // See scripts/home-shell.mjs for the measurement that motivated it and for
     // why the markup is the hydrated markup element for element.
-    const body = HOME_SHELL_ROUTES.has(route) ? applyHomeShell(html) : html
+    //
+    // EVERY OTHER ROUTE gets a heading and an intro, and a Learn guide its
+    // text, in place of the skeleton's empty title boxes — see
+    // scripts/page-shell.mjs for where each piece comes from and why.
+    let body = html
+    if (HOME_SHELL_ROUTES.has(route)) {
+      body = applyHomeShell(html)
+      assertHomeShellApplied(body, `${route}/index.html`)
+    } else if (wantsPageShell(route)) {
+      const content = shellContentFor(route, guideBodies)
+      body = applyPageShell(html, content)
+      assertPageShellApplied(body, content, `${route}/index.html`)
+    }
 
     const dir = path.join(dist, route.replace(/^\//, ''))
-    if (body !== html) assertHomeShellApplied(body, `${route}/index.html`)
     await mkdir(dir, { recursive: true })
     await writeFile(path.join(dir, 'index.html'), body, 'utf8')
   }

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -7,16 +7,24 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { readSessionHint } from '../utils/sessionHint'
 import { NEW_PROJECT_STATE, guideEntry, startGuide } from '../utils/brandKitGuide'
 import { getUsageCount } from '../utils/usageTracker'
+import { getSyncState, subscribeSync } from '../utils/syncStatus'
+import { mostRecentProject, partsPresent } from '../utils/userHome'
 import LocalClock from '../components/LocalClock'
-import SaveRefusal from '../components/SaveRefusal'
 import Glyph from '../components/userhome/Glyph'
-import PlanStrip from '../components/userhome/PlanStrip'
+import Greeting from '../components/userhome/Greeting'
+import TodayPanel from '../components/userhome/TodayPanel'
+import ContinueCard from '../components/userhome/ContinueCard'
+import StarterCard from '../components/userhome/StarterCard'
+import FirstPaletteCard from '../components/userhome/FirstPaletteCard'
+import ProjectRows from '../components/userhome/ProjectRows'
 import StartSomething from '../components/userhome/StartSomething'
-import ProjectTile from '../components/userhome/ProjectTile'
 import DiscoverPicks from '../components/userhome/DiscoverPicks'
 import ProPanel from '../components/userhome/ProPanel'
 import RecentExports from '../components/userhome/RecentExports'
+import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import useProjectIcons from '../hooks/useProjectIcons'
+import useMediaQuery from '../hooks/useMediaQuery'
+import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -24,6 +32,9 @@ import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/wor
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
+// The /tools rows and drawn plates this page reuses (.spt-row, .spt-art). The Spectrum tokens and
+// the ink pill (.spectrum, .sp-pill) come from spectrum.css, which is already in the entry graph.
+import '../styles/pages/spectrum-tools.css'
 
 // ── YOUR WORKSPACE ──────────────────────────────────────────────────────────
 //
@@ -32,14 +43,19 @@ import '../styles/pages/projects.css'
 // ruled rows, tip band or rotating starters: none of that is on the design's
 // screen, so none of it is here.
 //
-// What is here, in the design's order: the title and ONE accent "New project"; the plan
-// strip; "Start something"; "Recent projects"; "New in Discover"; the Pro panel.
-// Every value in it is read off the account, the plan config or the libraries
-// (see components/userhome/workspace.js for each one and what it replaced).
+// What is here, work first: a greeting and the title with New project; the lead
+// (the newest project's card with its next step, then the others as rows); Today
+// beside it (the date and time, the plan's allowances, recent exports); "Start
+// something"; "New in Discover"; the Pro panel. Every value in it is read off the
+// account, the plan config or the libraries (see components/userhome/workspace.js
+// for each one and what it replaced).
 //
-// Managing one project — rename, duplicate, archive, delete, overwrite — moved
-// to that project's own page, /projects/:id (ProjectDetail.jsx), which is where
-// the design's screen puts a project's controls.
+// ONE filled button per state: Continue when there is a project, Make your first
+// palette when there is none, New project when signed out. New project is
+// outlined whenever something else leads.
+//
+// Managing one project — rename, duplicate, archive, delete, overwrite, and its
+// icon — lives on that project's own page, /projects/:id (ProjectDetail.jsx).
 
 // THE "COMMUNITY" TAB IS GONE, AND IT WAS THE SAME FABRICATION THIS REPOSITORY
 // ALREADY DELETED ONCE.
@@ -67,17 +83,34 @@ import '../styles/pages/projects.css'
 // Nothing replaces it. /community is a real route with real curated links
 // credited to the platform they open; this page is for the projects you made.
 
-// A project's icon lives ON the project (`project.icon`) and syncs with it.
-// useProjectIcons moves any icon an older version kept in this browser onto
-// its project the first time both are known.
+// A project's icon lives ON the project (`project.icon`) and syncs with it. The cards read it from
+// there and the picker is on the project's page. useProjectIcons is still called here, for its
+// migration alone: it moves any icon an older version kept in this browser onto its project the
+// first time both are known, so a card's badge is right before that project's page is opened.
+
+
+// When the connection last dropped, for the "as of 07:41" on the allowances.
+let wentOfflineAt = 0
+const subscribeOnline = (fn) => {
+  const mark = () => { if (!readOnline()) wentOfflineAt = Date.now(); fn() }
+  window.addEventListener('online', mark)
+  window.addEventListener('offline', mark)
+  return () => { window.removeEventListener('online', mark); window.removeEventListener('offline', mark) }
+}
+const readOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
 
 export default function Projects() {
   const navigate = useNavigate()
-  const { loading: authLoading } = useAuth()
+  // On a phone (the spec's 390 order) Recent exports follows Discover instead of sitting in the rail
+  // under Today. One list, mounted in one place, so Tab and a screen reader meet it where it is drawn.
+  const phone = useMediaQuery('(max-width: 640px)')
+  const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
   const { openLogin } = useLoginPrompt()
-  const { projects, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
-  const { pickIcon } = useProjectIcons()
+  const { design, projects, projectsLoading, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  useProjectIcons()
+  const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)
+  const sync = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
 
   // ── THREE STATES, NOT TWO ────────────────────────────────────────
   //
@@ -92,12 +125,34 @@ export default function Projects() {
   const signedOut = !canSaveProjects && !resolving
 
   const [capRefusal, setCapRefusal] = useState('')
+  // New project is in the title row, and on a phone also under the work (see NewProject below).
+  // The refusal opens under the one that was pressed, so only that one draws it.
+  const [capAt, setCapAt] = useState('head')
+
+  // The cap refusal is a popover under New project: it closes on Escape and on a press elsewhere.
+  useEffect(() => {
+    if (!capRefusal) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setCapRefusal('') }
+    const onDown = (e) => { if (!e.target.closest?.('.uh-new-wrap')) setCapRefusal('') }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown) }
+  }, [capRefusal])
+
+  // The notice is in the flow on a phone and can open under the fixed tab bar. A ref callback runs once as
+  // it mounts (this one is stable, so a re-render never re-scrolls); `nearest` moves the page only as far as
+  // it takes, and projects.css gives it a scroll-margin that clears the tab bar. Smooth only when the
+  // user's own motion setting, then the OS, allows it.
+  const showCap = useCallback((el) => {
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [])
 
   // A new blank project: the cap refusal first, then the default design and the
   // walkthrough's first step, with its orientation card open.
   const startNew = () => {
     if (canSaveProjects && atProjectLimit) {
-      setCapRefusal(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+      setCapAt([...document.querySelectorAll('.uh-new-wrap')].find((w) => w.offsetParent !== null)?.dataset.where || 'head')
+      setCapRefusal(`The Free plan saves up to ${projectLimit} projects. Pro saves as many as you like.`)
       return
     }
     setCapRefusal('')
@@ -107,85 +162,134 @@ export default function Projects() {
   }
 
   const recent = [...projects].sort(byRecent)
-  const ai = aiUsageToday(getUsageCount, plan)
+  const lead = mostRecentProject(projects)
+  // The rest, newest first, with archived ones last.
+  const others = recent.filter((p) => p !== lead)
+  const rows = [...others.filter((p) => !p.archived), ...others.filter((p) => p.archived)]
+  // The account's own count from the server, once it answers; until then (and if
+  // it never does) this browser's count, which the strip labels as such.
+  const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null, plan?.id)
+  const ai = aiUsageToday(getUsageCount, plan, serverAi)
   const slots = projectSlots(projects.length, projectLimit)
 
+  // When the last answer came from, so the allowances can say "as of 07:41" while offline.
+  const asOf = online || !wentOfflineAt ? '' : new Date(wentOfflineAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+
+  const hasProjects = projects.length > 0
+  const loadingList = !signedOut && !resolving && projectsLoading && !hasProjects
+  const syncError = sync.errors.find((e) => e.channel === 'projects')
+  const loadFailed = !signedOut && !resolving && !hasProjects && !projectsLoading && (!online || !!syncError)
+  const workingChanged = Object.values(partsPresent(design)).some(Boolean)
+
+  const todayMeters = !signedOut && !resolving && !planLoading && !loadFailed && !loadingList
+    ? { planLabel: plan?.label || 'Free', isPro, ai, slots, asOf }
+    : null
+
+  let body
+  if (resolving || loadingList) {
+    /* WE DO NOT KNOW YET. The session hint says there is an account, so the list is unknown, not empty:
+       "No projects yet" here would tell a returning user their work was gone for the second auth takes. */
+    body = (
+      <div className="uh-continue uh-resolving" role="status">
+        <div className="uh-plate-skel" aria-hidden="true" />
+        <div className="uh-continue-body">
+          <span className="uh-bar" style={{ width: '40%' }} aria-hidden="true" />
+          <span className="uh-bar" style={{ width: '60%' }} aria-hidden="true" />
+          <p>Opening your projects…</p>
+        </div>
+      </div>
+    )
+  } else if (signedOut) {
+    body = workingChanged
+      ? <ContinueCard design={design} onSignIn={() => openLogin()} />
+      : <StartSomething inLead />
+  } else if (loadFailed) {
+    body = (
+      <div className="uh-continue uh-fail" role="alert">
+        <div className="uh-continue-body">
+          <p className="uh-fail-text">
+            {!online ? "You're offline. " : ''}Your projects didn't load. They're saved to your account, so nothing is lost.
+          </p>
+          <button type="button" className="uh-ghost" onClick={() => (syncError?.retry ? syncError.retry() : window.location.reload())}>Try again</button>
+        </div>
+      </div>
+    )
+  } else if (!hasProjects) {
+    /* No project yet: one action, straight into the Palette Builder. New project (title row) still
+       starts the full walkthrough, so this card is the only filled button on the screen. */
+    body = <FirstPaletteCard design={design} />
+  } else {
+    body = (
+      <>
+        {!online && <p className="uh-offline-note">You're offline. Showing the copy saved in this browser.</p>}
+        {lead
+          ? <ContinueCard project={lead} />
+          /* Every project is archived, so there is nothing to continue: the starter leads, with its one
+             filled button, and the archived projects follow as rows. */
+          : <StarterCard design={design} onStart={() => startNew()} archived limit={atProjectLimit ? projectLimit : null} />}
+        <ProjectRows projects={lead ? rows : recent} total={projects.length} label={lead ? 'Other projects' : 'Archived projects'} />
+      </>
+    )
+  }
+
+  // New project: top right of the title row. On a phone, with work on the page, it moves under that
+  // work, so the first screen holds one filled button (Continue). Both are in the DOM; CSS shows one,
+  // and the hidden one is out of the tab order and the accessibility tree.
+  const newProject = (where) => (
+    <div className={`uh-new-wrap uh-new-wrap--${where}${where === 'head' && !signedOut ? ' is-after-work' : ''}`} data-where={where}>
+      <button type="button" className={`uh-new${signedOut ? ' is-filled' : ''}`} onClick={startNew}>
+        <Glyph name="plus" size={14} />
+        <span>New project</span>
+      </button>
+      {capRefusal && capAt === where && (
+        <div className="uh-cap" ref={showCap} role="alert" data-testid="project-create-refusal">
+          <span>{capRefusal}</span>{' '}
+          <Link to="/plans" className="uh-quota-link">See plans</Link>
+        </div>
+      )}
+    </div>
+  )
+
+  const showExports = !signedOut && !resolving
+  const rail = (
+    <aside className="uh-rail" aria-label={showExports && !phone ? 'Today and recent exports' : 'Today'}>
+      <TodayPanel meters={todayMeters} signedOut={signedOut} onSignIn={() => openLogin()} />
+      {showExports && !phone && <RecentExports />}
+    </aside>
+  )
+  const main = (
+    <div className="uh-dash-main">
+      {body}
+      {!signedOut && newProject('foot')}
+    </div>
+  )
+
   return (
-    <div className="uh">
+    <div className="uh spectrum spt uh-spt">
       <div className="uh-main">
-        {/* The viewer's own date and time, from their machine. LocalClock renders nothing until the
-            browser has answered, so no prerendered shell carries a date. */}
-        <LocalClock className="uh-clock" />
-        <div className="uh-title">
-          <h1 className="uh-h1">Your workspace</h1>
-          <button type="button" className="uh-new" onClick={startNew}>
-            <Glyph name="plus" size={14} />
-            <span>New project</span>
-          </button>
-        </div>
-        {capRefusal && <SaveRefusal message={capRefusal} testId="project-create-refusal" />}
-
-        {/* The plan strip is for an account. A visitor who has never signed in
-            has no plan to be told about (20-billing-banner.spec.js). */}
-        {!signedOut && !resolving && !planLoading && (
-          <PlanStrip planLabel={plan?.label || 'Free'} ai={ai} slots={slots} />
-        )}
-
-        <StartSomething />
-
-        <div className="uh-recent-head">
-          <h2 className="uh-sec-h">Recent projects</h2>
+        <div className="uh-dash">
+          <div className="uh-dash-head">
+            <Greeting resolving={resolving} signedOut={signedOut} />
+            <div className="uh-title">
+              <h1 className="uh-h1">Your workspace</h1>
+              {/* The phone's date and time: one line under the title (the big clock is hidden in Today there). */}
+              <div className="uh-clock-slot"><LocalClock className="uh-clock-line" inline /></div>
+              {newProject('head')}
+            </div>
+          </div>
+          {signedOut ? <>{rail}{main}</> : <>{main}{rail}</>}
         </div>
 
-        {resolving ? (
-          /* WE DO NOT KNOW YET. The session hint says there is an account, so
-             the list is unknown, not empty — "No projects yet" here would tell a
-             returning user their work was gone for the second auth takes. */
-          <div className="uh-resolving" role="status">
-            <div className="fg-loader" />
-            <p>Opening your projects…</p>
-          </div>
-        ) : signedOut ? (
-          /* The design's empty card, carrying the sign-in the page needs. The sentence is
-             the one this page has always given a stranger. */
-          <div className="uh-empty uh-signin">
-            <h3 className="uh-empty-title">Sign in to keep what you build</h3>
-            <p className="uh-empty-text">
-              Every tool works without an account. Signing in is what makes a palette,
-              a pairing and a scale survive the tab — saved together as a project you can
-              reopen on any device.
-            </p>
-            <button type="button" className="uh-empty-cta" onClick={() => openLogin()}>
-              <span>Sign in</span>
-            </button>
-          </div>
-        ) : recent.length === 0 ? (
-          /* The design's empty state. Its second sentence — "Nothing leaves the browser
-             until you export it." — is deleted: a signed-in account's projects
-             sync to it (ProjectContext pushes them), so it is not true. */
-          <div className="uh-empty">
-            <h3 className="uh-empty-title">No projects yet</h3>
-            <p className="uh-empty-text">Start with a colour and the rest of the project follows.</p>
-            <button type="button" className="uh-empty-cta" onClick={startNew}>
-              <Glyph name="plus" size={14} />
-              <span>Start a project</span>
-            </button>
-          </div>
-        ) : (
-          <div className="uh-grid">
-            {recent.map((p) => (
-              <ProjectTile key={p.id} project={p} onPickIcon={pickIcon} />
-            ))}
-          </div>
-        )}
-
-        <RecentExports />
+        {/* Signed out with the default design, Start something is the lead itself. */}
+        {!(signedOut && !workingChanged) && <StartSomething />}
 
         <DiscoverPicks />
 
+        {showExports && phone && <RecentExports />}
+
         {/* Nothing to sell a Pro account — and nothing drawn until the plan is
             known, so a Pro account never sees it flash in and out. */}
-        {!isPro && (signedOut || !planLoading) && <ProPanel />}
+        {!isPro && (signedOut || !planLoading) && online && <ProPanel />}
       </div>
     </div>
   )

@@ -555,6 +555,7 @@ function loadRoute({ roster = [], accounts = {}, rosterFails = false } = {}) {
     // tests/unit/admin-allowlist.test.js and is asserted there against the
     // shipped function.
     isAdminEmail: (email) => typeof email === 'string' && email.trim().toLowerCase() === FOUNDER_EMAIL,
+    adminEmails: () => [FOUNDER_EMAIL],
     credentialProblem: () => null,
     adminDb: () => ({ collection }),
     adminAuth: () => ({
@@ -570,6 +571,7 @@ function loadRoute({ roster = [], accounts = {}, rosterFails = false } = {}) {
         if (!u) throw new Error(`there is no user record for ${uid}`)
         u.customClaims = { ...claims }
       },
+      revokeRefreshTokens: async () => {},
       listUsers: async () => { throw new Error('not modelled here') },
     }),
   }
@@ -856,11 +858,14 @@ test('minting the MODERATOR claim does not clobber an existing admin claim', asy
 test('a dropped moderator claim is removed rather than stored as false', async () => {
   // A present-but-false claim and an absent one mean the same thing to
   // roleFromClaims, and custom claims share a 1000-byte token budget.
-  const app = loadRoute({ roster: [], accounts: { 'ex-mod': { customClaims: { moderator: true, admin: true } } } })
-  await app.handshake(tokenFor('ex-mod', { moderator: true, admin: true }))
+  // `beta` stands for any claim the route does not own. (An `admin` claim on a
+  // non-allowlisted account is cleared by the handshake itself: see
+  // tests/unit/admin-claim-revocation.test.js.)
+  const app = loadRoute({ roster: [], accounts: { 'ex-mod': { customClaims: { moderator: true, beta: true } } } })
+  await app.handshake(tokenFor('ex-mod', { moderator: true, beta: true }))
   const claims = app.claimsOf('ex-mod')
   assert.ok(!('moderator' in claims), 'the dropped claim is stored as false instead of removed')
-  assert.equal(claims.admin, true, 'dropping the moderator claim took the admin claim with it')
+  assert.equal(claims.beta, true, 'dropping the moderator claim took another claim with it')
 })
 
 /* ── A roster that cannot be read ─────────────────────────────────────────── */

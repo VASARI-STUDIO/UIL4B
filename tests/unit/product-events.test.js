@@ -42,3 +42,8 @@ test('all five events are wired to their moments', () => {
   assert.match(at('src/App.jsx'), /sendEvent\(EVENTS\.signUp\)/)
   assert.match(at('src/pages/Checkout.jsx'), /sendEvent\(EVENTS\.checkoutStarted/)
 })
+
+test('`from` is kept only for our own surfaces', () => {
+  assert.deepEqual(cleanProps({ plan: 'yearly', from: 'kit-gallery' }), { plan: 'yearly', from: 'kit-gallery' })
+  assert.deepEqual(cleanProps({ plan: 'yearly', from: 'https://example.test/x' }), { plan: 'yearly' })
+})

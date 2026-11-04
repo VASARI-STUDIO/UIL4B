@@ -1,0 +1,76 @@
+/* The Palette Builder's previews (src/components/palette/PalettePreview.jsx).
+ * The examples (src/components/palette/examples/) carry their own stylesheets;
+ * this one holds the scene root and the legend's highlight rules.
+ *
+ * Colour comes only from the --pv-* custom properties that pvVars() sets on the
+ * scene root; spacing comes from --s-*. Nothing here reads the app theme, so a
+ * scene is light or dark by its own data-mode, whatever the page is.
+ *
+ * The root is a size container: the examples' layout changes are container
+ * queries on the width the scene is given, never on the viewport, and nothing
+ * is scaled, so text stays at its real pixel size.
+ */
+
+.pvs{
+  container:pvs / inline-size;
+  isolation:isolate;
+  position:relative;
+  width:100%;
+  min-height:100%;
+  overflow:hidden;
+  background:var(--pv-canvas);
+  color:var(--pv-text);
+  border:1px solid var(--pv-border);
+  border-radius:12px;
+  font-size:13px;
+  line-height:1.5;
+  font-variant-numeric:tabular-nums;
+  animation:pvs-in 150ms ease-out both;
+}
+@keyframes pvs-in{from{opacity:0}to{opacity:1}}
+
+.pvs :where(h2,h3,p,ul,dl,dd,dt){margin:0;padding:0;font:inherit}
+.pvs :where(ul){list-style:none}
+.pvs :where(*,*::before,*::after){box-sizing:border-box}
+
+/* ── Where each colour lands ───────────────────────────────────────────────
+ * The legend sets data-hit="on" on every element of the chosen role and "off"
+ * on the leaves of every other role; data-fail marks a role under its floor.
+ * Containers never dim, only leaves, so a highlighted child is not dimmed with
+ * its parent. The outline sits transparent at rest so it can fade in.
+ * The Contrast Checker marks by data-size (body, large, ui) the same way: a
+ * hit is a size class chosen in its legend, a fail a test the pair misses. */
+.pvs :is([data-role],[data-size]){outline:2px dashed transparent;outline-offset:2px;transition:outline-color 150ms ease-out,opacity 150ms ease-out}
+/* A role under its floor is flagged on the legend chip at all times; in the scene its element is outlined only under the pointer or focus, so a brand colour never reads as an error at rest. */
+.pvs [data-fail="on"]:not([data-size]):is(:hover,:focus-visible,:focus-within){outline:2px solid var(--pv-error)}
+/* The Contrast Checker's parts are the test itself, so a failing one stays marked. */
+.pvs [data-size][data-fail="on"]{outline:2px solid var(--pv-error)}
+.pvs [data-hit="on"]{outline:2px dashed var(--pv-hit,var(--pv-text))}
+.pvs [data-hit="on"][data-role~="neutral"],
+.pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
+/* Text of a Contrast Checker example is outlined outside its box even when its role is neutral; the inset used for a fill would sit on the glyphs. */
+.pvs [data-size]:not([data-size="ui"]):is([data-hit="on"],[data-fail="on"]){outline-offset:2px}
+.pvs [data-hit="off"]{opacity:.4}
+/* In the Contrast Checker's palette context the parts are the pair itself, and the
+ * labels inside them are the pair's own text, so a lit test never dims them: a
+ * "6-2" on its block or the tag's word would be a pair you cannot read. */
+.pvs[data-ctx="on"] :is([data-pair-part],[data-pair-part] *)[data-hit="off"]{opacity:1}
+/* Chromium draws an outline on an SVG shape as its bounding box, which on a
+ * stretched chart is a heavy bar across the whole drawing. So an SVG part drops
+ * the outline and is stroked instead: dashed for "where this colour lands",
+ * solid for a role under its floor. Hit comes last, as in the outline rules
+ * above, so a hover on a failing role still shows the dashes. */
+.pvs svg :is([data-role],[data-size]){outline:none}
+.pvs svg [data-fail="on"]:not([data-size]):is(:hover,:focus-visible){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
+.pvs svg [data-hit="on"]:not([data-size]){stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+/* A Contrast Checker part is judged by its own colour, so its stroke and fill stay as drawn
+ * and the mark is a crisp sleeve round it, made of four zero-blur shadows. */
+.pvs svg [data-size][data-fail="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-error)) drop-shadow(-1.5px 0 0 var(--pv-error)) drop-shadow(0 1.5px 0 var(--pv-error)) drop-shadow(0 -1.5px 0 var(--pv-error))}
+.pvs svg [data-size][data-hit="on"]{filter:drop-shadow(1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(-1.5px 0 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 1.5px 0 var(--pv-hit,var(--pv-text))) drop-shadow(0 -1.5px 0 var(--pv-hit,var(--pv-text)))}
+
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .pvs{animation:none}
+  html:not([data-reduced-motion="false"]) .pvs [data-role]{transition:none}
+}
+html[data-reduced-motion="true"] .pvs{animation:none}
+html[data-reduced-motion="true"] .pvs [data-role]{transition:none}

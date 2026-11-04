@@ -1,12 +1,12 @@
 // The brand kit walkthrough on a phone, and its closing step.
 //
-//   · On a phone the rail takes the bottom edge (the tab bar is hidden) and the card docks above it, so a
+//   · On a phone the bar takes the bottom edge (the tab bar is hidden) and the panel sits on it as a sheet, so a
 //     tap on any of their controls lands on that control, across at least 44px.
 //   · On a touch screen the name card does not raise the keyboard by itself,
 //     and once the field is focused Save stays above the keyboard.
 //   · On a phone the "What's this?" trigger is a visible icon button with the
 //     same name, and Escape on the card returns focus to it.
-//   · The last tool's Next opens "Name your kit": one name saves the project
+//   · The last tool's Next opens "Name your project": one name saves the project
 //     and names the kit, then the person lands on the project. The free cap
 //     refuses without losing anything; signed out, saving asks for an account
 //     and the work waits.
@@ -21,8 +21,11 @@ const DESIGN_KEY = 'vs-current-design'
 const SEED_COLOURS = ['#1D3557', '#E63946', '#F1FAEE']
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const introCard = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
-const nameCard = (page) => page.getByRole('dialog', { name: 'Name your kit' })
+const introCard = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
+const nameCard = (page) => page.getByRole('dialog', { name: 'Name your project' })
+// The closing step is one panel at every width: a sheet joined to the bar on a phone, a popover above it from 768px.
+const nameForm = nameCard
+const nameField = (page) => nameForm(page).getByRole('textbox', { name: 'Project name' })
 
 /** Prior state, written once per tab so the app's own writes are not undone on the next load. */
 async function seed(page, { guide = true, seen = true, colours = false } = {}) {
@@ -86,29 +89,47 @@ async function hitAreaMisses(locator) {
   })
 }
 
-// Soft, so one run names every control that is short of the target.
+// Soft, so one run names every control that is short of the target. Polled, like
+// expectTapsLand: a card that has just opened is still moving into place, and a
+// single sample of its edge can land mid-move. A control that stays short of the
+// target for the whole 5s still fails, with the misses from the last sample.
 async function expectHitArea(locator, what) {
-  expect.soft(await hitAreaMisses(locator), `${what}: a tap within 22px of its centre misses it`).toEqual([])
+  let misses = []
+  await expect.poll(async () => {
+    misses = await hitAreaMisses(locator)
+    return misses.length
+  }, { timeout: 5000 }).toBe(0).catch(() => {})
+  expect.soft(misses, `${what}: a tap within 22px of its centre misses it`).toEqual([])
 }
 
-async function railControlsAllLand(page) {
+// `nameOpen`: on a phone the name sheet has its own Close and Save, so the bar
+// hides its Next and its X while the sheet is up (one X on screen).
+async function railControlsAllLand(page, { nameOpen = false } = {}) {
   const r = rail(page)
   const chips = r.locator('.bkit-step')
-  expect(await chips.count()).toBe(4)
+  // Waited for, not counted once: a navigation swaps the page, and the rail of
+  // the page being left is still in the DOM until the new page has rendered its own.
+  await expect(chips).toHaveCount(4)
   for (let i = 0; i < 4; i++) await expectTapsLand(chips.nth(i), `step chip ${i + 1}`)
-  await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
   await expectTapsLand(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
-  await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
   for (let i = 0; i < 4; i++) await expectHitArea(chips.nth(i), `step chip ${i + 1}`)
-  await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
   await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
-  await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+  if (nameOpen) {
+    await expect(r.locator('.bkit-rail-next'), 'the bar keeps no Next under the name sheet').toBeHidden()
+    await expect(r.getByRole('button', { name: 'Leave the walkthrough' }), 'only the sheet has an X').toBeHidden()
+  } else {
+    await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
+    await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+    await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
+    await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+  }
   // The walkthrough hides the tab bar and the rail takes the bottom edge; its
   // action row has not wrapped.
   const geo = await page.evaluate(() => {
     const railBox = document.querySelector('.bkit-rail').getBoundingClientRect()
     const bar = document.querySelector('.pnav-tabs')
-    const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect())
+    // Only what is drawn: the name sheet hides Next and the X, and a hidden node measures 0,0.
+    const tops = [...document.querySelectorAll('.bkit-rail-actions > *')].map((n) => n.getBoundingClientRect()).filter((b) => b.width > 0)
     return {
       railBottom: railBox.bottom,
       viewportBottom: window.innerHeight,
@@ -137,6 +158,8 @@ const PHONES = [
 ]
 
 test.describe('Brand kit walkthrough on a phone', () => {
+  // A phone is a coarse pointer: the 44px tap pads on the bar's round buttons apply there.
+  test.use({ hasTouch: true })
   for (const vp of PHONES) {
     test(`${vp.width}px: every rail and card control takes its own tap`, async ({ page }) => {
       watch(page, 'designer building a brand kit on a phone')
@@ -161,20 +184,23 @@ test.describe('Brand kit walkthrough on a phone', () => {
       // The tallest step, and the one with the longest Next label.
       await rail(page).getByRole('link', { name: /Icons/ }).click()
       await expect(page).toHaveURL(/\/create\/icons$/)
+      // The URL changes before the page does, so the rail on screen at this
+      // point can still be the Colours page's. Wait for the Icons page's own.
+      await expect(rail(page).locator('.bkit-step[aria-current="step"]')).toContainText('Icons')
       await expect(rail(page)).toBeVisible()
       await railControlsAllLand(page)
 
       // The closing card docks above the rail at its tallest, on this step.
-      await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
+      await rail(page).getByRole('button', { name: /^Name your project/ }).click()
       await expect(nameCard(page)).toBeVisible()
       await expectCardClearsRail(page, nameCard(page), 'the name card overlaps the rail')
       await expectTapsLand(nameCard(page).getByRole('button', { name: 'Close' }), 'name card Close')
-      await expectTapsLand(nameCard(page).getByRole('textbox', { name: 'Kit name' }), 'Kit name')
+      await expectTapsLand(nameCard(page).getByRole('textbox', { name: 'Project name' }), 'Project name')
       await expectTapsLand(nameCard(page).getByRole('button', { name: 'Save project' }), 'Save project')
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Close' }), 'name card Close')
-      await expectHitArea(nameCard(page).getByRole('textbox', { name: 'Kit name' }), 'Kit name')
+      await expectHitArea(nameCard(page).getByRole('textbox', { name: 'Project name' }), 'Project name')
       await expectHitArea(nameCard(page).getByRole('button', { name: 'Save project' }), 'Save project')
-      await railControlsAllLand(page)
+      await railControlsAllLand(page, { nameOpen: true })
 
       // At the end of the page the card still sits clear of the rail.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -182,13 +208,16 @@ test.describe('Brand kit walkthrough on a phone', () => {
     })
   }
 
-  // From 1024px the bar is flush to the viewport foot (bottom 0, no 20px gap)
-  // and the card hangs 63px above it (55px bar + 12px, less 4px). On Colours
+  // From 1024px the bar is a pill floating 16px above the viewport foot and the
+  // popover hangs 74px above it (16 + 50 + 8). The help label is visually hidden
+  // there (absolute, clipped; the icon shows). On Colours
   // the bar rides on the Adjust-all row, so both offsets rise by its height.
+  // gap is measured between the popover's foot and the bar's top edge.
   const desktopOffsets = (page) => page.evaluate(() => ({
     rail: getComputedStyle(document.querySelector('.bkit-rail')).bottom,
     card: getComputedStyle(document.querySelector('.bkit-card')).bottom,
     help: getComputedStyle(document.querySelector('.bkit-rail-help-text')).position,
+    gap: Math.round(document.querySelector('.bkit-rail').getBoundingClientRect().top - document.querySelector('.bkit-card').getBoundingClientRect().bottom),
   }))
 
   test('1440px: the rail and card keep their desktop offsets', async ({ page }) => {
@@ -197,13 +226,13 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await go(page, '/create/font-pair')
     await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
     await expect(introCard(page)).toBeVisible()
-    await expect.poll(() => desktopOffsets(page)).toEqual({ rail: '0px', card: '63px', help: 'static' })
+    await expect.poll(() => desktopOffsets(page)).toEqual({ rail: '16px', card: '74px', help: 'absolute', gap: 8 })
 
-    // Each close button animates only what its own states change: the card's
-    // close its hover colours; the bar's also the 97% press scale (transform).
+    // Each close button animates only what its own states change: both
+    // hover colours and the 97% press scale (transform), and never `all`.
     const transitions = await page.evaluate(() => ['.bkit-card-close', '.bkit-rail-close']
       .map((sel) => getComputedStyle(document.querySelector(sel)).transitionProperty))
-    expect(transitions).toEqual(['border-color, color, background-color', 'background-color, border-color, color, transform'])
+    expect(transitions).toEqual(['background-color, border-color, color, transform', 'background-color, border-color, color, transform'])
   })
 
   test('1440px: on Colours the rail and card sit on top of the Adjust-all row', async ({ page }) => {
@@ -215,8 +244,8 @@ test.describe('Brand kit walkthrough on a phone', () => {
     expect(toolbarH, 'the Adjust-all row has no height').toBeGreaterThan(0)
     await expect.poll(async () => {
       const o = await desktopOffsets(page)
-      return { rail: Math.round(parseFloat(o.rail) - toolbarH), card: Math.round(parseFloat(o.card) - toolbarH), help: o.help }
-    }).toEqual({ rail: 0, card: 63, help: 'static' })
+      return { rail: Math.round(parseFloat(o.rail) - toolbarH), card: Math.round(parseFloat(o.card) - toolbarH), help: o.help, gap: o.gap }
+    }).toEqual({ rail: 16, card: 74, help: 'absolute', gap: 8 })
   })
 
   test('390px: the help trigger is a visible, named icon button and Escape returns focus to it', async ({ page }) => {
@@ -238,7 +267,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect(rail(page).getByRole('button', { name: 'Leave the walkthrough' }).locator('svg')).toHaveAttribute('aria-hidden', 'true')
 
     // Opened by itself on arrival: Escape must not drop focus on <body>.
-    await expect(introCard(page)).toBeFocused()
+    await expect(introCard(page).getByRole('button', { name: /^Start with/ })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(introCard(page)).toBeHidden()
     await expect(help).toBeFocused()
@@ -348,13 +377,13 @@ test.describe('Brand kit walkthrough: naming the kit on a touch screen', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height })
       await seed(page, { colours: true })
       await go(page, '/create/icons')
-      await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
+      await rail(page).getByRole('button', { name: /^Name your project/ }).click()
       const card = nameCard(page)
       await expect(card).toBeVisible()
 
       // Focus goes to the heading, so no keyboard rises before the card is read.
-      await expect(card.getByRole('heading', { name: 'Name your kit' })).toBeFocused()
-      const field = card.getByRole('textbox', { name: 'Kit name' })
+      await expect(card.getByRole('heading', { name: 'Name your project' })).toBeFocused()
+      const field = card.getByRole('textbox', { name: 'Project name' })
       await expect(field).not.toBeFocused()
 
       await field.tap()
@@ -373,32 +402,39 @@ test.describe('Brand kit walkthrough: naming the kit on a touch screen', () => {
 })
 
 test.describe('Brand kit walkthrough: ticks', () => {
-  test('pressing Next through every step with the defaults finishes at 4 of 4', async ({ page }) => {
+  test('pressing Next through every step with the defaults ticks all four and reads Step 4 of 4', async ({ page }) => {
     watch(page, 'designer happy with the defaults')
     await seed(page)
     await go(page, '/create/palette')
-    await expect(rail(page)).toContainText('0 of 4 parts')
+    // The count says where the person is; the ticks say what is built.
+    const ticks = rail(page).locator('.bkit-step.is-done')
+    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(ticks).toHaveCount(0)
 
     await rail(page).getByRole('button', { name: /^Next: Fonts/ }).click()
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('1 of 4 parts')
+    await expect(rail(page)).toContainText('Step 2 of 4')
+    await expect(ticks).toHaveCount(1)
     await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     await rail(page).getByRole('button', { name: /^Next: Type scale/ }).click()
     await expect(page).toHaveURL(/\/create\/type-scale$/)
-    await expect(rail(page)).toContainText('2 of 4 parts')
+    await expect(rail(page)).toContainText('Step 3 of 4')
+    await expect(ticks).toHaveCount(2)
 
     await rail(page).getByRole('button', { name: /^Next: Icons/ }).click()
     await expect(page).toHaveURL(/\/create\/icons$/)
-    await expect(rail(page)).toContainText('3 of 4 parts')
+    await expect(rail(page)).toContainText('Step 4 of 4')
+    await expect(ticks).toHaveCount(3)
 
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(rail(page)).toContainText('4 of 4 parts')
-    await expect(nameCard(page)).toBeVisible()
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(rail(page)).toContainText('Step 4 of 4')
+    await expect(ticks).toHaveCount(4)
+    await expect(nameField(page)).toBeVisible()
   })
 })
 
-test.describe('Brand kit walkthrough: Name your kit', () => {
+test.describe('Brand kit walkthrough: Name your project', () => {
   test('signed in: one name saves the project and names the kit, then opens the project', async ({ page }) => {
     watch(page, 'designer finishing a brand kit')
     await signIn(page, { plan: 'free', projects: 0 })
@@ -409,19 +445,19 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     const leave = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
     expect(await leave.getAttribute('title')).not.toMatch(/work is saved/i)
 
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page)).toBeVisible()
-    const field = nameCard(page).getByRole('textbox', { name: 'Kit name' })
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(nameField(page)).toBeVisible()
+    const field = nameField(page)
     await expect(field).toBeFocused()
 
     // A blank name is refused in place.
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(nameCard(page).getByRole('alert')).toHaveText('Give your kit a name to save it.')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(nameForm(page).getByRole('alert')).toHaveText('Give your project a name to save it.')
 
     await field.fill('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
-    await expect(page.getByText('Harbour Studio').first()).toBeVisible()
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Export Harbour Studio' })).toBeVisible()
 
     const stored = await page.evaluate(([dk, gk]) => ({
       projects: JSON.parse(localStorage.getItem('vs-projects') || '{}'),
@@ -443,9 +479,9 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await seed(page, { colours: true })
     await go(page, '/create/icons')
 
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Fourth Kit')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await nameField(page).fill('Fourth Kit')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
 
     const refusal = page.getByTestId('brand-kit-save-refusal')
     await expect(refusal).toBeVisible()
@@ -453,7 +489,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
     await expect(page).toHaveURL(/\/create\/icons$/)
     await expect(rail(page)).toBeVisible()
-    await expect(nameCard(page).getByRole('textbox', { name: 'Kit name' })).toHaveValue('Fourth Kit')
+    await expect(nameField(page)).toHaveValue('Fourth Kit')
 
     const stored = await page.evaluate(([dk, gk]) => ({
       count: Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat().length,
@@ -472,17 +508,19 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
 
     // Every tool step ran without an account.
     await expect(page.locator('#ui-login-title')).toHaveCount(0)
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page)).toContainText('Saving needs a free account')
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(nameForm(page)).toContainText('Saving needs a free account')
+    await nameField(page).fill('Harbour Studio')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
 
     await expect(page.locator('#ui-login-title')).toBeVisible()
     // Saved work is a project; the kit is what gets exported.
-    await expect(page.locator('#ui-login-promise')).toHaveText('You were about to save your project.')
+    await expect(page.locator('#ui-login-promise')).toContainText('You were about to save your project.')
     // Save cannot be pressed twice while the sign-in it asked for is open.
     const save = page.locator('.bkit-name-save')
     await expect(save).toBeDisabled()
+    await expect(save).toHaveText('Saving…')
+    await expect(page.locator('.bkit-card--name form')).toHaveAttribute('aria-busy', 'true')
     await expect(page).toHaveURL(/\/create\/icons$/)
     const held = await page.evaluate((dk) => JSON.parse(localStorage.getItem(dk) || '{}'), DESIGN_KEY)
     expect(held.palette?.colors).toEqual(SEED_COLOURS)
@@ -492,16 +530,18 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('#ui-login-title')).toBeHidden()
     await expect(save).toBeEnabled()
+    await expect(save).toHaveText('Save project')
+    await expect(page.locator('.bkit-card--name form')).not.toHaveAttribute('aria-busy', /.*/)
 
     // Back signed in (the test double cannot complete the form itself): the
     // flow, the design and the name are all still there, and saving works.
     await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/create/icons')
     await expect(rail(page)).toBeVisible()
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await expect(nameCard(page).getByRole('textbox', { name: 'Kit name' })).toHaveValue('Harbour Studio')
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(nameField(page)).toHaveValue('Harbour Studio')
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     const saved = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat())
     expect(saved).toHaveLength(1)
     expect(saved[0].design.palette.colors).toEqual(SEED_COLOURS)
@@ -515,9 +555,9 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
   )
   const completeSignIn = (page) => page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
   async function nameAndAskToSave(page, name) {
-    await rail(page).getByRole('button', { name: /^Name your kit/ }).click()
-    await nameCard(page).getByRole('textbox', { name: 'Kit name' }).fill(name)
-    await nameCard(page).getByRole('button', { name: 'Save project' }).click()
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await nameField(page).fill(name)
+    await nameForm(page).getByRole('button', { name: 'Save project' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
   }
 
@@ -530,7 +570,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     expect(await storedProjects(page)).toHaveLength(0)
 
     await completeSignIn(page)
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     await expect(page.getByTestId('brand-kit-save-refusal')).toHaveCount(0)
 
     // Let any second save show itself before counting.
@@ -551,7 +591,7 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     await nameAndAskToSave(page, 'Fourth Kit')
 
     await completeSignIn(page)
-    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+$/)
+    await expect(page).toHaveURL(/\/projects\/[a-z0-9]+\/export$/)
     await expect(page.getByTestId('brand-kit-save-refusal'), 'a Pro account was told to go Pro').toHaveCount(0)
 
     await page.waitForTimeout(600)
@@ -559,4 +599,230 @@ test.describe('Brand kit walkthrough: Name your kit', () => {
     expect(saved, 'three existing projects and the new one').toHaveLength(4)
     expect(saved.filter((p) => p.name === 'Fourth Kit')).toHaveLength(1)
   })
+
+  // The name step is a panel, never a form inside the bar: the bar keeps its one
+  // height and its steps, and the panel is a popover 8px above it from 768px and
+  // a sheet whose foot sits on the bar's top edge on a phone.
+  const NAME_PANEL_WIDTHS = [
+    { width: 1440, height: 900, barHeight: 50, gap: 8, float: 16 },
+    { width: 1024, height: 900, barHeight: 50, gap: 8, float: 16 },
+    { width: 768, height: 900, barHeight: 76, gap: 8, float: 0 },
+    { width: 390, height: 844, barHeight: 132, gap: 0, float: 0 },
+  ]
+  for (const { width, height, barHeight, gap, float } of NAME_PANEL_WIDTHS) {
+    test(`${width}px: the name step is a panel ${gap ? `${gap}px above` : 'joined to'} the bar, and the bar does not change`, async ({ page }) => {
+      watch(page, 'designer naming a project')
+      await page.setViewportSize({ width, height })
+      await seed(page, { colours: true })
+      await go(page, '/create/icons')
+      const r = rail(page)
+      const next = r.getByRole('button', { name: /^Name your project/ })
+      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await expect(next).toHaveClass(/btn-accent/)
+      await next.click()
+
+      // The panel is open and focus is in its field.
+      const panel = nameCard(page)
+      const field = nameField(page)
+      await expect(panel).toBeVisible()
+      await expect(panel).toHaveClass(/bkit-card--name/)
+      await expect(field).toBeVisible()
+      await expect(field).toBeFocused()
+      await expect(panel.locator('label.bkit-name-label')).toHaveText('Project name')
+      await expect(panel.getByRole('button', { name: 'Save project' })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Back' }), 'the panel has a Back').toHaveCount(0)
+      await expect(page.getByRole('dialog'), 'more than the one panel is open').toHaveCount(1)
+
+      // The bar is untouched: the same steps, the same buttons, and nothing in it
+      // is a form. Its Next is the outline pill and says it opened the panel.
+      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await expect(r.locator('form')).toHaveCount(0)
+      await expect(r.getByRole('button', { name: 'Save project' })).toHaveCount(0)
+      await expect(r.getByRole('button', { name: 'Back' })).toHaveCount(0)
+      // By class, not by role: under 768px the sheet hides this button, and a
+      // hidden button has no role to find.
+      const nextEl = r.locator('.bkit-rail-next')
+      await expect(nextEl).toHaveClass(/is-outline/)
+      await expect(nextEl).not.toHaveClass(/btn-accent/)
+      await expect(r.getByRole('button', { name: /What.s this\?/ })).toBeVisible()
+      if (width < 768) {
+        // The sheet has its own Close and Save: one X, and no Next, on the bar.
+        await expect(next).toBeHidden()
+        await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeHidden()
+        await expect(page.getByRole('button', { name: /^(Close|Leave the walkthrough)$/ }), 'exactly one X while naming').toHaveCount(1)
+      } else {
+        await expect(next).toHaveAttribute('aria-expanded', 'true')
+        await expect(r.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
+      }
+
+      // One bar at its one height, in place (flat on the foot of the viewport
+      // below 1024px; a glass pill floating 16px above it from 1024px), the
+      // spacer that clears the end of the tool matching it plus the gap around
+      // the pill, and the panel in place.
+      await expect.poll(() => page.evaluate((lift) => {
+        const bar = document.querySelector('.bkit-rail')
+        const box = bar.getBoundingClientRect()
+        const panelBox = document.querySelector('.bkit-card--name').getBoundingClientRect()
+        const cs = getComputedStyle(bar)
+        const flat = cs.backdropFilter === 'none' && cs.boxShadow === 'none' && cs.borderRadius === '0px'
+        const glass = cs.backdropFilter !== 'none' && cs.boxShadow !== 'none' && parseFloat(cs.borderTopLeftRadius) >= 25
+        return {
+          height: Math.round(box.height),
+          onBottom: Math.abs(window.innerHeight - box.bottom - lift) < 1,
+          spacer: Math.abs(document.querySelector('.bkit-rail-space').getBoundingClientRect().height - box.height - 2 * lift) < 1,
+          noOverflow: bar.scrollWidth <= bar.clientWidth,
+          look: lift ? (glass ? 'pill' : 'other') : (flat ? 'flat' : 'other'),
+          gap: Math.round(box.top - panelBox.bottom),
+        }
+      }, float)).toEqual({ height: barHeight, onBottom: true, spacer: true, noOverflow: true, look: float ? 'pill' : 'flat', gap })
+
+      // Escape closes the panel, and focus goes back to the button that opened it.
+      await page.keyboard.press('Escape')
+      await expect(panel).toBeHidden()
+      await expect(next).toBeFocused()
+      await expect(next).toHaveClass(/btn-accent/)
+      await expect(next).toHaveAttribute('aria-expanded', 'false')
+      await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.bkit-rail').getBoundingClientRect().height))).toBe(barHeight)
+
+      // So does the panel's Close.
+      await next.click()
+      await panel.getByRole('button', { name: 'Close' }).click()
+      await expect(panel).toBeHidden()
+      await expect(next).toBeFocused()
+
+      // A blank name is refused in the panel, under the field.
+      await next.click()
+      await panel.getByRole('button', { name: 'Save project' }).click()
+      await expect(panel.getByRole('alert')).toHaveText('Give your project a name to save it.')
+      await expect(field).toHaveAttribute('aria-invalid', 'true')
+      // Focus goes back to the field so the person can type at once.
+      await expect(field).toBeFocused()
+    })
+  }
 })
+
+test.describe('Brand kit walkthrough: rail polish and leaving', () => {
+  test('a later step link keeps what is on screen like Next; a step behind writes nothing', async ({ page }) => {
+    watch(page, 'designer jumping ahead with the bar')
+    await seed(page)
+    await go(page, '/create/palette')
+    await expect(rail(page).locator('.bkit-step.is-done')).toHaveCount(0)
+    await rail(page).getByRole('link', { name: /Fonts/ }).click()
+    await expect(page).toHaveURL(/\/create\/font-pair$/)
+    // Colours was moved past, so it is ticked and recorded in the flag.
+    await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
+    expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY)).toBe('1:color')
+    // Going back to a step behind records nothing for the one left.
+    await rail(page).getByRole('link', { name: /Colours/ }).click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY)).toBe('1:color')
+  })
+
+  test('1440px: the current-step line sits under its label, inside the bar', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const geo = await page.evaluate(() => {
+      const bar = document.querySelector('.bkit-rail').getBoundingClientRect()
+      const chip = document.querySelector('.bkit-step.is-current')
+      const label = chip.querySelector('.bkit-step-label').getBoundingClientRect()
+      const line = getComputedStyle(chip, '::before')
+      return { barTop: bar.top, chipBottom: chip.getBoundingClientRect().bottom, labelBottom: label.bottom, lineBottom: line.bottom, position: line.position, height: line.height }
+    })
+    expect(geo.position).toBe('absolute')
+    expect(geo.height).toBe('2px')
+    expect(geo.lineBottom, 'the line is anchored 3px above the foot of the chip inside the pill, not the bar edge').toBe('3px')
+  })
+
+  test('768px: Help and Close are 44px with 8px clear of Next', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const boxes = await page.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect()
+      return { close: r('.bkit-rail-close'), help: r('.bkit-rail-help'), next: r('.bkit-rail-next') }
+    })
+    expect(Math.round(boxes.close.width)).toBe(44)
+    expect(Math.round(boxes.help.height)).toBe(44)
+    expect(boxes.next.left - boxes.help.right).toBeGreaterThanOrEqual(8)
+  })
+
+  test('744px: Next keeps a button width instead of stretching across the bar', async ({ page }) => {
+    await page.setViewportSize({ width: 744, height: 1133 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const w = await rail(page).locator('.bkit-rail-next').evaluate((el) => el.getBoundingClientRect().width)
+    expect(w).toBeLessThanOrEqual(288)
+  })
+
+  test('two fast presses on the X end the walkthrough and press nothing behind it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    const before = await page.locator('.plb-col').count()
+    const x = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
+    const box = await x.boundingBox()
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(rail(page)).toBeHidden()
+    expect(await page.locator('.plb-col').count(), 'the second press added a colour').toBe(before)
+    await expect(page.locator('.bkit-exit-shield')).toHaveCount(0, { timeout: 3000 })
+  })
+
+  test('Enter on the X leaves no ring round the page', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seed(page)
+    await go(page, '/create/palette')
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(rail(page)).toBeHidden()
+    await expect(page.locator('#main')).toBeFocused()
+    expect(await page.locator('#main').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+  })
+
+  test('390px: an open card closes with the X and the tab bar comes back', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await seed(page, { seen: false })
+    await go(page, '/create/palette')
+    await expect(introCard(page)).toBeVisible()
+    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+    await expect(introCard(page)).toBeHidden()
+    await expect(nameCard(page)).toBeHidden()
+    await expect(rail(page)).toBeHidden()
+    await expect(page.locator('.pnav-tabs')).toBeVisible()
+  })
+})
+
+// From 768px the bar keeps its X while the name card is open (below that the
+// sheet has the only close control). Pressing it from inside the form has to
+// close both, leave no ring round the tool, and hand Tab on from the page.
+for (const width of [768, 1440]) {
+  test(`${width}px: the X pressed from the name field closes the card and the bar`, async ({ page }) => {
+    watch(page, 'keyboard designer leaving while naming the kit')
+    await page.setViewportSize({ width, height: 900 })
+    await seed(page, { colours: true })
+    await go(page, '/create/icons')
+
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(nameField(page)).toBeVisible()
+    await nameField(page).focus()
+    await nameField(page).fill('Draft name')
+
+    const leave = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
+    await leave.focus()
+    await page.keyboard.press('Enter')
+
+    await expect(rail(page)).toBeHidden()
+    await expect(nameCard(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/\/create\/icons$/)
+    await expect(page.locator('#main')).toBeFocused()
+    expect(await page.locator('#main').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+
+    // The next Tab moves into the tool, not back up to the site header.
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => {
+      const el = document.activeElement
+      return !!el && el !== document.body && !!document.getElementById('main')?.contains(el)
+    }), 'Tab after the X left the tool').toBe(true)
+  })
+}

@@ -2,20 +2,19 @@
 //
 // From 768px up they sit in ONE ordered column with the lock and the actions
 // button: Lock, Edit in HCT, Swap, Remove, "...". Each is also an item in the
-// "Colour actions" menu. They are revealed three ways, and each way has its own
-// test because each is its own piece of CSS or code:
+// "Colour actions" menu. On a mouse screen they are revealed two ways, and each
+// way has its own test because each is its own piece of CSS or code:
 //
 //   1. a pointer hovering the swatch,
 //   2. keyboard focus VISIBLY inside the swatch (`:has(:focus-visible)`; the
 //      tools stay rendered and focusable at rest from 768px up, so focus is
 //      what shows them — never `visibility:hidden` or `display:none`). A mouse
 //      press leaves focus on a button but is not focus-visible, so it does not
-//      latch the stack open,
-//   3. a tap on the bare swatch where there is no hover (`(hover: none)`), from
-//      768px up.
-// Columns under 80px wide (a 10-colour board at 768) hide the stack, and the
-// Colour actions menu still holds every action. Phones (767 and under) show
-// only Lock and More actions.
+//      latch the stack open.
+// A device with no hover (`(hover: none)`) has nothing to reveal them with, so
+// from 768px up they are on show at rest and pressable. Columns under 80px wide
+// (a 10-colour board at 768) hide the stack, and the Colour actions menu still
+// holds every action. Phones (767 and under) show only Lock and More actions.
 //
 // The second half of the file ("the ordered column") pins the behaviour of the
 // ordered column itself: Tab order, no focus latch, focus after a keyboard
@@ -237,20 +236,26 @@ test.describe('the per-swatch quick tools', () => {
     await ctx.close()
   })
 
-  // On phones Tab reaches More actions and its menu; wider touch devices
-  // keep Edit, Swap and Remove in the swatch's tab order, between the lock and
-  // More actions.
+  // On phones Tab reaches More actions and its menu, and no quick tool is drawn.
+  // On a wider touch device Edit, Swap and Remove are on show at rest, take the
+  // pointer, and sit in the swatch's tab order between the lock and More actions.
   for (const width of [390, 820]) {
     test(`Tab reaches the colour actions at ${width}px on a touch device`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, { touch: true })
       const col = page.locator('.plb-col').nth(2)
 
-      // POSITIVE CONTROLS: no hover on this device, the tools exist, and none
-      // is painted before focus arrives.
+      // POSITIVE CONTROLS: no hover on this device, and the tools exist.
       expect(await page.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(false)
       const rest = await quickState(col)
       expect(rest.every(Boolean), 'all three quick tools exist').toBe(true)
-      expect(rest.some(painted), 'nothing painted before focus arrives').toBe(false)
+      if (width < 768) {
+        expect(rest.some(painted), 'a phone draws no quick tool').toBe(false)
+      } else {
+        await expect.poll(async () => (await quickState(col)).every(painted), { message: 'a touch tablet shows every quick tool at rest' }).toBe(true)
+        const hits = await hitsOf(col)
+        expect(hits, 'three tools measured').toHaveLength(3)
+        expect(hits.filter((h) => !h.hitTool).map((h) => h.label), 'every quick tool takes the pointer at rest').toEqual([])
+      }
 
       await col.getByRole('button', { name: /^(Lock|Unlock) / }).focus()
       if (width < 768) {
@@ -626,6 +631,65 @@ test.describe('the ordered column', () => {
     expect(box.bottom, 'the panel overlaps or sits just above its row').toBeGreaterThanOrEqual(row.y - 8)
     await ctx.close()
   })
+
+  // The Tints popover lists all eleven steps (50 to 950) of the shared ramp plus
+  // the "Open in Tint Generator" button, which is taller than the old
+  // six-row list. It must still fit the viewport, clear the header, and stay
+  // above the phone tab bar, with every row reachable.
+  //
+  // MUTATION (both watched red at 390x844 and 1440x900): in the placement effect
+  // of PaletteBuilder.jsx change `Math.min(trigger.bottom + margin, bottom - rect.height)`
+  // to `trigger.bottom + margin` and the panel runs past the tab bar / viewport
+  // bottom; add `.slice(0, 6)` to `tintRampForHex(adjusted[i])` in the popover
+  // and the row count goes red.
+  const ELEVEN = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
+  for (const [width, height] of [[390, 844], [1440, 900]]) {
+    test(`${width}x${height}: the 11-row tints popover fits the viewport, clears the header and tab bar, and every row is reachable`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, width, { height })
+      const col = page.locator('.plb-col').nth(3)
+      if (width < 700) {
+        await col.getByRole('button', { name: MORE }).tap()
+        await page.getByRole('menu', { name: 'Colour actions', exact: true })
+          .getByRole('menuitem', { name: 'View tints', exact: true }).tap()
+      } else {
+        await col.locator('.plb-ramp').click()
+      }
+      const pop = col.locator('.plb-tintpop')
+      await expect(pop).toBeVisible()
+
+      // POSITIVE CONTROL: all eleven steps are drawn, in order, each with a hex.
+      await expect(pop.locator('.plb-tint-row')).toHaveCount(11)
+      expect(await pop.locator('.plb-tint-tone').allTextContents()).toEqual(ELEVEN)
+      expect((await pop.locator('.plb-tint-hex').allTextContents()).every((h) => /^#[0-9A-F]{6}$/i.test(h))).toBe(true)
+
+      const box = await settledBox(page, '.plb-tintpop')
+      const tabs = await page.locator('.pnav-tabs').evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { top: r.top, shown: r.height > 0 && getComputedStyle(el).display !== 'none' }
+      })
+      // On a phone the tab bar is part of the lower limit; on a desktop it is hidden.
+      expect(tabs.shown, width < 700 ? 'POSITIVE CONTROL: the tab bar is on screen on the phone' : 'no tab bar on a desktop').toBe(width < 700)
+      const floor = tabs.shown ? tabs.top : box.vh
+      expect(box.left, 'inside the viewport on the left').toBeGreaterThanOrEqual(0)
+      expect(box.right, 'inside the viewport on the right').toBeLessThanOrEqual(box.vw)
+      expect(box.top, 'below the header').toBeGreaterThanOrEqual(box.navBottom)
+      expect(box.bottom, `ends at ${Math.round(box.bottom)}, above ${tabs.shown ? 'the tab bar' : 'the viewport bottom'} at ${Math.round(floor)}`).toBeLessThanOrEqual(floor)
+
+      // Every row and the button can be scrolled into the panel's own view.
+      for (const target of [pop.locator('.plb-tint-row').first(), pop.locator('.plb-tint-row').last(), pop.getByRole('button', { name: 'Open in Tint Generator' })]) {
+        await target.scrollIntoViewIfNeeded()
+        const inside = await target.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const p = el.closest('.plb-tintpop').getBoundingClientRect()
+          const tabsEl = document.querySelector('.pnav-tabs')
+          const t = tabsEl && tabsEl.getBoundingClientRect().height > 0 ? tabsEl.getBoundingClientRect().top : innerHeight
+          return r.height > 0 && r.top >= p.top - 1 && r.bottom <= p.bottom + 1 && r.bottom <= t + 1
+        })
+        expect(inside, 'the row or button scrolls fully into the panel, above the tab bar').toBe(true)
+      }
+      await ctx.close()
+    })
+  }
 
   // (f) MUTATION: delete the two phone rules `.plb .plb-col-quick { display: none; }`
   // and `.plb .plb-tool--quick { display: none; }` in the max-width:767 block and

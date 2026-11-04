@@ -18,7 +18,7 @@
 //
 // The five NEW moods are measured in HCT (`hexToHct` in utils/colors.js) —
 // hue in degrees, chroma, tone. That is the space the palette engine itself
-// works in: tonalRamp, maxChromaFor, autoTonalFromSeed and derivePreviewRoles
+// works in: maxChromaFor, autoTonalFromSeed and derivePreviewRoles
 // all reason in HCT, so a mood computed there agrees with what the Builder will
 // do to the palette rather than disagreeing with it in a second geometry.
 //

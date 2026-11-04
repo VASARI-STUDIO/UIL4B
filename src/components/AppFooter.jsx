@@ -1,7 +1,10 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { categoryDestination } from '../data/toolTree'
+import { categoryDestination, isSoonPath } from '../data/toolTree'
+import { useIsAdmin } from '../hooks/useIsAdmin'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
+import { BrandLockup } from './BrandLogo'
 
 // Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
 // decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
@@ -49,7 +52,8 @@ const FOOTER_GROUPS = [
       // meet either. Revert by deleting this row and the /info row in Support.
       ['/community', 'Community'],
       ['/learn/principles', 'Design principles'],
-      ['/plans', 'Plans'],
+      ['/plans', 'Pricing'],
+      ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
       ['/sitemap', 'Sitemap'],
     ],
   },
@@ -78,12 +82,13 @@ const FOOTER_GROUPS = [
 export default function AppFooter({ compact = false }) {
   const { pathname } = useLocation()
   const year = new Date().getFullYear()
+  const { isAdmin } = useIsAdmin()
   if (!footerShowsOn(pathname)) return null
   return (
     <footer className={compact ? 'app-footer app-footer--compact' : 'app-footer'}>
       <div className="app-footer-inner">
         <div className="app-footer-brand">
-          <span className="app-footer-mark">UIL4B</span>
+          <span className="app-footer-mark"><BrandLockup label="UI L4B" /></span>
           {/* THE TAGLINE IS GONE — anti-slop audit, 2026-09-09. Under the
               wordmark sat "The operating workspace for building, validating
               and exporting interface foundations." on every page of the site:
@@ -110,8 +115,9 @@ export default function AppFooter({ compact = false }) {
         <nav className="app-footer-links" aria-label="Footer">
           {FOOTER_GROUPS.map((group) => (
             <div className="app-footer-group" key={group.label}>
-              <p>{group.label}</p>
-              {group.links.map(([to, label, soon]) => (
+              <h2 className="app-footer-group-h">{group.label}</h2>
+              {/* Unfinished pages are listed for admins only. */}
+              {group.links.filter(([to, , soon]) => isAdmin || !(soon || isSoonPath(to))).map(([to, label, soon]) => (
                 soon ? (
                   <span className="app-footer-soon-link" key={to} aria-label={`${label} — coming soon`}>
                     {label} <em>Soon</em>
