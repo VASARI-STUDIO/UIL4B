@@ -11,7 +11,7 @@
 // out by hand, not derived from the code under test.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { STRIPE_EVENTS_COLLECTION, subscriptionDocFields } from '../../api/_lib/billing.js'
+import { STRIPE_EVENTS_COLLECTION, subscriptionDocFields, writeSubscriptionForEvent } from '../../api/_lib/billing.js'
 import { clearPaymentFailure, flagPaymentFailed, processStripeEvent } from '../../api/stripe-webhook.js'
 import { memoryDb } from './helpers/memory-firestore.js'
 
@@ -381,7 +381,8 @@ const stripeError = (props) => Object.assign(new Error(`stripe said ${props.type
 const PERMANENT_ERRORS = {
   'no such invoice (404 resource_missing)': { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 },
   'bad request (400)': { type: 'StripeInvalidRequestError', code: 'parameter_invalid_empty', statusCode: 400 },
-  'key may not read invoices (403)': { type: 'StripePermissionError', statusCode: 403 },
+  'a bare 404 with no Stripe type': { statusCode: 404 },
+  'a 404 carried on raw': { raw: { statusCode: 404 } },
 }
 
 const TRANSIENT_ERRORS = {
@@ -391,6 +392,12 @@ const TRANSIENT_ERRORS = {
   'a 503 from a gateway': { statusCode: 503 },
   'a 503 carried on raw': { raw: { statusCode: 503 } },
   'a bare network failure with no Stripe verdict': {},
+  // A rotated or under-scoped key is fixed outside the request, so the redelivery succeeds.
+  'a rotated key (401)': { type: 'StripeAuthenticationError', statusCode: 401 },
+  'key may not read invoices (403)': { type: 'StripePermissionError', statusCode: 403 },
+  'a bare 401': { statusCode: 401 },
+  'a bare 403': { statusCode: 403 },
+  'a 403 carried on raw': { raw: { statusCode: 403 } },
 }
 
 test('a permanent read error keeps the failure and returns, without throwing', async (t) => {
@@ -529,4 +536,109 @@ test('an unhealthy subscription document leaves the failure fields alone', () =>
       assert.equal(field in doc, false, `${status} must not write ${field}`)
     }
   }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A key Stripe refuses is retried; an invoice Stripe cannot find is not
+// ─────────────────────────────────────────────────────────────────────────────
+test('a 401 or 403 from Stripe throws, so the claim is released for a redelivery after the key is fixed', async (t) => {
+  quiet(t)
+  for (const props of [{ type: 'StripeAuthenticationError', statusCode: 401 }, { type: 'StripePermissionError', statusCode: 403 }]) {
+    const db = memoryDb(failingAccount())
+    const event = paidEvent(paidInvoice('in_old'))
+    await assert.rejects(processStripeEvent(event, { db, stripe: fakeStripe({ error: stripeError(props) }) }), props.type)
+    assert.equal(db.doc(`${STRIPE_EVENTS_COLLECTION}/evt_paid`), undefined, `${props.type}: the event is not marked done`)
+    failureStillOnRecord(db)
+  }
+})
+
+test('a 404 from Stripe still keeps the failure and returns', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount())
+  const error = stripeError({ type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 })
+
+  assert.equal(await clearPaymentFailure(fakeStripe({ error }), paidInvoice('in_old'), db), 'kept_newer_failure')
+  failureStillOnRecord(db)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A subscription delivery from before a payment failure cannot clear it
+// ─────────────────────────────────────────────────────────────────────────────
+const FAILED_EVENT = 1_700_000_400 // seconds
+const activeSub = (extra = {}) => ({
+  id: 'sub_1', status: 'active', created: 1_600_000_000, cancel_at_period_end: true, ...extra,
+})
+const flaggedAccount = () => memoryDb({
+  'users/uid_1': { stripeCustomerId: 'cus_1', subscription: { id: 'sub_1', status: 'past_due', stripeEventCreated: FAILED_EVENT - 100 } },
+})
+const flagAt = (db, eventCreated, invoiceId = 'in_new') =>
+  flagPaymentFailed(openInvoices(invoiceId), failedInvoice(invoiceId, `https://pay.example/${invoiceId}`), db, eventCreated)
+
+test('flagging records the event time next to paymentFailedAt', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT)
+  assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT)
+})
+
+test('a re-flag keeps the later of the stored and the new event time', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT)
+  await flagAt(db, FAILED_EVENT + 500, 'in_next')
+  assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT + 500, 'a later retry moves it forward')
+  await flagAt(db, FAILED_EVENT + 200, 'in_next')
+  assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT + 500, 'an earlier redelivery cannot move it back')
+  assert.equal(stored(db).paymentFailed, true)
+})
+
+test('an older active subscription.updated leaves the newer failure in place but still updates the rest', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT)
+  const before = stored(db)
+
+  const decision = await writeSubscriptionForEvent(db, 'uid_1', activeSub(), FAILED_EVENT - 50, 1_800_000_000_000)
+
+  assert.deepEqual(decision, { write: true, reason: 'current' })
+  const sub = stored(db)
+  assert.equal(sub.paymentFailed, true)
+  assert.equal(sub.paymentFailedAt, before.paymentFailedAt)
+  assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_new')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+  assert.equal(sub.paymentFailedEventCreated, FAILED_EVENT)
+  assert.equal(sub.status, 'active', 'the status still writes')
+  assert.equal(sub.cancelAtPeriodEnd, true, 'so do the other fields')
+  assert.equal(sub.stripeEventCreated, FAILED_EVENT - 50)
+})
+
+test('a newer active subscription.updated clears the failure', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT)
+
+  await writeSubscriptionForEvent(db, 'uid_1', activeSub(), FAILED_EVENT + 50, 1_800_000_000_000)
+
+  const sub = stored(db)
+  assert.equal(sub.paymentFailed, false)
+  assert.equal(sub.paymentFailedAt, null)
+  assert.equal(sub.hostedInvoiceUrl, null)
+  assert.equal(sub.failedInvoiceId, null)
+  assert.equal(sub.paymentFailedEventCreated, null)
+  assert.equal(sub.status, 'active')
+})
+
+test('a failure with no recorded event time is cleared by a healthy delivery, as before', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount({ id: 'sub_1', status: 'past_due' }))
+  await writeSubscriptionForEvent(db, 'uid_1', activeSub(), FAILED_EVENT - 50, 1_800_000_000_000)
+  assert.equal(stored(db).paymentFailed, false)
+})
+
+test('paying the failed invoice clears the recorded event time too', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT)
+  assert.equal(await clearPaymentFailure(fakeStripe(), paidInvoice('in_new'), db), 'cleared')
+  assert.equal(stored(db).paymentFailedEventCreated, null)
 })

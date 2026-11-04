@@ -254,10 +254,20 @@ export function subscriptionStatusGrantsAccess(sub) {
   return sub?.status === 'active' || sub?.status === 'trialing'
 }
 
+// What a healthy subscription write resets. `paymentFailedEventCreated` is the
+// Stripe event time (seconds) of the failure on record (flagPaymentFailed).
+const PAYMENT_RECOVERY_FIELDS = Object.freeze({
+  paymentFailed: false,
+  paymentFailedAt: null,
+  hostedInvoiceUrl: null,
+  failedInvoiceId: null,
+  paymentFailedEventCreated: null,
+})
+
 export function subscriptionDocFields(sub, now = Date.now()) {
   const healthy = subscriptionStatusGrantsAccess(sub)
   const recovery = healthy
-    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null }
+    ? { ...PAYMENT_RECOVERY_FIELDS }
     : {}
   return {
     id: sub?.id,
@@ -355,6 +365,13 @@ export function subscriptionWriteDecision(stored, sub, eventCreated) {
   return { write: true, reason: 'current' }
 }
 
+// The payment failure on record was flagged by a later event than this delivery.
+function failureIsNewerThanEvent(stored, eventCreated) {
+  return stored?.paymentFailed === true
+    && Number.isFinite(stored.paymentFailedEventCreated)
+    && (!Number.isFinite(eventCreated) || eventCreated < stored.paymentFailedEventCreated)
+}
+
 /**
  * Write a subscription delivered by a webhook event, unless what is stored is
  * newer. The read and the write share one transaction, so two deliveries for
@@ -368,6 +385,10 @@ export function subscriptionWriteDecision(stored, sub, eventCreated) {
  * invoice comes from the event's snapshot, so for an old event it may not be
  * the subscription's latest one; the stamp still records money that has gone
  * back. A stamp only sets a revocation and never clears one.
+ *
+ * A healthy delivery created before the payment failure on record was flagged
+ * is a stale picture of the subscription: it still writes every other field,
+ * but not the recovery fields, so it cannot clear a newer failure.
  */
 export function writeSubscriptionForEvent(db, uid, sub, eventCreated, now = Date.now(), extra = null) {
   const ref = db.collection('users').doc(uid)
@@ -378,9 +399,13 @@ export function writeSubscriptionForEvent(db, uid, sub, eventCreated, now = Date
       if (extra) tx.set(ref, { subscription: { ...extra } }, { merge: true })
       return decision
     }
+    const fields = subscriptionDocFields(sub, now)
+    if ('paymentFailed' in fields && failureIsNewerThanEvent(stored, eventCreated)) {
+      for (const key of Object.keys(PAYMENT_RECOVERY_FIELDS)) delete fields[key]
+    }
     tx.set(ref, {
       subscription: {
-        ...subscriptionDocFields(sub, now),
+        ...fields,
         ...(extra || {}),
         ...(Number.isFinite(eventCreated) ? { stripeEventCreated: eventCreated } : {}),
       },

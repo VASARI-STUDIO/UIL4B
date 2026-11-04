@@ -558,8 +558,12 @@ async function invoiceNowPaid(stripe, invoice) {
 /**
  * Flag a failed invoice payment on the customer's account, unless the invoice
  * has been paid since. Returns 'no_account', 'already_paid' or 'flagged'.
+ *
+ * `eventCreated` is the delivering event's `created` time (seconds). It is stored
+ * as `paymentFailedEventCreated` so writeSubscriptionForEvent can tell a
+ * subscription delivery from before this failure from one that follows it.
  */
-export async function flagPaymentFailed(stripe, invoice, db = null) {
+export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated = null) {
   const database = db || adminDb()
   const uid = await uidForCustomer(invoice.customer, database)
   if (!uid) return 'no_account'
@@ -577,10 +581,15 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   // again on each Smart Retry; re-stamping here would push the window forward
   // each time, which is the same as having no window at all.
   let failedAt = Date.now()
+  let failedEventCreated = Number.isFinite(eventCreated) ? eventCreated : null
   try {
     const existing = (await ref.get()).data()?.subscription
     if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)) {
       failedAt = existing.paymentFailedAt
+    }
+    // A Smart Retry re-flag keeps the latest event time seen for this failure.
+    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedEventCreated)) {
+      failedEventCreated = Math.max(existing.paymentFailedEventCreated, failedEventCreated ?? -Infinity)
     }
   } catch (err) {
     // A read failure must not swallow the failure flag. Stamping "now" can only
@@ -592,6 +601,7 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
     subscription: {
       paymentFailed: true,
       paymentFailedAt: failedAt,
+      paymentFailedEventCreated: failedEventCreated,
       // Hosted invoice page the customer can use to retry payment.
       hostedInvoiceUrl: invoice.hosted_invoice_url || null,
       // Which invoice the failure belongs to, so a later invoice.paid only clears
@@ -604,14 +614,19 @@ export async function flagPaymentFailed(stripe, invoice, db = null) {
   return 'flagged'
 }
 
-const TRANSIENT_STRIPE_ERRORS = new Set(['StripeConnectionError', 'StripeRateLimitError', 'StripeAPIError'])
+const TRANSIENT_STRIPE_ERRORS = new Set([
+  'StripeConnectionError', 'StripeRateLimitError', 'StripeAPIError',
+  'StripeAuthenticationError', 'StripePermissionError',
+])
 
 // A read that may succeed on a retry: Stripe's own transient error types, a 5xx,
-// or a failure with no status and no Stripe verdict at all (the network).
+// a 401 or 403 (a rotated or under-scoped key, which is fixed outside the
+// request and then succeeds), or a failure with no status and no Stripe verdict
+// at all (the network). Any other 4xx, such as a 404, will answer the same way.
 function isTransientStripeError(err) {
   if (TRANSIENT_STRIPE_ERRORS.has(err?.type)) return true
   const status = err?.statusCode ?? err?.raw?.statusCode
-  if (Number.isFinite(status)) return status >= 500
+  if (Number.isFinite(status)) return status >= 500 || status === 401 || status === 403
   return !err?.type && !err?.code
 }
 
@@ -656,10 +671,11 @@ const sameFailureOnRecord = (sub, basis) =>
  * · A different failed invoice is on record: ask Stripe about it (one retrieve,
  *   outside the write) and clear only if it is paid or void, or if it belongs to
  *   a subscription that has since been cancelled while the paid invoice belongs
- *   to another one (the customer resubscribed). A transient Stripe error THROWS,
- *   so the delivery fails, the claim is released (processStripeEvent) and Stripe
- *   retries it. A permanent one (an id Stripe will never find, a 4xx) keeps the
- *   failure and returns, because retrying cannot change the answer.
+ *   to another one (the customer resubscribed). A transient Stripe error (or a
+ *   401/403 from a bad key) THROWS, so the delivery fails, the claim is released
+ *   (processStripeEvent) and Stripe retries it. A permanent one (an id Stripe
+ *   will never find, any other 4xx) keeps the failure and returns, because
+ *   retrying cannot change the answer.
  * · Legacy record (a failure stored before failedInvoiceId existed): clear unless
  *   the invoice was paid before the failure began. No paid_at: clear, as before.
  *
@@ -713,6 +729,7 @@ export async function clearPaymentFailure(stripe, invoice, db = null) {
     // settled invoice.
     subscription: {
       paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null,
+      paymentFailedEventCreated: null,
       updatedAt: Date.now(),
     },
   }
@@ -907,7 +924,7 @@ async function dispatchStripeEvent(stripe, event, { db = null } = {}) {
       break
     }
     case 'invoice.payment_failed': {
-      await flagPaymentFailed(stripe, event.data.object, db)
+      await flagPaymentFailed(stripe, event.data.object, db, event.created)
       break
     }
     case 'invoice.paid': {

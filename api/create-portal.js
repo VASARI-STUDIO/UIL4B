@@ -88,7 +88,10 @@ export default async function handler(req, res) {
         deleted: !!customer?.deleted,
         cause: customer?.deleted ? 'customer_deleted' : (customerUid ? 'uid_mismatch' : 'missing_metadata'),
       })
-      return res.status(403).json({ error: 'This billing account is not linked to your login. Please contact support.' })
+      return res.status(403).json({
+        error: 'This billing account is not linked to your login. Please contact support.',
+        code: 'billing-unlinked',
+      })
     }
 
     // 14-day withdrawal: cancel now and refund the full amount paid, once. The rules
