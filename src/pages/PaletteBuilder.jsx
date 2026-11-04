@@ -77,7 +77,7 @@ import { columnPair, handoffUrl, readingPair } from '../utils/contrastHandoff'
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 // Image → palette: the clustering, ranking and sampling live in a pure module.
-import { appendPicks, averageHex, clusterImage, colourShares, isTruncatedPng, MIN_VISIBLE_SHARE, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters, sampleRadius, visibleShare } from '../utils/imagePalette'
+import { appendPicks, averageHex, clusterImage, colourShares, isCutShort, MIN_VISIBLE_SHARE, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters, sampleRadius, visibleShare } from '../utils/imagePalette'
 import FromImageDialog from '../components/palette/FromImageDialog'
 
 // The preview dialog, as its own chunk. The Preview button warms it on hover and
@@ -377,16 +377,6 @@ const IMG_FORMATS = 'JPG, PNG, WebP or GIF'
 const IMG_POINT_MAX = 8
 const IMG_HEIC = /\.(heic|heif)$/i
 const NO_COLOURS = 'This image has no visible colours. Try another.'
-
-// A PNG that was cut short decodes without complaint, as a blank image. Read the
-// first and last bytes of the file to tell it from a real picture of nothing.
-async function isCutShort(file) {
-  try {
-    const head = new Uint8Array(await file.slice(0, 8).arrayBuffer())
-    const tail = new Uint8Array(await file.slice(Math.max(0, file.size - 64)).arrayBuffer())
-    return isTruncatedPng(head, tail)
-  } catch { return false }
-}
 
 // Decode with createImageBitmap, which decodes off the main thread and needs no
 // object URL, and fall back to an <img> for what it will not take (an SVG, or a

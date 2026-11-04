@@ -64,8 +64,22 @@ export default function FromImageDialog({
   const errRef = useRef(null)
   const hadError = useRef(false)
   const [upscaled, setUpscaled] = useState(false) // the photo is drawn at least twice its own size
+  const photoRef = useRef(null)
 
   const empty = !src
+
+  // Whether the photo is drawn at least twice its own size changes with the
+  // dialog (a rotated phone, a resized window), not only when the photo loads.
+  useEffect(() => {
+    const img = photoRef.current
+    if (!img) return undefined
+    const measure = () => setUpscaled(img.naturalWidth > 0 && img.clientWidth >= 2 * img.naturalWidth)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const watch = new ResizeObserver(measure)
+    watch.observe(img)
+    return () => watch.disconnect()
+  }, [src, empty])
   const active0 = active != null ? points[active] : null
   const atMax = points.length >= maxPoints
   const moodLabel = MOOD_OPTIONS.find((m) => m.id === mood)?.label || 'Balanced'
@@ -286,6 +300,7 @@ export default function FromImageDialog({
                     <img
                       src={src}
                       alt="Your photo"
+                      ref={photoRef}
                       className="plb-imgstage-img"
                       draggable={false}
                       data-upscaled={upscaled}

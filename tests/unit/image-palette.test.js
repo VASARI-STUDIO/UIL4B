@@ -23,6 +23,7 @@ import {
   sampleRadius,
   visibleShare,
 } from '../../src/utils/imagePalette.js'
+import * as palette from '../../src/utils/imagePalette.js'
 
 // Build an image from a function (x, y) -> [r, g, b, a?].
 function image(width, height, paint) {
@@ -331,6 +332,102 @@ test('averageHex prefers fully opaque pixels over the soft rim beside them', () 
   assert.equal(averageHex(soft.data, 5, 5, 2, 2, 2), BLUE)
 })
 
+// ── Flat art must not swallow what is not flat ───────────────────────────────
+
+const clamp8 = (v) => Math.max(0, Math.min(255, Math.round(v)))
+const noise = (seed0) => {
+  let seed = seed0
+  return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+}
+const has = (colours, want, within = 2) => colours.some((c) => deltaE(c.hex, want) <= within)
+const list = (colours) => colours.map((c) => c.hex).join(' ')
+
+test('a grainy photo on a plain white page is not flat art, and the photo keeps its colours', () => {
+  // The photo covers 30% of the picture, +-6 of grain; no 3x3 patch of it is flat.
+  const rnd = noise(7)
+  const W = 384, H = 256
+  const bw = Math.sqrt(0.3) * W, bh = Math.sqrt(0.3) * H
+  const x0 = (W - bw) / 2, y0 = (H - bh) / 2
+  const img = image(W, H, (x, y) => {
+    if (x < x0 || x >= x0 + bw || y < y0 || y >= y0 + bh) return [255, 255, 255]
+    const t = (x - x0) / bw
+    return [clamp8(200 - 100 * t + 12 * (rnd() - 0.5)), clamp8(120 + 60 * Math.sin(y / 20) + 12 * (rnd() - 0.5)), clamp8(60 + 100 * t + 12 * (rnd() - 0.5))]
+  })
+  const { status, colours } = extractPalette(img, 5)
+  assert.notEqual(status, 'flat')
+  assert.ok(colours.length > 2, list(colours))
+  assert.ok(colours.some((c) => c.hex !== '#FFFFFF' && colourDistance(c.hex, '#FFFFFF') > 0.1), list(colours))
+})
+
+test('a screenshot with a photo thumbnail keeps a colour of the thumbnail', () => {
+  const rnd = noise(3)
+  const thumb = [150, 100, 70]
+  const img = image(384, 256, (x, y) => {
+    if (x < 60) return [30, 30, 40]                                   // dark sidebar
+    if (x >= 100 && x < 240 && y >= 60 && y < 142) {                  // 11% photo
+      return [clamp8(thumb[0] + 20 * Math.sin(x / 15) + 30 * (rnd() - 0.5)), clamp8(thumb[1] + 20 * Math.cos(y / 12) + 30 * (rnd() - 0.5)), clamp8(thumb[2] + 30 * (rnd() - 0.5))]
+    }
+    return [250, 250, 250]
+  })
+  const { colours } = extractPalette(img, 6)
+  assert.ok(has(colours, rgbToHex(...thumb), 8), list(colours))
+})
+
+test('a one-pixel line on a white page is a colour of the picture', () => {
+  const img = image(384, 256, (x, y) => (y === 128 ? hex('#DC1E1E') : hex('#FFFFFF')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#DC1E1E'), list(colours))
+  assert.ok(has(colours, '#FFFFFF'), list(colours))
+})
+
+test('a line chart of three two-pixel lines gives all three line colours', () => {
+  const lines = [[220, 40, 40], [40, 160, 60], [40, 60, 220]]
+  const img = image(384, 256, (x, y) => {
+    const at = [x * 0.3 + 20, 200 - x * 0.2, 128 + 30 * Math.sin(x / 20)]
+    for (let k = 0; k < 3; k++) if (Math.abs(y - at[k]) < 1) return lines[k]
+    return [255, 255, 255]
+  })
+  const { colours } = extractPalette(img, 5)
+  for (const line of lines) assert.ok(has(colours, rgbToHex(...line)), `${rgbToHex(...line)} missing from ${list(colours)}`)
+})
+
+test('a button with one-pixel black text keeps the black', () => {
+  const img = image(384, 256, (x, y) => {
+    if (x < 100 || x >= 260 || y < 100 || y >= 140) return [255, 255, 255]
+    return x % 6 === 0 && y >= 110 && y < 130 ? [0, 0, 0] : [30, 90, 220]
+  })
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#000000'), list(colours))
+  assert.ok(has(colours, '#1E5ADC'), list(colours))
+})
+
+test('a 12px red accent on a 384x288 page is kept', () => {
+  // 0.13% of the picture, and only 100 of its 144 pixels have a flat 3x3 around them.
+  const img = image(384, 288, (x, y) => (x >= 20 && y >= 20 && x < 32 && y < 32 ? hex('#FF0000') : hex('#F0F0F0')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#FF0000'), list(colours))
+})
+
+test('a mostly translucent area beside a smaller solid one keeps both colours', () => {
+  // 70% blue at alpha 180, 30% solid white: the white must not cancel the blue.
+  const img = image(200, 200, (x) => (x < 140 ? [40, 80, 220, 180] : [255, 255, 255, 255]))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#2850DC'), list(colours))
+  assert.ok(has(colours, '#FFFFFF'), list(colours))
+  assert.equal(colours.length, 2, list(colours))
+})
+
+test('a one-pixel line over an anti-aliased edge does not turn the blends into colours', () => {
+  // A red disc with a soft edge on white, plus a 1px black line: three colours, no pinks.
+  const img = image(300, 200, (x, y) => {
+    if (y === 20) return [0, 0, 0]
+    const t = Math.max(0, Math.min(1, 70 - Math.hypot(x - 150, y - 110) + 0.5))
+    return [255, 255, 255].map((v, k) => Math.round(v * (1 - t) + [220, 40, 40][k] * t))
+  })
+  const { colours } = extractPalette(img, 8)
+  assert.equal(colours.length, 3, list(colours))
+})
+
 test('a PNG with no IEND chunk is cut short; a complete one, or a non-PNG, is not', () => {
   const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
   const iend = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
@@ -338,6 +435,26 @@ test('a PNG with no IEND chunk is cut short; a complete one, or a non-PNG, is no
   assert.equal(isTruncatedPng(signature, [...new Array(52).fill(7), ...iend]), false)
   assert.equal(isTruncatedPng([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0], new Array(64).fill(0xab)), false)
   assert.equal(isTruncatedPng([1, 2, 3], []), false)
+})
+
+// A tiny PNG-shaped byte string: the signature, some data, an IEND chunk and
+// `after` more bytes (a valid file can carry metadata or padding after IEND).
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+const pngBytes = ({ after = 0, cut = false } = {}) => {
+  const iend = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+  return Uint8Array.from([...PNG_SIGNATURE, ...new Array(200).fill(7), ...(cut ? [] : iend), ...new Array(after).fill(0)])
+}
+
+test('a PNG with 100 bytes after IEND is not called damaged, and one cut before IEND is', async () => {
+  // The picker reads the whole file, so the check sees what follows IEND.
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ after: 100 })])), false)
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ after: 5000 })])), false)
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ cut: true })])), true)
+  assert.equal(await palette.isCutShort(new Blob([new Uint8Array(500).fill(0xab)])), false)   // not a PNG
+  assert.equal(await palette.isCutShort(new Blob([])), false)
+  const rest = (bytes) => bytes.slice(PNG_SIGNATURE.length)
+  assert.equal(isTruncatedPng(PNG_SIGNATURE, rest(pngBytes({ after: 100 }))), false)
+  assert.equal(isTruncatedPng(PNG_SIGNATURE, rest(pngBytes({ cut: true }))), true)
 })
 
 // ── Putting picks on a board ─────────────────────────────────────────────────

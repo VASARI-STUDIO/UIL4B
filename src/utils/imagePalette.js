@@ -7,14 +7,14 @@
 //      convert them to OKLab, where straight-line distance is close to how
 //      different two colours look. Pixels with alpha < 128 are not colours of
 //      the image (a transparent logo has no black in it), so they are skipped.
-//      When the image has a real opaque area, pixels that are only partly
-//      transparent (the anti-aliased rim of a logo) are skipped too; otherwise
-//      every visible pixel counts, weighted by its alpha.
+//      Every other visible pixel counts, weighted by its alpha.
 //   2. Cluster. Flat art (a logo, a diagram, pixel art) has a handful of exact
 //      colours plus blends along the edges where they meet; those blends are not
-//      colours of the image. When a few colour buckets hold nearly all of the
-//      pixels, those buckets are the clusters and the blends are dropped.
-//      Anything else is clustered with k-means, whose seeds follow k-means++
+//      colours of the image. When a few colour buckets, plus the blends between
+//      them, account for nearly every pixel, those buckets are the clusters and
+//      the blends are dropped. Anything else (a photo, grain, a gradient, a
+//      screenshot with a photo in it) is clustered with k-means, whose seeds
+//      follow k-means++
 //      with a farthest-point rule, so a small vivid patch gets a seed of its own
 //      instead of being absorbed by the large neutral area around it.
 //   3. Merge clusters whose centres sit closer than MIN_DELTA.
@@ -40,11 +40,13 @@ const SPREAD_SCALE = 0.25                // distance from the chosen set at whic
 const HUE_WEIGHT = 4                     // a step in hue counts for more than a step in lightness when judging spread
 const REP_SPATIAL_WEIGHT = 0.08          // how much picture position counts against colour when placing a marker
 const DEFAULT_SEED = 0x9e3779b1
-const SOLID_SHARE = 0.25                 // fully opaque pixels must be this share of the visible ones before partly transparent ones are dropped
 const BUCKET_SHIFT = 3                   // flat-art buckets: 32 levels per channel
 const FLAT_MAX_BUCKETS = 24              // more colour buckets than this is not flat art
 const FLAT_TOLERANCE = 6                 // largest per-channel step between neighbours that still counts as one flat area
 const FLAT_INTERIOR_MIN = 0.6            // share of pixels that must sit inside a flat area before edge blends are set aside
+const FLAT_COVER_ALL = 0.97              // flat art: real colours plus the blends between them must account for this share of ALL visible pixels
+const FLAT_MAX_POOL = 40                 // real colours plus candidate stragglers; more than this is not flat art
+const BLEND_EPS = 10                     // RGB (0-255) distance within which a pixel counts as a colour, or a blend lying on the line between two
 
 // ── Colour maths ─────────────────────────────────────────────────────────────
 
@@ -137,11 +139,11 @@ export function visibleShare(image) {
 // OKLab, picture position, a weight, the 8-bit colour and its flat-art bucket.
 // A grid larger than MAX_SAMPLE_PIXELS is read on a stride (`step`; the grid is
 // `gw` by `gh` cells).
-// A pixel is usable when it is visible. If fully opaque pixels make up a real
-// part of what is visible, only those are used and each weighs 1: the partly
-// transparent rim of a logo is a blend with the page behind it, not a colour of
-// the logo. If the image has no such area (a faded watermark) every visible
-// pixel is used and weighs its alpha.
+// A pixel is usable when it is visible (alpha of OPAQUE_ALPHA or more) and
+// weighs its alpha. The partly transparent rim of a logo is a blend with the
+// page behind it, and the flat-art pass sets blends aside, so no rule is needed
+// here: a hard share cut-off would drop a mostly translucent image beside a
+// small solid area.
 function collect(image) {
   const { data, width, height } = image
   if (!data || !(width > 0) || !(height > 0)) return { n: 0, total: 0, visible: 0, width: 0, height: 0 }
@@ -149,16 +151,12 @@ function collect(image) {
   const gw = Math.ceil(width / step)
   const gh = Math.ceil(height / step)
   let visible = 0
-  let solid = 0
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
-      const a = data[(y * width + x) * 4 + 3]
-      if (a >= OPAQUE_ALPHA) { visible++; if (a >= SOLID_ALPHA) solid++ }
+      if (data[(y * width + x) * 4 + 3] >= OPAQUE_ALPHA) visible++
     }
   }
-  const solidOnly = solid > 0 && solid >= SOLID_SHARE * visible
-  const minAlpha = solidOnly ? SOLID_ALPHA : OPAQUE_ALPHA
-  const cap = solidOnly ? solid : visible
+  const cap = visible
   const L = new Float32Array(cap), A = new Float32Array(cap), B = new Float32Array(cap)
   const X = new Uint16Array(cap), Y = new Uint16Array(cap)
   const W = new Float32Array(cap)
@@ -168,11 +166,11 @@ function collect(image) {
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
       const i = (y * width + x) * 4
-      if (data[i + 3] < minAlpha) continue
+      if (data[i + 3] < OPAQUE_ALPHA) continue
       const r = data[i], g = data[i + 1], b = data[i + 2]
       const [l, a, ob] = rgbToOklab(r, g, b)
       L[n] = l; A[n] = a; B[n] = ob; X[n] = x; Y[n] = y
-      W[n] = solidOnly ? 1 : data[i + 3] / 255
+      W[n] = data[i + 3] / 255
       cr[n] = r; cg[n] = g; cb[n] = b
       K[n] = ((r >> BUCKET_SHIFT) << 10) | ((g >> BUCKET_SHIFT) << 5) | (b >> BUCKET_SHIFT)
       n++
@@ -252,21 +250,145 @@ function interiorMask(px) {
   return { keep, count }
 }
 
+// Blend tests work on the 8-bit colours, because that is the space a browser
+// blends in. A "segment" is stored flat as [ax, ay, az, dx, dy, dz, 1/|d|^2]:
+// the line from colour a to a + d. A colour on its own is a segment with d = 0.
+function blendSegments(cols, skip = -1) {
+  const out = []
+  for (let i = 0; i < cols.length; i++) {
+    if (i === skip) continue
+    const [ax, ay, az] = cols[i]
+    out.push(ax, ay, az, 0, 0, 0, 0)
+    for (let j = i + 1; j < cols.length; j++) {
+      if (j === skip) continue
+      const dx = cols[j][0] - ax, dy = cols[j][1] - ay, dz = cols[j][2] - az
+      const dd = dx * dx + dy * dy + dz * dz
+      out.push(ax, ay, az, dx, dy, dz, dd ? 1 / dd : 0)
+    }
+  }
+  return Float64Array.from(out)
+}
+
+// The line from each colour to black: a partly transparent pixel whose colour
+// was premultiplied by its alpha is a blend of its colour and black.
+function blackSegments(cols, skip = -1) {
+  const out = []
+  cols.forEach(([ax, ay, az], i) => {
+    const dd = ax * ax + ay * ay + az * az
+    if (i !== skip && dd) out.push(ax, ay, az, -ax, -ay, -az, 1 / dd)
+  })
+  return Float64Array.from(out)
+}
+
+function nearSegment(r, g, b, segs, eps2) {
+  for (let s = 0; s < segs.length; s += 7) {
+    const dx = segs[s + 3], dy = segs[s + 4], dz = segs[s + 5]
+    let t = ((r - segs[s]) * dx + (g - segs[s + 1]) * dy + (b - segs[s + 2]) * dz) * segs[s + 6]
+    t = t < 0 ? 0 : t > 1 ? 1 : t
+    const ex = r - segs[s] - t * dx, ey = g - segs[s + 1] - t * dy, ez = b - segs[s + 2] - t * dz
+    if (ex * ex + ey * ey + ez * ez <= eps2) return true
+  }
+  return false
+}
+
+// Whole-image bucket totals: weight, pixel count and weighted colour sums.
+function bucketStats(px) {
+  const size = 1 << (3 * (8 - BUCKET_SHIFT))
+  const st = { w: new Float64Array(size), n: new Uint32Array(size), r: new Float64Array(size), g: new Float64Array(size), b: new Float64Array(size) }
+  for (let i = 0; i < px.n; i++) {
+    const k = px.K[i], w = px.W[i]
+    st.w[k] += w; st.n[k]++
+    st.r[k] += w * px.cr[i]; st.g[k] += w * px.cg[i]; st.b[k] += w * px.cb[i]
+  }
+  return st
+}
+
+// Colours that the flat areas did not show but that the picture plainly has: a
+// 1-2px line or text stroke never forms a 3x3 flat area, and a small accent
+// loses its edge pixels to the erosion. Counted over ALL pixels, any bucket
+// holding at least MIN_SHARE of the image (the share below which a cluster is
+// not offered anyway) that is not a blend of colours already known is a real
+// colour too. Null when there are too many to be flat art.
+function withStragglers(px, st, real) {
+  let total = 0
+  for (let i = 0; i < px.n; i++) total += px.W[i]
+  const known = new Set(real)
+  const cand = []
+  for (let key = 0; key < st.w.length; key++) {
+    if (!known.has(key) && st.w[key] >= MIN_SHARE * total) cand.push(key)
+  }
+  if (real.length + cand.length > FLAT_MAX_POOL) return null
+  cand.sort((a, b) => st.w[b] - st.w[a])
+  const colourOf = (key) => [st.r[key] / st.w[key], st.g[key] / st.w[key], st.b[key] / st.w[key]]
+  const partial = (key) => st.w[key] < 0.98 * st.n[key]
+  const pool = [...real, ...cand]
+  const cols = pool.map(colourOf)
+  const eps2 = BLEND_EPS * BLEND_EPS
+  const out = [...real]
+  cand.forEach((key, c) => {
+    const at = real.length + c
+    const [r, g, b] = cols[at]
+    // Close to a bigger colour (a neighbouring bucket of the same flat area), or
+    // on a line between any two others: a blend, not a colour.
+    for (let o = 0; o < at; o++) {
+      if (o >= real.length && !out.includes(pool[o])) continue
+      if (Math.hypot(r - cols[o][0], g - cols[o][1], b - cols[o][2]) <= BLEND_EPS) return
+    }
+    if (nearSegment(r, g, b, blendSegments(cols, at), eps2)) return
+    if (partial(key) && nearSegment(r, g, b, blackSegments(cols, at), eps2)) return
+    out.push(key)
+  })
+  if (out.length > FLAT_MAX_BUCKETS) return null
+  return { keys: out, cols: out.map(colourOf), partial: out.map(partial) }
+}
+
+// True when real colours plus the blends between them account for at least
+// FLAT_COVER_ALL of the weight of ALL pixels, not only the interior ones. A
+// grainy photo on a plain page fails this: the page is flat but the photo is not.
+function coversAll(px, found) {
+  let total = 0
+  for (let i = 0; i < px.n; i++) total += px.W[i]
+  const limit = (1 - FLAT_COVER_ALL) * total
+  const inSet = new Set(found.keys)
+  const eps2 = BLEND_EPS * BLEND_EPS
+  const plain = blendSegments(found.cols)
+  const toBlack = blackSegments(found.cols)
+  let missed = 0
+  for (let i = 0; i < px.n; i++) {
+    if (inSet.has(px.K[i])) continue
+    const r = px.cr[i], g = px.cg[i], b = px.cb[i]
+    if (nearSegment(r, g, b, plain, eps2)) continue
+    if (px.W[i] < 0.98 && nearSegment(r, g, b, toBlack, eps2)) continue
+    missed += px.W[i]
+    if (missed > limit) return false
+  }
+  return true
+}
+
 // Is `px` flat art? Two ways to be:
-//   - most pixels sit inside flat areas and those areas use a few buckets; the
+//   - most pixels sit inside flat areas and those areas use a few buckets, with
+//     any further colour that holds a real share of the whole image added; the
 //     pixels along the edges between them are blends of two colours and are left
-//     out, so a blend never becomes a colour of its own, or
+//     out, so a blend never becomes a colour of its own, and only if these
+//     colours and their blends account for nearly ALL pixels, or
 //   - there is hardly any room for a flat area (an 8x8 icon, small pixel art)
 //     and a few buckets hold essentially every pixel.
 // Returns the pixels that are real colours with a bucket number for each, or
 // null for a photo or a gradient.
 function findFlat(px) {
   const inside = interiorMask(px)
-  const real = inside.count >= FLAT_INTERIOR_MIN * px.n
+  let real
+  if (inside.count >= FLAT_INTERIOR_MIN * px.n) {
     // 0.1%: interior pixels hold no edge blends, so a small real accent (a 40px
     // square on an 800x600 page is 0.33%) still counts as a colour.
-    ? flatBuckets(px, inside.keep, 0.001, 0.98)
-    : flatBuckets(px, null, 0.002, 0.995)
+    const flat = flatBuckets(px, inside.keep, 0.001, 0.98)
+    if (!flat) return null
+    const found = withStragglers(px, bucketStats(px), flat)
+    if (!found || !coversAll(px, found)) return null
+    real = found.keys
+  } else {
+    real = flatBuckets(px, null, 0.002, 0.995)
+  }
   if (!real) return null
   // The real colours are decided from the flat areas, but every pixel in one of
   // those buckets counts toward its share, edge pixels included.
@@ -619,16 +741,32 @@ export function averageHex(data, width, height, cx, cy, radius = 2) {
 // ── Damaged files ────────────────────────────────────────────────────────────
 
 // A PNG cut short still decodes, as a blank image, and so looks like a picture
-// with nothing in it. Every complete PNG ends with an IEND chunk, so a file that
-// starts like a PNG (`head`, its first bytes) but has no IEND in `tail` (its
-// last bytes) was cut off.
-export function isTruncatedPng(head, tail) {
-  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-  if (!head || head.length < signature.length || signature.some((byte, i) => head[i] !== byte)) return false
-  for (let i = 0; i + 4 <= (tail ? tail.length : 0); i++) {
-    if (tail[i] === 0x49 && tail[i + 1] === 0x45 && tail[i + 2] === 0x4e && tail[i + 3] === 0x44) return false
+// with nothing in it. Every complete PNG has an IEND chunk, so a file that
+// starts like a PNG (`head`, its first bytes) but has no IEND in `rest` (the
+// bytes after the signature, or a tail of them reaching back past the last
+// image data) was cut off. IEND is not always the very last chunk: a valid file
+// can carry metadata or padding after it, so the whole of `rest` is searched.
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+
+export function isTruncatedPng(head, rest) {
+  if (!head || head.length < PNG_SIGNATURE.length || PNG_SIGNATURE.some((byte, i) => head[i] !== byte)) return false
+  if (!rest || !rest.length) return true
+  for (let i = rest.indexOf(0x49); i >= 0 && i + 4 <= rest.length; i = rest.indexOf(0x49, i + 1)) {
+    if (rest[i + 1] === 0x45 && rest[i + 2] === 0x4e && rest[i + 3] === 0x44) return false
   }
   return true
+}
+
+// isTruncatedPng for a File or Blob. Only a PNG is read past its first 8 bytes,
+// and then the whole file (the picker caps the size before this is called).
+// Anything that cannot be read is given the benefit of the doubt.
+export async function isCutShort(file) {
+  try {
+    const head = new Uint8Array(await file.slice(0, PNG_SIGNATURE.length).arrayBuffer())
+    if (!isTruncatedPng(head, [])) return false      // not a PNG, or too short to say
+    const rest = new Uint8Array(await file.slice(PNG_SIGNATURE.length).arrayBuffer())
+    return isTruncatedPng(head, rest)
+  } catch { return false }
 }
 
 // ── Moods ────────────────────────────────────────────────────────────────────
