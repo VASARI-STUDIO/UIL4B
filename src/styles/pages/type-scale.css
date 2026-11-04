@@ -41,7 +41,7 @@ html:has(.tsc-page),
 }
 html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
 html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
-html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-h) + var(--bkit-toolbar-h, 0px) + 8px); }
+html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve) + var(--bkit-toolbar-h, 0px) + 8px); }
 .tsc-page .tsc-output { gap: var(--tl-gap); container-type: inline-size; container-name: tsc-work; }
 
 /* Labels are Geist, sentence case: the shared section label is uppercase mono. */
@@ -251,7 +251,7 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
   animation: tsc-drawer-in var(--dur-2, 200ms) var(--ease-entrance, ease-out) both;
 }
 .tsc-page .tsc-drawer[hidden] { display: none; }
-html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit-h)); }
+html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve)); }
 .tsc-page .tsc-drawer:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
 .tsc-page .tsc-drawer-head {
   display: flex;
@@ -549,10 +549,10 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
   html.has-tabbar .tsc-page .tsc-dock { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
   /* The walkthrough bar takes the foot of the screen and lifts the dock, so the sheet lifts with it. */
-  html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--bkit-h)); }
+  html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve)); }
   .tsc-page .tsc-page-bar { flex-wrap: wrap; }
 }
-html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-h); }
+html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-reserve); }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .tsc-page .tsc-sample-input,

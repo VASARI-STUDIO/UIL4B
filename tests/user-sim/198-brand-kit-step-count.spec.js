@@ -8,7 +8,7 @@
 //     the count keeps its own x and width, so Next never makes anything jump.
 //   · The card that opens on arrival is one sentence and one button; the four
 //     steps are behind "What's this?".
-//   · Below 1056px the count sits in a band above the steps and does not touch
+//   · Below 1024px the count sits in a band above the steps and does not touch
 //     them.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -110,7 +110,7 @@ test.describe('Brand kit walkthrough: the step count', () => {
         expect(m.fontSize, `step ${n}: the count is under the 13px floor`).toBeGreaterThanOrEqual(13)
         expect(m.clipped, `step ${n}: the count is clipped`).toBe(false)
         expect(m.barBottomOverflow, `step ${n}: the bar overflows sideways`).toBe(false)
-        if (width < 1056) {
+        if (width < 1024) {
           expect(m.count.bottom, `step ${n}: the count runs into the steps`).toBeLessThanOrEqual(m.stepTop)
         }
         seen.push(m)

@@ -37,15 +37,17 @@ const EXIT_SHIELD_MS = 500
 // is derived rather than counted) is in src/utils/brandKitGuide.js, next to the
 // step model itself. This file is the surface. Two pieces:
 //
-//   1. THE BAR. A flat strip docked to the bottom of every step, showing all
-//      four steps at once with a tick on the ones that are built AND THE
-//      ARTEFACT EACH ONE PRODUCED: the real swatches, the real family names, the
-//      real base and ratio. That is the difference between a guided flow and
-//      four bookmarks: standing on Icons you can see the palette you drew on
-//      Colours. Every value comes off the saved design, so the bar cannot show a
-//      system the tools did not build. The bar is fixed to the foot of the
-//      viewport at every width (tool-shell.css), so it has the same height, width
-//      and position on all four tools and on every step.
+//   1. THE BAR. A strip docked to the bottom of every step (a floating glass
+//      pill from 1024px), showing all four steps at once with a tick on the
+//      ones that are built. The help panel lists THE ARTEFACT EACH ONE
+//      PRODUCED: the real swatches, the real family names, the real base and
+//      ratio. That is the difference between a guided flow and four bookmarks:
+//      standing on Icons you can see the palette you drew on Colours. Every
+//      value comes off the saved design, so neither can show a system the tools
+//      did not build.
+//      The bar is fixed over the foot of the viewport at every width
+//      (tool-shell.css), so it has the same height, width and position on all
+//      four tools and on every step.
 //
 //   2. THE PANEL. One surface that holds both the orientation copy and the
 //      closing step where the project is named: a bottom sheet joined to the bar
@@ -632,7 +634,7 @@ export default function UIKitGuide({ step }) {
       <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}${showName ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
         <div className="bkit-rail-head">
           <span className="bkit-rail-eyebrow">Brand kit</span>
-          {/* Drawn at every width; the title shows only from 1056px. */}
+          {/* Drawn at every width; the title shows only from 1024px. */}
           <span className="bkit-rail-count" aria-live="polite">{count}</span>
         </div>
 
@@ -671,11 +673,12 @@ export default function UIKitGuide({ step }) {
           <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
             {CLOSE_ICON(14, 2.4)}
           </button>
-          {/* Text from 1080px; below that the text is visually hidden and the
-              icon shows, so the control and its name both stay. */}
+          {/* Icon only at every width: the text is visually hidden, so the
+              control keeps its name, and the title repeats it for a pointer. */}
           <button
             type="button"
             className="bkit-rail-help"
+            title="What&rsquo;s this?"
             onClick={(e) => {
               setShowName(false)
               // Open on arrival, it grows to the full list; open with the list, it closes.
@@ -715,8 +718,9 @@ export default function UIKitGuide({ step }) {
           )}
         </div>
       </div>
-      {/* The bar is fixed to the foot of the viewport; this keeps its height in
-          the page so the end of the tool scrolls clear of it. */}
+      {/* The bar is fixed over the foot of the viewport; this keeps its height,
+          plus the gap around the pill from 1024px, in the page so the end of the
+          tool scrolls clear of it. */}
       <div className="bkit-rail-space" aria-hidden="true" />
     </>
   )

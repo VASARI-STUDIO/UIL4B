@@ -271,7 +271,7 @@ html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 7
   .fpr-page .fpr-dock .fpr-copy-primary .tl-btn-ico { display: none; }
   .fpr-page .fpr-dock .fpr-copy-primary { padding-inline: 12px; }
 }
-html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-h); }
+html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-reserve); }
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
