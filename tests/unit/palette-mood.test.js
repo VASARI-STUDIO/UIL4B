@@ -1,8 +1,7 @@
 // The eight palette moods, swept over the library that actually ships.
 //
-// Founder request (2026-09-07): "for our pallete library lets include filters
-// of neutral, and others" — Neutral, Warm, Cool, Pastel, Vivid, Dark, Light,
-// Monochrome.
+// The palette library filters by mood: Neutral, Warm, Cool, Pastel, Vivid, Dark,
+// Light, Monochrome.
 //
 // WHAT THIS FILE IS FOR, and what it deliberately does not do:
 //
@@ -311,7 +310,7 @@ test('a haystack carries the name, the hexes and the hues', () => {
   assert.equal(paletteHaystack(palette), hay)
 })
 
-// ── The report the founder asked for, derived rather than typed ─────────────
+// ── The mood report, derived rather than typed ──────────────────────────────
 
 test('every mood reports its derived count', () => {
   const lines = MOOD_IDS.map((mood) => {
@@ -320,7 +319,7 @@ test('every mood reports its derived count', () => {
     const split = (a) => `${String(a.length).padStart(3)} (${a.filter((p) => p.kind === 'brand').length}b + ${a.filter((p) => p.kind === 'curated').length}c)`
     return `  ${mood.padEnd(11)} library ${split(all)}   free view ${split(free)}`
   })
-  // Printed, not asserted. The numbers are the answer to the founder's
+  // Printed, not asserted. The numbers are the answer to the coverage
   // question and they are allowed to move when the library does; what must not
   // move is any of the properties asserted above.
   console.log(`\npalette moods, derived from ${LIBRARY_PALETTES.length} palettes:\n${lines.join('\n')}\n`)

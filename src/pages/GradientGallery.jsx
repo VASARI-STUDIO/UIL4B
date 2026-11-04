@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
@@ -14,10 +14,12 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
-import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
-import { mergeSubmissions } from '../utils/communityQueue'
-import { listMySubmissions } from '../utils/communityQueueApi'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
+import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
+import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
+import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
+import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -43,6 +45,10 @@ import '../styles/pages/gradient-gallery.css'
 
 const TYPES = ['Linear', 'Radial', 'Conic']
 
+// What the queue's status says on a submission row. 'approved' and 'rejected'
+// are a reviewer's words; anything unknown reads as pending.
+const QUEUE_STATUS_LABEL = { pending: 'Pending review', approved: 'Approved', rejected: 'Not approved' }
+
 // Filter options are built once at module scope: they are pure functions of
 // static data, and rebuilding them per render would hand LibraryFilterGroup a
 // new array identity every keystroke and re-measure the sliding indicator.
@@ -65,7 +71,7 @@ const TYPE_OPTIONS = [
 ]
 
 export default function GradientGallery({ toast }) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { isPro } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   // A Pro account's full library comes from the server (src/utils/proLibrary.js);
@@ -80,48 +86,86 @@ export default function GradientGallery({ toast }) {
   // state still resolving shows the tier below, never the one above.
   const tier = galleryTier({ isPro: ready, signedIn: user != null })
   const [rawQuery, setRawQuery] = useState('')
-  const [tag, setTag] = useState('all')
-  // An ARRAY, because the type tray is multi-select (founder request,
-  // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
+  // `?mood=warm` opens the library already filtered (the Gradient Generator's
+  // taste chips link here). Anything that is not a known mood reads as All.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlMood = searchParams.get('mood')
+  const moodFromUrl = GRADIENT_TAGS.includes(urlMood) ? urlMood : 'all'
+  const [tag, setTag] = useState(moodFromUrl)
+  // Following a mood link while already on the library (or Back / Forward
+  // between two of them) changes the URL without remounting, so the filter
+  // follows it. Keyed on the URL's mood only: picking a mood in the tray does
+  // not touch the URL and so is not undone here.
+  useEffect(() => { setTag(moodFromUrl) }, [moodFromUrl])
+  // An ARRAY, because the type tray is multi-select.
+  // `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.
   const [types, setTypes] = useState(['all'])
-  // Gradients this browser has queued for review. They are deliberately kept
-  // OUT of the browse grid: they are not in the library, and showing them there
-  // would imply they had been published. See utils/gradientSubmissions.js.
-  const [submissions, setSubmissions] = useState(readGradientSubmissions)
+  // "Your submissions" belongs to the ACCOUNT, not to this browser: it is read
+  // from the review queue under the signed-in uid and nowhere else.
+  //
+  // Gradients an earlier visit held in this browser are never listed here.
+  // Signed in, the page asks whether they are this account's (Keep moves them
+  // and the list picks them up; they are never moved unasked, as a shared
+  // machine's browser can hold someone else's). Signed out, the page offers to
+  // keep them (the sign-in note below) rather than show a list that lives in one
+  // browser. Either way they stay OUT of the browse grid: they are not in the
+  // library, and showing them there would imply they had been published.
+  const [queue, setQueue] = useState({ uid: null, items: [] })
+  const [queueRefresh, setQueueRefresh] = useState(0)
+  const [withdrawingId, setWithdrawingId] = useState(null)
+  // How many an earlier visit left in this browser (withdrawn ones are not counted); read once, never written.
+  const [legacyCount] = useState(() => countLegacyGradientSubmissions())
+  const keepGradients = useGradientSubmissionMigration({ toast, onMigrated: () => setQueueRefresh(n => n + 1) })
 
-  // "My pending submissions" is a property of the ACCOUNT, not of this browser.
-  //
-  // This list used to come from localStorage alone, so a gradient submitted on
-  // a phone was invisible on a laptop and vice versa — the reported symptom was
-  // "I submitted other gradients that I do not see here". They were never lost;
-  // they were simply only ever in one browser's storage, and no reviewer could
-  // see them either.
-  //
-  // The local list still renders first (instant, works offline); the account's
-  // copy merges in when it arrives. Local-only entries are KEPT and marked
-  // unsynced rather than dropped — they are real submissions that have not
-  // reached the queue yet, and hiding them would look exactly like the bug.
   useEffect(() => {
     let cancelled = false
-    if (!user?.uid) return undefined
-    listMySubmissions(user.uid, 'gradient')
+    const uid = user?.uid
+    if (!uid) return undefined
+    listMySubmissions(uid, 'gradient')
       .then((server) => {
         if (cancelled) return
-        setSubmissions(prev => mergeSubmissions(
-          server.map(s => ({
-            id: s.localId || s.id,
-            name: s.name,
-            status: s.status,
-            createdAt: s.createdAt,
-            ...(s.payload || {}),
-          })),
-          prev,
-        ))
+        const items = server
+          .filter(s => s.status !== 'withdrawn')
+          .map((s) => {
+            // The server's copy gets the same clean-up a local entry did: a
+            // document that doesn't describe a gradient is skipped, not drawn.
+            const g = sanitizeGradientSubmission({
+              id: s.id,
+              name: s.name,
+              author: s.authorName,
+              type: s.payload?.type,
+              angle: s.payload?.angle,
+              stops: s.payload?.stops,
+            })
+            return g && { ...g, docId: s.id, localId: s.localId, status: s.status, createdAt: s.createdAt }
+          })
+          .filter(Boolean)
+        setQueue({ uid, items })
       })
-      .catch(() => { /* the local list still stands; nothing is lost */ })
+      .catch(() => { /* the list stays as it was; nothing is lost */ })
     return () => { cancelled = true }
-  }, [user?.uid])
+  }, [user?.uid, queueRefresh])
+  // Another person's list never shows through after a sign-out or account switch.
+  const submissions = user?.uid && queue.uid === user.uid ? queue.items : []
+
+  const withdraw = async (s) => {
+    if (withdrawingId) return
+    setWithdrawingId(s.docId)
+    try {
+      // Forget the browser-held copy first, so a withdrawn gradient can never
+      // be found there and published again.
+      removeLegacyGradientSubmission(s.localId)
+      keepGradients.recount()
+      await deleteSubmission(s.docId)
+      setQueue(q => ({ ...q, items: q.items.filter(x => x.docId !== s.docId) }))
+      toast?.(s.status === 'pending' ? 'Submission withdrawn' : 'Submission removed')
+    } catch {
+      toast?.('Couldn’t withdraw that one. Try again.', 'error')
+    } finally {
+      setWithdrawingId(null)
+    }
+  }
   const query = rawQuery.trim().toLowerCase()
 
   // THE GATE, BEFORE THE DATA IS PRODUCED — not on a control, not in CSS.
@@ -152,8 +196,7 @@ export default function GradientGallery({ toast }) {
   const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
 
   const visible = useMemo(() => browsable.filter(g => {
-    if (tag !== 'all' && !g.tags.includes(tag)) return false
-    if (!types.includes('all') && !types.includes(g.type)) return false
+    if (!matchesGradientFacets(g, tag, types)) return false
     if (query) {
       const hay = `${g.name} ${g.type} ${g.tags.join(' ')} ${g.stops.map(s => s.color).join(' ')}`.toLowerCase()
       if (!hay.includes(query)) return false
@@ -161,7 +204,30 @@ export default function GradientGallery({ toast }) {
     return true
   }), [browsable, query, tag, types])
 
-  const clearAll = () => { setRawQuery(''); setTag('all'); setTypes(['all']) }
+  const clearAll = () => {
+    setRawQuery(''); setTag('all'); setTypes(['all'])
+    // A mood in the URL would otherwise survive the reset and come back on reload.
+    if (searchParams.has('mood')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('mood')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  // When a signed-out visitor's mood or type filter comes up empty, say so if
+  // the cap is the reason: a free account opens more rows, and some of them fit.
+  // Counted over the free tier's open rows by mood and type ONLY. A typed search
+  // is deliberately left out — it indexes hex values, so reporting whether
+  // withheld rows match it would be the oracle the gate above exists to close.
+  // Mood and type are public facets, so the count discloses nothing new.
+  //
+  // While auth is still resolving the tier reads anonymous even for a signed-in
+  // account, so nothing is claimed (and no sign-in action offered) until it has.
+  const accountMatches = useMemo(() => {
+    if (authLoading || tier !== 'anonymous' || query) return 0
+    if (tag === 'all' && types.includes('all')) return 0
+    return openGradientRows(rows, 'free').filter(g => matchesGradientFacets(g, tag, types)).length
+  }, [authLoading, tier, query, tag, types, rows])
 
   // The teased tail. Shown only while the view is unnarrowed: under a search or
   // a filter the visitor has asked a narrower question, and answering it with a
@@ -174,12 +240,14 @@ export default function GradientGallery({ toast }) {
   // PaletteGallery.jsx.
   const anonymous = tier === 'anonymous'
   const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
+  // Where the viewer stands on the ladder, in words, for the wall and the close.
+  const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'gradients' })
   const lockedBlock = teaseVisible ? (
     anonymous ? (
       <div className="lockt-cta">
         <div className="lockt-cta-copy">
           <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'gradient' : 'gradients'} with a free account`}</p>
-          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${rows.length} gradients. Pro opens all ${rows.length}.`}</p>
+          <p className="lockt-cta-body">{ladderLine}</p>
         </div>
         <button
           type="button"
@@ -197,8 +265,8 @@ export default function GradientGallery({ toast }) {
             hidden inside the card, and the name it does carry is the gradient's
             own — a fact, not an invention. */}
         <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
-        <LibraryGrid className="grg-grid" min={280} labelledBy="grg-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="gradient-library-locked-card" />)}
+        <LibraryGrid className="grg-grid grg-grid--locked" min={280} labelledBy="grg-locked-more">
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="gradients" gate="gradient-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="gradient-library-tier-lock"
@@ -212,7 +280,7 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec lib-surface grg-wrap">
-      {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
+      {/* NO `description`: the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on
           purpose-and-content. Deleted, not rewritten. The masthead is sized by
@@ -227,39 +295,76 @@ export default function GradientGallery({ toast }) {
         )}
       />
 
+      {user && keepGradients.waiting > 0 && (
+        <section className="grg-queue" aria-labelledby="grg-keep-heading">
+          <div className="section-h">
+            <h2 id="grg-keep-heading">Left in this browser</h2>
+          </div>
+          <LegacyGradientsPrompt
+            count={keepGradients.waiting}
+            busy={keepGradients.busy}
+            onKeep={keepGradients.keep}
+            onDismiss={keepGradients.notMine}
+          />
+        </section>
+      )}
+
       {submissions.length > 0 && (
         <section className="grg-queue" aria-labelledby="grg-queue-heading">
           <div className="section-h">
             <h2 id="grg-queue-heading">Your submissions</h2>
-            <span className="meta">Queued for review — not published</span>
+            <span className="meta">Saved with your account</span>
           </div>
           <p className="grg-queue-note">
-            These are held on this browser while shared publishing is built. A reviewer has
-            to approve a gradient before it joins the library above, so nothing here is live yet.
+            A reviewer has to approve a gradient before it joins the library above, so a
+            pending one is not live yet.
           </p>
           <ul className="grg-queue-list">
             {submissions.map(s => (
-              <li key={s.id} className="grg-queue-item">
+              <li key={s.docId} className="grg-queue-item">
                 <span className="grg-queue-swatch" style={{ background: gradientCss(s.type, s.angle, s.stops) }} aria-hidden="true" />
                 <span className="grg-queue-id">
                   <strong>{s.name}</strong>
                   <span className="meta">{s.type} · {s.stops.length} stops · by {s.author}</span>
                 </span>
-                <span className="grg-queue-status">Pending review</span>
-                <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name })}>Open</Link>
-                <button
-                  type="button"
-                  className="btn btn-s btn-ghost"
-                  onClick={() => {
-                    setSubmissions(withdrawGradientSubmission(s.id))
-                    toast?.('Submission withdrawn')
-                  }}
-                >
-                  Withdraw
-                </button>
+                <span className={`grg-queue-status${s.status === 'pending' ? '' : ' is-decided'}`}>{QUEUE_STATUS_LABEL[s.status] || 'Pending review'}</span>
+                <Link className="btn btn-s btn-ghost" to={gradientToolUrl({ ...s, name: s.name, src: 'link' })}>Open</Link>
+                {s.status !== 'approved' && (
+                  <button
+                    type="button"
+                    className="btn btn-s btn-ghost"
+                    disabled={withdrawingId === s.docId}
+                    onClick={() => withdraw(s)}
+                  >
+                    {s.status === 'pending' ? 'Withdraw' : 'Remove'}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Signed out with gradients left in this browser by an earlier visit. They
+          are not listed (a browser-only list is the thing this replaces); signing
+          in moves them to the account. Held back until auth has resolved, so a
+          signed-in person never sees it flash. */}
+      {!authLoading && !user && legacyCount > 0 && (
+        <section className="grg-queue" aria-labelledby="grg-queue-heading">
+          <div className="section-h">
+            <h2 id="grg-queue-heading">Your submissions</h2>
+          </div>
+          <p className="grg-queue-note">
+            {legacyCount} {legacyCount === 1 ? 'gradient' : 'gradients'} from this browser {legacyCount === 1 ? 'is' : 'are'} waiting.
+            {' '}Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account.
+          </p>
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => requireLogin('keep your gradients with your account', { free: true })}
+          >
+            Sign in
+          </button>
         </section>
       )}
 
@@ -275,7 +380,7 @@ export default function GradientGallery({ toast }) {
         search={{
           value: rawQuery,
           onChange: setRawQuery,
-          placeholder: 'Search gradients by name, hex or mood…',
+          placeholder: 'Search gradients',
           label: 'Search gradients',
         }}
       >
@@ -335,22 +440,39 @@ export default function GradientGallery({ toast }) {
         <DiscoverResultHead
           eyebrow="Curated collection"
           title="Gradients worth building with"
-          count={visible.length}
+          // No count while a Pro library is on its way: the number of free
+          // rows would be the wrong one. Otherwise the whole library's size sits
+          // beside the part this viewer has, on the unnarrowed view only.
+          count={proPending ? undefined : visible.length}
+          total={teaseVisible ? rows.length : undefined}
           noun="gradient"
           id="grg-grid-heading"
         />
 
         {visible.length > 0 ? (
           <GradientGalleryGrid toast={toast} gradients={visible} />
-        ) : (
+        ) : proPending ? null : (
           // The reset is unconditional now. It used to render only when the page
           // could prove a filter was set, which hid it in precisely the case
           // where working out what to undo by hand was hardest.
           <LibraryEmpty
             className="grg-empty"
-            title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
-            detail="Try a broader search, or reset the mood and type filters to see all of them again."
+            title={accountMatches > 0
+              ? 'Nothing open to you matches those filters.'
+              : `No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
+            detail={accountMatches > 0
+              ? `Signed out, you can browse ${browsable.length} of the ${rows.length} gradients. A free account opens ${accountMatches} that ${accountMatches === 1 ? 'fits' : 'fit'} these filters.`
+              : 'Try a broader search, or reset the mood and type filters to see all of them again.'}
             onClear={clearAll}
+            action={accountMatches > 0 ? (
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+              >
+                {`Open ${accountMatches === 1 ? 'it' : accountMatches} with a free account`}
+              </button>
+            ) : null}
           />
         )}
       </section>
@@ -362,29 +484,37 @@ export default function GradientGallery({ toast }) {
       {proPending && <ProLibraryStatus library={pro} noun="gradient library" />}
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
-          Library: the Gradient Generator is where a gradient gets made and where
-          its own "Submit to community" button already lives, running the
-          requireLogin gate 09-auth-modal-accessibility covers. Sending a submit
-          intent ahead of the user would open that form over a gradient they had
-          not built. */}
-      {/* "create and submit your
-          own" is for Pro viewers only; everyone else, at the end of a capped
+          Library: the Gradient Generator is where a gradient gets made, so the
+          link goes there and carries no intent ahead of the user. */}
+      {/* "Make your own" is for Pro viewers only; everyone else, at the end of a capped
           result, is offered more access instead. Where the locked tease is
           already on screen it IS that offer, so the close does not repeat it. */}
       {isPro === true ? (
         <GalleryCloseCta
           className="grg-cta"
-          detail="Build one in the Gradient Generator — then submit it to the community from there."
-          action="Create and submit your own"
+          detail="Make your own in the Gradient Generator and save it to your account."
+          action="Make your own"
           to="/create/gradient"
         />
       ) : !teaseVisible && !proPending && lockedCount > 0 ? (
-        <GalleryCloseCta
-          className="grg-cta"
-          detail={`Free covers ${browsable.length} of the ${rows.length}. Pro opens all of them.`}
-          action="See what Pro includes"
-          to="/plans"
-        />
+        // A signed-out visitor's next step is the free account, with the same
+        // numbers the wall states; a free account's next step is Pro.
+        anonymous ? (
+          <GalleryCloseCta
+            className="grg-cta"
+            detail={ladderLine}
+            action="Create your free account"
+            onAction={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+            busy={authLoading}
+          />
+        ) : (
+          <GalleryCloseCta
+            className="grg-cta"
+            detail={ladderLine}
+            action="See what Pro includes"
+            to="/plans"
+          />
+        )
       ) : null}
     </div>
   )

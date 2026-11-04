@@ -1,12 +1,11 @@
-// P-003, founder verdict: THE FREE TIER IS A FOOT IN THE DOOR.
+// THE FREE TIER IS A FOOT IN THE DOOR.
 //
-// That settles the question the proposal posed — "Is free a trial of
-// everything, or a genuinely useful small tool?" — and it decides how every
-// paid edge should behave.
+// Free is a genuinely useful small tool, not a trial of everything, and that
+// decides how every paid edge should behave.
 //
-// The proposal's smallest version is not code but a rule: "make every gate
+// The rule that follows is not code: make every gate
 // EXPLICIT rather than silent — the user should always know they hit a paid
-// edge, never merely find that something behaved oddly."
+// edge, never merely find that something behaved oddly.
 //
 // For a foot-in-the-door tier that is not merely honest, it is the whole
 // mechanism. A silent downgrade teaches the user nothing and reads as the
@@ -65,7 +64,7 @@ test('a new board defaults to a FREE system everywhere', () => {
   // is about, produced by the default itself.
   //
   // That fallback is now the named DEFAULT_SYSTEM rather than a repeated
-  // literal, because the founder's 2026-09-03 request made the same value the
+  // literal, because the same value is also the
   // arrival draw's system and Reset's system too — three places that must not
   // be able to disagree. DEFAULT_SYSTEM is itself asserted to be a FREE system
   // in tests/unit/palette-defaults.test.js, so accepting the constant here

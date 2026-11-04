@@ -1,11 +1,13 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { categoryDestination } from '../data/toolTree'
+import { categoryDestination, isSoonPath } from '../data/toolTree'
+import { useIsAdmin } from '../hooks/useIsAdmin'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
+import { BrandLockup } from './BrandLogo'
 
-// Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
-// decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
-// link it exactly this way. Like those two it stays a literal rather than going
+// Author credit. The Help Centre and Settings already link the portfolio exactly
+// this way. Like those two it stays a literal rather than going
 // through safeHttpUrl(): that guard is for URLs arriving at RUNTIME (community
 // submissions, prompt profile links), and a constant in this file has no
 // untrusted path to guard. No rel="nofollow" either — that is for the curated
@@ -49,7 +51,8 @@ const FOOTER_GROUPS = [
       // meet either. Revert by deleting this row and the /info row in Support.
       ['/community', 'Community'],
       ['/learn/principles', 'Design principles'],
-      ['/plans', 'Plans'],
+      ['/plans', 'Pricing'],
+      ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
       ['/sitemap', 'Sitemap'],
     ],
   },
@@ -78,26 +81,26 @@ const FOOTER_GROUPS = [
 export default function AppFooter({ compact = false }) {
   const { pathname } = useLocation()
   const year = new Date().getFullYear()
+  const { isAdmin } = useIsAdmin()
   if (!footerShowsOn(pathname)) return null
   return (
     <footer className={compact ? 'app-footer app-footer--compact' : 'app-footer'}>
       <div className="app-footer-inner">
         <div className="app-footer-brand">
-          <span className="app-footer-mark">UIL4B</span>
-          {/* THE TAGLINE IS GONE — anti-slop audit, 2026-09-09. Under the
-              wordmark sat "The operating workspace for building, validating
-              and exporting interface foundations." on every page of the site:
-              a tagline (the founder's word for the "UI system toolkit" line he
-              retired as "a huge AI Slop feature"), and a value claim typed by
-              an agent rather than read from positioning.js, which is exactly
-              what positioning-truth.test.js exists to stop. Nothing replaces
-              it — the four founder lines each already have a surface, and a
-              footer that repeats one of them under every page would be the
-              "all over the place" he named. The wordmark and the way in stay. */}
-          {/* READ FROM THE TREE, not typed. This said `/create/color` until
-              2026-09-18, which was correct while that was the one Create
-              category home that rendered a page. The founder deleted the colour
-              landing when Spectrum became `/`, so the URL now answers a 301 at
+          <span className="app-footer-mark"><BrandLockup label="UI L4B" /></span>
+          {/* THE TAGLINE IS GONE. Under the wordmark sat "The operating
+              workspace for building, validating and exporting interface
+              foundations." on every page of the site: a generic tagline, and
+              a value claim typed in place rather than read from
+              positioning.js, which is exactly what positioning-truth.test.js
+              exists to stop. Nothing replaces it — each core value line
+              already has a surface, and a footer that repeats one of them
+              under every page would be noise. The wordmark and the way in
+              stay. */}
+          {/* READ FROM THE TREE, not typed. This used to say `/create/color`,
+              which was correct while that was the one Create category home
+              that rendered a page. The colour landing was deleted when
+              Spectrum became `/`, so the URL now answers a 301 at
               the edge and a bounce in the client — exactly the defect the
               comment on FOOTER_CREATE above describes ("Imagery" pointing at
               /create/imagery). categoryDestination() answers it from
@@ -110,8 +113,9 @@ export default function AppFooter({ compact = false }) {
         <nav className="app-footer-links" aria-label="Footer">
           {FOOTER_GROUPS.map((group) => (
             <div className="app-footer-group" key={group.label}>
-              <p>{group.label}</p>
-              {group.links.map(([to, label, soon]) => (
+              <h2 className="app-footer-group-h">{group.label}</h2>
+              {/* Unfinished pages are listed for admins only. */}
+              {group.links.filter(([to, , soon]) => isAdmin || !(soon || isSoonPath(to))).map(([to, label, soon]) => (
                 soon ? (
                   <span className="app-footer-soon-link" key={to} aria-label={`${label} — coming soon`}>
                     {label} <em>Soon</em>

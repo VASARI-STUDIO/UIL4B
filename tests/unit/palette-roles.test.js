@@ -8,9 +8,9 @@
 // for every hue-based harmony, because generateHarmony emits a different shape
 // per system.
 //
-// Founder report: "all systems say the same from left to right… the subtle
-// colour of the primary should be called subtle, or the colour shown in the
-// slot should be the subtle colour."
+// The symptom: every system showed the same names from left to right, so the
+// slot called SUBTLE was not the subtle colour. Either the name or the colour
+// in the slot has to change.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'

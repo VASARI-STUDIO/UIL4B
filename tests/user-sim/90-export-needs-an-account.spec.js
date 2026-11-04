@@ -1,7 +1,7 @@
 // COPYING IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
-// Founder decision, 2026-09-15: "make users have to make an account to use alot
-// of the extra feature". The line was chosen from a measurement rather than a
+// Many of the extra features need an account. The line was chosen from a
+// measurement rather than a
 // guess — signed out, pressing each of the fourteen /create tools' own
 // take-away control, only TWO asked for an account: /create/palette
 // ("Save / export") and /create/type-scale ("Save to a project"). Saving, the
@@ -134,6 +134,9 @@ test.describe('a file needs a free account', () => {
     // called Export.
     const panel = page.locator('[role="dialog"]').filter({ hasText: /export/i }).first()
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
+    // The popup opens on the Pro book; the style guide is the free file a
+    // visitor can build, so that is the one that has to ask for an account.
+    await panel.getByRole('radio', { name: /^Style guide/ }).click()
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
       .toBeVisible({ timeout: 15000 })
@@ -178,7 +181,7 @@ test.describe('a file needs a free account', () => {
     // — a picture of a download arrow — instead of the customizer's Download
     // button, clicks it, and then reports that nothing was gated. That is
     // exactly how the first pass at this test failed.
-    const download = page.getByRole('button', { name: 'Download', exact: true })
+    const download = page.getByRole('button', { name: 'Download SVG', exact: true })
     // POSITIVE CONTROL: without a reachable download control this test is
     // asserting nothing, and that is what a closed customizer looks like.
     await expect(download, 'no Download control appeared after choosing an icon')
@@ -264,12 +267,14 @@ test.describe('copying stays free, and that is half the decision', () => {
   // "Copy CSS" (D:617). The name is per route rather than one regex: a
   // loose /copy/i would also match Tint's "Copy row", which copies a single step
   // and would let this pass while saying nothing about the CSS.
-  for (const [route, label] of [['/create/tint', 'Copy variables'], ['/create/gradient', 'Copy CSS']]) {
+  for (const [route, label, role, menu] of [['/create/tint', 'Copy CSS', 'menuitem', '.tl-export-btn'], ['/create/gradient', 'Copy CSS', 'button', null]]) {
     test(`${route} copies without asking for anything`, async ({ page }) => {
       watch(page, PERSONA)
       await go(page, route)
 
-      const copy = page.getByRole('button', { name: label, exact: true }).first()
+      // Tint's Copy CSS is a row in its Export menu, which opens for anybody.
+      if (menu) await page.locator(menu).click()
+      const copy = page.getByRole(role, { name: label, exact: true }).first()
       // POSITIVE CONTROL: a route with no copy control cannot demonstrate that
       // copying is free. Waiting on the control itself is also the readiness
       // signal — it exists only once the tool has rendered its output.

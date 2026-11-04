@@ -31,8 +31,9 @@
      declares `color` on that element.
    · `.ch-card-source`. `60-community-card-credit.spec.js` walks every one of
      them at 320/360/390/414 and fails on `scrollWidth > clientWidth + 1` — a
-     truncated platform credit. Its size, its measure and its overflow are a
-     measured result, not a style choice.
+     truncated platform credit. Its overflow is a measured result, not a style
+     choice: it is 12px, and the category beside it matches at phone width so
+     both still fit.
    · The `.ch-heart` reveal-on-hover pair. It is already guarded by
      `@media (hover:hover)` in account.css so the control is permanently visible
      on touch, which is what `24-mobile-overhaul.spec.js` checks.
@@ -100,7 +101,7 @@
   font-weight: 560;
   font-size: clamp(34px, 5vw, 62px);
   line-height: .98;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
   color: var(--cm-ink);
   text-wrap: balance;
 }
@@ -115,14 +116,14 @@
 }
 /* The <small> that says the starter cards are examples is a CAVEAT, not a
    second sentence of the pitch, and it is the one line that stops twelve seed
-   entries reading as a community. It keeps its own line and drops to the quiet
-   ink so the two are told apart at a glance rather than by reading both. */
+   entries reading as a community. It keeps its own line, a step smaller than the
+   pitch but in the same readable ink, so it is not missed. */
 .ch-spectrum .ch-sub small {
   display: inline-block;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
-  color: var(--cm-quiet);
+  color: var(--cm-dim);
 }
 
 /* The two submit entries. A pair, not one with a switch — Mobbin/Wix runs
@@ -153,11 +154,8 @@
 .ch-spectrum .ch-submit-btn svg { flex: 0 0 auto; }
 
 /* ── the toolbar ──────────────────────────────────────────────────────────────
-   Category chips and the sort segment. Mobbin/Kajabi and Mobbin/The Leap both
-   wrap their category chips into rows under a quiet label rather than scrolling
-   them, which is right here because there are only seven and a hidden eighth
-   would be a category nobody finds
-   (https://mobbin.com/sites/sections/abc34dbf-429d-43a0-a18f-684a40ca3a2a).
+   Category chips and the sort segment. The chips never wrap: on a narrow screen
+   they stay on one line and scroll sideways, with a fade at the edge.
 
    THE ACTIVE CHIP LOSES ITS ACCENT FILL. `--accent-strong` behind
    `--accent-fg` put the loudest colour on the page on a filter, seven times
@@ -169,14 +167,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 12px;
   min-width: 0;
 }
-.ch-spectrum .ch-filters { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+/* One line at every width: the chips scroll sideways instead of wrapping into
+   rows. The block padding (and the matching negative margin) keeps the focus
+   ring inside the scroll box, which clips whatever lies outside it. */
+.ch-spectrum .ch-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  margin-block: -6px;
+  padding-block: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.ch-spectrum .ch-filters::-webkit-scrollbar { display: none; }
 
 .ch-spectrum .ch-filter {
   display: inline-flex;
+  flex: none;
   align-items: center;
   min-height: 36px;
   padding: 9px 16px;
@@ -328,6 +340,8 @@
   font-size: 12px;
   color: var(--cm-faint);
 }
+/* The platform credit is 12px, the floor for text. */
+.ch-spectrum .ch-card-source { font-size: 12px; }
 /* The category tag drops its accent chip. Every card carries one, so a tinted
    accent pill on each turned the grid into a field of badges and spent the
    accent on the least load-bearing word on the card. Spectrum's
@@ -338,11 +352,11 @@
   padding: 0;
   border-radius: 0;
   background: none;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 400;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   /* `--t2`, not `--t3`. On the card's own 4% ink wash `--t3` measured 4.19:1 at
      390, 834 and 1440 in light — the category is the only classification on the
      card and it is the smallest type on it, so it is the wrong place to spend
@@ -351,15 +365,36 @@
   white-space: nowrap;
 }
 
+/* The button is the 44px hit area; the dark pill the eye sees is its ::before,
+   32px high, so the target is larger than the mark. */
 .ch-spectrum .ch-heart {
-  top: 10px;
-  right: 10px;
-  min-height: 28px;
-  padding: 6px 11px;
+  top: 4px;
+  right: 4px;
+  isolation: isolate;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-radius: var(--radius-pill);
   font-size: 12px;
   font-weight: 500;
 }
+.ch-spectrum .ch-heart::before {
+  content: "";
+  position: absolute;
+  inset: 6px 4px;
+  z-index: -1;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, .5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: background var(--dur-1) ease;
+}
+.ch-spectrum .ch-heart:hover { background: transparent; }
+.ch-spectrum .ch-heart:hover::before { background: rgba(0, 0, 0, .7); }
 
 /* ── the empty state ──────────────────────────────────────────────────────────
    A hairline panel, not a dashed one. Nothing else on this page is dashed, and
@@ -404,10 +439,10 @@
   color: var(--cm-ink);
 }
 .ch-spectrum .ch-queue-head .meta {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cm-quiet);
 }
 .ch-spectrum .ch-queue-note {
@@ -451,9 +486,9 @@
    is mono micro-caps in the quiet ink and NOT an accent chip, because "not
    sent" is not a feature. */
 .ch-spectrum .ch-queue-row .ch-card-tag {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .12em;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
   color: var(--cm-quiet);
 }
 .ch-spectrum .ch-queue-row .btn {
@@ -501,8 +536,8 @@
    One ring, on the accent, offset so it clears the card radius and the chip
    tracks. NO `border-radius` here: an outline follows its own element's radius,
    so declaring one would round the CONTROL at the instant of focus rather than
-   the ring — the defect the founder reported on 2026-09-04 and that
-   `focus-ring-geometry.test.js` has banned in every sheet since. */
+   the ring — a defect that
+   `focus-ring-geometry.test.js` bans in every sheet. */
 .ch-spectrum :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -515,14 +550,33 @@
 
 @media (max-width: 760px) {
   .ch-spectrum .ch-head { align-items: flex-start; }
-  .ch-spectrum .ch-head-actions { width: 100%; }
-  .ch-spectrum .ch-head-actions .ch-submit-btn { flex: 1 1 160px; justify-content: center; }
-  .ch-spectrum .ch-toolbar { align-items: stretch; }
+  .ch-spectrum .ch-head-actions { width: 100%; flex-wrap: nowrap; }
+  .ch-spectrum .ch-head-actions .ch-submit-btn { flex: 1 1 0; justify-content: center; }
+  .ch-spectrum .ch-sub small { font-size: 15px; }
+}
+
+/* Phone and tablet: the chips take a row of their own and the sort switch sits
+   under them, each one line. The chips fade out at the right edge to show there
+   are more; the end padding lets the last chip scroll clear of the fade. */
+@media (max-width: 900px) {
+  /* nowrap: deferred/account.css still gives `.ch-toolbar` `flex-wrap: wrap`, and
+     a wrapping column sizes its line to the chips' full width (660px), which
+     pushed the page sideways instead of letting the row scroll. */
+  .ch-spectrum .ch-toolbar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .ch-spectrum .ch-sort { align-self: flex-start; }
+  .ch-spectrum .ch-filters {
+    padding-inline-end: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .ch-spectrum .ch-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 }
 
 @media (max-width: 560px) {
-  .ch-spectrum .ch-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); }
+  .ch-spectrum .ch-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 12px; }
   .ch-spectrum .ch-thumb { height: 104px; }
   .ch-spectrum .ch-card-name {
     white-space: normal;
@@ -534,10 +588,10 @@
     min-height: 2.6em;
     line-height: 1.3;
   }
-  /* The category tag grows back to a readable size at phone width, where a 10px
-     mono caps line is the smallest thing on the screen. account.css already
-     made the same call for the old chip. */
-  .ch-spectrum .ch-card-tag { font-size: 10.5px; letter-spacing: .06em; }
+  /* The credit and the category share one line in a card of about 150px, so the
+     category drops to the credit's 12px: short enough that neither is cut off at
+     360px. */
+  .ch-spectrum .ch-card-tag { font-size: 12px; letter-spacing: normal; }
   .ch-spectrum .ch-card-meta { gap: 6px; }
   .ch-spectrum .ch-queue-row { gap: 10px; padding: 12px; }
 }
@@ -559,13 +613,11 @@
   transform: none !important;
 }
 
-/* Touch: 44px under a coarse pointer. The chips and the sort buttons grow;
-   the heart keeps its painted pill, because it sits over the card's artwork,
-   and gains the target through an invisible ring around it. */
+/* Touch: 44px under a coarse pointer for the chips and the sort buttons. The
+   heart is 44px at every pointer (see above). */
 @media (pointer: coarse) {
   .ch-spectrum .ch-filter,
   .ch-spectrum .ch-sort-btn { min-height: 44px; }
-  .ch-spectrum .ch-heart::after { content: ""; position: absolute; inset: -8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

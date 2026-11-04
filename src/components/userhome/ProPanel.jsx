@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import Glyph from './Glyph'
+import OpenPill from '../spectrum/OpenPill'
 import { usePrices, useProPrice } from '../../hooks/usePrices'
 import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 
@@ -13,6 +13,9 @@ import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 // gone (there is no version history), and "Curves and OKLCH controls" is the
 // HCT editor and the per-colour contrast chip, which are what the Palette
 // Builder actually gates. The pill goes to /plans, never to checkout.
+//
+// The panel is flat: the card colour and a hairline, with no gradient, shadow or accent border.
+
 export default function ProPanel() {
   const { currency, loaded } = useProPrice()
   const { prices } = usePrices()
@@ -20,21 +23,17 @@ export default function ProPanel() {
   return (
     <section className="uh-pro" aria-labelledby="uh-pro-h">
       <div className="uh-pro-copy">
-        <span className="uh-pro-eyebrow">UIL4B PRO</span>
         <h2 id="uh-pro-h" className="uh-pro-h">Lift the daily cap and the export mark.</h2>
         <p className="uh-pro-line">{UPGRADE_LINE}</p>
         <div className="uh-pro-cta-row">
-          <Link to="/plans" className="uh-pro-cta">
-            <span>{upgrade.label}</span>
-            <span className="uh-pro-cta-ico" aria-hidden="true"><Glyph name="arrow-up-right" size={13} /></span>
-          </Link>
+          <OpenPill to="/plans" className="uh-pro-cta">{upgrade.label}</OpenPill>
           {upgrade.billed && <span className="uh-pro-billed">{upgrade.billed}</span>}
         </div>
       </div>
       <ul className="uh-pro-perks">
         {PRO_PERKS.map((pk) => (
           <li key={pk.label} className="uh-pro-perk">
-            <span className="uh-pro-perk-ico" aria-hidden="true"><Glyph name={pk.icon} size={14} /></span>
+            <span className="uh-pro-perk-ico" aria-hidden="true"><Glyph name={pk.icon} size={16} /></span>
             <span className="uh-pro-perk-text">
               <span className="uh-pro-perk-label">{pk.label}</span>
               <span className="uh-pro-perk-note">{pk.note}</span>

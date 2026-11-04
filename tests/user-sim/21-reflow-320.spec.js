@@ -26,7 +26,7 @@
 //                       already asked for an ellipsis; `min-width: auto` on the
 //                       parent flex item meant it never applied.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
 // 320px is the narrowest viewport WCAG 1.4.10 requires (it is 400px CSS at
 // 400% zoom). Chromium reports ~315px of client width after the scrollbar.
@@ -35,7 +35,6 @@ const NARROW = { width: 320, height: 800 }
 const ROUTES = [
   '/',
   '/create/palette',
-  '/discover/prompts',
   '/create/type-scale',
   '/create/icons',
   '/plans',
@@ -107,10 +106,10 @@ test.describe('reflow at 320px', () => {
     })
   }
 
-  test('the type scale truncates its specimens without shrinking the type', async ({ page }) => {
+  test('the type scale wraps its specimens without shrinking the type', async ({ page }) => {
     // The distinction that makes this fix correct rather than convenient: a
     // type-scale tool that shrinks its own specimens to fit is lying about the
-    // scale it exists to demonstrate. Truncating the sentence is fine; changing
+    // scale it exists to demonstrate. Wrapping the sentence is fine; changing
     // the size is not.
     await page.setViewportSize(NARROW)
     watch(page, 'a designer checking a type scale on a phone')
@@ -226,9 +225,11 @@ test.describe('reflow at 320px', () => {
     }
   })
 
+  // parked: only an admin can open /discover/prompts, so this phone signs in as one.
   test('the prompt library CTA is on screen and tappable', async ({ page }) => {
     await page.setViewportSize(NARROW)
     watch(page, 'a designer submitting a prompt from a phone')
+    await signIn(page, { admin: true })
     await go(page, '/discover/prompts')
 
     const cta = page.locator('.pl-add-btn')

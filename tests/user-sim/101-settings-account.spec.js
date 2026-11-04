@@ -22,7 +22,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Edit' }).nth(1).click()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     await section.getByPlaceholder('Enter new email').fill('new.address@uil4b.test')
     await section.getByRole('button', { name: 'Next' }).click()
     await section.getByPlaceholder('Enter your password to confirm').fill('hunter22')
@@ -40,7 +40,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Edit' }).nth(1).click()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     await section.getByPlaceholder('Enter new email').fill('new.address@uil4b.test')
     await section.getByRole('button', { name: 'Next' }).click()
     await section.getByPlaceholder('Enter your password to confirm').fill('hunter22')
@@ -50,7 +50,8 @@ test.describe('settings — account', () => {
     // The link went to the NEW inbox, and the account still has the old address.
     const mail = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)
     expect(mail).toEqual([{ kind: 'change-email', to: 'new.address@uil4b.test' }])
-    await expect(section.locator('.settings-row-value').nth(1)).toHaveText('free.user@uil4b.test')
+    const emailRow = section.locator('.settings-row', { has: page.getByText('Email address', { exact: true }) })
+    await expect(emailRow.locator('.settings-row-value')).toHaveText('free.user@uil4b.test')
   })
 
   test('cancelling account deletion puts focus back on the button that opened it', async ({ page }) => {
@@ -73,7 +74,7 @@ test.describe('settings — account', () => {
     await go(page, '/settings')
     await openSection(page, 'account')
     const section = page.locator('#set-account')
-    await section.getByRole('button', { name: 'Change' }).last().click()
+    await section.getByRole('button', { name: 'Change password' }).click()
     await section.getByRole('button', { name: 'Email me a password reset link' }).click()
     await expect(section.getByRole('alert')).toContainText('could not be sent')
   })
@@ -108,7 +109,7 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
-    await expect(note).toContainText('Live pricing is unreachable')
+    await expect(note).toContainText('Stripe didn’t answer')
   })
 
   test('checkout for a cadence with no live price says so while another cadence is live', async ({ page }) => {
@@ -121,8 +122,8 @@ test.describe('settings — billing', () => {
     const note = page.locator('.checkout-plan-note')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
-    await expect(note).toContainText('price for this billing period')
-    await expect(note).not.toContainText('unreachable')
+    await expect(note).toContainText(/price for \w+ yet\./)
+    await expect(note).not.toContainText('Stripe didn’t answer')
   })
 
   test('a quarterly-or-monthly subscription is never called "Billed monthly" on a guess', async ({ page }) => {
@@ -130,9 +131,13 @@ test.describe('settings — billing', () => {
     await signIn(page, { plan: 'pro', subscription: { status: 'active', interval: 'month', currentPeriodEnd: Date.now() + 60 * 86400e3, cancelAtPeriodEnd: false } })
     await go(page, '/settings')
     await openSection(page, 'support')
-    const meta = page.locator('#set-support .sub-active-meta')
-    await expect(meta).toContainText('Renews')
-    await expect(meta).not.toContainText('Billed monthly')
+    // The record has no interval count, so the cadence is unknown: the Billing
+    // cycle row is left out rather than guessed. The next payment still shows.
+    const plan = page.locator('#set-support .sub-active')
+    await expect(plan.getByText('Next payment', { exact: true })).toBeVisible()
+    await expect(plan.getByText('Billing cycle', { exact: true }), 'a cadence was guessed').toHaveCount(0)
+    await expect(plan).not.toContainText('Monthly')
+    await expect(plan).not.toContainText('Billed monthly')
   })
 
   test('a subscription that records its count names the cadence', async ({ page }) => {
@@ -140,7 +145,8 @@ test.describe('settings — billing', () => {
     await signIn(page, { plan: 'pro', subscription: { status: 'active', interval: 'month', intervalCount: 3, currentPeriodEnd: Date.now() + 60 * 86400e3, cancelAtPeriodEnd: false } })
     await go(page, '/settings')
     await openSection(page, 'support')
-    await expect(page.locator('#set-support .sub-active-meta')).toContainText('Billed every three months')
+    const cycle = page.locator('#set-support .settings-row--fact', { has: page.getByText('Billing cycle', { exact: true }) })
+    await expect(cycle.locator('.settings-row-value')).toHaveText('Every three months')
   })
 })
 

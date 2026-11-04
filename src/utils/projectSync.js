@@ -148,6 +148,7 @@ export function projectListsEqual(a, b) {
     const other = aById.get(p && p.id)
     if (!other) return false
     if ((other.updatedAt || '') !== (p.updatedAt || '')) return false
+    if ((other.iconAt || '') !== (p.iconAt || '')) return false
   }
   return true
 }
@@ -194,9 +195,14 @@ export function mergeProjects(localList, remoteList, opts = {}) {
       byId.set(r.id, r)
       continue
     }
-    if (newerSide(existing.updatedAt, r.updatedAt) === 'remote') {
+    const side = newerSide(existing.updatedAt, r.updatedAt)
+    if (side === 'remote') {
       byId.set(r.id, r)
       replaced.push({ id: r.id, name: r.name || existing.name || 'Untitled' })
+    } else if (side === 'equal' && newerSide(existing.iconAt, r.iconAt) === 'remote') {
+      // Same edit time, but the icon was chosen later on the other device. An icon choice does
+      // not move `updatedAt`, so it carries its own stamp.
+      byId.set(r.id, r)
     }
   }
 
@@ -346,6 +352,7 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
     const data = d.data() || {}
     stored.set(d.id, {
       updatedAt: data.project?.updatedAt ?? data.updatedAt ?? null,
+      iconAt: data.project?.iconAt ?? null,
       deletedAt: data.deletedAt || null,
     })
     if (data.deletedAt) { perTombstones[d.id] = data.deletedAt; return }
@@ -444,13 +451,14 @@ export async function writeRemoteProjects(fs, uid, opts = {}) {
       }
       const there = stored.get(project.id)
       const updatedAt = project.updatedAt || null
-      if (there && !there.deletedAt && there.updatedAt === updatedAt) continue
+      const iconAt = project.iconAt || null
+      if (there && !there.deletedAt && there.updatedAt === updatedAt && (there.iconAt || null) === iconAt) continue
       await fs.setDoc(
         projectRef(fs, uid, project.id),
         { project, updatedAt, deletedAt: null, _updatedAt: now },
         { merge: false },
       )
-      stored.set(project.id, { updatedAt, deletedAt: null })
+      stored.set(project.id, { updatedAt, iconAt, deletedAt: null })
       written += 1
     }
     for (const [id, deletedAt] of Object.entries(tombstones)) {

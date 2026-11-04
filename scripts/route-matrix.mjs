@@ -37,7 +37,7 @@
 //
 // A route excluded because a hand-written list said so would go stale the first
 // time a tool shipped. A route excluded because `isSoonRoute()` says it is soon
-// becomes eligible automatically on the day the founder flips the flag.
+// becomes eligible automatically on the day the flag is flipped.
 //
 // ── Canonical and noindex truth survives, by construction ───────────────────
 //
@@ -49,7 +49,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { CREATE_GROUPS, CREATE_HOMES_THAT_RENDER, createRoutes } from '../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../src/data/legacyRoutes.js'
 import { isPrivateRoute, isSoonRoute, robotsFor } from '../src/utils/routeMeta.js'
@@ -81,7 +81,7 @@ export { CREATE_HOMES_THAT_RENDER }
 // is on the way. The exclusion existed because prerendering it would have put a
 // crawlable shell behind an empty library; that is no longer what is behind it.
 //
-// This ALSO resolves the contradiction recorded here for the founder: the
+// This ALSO resolves a contradiction that was recorded here: the
 // served shell said noindex while robotsFor('/learn') returned `index,follow`,
 // so the moment JavaScript ran the page asked to be indexed and the HTML it
 // arrived in said the opposite. Both now say index, which is the honest answer

@@ -54,18 +54,13 @@ export function FontCatalogNotice({ online, degraded, onRetry, retrying, count }
       <WarnIcon />
       <div>
         <strong>Showing a bundled list of {count ? count.toLocaleString() : 'popular'} families.</strong>
-        {/* The old copy said "Google's font catalogue couldn't be reached",
-            which the audit caught being wrong: fonts.googleapis.com and
-            fonts.gstatic.com were both returning 200 while this showed. It is
-            the catalogue LISTING API that failed — a different request with a
-            different cause — so blaming the network sent people looking in the
-            wrong place. The specimens keep rendering either way, which is the
-            observable clue this now points at. */}
+        {/* Only the catalogue listing failed. The font files themselves load from
+            separate hosts, so specimens keep rendering; the copy says what
+            happened and does not guess at a cause (the console warning carries
+            the measured one). */}
         <span>
-          The full family listing didn&rsquo;t load. Font rendering is unaffected — if specimens
-          below look right, this is the catalogue request alone, not your connection.
-          A privacy or ad-blocking extension is the usual cause. Every tool still works
-          on this shorter list.
+          The full list of families didn&rsquo;t load, so these tools are using a built-in set
+          of popular ones. Fonts still render as normal and everything keeps working.
         </span>
         <button type="button" className="typ-notice-retry" onClick={onRetry} disabled={retrying}>
           {retrying ? 'Retrying…' : 'Try the full catalogue again'}

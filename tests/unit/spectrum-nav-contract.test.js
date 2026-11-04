@@ -84,10 +84,9 @@ test('the accent stays swappable — no hardcoded brand blue anywhere in the nav
    * is color-mix()'d off `--accent`, which is what makes the derivation the
    * theme mechanism. The marketing wordmark already read it, so the two are now
    * one token instead of two that happened to look alike. */
-  assert.match(css, /\.pnav-word-mark\{color:var\(--accent-mid\)\}/,
-    'the app header wordmark must take the accent from the derived family')
-  assert.match(css, /\.spnav-word-mark\{color:var\(--accent-mid\)\}/,
-    'the marketing wordmark must take the accent from the derived family')
+    // The wordmark is now the monochrome SVG lockup (currentColor), so neither
+  // nav carries an accent-coloured "4" any more.
+  assert.ok(!/.pnav-word-mark|.spnav-word-mark/.test(css), 'a nav still styles the old text "4"')
 })
 
 test('every nav weight sits inside Geist\'s 300..700 axis', () => {
@@ -157,7 +156,7 @@ test('Beta is not a second Soon, in the app header', () => {
   const css = stripCss(read(GLOBAL_CSS))
   // The menu-scoped chip changes geometry only; the colours stay with the
   // shared badges, which five other surfaces also render.
-  assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:3px 6px;border-radius:var\(--radius-xs\)\}/)
+  assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:2px 8px;border-radius:var\(--radius-xs\)\}/)
 })
 
 test('the full-screen menu is the design\'s four items and its note — not a mega menu', () => {
@@ -173,12 +172,12 @@ test('the full-screen menu is the design\'s four items and its note — not a me
   ]) {
     assert.doesNotMatch(src, re, `the marketing menu has grown ${what} again`)
   }
-  assert.match(src, /EVERY CORE TOOL IS FREE, FOREVER/, 'the design\'s menu note is gone')
+  assert.match(src, /Every core tool is free, forever/, 'the design\'s menu note is gone')
   assert.match(src, /className="spnav-mi spnav-mi--accent"[\s\S]{0,80}Open the toolkit/,
     'the fourth big item, "Open the toolkit ↗" in the accent, is gone')
   // What a dialog has to do, whatever is in it.
   for (const [what, re] of [
-    ['scroll lock', /document\.body\.style\.overflow = 'hidden'/],
+    ['scroll lock', /lockScroll\(\)/],
     ['a focus trap', /event\.key !== 'Tab'/],
     ['focus returned to the trigger on close', /burgerRef\.current\?\.focus\(\)/],
     ['the design\'s exit, held mounted', /menu !== 'closed' &&/],
@@ -212,13 +211,13 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
   const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1])
   assert.deepEqual(labels, ['Tools', 'Pricing', 'On mobile'], 'the quiet links are the design\'s three, in its order')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(hashes, ['bench'])
+  assert.deepEqual(hashes, [])
   const page = read('src/pages/Spectrum.jsx')
   for (const id of hashes) {
     assert.match(page, new RegExp(`id="${id}"`), `SpectrumNav links to #${id}, which Spectrum.jsx does not define`)
   }
   const routes = [...src.matchAll(/to: '(\/[a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(routes, ['/plans', '/mobile'])
+  assert.deepEqual(routes, ['/tools', '/plans', '/mobile'])
   const app = stripJs(read('src/App.jsx'))
   assert.match(app, /=== '\/mobile'[\s\S]{0,400}<SpectrumMobile \/>/, 'App.jsx does not render a page at /mobile')
   assert.match(app, /=== '\/plans'[\s\S]{0,400}<Pricing \/>/, 'App.jsx does not render a page at /plans')
@@ -234,7 +233,7 @@ test('the screen you are on is announced as well as painted', () => {
   // aria-current.
   const src = stripJs(read(SPECTRUM_NAV))
   assert.match(src, /'aria-current': current \? 'page' : undefined/)
-  assert.match(src, /if \(onSalesPage\(p\)\) return 'tools'/)
+  assert.match(src, /if \(p === '\/tools'\) return 'tools'/)
   assert.match(src, /if \(p === '\/plans'\) return 'pricing'/)
   assert.match(src, /if \(p === '\/mobile'\) return 'mobile'/)
   const css = stripCss(read(CHROME_CSS))

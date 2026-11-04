@@ -56,7 +56,7 @@ function contentFor(alert) {
   // A refund or chargeback. Deliberately does NOT say "update your card": the
   // money came back, which is a different situation from a card that declined,
   // and offering the wrong fix is how a billing notice sends someone to support.
-  // It also does not accuse — a refund the founder issued lands here too.
+  // It also does not accuse — a refund issued by us lands here too.
   if (kind === 'payment-reversed') {
     return {
       title: 'Pro is off — that payment was reversed',
@@ -142,7 +142,7 @@ export default function BillingBanner() {
       await openPortal()
     } catch (err) {
       setBusy(false)
-      setError(err?.message || 'Could not open billing. Try Settings → Subscription.')
+      setError(err?.message || 'Could not open billing. Try Settings → Plan and billing.')
     }
   }
 

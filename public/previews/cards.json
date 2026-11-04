@@ -15,24 +15,6 @@
     "ground": "#F5F5F2",
     "ink": "#0F0F10"
   },
-  "hero": {
-    "kicker": null,
-    "headline": [
-      {
-        "text": "Build and export UI and brand kits from ",
-        "hi": false
-      },
-      {
-        "text": "one place",
-        "hi": true
-      },
-      {
-        "text": ".",
-        "hi": false
-      }
-    ],
-    "sub": "Pick your colours, type, icons and imagery in the browser, then export the whole kit as one file."
-  },
   "sections": [
     {
       "id": "colour",
@@ -87,11 +69,10 @@
     {
       "id": "discover",
       "label": "Discover",
-      "blurb": "Curated palettes, gradients and prompts",
+      "blurb": "Curated palettes and gradients",
       "tools": [
         "Palette Library",
-        "Gradient Library",
-        "Prompt Library"
+        "Gradient Library"
       ]
     },
     {
@@ -107,7 +88,7 @@
     {
       "id": "learn",
       "label": "Learn",
-      "blurb": "7 guides on colour, typography and accessibility",
+      "blurb": "8 guides on colour, typography, accessibility and psychology",
       "tools": [
         "Colour contrast",
         "Type scales",
@@ -115,7 +96,8 @@
         "Before the font arrives",
         "Colour spaces",
         "Dark and light themes",
-        "Brand colour"
+        "Brand colour",
+        "Value proposition"
       ]
     }
   ]

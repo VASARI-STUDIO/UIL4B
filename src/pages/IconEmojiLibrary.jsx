@@ -1,9 +1,11 @@
-import { Suspense, useCallback, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
+import useSlideIndicator from '../hooks/useSlideIndicator'
 import { useI18n } from '../contexts/I18nContext'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import { ICON_GROUPS_ROUTE } from '../data/iconGroups'
+import { requestFeedbackDialog } from '../utils/errorReport'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -19,6 +21,9 @@ import { lazyRoute as lazy } from '../utils/lazyRoute'
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
 const IconGroups = lazy(() => import('./IconGroups'))
+
+// A stable empty list, so a tab that reports nothing never changes identity.
+const NO_CREDITS = []
 
 // THE LIBRARY TABS ARE DATA. Each row is a route (also registered in
 // toolTree.js, which feeds the router and the route tables), its title and
@@ -64,7 +69,7 @@ const tabFor = (pathname) => {
 // toggles `hidden` (display:none), so state, scroll and fetched data survive and
 // the switch is instant. The inactive panel's IntersectionObservers idle while
 // hidden, so there's no background cost either.
-export default function IconEmojiLibrary({ onCopy }) {
+export default function IconEmojiLibrary({ onCopy, onCredits }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -91,6 +96,24 @@ export default function IconEmojiLibrary({ onCopy }) {
   // built in and never asks the catalogue for anything.
   const iconFallback = tab === 'icon' && catalogue === 'fallback'
   const tabRefs = useRef({})
+  // The selected tab's pill slides between tabs (useSlideIndicator; library.css).
+  const switchRef = useRef(null)
+  useSlideIndicator(switchRef, tab)
+
+  // The licence rows each tab reports for the footer's notice, kept per tab so a
+  // hidden (kept-alive) tab cannot overwrite the visible one. The active tab's
+  // list goes up to the page. The Emoji tab draws no third-party artwork and
+  // reports nothing.
+  const [credits, setCredits] = useState({ icon: NO_CREDITS, groups: NO_CREDITS })
+  const reportCredits = useMemo(() => ({
+    icon: (rows) => setCredits((c) => (c.icon === rows ? c : { ...c, icon: rows })),
+    groups: (rows) => setCredits((c) => (c.groups === rows ? c : { ...c, groups: rows })),
+  }), [])
+  const activeCredits = credits[tab] || NO_CREDITS
+  useEffect(() => {
+    onCredits?.(activeCredits, tab === 'groups' ? 'group' : 'page')
+  }, [onCredits, activeCredits, tab])
+
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
 
   const activateTab = (next) => navigate(LIB_TABS.find((t) => t.id === next).route)
@@ -109,7 +132,7 @@ export default function IconEmojiLibrary({ onCopy }) {
   }
 
   const fallback = (
-    <div className="lib-loading" role="status" aria-live="polite">
+    <div className="lib-loading lib-loading--route" role="status" aria-live="polite">
       <div className="fg-loader" />
       <strong>Opening the {current.label.toLowerCase().replace(/s$/, '')} library</strong>
       <span>Your search and filters will stay in place when you switch libraries.</span>
@@ -119,19 +142,19 @@ export default function IconEmojiLibrary({ onCopy }) {
   return (
     <>
     <div className="sec lib-surface iel-page">
-      {/* THE SHARED LIBRARY MASTHEAD. #292 moved this surface's browse language
+      {/* THE SHARED LIBRARY MASTHEAD. This surface's browse language moved
           onto the Palette/Gradient components; the hero was not part of that,
           so it stayed on a bespoke `.lib-head` — light, flush, 56px/720-weight
-          — next to two galleries wearing a 110px serif on a dark band. Founder
-          request: match the feeling of the other gallery pages. Same direction
-          of travel as #292: this page joins the existing pattern.
+          — next to two galleries wearing a 110px serif on a dark band. It now
+          matches the feeling of the other gallery pages: this page joins the
+          existing pattern.
 
           THE HEADLINE IS NOW THE LIBRARY'S NAME. The galleries' agreed
           vocabulary is title case with no trailing full stop ("Palette
           Library"), which tests/user-sim/15-discover-library-parity.spec.js
           already pins for them. "Icons for every interface." was a sentence, so
           it sat outside that vocabulary AND disagreed with the <title> the same
-          route ships ("UI L4B | Icon Library"). The two tabs still differ from
+          route ships (which names the Icon Library). The two tabs still differ from
           each other, which is the constraint that matters: /create/icons and
           /create/emoji are two indexable URLs and must not share an h1. */}
       <DiscoverGalleryHero
@@ -143,7 +166,7 @@ export default function IconEmojiLibrary({ onCopy }) {
                 puts the control that says WHICH library you are in — so it goes
                 through `aside`, not `mark`: never aria-hidden, and never
                 dropped on a narrow screen the way the count is. */}
-            <div className="lib-switch" role="tablist" aria-label="Choose asset library">
+            <div ref={switchRef} className="lib-switch" role="tablist" aria-label="Choose asset library">
               {LIB_TABS.map((lib) => (
                 <button
                   key={lib.id}
@@ -186,7 +209,7 @@ export default function IconEmojiLibrary({ onCopy }) {
                   The OFFLINE reading stays on both tabs and is true on both —
                   the emoji set is exactly the "built-in assets" it promises
                   remain available. A truthful online reading for the emoji tab
-                  is the founder's sentence to write. */}
+                  is a sentence for the owner to write. */}
               {(!online || tab === 'icon') && (
                 <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
                   <i aria-hidden="true" />
@@ -194,6 +217,12 @@ export default function IconEmojiLibrary({ onCopy }) {
                 </span>
               )}
               <span className="lib-keyhint">Use ← → to switch</span>
+              {/* These routes are chromeless, so the floating Feedback button is not
+                  drawn here and a touch screen has no right-click. This opens the
+                  same dialog the Create tools' More menu does. */}
+              <button type="button" className="lib-feedback" onClick={() => { if (requestFeedbackDialog()) navigate('/feedback') }}>
+                Send feedback
+              </button>
             </div>
           </>
         )}
@@ -214,13 +243,18 @@ export default function IconEmojiLibrary({ onCopy }) {
           {mounted.has(id) && (
             <Suspense fallback={fallback}>
               {id === 'icon'
-                ? <LibBody onCopy={onCopy} onCatalogue={onCatalogue} />
-                : <LibBody onCopy={onCopy} />}
+                ? <LibBody onCopy={onCopy} onCatalogue={onCatalogue} onCredits={reportCredits.icon} />
+                : id === 'groups'
+                  ? <LibBody onCopy={onCopy} onCredits={reportCredits.groups} />
+                  : <LibBody onCopy={onCopy} />}
             </Suspense>
           )}
         </div>
         )
       })}
+      {/* THE PAGE ENDS AT THE FOOTER (rendered by CreateTool, outside <main>).
+          A tool page carries at most one call to action before it: the Icon
+          panel's own end block, for signed-out and free viewers. */}
     </div>
     </>
   )

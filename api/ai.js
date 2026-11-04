@@ -1,6 +1,8 @@
 import { adminDb, adminAuth, credentialProblem, FieldValueIncrement } from './_lib/firebase-admin.js'
 import { planForUser, dailyLimitFor, monthlyLimitFor, modelFor } from './_lib/plans.js'
 import { requireAdmin } from './_lib/admin.js'
+import { emailGateBody } from './_lib/emailGate.js'
+import { serveUsage, usageDayKey, usageMonthKey } from './_lib/aiUsage.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
 import {
@@ -11,6 +13,12 @@ import {
 } from './_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
+import {
+  geminiRegionBlocked,
+  REGION_BLOCKED_STATUS,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_ERROR,
+} from './_lib/geoBlock.js'
 import {
   BRAND_STARTER_TOOL_ID,
   MAX_PROMPT_CHARS,
@@ -37,6 +45,7 @@ import {
 //   task 'scan-photo'      → toolId 'scan-photo'      (Gemini vision, photo-rule JSON)
 //   task 'generate-prompt' → toolId 'prompts-ai'      (OpenRouter → Gemini fallback)
 //   task 'brand-starter'   → toolId 'brand-starter'   (OpenRouter → Gemini fallback)
+// Vision tasks refuse EEA, UK and CH visitors with 451; text tasks skip the Gemini fallback there.
 //
 // 'brand-starter' is a MODE here rather than a route of its own for the reason
 // this file exists: /api holds twelve handlers and Vercel allows twelve on this
@@ -73,9 +82,7 @@ const GEMINI_MODEL = 'gemini-2.0-flash'
 // `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
 // set of day docs by id, which needs no composite index and no ordering trick.
 function dayStr(daysAgo = 0) {
-  const d = new Date()
-  if (daysAgo) d.setDate(d.getDate() - daysAgo)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return usageDayKey(new Date(), daysAgo)
 }
 
 function todayStr() {
@@ -87,15 +94,14 @@ function todayStr() {
 // which is absent from firestore.rules and therefore default-denied to every
 // client — only the Admin SDK (which bypasses rules) touches it. Reusing the
 // collection is what keeps the monthly ceiling free of a rules change, and
-// rules changes are founder-gated and separately published.
+// rules changes are published separately.
 function monthStr() {
-  const d = new Date()
-  return `m${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  return usageMonthKey(new Date())
 }
 
 // ── alt-text ─────────────────────────────────────────────────────────────────
 
-// A markdown-structured brief rather than the flat bullet list this used to be.
+// A markdown-structured brief rather than a flat bullet list.
 // Three things the old shape kept getting wrong and this one fixes:
 //   1. Headed sections separate the non-negotiable output contract from the
 //      advice. As one undifferentiated list, the "plain text only" rule carried
@@ -111,7 +117,7 @@ function monthStr() {
 //      audiences want the SAME sentence rather than asking for a compromise.
 // Cost: the examples are text-only, so this adds input tokens and no extra
 // request. Free Gemini tiers meter requests per minute/day, not tokens, so it
-// stays inside the founder's free-tier-only constraint.
+// stays inside the free-tier-only constraint.
 const ALT_BASE_PROMPT = `# Role
 
 You are an accessibility specialist writing the alt text for one image on a website.
@@ -470,20 +476,20 @@ async function callGemini(userMessage, opts = {}) {
 // THE DEFECT THIS EXISTS FOR. The failover above is silent and total: a wrong,
 // revoked or rate-limited OpenRouter key produces a perfectly good generation
 // from Gemini, the user sees nothing, and the app looks healthy while the
-// primary provider is dead. Until now the only trace a failover left anywhere
-// was one console.error in a Vercel function log — never counted, never
+// primary provider is dead. Without this, the only trace a failover leaves is
+// one console.error in a Vercel function log — never counted, never
 // aggregated, never alerted on, short retention, no admin surface. OpenRouter
-// could have been dead since August and nothing in the product would say so.
+// could be dead for weeks and nothing in the product would say so.
 //
 // The test being answered: would an operator who is NOT looking at devtools
 // find out, within a day, that every generation is coming from the fallback?
 // These counters are the durable half of making that a yes.
 //
-// WHERE IT LIVES, and why that needed nothing from the founder: `provider-health`
+// WHERE IT LIVES, and why that needs no rules change: `provider-health`
 // appears NOWHERE in firestore.rules, which default-denies, so it is unreachable
 // from every client and only the Admin SDK (which bypasses rules) can touch it.
 // That is the same property `daily-usage` already relies on, and it is what
-// keeps this clear of a rules change — rules changes are founder-gated and
+// keeps this clear of a rules change — rules changes are
 // published separately.
 const PROVIDER_HEALTH = 'provider-health'
 const HEALTH_WINDOW_DAYS = 7
@@ -605,8 +611,8 @@ async function alertFirstFailoverOfDay(db, date, summary) {
  * Summarise the last HEALTH_WINDOW_DAYS for the admin diagnostic.
  *
  * A verdict, not a pile of numbers. `openrouterKey: "set (73 chars)"` is what a
- * revoked key looks like too — that is precisely why the old owner action could
- * never be completed. This reports what the key DID.
+ * revoked key looks like too — that is why a key's presence is not a health
+ * check. This reports what the key DID.
  */
 // Exported and pure. This is the sentence an operator actually reads, so it is
 // the part most worth pinning: `days` is `[{ date, data }]`, newest first.
@@ -638,16 +644,18 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
   const attempts = totals.openrouterOk + totals.openrouterFail
   let status, summary
   if (attempts === 0) {
-    // NOT 'ok'. Silence is not health — reading no traffic as a pass is how the
-    // previous owner action recorded a check that never ran.
+    // NOT 'ok'. Silence is not health — reading no traffic as a pass would
+    // record a check that never ran.
     status = 'no-data'
     summary = `No prompt generations in the last ${window} days, so nothing has exercised the OpenRouter path. This is not a pass — generate one prompt and look again.`
   } else if (totals.openrouterFail === 0) {
     status = 'ok'
-    summary = `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
+    summary = totals.openrouterOk === 1
+      ? `OpenRouter served the only generation in the last ${window} days.`
+      : `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
   } else if (totals.openrouterOk === 0) {
     status = 'failing'
-    summary = `OpenRouter failed all ${totals.openrouterFail} times in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
+    summary = `OpenRouter failed ${totals.openrouterFail === 1 ? 'the only time it was tried' : `all ${totals.openrouterFail} times`} in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
   } else {
     status = 'degraded'
     summary = `OpenRouter failed ${totals.openrouterFail} of ${attempts} attempts in the last ${window} days.`
@@ -660,7 +668,7 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     totals,
     byDay,
     lastFailover,
-    // Reported so the founder can see from Admin whether outbound mail is still
+    // Reported so an admin can see from Admin whether outbound mail is still
     // going out as the Resend sandbox, without opening a dashboard. A mailbox is
     // not a verified sending domain, and the difference is invisible until
     // someone tries to email a customer.
@@ -726,7 +734,7 @@ export function buildPromptUserMessage({ description, style, platform } = {}) {
 // and the whole provider-health apparatus below exists because the first one
 // did. Same race, same counters, same once-a-day operator email.
 //
-// COST CONTROLS, all four of them, because this spends the founder's money:
+// COST CONTROLS, all four of them, because this spends real money:
 //   1. the brief is capped at MAX_PROMPT_CHARS on the way in;
 //   2. maxTokens is 900 — enough for eight swatches and two font names, and not
 //      enough to be talked into an essay;
@@ -748,7 +756,7 @@ The object has exactly these keys:
 
 {
   "name": "a short name for this direction, 2-4 words, max 48 characters",
-  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and what you did about it",
+  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and how the draft answers it",
   "palette": [ { "role": "Background", "hex": "#FFFFFF" }, ... ],
   "fonts": { "heading": "Family Name", "body": "Family Name" },
   "typeScale": { "base": 16, "ratio": 1.25 }
@@ -778,7 +786,7 @@ ${fontChoiceList()}
 
 # rationale
 
-One sentence, in plain English, that a designer would accept from a colleague. Say what in the brief drove the choice. Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
+One sentence, in plain Australian English (colour, centre, organise), that a designer would accept from a colleague. Say what in the brief drove the choice. Write about the draft, never as yourself: no "I", "we" or "my". Write "Soft, neutral colours keep the focus on the product", not "I chose soft, neutral colors". Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
 
 # If the brief is thin
 
@@ -815,7 +823,8 @@ async function runBrandStarter(req, res, { plan, bucket, used }) {
     }
   }
 
-  if (!text && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!text && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       text = await callGemini(userMessage, opts)
       servedBy = 'gemini'
@@ -914,7 +923,8 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     }
   }
 
-  if (!prompt && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!prompt && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       prompt = await callGemini(userMessage)
       provider = 'gemini'
@@ -962,6 +972,7 @@ const TASKS = {
     limitError: 'Daily limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    geminiOnly: true,
     run: runAltText,
     cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP,
   },
@@ -970,6 +981,7 @@ const TASKS = {
     limitError: 'Daily scan limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    geminiOnly: true,
     run: runScanPhoto,
   },
   'generate-prompt': {
@@ -1004,102 +1016,62 @@ function timingSafeEqual(a, b) {
   return nodeTimingSafeEqual(av, bv)
 }
 
-// ── The founder's internal boards, served rather than shipped ───────────────
+// ── The internal boards, served rather than shipped ────────────────────────
 //
-// TWO data modules describe the PROJECT rather than the product, and both used
-// to ship to the browser. This one endpoint returns both, because they are one
-// question ("what is the state of this project") behind one gate, and because
-// two requests would be two things to keep in step.
+// TWO data modules describe the PROJECT rather than the product. This one
+// endpoint returns both, because they are one question ("what is the state of
+// this project") behind one gate, and because two requests would be two things
+// to keep in step.
 //
-//   src/data/pipeline.js    the engineering backlog — 185 rows whose `note`
-//                           fields are long, candid and written for us.
-//   src/data/moduleBoard.js the module status board — 20 entries carrying
-//                           `summary`, `recentChanges`, `nextSteps`, `health`
-//                           and dated owner actions per module.
+//   src/data/pipeline.js    the engineering backlog — long, candid `note`
+//                           fields written for the team.
+//   src/data/moduleBoard.js the module status board — per module, a `summary`,
+//                           `recentChanges`, `nextSteps`, `health` and dated
+//                           owner actions.
 //
-// THE FIRST ONE reached the Admin dashboard by `import('../data/pipeline')`,
-// which made it a CLIENT MODULE — so rolldown emitted it as
-// dist/assets/pipeline-*.js and Vercel served it as a public static asset.
-// MEASURED against a real `npm run build`, anonymous, no login:
-//
-//   GET /admin                    200   the HTML names the entry chunk
-//   GET /assets/index-*.js        200   names Admin-rjGyizH8.js
-//   GET /assets/Admin-*.js        200   names pipeline-DUbq1XL3.js
-//   GET /assets/pipeline-*.js     200   824,007 bytes, 319,711 gzip, no auth
-//
-// That file contained the literal string `allow create: if true` — the feedback
-// rule that #472 has since closed in firestore.rules (docs/OWNER-ACTIONS.md,
-// the founder's own worklist, followed the boards out of the repository on
-// 2026-09-16 for the same reason one level up: this paragraph is the argument
-// for why a worklist must not ship to a client or sit in a public tree — see
-// .gitignore) — 23 mentions of firestore.rules,
-// 3 permission-denied diagnostics and
-// 246 mentions of the founder. #420 moved it behind a dynamic import, which
-// fixed WHEN it was fetched and did nothing at all about WHO could fetch it.
-//
-// THE SECOND ONE was a plain STATIC import in Admin.jsx, so its 20,332 bytes
-// were inlined straight into the Admin chunk and fetched by anyone who loaded
-// /admin. Measured on the same build, in dist/assets/Admin-*.js verbatim:
-//
-//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
-//   the published Firestore rules", "Do not assume the admin custom claim
-//   exists; resolve any permission-denied result explicitly", ...]
-//
-// Instructions addressed to the owner, plus per-module health and what is known
-// to be unfinished. Much smaller, so the weight argument barely applies — the
-// trust argument applies in full, and it is the same class of disclosure.
-//
-// So both boards now arrive from here, behind the same verified-admin check
-// /api/ai?diag=1 already uses, and neither module enters the client graph.
+// WHY THEY ARE SERVED, NOT BUNDLED: a module imported by client code is built
+// into dist/assets/ and served as a public static asset, readable by anyone
+// without logging in. These boards hold instructions addressed to the owner,
+// per-module health and what is known to be unfinished, so they must not enter
+// the client graph at all. Both arrive from here, behind the same
+// verified-admin check /api/ai?diag=1 uses.
 // tests/unit/admin-chunk-carries-no-backlog.test.js DERIVES the internal boards
 // from src/data/ by shape and fails the build if a row of any of them is back
-// in the output — so a third one is covered the day it is written.
+// in the output — so a new board is covered the day it is written. It derives
+// its needles from the board files, so on a checkout without them it skips.
 //
 // ── WHY THIS ROUTE AND NOT A NEW ONE ───────────────────────────────────────
 // api/ holds exactly twelve deployed functions and Vercel allows twelve on this
 // plan; three unit tests fail the build on a thirteenth. api/verify-admin.js is
-// the established place to fold an admin-only payload (`includeUsers` says so
-// in its own comment) — but docs/reference/human-validation-zones.md gates that
-// file to the founder, so a change there could not ship today and the board
-// would have to stay broken until somebody typed a patch in. THIS route is not
-// gated, already imports requireAdmin from _lib/admin.js, and already answers
-// an admin-only GET. Folding in here costs nothing against the budget and ships
-// now, which is the difference between a hole closed and a hole documented.
+// the usual place to fold an admin-only payload (`includeUsers` says so in its
+// own comment), but that file is a protected one that changes only through a
+// separate review. THIS route is not protected, already imports requireAdmin
+// from _lib/admin.js, and already answers an admin-only GET. Folding in here
+// costs nothing against the budget.
 //
 // ── WHY import() AND NOT A GENERATED JSON ──────────────────────────────────
-// The same reason the client's comment gave before it: a generator can go
-// stale. An agent who edits pipeline.js and forgets to re-run it would leave
-// the founder's board showing yesterday's backlog with every check green.
-// import() of a literal path cannot go stale. It is INSIDE this branch rather
-// than at module scope so the hot POST path never parses a quarter of a
-// megabyte of prose on a cold start — and, since 2026-09-16, so that a
-// deployment WITHOUT the modules still serves every other route on this
-// function instead of failing to load at all.
+// A generator can go stale. If pipeline.js were edited without re-running it,
+// the board would show an old backlog with every check green. import() of a
+// literal path cannot go stale. It is INSIDE this branch rather than at module
+// scope so the hot POST path never parses a large block of prose on a cold
+// start, and so a deployment WITHOUT the modules still serves every other
+// route on this function instead of failing to load at all.
 //
-// ── SINCE 2026-09-16 THE MODULES ARE NOT IN THE DEPLOYMENT AT ALL ──────────
+// ── THE MODULES ARE NOT IN THE DEPLOYMENT ──────────────────────────────────
 //
-// The repository went PUBLIC to use free GitHub Actions minutes, which made
-// this backlog world-readable. The founder chose to keep the repository public
-// and take the notes out of it instead: src/data/pipeline.js and
-// src/data/moduleBoard.js are gitignored, byte-identical on his machine and in
-// no clone. .gitignore carries the decision, its date and its cost.
-//
-// vercel.json's `functions["api/ai.js"].includeFiles` named both files as
-// belt-and-braces behind @vercel/nft's trace of the literal imports below. It
-// named two paths that no longer exist in a checkout, so it went with them, and
-// the `functions` block was empty afterwards and went too.
+// src/data/pipeline.js and src/data/moduleBoard.js are gitignored: they exist
+// on the maintainer's machine and in no clone of this public repository.
 //
 // SO IN PRODUCTION BOTH IMPORTS BELOW THROW, AND THAT IS THE EXPECTED STATE
 // RATHER THAN A FAULT. It is caught by specifier and said out loud. WHAT IT
 // MUST NEVER DO IS ANSWER 200 WITH EMPTY ARRAYS: an empty board is
 // indistinguishable from "there is no work left", and a surface that cannot
-// tell those two apart is the exact class of lie the comments above argue
-// against. A REAL failure — a syntax error in the module, a dependency of it
-// missing — is still a 500, because it is still a fault; the two are told apart
-// by the error's own `code` and the specifier it names, not by the wording of
-// its message.
+// tell those two apart is a lie. A REAL failure — a syntax error in the
+// module, a dependency of it missing — is still a 500, because it is still a
+// fault; the two are told apart by the error's own `code` and the specifier it
+// names, not by the wording of its message.
 //
-// pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
+// pipeline.js DOES NOT MOVE. Composition scripts and several
 // tests/unit/*.test.js files import it by that exact path, and they still run
 // in full wherever it is present.
 
@@ -1108,7 +1080,7 @@ function timingSafeEqual(a, b) {
 // could not be found, which is the unambiguous half; the message is read as a
 // fallback for a runtime that sets no `url`, and only the quoted specifier out
 // of it, because matching the whole message would also match a missing
-// DEPENDENCY of a board and report a real defect as a founder decision.
+// DEPENDENCY of a board and report a real defect as a missing board.
 const BOARD_MODULE = /[/\\]src[/\\]data[/\\](?:pipeline|moduleBoard)\.js$/
 function isBoardModuleMissing(err) {
   if (err?.code !== 'ERR_MODULE_NOT_FOUND') return false
@@ -1118,6 +1090,7 @@ function isBoardModuleMissing(err) {
 }
 
 async function serveBacklog(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store')
   const admin = await requireAdmin(req)
   // 404, not 403 — see requireAdmin. A caller who is not the administrator
   // learns nothing about whether this surface exists, which matters more here
@@ -1149,12 +1122,10 @@ async function serveBacklog(req, res) {
     if (isBoardModuleMissing(err)) {
       return res.status(501).json({
         localOnly: true,
-        since: '2026-09-16',
         modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
-        error: 'The internal boards are not part of this deployment. They are kept on the founder\'s '
-          + 'machine and out of this public repository, because their notes are candid prose written '
-          + 'for us, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — the rows exist, '
-          + 'on the checkout that has the files.',
+        error: 'The internal boards are not part of this deployment: their data files are kept out of '
+          + 'this public repository, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — '
+          + 'the rows exist on a checkout that has the files.',
       })
     }
     // Named in words rather than swallowed. A board that silently rendered zero
@@ -1165,11 +1136,33 @@ async function serveBacklog(req, res) {
   }
 }
 
+// Per-visitor answer, so it must never be cached or shared between visitors.
+function serveRegion(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store')
+  return res.status(200).json({ blocked: geminiRegionBlocked(req.headers) })
+}
+
 export default async function handler(req, res) {
-  // ── The founder's Pipeline board ──────────────────────────────────────────
+  // ── The Pipeline board ────────────────────────────────────────────────────
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
+  // GET /api/ai?region=1: does the Gemini region gate apply to this visitor? The
+  // tool pages ask so they can show the explanation instead of an upload box.
+  if (req.method === 'GET' && 'region' in (req.query || {})) return serveRegion(req, res)
+
+  // ── This account's AI usage ───────────────────────────────────────────────
+  // GET /api/ai?usage=1. Token required, read-only; see api/_lib/aiUsage.js. The
+  // daily-usage documents are default-denied to clients, so this is the only way
+  // the dashboard can show the account's own count rather than one browser's.
+  if (req.method === 'GET' && 'usage' in (req.query || {})) {
+    return serveUsage(req, res, {
+      verifyIdToken: (token) => adminAuth().verifyIdToken(token),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      readUsage: async (ids) => (await Promise.all(ids.map((id) => adminDb().doc(`daily-usage/${id}`).get()))).map((snap) => snap.data() || {}),
+    })
+  }
 
   // ── The Pro libraries ─────────────────────────────────────────────────────
   // GET /api/ai?library=palettes|gradients|prompts. Token + planForUser, like
@@ -1183,15 +1176,52 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The Pro export documents ───────────────────────────────────────────────
+  // POST /api/ai?export=document { format, projectName, design }. Token +
+  // planForUser, like the libraries above, and not metered: it reads one user
+  // document and builds a string. The design system book and the brand
+  // guidelines are built HERE and nowhere else, so the Pro check cannot be
+  // skipped by calling a generator in the browser; see api/_lib/exportDocument.js.
+  // Imported on demand so the generators do not ride in this function's cold start.
+  if (req.method === 'POST' && req.query?.export === 'document') {
+    const { serveExportDocument } = await import('./_lib/exportDocument.js')
+    return serveExportDocument(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      credentialProblem,
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
+  // ── The soft stand-in for a locked palette ─────────────────────────────
+  // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
+  // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
+  if (req.method === 'GET' && 'palettePreview' in (req.query || {})) {
+    const [{ servePalettePreview }, { LIBRARY_PALETTES }] = await Promise.all([
+      import('./_lib/library/preview.js'),
+      import('./_lib/library/paletteLibrary.js'),
+    ])
+    return servePalettePreview(req, res, LIBRARY_PALETTES)
+  }
+
+  // ── The animated icon sets (Pro) ──────────────────────────────────────────
+  // GET /api/ai?animatedIcons=<prefix>[&icons=a,b,c]. Same token + planForUser
+  // gate as the libraries; see api/_lib/icons/animated.js.
+  if (req.method === 'GET' && 'animatedIcons' in (req.query || {})) {
+    const { serveAnimatedIcons } = await import('./_lib/icons/animated.js')
+    return serveAnimatedIcons(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── Config health check ───────────────────────────────────────────────────
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
   // are present and valid — presence and length only, never a value.
   //
-  // THIS USED TO BE GATED ON A STRING COMMITTED TO THIS FILE. That is not a
-  // secret; it is a published password, and it opened an endpoint that
-  // enumerates which of the deployment's secrets exist. It is now gated on a
-  // VERIFIED ADMINISTRATOR, using the same allowlist + email_verified check as
-  // /api/verify-admin.
+  // GATED ON A VERIFIED ADMINISTRATOR, not on a shared string: a string in this
+  // file would be a published password, and this endpoint enumerates which of
+  // the deployment's secrets exist. It uses the same allowlist +
+  // email_verified check as /api/verify-admin.
   //
   // The break-glass matters and is not laziness. The single most useful thing
   // this endpoint reports is "the Firebase credential is broken" — and admin
@@ -1200,6 +1230,7 @@ export default async function handler(req, res) {
   // server-only env var with NO default: unset (the shipped state) means the
   // break-glass does not exist and admin auth is the only way in.
   if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'private, no-store')
     if (!('diag' in (req.query || {}))) {
       res.setHeader('Allow', 'POST')
       return res.status(405).json({ error: 'Method not allowed' })
@@ -1234,10 +1265,10 @@ export default async function handler(req, res) {
 
   // ── Authentication comes FIRST ────────────────────────────────────────────
   // Ahead of the task lookup, and — the part that matters — ahead of
-  // task.configured(). It used to run after, and the ordering was a secret
-  // oracle: an anonymous POST that answered 401 meant "that provider's key is
+  // task.configured(). Run after it, the ordering would be a secret
+  // oracle: an anonymous POST that answered 401 would mean "that provider's key is
   // set", and one that answered 500 ("AI is not configured on the server:
-  // GEMINI_API_KEY is missing") meant it is not. Because each task declares its
+  // GEMINI_API_KEY is missing") would mean it is not. Because each task declares its
   // OWN configured() — the vision tasks need Gemini, generate-prompt takes
   // either — three unauthenticated requests enumerated which provider keys the
   // deployment holds. No key VALUE ever leaked, only its existence, which is
@@ -1252,13 +1283,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Authentication required' })
   }
 
-  let uid, email
+  let uid, email, emailVerified
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
     // Only trust the email for entitlements when Firebase has verified it —
     // an unverified signup could otherwise claim someone else's address.
     email = decoded.email_verified ? decoded.email : null
+    emailVerified = decoded.email_verified === true
   } catch {
     // This 500 reports the state of FIREBASE_SERVICE_ACCOUNT_KEY to a caller who
     // has not proved anything, and that is deliberate rather than an oversight
@@ -1275,6 +1307,15 @@ export default async function handler(req, res) {
   const task = TASKS[req.body?.task]
   if (!task) {
     return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
+  }
+
+  // Region gate. After auth on purpose (an anonymous caller still gets 401 and
+  // learns nothing), before the quota reservation and any provider fetch, so a
+  // refused request costs nothing. Gemini-only tasks refuse outright; a task
+  // with an OpenRouter key skips the Gemini fallback instead (see the run fns).
+  if (geminiRegionBlocked(req.headers) && (task.geminiOnly || !OPENROUTER_KEY)) {
+    res.setHeader('Cache-Control', 'no-store')
+    return res.status(REGION_BLOCKED_STATUS).json({ error: REGION_BLOCKED_ERROR, code: REGION_BLOCKED_CODE, quotaSpent: false })
   }
 
   // …and only now, to a caller Firebase has vouched for, does the server say
@@ -1296,23 +1337,25 @@ export default async function handler(req, res) {
   // every other AI task already uses. Both live in `daily-usage`, which is
   // absent from firestore.rules and therefore default-denied to every client —
   // only the Admin SDK, which bypasses rules, can read or write it. That is
-  // what keeps this clear of a rules change, and rules changes are founder-
-  // gated and published separately.
+  // what keeps this clear of a rules change, and rules changes are
+  // published separately.
   //
   // The response carries the count back so the UI can show what is left
   // without ever reading the collection itself.
   if (task.quota === 'generation') {
-    let plan
+    let plan, subscription, lifetimeEntitlement
     try {
       const snap = await fireDb.doc(`users/${uid}`).get()
-      plan = planForUser({
-        subscription: snap.data()?.subscription || null,
-        lifetimeEntitlement: snap.data()?.lifetimeEntitlement || null,
-        email,
-      })
+      subscription = snap.data()?.subscription || null
+      lifetimeEntitlement = snap.data()?.lifetimeEntitlement || null
+      plan = planForUser({ subscription, lifetimeEntitlement, email })
     } catch (e) {
       return res.status(500).json({ error: `Could not read your plan from Firestore (${String(e?.message || e).slice(0, 140)}).` })
     }
+
+    // Before the meter is touched, so a refused request reserves nothing.
+    const unverified = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
+    if (unverified) return res.status(403).json(unverified)
 
     const bucket = generationBucket(plan.id, monthStr())
     const ref = fireDb.doc(`daily-usage/${uid}_${bucket.suffix}`)
@@ -1356,19 +1399,22 @@ export default async function handler(req, res) {
 
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
   const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
-  let plan, limit, monthLimit
+  let plan, limit, monthLimit, subscription, lifetimeEntitlement
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
-    plan = planForUser({
-      subscription: userSnap.data()?.subscription || null,
-      lifetimeEntitlement: userSnap.data()?.lifetimeEntitlement || null,
-      email,
-    })
+    subscription = userSnap.data()?.subscription || null
+    lifetimeEntitlement = userSnap.data()?.lifetimeEntitlement || null
+    plan = planForUser({ subscription, lifetimeEntitlement, email })
     limit = dailyLimitFor(plan, toolId)
     monthLimit = monthlyLimitFor(plan, toolId)
   } catch (e) {
     return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
   }
+
+  // Free use of a paid task needs a verified email; see _lib/emailGate.js. It
+  // runs before the meters so a refused request reserves nothing.
+  const blocked = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
+  if (blocked) return res.status(403).json(blocked)
 
   // BOTH ceilings are reserved in ONE transaction, month first. The order is the
   // reporting order: whichever is reached first is the one the message names,

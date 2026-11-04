@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { answerIconify, fixturePacks, ICONIFY_HOSTS } from '../user-sim/iconify-stub.js'
+import { answerIconify, answerSnapshot, fixturePacks, headPackNames, headPackOfUrl, ICONIFY_HOSTS, refusesCollection, SNAPSHOT_PATH_RE, snapshotPacks } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -26,7 +26,10 @@ test('every pack IconLibrary.jsx browses on first paint has a fixture file', () 
   const end = page.indexOf("// The group tray", start)
   assert.ok(start >= 0 && end > start, 'the catalogue declarations must be available')
   const { packs, groups } = new Function(`${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)()
-  assert.deepEqual(groups, ['coloured', 'brands', 'flags', 'emoji'])
+  assert.deepEqual(groups, ['coloured', 'brands', 'flags'])
+  for (const pack of ['twemoji', 'fluent-emoji', 'noto', 'openmoji']) {
+    assert.ok(packs.includes(pack), `${pack} stays in the default listing and the pack menu without an Emoji chip`)
+  }
   for (const pack of ['lucide', 'ph', 'mdi', 'heroicons', 'solar']) {
     assert.ok(packs.includes(pack), `${pack} remains available without style chips`)
   }
@@ -51,6 +54,34 @@ test('/collection answers per pack, and Lucide holds a full first page', () => {
   assert.ok(names.length >= 120, `lucide fixture has ${names.length} names; the default grid's first page needs 120 from one pack`)
   assert.ok(names.includes('zap'), '10-home hands lucide:zap to the editor; the fixture must hold it')
   assert.equal(answerIconify(`${HOST}/collection?prefix=no-such-pack`).status, 404)
+})
+
+test('the site\'s own pack list is the /collection fixture for a pack with a committed snapshot, and a 404 for every other pack', () => {
+  const committed = new Set(snapshotPacks())
+  assert.ok(committed.size >= 20, `expected the repo to commit many pack lists; found ${committed.size}`)
+  for (const pack of fixturePacks()) {
+    const site = answerSnapshot(`/iconify/collections/${pack}.json`)
+    if (!committed.has(pack)) {
+      assert.equal(site.status, 404,
+        `${pack}: the repo commits no pack list for it, so the site must 404 and the page must go on to the live /collection`)
+      continue
+    }
+    assert.equal(site.status, 200, `${pack}: the site's pack list has no fixture answer`)
+    assert.deepEqual(json(site), json(answerIconify(`${HOST}/collection?prefix=${pack}`)),
+      `${pack}: the site's list and the live /collection answer must be the same body, or the suite tests two different catalogues`)
+  }
+  // fluent-emoji is the one pack the real page asks Iconify for (Pro only). If
+  // the repo ever commits its list, this goes red and the Pro cold-visit counts
+  // in specs 66 and 97 (exactly one /collection) must drop to 0.
+  assert.equal(committed.has('fluent-emoji'), false,
+    'fluent-emoji has a committed snapshot now: update the Pro cold-visit counts in specs 66 and 97')
+  assert.equal(answerSnapshot('/iconify/collections/fluent-emoji.json').status, 404)
+  assert.equal(answerSnapshot('/iconify/collections/no-such-pack.json').status, 404,
+    'a pack with no fixture must 404 on the site too, which is what sends the page on to Iconify')
+  assert.equal(answerSnapshot('/iconify/collections/lucide.json.map').status, 404)
+  assert.ok(SNAPSHOT_PATH_RE.test('/iconify/collections/lucide.json'))
+  assert.ok(!SNAPSHOT_PATH_RE.test('/lucide.json'), 'the batched glyph endpoint is not a pack list')
+  assert.ok(!SNAPSHOT_PATH_RE.test('/iconify/collections/a/b.json'))
 })
 
 test('/search filters the fixture index by query and by prefix(es), and a broad query mixes packs', () => {
@@ -115,8 +146,8 @@ test('the GRID takes its markup from the batch endpoint, never one request per c
   // `<img src={`https://api.iconify.design/${pack}/${name}.svg?…`}>`, so a
   // 120-cell first paint fired 120 image requests at one host on top of the 25
   // /collection requests — measured at ~145, which is what Cloudflare answered
-  // with error 1015 and what left the founder looking at a grid of blank cells
-  // on 2026-09-15. Comment-blind, so the note explaining the change cannot be
+  // with error 1015 and what left a grid of blank cells.
+  // Comment-blind, so the note explaining the change cannot be
   // what satisfies the rule.
   const page = strip(read('src/pages/IconLibrary.jsx'))
   assert.match(page, /\.json\?icons=/,
@@ -126,14 +157,14 @@ test('the GRID takes its markup from the batch endpoint, never one request per c
     + 'pattern that rate-limited the page into a grid of blank cells; the glyph comes from the '
     + 'batched endpoint, composed into a data: URI.')
 
-  // The dead mirrors. Both answered 403 to every path when measured on
-  // 2026-09-18, so listing them only bought three round trips per failure.
+  // The dead mirrors. Both answered 403 to every path when measured,
+  // so listing them only bought three round trips per failure.
   assert.doesNotMatch(page, /api\.simplesvg\.com|api\.unisvg\.com/,
     'api.simplesvg.com and api.unisvg.com refuse this origin outright (403). They are not a '
     + 'fallback; re-adding one puts a guaranteed-failing hop back in front of every retry.')
 
-  // Third-party markup must never become HTML. The whole repo is free of this
-  // and that is a large part of why the 2026-09-16 security review found no XSS.
+  // Batched third-party markup must not become HTML: IconLibrary.jsx carries no
+  // dangerouslySetInnerHTML, and glyph bodies stay inside a data: URI <img>.
   assert.doesNotMatch(page, /dangerouslySetInnerHTML/,
     'A batched body is remote third-party markup. It goes into a data: URI inside an <img>, '
     + 'which is a non-scripting context, never into the DOM as HTML.')
@@ -163,4 +194,34 @@ test('the stub is installed once, in base.js, and checked by the teardown', () =
   assert.doesNotMatch(exempt, /\.abort\(/, `${EXEMPT} must fulfil the refusal, not abort it`)
   assert.match(exempt, /\[ICONIFY_STUB_HEADER\]:\s*REFUSED_VALUE/,
     `${EXEMPT} must stamp its refusals with REFUSED_VALUE, or the teardown reads them as requests that reached the network`)
+})
+
+test('refusesCollection matches /collection for a prefix and nothing else the API still answers', () => {
+  const u = (p) => new URL(`${HOST}${p}`)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide&info=1')), true)
+  assert.equal(refusesCollection(u('/collection?prefix=lucide'), ['lucide']), false)
+  assert.equal(refusesCollection(u('/collection?prefix=tabler'), ['lucide']), true)
+  for (const ok of ['/collections', '/search?query=a', '/lucide.json?icons=zap', '/lucide/zap.svg']) {
+    assert.equal(refusesCollection(u(ok)), false, `${ok} stays answerable while /collection is refused`)
+  }
+  assert.equal(refusesCollection(new URL('https://api.unisvg.com/collection?prefix=lucide')), false)
+})
+
+test('headPackOfUrl names the pack of a head chunk, built or dev, and nothing else', () => {
+  const site = 'http://127.0.0.1:4680'
+  assert.equal(headPackOfUrl(`${site}/assets/lucide-C7UjpPtx.js`), 'lucide')
+  // A pack whose own name has a hyphen, and a hash that has one too.
+  assert.equal(headPackOfUrl(`${site}/assets/material-symbols-Ab-Cd_Ef.js`), 'material-symbols')
+  assert.equal(headPackOfUrl(`${site}/assets/fa6-solid-DukXp6dY.js`), 'fa6-solid')
+  assert.equal(headPackOfUrl(`${site}/src/data/iconHeads/tabler.json`), 'tabler')
+  assert.equal(headPackOfUrl(`${site}/src/data/iconHeads/tabler.json?import`), 'tabler')
+  for (const other of ['/assets/IconLibrary-C7UjpPtx.js', '/assets/lucide-react-C7UjpPtx.js',
+    '/assets/lucide-short.js', '/lucide.json?icons=zap', '/src/data/iconHeads/nope.json', '/assets/index-DukXp6dY.css']) {
+    assert.equal(headPackOfUrl(`${site}${other}`), null, `${other} is not a head file`)
+  }
+  assert.equal(headPackOfUrl('not a url'), null)
+  const heads = headPackNames()
+  for (const pack of ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'logos', 'circle-flags']) {
+    assert.ok(heads.includes(pack), `${pack} has a committed head`)
+  }
 })

@@ -175,13 +175,13 @@ test.describe('premium homepage', () => {
     // The headline says what the product MAKES rather than naming a category.
     //
     // It used to be pinned verbatim ("Every design tool, / one search box
-    // away."). That sentence is gone: a user told the founder the page read
+    // away."). That sentence is gone: the page read
     // instantly as "an AI-generated website", and a headline that could sit on
     // any design product was part of why. The full reasoning and the property
     // pins live in 10-home-chaos-to-calm, which owns this contract; here the
     // check is only that the hero still names the work.
-    // THE EXPECTED WORDS CHANGED WITH THE HEADLINE, 2026-09-07. The hero now
-    // carries a line assembled from the founder's own sentences ("Build and
+    // THE EXPECTED WORDS CHANGED WITH THE HEADLINE. The hero now
+    // carries a line ("Build and
     // export UI and brand design kits, in one unified location."), which names
     // the OUTPUT rather than the material — so the old
     // /colour|color|type|token|system/ probe no longer matches and would have
@@ -196,20 +196,18 @@ test.describe('premium homepage', () => {
     await expect(heading).toContainText(/UI and brand kits/i)
 
     // THE KICKER ASSERTION IS GONE, AND ITS INVERSE TAKES ITS PLACE.
-    // `.home-hero-kicker` carried "UI system toolkit"; the founder removed it
-    // on 2026-09-07 — "these all over the place is a huge AI Slop feature" —
-    // and asked that nothing replace it. So the check flips: the element must
+    // `.home-hero-kicker` carried "UI system toolkit"; it was removed as an
+    // AI-slop tell and nothing replaces it. So the check flips: the element must
     // be ABSENT, which is what stops a future edit quietly reinstating a
     // category line above the headline. Paired with the stat-strip check below,
     // which has the same shape and the same history.
     await expect(page.locator('.home-hero-kicker'), 'the hero kicker tagline is back').toHaveCount(0)
     await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
 
-    // The figures moved beside the toolset grid on 2026-09-07 and were
-    // removed from there on 2026-09-09: the founder marked the three-up
-    // figure strip "AI" on the Font Gallery masthead and asked for the change
-    // to reach every header that matches, and a figure strip under a section
-    // heading matches. So this check flips the same way the kicker check did —
+    // The figures moved beside the toolset grid and were then removed: a three-up
+    // figure strip is an AI tell on a header, and a figure strip under a section
+    // heading matches that pattern. So this check flips the same way the kicker
+    // check did —
     // the strip must be ABSENT, wherever it is put. The mock's invented
     // "40+ TOOLS" cannot come back through a component that no longer exists;
     // 70-anti-slop-marketing.spec.js owns the rendered absence.
@@ -227,7 +225,7 @@ test.describe('premium homepage', () => {
      * its primary CTA is a link to that tool's live route. */
     const rail = page.locator('.sp-rail-row')
     await expect(rail).toHaveCount(4)
-    await expect(rail).toHaveText([/Palette builder/, /Icon library/, /Font gallery/, /File conversion/])
+    await expect(rail).toHaveText([/Palette Builder/, /Icon Library/, /Font Gallery/, /File Converter/])
 
     const lede = (await page.locator('.sp-bench-lede').innerText()).toLowerCase()
     expect(lede, 'the bench lede no longer states the tool count the tree gives')
@@ -284,7 +282,7 @@ test.describe('premium homepage', () => {
   /* ── Carried over from 10-home-chaos-to-calm, which was deleted with Home.jsx
    *
    * That file's 25 tests described the old homepage's tabbed workbench — a page
-   * the founder replaced. Most of what it asserted went with the page. These
+   * that has been replaced. Most of what it asserted went with the page. These
    * two did not: the command bar and the width sweep are guarantees the FRONT
    * DOOR makes, whichever page is behind it, so they move here rather than die
    * with the file. */

@@ -1,0 +1,150 @@
+/* The /login page and the wall of exports (also the modal's still strip).
+   Form and modal rules, and the strip's box in the dialog, live in auth.css. */
+
+.ui-login-strip .aw{position:absolute;inset:0;border:0}
+
+/* ---- /login page ------------------------------------------------------- */
+.auth-page{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "wall" "form";grid-template-rows:auto auto 1fr;min-height:100dvh;background:var(--bg-1);color:var(--t0);font-family:var(--font)}
+.auth-page:focus-visible{outline:none}
+.auth-page-top{grid-area:top;display:flex;align-items:center;height:56px;padding-inline:24px}
+.auth-wordmark{display:inline-flex;align-items:center;min-height:44px;font-size:20px;color:var(--t0)}
+.auth-page-form{grid-area:form;padding:24px 24px calc(32px + env(safe-area-inset-bottom))}
+.auth-checking{margin:0;min-height:420px;font-size:14px;line-height:1.5;color:var(--t2)}
+.auth-page .auth-form-root .auth-title{padding-right:0;font-size:24px;line-height:1.15}
+.auth-page .auth-form-root .auth-sub{max-inline-size:46ch}
+
+/* The wall. One component, three presentations (page, band, strip). */
+.aw{position:relative;isolation:isolate;overflow:hidden;background:var(--bg-0);font-family:var(--font);--band-h:88px;--band-top:16px}
+.aw-tile{margin:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden}
+.aw-art{position:relative}
+.aw-img{display:block;width:100%;height:auto;outline:1px solid oklch(0 0 0/.1);outline-offset:-1px}
+[data-theme="dark"] .aw-img{outline-color:oklch(1 0 0/.1)}
+.aw-cap{display:block;padding:12px}
+.aw-name{display:block;font-size:13px;line-height:18px;font-weight:560;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aw-meta{display:block;margin-top:2px;font-family:var(--mono);font-size:11px;line-height:16px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aw-icons{display:grid;grid-template-columns:repeat(3,1fr);padding:12px;color:var(--t0)}
+.aw-ico{display:grid;place-items:center;height:48px}
+.aw-ico svg{width:24px;height:24px}
+.aw-ramp{display:flex;flex-direction:column}
+.aw-step{display:flex;justify-content:space-between;align-items:center;height:16px;padding-inline:12px;font-family:var(--mono);font-size:11px;line-height:16px}
+.aw-code{margin:0;padding:12px;background:var(--card);font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--t1);white-space:pre;overflow:hidden}
+.aw-line{display:block}
+.aw-prop{color:var(--t0)}
+.aw-set{display:flex;flex-direction:column;gap:16px;padding-bottom:16px}
+.aw-set--copy{display:none}
+.aw-line-note{display:none}
+.aw-pause{position:absolute;z-index:2;right:12px;bottom:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--bg-0)}
+.aw-pause-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+
+/* Band (below 1024): a single row of art, sliding sideways. */
+.aw--band{grid-area:wall;height:120px;border-bottom:1px solid var(--border);contain:paint}
+.aw-bandview{position:absolute;inset:0;overflow:hidden}
+.aw--band .aw-track{display:flex;width:max-content;margin:var(--band-top) 0 0 16px}
+.aw--band .aw-set{flex-direction:row;gap:12px;padding:0 12px 0 0}
+.aw--band .aw-tile{flex:none;border-radius:var(--radius)}
+.aw--band .aw-art{height:var(--band-h)}
+.aw--band .aw-tile--palette .aw-art,.aw--band .aw-tile--guide .aw-art{aspect-ratio:600/270}
+.aw--band .aw-tile--pair .aw-art,.aw--band .aw-tile--tint .aw-art{aspect-ratio:3/2}
+.aw--band .aw-tile--scale .aw-art{aspect-ratio:200/88}
+.aw--band .aw-tile--icons .aw-art{aspect-ratio:1}
+.aw--band .aw-img{height:100%;object-fit:cover}
+/* A type pair's 300x200 specimen has a 16px body line that would print at about
+   7px in an 88px band. The tile crops to the specimen's top-left 180x120 instead
+   ("Aa" and the family name, 13px at 88 tall): the image is 166% of the box. */
+.aw--band .aw-tile--pair .aw-art{overflow:hidden}
+.aw--band .aw-tile--pair .aw-img{width:166%;max-width:none;height:auto;object-fit:initial}
+.aw--band .aw-icons{height:100%;padding:0;align-content:center}
+.aw--band .aw-ico{height:calc(var(--band-h)/3)}
+.aw--band .aw-ico svg{width:calc(var(--band-h)/6);height:calc(var(--band-h)/6)}
+.aw--band .aw-ramp{flex-direction:row;height:100%}
+.aw--band .aw-step{flex:1;height:auto;padding:0}
+.aw--band .aw-step span{display:none}
+.aw--band .aw-code{height:100%;padding:8px 10px}
+.aw--band .aw-line:nth-child(n+5){display:none}
+.aw--band .aw-cap{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+/* While the band moves, the pause button gets its own slot at the right end:
+   the art ends at a hairline instead of sliding under the button. */
+.aw--band[data-motion="true"] .aw-bandview{right:60px}
+.aw--band[data-motion="true"]::after{content:"";position:absolute;z-index:1;top:0;bottom:0;right:60px;width:1px;background:var(--border)}
+.aw--band .aw-pause{right:8px;top:50%;bottom:auto;translate:0 -50%}
+.aw--band[data-run="true"] .aw-set--copy{display:flex}
+.aw--band[data-run="true"] .aw-track{animation:auth-drift-left var(--drift-dur,60s) linear infinite;will-change:transform}
+
+/* Strip (modal). */
+.aw--strip .aw-strip{padding:16px}
+.aw--strip .aw-set{padding-bottom:0}
+
+@keyframes auth-drift-up{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+@keyframes auth-drift-down{from{transform:translateY(-50%)}to{transform:translateY(0)}}
+@keyframes auth-drift-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes auth-settle{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Phones. */
+@media(max-width:767px){
+  /* Sign-up has to fit 390x844 without scrolling, so its band is a still strip. */
+  .auth-page[data-mode="signup"] .aw--band{height:72px;--band-h:48px;--band-top:12px}
+  /* Specimens, the style guide and the code excerpt all hold text, which would
+     print under 6px at 48px tall. The strip keeps palettes, ramps and icons. */
+  .auth-page[data-mode="signup"] .aw--band :is(.aw-tile--pair,.aw-tile--guide,.aw-tile--scale){display:none}
+}
+
+/* Tablet: a taller band with a one-line caption, then a centred form. */
+@media(min-width:768px){
+  .auth-page-top{height:64px;padding-inline:32px}
+  .aw--band{height:200px;--band-h:136px;--band-top:24px}
+  .aw--band .aw-cap{position:static;width:auto;height:auto;padding:8px 12px;clip:auto;overflow:hidden}
+  .aw--band .aw-meta{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .auth-page-form{justify-self:center;width:min(400px,100%);padding:48px 0 calc(48px + env(safe-area-inset-bottom))}
+  .auth-page .auth-form-root .auth-title{font-size:30px}
+}
+
+/* Split. */
+@media(min-width:1024px){
+  .auth-page{grid-template-columns:minmax(440px,5fr) 7fr;grid-template-areas:"top wall" "form wall";grid-template-rows:auto 1fr}
+  .auth-page-top{padding-inline:64px}
+  .auth-page-form{justify-self:stretch;width:auto;display:flex;flex-direction:column;justify-content:center;padding:0 64px 64px}
+  .auth-page-form > *{width:100%;max-width:368px}
+  .auth-page .auth-form-root .auth-title{font-size:32px;line-height:1.1}
+
+  .aw--page{grid-area:wall;border-left:1px solid var(--border)}
+  .aw-cols{position:absolute;inset:64px 0 0 0;display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:16px;padding-inline:32px}
+  .aw--c2{--n:2}
+  .aw--c3{--n:3}
+  .aw-col{position:relative;overflow:hidden;height:100%}
+  .aw-col .aw-track{margin-top:32px}
+  /* No motion: the board is complete and the page scrolls if it must. */
+  .aw--page[data-motion="false"] .aw-cols{position:relative;inset:auto;padding-block:96px}
+  .aw--page[data-motion="false"] .aw-col{height:auto;overflow:visible}
+  .aw--page[data-motion="false"] .aw-col .aw-track{margin-top:0}
+  /* With the wall taller than the screen, the form stays in view beside it. */
+  .auth-page:has(.aw--page[data-motion="false"]) .auth-page-form{position:sticky;top:0;align-self:start;height:calc(100dvh - 64px)}
+  .aw--page[data-run="true"] .aw-set--copy{display:flex}
+  .aw--page[data-run="true"] .aw-track{animation:auth-drift-up var(--drift-dur,60s) linear infinite;will-change:transform}
+  .aw--page[data-run="true"] .aw-col[data-up="false"] .aw-track{animation-name:auth-drift-down}
+  .aw--page[data-motion="true"] .aw-col{animation:auth-settle 600ms var(--ease-entrance) both;animation-delay:calc(var(--i) * 100ms)}
+
+  /* One bar across the top of the wall, the same 64px as the wordmark row beside
+     it: the caption on the left, the pause on the right. The columns start under
+     its hard edge, so tiles drift out from beneath it rather than through it. */
+  .aw-rail{position:absolute;z-index:2;inset:0 0 auto 0;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding-inline:32px;background:var(--bg-0);border-bottom:1px solid var(--border)}
+  .aw-line-note{display:block;flex:1 1 auto;min-width:0;margin:0;font-size:13px;line-height:1.4;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aw-rail .aw-pause{position:static;flex:none;width:auto;height:36px;min-height:36px;padding:0 14px;border-radius:var(--btn-radius)}
+  .aw-pause-text{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+}
+@media(min-width:1680px){
+  .auth-page{grid-template-columns:minmax(440px,640px) 1fr}
+  .aw-cols{grid-template-columns:repeat(3,minmax(0,300px));justify-content:center}
+}
+
+/* Keep still while the form is in use, the tab is hidden, the wall is
+   offscreen or the visitor pressed pause. This sits after every `animation`
+   shorthand (the band's above, the page's inside the 1024 query): the shorthand
+   resets the play state, and these selectors have the same specificity. */
+.aw[data-paused="true"] .aw-track,.aw[data-hidden="true"] .aw-track,.aw[data-offscreen="true"] .aw-track,.auth-page-form:focus-within ~ .aw .aw-track{animation-play-state:paused}
+
+/* Reduced motion: no settle, no drift. The copy and the pause button are not
+   rendered either; this keeps a half-applied state from animating. */
+html[data-reduced-motion="true"] .aw .aw-col,html[data-reduced-motion="true"] .aw .aw-track{animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .aw .aw-col,html:not([data-reduced-motion="false"]) .aw .aw-track{animation:none}
+}

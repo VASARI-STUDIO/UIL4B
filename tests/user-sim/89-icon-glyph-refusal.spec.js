@@ -1,13 +1,13 @@
 // THE CATALOGUE CAN ANSWER WHILE EVERY GLYPH REFUSES, AND THAT IS WHAT BROKE.
 //
-// The 2026-09-08 outage work built a real refused-state for the Icon Library:
+// The outage work built a real refused-state for the Icon Library:
 // "Couldn't reach the icon service — showing built-in icons", a Try again
 // button, the built-in set underneath, and a masthead pill that reads the same
 // flag so it can never say "Live library connected" over a dead grid. All of it
 // keys on the CATALOGUE requests failing.
 //
-// Founder, 2026-09-15: "the icon library is broken and so is alot of other
-// resources". Measured the same day against the live API: all 24 /collection
+// The reported symptom was a broken icon library. Measured against the live
+// API: all 24 /collection
 // requests returned 200 while every individual glyph .svg came back 429 from
 // Cloudflare (error 1015 — rate limited per IP, Retry-After 257). The API
 // answers a rate-limited glyph with text/plain; the browser had asked for an
@@ -20,7 +20,9 @@
 // per-spec route that drifted would refuse differently from the outage.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify, refuseIconifyGlyphs } from './iconify-stub.js'
+import {
+  ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, iconifyRequests, isLiveIconify, refuseIconifyGlyphs,
+} from './iconify-stub.js'
 
 const PERSONA = 'a designer looking for an icon on a shared office connection, where the icon API has rate-limited the whole building'
 
@@ -32,7 +34,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
     await refuseIconifyGlyphs(page)
     await go(page, '/create/icons')
 
-    // The notice the 2026-09-08 work built, reached by a route it could not see.
+    // The notice the outage work built, reached by a route it could not see.
     const notice = page.getByText(/couldn.t reach the icon service/i)
     await expect(notice, 'the grid is refusing glyphs and saying nothing').toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: /try again/i })).toBeVisible()
@@ -45,7 +47,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
       // longer the way to ask: a cell that DID get its markup carries a data:
       // URI, so the question is whether any catalogue glyph painted at all.
       // Counted inside the grid, because the masthead and rail are not it.
-      catalogueCells: document.querySelectorAll('.ig .ic img').length,
+      catalogueCells: document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)').length,
       // And no cell is left sitting on the placeholder: the fallback replaced
       // the grid rather than leaving 120 empty boxes, which is the whole
       // difference between this state and the bug at the top of this file.
@@ -59,7 +61,7 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
   })
 
   test('the masthead pill cannot claim a live library over a fallback grid', async ({ page }) => {
-    // The 2026-09-09 follow-up wired the pill to the same loadError flag so the
+    // The pill is wired to the same loadError flag so the
     // two could never disagree. It has to hold for THIS failure too, which is
     // the one that reaches the flag by a different road.
     watch(page, PERSONA)
@@ -95,12 +97,20 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 
     await expect(page.getByText(/couldn.t reach the icon service/i)).toHaveCount(0)
     expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
+    // And the names came from the heads committed with the page: the default
+    // listing reads no pack list at all, from this site or from Iconify, and
+    // asks Iconify for glyphs only.
+    const tally = iconifyRequests(page.context())
+    expect(tally.snapshot, 'the default listing read a full pack list from the site').toBe(0)
+    expect(tally.collection, 'a first visit asked Iconify for a pack list').toBe(0)
 
     const m = await page.evaluate(() => {
-      const cells = [...document.querySelectorAll('.ig .ic img')]
+      // A mono cell is a <use> of a symbol in the page's sprite; a coloured one is a decoded <img>.
+      const cells = [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')]
+      const sym = (c) => c.matches('svg')
       return {
-        painted: cells.filter((i) => i.complete && i.naturalWidth > 0).length,
-        notFromBatch: cells.filter((i) => !i.src.startsWith('data:')).length,
+        painted: cells.filter((c) => (sym(c) ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`) : c.complete && c.naturalWidth > 0)).length,
+        notFromBatch: cells.filter((c) => !sym(c) && !c.src.startsWith('data:')).length,
         waiting: document.querySelectorAll('.ig .ic .ig-glyph-wait').length,
       }
     })
@@ -123,6 +133,13 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
 // answering from the fixture (route.fallback hands the request to the context
 // route), and a refused answer is stamped REFUSED_VALUE so the audit counts it
 // as deliberate.
+//
+// THE VICTIM'S BATCH ANSWERS 503, NOT 429. A 429 starts the shared Iconify
+// back-off (src/utils/iconifyFetch.js): by design nothing more goes to Iconify
+// until it ends, so a 429 cannot show the page asking the failed pack again.
+// A 503 is a pack that failed on its own, which is the case the page's own
+// bounded retry exists for. The back-off after a 429 is pinned in
+// 97-iconify-persistent-cache.spec.js and tests/unit/iconify-fetch.test.js.
 const BATCH = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/[^/]+\.json$/.test(u.pathname) && u.search.includes('icons=')
 
 const failFirstPack = async (page, failures) => {
@@ -134,7 +151,7 @@ const failFirstPack = async (page, failures) => {
     seen.requests += 1
     if (seen.requests > failures) return route.fallback()
     return route.fulfill({
-      status: 429, contentType: 'text/plain', body: 'Too Many Requests',
+      status: 503, contentType: 'text/plain', body: 'Service Unavailable',
       headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE },
     })
   })
@@ -175,7 +192,7 @@ test.describe('the icon grid when only one pack batch fails', () => {
     await page.waitForTimeout(5_000)
     expect(seen.requests, 'the failed pack is being asked again without a bound').toBe(3)
     // The packs that answered still painted, and the page did not fall over.
-    const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic img')].filter((i) => i.complete && i.naturalWidth > 0).length)
+    const painted = await page.evaluate(() => [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')].filter((c) => (c.matches('svg') ? !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`) : c.complete && c.naturalWidth > 0)).length)
     expect(painted, 'the packs that answered did not paint').toBeGreaterThan(8)
     await expect(page.getByText(/couldn.t reach the icon service/i), 'a retry failing must not raise the outage notice').toHaveCount(0)
     // Names given up on are quiet empty slots, not skeletons that pulse for the

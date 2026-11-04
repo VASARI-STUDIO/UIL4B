@@ -102,8 +102,23 @@ for (const width of [1440, 390]) {
       await expect(picker).toHaveCount(0)
       await expect(trigger).toBeFocused()
       await trigger.click()
-      await source.click()
-      await expect(picker).toHaveCount(0)
+      await expect(picker).toBeVisible()
+      if (width === 390) {
+        // The phone sheet dims the page behind it on purpose: the first tap
+        // outside lands on the scrim and closes the sheet, it does not reach
+        // the field underneath. Only after that is the field tappable again.
+        await page.locator('.cpk-scrim').click({ position: { x: 10, y: 10 } })
+        await expect(picker).toHaveCount(0)
+        await expect(page.locator('.cpk-scrim')).toHaveCount(0)
+        await source.click()
+        await expect(source).toBeFocused()
+      } else {
+        // Wider screens draw no scrim: a tap straight on another field closes the picker.
+        await expect(page.locator('.cpk-scrim')).toHaveCount(0)
+        await source.click()
+        await expect(picker).toHaveCount(0)
+        await expect(source).toBeFocused()
+      }
     })
   }
 }

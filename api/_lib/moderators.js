@@ -5,10 +5,10 @@
 // NOT YET WIRED — AND THAT IS THE POINT
 // ─────────────────────────────────────────────────────────────────────────────
 // Nothing calls this module yet. Its one intended caller is api/verify-admin.js,
-// which docs/reference/human-validation-zones.md gates to the founder, so the
+// which is approval-gated, so the
 // three lines that call in are proposed in the pull request rather than taken.
 // The module is written, reviewed and tested first so that the change the
-// founder is asked to approve is a three-line call into audited code, not a
+// owner is asked to approve is a three-line call into audited code, not a
 // hundred lines of new authority arriving at the same time as the approval.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ export const FOUNDER_CLAIM = 'admin'
 const lower = (s) => (typeof s === 'string' ? s.trim().toLowerCase() : '')
 
 /**
- * Is this address the founder's?
+ * Is this address the owner's?
  *
  * Reads api/_lib/adminEmails.js rather than keeping a second list, for the
  * reason that file already gives: two copies of an allowlist is one copy too
@@ -115,7 +115,7 @@ export function roleFromClaims(claims) {
  * Deliberately routed through the SAME `roleFromClaims` the browser uses, so
  * the surface a person sees and the authority the server grants are two
  * readings of one function rather than two implementations that can drift. The
- * founder's allowlist is layered on top because it is the stronger fact: it is
+ * admin allowlist is layered on top because it is the stronger fact: it is
  * checked against a Firebase-verified email and does not depend on a claim
  * having been minted yet.
  */
@@ -131,7 +131,7 @@ export function roleFromDecodedToken(decoded) {
  * `uid` is the key, not the email. An email can be changed by its owner and can
  * be re-registered by somebody else after an account is deleted; a Firebase uid
  * is stable for the life of the account and is what the custom claim is minted
- * against. The email is stored ALONGSIDE it for the founder to read, and is
+ * against. The email is stored ALONGSIDE it for the owner to read, and is
  * never the thing looked up.
  */
 export function rosterEntry({ uid, email, displayName, grantedByUid, now = new Date() }) {
@@ -145,7 +145,7 @@ export function rosterEntry({ uid, email, displayName, grantedByUid, now = new D
   }
 }
 
-/** Everyone currently holding the role, for the founder's own list. */
+/** Everyone currently holding the role, for the owner's own list. */
 export async function listModerators() {
   const snap = await adminDb().collection(MODERATORS_COLLECTION).get()
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
@@ -169,7 +169,7 @@ export async function isModerator(uid) {
  * order leaves somebody who can act but whom no list remembers, which is an
  * unrevokable grant.
  *
- * `grantedByUid` must be a founder. That is deliberately NOT checked here: this
+ * `grantedByUid` must hold the founder role. That is deliberately NOT checked here: this
  * module says HOW a grant is made and the route says WHO may ask for one, so
  * the authority check sits at the boundary where the token is verified.
  */
@@ -205,8 +205,8 @@ export async function revokeModerator(uid) {
  *
  * `setCustomUserClaims` REPLACES the whole claims object rather than merging
  * into it, so reading the existing claims first is not politeness. Writing
- * `{ moderator: true }` blind onto the founder's account would DELETE his
- * `admin: true` and lock him out of his own moderation queue and his own
+ * `{ moderator: true }` blind onto the owner's account would DELETE its
+ * `admin: true` and lock the owner out of the moderation queue and the
  * Firestore rules.
  *
  * (api/verify-admin.js has the same hazard in the other direction today — it
@@ -234,7 +234,7 @@ async function mintClaims(uid, patch) {
  * deleted and recreated, and a `setCustomUserClaims` call can fail on its own —
  * verify-admin.js already treats exactly that failure as non-fatal. Calling
  * this on the admin handshake means a moderator whose claim went missing gets
- * it back by signing in, rather than by the founder noticing and re-granting.
+ * it back by signing in, rather than by the owner noticing and re-granting.
  *
  * Idempotent: it writes only when the token does not already agree with the
  * roster, because setCustomUserClaims costs a write and forces a token refresh.

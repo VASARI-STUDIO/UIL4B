@@ -1,0 +1,73 @@
+diff --git a/firestore.rules b/firestore.rules
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -37,9 +37,67 @@ service cloud.firestore {
+         return request.auth != null && request.auth.uid == userId;
+       }
+ 
++      // Type and length checks for the profile keys the client writes. There is
++      // no hasOnly: the server writes other keys on this document, and a key
++      // list would refuse them.
++      //
++      // A field this write leaves exactly as it was is not re-checked. The
++      // settings form has never capped its inputs, so an older document may
++      // hold a value over a cap, and checking the whole merged document would
++      // refuse every later write to it, including the one that fixes it.
++      function profileText(key, max) {
++        return !(key in request.resource.data)
++          || (request.resource.data[key] is string
++              && request.resource.data[key].size() <= max)
++          || (resource != null
++              && key in resource.data
++              && resource.data[key] == request.resource.data[key]);
++      }
++
++      function onboardingText(key) {
++        return !(key in request.resource.data.onboarding)
++          || (request.resource.data.onboarding[key] is string
++              && request.resource.data.onboarding[key].size() <= 100);
++      }
++
++      function onboardingNumber(key) {
++        return !(key in request.resource.data.onboarding)
++          || request.resource.data.onboarding[key] is number;
++      }
++
++      // The record Onboarding.jsx writes: openedAt and completedAt are
++      // timestamps, firstWin is a tool id, and role, use and source are the
++      // retired survey answers that older documents still hold.
++      function onboardingOk() {
++        return !('onboarding' in request.resource.data)
++          || (resource != null
++              && resource.data.get('onboarding', null) == request.resource.data.onboarding)
++          || (request.resource.data.onboarding is map
++              && request.resource.data.onboarding.size() <= 12
++              && onboardingNumber('openedAt')
++              && onboardingNumber('completedAt')
++              && onboardingText('firstWin')
++              && onboardingText('role')
++              && onboardingText('use')
++              && onboardingText('source'));
++      }
++
++      function profileTypesOk() {
++        return profileText('displayName', 200)
++          && profileText('email', 320)
++          // A 128 px avatar is stored inline as a data URL.
++          && profileText('photoURL', 100000)
++          && profileText('location', 200)
++          && profileText('website', 2048)
++          && profileText('bio', 5000)
++          && profileText('company', 200)
++          && profileText('flair', 64)
++          && onboardingOk();
++      }
++
+       allow read: if isOwner();
+-      allow create: if isOwner() && createsNoLockedField();
+-      allow update: if isOwner() && leavesLockedFieldsUntouched();
++      allow create: if isOwner() && createsNoLockedField() && profileTypesOk();
++      allow update: if isOwner() && leavesLockedFieldsUntouched() && profileTypesOk();
+       // Clients cannot delete a profile document. Account deletion runs
+       // server-side through /api/delete-account.
+       allow delete: if false;

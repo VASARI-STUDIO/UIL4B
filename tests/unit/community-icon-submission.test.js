@@ -1,8 +1,8 @@
-// Community ICON submissions — the founder's instruction, and the two things
+// Community ICON submissions — the requirement, and the two things
 // that could go wrong with it.
 //
-// 2026-09-18: "people can submit icons to the community they just need to be
-// reviewed - all submissions of any sorts are tied to the account not browser."
+// People can submit icons to the community; they only need to be reviewed, and
+// every submission of any kind is tied to the account, not the browser.
 //
 // The Hub already took designs, and the queue already carried gradients and
 // palettes. An icon is different from all three in one way that this whole file
@@ -346,7 +346,7 @@ const PATCH = 'docs/design/community-icon-rules.patch'
 test('the rules diff exists, still applies, and grants exactly what the client needs', () => {
   // firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an
   // allowlist of payload keys that does not include `svg`, so an icon
-  // submission is REFUSED until this lands. The file is founder-gated (the
+  // submission is REFUSED until this lands. The file is approval-gated (the
   // auto-mode classifier refuses to stage it), so it ships as a diff somebody
   // has to apply — the same shape as the four in scripts/gated-patches.mjs.
   //

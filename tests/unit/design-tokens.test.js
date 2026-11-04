@@ -51,16 +51,28 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --tsc-  TypeScale specimen rows
 //   --tt-   Tint tool preview
 //   --fg-   Font Gallery specimen cards
+//   --fgd-  the Font Gallery detail pop-up (each family's face and weights)
 //   --fpr-  Font Pair preview
 //   --plb-  Palette Builder board
 //   --stc-  style-guide preview
 //   --cc-   Contrast Checker live pair
 //   --cq-   the admin community queue previews
 //   --quota- the AI quota meter fill
+//   --si-   the sliding pill: useSlideIndicator measures the selected pill (--si-x/-y/-w/-h/-r)
 const RUNTIME_FAMILIES = [
-  '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fpr-',
-  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-',
+  '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
+  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--si-',
 ]
+
+// Exact names set inline by a component, not a family: the /login wall gives
+// each column its index as --i (AuthWall.jsx) for the settle stagger. The
+// Gradient Generator's angle wheel (AngleWheel.jsx) sets two inline: --grd-tick
+// on each tick mark (its own rotation) and --grd-wheel-angle on the hand (the
+// current angle), which the stylesheet reads as `rotate(var(...))`. The From image dialog sets --c
+// (a point's or strip slot's sampled hex) inline on each marker and slot (FromImageDialog.jsx).
+// A library toolbar brought back on a phone keeps the left edge and width it
+// had in the page as --peek-left and --peek-w (LibraryToolbar.jsx).
+const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px', '--peek-left', '--peek-w'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()
@@ -70,6 +82,7 @@ test('no stylesheet token is used without being defined or set at runtime', () =
     if (m[2]) continue                                   // a fallback keeps it valid
     if (defined.has(m[1])) continue
     if (RUNTIME_FAMILIES.some(pre => m[1].startsWith(pre))) continue
+    if (RUNTIME_EXACT.has(m[1])) continue
     missing.add(m[1])
   }
 

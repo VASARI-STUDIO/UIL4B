@@ -420,20 +420,20 @@ test.describe('the catalogue tools name the thing they are for', () => {
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
-      'region("77 FAMILIES")',
+      'region("77 families, most popular first")',
     ])
 
     // AND IT SURVIVES THE EMPTY STATE. A section wrapped around only the
     // populated arm vanishes exactly when a reader most needs to find out why
     // there are no results — the fault fixed on /discover/palettes.
-    await page.locator('.fg-controls input').first().fill('zzzzqqq')
+    await page.getByLabel('Search font families').fill('zzzzqqq')
     await expect(page.locator('.fg-empty')).toBeVisible()
     await expect(page.locator('.fg-card')).toHaveCount(0)
 
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
-      'region("0 FAMILIES MATCHING “ZZZZQQQ”")',
+      'region("0 families match “zzzzqqq”, most popular first")',
     ])
   })
 
@@ -445,8 +445,11 @@ test.describe('the catalogue tools name the thing they are for', () => {
   // 122 tab stops at 390px. The tabpanel it lives in is named ("Emoji") but a
   // tabpanel is not a landmark and never appears in this list.
   //
+  // The icon pages end at the footer (contentinfo and its Footer navigation) with no sales close;
+  // the grid's region is the only region inside main.
+  //
   // MUTATION: drop aria-labelledby from `.emoji-results` in EmojiLibrary.jsx
-  // and both halves go red on the four-landmark list.
+  // and both halves go red on the landmark list.
   test('/create/emoji · the grid is a region, in both states', async ({ page }) => {
     watch(page, 'a screen-reader user looking for the emoji grid by landmark')
     await go(page, '/create/emoji')
@@ -460,6 +463,8 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("Showing all 1655 emojis")',
+      'contentinfo',
+      'navigation("Footer")',
     ])
 
     await page.locator('.emoji-toolbar input').first().fill('zzzzqqq')
@@ -470,6 +475,8 @@ test.describe('the catalogue tools name the thing they are for', () => {
       'navigation("Primary")',
       'main',
       'region("0 emojis for zzzzqqq")',
+      'contentinfo',
+      'navigation("Footer")',
     ])
   })
 })

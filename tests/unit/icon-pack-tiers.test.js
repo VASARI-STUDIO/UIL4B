@@ -1,7 +1,7 @@
 // WHO SEES WHICH ICON PACK — the table, and the page's agreement with it.
 //
 // src/data/iconPackTiers.js is the single editable answer to "may this viewer
-// browse this pack". The founder moves a pack between tiers by changing one
+// browse this pack". A pack moves between tiers by changing one
 // word on one line; nothing in src/pages/IconLibrary.jsx knows a pack name.
 //
 // THE TEST THIS FILE EXISTS FOR is the first one: the set of packs the library
@@ -26,6 +26,7 @@ import {
   ANON_ICON_CAP, ICON_GATE_COPY, ICON_PACK_TIERS, TIER_ORDER,
   anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
 } from '../../src/data/iconPackTiers.js'
+import { ANON_ICON_CEILING, anonCapForCols, anonListMax, capAnonList } from '../../src/data/iconGridRows.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -78,7 +79,7 @@ test('every line carries a tier the code understands and a justification a human
   for (const [prefix, row] of Object.entries(ICON_PACK_TIERS)) {
     assert.ok(TIER_ORDER.includes(row.tier), `${prefix} has tier "${row.tier}", which is not one of ${TIER_ORDER.join(' | ')}`)
     assert.equal(typeof row.why, 'string', `${prefix} has no justification`)
-    // The founder's rule is "does its creator run a free browser for it", so a
+    // The rule is "does its creator run a free browser for it", so a
     // justification that names neither a browser nor the absence of one records
     // nothing. Short strings are how a row rots into an unexplained decision.
     assert.ok(row.why.trim().length >= 40,
@@ -107,10 +108,10 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   for (const p of anon) assert.ok(free.includes(p), `${p} is visible signed out but not signed in — the tiers do not widen`)
   for (const p of free) assert.ok(paid.includes(p), `${p} is visible free but not on Pro — the tiers do not widen`)
 
-  // The concrete cases the founder named, so a refactor that inverts the
+  // The concrete cases that matter, so a refactor that inverts the
   // comparison cannot pass by being internally consistent.
   assert.equal(canSeePack('lucide', 'anon'), true, 'Lucide is the signed-out sample')
-  assert.equal(canSeePack('material-symbols', 'anon'), false, 'a solid set needs an account')
+  assert.equal(canSeePack('material-symbols', 'anon'), false, 'Material Symbols needs an account')
   assert.equal(canSeePack('material-symbols', 'free'), true, 'Material Symbols has a free official browser, so an account opens it')
   assert.equal(canSeePack('simple-icons', 'free'), false, 'brand marks are the named exclusion')
   assert.equal(canSeePack('twemoji', 'free'), false, 'the emoji sets are paid')
@@ -121,9 +122,9 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   // in our list at all; below Pro that must be refused rather than waved
   // through, and on Pro it must be allowed, because an unscoped Pro search has
   // always reached the whole Iconify registry.
-  assert.equal(canSeePack('mingcute', 'anon'), false)
-  assert.equal(canSeePack('mingcute', 'free'), false)
-  assert.equal(canSeePack('mingcute', 'paid'), true)
+  assert.equal(canSeePack('some-unlisted-set', 'anon'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'free'), false)
+  assert.equal(canSeePack('some-unlisted-set', 'paid'), true)
 })
 
 test('viewerTier fails closed — only an explicit Pro is Pro, and an unresolved session is signed out', () => {
@@ -163,6 +164,82 @@ test('the signed-out cap spreads across every anon pack rather than slicing one'
   assert.equal(anonPerPack([]), ANON_ICON_CAP, 'with no anon packs the share degrades to the cap rather than dividing by zero')
 })
 
+test('the signed-out cap fills whole rows: the 60 rounded up to the column count, never past 72', () => {
+  assert.equal(ANON_ICON_CEILING, 72)
+  // The widths that matter: 1440 is 13 columns and shows 65.
+  assert.equal(anonCapForCols(13), 65)
+  assert.equal(anonCapForCols(6), 60, '768')
+  assert.equal(anonCapForCols(4), 60, '390 on the four-up phone grid')
+  assert.equal(anonCapForCols(3), 60, '320')
+  assert.equal(anonCapForCols(17), 68, '1920')
+  assert.equal(anonCapForCols(1), 60)
+  assert.equal(anonCapForCols(60), 60)
+  // Rounding up would pass 72 from 19 columns, so it rounds down to whole rows instead.
+  assert.equal(anonCapForCols(18), 72)
+  assert.equal(anonCapForCols(19), 57)
+  assert.equal(anonCapForCols(37), 37)
+  // Past the ceiling in one row there is no whole row to give; the ceiling is the answer.
+  assert.equal(anonCapForCols(100), ANON_ICON_CEILING)
+  // Unmeasured or nonsense column counts fall back to the plain cap rather than NaN.
+  for (const bad of [null, undefined, 0, -3, 2.5, NaN, '13']) assert.equal(anonCapForCols(bad), ANON_ICON_CAP, String(bad))
+  // The property, for every plausible column count: whole rows, and never past the ceiling.
+  for (let cols = 1; cols <= 72; cols++) {
+    const cap = anonCapForCols(cols)
+    assert.equal(cap % cols, 0, `${cols} columns: ${cap} is not whole rows`)
+    assert.ok(cap <= ANON_ICON_CEILING, `${cols} columns: ${cap} passes the ceiling`)
+    assert.ok(cap >= 1, `${cols} columns: empty grid`)
+  }
+})
+
+test('the signed-out lists are fetched wide enough for the ceiling, and trimmed to the cap by pack', () => {
+  const packs = Object.keys(ICON_PACK_TIERS)
+  const anon = packs.filter((p) => tierOf(p) === 'anon')
+  assert.equal(anonPerPack(packs), Math.ceil(ANON_ICON_CAP / anon.length), 'the default share is unchanged')
+  assert.equal(anonPerPack(packs, 65), Math.ceil(65 / anon.length))
+  assert.ok(anonPerPack(packs, ANON_ICON_CEILING) * anon.length >= ANON_ICON_CEILING)
+  assert.equal(anonListMax(packs), anonPerPack(packs, ANON_ICON_CEILING) * anon.length)
+  assert.equal(anonListMax([]), ANON_ICON_CEILING, 'no anon packs: the ceiling, not NaN')
+
+  const names = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+  const list = names.flatMap((pack) => Array.from({ length: 15 }, (_, i) => ({ pack, name: `${pack}-${i}` })))
+  const counts = (out) => names.map((p) => out.filter((i) => i.pack === p).length)
+  const at65 = capAnonList(list, 65)
+  assert.equal(at65.length, 65)
+  assert.deepEqual(counts(at65), [13, 13, 13, 13, 13], 'an even share of every set, not 15 of the first four')
+  assert.deepEqual(at65.map((i) => i.name), list.filter((i) => Number(i.name.split('-')[1]) < 13).map((i) => i.name), 'order is kept')
+  const at68 = capAnonList(list, 68)
+  assert.equal(at68.length, 68)
+  assert.deepEqual(counts(at68), [14, 14, 14, 14, 12], 'the last set takes the shortfall when the cap is not a multiple of five')
+  assert.equal(capAnonList(list, 72).length, 72)
+  // A list that already fits is returned as is, so a memo keyed on it holds.
+  const short = list.slice(0, 40)
+  assert.equal(capAnonList(short, 65), short)
+  // One pack answers most of a search: its extras fill the row once the others run out.
+  const lopsided = [
+    ...Array.from({ length: 40 }, (_, i) => ({ pack: 'lucide', name: `l${i}` })),
+    ...Array.from({ length: 3 }, (_, i) => ({ pack: 'tabler', name: `t${i}` })),
+  ]
+  const filled = capAnonList(lopsided, 13)
+  assert.equal(filled.length, 13, 'topped up to the whole row rather than left at 7 + 3')
+  assert.equal(filled.filter((i) => i.pack === 'tabler').length, 3)
+  // A single pack is a plain slice.
+  assert.deepEqual(capAnonList(lopsided.slice(0, 40), 13).map((i) => i.name), lopsided.slice(0, 13).map((i) => i.name))
+  // Nonsense caps leave the list alone.
+  assert.equal(capAnonList(list, 0), list)
+})
+
+test('IconLibrary cuts the signed-out grid by the measured columns, and refetches nothing on a resize', () => {
+  const page = strip(read(PAGE))
+  // Literal source text: brackets are plain characters here (as a regex they read as groups and never match).
+  const has = (text, why) => assert.ok(page.includes(text), why)
+  has('anonCapForCols(gridCols)', 'the cap comes from the measured column count')
+  has('capAnonList(fetchedIcons, anonCap)', 'the grid trims what was fetched')
+  // The browse callbacks must not depend on the column count, or a resize would refetch.
+  has('const capList = useCallback((list) => (capped ? list.slice(0, anonListMax(ALL_PACKS)) : list), [capped])',
+    'capList is fixed at the ceiling and depends on the tier only: a column change must not rebuild the browse callbacks')
+  has('new ResizeObserver(read)', 'the column count follows the grid as it resizes')
+})
+
 test('IconLibrary consults the table — it does not carry a second copy of the rule', () => {
   const page = strip(read(PAGE))
 
@@ -185,7 +262,7 @@ test('IconLibrary consults the table — it does not carry a second copy of the 
     const inCondition = new RegExp(`(?:if|\\?|&&|\\|\\|)[^\\n]{0,80}['"\`]${brand}['"\`]`)
     assert.doesNotMatch(page, inCondition,
       `"${brand}" appears inside a condition in ${PAGE}. Tiering is a table, not a conditional — `
-      + 'the founder must be able to move a pack by editing one line of src/data/iconPackTiers.js.')
+      + 'a pack must be movable by editing one line of src/data/iconPackTiers.js.')
   }
 })
 
@@ -195,35 +272,48 @@ test('a gated scope never becomes the refused-service state, and never the empty
   //   loadError → "Couldn't reach the icon service" (the network said no)
   //   gated     → the wall (the product said no)
   //   searchEmpty → "No icons match" (the catalogue has nothing)
-  // Letting any two share a rendering is the defect #435 fixed for the first
+  // Letting any two share a rendering is the defect already fixed for the first
   // pair; these assertions stop it being reintroduced through the third.
   assert.match(page, /\{loadError && !gated && \(/,
     'the "couldn\'t reach the icon service" notice must be suppressed for a gated scope — nothing was asked for, so nothing refused it')
   assert.match(page, /const searchEmpty = [^\n]*!gated/,
     '"No icons to show" must be suppressed for a gated scope — it blames the catalogue for a decision the product made')
-  assert.match(page, /const capWall = [^\n]*!gated/,
-    'the signed-out cap wall and a gated scope are different answers and must not stack')
+  assert.match(page, /const endKind = endBandKind\(\{[^}]*\bgated\b/,
+    'the end band and a gated scope are different answers and must not stack: the page has to hand `gated` to endBandKind')
 })
 
 test('the gate copy is complete, count-driven, and reuses the app\'s own action labels', () => {
-  for (const key of ['anon', 'lockedFree', 'lockedPro']) {
-    const c = ICON_GATE_COPY[key]
+  for (const key of ['end.anon', 'end.free', 'lockedFree', 'lockedPro']) {
+    const c = key.split('.').reduce((o, k) => o?.[k], ICON_GATE_COPY)
     assert.ok(c, `ICON_GATE_COPY.${key} is missing — a wall would render undefined`)
     assert.ok(c.action && c.action.trim(), `ICON_GATE_COPY.${key}.action is empty — the wall would have an unlabelled button`)
   }
   // "Log in" is the nav trigger's own word and "See what Pro includes" is what
   // the Palette and Prompt libraries already say. Neither is coined here.
-  assert.equal(ICON_GATE_COPY.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.anon.action, 'Log in')
+  assert.equal(ICON_GATE_COPY.end.free.action, 'See what Pro includes')
   assert.equal(ICON_GATE_COPY.lockedFree.action, 'Log in')
   assert.equal(ICON_GATE_COPY.lockedPro.action, 'See what Pro includes')
 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.anon.heading(5), /\b5\b/, 'the heading must render the count it is handed')
-  assert.match(ICON_GATE_COPY.anon.heading(1), /\bpack\b/, 'one pack is singular')
-  assert.match(ICON_GATE_COPY.anon.heading(2), /\bpacks\b/, 'two packs are plural')
-  assert.match(ICON_GATE_COPY.anon.body(ANON_ICON_CAP), new RegExp(`\\b${ANON_ICON_CAP}\\b`))
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 12), /from 5 sets\. .*across 12 sets/, "the body must render the counts it is handed")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 1), /across 1 set\./, "one set is singular")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 2), /across 2 sets\./, "two sets are plural")
+  assert.match(ICON_GATE_COPY.end.anon.body(65, 5, 12), /65/)
+  assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
+  // The signed-out heading leads with the icon count a free account opens; the free one is fixed.
+  assert.equal(ICON_GATE_COPY.end.anon.heading(60017), 'Log in to access 60,017 icons')
+  assert.equal(ICON_GATE_COPY.end.anon.heading(1), 'Log in to access 1 icon')
+  assert.doesNotMatch(ICON_GATE_COPY.end.free.heading, /\d/,
+    'a fixed heading must not quote a count it cannot keep true')
+  for (const text of [
+    ICON_GATE_COPY.end.anon.heading(60017), ICON_GATE_COPY.end.anon.body(60, 5, 12),
+    ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
+  ]) {
+    assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')
+  }
   assert.doesNotMatch(ICON_GATE_COPY.lockedPro.body, /\d/, 'a fixed sentence must not quote a count it cannot keep true')
   assert.doesNotMatch(ICON_GATE_COPY.lockedFree.body, /\d/)
 

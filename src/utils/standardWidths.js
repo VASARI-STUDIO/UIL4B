@@ -5,9 +5,8 @@
 // RATIOS. Each of those carries a hand-written `sizes` list, so 16:9 offers
 // 720p through 8K and 4:3 offers SVGA through QXGA.
 //
-// Founder, 2026-09-15: "i then want to be able to lock the ratio based on the
-// numbers supplied then chose a standard size to match the ratio such as 1920 x
-// or 800 x or 2480x or 1600x or whatever else."
+// The user can lock the ratio from the numbers supplied, then choose a standard
+// size to match it (1920 wide, 800 wide, 2480 wide, 1600 wide and so on).
 //
 // That is the case the curated lists cannot serve. Measure something — a client
 // artboard at 1456 × 816, a crop at 2100 × 1400 — and the ratio you get is very
@@ -32,9 +31,8 @@
  * ratio in the list, because 2480 is its SHORT side and the sheet is portrait,
  * so "2480 x 1395 / A4 @ 300dpi" appeared even on the 16:9 the rest is cut for.
  *
- * That is the defect this whole page was reworked to remove - the founder
- * asked for standard sizes so he would be "working in real sizes not partial
- * ratios", and a ladder that prints a real name over an invented size is worse
+ * That is the defect this whole page was reworked to remove - standard
+ * sizes exist so people work in real sizes, not partial ratios, and a ladder that prints a real name over an invented size is worse
  * than one that prints no name at all.
  *
  * So an entry that denotes a resolution carries the SHAPE it denotes, and

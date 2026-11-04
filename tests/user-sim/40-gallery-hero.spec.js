@@ -31,7 +31,7 @@
 //    sentence still there, and 189px past the padding once that sentence came
 //    out - 217px from the top border to the h1 in a 280px box at 320.
 //
-//    FOUNDER DECISION, 2026-09-13: no floor. .dgh-hero is its content plus its
+//    THE RULE NOW: no floor. .dgh-hero is its content plus its
 //    padding at every width, `align-items` is `start`, and .dgh-aside takes
 //    `align-self:end` so a control column still sits on the slab's baseline.
 //    The tests below assert the new rule rather than the old floor.
@@ -44,7 +44,6 @@ import { go } from './helpers.js'
 const SURFACES = [
   '/discover/palettes',
   '/discover/gradients',
-  '/discover/prompts',
   '/create/icons',
   '/create/emoji',
 ]
@@ -80,7 +79,7 @@ const MEASURE = `(() => {
     contentH: Math.round(bottom - top),
     padY: Math.round(padTop + padBottom),
     dead: Math.round(hb.height - (bottom - top) - padTop - padBottom),
-    // The founder's own framing: painted black between the top border and the
+    // The framing: painted black between the top border and the
     // headline, past the padding that is supposed to be there.
     emptyAboveH1: h1 ? Math.round(h1.getBoundingClientRect().top - hb.top - padTop) : null,
     docOverflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -143,7 +142,7 @@ test.describe('the shared Discover gallery masthead', () => {
         // only slack is sub-pixel rounding on the padding clamp. 4px.
         if (m.dead > 4) bad.push(`  ${route} @${width}: ${m.dead}px of empty `
           + `masthead (hero ${m.heroH}, content ${m.contentH}, padding ${m.padY})`)
-        // Stated the way the founder states it, because `dead` alone cannot see
+        // Stated that way, because `dead` alone cannot see
         // the --controls case: a row whose aside is the taller column has no
         // spare height at all and still paints black above the headline.
         if (m.emptyAboveH1 > 4) bad.push(`  ${route} @${width}: ${m.emptyAboveH1}px of `
@@ -160,7 +159,7 @@ test.describe('the shared Discover gallery masthead', () => {
 
   // THIS TEST USED TO ASSERT A 280px FLOOR AT 641 AND IT IS NOW THE OPPOSITE
   // ASSERTION, deliberately. The old one guarded against "the masthead
-  // collapses onto its copy"; after the founder's 2026-09-13 decision that is
+  // collapses onto its copy"; that is now
   // exactly what it is meant to do, and /discover/palettes - which now carries
   // a one-line h1 and nothing else - measures 133px at 641 where it used to be
   // held at 280. Keeping the old number would have failed the shipped design.
@@ -239,7 +238,7 @@ test.describe('the Font Gallery search field', () => {
     await go(page, '/create/font-gallery')
     await expect(page.locator('[data-tool-toolbar]')).toBeVisible()
     const placeholder = await page.evaluate(() => {
-      const input = [...document.querySelectorAll('.fg-controls input')].filter((e) => e.offsetParent !== null)[0]
+      const input = [...document.querySelectorAll('input[aria-label="Search font families"]')].filter((e) => e.offsetParent !== null)[0]
       return input ? input.placeholder : null
     })
     expect(placeholder, 'the search field lost its placeholder').toBeTruthy()

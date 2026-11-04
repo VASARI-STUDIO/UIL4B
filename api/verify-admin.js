@@ -1,6 +1,6 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 // The server administrator allowlist.
-import { isAdminEmail } from './_lib/adminEmails.js'
+import { isAdminEmail, adminEmails } from './_lib/adminEmails.js'
 // The CORS allowlist, shared with /api/support and the Stripe flows.
 import { allowedOrigins } from './_lib/origins.js'
 // The moderator roster. Files in api/_lib are not deployed as routes.
@@ -73,7 +73,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
+    // checkRevoked: a token minted before the account's sessions were revoked
+    // (sign-out everywhere, or the stale-claim clear below) is refused here.
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7), true)
     const email = decoded.email?.toLowerCase()
     // Administrator status requires a Firebase-verified email on the allowlist.
     const isAdmin = !!email && !!decoded.email_verified && isAdminEmail(email)
@@ -94,6 +96,33 @@ export default async function handler(req, res) {
         // Non-fatal: verification succeeded, and moderation reports its own
         // failure.
         console.error('verify-admin: could not set the admin claim', { uid: decoded.uid, error: err?.message })
+      }
+    }
+
+    // ── Clear a stale `admin` claim ───────────────────────────────────────
+    // The claim is permanent, and Firestore and Storage rules trust it on its
+    // own. When an address leaves ADMIN_EMAILS the claim has to go with it, so
+    // the account is no longer an administrator to the rules, and its refresh
+    // tokens are revoked so a token already in circulation stops working at the
+    // next revocation-checked call.
+    //
+    // Skipped when the allowlist is empty: an unset ADMIN_EMAILS is far more
+    // likely a configuration slip than a decision to remove every administrator,
+    // and acting on it would strip every administrator's claim at once.
+    if (!isAdmin && decoded.admin === true && adminEmails().length > 0) {
+      try {
+        // Revoke FIRST, so no token issued before the removal outlives it. If the
+        // claim clear then fails, the revoked token cannot reach this branch
+        // again: the claim stays until the account signs in again and calls
+        // here, or scripts/sweep-admin-claims.mjs runs. The error log below is
+        // the signal to run the sweep.
+        await adminAuth().revokeRefreshTokens(decoded.uid)
+        // setCustomUserClaims replaces the whole object, so keep the others.
+        const { admin: _removed, ...kept } = (await adminAuth().getUser(decoded.uid)).customClaims || {}
+        await adminAuth().setCustomUserClaims(decoded.uid, kept)
+        claimUpdated = true
+      } catch (err) {
+        console.error('verify-admin: could not clear the stale admin claim', { uid: decoded.uid, error: err?.message })
       }
     }
 
@@ -182,7 +211,11 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({ isAdmin, uid: decoded.uid, email, claimUpdated, moderator, role, rosterError })
-  } catch {
+  } catch (err) {
+    // A revoked session is an expected refusal, not a server fault.
+    if (err?.code === 'auth/id-token-revoked') {
+      return res.status(401).json({ code: 'session-revoked', error: 'Your session was ended. Sign in again.', isAdmin: false })
+    }
     return res.status(401).json({ error: credentialProblem() || 'Invalid token', isAdmin: false })
   }
 }

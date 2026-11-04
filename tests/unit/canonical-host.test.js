@@ -21,7 +21,7 @@
 // X, Discord and iMessage, and every page told crawlers its authoritative URL
 // was a host that does not answer. scripts/prerender.mjs already called a wrong
 // canonical "an explicit instruction to drop them from the index" — it fixed the
-// per-ROUTE half, and the HOST was never checked. Founder decision: point the
+// per-ROUTE half, and the HOST was never checked. The fix is to point the
 // site at the apex, which already serves and is the only configured domain.
 //
 // ── Why this reads dist/ rather than src/ ───────────────────────────────────

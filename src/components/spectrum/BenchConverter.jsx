@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import ToolFoot from './ToolFoot'
 import PhIcon from './PhIcon'
 import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
+import { navigatesThisTab } from '../../utils/handoffSlot'
+import { setImageHandoff } from '../../utils/imageHandoff'
 import {
   CONVERTER_SOURCE,
   FRAME_COUNTS,
@@ -15,7 +17,7 @@ import {
   formatBytes,
 } from './spectrumKit'
 
-// 04 · FILE CONVERTER — the design's window, with its Tasmanian sunset photograph.
+// FILE CONVERTER — the design's window, with its Tasmanian sunset photograph.
 //
 // THE SIZES ARE MEASURED, NOT TABLED. The photo is drawn to a canvas and
 // encoded with `canvas.toBlob` at the format and quality on screen, and the
@@ -75,7 +77,7 @@ function savingOf(pct, lossless) {
   return [`${pct}%`, lossless ? 'smaller, no quality lost' : 'smaller', pct > 0 ? 'win' : 'plain']
 }
 
-export default function BenchConverter() {
+export default function BenchConverter({ onResult }) {
   const uid = useId()
   const root = useRef(null)
   const stageRef = useRef(null)
@@ -118,7 +120,11 @@ export default function BenchConverter() {
       canvas.getContext('2d').drawImage(img, 0, 0)
       canvasRef.current = canvas
       const before = pick ? pick.size : await encode(canvas, 'image/png')
-      if (!cancelled) setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
+      if (cancelled) return
+      // A zero-size image, or one past the browser's canvas limit, cannot be
+      // measured; it reports as unsupported rather than waiting for a figure.
+      if (!img.naturalWidth || !img.naturalHeight || !before) { setSrc(null); setFailed(true); return }
+      setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
     }).catch(() => { if (!cancelled) { setSrc(null); if (pick) setFailed(true) } })
     return () => { cancelled = true }
   }, [near, pick])
@@ -130,7 +136,11 @@ export default function BenchConverter() {
     const timer = setTimeout(async () => {
       const [, type] = IMG_FORMATS[fmt]
       const size = await encode(canvasRef.current, type, type === 'image/png' ? undefined : quality / 100)
-      if (!cancelled) setOut(size)
+      // The size is stored with the format it was encoded as, so a reading
+      // from the previous format is never shown under the new one's name.
+      if (cancelled) return
+      if (size == null) { setFailed(true); return }
+      setOut({ size, format: IMG_FORMATS[fmt][0] })
     }, 150)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [src, fmt, quality])
@@ -154,7 +164,7 @@ export default function BenchConverter() {
     setOut(null)
     setSrc(null)
     setFailed(false)
-    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file) })
+    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file), file })
   }
   const takeClip = (file) => { if (file) setClip({ name: file.name, size: file.size }) }
 
@@ -179,9 +189,20 @@ export default function BenchConverter() {
   const fileButton = (kind, chosen) => (dragging === kind ? 'Drop to replace' : chosen ? 'Replace' : 'Choose a file')
 
   const lossless = IMG_FORMATS[fmt][0] === 'PNG'
+  const formatLabel = IMG_FORMATS[fmt][0]
   const before = src?.before ?? null
-  const pct = before && out != null ? Math.round(100 - (out / before) * 100) : null
+  // The AFTER size counts only once it was encoded as the format on screen; in
+  // the gap after a format switch the old reading is stale, so it reads as pending.
+  const outSize = out && out.format === formatLabel ? out.size : null
+  const pct = before && outSize != null ? Math.round(100 - (outSize / before) * 100) : null
   const [numText, wordText, tone] = savingOf(pct, lossless)
+  // The rail's summary reads the latest measurement. `measuring` is true only
+  // once the converter is near the screen and a figure is still on its way; a
+  // file that failed to decode reports `failed` rather than waiting.
+  const measuring = near && !failed && pct == null
+  useEffect(() => {
+    onResult?.({ pct, format: formatLabel, failed, measuring })
+  }, [onResult, pct, formatLabel, failed, measuring])
   const [, rw, rh] = RATIO_PRESETS[ratioPreset]
   const stem = pick ? pick.name.replace(/\.[^.]+$/, '') : 'plateau-sunset'
   const imageName = pick ? pick.name : 'plateau-sunset.png'
@@ -189,13 +210,27 @@ export default function BenchConverter() {
   const stripLen = Math.min(8, frameCount)
   const strip = Array.from({ length: stripLen }, (_, i) => {
     const k = i / Math.max(1, stripLen - 1)
-    return { pos: `${Math.round(k * 100)}% 50%`, time: `0:0${Math.min(8, Math.round(k * 8))}` }
+    return { pos: `${Math.round(k * 100)}% 50%` }
   })
   const target = MODEL_OUTPUTS[outFmt]
   const fileToolHref = route('file-converter')
+  // "Continue in the converter" carries the dropped image through the File
+  // Converter's own in-memory hand-off, with the format and quality on screen as
+  // its starting settings. The slot is staged only when this tab will navigate
+  // (a modified click opens a new tab that would never consume it). A dropped
+  // clip has no hand-off, so it keeps the plain "Open File Converter".
+  const carryImage = (e) => {
+    if (!pick?.file || !navigatesThisTab(e)) return
+    const [label, type] = IMG_FORMATS[fmt]
+    setImageHandoff([pick.file], {
+      resolution: 'original',
+      format: type,
+      compression: label === 'PNG' ? 'lossless' : quality >= 90 ? 'high' : 'balanced',
+    })
+  }
   // Both bars share one scale, so a file that grew draws longer than the one it
   // came from; a result that is not smaller is drawn in a neutral fill.
-  const top = Math.max(before || 0, out || 0) || 1
+  const top = Math.max(before || 0, outSize || 0) || 1
   const notSmaller = pct != null && pct <= 0
   // "name, size". The size sits in a box as wide as a full-width figure (the
   // hidden pad), so the name never moves. The figure itself is remounted per
@@ -219,9 +254,10 @@ export default function BenchConverter() {
   const paneClass = (id, cls) => `sp-cv-pane ${cls}${mode === id ? ' is-on' : ''}`
 
   return (
+    <>
     <div className="sp-panel-body sp-panel-body--pad sp-cv" ref={root}>
       <div className="sp-modes" role="tablist" aria-label="Mode">
-        {IMG_MODES.map(([id, label, icon, short], i) => (
+        {IMG_MODES.map(([id, label, , short], i) => (
           <button
             key={id}
             ref={(el) => { tabRefs.current[i] = el }}
@@ -236,7 +272,6 @@ export default function BenchConverter() {
             onClick={() => select(id)}
             onKeyDown={(e) => onTabKey(e, i)}
           >
-            {icon ? <PhIcon name={icon} /> : <span aria-hidden="true" />}
             <span className={short ? 'sp-mode-long' : undefined}>{label}</span>
             {short ? <span className="sp-mode-short" aria-hidden="true">{short}</span> : null}
           </button>
@@ -264,24 +299,27 @@ export default function BenchConverter() {
             {failed
               ? <span className="sp-saving-word">That file is not supported. Try a JPG, PNG or WebP.</span>
               : <>
-                <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>{numText}</b>
+                <b className={tone === 'win' ? 'sp-saving-num' : `sp-saving-num is-${tone}`}>
+                  <span className="sp-saving-pad" aria-hidden="true">00%</span>
+                  <span className="sp-saving-fig">{numText}</span>
+                </b>
                 <span className="sp-saving-word">{wordText}</span>
               </>}
           </p>
           <div className="sp-bars">
             <div className="sp-bar">
-              <div className="sp-bar-row"><small>BEFORE</small>{barValue(imageName, before)}</div>
+              <div className="sp-bar-row"><small>Before</small>{barValue(imageName, before)}</div>
               <span className="sp-bar-track"><span className="sp-bar-fill" style={{ width: before ? `${Math.round((before / top) * 100)}%` : '100%' }} /></span>
             </div>
             <div className="sp-bar">
               <div className="sp-bar-row">
-                <small>AFTER</small>
-                {barValue(`${stem}.${IMG_FORMATS[fmt][0].toLowerCase()}`, out)}
+                <small>After</small>
+                {barValue(`${stem}.${formatLabel.toLowerCase()}`, outSize)}
               </div>
               <span className="sp-bar-track">
                 <span
                   className={notSmaller ? 'sp-bar-fill sp-bar-fill--out is-plain' : 'sp-bar-fill sp-bar-fill--out'}
-                  style={{ width: before && out != null ? `${Math.max(4, Math.round((out / top) * 100))}%` : '4%' }}
+                  style={{ width: before && outSize != null ? `${Math.max(4, Math.round((outSize / top) * 100))}%` : '4%' }}
                 />
               </span>
             </div>
@@ -292,7 +330,10 @@ export default function BenchConverter() {
             ))}
           </div>
           <label className="sp-quality">
-            <span>{lossless ? 'Lossless, quality ignored' : 'Quality'}</span>
+            <span className="sp-quality-row">
+              <span>{lossless ? 'Lossless, quality not used' : 'Quality'}</span>
+              {lossless ? null : <output>{quality}%</output>}
+            </span>
             <input
               type="range"
               min="30"
@@ -342,7 +383,6 @@ export default function BenchConverter() {
             {strip.map((f) => (
               <span key={f.pos}>
                 <img src={CONVERTER_SOURCE} alt="" width="1600" height="900" loading="lazy" decoding="async" style={{ objectPosition: f.pos }} />
-                <small>{f.time}</small>
               </span>
             ))}
             <span className="sp-art-over" aria-hidden="true">
@@ -359,10 +399,10 @@ export default function BenchConverter() {
           <div className="sp-frames-row">
             <div role="group" aria-label="Frame count">
               {FRAME_COUNTS.map((n) => (
-                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} FRAMES</button>
+                <button key={n} type="button" className="sp-utab" aria-pressed={frameCount === n} onClick={() => setFrameCount(n)}>{n} frames</button>
               ))}
             </div>
-            <small>{frameCount > 8 ? `Eight of ${frameCount} frames, evenly sampled` : `${frameCount} frames`}</small>
+            <small>{`${stripLen} crops of one sample photo`}</small>
           </div>
         </div>
 
@@ -380,23 +420,14 @@ export default function BenchConverter() {
         </div>
       </div>
 
-      <div className="sp-conv-foot">
-        {mode === 'model'
-          ? <>
-            <Link className="sp-pill" to={route('3d-converter')}>
-              <span>Open 3D Model Converter</span>
-              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-            </Link>
-            <Link className="sp-ghost" to={fileToolHref}>File Converter</Link>
-          </>
-          : <>
-            <Link className="sp-pill" to={fileToolHref}>
-              <span>{pick || clip ? 'Continue in the converter' : 'Open File Converter'}</span>
-              <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-            </Link>
-            <Link className="sp-ghost" to={route('ratio')}>Aspect &amp; Resolution</Link>
-          </>}
-      </div>
     </div>
+      {mode === 'model'
+        ? <ToolFoot to={route('3d-converter')} secondary={{ to: fileToolHref, label: 'File Converter' }}>Open 3D Model Converter</ToolFoot>
+        : (
+          <ToolFoot to={fileToolHref} onClick={carryImage} secondary={{ to: route('ratio'), label: 'Aspect & Resolution' }}>
+            {pick ? 'Continue in the converter' : 'Open File Converter'}
+          </ToolFoot>
+        )}
+    </>
   )
 }

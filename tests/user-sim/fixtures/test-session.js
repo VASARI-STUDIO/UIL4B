@@ -20,8 +20,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * THE SEAM, AND WHY IT IS THIS ONE
  * ═══════════════════════════════════════════════════════════════════════════
- * `src/contexts/AuthContext.jsx` is founder-gated by
- * docs/reference/human-validation-zones.md and is NOT TOUCHED by any of this.
+ * `src/contexts/AuthContext.jsx` is approval-gated and is NOT TOUCHED by any
+ * of this.
  * It does not need to be. Every piece of session state in the app descends from
  * one line inside it:
  *
@@ -194,12 +194,15 @@ function createFakeAuth(d) {
     onAuthStateChanged(next) {
       const cb = typeof next === 'function' ? next : next?.next
       listeners.add(cb)
-      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser) }, 0)
+      // `signIn(page, { authDelay: ms })` holds the first answer back, so a spec
+      // can look at the page while AuthContext is still (loading: true).
+      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser); auth.answered = true }, Number(d.authDelay) || 0)
       return () => listeners.delete(cb)
     },
     notify() {
       for (const cb of [...listeners]) cb(auth.currentUser)
     },
+    answered: false,
     async signOut() {
       auth.currentUser = null
       auth.notify()
@@ -235,6 +238,9 @@ function createFakeAuth(d) {
   // and the links it would have emailed. See firebase-auth.js.
   auth.account = { emailVerified: d.emailVerified !== false }
   auth.mail = []
+  // Which account-changing calls reached the double, and how long each is held.
+  auth.calls = []
+  auth.delays = {}
   auth.verifySends = []
   // How many times the account was re-read. A spec that proves a toast did NOT
   // appear waits on this first, so it cannot pass before the re-read has finished.
@@ -355,9 +361,45 @@ export const denials = DECLARED?.deny || []
 export function readDelayFor(path) {
   let ms = 0
   for (const entry of DECLARED?.slowReads || []) {
+    // A `hold` entry belongs to the listener below, not to getDoc.
+    if (entry?.path && !entry.hold && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+  }
+  return ms
+}
+
+/* A WRITE THAT ANSWERS LATE. `signIn(page, { slowWrites: [{ path, ms }] })` holds
+ * every setDoc whose path contains `path` for `ms` before it resolves, the shape
+ * of a slow Firestore round trip seen from the app. The data lands in the store at
+ * once, as a write that has left the browser would; only the answer is late, so a
+ * spec can change the account while a save is still waiting. Nothing is slowed
+ * unless a spec asks. */
+export function writeDelayFor(path) {
+  let ms = 0
+  for (const entry of DECLARED?.slowWrites || []) {
     if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
   }
   return ms
+}
+
+/* A LISTENER THAT DOES NOT ANSWER UNTIL THE SPEC SAYS SO.
+ * `signIn(page, { slowReads: [{ path, hold: true }] })` keeps every onSnapshot
+ * whose path contains `path` silent: it fires no snapshot, first or later, until
+ * the page calls `window.__UIL4B_TEST_HOLD__.release()`. That is the state the
+ * app sits in while a signed-in account's entitlement is still on the way
+ * (SubscriptionContext `planKnown` false), held open for as long as a spec
+ * needs to look at it instead of for a guessed number of milliseconds. */
+const HELD_PATHS = (DECLARED?.slowReads || []).filter((e) => e?.path && e.hold).map((e) => e.path)
+const heldFires = new Set()
+let holdReleased = false
+export function heldWatch(path, fire) {
+  if (!HELD_PATHS.some((p) => String(path).includes(p))) return fire
+  return () => { if (holdReleased) fire(); else heldFires.add(fire) }
+}
+function releaseHeldWatches() {
+  holdReleased = true
+  const queued = [...heldFires]
+  heldFires.clear()
+  queued.forEach((fire) => fire())
 }
 
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
@@ -406,5 +448,6 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, get answered() { return fakeAuth.answered }, get signedIn() { return !!fakeAuth.currentUser }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }

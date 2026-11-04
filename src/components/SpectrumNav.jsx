@@ -1,7 +1,7 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
-import { crossRouteHashClick, normPath, onSalesPage, salesHref } from './spectrum/salesLinks'
+import { crossRouteHashClick, normPath, salesHref } from './spectrum/salesLinks'
 import { useCloseOnBack } from './spectrum/useCloseOnBack'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { SEARCH_KEY } from '../config/shortcuts'
@@ -11,6 +11,9 @@ import '../styles/pages/spectrum-chrome.css'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
+import { BrandLockup, BrandSymbol } from './BrandLogo'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -33,12 +36,12 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 // the app, which "Open the toolkit" enters directly, with no sign-up gate.
 // The "/" search shortcut still opens the command palette — it draws nothing.
 //
-// DESTINATIONS. Tools is the sales page's bench (`#bench`). Pricing is the
+// DESTINATIONS. Tools is the `/tools` page. Pricing is the
 // separate Pricing screen, which is the route `/plans`. On mobile is the
 // "mobile" screen, `/mobile`. Off the sales page, Tools goes to `/home#bench`
 // and lands there (salesLinks.js).
 const QUIET = [
-  { id: 'tools', label: 'Tools', hash: '#bench' },
+  { id: 'tools', label: 'Tools', to: '/tools' },
   { id: 'pricing', label: 'Pricing', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
@@ -47,7 +50,7 @@ const QUIET = [
 // is Tools — the design's `goLanding`.
 function activeQuiet(pathname) {
   const p = normPath(pathname)
-  if (onSalesPage(p)) return 'tools'
+  if (p === '/tools') return 'tools'
   if (p === '/plans') return 'pricing'
   if (p === '/mobile') return 'mobile'
   return null
@@ -102,7 +105,9 @@ function QuietLink({ href, label, className, current, mi, onClick, onHash }) {
 // (lines 2094-2116), with its own numbers: nothing hides in the first 120px, a
 // downward move of more than 2px hides it, and an upward move waits 140ms
 // before bringing it back so a stray wheel nudge does not flash the bar. The
-// menu being open pins it visible.
+// menu being open pins it visible, and so does keyboard focus inside the bar: a
+// bar that hides while a control in it holds focus leaves the focus indicator
+// off screen (WCAG 2.4.7 / 2.4.11).
 //
 // IT RETURNS A FLAG, NOT A STYLE. The design wrote `transform` and `opacity`
 // straight onto the element and branched on reduced motion in JS. Here the flag
@@ -118,6 +123,9 @@ export default function SpectrumNav() {
   const quietHref = (q) => q.to || salesHref(q.hash, location.pathname)
 
   const [hidden, setHidden] = useState(false)
+  // True while the page's own "Open the toolkit" row is on screen, so the pill
+  // does not offer the same action a second time (spectrum-chrome.css hides it).
+  const [heroCta, setHeroCta] = useState(false)
   // 'closed' → 'in' while open → 'out' for the design's exit, then 'closed'.
   // The menu stays MOUNTED through 'out' so the close animation has something
   // to play on.
@@ -128,6 +136,7 @@ export default function SpectrumNav() {
   }, [])
   const [searchOpen, setSearchOpen] = useState(false)
 
+  const navRef = useRef(null)
   const burgerRef = useRef(null)
   const sheetRef = useRef(null)
   const lastY = useRef(0)
@@ -135,6 +144,17 @@ export default function SpectrumNav() {
   const openRef = useRef(false)
 
   useEffect(() => { openRef.current = open }, [open])
+
+  // Keyboard focus arriving in the bar while it is hidden brings it back at
+  // once. :focus-visible, not any focus, so a mouse click on the theme button
+  // does not pin the bar open. The stylesheet's :has(:focus-visible) shows it on
+  // the same frame; this keeps the hidden flag in step.
+  const onNavFocus = (e) => {
+    if (!e.target.matches(':focus-visible')) return
+    clearTimeout(returnTimer.current)
+    returnTimer.current = null
+    setHidden(false)
+  }
 
   // The exit's unmount. Under reduced motion there is no exit to wait for.
   useEffect(() => {
@@ -150,7 +170,9 @@ export default function SpectrumNav() {
       const y = Math.max(0, window.scrollY || 0)
       const dy = y - lastY.current
       lastY.current = y
-      if (y < HIDE_AFTER || openRef.current) {
+      const active = document.activeElement
+      const focusInBar = !!(active && navRef.current?.contains(active) && active.matches(':focus-visible'))
+      if (y < HIDE_AFTER || openRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(false)
@@ -173,6 +195,24 @@ export default function SpectrumNav() {
       returnTimer.current = null
     }
   }, [])
+
+  // One observer on the hero's action row. A page without one (pricing,
+  // mobile) never sets the flag, and the pill keeps its own button. The flag is
+  // seeded from the row's position before paint, so the pill's button never
+  // shows for a frame on load. The top margin is the pill's height: a hero row
+  // hidden under the pill counts as out of view, so one button always shows.
+  useLayoutEffect(() => {
+    const row = document.querySelector('.sp-hero-cta')
+    if (!row || typeof IntersectionObserver === 'undefined') return undefined
+    const PILL = 72
+    // A microtask still runs before the first paint, and keeps the setState
+    // out of the effect body.
+    const r = row.getBoundingClientRect()
+    queueMicrotask(() => setHeroCta(r.bottom > PILL && r.top < window.innerHeight))
+    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0, rootMargin: `-${PILL}px 0px 0px 0px` })
+    io.observe(row)
+    return () => { io.disconnect(); setHeroCta(false) }
+  }, [location.pathname])
 
   // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG). The
   // SEARCH_KEY branch is the same contract PillNav holds: "/" opens the command
@@ -218,19 +258,33 @@ export default function SpectrumNav() {
     setOpen(false)
     const el = document.getElementById(href.slice(1))
     if (!el) return
-    const lenis = getLenis()
-    // Lenis reads the target's scroll-margin-top itself.
-    if (lenis) lenis.scrollTo(el)
-    else el.scrollIntoView({ block: 'start' })
+    // The open menu holds the page's scroll lock, which keeps Lenis stopped, and
+    // a stopped Lenis ignores scrollTo. The lock is released when the close
+    // commits, so the scroll waits one frame.
+    requestAnimationFrame(() => {
+      const lenis = getLenis()
+      // Lenis reads the target's scroll-margin-top itself.
+      if (lenis) lenis.scrollTo(el)
+      else el.scrollIntoView({ block: 'start' })
+      // The link that held focus has just unmounted, so focus would fall to the
+      // body and the next Tab would restart at the skip link. Focus goes to the
+      // section instead; a plain section is made focusable by script only.
+      if (!el.hasAttribute('tabindex') && el.tabIndex < 0) {
+        el.setAttribute('tabindex', '-1')
+        el.setAttribute('data-menu-jump', '')
+      }
+      el.focus({ preventScroll: true })
+    })
   }, [setOpen])
 
   // Scroll lock + focus move-in + focus trap: a full-screen layer that leaves
   // the page scrolling behind it and lets Tab walk out the back is not a dialog.
   useEffect(() => {
     if (!open) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
       .filter((el) => el.getClientRects().length > 0)
     focusable()[0]?.focus()
@@ -251,7 +305,8 @@ export default function SpectrumNav() {
     panel?.addEventListener('keydown', trap)
     return () => {
       panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      unlockScroll()
+      unmark()
     }
   }, [open])
 
@@ -265,18 +320,21 @@ export default function SpectrumNav() {
     <>
       <nav
         className="spnav"
+        ref={navRef}
+        onFocus={onNavFocus}
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
+        data-hero-cta={heroCta ? '1' : '0'}
       >
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>
-            {/* One accessible name for the pair, so a screen reader meets
-                "UI L4B home" and not "UI L 4 B" then "TOOLKIT". */}
+            {/* One accessible name for the logo, so a screen reader meets
+                "UIL4B home" and not "UI L 4 B". */}
             <span className="spnav-word" aria-hidden="true">
-              UI L<span className="spnav-word-mark">4</span>B
+              <BrandLockup className="brand-logo-wide" />
+              <BrandSymbol className="brand-logo-narrow" />
             </span>
-            <span className="spnav-eyebrow" aria-hidden="true">TOOLKIT</span>
-            <span className="sr-only">UI L4B home</span>
+            <span className="sr-only">UIL4B home</span>
           </Link>
 
           <span className="spnav-rule" aria-hidden="true" />
@@ -336,7 +394,7 @@ export default function SpectrumNav() {
             <Link className="spnav-mi spnav-mi--accent" data-mi to={TOOLKIT} replace onClick={() => setOpen(false)}>
               Open the toolkit <span aria-hidden="true">&#8599;</span>
             </Link>
-            <p className="spnav-mi-note" data-mi data-mi-note>EVERY CORE TOOL IS FREE, FOREVER</p>
+            <p className="spnav-mi-note" data-mi data-mi-note>Every core tool is free, forever</p>
           </div>
         </div>
       )}

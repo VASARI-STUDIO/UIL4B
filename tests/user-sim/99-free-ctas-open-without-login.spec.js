@@ -13,7 +13,9 @@ async function freeLinks(page, scope) {
   return page.locator(scope).locator('a[href]').evaluateAll((els, src) => {
     const re = new RegExp(src)
     return els
-      .filter((el) => el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden')
+      // A link in an inert panel (a tab that isn't selected) can't be reached
+      // until its tab is chosen, so it isn't one of the page's CTAs yet.
+      .filter((el) => el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert]'))
       .map((el, i) => ({ i, text: (el.textContent || '').replace(/[↗\s]+/g, ' ').trim(), href: el.getAttribute('href') }))
       .filter((l) => re.test(l.text))
   }, FREE.source)
@@ -27,7 +29,7 @@ async function assertOpened(page, label) {
 }
 
 const SALES = [
-  ['/', 390], ['/', 1440], ['/plans', 390], ['/plans', 1440], ['/mobile', 390], ['/mobile', 1440],
+  ['/', 390], ['/', 1440], ['/plans', 390], ['/plans', 1440], ['/mobile', 390], ['/mobile', 1440], ['/tools', 390], ['/tools', 1440],
 ]
 
 for (const [route, width] of SALES) {
@@ -42,7 +44,7 @@ for (const [route, width] of SALES) {
     for (const l of links) {
       await go(page, route)
       const target = page.locator('body').locator('a[href]').filter({ hasText: l.text }).filter({ visible: true })
-        .and(page.locator(`a[href="${l.href}"]`)).first()
+        .and(page.locator(`a[href="${l.href}"]:not([inert] a)`)).first()
       await target.scrollIntoViewIfNeeded()
       await target.click()
       await assertOpened(page, `"${l.text}" on ${route}`)

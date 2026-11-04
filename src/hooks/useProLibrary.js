@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { loadAuthSdk } from '../utils/firebaseAccess'
+import { readSessionHint } from '../utils/sessionHint'
 import {
-  libraryKey, cachedLibrary, hasCachedLibrary, isLibraryDenied, clearLibraryDenied,
+  libraryKey, deriveLibraryStatus, cachedLibrary, hasCachedLibrary, isLibraryDenied, clearLibraryDenied,
   forgetLibrariesExcept, forgetLibrariesOf, loadProLibrary, setProLibraryAuth,
 } from '../utils/proLibrary'
 
@@ -21,18 +22,24 @@ setProLibraryAuth(loadAuthSdk)
  * gallery popup is open); a library already fetched this session is not refetched.
  *
  * Returns { items, status, retry, active }:
- *   active  true when this viewer is a Pro account whose library should come
- *           from the server. Pages keep the free rows and show a quiet line
- *           while it is true and `status` is not 'ready'.
- *   status  'idle'     not a Pro viewer, or the server said this account is not
- *                      Pro (403: treated as free, no error UI);
- *           'loading'  request in flight;
- *           'ready'    `items` holds the whole library in canonical order;
- *           'error'    network or server failure; `retry` asks again.
+ *   active  true when this viewer is, or may turn out to be, a Pro account whose
+ *           library comes from the server. Pages keep the free rows and show a
+ *           status block in place of the upsell while it is true and `status`
+ *           is not 'ready'.
+ *   status  'idle'      not a Pro viewer: anonymous, or a signed-in account
+ *                       whose plan resolved to free;
+ *           'resolving' signed in (or a returning session whose auth has not
+ *                       answered) and the plan is not known yet, so the viewer
+ *                       may be Pro and must not be shown the free wall;
+ *           'loading'   request in flight;
+ *           'ready'     `items` holds the whole library in canonical order;
+ *           'refused'   the server answered 403 for an account the client
+ *                       believed was Pro; `retry` clears that and asks again;
+ *           'error'     network or server failure; `retry` asks again.
  *   items   the fetched rows, or null until ready.
  */
 export function useProLibrary(kind, { enabled: wanted = true } = {}) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { isPro, planKnown } = useSubscription()
   const uid = user?.uid || null
   const enabled = wanted === true && isPro === true && planKnown === true && uid != null
@@ -40,6 +47,9 @@ export function useProLibrary(kind, { enabled: wanted = true } = {}) {
 
   const [, setVersion] = useState(0)
   const [failedKey, setFailedKey] = useState(null)
+  // Bumped by a retry after a refusal: the denied mark is cleared outside React,
+  // so the fetch effect needs a dependency that changes to run again.
+  const [attempt, setAttempt] = useState(0)
 
   // A different account (or none) on this tab never sees the last one's rows.
   // (proLibrary also follows the auth state itself, so this is the second line.)
@@ -60,21 +70,31 @@ export function useProLibrary(kind, { enabled: wanted = true } = {}) {
       else setVersion((v) => v + 1)
     })
     return () => { live = false }
-  }, [enabled, kind, uid, key, failedKey])
+  }, [enabled, kind, uid, key, failedKey, attempt])
 
-  const retry = useCallback(() => setFailedKey(null), [])
+  const retry = useCallback(() => {
+    clearLibraryDenied(key)
+    setFailedKey(null)
+    setAttempt((n) => n + 1)
+  }, [key])
 
-  let status = 'idle'
-  let items = null
-  if (enabled) {
-    if (hasCachedLibrary(key)) { status = 'ready'; items = cachedLibrary(key) }
-    else if (isLibraryDenied(key)) status = 'idle'
-    else if (failedKey === key) status = 'error'
-    else status = 'loading'
-  }
-  // `active` stays true through loading and error, so a Pro viewer never gets
-  // the upsell. A plan still resolving is not a Pro viewer yet and sees the
-  // free view until it is, exactly as before.
+  // A returning session whose auth has not answered yet, or an account whose
+  // plan is still on the way. The hint is only a guess about the first paint
+  // (utils/sessionHint.js), so a wrong one costs a moment of neutral loading and
+  // never grants anything.
+  const resolving = (authLoading === true && readSessionHint()) || (uid != null && planKnown !== true)
+  const status = deriveLibraryStatus({
+    wanted: wanted === true,
+    enabled,
+    cached: enabled && hasCachedLibrary(key),
+    denied: enabled && isLibraryDenied(key),
+    failed: failedKey === key,
+    resolving,
+  })
+  const items = status === 'ready' ? cachedLibrary(key) : null
+  // `active` stays true through every state but 'idle', so a Pro viewer never
+  // gets the upsell, and an account whose plan is still resolving gets the
+  // neutral status block rather than the free wall.
   const active = status !== 'idle'
   return { items, status, retry, active }
 }

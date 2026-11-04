@@ -67,6 +67,46 @@ export function isMulticolourSvg(svg) {
   return paints.size >= 2
 }
 
+// The one paint colour of single-colour artwork (lowercase, as normalizePaint
+// writes it), or null when it has several, a gradient or none. Shapes with no paint
+// of their own are black, so they are the colour of an icon that sets none.
+// Art coloured some way the attributes do not show (a <style> block, an <image>,
+// <text>, a <use> or a <foreignObject>) is null: its colour is not knowable here.
+const HIDDEN_PAINT = /<(?:style|image|text|use|foreignObject)[\s>/]/i
+export function singlePaint(svg) {
+  if (!svg || HIDDEN_PAINT.test(svg) || isMulticolourSvg(svg)) return null
+  const paints = new Set()
+  mapPaints(svg, value => {
+    const paint = normalizePaint(value)
+    if (paint) paints.add(paint)
+    return value
+  })
+  if (paints.size === 0) return hasUnpaintedShape(svg) ? '#000000' : null
+  return paints.size === 1 ? [...paints][0] : null
+}
+
+const toLinear = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+
+// WCAG relative luminance (0 black, 1 white) of a plain colour: #rrggbb, black or
+// white. Anything else (a url() paint, a name this does not know) is null.
+export function paintLuminance(paint) {
+  if (paint === 'black') return 0
+  if (paint === 'white') return 1
+  const m = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(paint || '')
+  if (!m) return null
+  const [r, g, b] = m.slice(1).map(h => toLinear(parseInt(h, 16)))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// True when the whole artwork is ONE colour and that colour is near-black (linear
+// luminance below `max`). Such art is recoloured in the page's own ink where it is
+// shown, the way a mono icon is; a lockup that mixes a dark wordmark with a coloured
+// mark has more than one paint, so it is never this.
+export function isNearBlackMono(svg, max) {
+  const luminance = paintLuminance(singlePaint(svg))
+  return luminance !== null && luminance < max
+}
+
 // Single-colour pack artwork must inherit the same ink as a plain icon.
 export function monochromeSvg(svg) {
   return mapPaints(svg, value => normalizePaint(value)

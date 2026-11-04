@@ -1,9 +1,11 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useDeferredValue } from 'react'
 import usePopover from '../hooks/usePopover'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import EmojiGrid from '../components/library/EmojiGrid'
+import EmojiDetailDialog from '../components/library/EmojiDetailDialog'
 import { EMOJI_DATA } from '../data/emojiData'
+import { TONE_EMOJI } from '../data/emojiTones'
 import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
 // The stylesheet families this surface needs, split out of the one
@@ -16,38 +18,14 @@ function parseEmojis(str) {
   return str.split(/\s+/).filter(Boolean)
 }
 
-// Emoji_Modifier_Base — the code points that accept a Fitzpatrick skin-tone
-// modifier (Unicode 15). Anything outside this set (or any ZWJ sequence) is
-// shown and copied unchanged, so we never emit a broken base-plus-swatch pair
-// (e.g. a car followed by a floating skin square).
-const MODIFIER_BASE = new Set()
-const MODIFIER_RANGES = [
-  [0x261D, 0x261D], [0x26F9, 0x26F9], [0x270A, 0x270D],
-  [0x1F385, 0x1F385], [0x1F3C2, 0x1F3C4], [0x1F3C7, 0x1F3C7], [0x1F3CA, 0x1F3CC],
-  [0x1F442, 0x1F443], [0x1F446, 0x1F450], [0x1F466, 0x1F478], [0x1F47C, 0x1F47C],
-  [0x1F481, 0x1F483], [0x1F485, 0x1F487], [0x1F48F, 0x1F48F], [0x1F491, 0x1F491],
-  [0x1F4AA, 0x1F4AA], [0x1F574, 0x1F575], [0x1F57A, 0x1F57A], [0x1F590, 0x1F590],
-  [0x1F595, 0x1F596], [0x1F645, 0x1F647], [0x1F64B, 0x1F64F], [0x1F6A3, 0x1F6A3],
-  [0x1F6B4, 0x1F6B6], [0x1F6C0, 0x1F6C0], [0x1F6CC, 0x1F6CC], [0x1F90C, 0x1F90C],
-  [0x1F90F, 0x1F90F], [0x1F918, 0x1F91F], [0x1F926, 0x1F926], [0x1F930, 0x1F939],
-  [0x1F93D, 0x1F93E], [0x1F977, 0x1F977], [0x1F9B5, 0x1F9B6], [0x1F9BB, 0x1F9BB],
-  [0x1F9CD, 0x1F9CF], [0x1F9D1, 0x1F9DD], [0x1FAC3, 0x1FAC5], [0x1FAF0, 0x1FAF8],
-]
-MODIFIER_RANGES.forEach(([a, b]) => { for (let c = a; c <= b; c++) MODIFIER_BASE.add(c) })
-
-function supportsSkinTone(emoji) {
-  if (!emoji) return false
-  const cps = [...emoji]
-  if (cps.some(c => c.codePointAt(0) === 0x200D)) return false   // ZWJ sequence → skip (v1)
-  return MODIFIER_BASE.has(cps[0].codePointAt(0))
-}
-
 // EMOJI_DATA is fully static, so parse every group and flag each emoji's
-// skin-tone support exactly once at module load. Rendering is then a pure lookup
-// — no per-cell code-point spreading on every scroll, keystroke, or copy.
+// skin-tone support exactly once at module load. TONE_EMOJI is the generated
+// list of emoji Unicode defines a toned form for, so a car or a family is shown
+// unchanged rather than followed by a floating skin square. Rendering is then a
+// pure lookup — no per-cell code-point spreading on every scroll or keystroke.
 const PARSED_EMOJI_DATA = EMOJI_DATA.map(g => ({
   cat: g.cat,
-  items: parseEmojis(g.emojis).map(char => ({ char, tone: supportsSkinTone(char) })),
+  items: parseEmojis(g.emojis).map(char => ({ char, tone: TONE_EMOJI.has(char) })),
 }))
 const TOTAL_COUNT = PARSED_EMOJI_DATA.reduce((sum, g) => sum + g.items.length, 0)
 
@@ -80,6 +58,9 @@ export default function EmojiLibrary({ onCopy }) {
   const [activeCat, setActiveCat] = useState(null)
   const [skinTone, setSkinTone] = useState('')
   const [toneOpen, setToneOpen] = useState(false)
+  // The emoji whose detail dialog is open (the untoned catalogue character), or null.
+  const [detail, setDetail] = useState(null)
+  const closeDetail = useCallback(() => setDetail(null), [])
   // The search index is a separate chunk. Seeded from the loader's cache so a
   // second search in the same session is ready on the first render, with no
   // loading flash for an index that is already in memory.
@@ -126,6 +107,12 @@ export default function EmojiLibrary({ onCopy }) {
     return { groups: items.length ? [{ cat: 'Results', items }] : [], count: items.length }
   }, [query, activeCat, index])
 
+  // The grid renders from a deferred copy, so a keystroke or a category click
+  // paints the typed text, chip and status first and the new cells in a later
+  // task. `gridStale` is true while the grid still shows the previous list.
+  const gridGroups = useDeferredValue(results.groups)
+  const gridStale = gridGroups !== results.groups
+
   // Offline is recoverable without the user doing anything: when the network
   // returns, fetch the index they already asked for. The Try again button stays
   // for the failed-request case, which coming back online will not fix.
@@ -147,7 +134,7 @@ export default function EmojiLibrary({ onCopy }) {
     value: search,
     onChange: handleSearch,
     onFocus: requestIndex,
-    placeholder: 'Search emoji by name or keyword…',
+    placeholder: 'Search emoji',
     label: 'Search emoji',
   }), [search, handleSearch, requestIndex])
 
@@ -246,16 +233,16 @@ export default function EmojiLibrary({ onCopy }) {
           Unreachable, and not inert: the block kept a second copy of the h1 and
           subtitle that the wrapper owns, which is a drift bug waiting for the
           next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
-          element the founder marked "AI" and #382 deleted from every tool
-          masthead it reached. A retired motif that cannot be rendered still
+          element that read as AI-generated and was deleted from every tool
+          masthead it appeared on. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
       {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
           Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed from
           the Prompt Library) and outlined `.pl-chip` pills — while the Palette
           and Gradient libraries had already converged on
-          src/components/library/. Founder request: make this and the Icon
-          Library match the galleries.
+          src/components/library/. This and the Icon Library now match the
+          galleries.
 
           Two things the shared components did not do, and now do, rather than
           being dropped to force a match: the search field takes an `onFocus`
@@ -305,10 +292,11 @@ export default function EmojiLibrary({ onCopy }) {
         {/* The windowed grid and its scroll state live in EmojiGrid, so a scroll
             tick re-renders the grid alone and never this page or its toolbar. */}
         <EmojiGrid
-          groups={results.groups}
+          groups={gridGroups}
+          stale={gridStale}
           catalogue={PARSED_EMOJI_DATA}
           skinTone={skinTone}
-          onCopy={onCopy}
+          onOpen={setDetail}
         />
 
         {/* Always rendered so the input's aria-describedby always resolves, and
@@ -372,6 +360,13 @@ export default function EmojiLibrary({ onCopy }) {
           </div>
         )}
       </section>
+
+      {/* Mounted only while open, so the dialog's focus trap and scroll lock
+          exist exactly as long as it does, and its two data tables are fetched
+          on the first open rather than with the page. */}
+      {detail && (
+        <EmojiDetailDialog emoji={detail} tone={skinTone} onClose={closeDetail} onCopy={onCopy} />
+      )}
     </div>
   )
 }

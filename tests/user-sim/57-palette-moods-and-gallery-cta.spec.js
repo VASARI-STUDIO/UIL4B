@@ -1,9 +1,9 @@
-// Two founder requests, 2026-09-07, asserted on the RENDERED page.
+// Two requested features, asserted on the RENDERED page.
 //
-//   1. "for our pallete library lets include filters of neutral, and others"
+//   1. the palette library gets filters of neutral, and others
 //      — Neutral, Warm, Cool, Pastel, Vivid, Dark, Light, Monochrome.
-//   2. "at the very bottom of all gallery pages, include a CTA, 'cant find
-//      what you are looking for' Create and Submit your own or something."
+//   2. at the very bottom of all gallery pages, a CTA ("can't find what you are
+//      looking for? Create and Submit your own").
 //
 // ── WHY THIS FILE EXISTS WHEN tests/unit/palette-mood.test.js ALREADY PASSES ─
 //
@@ -214,7 +214,7 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 
 // ── Request 2: the closing CTA ──────────────────────────────────────────────
 //
-// Every gallery, in the founder's words, below the last card, one action.
+// Every gallery gets, below the last card, one action.
 //
 // /create/font-gallery is DELIBERATELY ABSENT and this is the place to say so.
 // It browses the live Google Fonts catalogue (useFontCatalog → the Google Fonts
@@ -227,8 +227,7 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 // which answers the same question with something real.
 const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
-  { route: '/discover/gradients', card: '.grg-card', action: 'Create and submit your own', href: '/create/gradient' },
-  { route: '/discover/prompts', card: '.pl-card', action: 'Create and submit your own', href: null },
+  { route: '/discover/gradients', card: '.grg-card', action: 'Make your own', href: '/create/gradient' },
   { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
 ]
 
@@ -253,11 +252,12 @@ test.describe('the closing CTA on every gallery', () => {
       const cardCount = await cards.count()
       expect(cardCount, `${gallery.route} rendered no cards, so "below the last card" means nothing`).toBeGreaterThan(3)
 
-      const cta = page.locator('.gcta')
+      const ctaSel = gallery.ctaSel || '.gcta'
+      const cta = page.locator(ctaSel)
       await expect(cta).toHaveCount(1)
-      // The founder's words, with a typographic apostrophe. Asserted as text
+      // The requested words, with a typographic apostrophe. Asserted as text
       // rather than as a class so a silent re-wording fails here.
-      await expect(cta.locator('.gcta-q')).toHaveText(/^Can[’']t find what you[’']re looking for\?$/)
+      await expect(cta.locator(gallery.qSel || '.gcta-q')).toHaveText(gallery.question || /^Can[’']t find what you[’']re looking for\?$/)
 
       // ONE action. Not a card, not a row of them.
       const actions = cta.locator('a, button')
@@ -273,13 +273,13 @@ test.describe('the closing CTA on every gallery', () => {
       }
 
       // BELOW the last card, at this width. Measured off the geometry, because
-      // "later in the DOM" is not the founder's request.
-      const geom = await page.evaluate((sel) => {
+      // "later in the DOM" is not the requirement.
+      const geom = await page.evaluate(({ sel, ctaSel }) => {
         const cardsFound = [...document.querySelectorAll(sel)]
         const lowest = Math.max(...cardsFound.map((c) => c.getBoundingClientRect().bottom + window.scrollY))
-        const block = document.querySelector('.gcta').getBoundingClientRect()
+        const block = document.querySelector(ctaSel).getBoundingClientRect()
         return { lowestCard: lowest, ctaTop: block.top + window.scrollY, ctaHeight: block.height }
-      }, gallery.card)
+      }, { sel: gallery.card, ctaSel })
       expect(geom.ctaHeight, 'the CTA rendered with no height').toBeGreaterThan(60)
       expect(
         geom.ctaTop,

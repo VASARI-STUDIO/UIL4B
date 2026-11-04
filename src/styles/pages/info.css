@@ -12,7 +12,7 @@
  *   1. A TAXONOMY EYEBROW over the h1. Deleted in the page file.
  *   2. FOURTEEN EMOJI, one per section heading and one per index entry, five
  *      of which were the same phone glyph standing for five different things.
- *      Deleted. The rhythm is a CSS counter now.
+ *      Deleted, and not replaced: the sections are a reference, not a sequence.
  *   3. A WRAPPED ROW OF PILLS as the table of contents, at the top of a
  *      document eleven sections long, so a reader anywhere below the fold had
  *      no index at all. It is a sticky rail beside the document now, which is
@@ -34,27 +34,27 @@
  * APPEARANCE at a higher specificity (`.ic-wrap` + the class) and leaves the
  * collapse itself alone, because that collapse is load-bearing:
  * tests/user-sim/24-mobile-overhaul.spec.js asserts that a collapsed panel
- * still contains focusable descendants, that `inert` keeps them out of the tab
+ * still contains focusable descendants, that `hidden` keeps them out of the tab
  * order, and that opening one gives `.ic-acc-body-inner` a height above zero.
  * `display:none` would satisfy the tab-order half and break the other two.
  *
- * ── THE INDEX WRAPS BELOW 1000px, IT DOES NOT SCROLL ───────────────────────
+ * ── THE INDEX IS ONE BUTTON BELOW 1000px ───────────────────────────────────
  *
- * content.css's `.cpg-rail` turns into a horizontal scroller at that width,
- * which is right for /terms and /privacy and WRONG here, and the reason is a
- * measurement rather than a preference. 24-mobile-overhaul runs a glyph-level
- * sweep at 320/360/390/430/560/768 that puts a `Range` around the text of
- * every `.ic-toc a` and fails if any of it lands past the viewport's right
- * edge — and unlike its element-level sweep, that one has no escape hatch for
- * a scrollable ancestor. A scroller is off-screen glyphs by definition. So on
- * this page the rail becomes a wrapped row of pills, which is what it already
- * was, only at the right size.
+ * Fourteen links do not fit one row on a phone or a tablet. Wrapping them
+ * pushes the content a screenful down, and scrolling them sideways leaves
+ * glyphs off-screen. Below 1000px the rail is hidden and `.ic-jump` takes its
+ * place: one 48px button that opens the same list as a bottom sheet (a popover
+ * from 768). The sticky rail returns above 1000px.
  */
 
+/* The jump button only exists below 1000px, where the rail is hidden. */
+.ic-wrap .ic-jump { display: none; }
+/* Rail rows are touch-sized wherever the rail is shown. */
+.ic-wrap .ic-toc .cpg-rail-row { min-height: 44px; align-items: center; }
+
 .ic-wrap {
-  /* The index column is narrower here than on the legal pages: these titles
-     are two or three words where a clause title is eight. */
-  --ic-indent: 46px;
+  /* The panel text lines up with the title, which starts at the row's padding. */
+  --ic-indent: 12px;
 }
 
 /* ── The head ── */
@@ -67,7 +67,7 @@
   font-weight: 600;
   font-size: clamp(32px, 5vw, 60px);
   line-height: 1;
-  letter-spacing: -.04em;
+  letter-spacing: -.02em;
   color: var(--cpg-ink);
   text-wrap: balance;
 }
@@ -128,10 +128,9 @@
 .ic-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(48px, 6vw, 80px); max-width: 78ch; }
 
 /* ── The sections ──
- * Hairline rows. `counter-reset` here and `counter-increment` on the row, so
- * the numerals are drawn from the list rather than typed beside it. */
-.ic-sections { display: flex; flex-direction: column; counter-reset: ic; min-width: 0; }
-.ic-acc { border-top: 1px solid var(--cpg-line); counter-increment: ic; min-width: 0; }
+ * Hairline rows. */
+.ic-sections { display: flex; flex-direction: column; min-width: 0; }
+.ic-acc { border-top: 1px solid var(--cpg-line); min-width: 0; }
 .ic-acc:first-child { border-top: 0; }
 .ic-acc-h { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
 
@@ -149,21 +148,13 @@
 }
 .ic-wrap .ic-acc-head:hover { background: var(--cpg-wash); }
 
-.ic-acc-no {
-  flex: 0 0 auto;
-  min-width: 20px;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  /* --cpg-faint, NOT --cpg-quiet. This numeral sits on `--cpg-wash` the moment
-     the row is hovered, and --t3 on that composited ground measures 4.23:1 in
-     light. --t2 is 5.18:1 on the same ground and 5.62:1 off it. */
-  color: var(--cpg-faint);
-  font-variant-numeric: tabular-nums;
-}
-.ic-acc-no::before { content: counter(ic, decimal-leading-zero); }
-.ic-acc.is-open .ic-acc-no { color: var(--accent-text); }
+/* A panel moving between hidden and shown opens at once: this is a page to
+ * look things up in, and a find-in-page match should land on text that is
+ * already there. */
+.ic-wrap .ic-acc-body { transition: none; }
+/* Browsers without `until-found` get plain `hidden`, which the grid display
+ * above would otherwise override. */
+.ic-wrap .ic-acc-body[hidden=""] { display: none; }
 
 .ic-acc-title { flex: 1; min-width: 0; margin: 0; font-size: 16.5px; font-weight: 540; line-height: 1.35; color: var(--cpg-ink); }
 .ic-acc-chevron {
@@ -309,11 +300,11 @@
 .ic-stat-num span { font-size: 13px; color: var(--cpg-faint); font-weight: 400; margin-left: 3px; letter-spacing: 0; }
 .ic-stat-sm { font-size: 16px; }
 .ic-stat-lbl {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   /* --cpg-faint on --cpg-wash: 5.18:1 light. --cpg-quiet would be 4.23:1. */
   color: var(--cpg-faint);
   margin-top: auto;
@@ -361,38 +352,30 @@
   top: -24px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: var(--mono);
-  font-size: 9.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cpg-faint);
   white-space: nowrap;
 }
 /* 9.5px is the smallest type in the product and --cpg-quiet cannot carry it:
- * measured 3.70:1 in light (#6C6C66 on #DAD8CF) and 4.29:1 in dark, so LIGHT
- * was the worse of the two and had been shipping that way. --cpg-faint clears
- * both. */
+ * measures 4.05:1 in light (#66665F on #DAD8CF) and 4.29:1 in dark, so LIGHT
+ * is the worse of the two. --cpg-faint clears both. */
 .ic-bp-tick-px { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 9.5px; color: var(--cpg-faint); }
 
 /* ── Narrow ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 1000px) {
-  /* The index WRAPS rather than scrolling here. See the header — a horizontal
-     scroller puts `.ic-toc a` glyphs past the viewport edge, and this page's
-     overflow sweep measures those glyphs with no escape hatch for a
-     scrollable ancestor. */
-  .ic-wrap .ic-toc ol {
+  .ic-wrap .ic-toc { display: none; }
+  .ic-wrap .ic-jump {
     display: flex;
-    flex-wrap: wrap;
-    grid-auto-flow: row;
-    overflow-x: visible;
-    gap: 6px;
-    margin-inline: 0;
-    padding-inline: 0;
-    padding-bottom: 0;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 15px;
   }
-  .ic-wrap .ic-toc .cpg-rail-row { font-size: 13px; padding: 9px 14px; min-height: 40px; }
   .ic-main { max-width: none; gap: clamp(36px, 6vw, 56px); }
 }
 

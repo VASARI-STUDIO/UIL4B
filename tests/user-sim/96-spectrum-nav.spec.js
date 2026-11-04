@@ -15,7 +15,7 @@
 // off the source. A skipped test is honest; a test asserting against a nav
 // nobody can reach is not.
 //
-// WHAT IT GUARDS. The founder's number-one constraint is that no functionality
+// WHAT IT GUARDS. The top constraint is that no functionality
 // is lost, and this bar carries five controls where the app header carries
 // fifteen. Everything the pill drops has to be in the full-screen menu, and
 // that menu has to behave like a dialog: focus in, focus trapped, scroll
@@ -62,7 +62,7 @@ test.describe('the marketing pill', () => {
     // Pricing is the design's separate Pricing screen, which is /plans.
     expect(links.find((l) => l.label === 'Pricing').href).toBe('/plans')
     // The sales page is the design's "Tools" screen, so Tools is the current one.
-    expect(links.map((l) => l.current)).toEqual(['page', null, null])
+    expect(links.map((l) => l.current), '/ marks no quiet link as current').toEqual([null, null, null])
   })
 
   test('the bar hides on the way down and comes back on the way up', async ({ page }) => {
@@ -125,7 +125,7 @@ test.describe('the full-screen menu carries what the pill drops', () => {
     await expect(menu).toBeVisible()
     await expect(menu).toHaveAttribute('aria-modal', 'true')
     await expect(burger).toHaveAttribute('aria-expanded', 'true')
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the page behind the menu is still scrolling').toBe('hidden')
     expect(await page.evaluate(() => document.querySelector('.spnav-menu').contains(document.activeElement)),
       'focus never moved into the menu').toBe(true)
@@ -134,9 +134,23 @@ test.describe('the full-screen menu carries what the pill drops', () => {
 
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
-    expect(await page.evaluate(() => getComputedStyle(document.body).overflow),
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow),
       'the scroll lock outlived the menu').not.toBe('hidden')
     await expect(burger, 'Escape closed the menu and dropped focus on the floor').toBeFocused()
+  })
+
+  // The menu holds the scroll lock. Its Tools link leaves the sales page for
+  // /tools: the menu must close and release the lock on the way.
+  test('Tools in the menu closes it and opens /tools', async ({ page }) => {
+    await salesPage(page)
+    await page.locator('.spnav-burger').click()
+    const menu = page.locator('.spnav-menu')
+    await expect(menu).toBeVisible()
+    await menu.locator('a.spnav-mi', { hasText: 'Tools' }).click()
+    await expect(menu).toHaveCount(0)
+    await expect(page).toHaveURL(/\/tools\/?$/)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'the scroll lock outlived the menu').not.toBe('hidden')
   })
 
   test('Tab is trapped inside the menu', async ({ page }) => {
@@ -164,12 +178,21 @@ test.describe('the full-screen menu carries what the pill drops', () => {
       label: a.textContent.trim(), href: a.getAttribute('href'),
     })))
     expect(items).toEqual([
-      { label: 'Tools', href: '#bench' },
+      { label: 'Tools', href: '/tools' },
       { label: 'Pricing', href: '/plans' },
       { label: 'On mobile', href: '/mobile' },
       { label: 'Open the toolkit ↗', href: '/projects' },
     ])
-    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    await expect(menu.locator('.spnav-mi-note')).toHaveText('Every core tool is free, forever')
+    // The note takes the house voice: UI sans, 13px, no capitals, no tracking.
+    const note = await menu.locator('.spnav-mi-note').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { mono: /mono|consolas|courier/i.test(cs.fontFamily), size: parseFloat(cs.fontSize), tracking: cs.letterSpacing, transform: cs.textTransform }
+    })
+    expect(note.mono, 'the menu note is back in mono').toBe(false)
+    expect(note.size).toBeGreaterThanOrEqual(13)
+    expect(note.tracking).toBe('normal')
+    expect(note.transform).toBe('none')
     // Nothing else that can take focus: the Close pill plus the four items.
     const focusables = await menu.locator('a[href], button').count()
     expect(focusables, 'the menu carries more than the design\'s items again').toBe(5)

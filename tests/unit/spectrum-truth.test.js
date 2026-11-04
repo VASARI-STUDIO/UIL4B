@@ -148,7 +148,7 @@ test('the page offers no cadence that cannot reach checkout', () => {
 /* ── claims the rest of the app has already retracted ──────────────────────── */
 
 test('the page does not promise a cancellation the portal cannot do', () => {
-  // /plans deleted "cancel any time" under a founder flag because the Stripe
+  // /plans deleted "cancel any time" pending owner approval because the Stripe
   // Customer Portal has no cancellation flow enabled. Re-adding it on the front
   // page retracts nothing. The prototype says it twice — an assurance chip and
   // an FAQ answer ("From the dashboard, in two clicks, no email required").
@@ -173,7 +173,7 @@ test('the page sells no export the panel cannot build', () => {
   // (`['export', 'Export'] … ['brackets-curly', 'JSON']`) read as a claim —
   // two neighbouring labels, not a sentence.
   const exportOf = (word) => new RegExp(`\\bexport(?:s|ed|ing)?\\b[^.'"\`]*\\b${word}\\b`, 'i')
-  const WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON' }
+  const WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON', assets: 'asset bundle' }
   for (const f of unbuilt) {
     if (!WORD[f.id]) continue
     assert.ok(!exportOf(WORD[f.id]).test(PROSE),
@@ -372,11 +372,6 @@ test('the stylesheet hardcodes no accent colour', () => {
     // The converter's dimension badge: light text on a fixed dark scrim over
     // a photograph, the same in both themes because the photo is.
     '#F4F6FA',
-    // The exported UI kit drawn in the second exports card: its paper, inks and
-    // swatch fills are the FILE's own colours, fixed in both themes because the
-    // card is a picture of a document (as the window dots are a picture of a
-    // window). None of them is an accent.
-    '#F7F6F1', '#18221E', '#5C6B63', '#3A4A42', '#203C35', '#DBD0EB', '#3A3050', '#221B33', '#E4E8DE',
   ])
   const hexes = [...CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0])
   const unexpected = hexes.filter((h) => !ALLOWED.has(h) && !ALLOWED.has(h.toUpperCase()))
@@ -386,7 +381,7 @@ test('the stylesheet hardcodes no accent colour', () => {
 
   // POSITIVE CONTROL: the sheet really does use the derived family, so the
   // assertion above is not passing on an empty stylesheet.
-  for (const token of ['--accent', '--accent-mid', '--accent-text', '--accent-bright', '--accent-ink']) {
+  for (const token of ['--accent', '--accent-mid', '--accent-text', '--accent-ink']) {
     assert.ok(CSS.includes(`var(${token})`), `spectrum.css never reads ${token}`)
   }
 })

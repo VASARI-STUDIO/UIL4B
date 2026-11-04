@@ -46,13 +46,14 @@
    tinted ground — so the floor here is measured on the COMPOSITED colour, not
    the declared one:
 
-     --t3 (#6C6C66) on --bg-0 (#EFEEE9) ............ 4.59:1  (passes, barely)
-     --t3 on --cpg-wash over --bg-0 (~#E6E5E0) ..... 4.23:1  FAILS
-     --t2 (#5F5F59) on that same wash .............. 5.18:1  passes
+     --t3 (#66665F) on --bg-0 (#EFEEE9) ............ 4.98:1  passes
+     --t3 on --cpg-wash over --bg-0 (~#E6E5E0) ..... 4.59:1  passes, barely
+     --t2 (#5F5F59) on that same wash .............. 5.09:1  passes
 
    So `--cpg-quiet` (--t3) appears only where the ground is the page or a plain
    `--card`, and every label that sits on `--cpg-wash`, `--cpg-wash-2` or an
-   accent wash uses `--cpg-faint` (--t2) instead. Light is the worse theme in
+   accent wash uses `--cpg-faint` (--t2) instead: a wash that is a shade darker
+   than the one quoted takes --t3 under 4.5. Light is the worse theme in
    every one of those pairs, which is why it is the one quoted.                */
 
 .cpg {
@@ -101,7 +102,7 @@
   font-weight: 600;
   font-size: clamp(34px, 5.4vw, 64px);
   line-height: .99;
-  letter-spacing: -.04em;
+  letter-spacing: -.02em;
   color: var(--cpg-ink);
   text-wrap: balance;
 }
@@ -111,11 +112,11 @@
    mono captions the sheet it replaces carried (9px/9.5px/10px/10.5px/11px and
    --fs-micro, at .04em/.06em/.08em/.1em/.12em/.14em). */
 .cpg-cap {
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--cpg-faint);
 }
 
@@ -229,9 +230,9 @@
    NO `border-radius` IN A FOCUS RULE. An outline follows its own element's
    radius, so declaring one here would round the CONTROL at the instant of
    focus rather than rounding the ring, and the ring would trace a shape the
-   reader was not looking at a frame earlier. The founder reported that as "the
-   search bar has a weird visual" (2026-09-04) and
-   tests/unit/focus-ring-geometry.test.js has banned it in every sheet since.
+   reader was not looking at a frame earlier. On the search bar that showed as a
+   weird visual, and tests/unit/focus-ring-geometry.test.js bans it in every
+   sheet.
    Every control here carries its radius at rest, so the ring is the right
    shape for free. */
 .cpg :focus-visible {

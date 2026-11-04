@@ -4,8 +4,9 @@
 // localStorage — so a project opened on a second device lost its icon, and the
 // map never reached the account at all. The icon is now a
 // field on the project record (`project.icon`), written through ProjectContext's
-// `updateProject`, which syncs with the project and stamps `updatedAt` so the
-// newer choice wins a merge.
+// `updateProject`, which syncs with the project. The write stamps `iconAt`, not `updatedAt`: an icon is
+// not an edit of the design, so it leaves "last edited" and the lead project alone, and the newer
+// choice still wins a merge.
 //
 // The value is whatever the picker writes: one of the workspace's glyph names,
 // or, for an icon somebody uploaded on the old page, its data: URL (≤ 50 KB,

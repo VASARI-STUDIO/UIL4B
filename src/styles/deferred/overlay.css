@@ -4,7 +4,7 @@
  * homepage its bytes without ever being used there. It now travels with the
  * lazy route chunks that can actually reach it:
  *
- *   CommandPalette, ExportPanel
+ *   CommandPalette, the export dialog's parts
  *
  * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
  * in global.css, so the cascade between any two of them is the one that was
@@ -21,19 +21,29 @@
 
 
 /* ─── Command Palette ─── */
-.cp-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.cp-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(10vh,80px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 .cp-input-wrap{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .cp-input-wrap svg{color:var(--t2);flex-shrink:0}
 .cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
 .cp-input::placeholder{color:var(--t3)}
-.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 7px;border-radius:var(--radius-s);border:1px solid var(--border)}
+.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;flex-shrink:0;line-height:inherit}
+.cp-kbd-x{display:none}
+@media(hover:hover){.cp-kbd:hover{color:var(--t0)}}
+/* On a phone or tablet the chip becomes a 44px close button. */
+@media(pointer:coarse),(max-width:767px){
+  .cp-input-wrap{padding-right:10px}
+  .cp-kbd{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0}
+  .cp-kbd-key{display:none}
+  .cp-kbd-x{display:block}
+}
 .cp-results{flex:1;overflow-y:auto;padding:8px}
-.cp-section-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:10px 14px 4px}
+.cp-section-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t3);letter-spacing:normal;text-transform:none;padding:10px 14px 4px}
 .cp-item-icon svg{width:13px;height:13px}
 .cp-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .cp-item-label{font-size:13px;font-weight:500;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cp-item-desc{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cp-item-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;padding:3px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+@media(max-width:767px){.cp-item-desc{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;font-size:12px;line-height:1.4}}
+.cp-item-cat{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t3);letter-spacing:normal;text-transform:none;flex-shrink:0;padding:3px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .cp-empty{padding:48px 20px;text-align:center;font-size:13px;color:var(--t2)}
 .cp-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg-2);font-size:11px;color:var(--t2);gap:12px;flex-wrap:wrap}
 .cp-footer-keys{display:flex;gap:14px}
@@ -43,53 +53,18 @@
 @media(pointer:coarse){.cp-footer-keys{display:none}}
 @media(max-width:767px){.cp-overlay{padding-top:calc(env(safe-area-inset-top) + 12px)}}
 /* The footer's label. It was an inline style object. */
-.cp-footer-brand{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.cp-footer-brand{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t3)}
 
-/* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
-   nav search cluster. No real export yet: every format previews and the primary
-   action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
-.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84dvh,720px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
-.exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-/* --accent-mid on the panel's --bg-1: 5.55:1 light, 8.48:1 dark. */
-.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
-.exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
-.exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
-.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.exp-formats{display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--border)}
-.exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
-.exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
-.exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
-.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg-0)}
-/* The footer's two actions: the app's rectangle at the 44px the old
-   .ui-pill-md held, so the target does not shrink. */
-.exp-foot .exp-act{min-height:44px;padding:0 18px;justify-content:center}
+/* ══ Export parts (exp-) — the pieces the export dialog reuses: the identity
+   fields, the file-type switch, the preview strip, the template picker and the
+   brand logo field. The dialog's own shell and layout are in
+   styles/pages/export-dialog.css. ══ */
 .exp-logo-acts .btn-s{min-height:40px;padding:0 14px;border-radius:var(--radius-pill)}
 
-
-/* Export panel error. The panel deliberately stays OPEN on a failed export —
-   closing it would leave the user with no file and no explanation, which reads
-   as the button doing nothing. */
-/* A finished export with something left to say (a font the UI kit could not
-   embed): a status, not an error. A hairline-divided line of the dialog, not a
-   box inside it. */
-.exp-notice{margin:0;padding:16px 24px 8px;font-size:var(--fs-caption);line-height:1.5;color:var(--t1);border-top:1px solid var(--border)}
-/* The sentence the panel stayed open to say: full ink at the weight of the
-   format names, no icon and no tint. */
-.exp-notice-lead{font-weight:600;color:var(--t0)}
-/* The notice and its buttons are one group, so no hairline between them and a
-   tighter gap. The button tops do not move: the dock grows upward. */
-.exp-dock:has(.exp-notice) .exp-foot{border-top:0;padding-top:8px}
-
 /* The Pro kit's identity: name and description, then the logo row, as one
-   hairline-divided section directly under the selected kit row, so it is in
-   view when the dialog opens. The format row after it takes the list's
-   hairline back. */
+   hairline-divided section. */
 .exp-identity{display:flex;flex-direction:column;gap:14px;padding:18px 24px 6px;border-top:1px solid var(--border)}
-.exp-identity-title{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.exp-identity-title{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-field{display:flex;flex-direction:column;gap:6px}
 .exp-field-label{font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
 .exp-field-opt{margin-left:6px;font-weight:400;color:var(--t2)}
@@ -98,36 +73,46 @@
 /* 16px on touch screens: smaller field text makes iOS zoom the page on focus. */
 @media (pointer:coarse){.exp-field input{min-height:44px}.exp-field input,.exp-field textarea{font-size:16px}}
 .exp-identity + .exp-logo{border-top:0;padding-top:12px}
-.exp-formats > .exp-logo + .exp-fmt{border-top:1px solid var(--border)}
-/* The dock (the error, the notice, then the footer's actions) stays in reach
-   while the format list scrolls: on a phone the list is taller than the sheet,
-   and both the button and anything the export has to say were below the fold. */
-.exp-dock{position:sticky;bottom:0;z-index:1;background:var(--bg-0)}
-/* Scroll cue: while the list has more below the dock, its last visible row fades
-   into the panel ground. A mask on the content that is cut off, not decoration;
-   ExportPanel.jsx toggles .has-more from the panel's scroll position. */
-.exp-dock::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:44px;pointer-events:none;opacity:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg-1) 0%,transparent),var(--bg-1));transition:opacity var(--dur-2) var(--ease-out)}
-.exp-panel.has-more .exp-dock::before{opacity:1}
-/* The Soon action is plainly off: a muted surface with a readable label, not the
-   primary fill dimmed (a dimmed blue still reads as live in the moment before
-   the fade settles). Scoped to this footer, so no other primary button moves. */
-.exp-foot .exp-act.btn-accent[aria-disabled="true"],.exp-foot .exp-act.btn-accent[aria-disabled="true"]:hover{opacity:1;background:var(--bg-3);border-color:var(--border);color:var(--t2);cursor:not-allowed}
-@media (pointer:coarse){.exp-close{width:44px;height:44px}}
-/* Buttons are pills; the icon-only close is a circle. */
-.exp-foot .exp-act{border-radius:var(--radius-pill)}
-.exp-close{border-radius:50%}
 @media(max-width:560px){
-  /* One 16px gutter for every row of the dialog on a phone. */
-  .exp-head{padding:20px 16px 12px}
-  .exp-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
-  .exp-notice{padding:16px 16px 8px}
+  /* One 16px gutter for the fields on a phone. */
   .exp-identity{padding:16px 16px 6px}
-  /* On a phone every description at once is a wall of text: the list reads as
-     names, and the chosen format explains itself. */
-  .exp-fmt:not(.is-active) .exp-fmt-desc{display:none}
 }
-.exp-error{margin:0;padding:14px 24px;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border-top:1px solid color-mix(in srgb,var(--err) 30%,transparent)}
-@media(max-width:560px){.exp-error{padding:14px 16px}}
+
+/* The file-type switch: pills, 44px, one line. If they outgrow the row (a 320px
+   screen) the row scrolls sideways rather than wrapping. The padding and
+   negative margin keep the focus ring inside the scroll box. */
+.exp-switch-label{display:none;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
+/* Up to tablet the switch sits under the Pro rows, so it needs its own label. */
+@media(max-width:900px){.exp-switch-label{display:block}}
+.exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
+.exp-switch::-webkit-scrollbar{display:none}
+.exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+@media (hover:hover){.exp-pill:hover{background:var(--hvr);color:var(--t0)}}
+/* The chosen pill is told apart by a heavier edge and the ink, not by colour alone. */
+.exp-pill.is-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--t0)}
+.exp-pill:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+
+/* The Pro preview strip. The box is reserved before any picture lands (flat
+   fill, fixed ratio), so the dock does not move when the images arrive. The lock
+   sits over the strip, not inside its scroll, so it stays in view on a phone. */
+.exp-preview{position:relative;isolation:isolate}
+.exp-preview-strip{display:flex;gap:12px;padding:2px;margin:-2px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;border-radius:var(--radius-s)}
+.exp-thumb{flex:0 0 auto;display:block;width:120px;height:auto;aspect-ratio:1 / 1.414;object-fit:cover;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0);scroll-snap-align:start;-webkit-user-drag:none}
+.exp-preview.is-guidelines .exp-thumb{width:160px;aspect-ratio:16 / 9}
+.exp-preview-stage{position:relative;width:fit-content;max-width:100%}
+/* A strip that scrolls sideways is a Tab stop, so it gets the site's ring, held
+   in the 2px of padding the negative margin gives back. */
+.exp-preview-strip:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.exp-preview-lock{position:absolute;inset:0;z-index:1;display:grid;place-items:center;pointer-events:none}
+.exp-preview-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
+/* The strip is its own group under the template picker: 16px on top of the options' 12px gap makes 28px
+   between the two, more than the 12px between tiles or the 8px between a heading and what it heads. */
+.exp-preview{margin-top:16px}
+.exp-preview-note,.exp-preview-caption{margin:0 0 8px;font-size:var(--fs-caption);color:var(--t1)}
+.exp-preview-caption{font-weight:600;color:var(--t0)}
+
+/* Pro, as plain words with a lock. */
+.exp-pro-lock{flex:0 0 auto}
 
 /* ── Export panel · the brand logo field ─────────────────────────────────────
    The one place UIL4B accepts an asset it did not generate. It renders only for
@@ -152,7 +137,7 @@
 .exp-logo-chip img{max-width:38px;max-height:38px;width:auto;height:auto;object-fit:contain}
 .exp-logo-text{display:flex;flex-direction:column;gap:3px;min-width:0}
 .exp-logo-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow-wrap:anywhere}
-.exp-logo-hint{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-logo-hint{font-size:var(--fs-caption);color:var(--t1);line-height:1.45}
 .exp-logo-acts{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
 .exp-logo-drop{padding:0;background:none;border:0;font-size:var(--fs-micro);color:var(--t2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .exp-logo-drop:hover{color:var(--t0)}
@@ -176,4 +161,31 @@
 @media (pointer:coarse){
   .exp-logo-acts .btn-s{min-height:44px}
   .exp-logo-drop{min-height:44px;padding:0 4px}
+}
+/* ── Template picker: three tiles in one row ── */
+.exp-tpl-label{margin:0 0 8px}
+.exp-tpl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.exp-tpl-tile{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
+/* With no picture the tile is a card: name and description, the chosen one outlined like an active pill. */
+.exp-tpl-tile:not(.has-pic){gap:4px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
+.exp-tpl-tile:not(.has-pic).is-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+/* The selection border is reserved when not selected, so nothing shifts. */
+.exp-tpl-frame{display:block;width:100%;overflow:hidden;border:2px solid transparent;border-radius:var(--radius-s);background:var(--bg-1);box-shadow:inset 0 0 0 1px var(--border);transition:border-color var(--dur-2) var(--ease-out)}
+.exp-tpl-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.exp-tpl-tile.is-active .exp-tpl-frame{border-color:var(--accent)}
+@media (hover:hover){
+  .exp-tpl-tile:not(.has-pic):not(.is-active):hover{background:var(--hvr)}
+  .exp-tpl-tile.has-pic:not(.is-active):hover .exp-tpl-frame{border-color:var(--t3)}
+}
+.exp-tpl-name{font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
+.exp-tpl-tile.is-active .exp-tpl-name{font-weight:600}
+.exp-tpl-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.exp-tpl-tile:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.exp-tpl-picked{display:none;margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
+@media(max-width:560px){
+  .exp-tpl-row{gap:8px}
+  .exp-tpl-tile:not(.has-pic){padding:10px 8px}
+  .exp-tpl-desc{display:none}
+  .exp-tpl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-tpl-picked{display:block}
 }

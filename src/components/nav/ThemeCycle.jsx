@@ -23,47 +23,10 @@ import { PH_CIRCLE_HALF, PH_MOON, PH_SUN } from '../spectrum/phosphorNav'
 // resolves to and there would be no third stop.
 const ORDER = ['light', 'dark', 'system']
 
-// Phosphor's `sun`, `moon` and `monitor`, drawn as inline SVG.
-//
-// SPECTRUM LOADS PHOSPHOR FROM A CDN (`class="ph ph-{{ themeIcon }}"`). This
-// product does not add origins to the first-paint path and ships every glyph
-// inline, so the three shapes are ported by hand at the same 16px optical size
-// the design sets. Same silhouettes, no request, no icon font.
-function SunGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4.25" />
-      <path d="M12 2.6v2.3M12 19.1v2.3M4.95 4.95l1.63 1.63M17.42 17.42l1.63 1.63M2.6 12h2.3M19.1 12h2.3M4.95 19.05l1.63-1.63M17.42 6.58l1.63-1.63" />
-    </svg>
-  )
-}
-
-function MoonGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20.8 13.4A9.2 9.2 0 1 1 10.6 3.2a7.2 7.2 0 0 0 10.2 10.2Z" />
-    </svg>
-  )
-}
-
-// A display, not a time of day — the same reasoning ThemeChoice.jsx records for
-// its own System glyph: a half-sun/half-moon reads as a third colour scheme.
-function SystemGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2.8" y="4.2" width="18.4" height="12.4" rx="2.2" />
-      <path d="M8.8 20.2h6.4M12 16.6v3.6" />
-    </svg>
-  )
-}
-
-const GLYPH = { light: SunGlyph, dark: MoonGlyph, system: SystemGlyph }
-
-// THE MARKETING NAV'S SET — `glyphs="phosphor"`. The Spectrum design's control
-// (line 230, and `themeIcon` at 1935) draws Phosphor's own sun, moon and
-// circle-half — System is the half-filled circle, not a monitor. SpectrumNav
-// asks for that set so the pill matches the design exactly; the app header
-// keeps the hand-drawn set above.
+// One glyph set for both navs: Phosphor's own sun, moon and circle-half, as the
+// Spectrum design's control draws them (line 230, and `themeIcon` at 1935).
+// System is the half-filled circle. The paths ship inline from phosphorNav, so
+// there is no icon font and no extra request on first paint.
 function phosphor(d) {
   return function PhosphorGlyph() {
     return (
@@ -80,7 +43,7 @@ export default function ThemeCycle({ className = 'pnav-iconbtn pnav-theme', glyp
   const { theme, themePref, setTheme } = useTheme()
   const current = ORDER.includes(themePref) ? themePref : 'system'
   const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]
-  const Glyph = (glyphs === 'phosphor' ? PHOSPHOR : GLYPH)[current]
+  const Glyph = PHOSPHOR[current]
 
   // The accessible name says what the press DOES, which is the only thing a
   // non-sighted user can act on — and it names how System currently resolves,

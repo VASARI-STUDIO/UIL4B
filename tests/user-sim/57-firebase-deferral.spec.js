@@ -65,7 +65,7 @@ test('the homepage boots through the Firebase access broker and renders real con
 test('the One Tap mount seam is live — the app still injects Google Identity Services', async ({ page }) => {
   // `src/components/oneTapMount.jsx` is the seam that lets a deferred build hold
   // One Tap back until the Firebase gate opens, WITHOUT editing the
-  // founder-gated `GoogleOneTap.jsx`. On the default build it must be a
+  // approval-gated `GoogleOneTap.jsx`. On the default build it must be a
   // transparent re-export, and the only way to see that from the browser is
   // that One Tap still does the one thing it does on a signed-out page: inject
   // the GIS script.
@@ -76,15 +76,26 @@ test('the One Tap mount seam is live — the app still injects Google Identity S
   // injecting one itself: a tag this spec added would prove nothing about the
   // seam. That is the opposite choice to `26-one-tap-stub.spec.js`, which is
   // guarding the stub rather than the mount and must not depend on auth.
+  //
+  // One Tap mounts only on the routes in src/components/oneTapRoutes.js, so the
+  // sign-in page is where it must load, and a tool page is where it must not.
   watch(page, 'a signed-out visitor whose browser should be offered One Tap')
-  await go(page, '/')
-  await expectRendered(page, 'the homepage')
+  await go(page, '/login')
 
   await expect(
     page.locator(GIS_SCRIPT),
-    'the app never injected the Google Identity Services script, so the One Tap mount seam did not render '
+    'the app never injected the Google Identity Services script on /login, so the One Tap mount seam did not render '
     + 'GoogleOneTap. Automatic sign-in is silently gone for every returning Google user.',
   ).toHaveCount(1, { timeout: 20000 })
+})
+
+test('One Tap stays off a page someone is only browsing', async ({ page }) => {
+  watch(page, 'a signed-out visitor using a tool, who has not asked to sign in')
+  await go(page, '/create/palette')
+  await expectRendered(page, 'the palette tool')
+  // Long enough for the mount to have injected the script if it were going to.
+  await page.waitForTimeout(3000)
+  await expect(page.locator(GIS_SCRIPT), 'One Tap loaded on a tool page').toHaveCount(0)
 })
 
 test('the account affordance resolves, so auth still reaches the chrome', async ({ page }) => {

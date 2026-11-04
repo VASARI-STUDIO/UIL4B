@@ -2,8 +2,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
+import { readLastPick, resolvePreset } from '../config/dialogExport'
 import { localiseTools } from '../data/tools'
-import { searchHints } from '../data/toolIndex'
+import { CREATE_TOOL_SEARCH, searchHints } from '../data/toolIndex'
 // The Create pane is a miniature of the real style-guide export, read from the
 // same gallery palette and the same inkFor/grade the exporter uses.
 import { LIBRARY_LEAD } from '../data/libraryTotals'
@@ -22,23 +23,32 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
+import { INTENT_MS, MOMENT_OF, GALLERY_STEP_MS, faceByKey, facesAttr, finePointer, galleryRun, warmFaces } from './nav/menuMoments'
 import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
 import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
-import { AccountSwitcher, SignOutRows } from './nav/AccountSwitcher'
-import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
+import { AccountSwitcher, OfflineNote, SignOutRows } from './nav/AccountSwitcher'
+import useOfflineGate from './nav/useOfflineGate'
+import { menuFootNote, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import { lockScroll } from '../utils/scrollLock'
+import { markScrollContainers } from '../utils/scrollContainment.js'
+import { BrandLockup, BrandSymbol } from './BrandLogo'
+import { initialsOf } from '../utils/initials.js'
+import { readSessionHint } from '../utils/sessionHint'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
-// Discover pane's counts too — the resources list behind one of them is 20 KB
-// no other always-loaded module needs.
+// Discover pane's counts and suggested gallery too — they render only inside
+// the open Discover menu, and the prompt count comes from a data module nothing
+// else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
-const ExportPanel = lazy(() => import('./ExportPanel'))
+const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
+const DiscoverRecommended = lazy(() => import('./nav/DiscoverRecommended'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
@@ -136,6 +146,14 @@ function GearIcon() {
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6L12 3Z" />
     </svg>
   )
 }
@@ -246,11 +264,7 @@ function ThemeSeg() {
 }
 
 function initials(profile, user) {
-  const src = profile?.displayName || user?.email || ''
-  const parts = src.trim().split(/[\s@.]+/).filter(Boolean)
-  const first = parts[0]?.[0] || 'U'
-  const second = parts.length > 1 ? parts[1][0] : ''
-  return (first + second).toUpperCase()
+  return initialsOf(profile?.displayName, user?.email)
 }
 
 // THE CREATE PANE'S PICTURE — a page of what an export looks like, set inside
@@ -295,9 +309,14 @@ export default function PillNav({ variant }) {
 }
 
 function AppHeader() {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, loading: authLoading } = useAuth()
+  // Auth answers after the first paint. The empty avatar slot is held only for a
+  // browser whose last session was signed in; with no hint the signed-out controls
+  // show at once, so a visitor never sees a slot open and close.
+  const [sessionLikely] = useState(readSessionHint)
+  const accountPending = authLoading && sessionLikely
   const { openLogin } = useLoginPrompt()
-  const { isPro } = useSubscription()
+  const { isPro, planKnown } = useSubscription()
   const { reducedMotion } = useAppearance()
   const { design, projects, loadProject } = useProject()
   const exportDesign = useExportDesign()
@@ -321,6 +340,13 @@ function AppHeader() {
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
   const onDashboard = path === '/projects'
+  // Manage plan from the menu while Settings is already open. A phone's Settings
+  // keeps the open section in the history entry, so a push here would stack a
+  // second section entry on the first and the bar's Back would loop between them.
+  // It replaces the entry instead, and keeps `fromList` so the entry behind (the
+  // list) is still what the bar steps back to.
+  const onSettings = path === '/settings'
+  const planState = { section: 'support', ...(onSettings && location.state?.fromList ? { fromList: true } : null) }
   // Below 900px the labels are hidden, so the icon buttons carry a title.
   const iconOnly = useMediaQuery('(max-width: 899px)')
 
@@ -342,6 +368,9 @@ function AppHeader() {
   const [sheetSection, setSheetSection] = useState('create')
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  // The pick the dialog opens on, fixed when it opens so a re-render of the
+  // header cannot move it.
+  const [exportPreset, setExportPreset] = useState(null)
   const navRef = useRef(null)
   const menuRef = useRef(null)
   const sheetRef = useRef(null)
@@ -355,6 +384,10 @@ function AppHeader() {
   const openedBy = useRef(null)
   // Escape returns focus to the trigger that owns the layer it closed.
   const triggerRefs = useRef({})
+  // The signed-out menu and the phone sheet each point their sign-in rows at
+  // their own offline note.
+  const menuOffline = useOfflineGate()
+  const sheetOffline = useOfflineGate()
   const closeAccountMenu = useCallback(() => setMenu(null), [])
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
@@ -469,32 +502,39 @@ function AppHeader() {
     if (sheet && sheetSection === 'account') document.getElementById('pnav-sheet-account')?.scrollIntoView({ block: 'start' })
   }, [sheet, sheetSection])
 
-  // The sheet locks the page's scroll and keeps Tab inside itself.
+  // The sheet locks the page's scroll and keeps Tab inside itself. Its Close is
+  // the header's menu button, which sits above the sheet and outside it, so the
+  // ring is that button followed by the sheet's controls: Shift+Tab from the
+  // first control reaches Close, and Tab from Close re-enters the sheet.
   useEffect(() => {
     if (!sheet) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlockScroll = lockScroll()
     const panel = sheetRef.current
+    // The page is locked and Lenis stopped; marking the panel's scroll boxes lets the wheel still scroll them.
+    const unmark = markScrollContainers(panel)
     const focusable = () => [...(panel?.querySelectorAll('button:not([disabled]),a[href]') || [])]
     focusable()[0]?.focus()
     const trap = (event) => {
       if (event.key !== 'Tab') return
+      const closeBtn = mobileBtnRef.current
       const items = focusable()
-      if (!items.length) return
-      const first = items[0]
-      const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
+      const ring = closeBtn && closeBtn.getClientRects().length > 0 ? [closeBtn, ...items] : items
+      const at = ring.indexOf(document.activeElement)
+      // Focus in another layer (a dialog opened from the sheet) is not ours.
+      if (at < 0) return
+      const last = ring.length - 1
+      let next = null
+      if (event.shiftKey) next = at === 0 ? last : (ring[0] === closeBtn && at === 1 ? 0 : null)
+      else next = at === last ? 0 : (ring[0] === closeBtn && at === 0 ? 1 : null)
+      if (next === null || ring.length < 2) return
+      event.preventDefault()
+      ring[next].focus()
     }
-    panel?.addEventListener('keydown', trap)
+    document.addEventListener('keydown', trap)
     return () => {
-      panel?.removeEventListener('keydown', trap)
-      document.body.style.overflow = prev
+      document.removeEventListener('keydown', trap)
+      unlockScroll()
+      unmark()
     }
   }, [sheet])
 
@@ -534,6 +574,7 @@ function AppHeader() {
   const openExport = () => {
     if (exportTarget) loadProject(exportTarget.id)
     closeAll()
+    setExportPreset(resolvePreset(readLastPick()))
     setExportOpen(true)
   }
   // With nothing to export the button explains itself instead of opening the
@@ -635,14 +676,28 @@ function AppHeader() {
   }
 
   // After a switch the popover closes and focus returns to the avatar, so a
-  // keyboard user is not dropped on <body>.
+  // keyboard user is not dropped on <body>. The switch dialog closes this menu
+  // as it opens, so when a dialog is already up it keeps the focus it took.
   const closeAccountMenuAndRestoreFocus = () => {
     setMenu(null)
-    requestAnimationFrame(() => accountBtnRef.current?.focus())
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) accountBtnRef.current?.focus()
+    })
+  }
+
+  // The phone sheet's switcher hands focus back to the menu button instead.
+  const closeSheetAndRestoreFocus = () => {
+    closeAll()
+    requestAnimationFrame(() => {
+      if (!document.querySelector('[role="dialog"]')) mobileBtnRef.current?.focus()
+    })
   }
 
   const activeSection = NAV_SECTIONS.find((s) => s.id === open) || null
-  const showUpgrade = !isPro && path !== '/plans'
+  // Neither the signed-out controls nor Upgrade are right until the account is
+  // known: a signed-in person would first see "Log in", a Pro subscriber
+  // "Upgrade". Until then the account slot is an empty box the size of the avatar.
+  const showUpgrade = !accountPending && planKnown && !isPro && path !== '/plans'
 
   return (
     <>
@@ -653,16 +708,18 @@ function AppHeader() {
         onMouseLeave={hoverLeave}
       >
         <div className="pnav-inner">
-          {/* 19px / 600 / -.035em with the "4" in the accent (App line 102).
-              It goes to the dashboard from every app page, and from the
-              dashboard to the sales home page. */}
+          {/* The logo lockup, sized from .pnav-word's font-size so the phone
+              header's 21px and the desktop 19px still set its height. It goes
+              to the dashboard from every app page, and from the dashboard to
+              the sales home page. The link's aria-label is its name; the SVG
+              is decorative. */}
           <Link
             className="pnav-logo"
             to={onDashboard ? '/home' : '/projects'}
             onClick={onLogoClick}
             aria-label={onDashboard ? 'UIL4B, go to the home page' : 'UIL4B, go to your dashboard'}
           >
-            <span className="pnav-word">UIL<span className="pnav-word-mark">4</span>B</span>
+            <span className="pnav-word"><BrandLockup className="brand-logo-wide" /><BrandSymbol className="brand-logo-narrow" /></span>
           </Link>
 
           <div className={searchHot ? 'pnav-search is-hot' : 'pnav-search'}>
@@ -705,7 +762,7 @@ function AppHeader() {
             ))}
           </div>
 
-          <div className="pnav-actions">
+          <div className="pnav-actions" aria-busy={accountPending || undefined}>
             {!isSalesPage && (
               <span
                 className="pnav-act-wrap"
@@ -748,7 +805,7 @@ function AppHeader() {
             {/* The theme switch is the control directly left of the account
                 one: before "Log in" signed out, before the avatar signed in
                 (below, after Upgrade). */}
-            {!user && (
+            {!user && !accountPending && (
               <>
                 <ThemeCycle />
                 <button type="button" className="pnav-login" aria-haspopup="dialog" onClick={startLogin}>
@@ -764,9 +821,13 @@ function AppHeader() {
               </Link>
             )}
 
-            {user && <ThemeCycle />}
+            {(user || accountPending) && <ThemeCycle />}
 
-            {user ? (
+            {accountPending ? (
+              <div className="pnav-pop-wrap">
+                <span className="pnav-avatar-slot" aria-hidden="true" />
+              </div>
+            ) : user ? (
               <div className="pnav-pop-wrap">
                 <button
                   type="button"
@@ -788,6 +849,7 @@ function AppHeader() {
                     className="pop pnav-pop pnav-pop--account"
                     ref={accountPopRef}
                     id="pnav-account-pop"
+                    role="group"
                     aria-label="Account and settings"
                     tabIndex={-1}
                   >
@@ -798,12 +860,15 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
                       <GearIcon />
-                      <span>Account &amp; settings</span>
+                      <span>Account and settings</span>
                     </Link>
-                    <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? { section: 'support' } : undefined} onClick={closeAll}>
-                      <TagIcon />
-                      <span>{isPro ? 'Manage plan' : 'Plans & upgrade'}</span>
-                    </Link>
+                    {/* Which plan row is right is not known until the plan is. */}
+                    {planKnown && (
+                      <Link className="pnav-pop-item" to={isPro ? '/settings' : '/plans'} state={isPro ? planState : undefined} replace={isPro && onSettings} onClick={closeAll}>
+                        <TagIcon />
+                        <span>{isPro ? 'Manage plan' : 'Upgrade to Pro'}</span>
+                      </Link>
+                    )}
                     <Link className="pnav-pop-item" to="/learn/help" onClick={closeAll}>
                       <HelpIcon />
                       <span>Help centre</span>
@@ -814,11 +879,12 @@ function AppHeader() {
                     </Link>
                     {isAdmin && (
                       <Link className="pnav-pop-item" to="/admin" onClick={closeAll}>
-                        Admin dashboard
+                        <ShieldIcon />
+                        <span>Admin dashboard</span>
                       </Link>
                     )}
                     <div className="pnav-pop-sep" />
-                    <SignOutRows onDone={closeAll} />
+                    <SignOutRows onDone={closeAccountMenuAndRestoreFocus} />
                   </div>
                 )}
               </div>
@@ -842,9 +908,11 @@ function AppHeader() {
                     className="pop pnav-pop"
                     ref={accountPopRef}
                     id="pnav-account-pop"
-                    aria-label="Menu"
+                    role="group"
+                    aria-label="Settings and sign in"
                     tabIndex={-1}
                   >
+                    {!menuOffline.online && <OfflineNote id={menuOffline.noteId} />}
                     <p className="pnav-pop-head">Appearance</p>
                     <ThemeSeg />
                     <div className="pnav-pop-sep" />
@@ -859,13 +927,13 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
                       <TagIcon />
-                      <span>Pricing &amp; plans</span>
+                      <span>Pricing</span>
                     </Link>
-                    <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={startLogin}>
+                    <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startLogin() }} {...menuOffline.gate}>
                       <LoginArrowIcon />
                       <span>Log in</span>
                     </button>
-                    <button type="button" className="pnav-pop-item pnav-pop-signup" aria-haspopup="dialog" onClick={startSignup}>
+                    <button type="button" className="pnav-pop-item pnav-pop-signup" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startSignup() }} {...menuOffline.gate}>
                       <UserPlusIcon />
                       <span>Create a free account</span>
                     </button>
@@ -892,6 +960,8 @@ function AppHeader() {
         <MegaMenu
           ref={menuRef}
           section={activeSection}
+          path={path}
+          showSoon={isAdmin}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
           onKeyDown={onMenuKeyDown}
@@ -903,59 +973,77 @@ function AppHeader() {
 
       {sheet && (
         <div ref={sheetRef} className="pnav-sheet" role="dialog" aria-modal="true" aria-label="Menu">
-          {visibleSections.map((section) => {
-            const expanded = sheetSection === section.id
-            const promo = menuPromo(section)
-            return (
-              <div className="pnav-acc" key={section.id}>
+          {/* Three segments, one open panel under them. The segments are the
+              same 44px buttons at the same top on every tab, so switching
+              never moves them; the open one does nothing when pressed. */}
+          <div className="pnav-acc-tabs">
+            {visibleSections.map((section) => {
+              const expanded = sheetSection === section.id
+              return (
                 <button
+                  key={section.id}
                   type="button"
                   className="pnav-acc-trigger"
                   aria-expanded={expanded}
-                  onClick={() => setSheetSection(expanded ? '' : section.id)}
+                  aria-controls={expanded ? 'pnav-acc-panel' : undefined}
+                  onClick={() => { if (!expanded) setSheetSection(section.id) }}
                 >
                   {section.label}
-                  <Chevron />
                 </button>
-                {expanded && (
-                  <div className="pnav-acc-panel">
-                    {section.id === 'create' && (
-                      <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
-                        {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
-                        <ArrowRight />
-                      </button>
-                    )}
-                    {/* Live rows only: a phone menu lists what
-                        opens. Soon rows stay in the desktop menu and /sitemap. */}
-                    {section.columns.flat().map((col) => {
-                      const live = col.tools.filter((t) => !t.soon)
-                      if (!live.length) return null
-                      return (
-                        <div className="pnav-acc-col" key={col.label}>
-                          <p className="pnav-acc-colhead">{col.label}</p>
-                          {live.map((t) => (
-                            <Link key={t.id} className="pnav-acc-link" to={t.route} onClick={closeAll}>
-                              <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                              <span className="pnav-acc-label">{t.label}</span>
-                              {t.beta && <span className="beta-badge">Beta</span>}
-                            </Link>
-                          ))}
-                        </div>
-                      )
-                    })}
-                    <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
-                      {menuViewAll(section)} <ArrowRight size={12} />
-                    </Link>
-                  </div>
+              )
+            })}
+          </div>
+          {visibleSections.filter((section) => sheetSection === section.id).map((section) => {
+            const promo = menuPromo(section)
+            return (
+              <div className="pnav-acc-panel" id="pnav-acc-panel" key={section.id}>
+                {/* Live rows only: a phone menu lists what
+                    opens. Soon rows show only in the desktop menu and /sitemap, and only to admins. */}
+                {section.columns.flat().map((col) => {
+                  const live = col.tools.filter((t) => !t.soon)
+                  if (!live.length) return null
+                  return (
+                    <div className="pnav-acc-col" key={col.label}>
+                      <p className="pnav-acc-colhead">{col.label}</p>
+                      <div className="pnav-acc-grid">
+                        {live.map((t) => (
+                          <Link key={t.id} className="pnav-acc-link" to={t.route} data-hue={t.hue} onClick={closeAll}>
+                            <span className="pnav-acc-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                            <span className="pnav-acc-label">{t.label}</span>
+                            {t.beta && <span className="beta-badge">Beta</span>}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {section.id === 'discover' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <DiscoverRecommended path={path} onPick={closeAll} />
+                  </Suspense>
                 )}
+                {section.id === 'create' ? (
+                  <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
+                    {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
+                    <ArrowRight />
+                  </button>
+                ) : (
+                  <Link className="pnav-acc-cta" to={promo.href} onClick={closeAll}>
+                    {promo.cta}
+                    <ArrowRight />
+                  </Link>
+                )}
+                <Link className="pnav-acc-all" to={section.viewAllHref} onClick={closeAll}>
+                  {menuViewAll(section)} <ArrowRight size={12} />
+                </Link>
               </div>
             )
           })}
 
           <div className="pnav-sheet-group">
-            {!user && (
+            {!user && !accountPending && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
-                <TagIcon /><span>Pricing &amp; plans</span>
+                <TagIcon /><span>Pricing</span>
               </Link>
             )}
             <Link className="pnav-sheet-row" to="/learn/help" onClick={closeAll}>
@@ -976,39 +1064,52 @@ function AppHeader() {
               here it is one plain row. Signed out, "Start for free" opens the
               workspace, not a sign-up form: an account is asked for only on
               save or export. */}
-          <div className="pnav-sheet-group">
-            {user ? (
-              <div id="pnav-sheet-account">
-                <AccountSwitcher onDone={closeAll} />
-                <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
-                  <GearIcon /><span>Account &amp; settings</span>
-                </Link>
-                {showUpgrade && (
-                  <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
-                    <TagIcon /><span>Upgrade</span>
+          {/* While the account loads this group is absent: neither the signed-in
+              nor the signed-out version is right yet. */}
+          {!accountPending && (
+            <div className="pnav-sheet-group">
+              {user ? (
+                <div id="pnav-sheet-account">
+                  <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
+                  <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
+                    <GearIcon /><span>Account and settings</span>
                   </Link>
-                )}
-                <SignOutRows onDone={closeAll} />
-              </div>
-            ) : (
-              <div className="pnav-sheet-cta">
-                <Link className="pnav-upgrade pnav-upgrade--block" to="/projects" onClick={closeAll}>
-                  Start for free
-                </Link>
-                <button type="button" className="pnav-sheet-login" aria-haspopup="dialog" onClick={startLogin}>
-                  Log in
-                </button>
-                <button type="button" className="pnav-sheet-row pnav-sheet-signup" aria-haspopup="dialog" onClick={startSignup}>
-                  <UserPlusIcon /><span>Create a free account</span>
-                </button>
-              </div>
-            )}
-          </div>
+                  {isPro ? (
+                    planKnown && (
+                      <Link className="pnav-sheet-row" to="/settings" state={planState} replace={onSettings} onClick={closeAll}>
+                        <TagIcon /><span>Manage plan</span>
+                      </Link>
+                    )
+                  ) : showUpgrade && (
+                    <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
+                      <TagIcon /><span>Upgrade to Pro</span>
+                    </Link>
+                  )}
+                  <SignOutRows onDone={closeSheetAndRestoreFocus} />
+                </div>
+              ) : (
+                <div className="pnav-sheet-cta">
+                  {!sheetOffline.online && <OfflineNote id={sheetOffline.noteId} />}
+                  <Link className="pnav-upgrade pnav-upgrade--block" to="/projects" onClick={closeAll}>
+                    Start for free
+                  </Link>
+                  <button type="button" className="pnav-sheet-login" aria-haspopup="dialog" onClick={() => { if (sheetOffline.online) startLogin() }} {...sheetOffline.gate}>
+                    Log in
+                  </button>
+                  <button type="button" className="pnav-sheet-row pnav-sheet-signup" aria-haspopup="dialog" onClick={() => { if (sheetOffline.online) startSignup() }} {...sheetOffline.gate}>
+                    <UserPlusIcon /><span>Create a free account</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       <PhoneTabBar
         signedIn={!!user}
+        loading={accountPending}
+        sheetSection={sheet ? sheetSection : null}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}
@@ -1024,7 +1125,7 @@ function AppHeader() {
       )}
       {exportOpen && (
         <Suspense fallback={null}>
-          <ExportPanel onClose={() => setExportOpen(false)} />
+          <ExportDialog onClose={() => setExportOpen(false)} preset={exportPreset} projectId={exportTarget?.id} />
         </Suspense>
       )}
     </>
@@ -1042,19 +1143,98 @@ function AppHeader() {
 //
 // It is a function component with a forwarded ref only in name: React 19
 // passes `ref` as a prop.
-function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
-  const stacks = menuStacks(section)
+function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
+  const stacks = menuStacks(section, { showSoon })
   const promo = menuPromo(section)
-  // The file opens every menu with its first row lit (feat = flatNav[0] when
-  // nothing is hovered, App line 1414); CSS lights it only while no other row
-  // is hovered or focused.
-  const featId = stacks[0]?.[0]?.tools?.[0]?.id
+  // A row is marked only when it is the page the visitor is on: aria-current,
+  // which the CSS draws. Hover and keyboard focus light a row separately, and an
+  // open menu lights nothing by itself.
+  const isHere = (t) => !!t.route && (path === t.route || path.startsWith(t.route + '/') || !!t.views?.includes(path))
+
+  // THE READOUT. One row is "active" while the pointer is on it or keyboard focus
+  // is in it; the foot's line then says what that row is for, and goes back to
+  // the section's own line when nothing is. Tracked by delegation on the grid
+  // (pointerover and focus bubble), not a handler per row. The section id rides
+  // along so a row id both menus share (Font Gallery) cannot carry over.
+  // `mode` rides along for the hover moments (nav/menuMoments.js): 'pointer' for a
+  // fine pointer, 'key' for keyboard focus, null for anything that gets no moment.
+  // The same handlers set it, so there is no second tracker.
+  const [active, setActive] = useState({ section: section.id, id: null, mode: null })
+  const activeId = active.section === section.id ? active.id : null
+  const activeMode = active.section === section.id ? active.mode : null
+  const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
+  const setRow = (id, mode = null) => setActive((prev) => (
+    prev.section === section.id && prev.id === id && prev.mode === (id ? mode : null)
+      ? prev
+      : { section: section.id, id, mode: id ? mode : null }
+  ))
+  // Nothing under the pointer: fall back to the row keyboard focus is in, or to none.
+  const settleRow = (grid) => {
+    const f = grid.contains(document.activeElement) ? document.activeElement : null
+    setRow(rowOf(f), keyboardRow(f))
+  }
+  const keyboardRow = (el) => (el?.matches?.(':focus-visible') ? 'key' : null)
+  const pointerMode = (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return null
+    if (!finePointer()) return null
+    // A pointer arriving on the row keyboard focus is already on keeps that moment.
+    const row = e.target.closest?.('[data-row-id]')
+    return row && row === document.activeElement ? keyboardRow(row) || 'pointer' : 'pointer'
+  }
+  const activeRow = activeId
+    ? stacks.flat().flatMap((col) => col.tools).find((t) => t.id === activeId)
+    : null
+  const activeDesc = activeRow
+    ? (section.id === 'create' ? CREATE_TOOL_SEARCH[activeRow.id]?.description : null) || activeRow.desc
+    : null
+  const readoutText = activeRow && activeDesc ? activeDesc : null
+
+  // THE HOVER MOMENT. data-live goes on the active row: at once for keyboard focus,
+  // INTENT_MS after a fine pointer arrives. Leaving or blurring clears it at once
+  // (activeId changes), and the timer's cleanup drops a pending start.
+  const [intentId, setIntentId] = useState(null)
+  useEffect(() => {
+    if (activeMode !== 'pointer' || !activeId) return undefined
+    const t = setTimeout(() => setIntentId(activeId), INTENT_MS)
+    return () => { clearTimeout(t); setIntentId(null) }
+  }, [activeId, activeMode])
+  const liveId = activeMode === 'key' ? activeId : activeMode === 'pointer' && intentId === activeId ? activeId : null
+
+  // Faces for the name moments: warmed once, on the first menu open, and used only
+  // once ready. data-faces on the root tells the CSS which are.
+  const [faces, setFaces] = useState(facesAttr)
+  const warms = section.id === 'create' || section.id === 'discover'
+  useEffect(() => {
+    if (!warms) return undefined
+    let alive = true
+    warmFaces().then(() => { if (alive) setFaces(facesAttr()) })
+    return () => { alive = false }
+  }, [warms])
+
+  // Font Gallery: the name steps through the shuffled ready faces and loops while the
+  // row is live. Going quiet resets it; a run of one face (reduced motion) just sets it.
+  const [galleryFace, setGalleryFace] = useState(null)
+  const galleryLive = liveId === 'font-gallery' && finePointer()
+  useEffect(() => {
+    if (!galleryLive) return undefined
+    const run = galleryRun()
+    let step = 0
+    let timer = null
+    const tick = () => {
+      setGalleryFace(run[step % run.length].key)
+      step += 1
+      if (run.length > 1) timer = setTimeout(tick, GALLERY_STEP_MS)
+    }
+    if (run.length) timer = setTimeout(tick, 0)
+    return () => { clearTimeout(timer); setGalleryFace(null) }
+  }, [galleryLive])
   return (
     <div
       ref={ref}
       id="pnav-mega"
       className="pnav-menu"
       data-menu={section.id}
+      data-faces={faces || undefined}
       role="region"
       aria-label={`${section.label} menu`}
       onMouseEnter={onMouseEnter}
@@ -1063,31 +1243,61 @@ function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick,
     >
       <div className="pnav-menu-body">
         <div className="pnav-menu-cols">
-          <div className="pnav-grid" data-cols={stacks.length}>
+          <div
+            className="pnav-grid"
+            data-cols={stacks.length}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)); else settleRow(e.currentTarget) }}
+            onPointerLeave={(e) => settleRow(e.currentTarget)}
+            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id, keyboardRow(e.target)) }}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
+          >
             {stacks.map((stack) => (
               <div className="pnav-colstack" key={stack[0].label}>
                 {stack.map((col) => (
                   <div className="pnav-col" key={col.label}>
                     <p className="pnav-col-label">{col.label}</p>
                     <ul className="pnav-toollist">
-                      {col.tools.map((t) => (
+                      {col.tools.map((t) => {
+                        const moment = MOMENT_OF[t.id]
+                        const face = moment === 'font-gallery' && t.id === liveId ? faceByKey(galleryFace) : null
+                        return (
                         <li key={t.id}>
                           <Link
                             className="pnav-tool"
                             to={t.route}
                             data-soon={t.soon ? 'true' : undefined}
-                            data-feat={t.id === featId ? 'true' : undefined}
+                            data-hue={t.hue}
+                            data-row-id={t.id}
+                            data-moment={moment}
+                            data-live={moment && t.id === liveId ? '' : undefined}
+                            aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
+                            aria-current={isHere(t) ? 'page' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}
                             data-pnav-menuitem
                           >
-                            <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                            <span className="pnav-tool-label">{t.label}</span>
+                            <span className="pnav-tool-ico" aria-hidden="true">
+                              <NavIcon id={t.icon} moment={moment} />
+                            </span>
+                            <span className="pnav-tool-label">
+                              {moment === 'font-pair'
+                                // A real space between the words, so textContent stays "Font Pair".
+                                ? <span className="pnav-tool-nm"><span className="w1">Font</span> <span className="w2">Pair</span></span>
+                                : (
+                                  <span
+                                    className="pnav-tool-nm"
+                                    data-face={face ? face.key : undefined}
+                                    style={face ? { fontFamily: face.family, fontWeight: face.weight } : undefined}
+                                  >{t.label}</span>
+                                )}
+                            </span>
+                            {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
                           </Link>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   </div>
                 ))}
@@ -1102,19 +1312,14 @@ function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick,
             </div>
             {section.id === 'create' && <ExportPreview />}
             {section.id === 'discover' && (
-              <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
-                <DiscoverCounts />
-              </Suspense>
-            )}
-            {section.id === 'learn' && (
-              <ul className="pnav-guides">
-                {menuGuides().map((g) => (
-                  <li className="pnav-guide" key={g.to}>
-                    <span className="pnav-guide-label">{g.label}</span>
-                    <span className="pnav-guide-mins">{g.mins}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
+                  <DiscoverCounts />
+                </Suspense>
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <DiscoverRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
             )}
             {section.id === 'create' ? (
               <button type="button" className="pnav-editorial-cta" onClick={onBrandKit} data-pnav-menuitem>
@@ -1131,7 +1336,9 @@ function MegaMenu({ ref, section, onMouseEnter, onMouseLeave, onKeyDown, onPick,
         </div>
       </div>
       <div className="pnav-menu-foot">
-        <span className="pnav-menu-foot-note">{menuFootNote(section)}</span>
+        <p className="pnav-menu-foot-note pnav-menu-readout" id="pnav-readout">
+          {readoutText ? <><b>{activeRow.label}</b>{' '}{readoutText}</> : menuFootNote(section)}
+        </p>
         <Link className="pnav-menu-foot-link" to={section.viewAllHref} onClick={onPick} data-pnav-menuitem>
           <span>{menuViewAll(section)}</span>
           <ArrowRight size={12} />

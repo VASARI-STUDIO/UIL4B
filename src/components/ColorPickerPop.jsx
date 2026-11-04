@@ -1,9 +1,12 @@
 import MenuSelect from './tool/MenuSelect'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import usePopover from '../hooks/usePopover'
+import usePopover, { topObstruction } from '../hooks/usePopover'
+import useMediaQuery from '../hooks/useMediaQuery'
+import { getLenis } from '../hooks/useSmoothScroll'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
+import { lockScroll } from '../utils/scrollLock'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
 // THE colour input for this app. Not "a shared component available to surfaces
@@ -12,9 +15,8 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 // generators, the icon colour, the tint ramps, the contrast pair, the JPEG
 // matte, the UI-system seed and the homepage workbench.
 //
-// Founder request (2026-09-03): "i want a better colour picker maybe even one
-// that matches the apps UI, and i want this one used for all colour pickers."
-// Before that pass this component had THREE call sites and there were NINE live
+// One picker that matches the app's UI, used for every colour input.
+// Before that was done this component had THREE call sites and there were NINE live
 // `<input type="color">` elsewhere, so the same act — choose a colour — looked
 // and behaved differently depending on which tool you were standing in. A native
 // colour input cannot be styled, cannot offer the app's shared recents, and
@@ -29,10 +31,10 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 // through it is also what gives this panel #316's scroll containment for free.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT THE FOUNDER ASKED FOR, AND WHAT IS HERE
+// WHAT IS HERE, AND WHAT IS NOT
 // ─────────────────────────────────────────────────────────────────────────────
-// Request (2026-08-08): "Solid / Gradient / Image tabs, an SV field, hue and
-// alpha sliders, a format dropdown and saved swatches."
+// The wishlist for this panel was solid / gradient / image tabs, an SV field,
+// hue and alpha sliders, a format dropdown and saved swatches.
 //
 // The SV field, hue slider and preset swatches already existed. Added since:
 //
@@ -52,12 +54,12 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 //   three tools of it.
 //
 //   The list is written at the four SETTLE boundaries, and two of them were
-//   missing until [colour-picker-ui] closed them: the pad recorded a pointer
+//   missing at first: the pad recorded a pointer
 //   release but not an arrow-key release, and the hue strip recorded nothing at
 //   all. A keyboard user could mix a colour and watch the Recent grid stay
 //   empty; so could anyone who only moved hue. See the note on `commit`.
 //
-//   EYEDROPPER — the one control added in the 2026-09-03 pass, and it is here
+//   EYEDROPPER — a later addition, and it is here
 //   rather than in the declined list below because of the emit contract, not
 //   taste: `EyeDropper.open()` resolves to an opaque `sRGBHex`, which is already
 //   exactly what this component emits. Every one of the twelve consumers can
@@ -87,9 +89,7 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 //   from here either. Note the shape of the call sites: two of them ARE gradient
 //   stops, and a stop cannot itself be a gradient. Which surface should take a
 //   gradient or image fill is product direction, not a defect, so it is raised
-//   in docs/PROPOSALS.md rather than guessed at. That queue is local-only
-//   since 2026-09-16 and is not in this repository (see .gitignore); if you
-//   cannot open it, raise the question with the founder rather than deciding.
+//   as a product question rather than guessed at here.
 //
 // tests/user-sim/35-colour-picker.spec.js asserts the ABSENCE of both — by
 // visible text AND by role, so neither a tab strip nor a bare alpha track can
@@ -138,6 +138,10 @@ const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
+// On a phone the portalled panel is a bottom sheet (global.css, the same width
+// the notation sheet switches at) rather than a popover hung off its trigger.
+const SHEET_QUERY = '(max-width: 767px)'
+
 const DEFAULT_SWATCHES = [
   '#18181b', '#f4f4f5', '#ef4444', '#f59e0b', '#22c55e',
   '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#78716c',
@@ -157,6 +161,13 @@ export default function ColorPickerPop({
   onDisabledClick,
   triggerClassName = '',
   triggerChildren,
+  // Extra attributes for the trigger button, spread last. The icon customiser uses
+  // it to make the trigger one radio of its colour group (role, aria-checked,
+  // tabIndex, data attributes), so a caller can fit the picker into a larger control.
+  triggerProps,
+  // For a tool that restyles its own picker's panel; a portalled panel sits
+  // outside the tool's wrapper, so a descendant selector cannot reach it.
+  popClassName = '',
   portal = false,
 }) {
   const [open, setOpen] = useState(false)
@@ -183,7 +194,16 @@ export default function ColorPickerPop({
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
-  const { triggerRef, popRef } = usePopover(open, close, { initialFocus: '.cpk-pad', portalled: portal })
+  //
+  // A portalled panel is placed in viewport coordinates, so scrolling the trigger
+  // away would leave it clamped under the nav; it closes instead. A sheet stays
+  // put on purpose, so it is exempt.
+  const phone = useMediaQuery(SHEET_QUERY)
+  const sheet = portal && phone
+  const scrimRef = useRef(null)
+  const { triggerRef, popRef } = usePopover(open, close, {
+    initialFocus: '.cpk-pad', portalled: portal, closeWhenAnchorLeaves: portal && !sheet,
+  })
 
   useLayoutEffect(() => {
     if (!open || !portal) return
@@ -193,7 +213,60 @@ export default function ColorPickerPop({
       layer = Math.max(layer, (Number.parseInt(getComputedStyle(node).zIndex, 10) || 0) + 1)
     }
     popRef.current?.style.setProperty('--cpk-layer', String(layer))
-  }, [open, portal, popRef, triggerRef])
+    // The scrim sits one layer under the panel, so it carries the same number.
+    scrimRef.current?.style.setProperty('--cpk-layer', String(layer))
+  }, [open, portal, popRef, triggerRef, sheet])
+
+  // A sheet is modal in effect: it dims the page and a tap outside closes it, so
+  // the page behind must not scroll under a finger that misses the panel.
+  useEffect(() => {
+    if (!open || !sheet) return undefined
+    return lockScroll()
+  }, [open, sheet])
+
+  // A panel that is shorter than its content scrolls, and a scrolling panel that
+  // looks complete is the bug: a half-visible preset row reads as the end of the
+  // list. `data-more` is set while content remains below the fold, and the
+  // stylesheet draws a fade at the bottom edge for exactly that state.
+  useLayoutEffect(() => {
+    const panel = popRef.current
+    if (!open || !panel) return undefined
+    const update = () => {
+      const more = panel.scrollHeight - panel.scrollTop - panel.clientHeight > 2
+      if (panel.hasAttribute('data-more') !== more) panel.toggleAttribute('data-more', more)
+    }
+    update()
+    panel.addEventListener('scroll', update, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(panel)
+    return () => {
+      panel.removeEventListener('scroll', update)
+      observer?.disconnect()
+    }
+  }, [open, popRef, recents.length, sheet])
+
+  // The sheet is pinned to the bottom edge, and a trigger that happens to sit in
+  // the lower half of the page would be under it. Lift the page by just enough to
+  // bring the trigger into the clear space above the sheet — never past the
+  // fixed chrome at the top, and not at all when it already clears.
+  useLayoutEffect(() => {
+    const panel = popRef.current
+    const trigger = triggerRef.current
+    if (!open || !sheet || !panel || !trigger) return undefined
+    const frame = requestAnimationFrame(() => {
+      // Worked out from the CSS position, not getBoundingClientRect: the sheet is
+      // still mid-way through its entry transform on the first frame.
+      const sheetTop = window.innerHeight - (Number.parseFloat(getComputedStyle(panel).bottom) || 0) - panel.offsetHeight
+      const box = trigger.getBoundingClientRect()
+      const lift = Math.min(box.bottom + 12 - sheetTop, box.top - topObstruction() - 8)
+      if (lift <= 0) return
+      const lenis = getLenis()
+      // `force`: the sheet has locked the page, which stops Lenis.
+      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
+      else window.scrollBy({ top: lift, behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, sheet, popRef, triggerRef, recents.length])
 
   const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
 
@@ -314,6 +387,7 @@ export default function ColorPickerPop({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-disabled={disabled}
+        {...triggerProps}
         onClick={() => {
           // Stay a real (not natively disabled) button when locked so a click
           // still reaches onDisabledClick — the Pro gate wants to raise its modal.
@@ -327,7 +401,16 @@ export default function ColorPickerPop({
       </button>
 
       {open && renderPopover(
-        <div className="pop cpk-pop" data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
+        <>
+        {/* Phone sheet only: the dimmed page behind it, the same scrim the notation
+            sheet draws. usePopover skips presses on `data-pop-scrim` that matches the
+            panel id, so the press reaches this click handler instead of closing the
+            sheet on pointer-down and letting the tap fall through to the page. */}
+        {sheet && (
+          <div ref={scrimRef} className="menu-select-scrim cpk-scrim" aria-hidden="true" data-pop-scrim={`${ids}-pop`}
+            onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); close() }} />
+        )}
+        <div id={`${ids}-pop`} className={`pop cpk-pop${popClassName ? ` ${popClassName}` : ''}`} data-pop-fixed={portal || undefined} ref={popRef} role="dialog" aria-label={ariaLabel} tabIndex={-1}>
           {/* The panel says which colour it is editing, in the shared .pop-head
               voice. Near-free on a surface with one picker; the difference
               between usable and guesswork on a gradient with five stops, a
@@ -337,6 +420,13 @@ export default function ColorPickerPop({
           <p className="pop-head cpk-head">
             <span className="cpk-head-name">{ariaLabel}</span>
             <span className="cpk-chip" style={{ '--cpk-chip-color': liveHex }} aria-hidden="true" />
+            {/* The sheet has no trigger in reach and no Escape key, so it carries
+                its own way out, and puts focus back on the trigger like Escape does. */}
+            {sheet && (
+              <button type="button" className="cpk-close" onClick={() => { triggerRef.current?.focus({ preventScroll: true }); close() }}>
+                Close
+              </button>
+            )}
           </p>
 
           {/* Pad and hue are ONE instrument, not two stacked fields: they share
@@ -486,6 +576,7 @@ export default function ColorPickerPop({
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   )

@@ -37,6 +37,21 @@
 // wrong data is worse than one that leaks. `slots` drives neutral, tokenised
 // shapes instead, which carry no colour information at all.
 
+// ── The one image a locked row has ──────────────────────────────────────────
+//
+// A locked palette or gradient card shows a blurred preview of its own row
+// (scripts/library/lockedThumbs.mjs, public/locked-previews/). It is not a
+// preview of the values: every colour is shifted 20 to 32 per channel before
+// it is drawn, by an amount keyed with a secret that is never committed, so the
+// image reads as the same family of colours while even a least-squares fit of
+// it lands 20 to 32 units away from the real ones on every channel
+// (tests/unit/locked-thumbs.test.js runs that fit on every file). That is the
+// ceiling: it hides values that are not public, but a row copied from a public
+// source (a brand's colours, a known gradient) can still be confirmed by
+// checking it against the image. It carries the row's order and its gradient's shape, which the
+// stub does not. It is an image on a card that only links to /plans, so none of
+// the copy, export or search paths above can reach it.
+
 // ── BE HONEST ABOUT THE CEILING ─────────────────────────────────────────────
 //
 // What this module guarantees is that a withheld row never reaches the PAGE:
@@ -65,7 +80,7 @@ const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 
 // How many locked rows to tease before the call to action.
 //
-// The founder asked for "a couple". The number comes from what makes the value
+// The brief was "a couple". The number comes from what makes the value
 // legible, not from the word:
 //   - Fewer than three reads as a stub — an error state rather than a library
 //     that continues.
@@ -73,7 +88,7 @@ const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 //     count, so the tease reads as "the next row", which is what it is.
 //   - More than three buries the call to action under a scroll of grey
 //     placeholders. The brand panel has 30 locked rows and the prompt library
-//     8; rendering them all is the "tease that annoys" failure — a wall, not an
+//     ten; rendering them all is the "tease that annoys" failure — a wall, not an
 //     invitation.
 // The quantity on the other side of the wall is communicated as a NUMBER in the
 // CTA, the way Mobbin says "Access all 511,089 screens" rather than rendering
@@ -82,8 +97,8 @@ export const LOCKED_TEASE = 3
 
 // ── THREE TIERS, NOT TWO ────────────────────────────────────────────────────
 //
-// Founder instruction, 2026-09-18: "for the galleries non logged in users get 3
-// free ones logged in get 10 and paid get full". The module was built for two
+// In the galleries, signed-out visitors get 3 free rows, signed-in users get
+// 10, and Pro gets the full set. The module was built for two
 // answers — entitled or not — and this is the third: an account is now worth
 // something on its own, so the ladder is anonymous → free account → Pro.
 //
@@ -146,6 +161,30 @@ export function accountTierGain({ tier, eligible, shown } = {}) {
   if (tier !== 'anonymous') return 0
   const reach = Math.min(GALLERY_TIER_LIMITS.free, Math.max(0, Number(eligible) || 0))
   return Math.max(0, reach - Math.max(0, Number(shown) || 0))
+}
+
+// How many rows a free account opens in all: the free cap, or fewer when the
+// library holds fewer open rows than that. The one place the figure is worked
+// out, so the walls and the closing lines cannot disagree about it.
+export function freeOpens({ eligible } = {}) {
+  return Math.min(GALLERY_TIER_LIMITS.free, Math.max(0, Number(eligible) || 0))
+}
+
+// The sentence that states where this viewer stands on the ladder, for the
+// closing lines and the walls. `noun` is the plural ("palettes"), `shown` is
+// what the viewer has now and `total` is the size of the library.
+//
+//   anonymous  both next steps, with their true numbers;
+//   free       Pro is the next step;
+//   pro        nothing to say.
+export function tierSentence({ tier, shown, total, eligible, noun } = {}) {
+  if (tier === 'anonymous') {
+    return `Signed out, you see ${shown} of the ${total} ${noun}. A free account opens ${freeOpens({ eligible })}; Pro opens all ${total}.`
+  }
+  if (tier === 'free') {
+    return `Free covers ${shown} of the ${total} ${noun}. Pro opens all of them.`
+  }
+  return ''
 }
 
 // Strip a preview down to the whitelist. Undefined values are dropped so a

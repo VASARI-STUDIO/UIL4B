@@ -16,6 +16,7 @@ export default function LibraryEmpty({
   onClear,
   clearLabel = 'Clear filters',
   className = '',
+  action = null,
 }) {
   return (
     <div className={`lbry-empty${className ? ` ${className}` : ''}`} role="status">
@@ -24,9 +25,16 @@ export default function LibraryEmpty({
       </svg>
       <strong>{title}</strong>
       {detail && <span>{detail}</span>}
-      <button type="button" className="lbry-empty-clear" onClick={onClear}>
-        {clearLabel}
-      </button>
+      {/* `action` is a first step when the filters are not the cause (sign in
+          for rows the tier withholds); the reset stays beside it, never in its
+          place, and steps back to a quiet secondary so the action is the one
+          primary. */}
+      <div className="lbry-empty-actions">
+        {action}
+        <button type="button" className={`lbry-empty-clear${action ? ' lbry-empty-clear--quiet' : ''}`} onClick={onClear}>
+          {clearLabel}
+        </button>
+      </div>
     </div>
   )
 }

@@ -11,7 +11,7 @@
    `--sp-hair`, `--sp-wash`), the film grain, the colour band and the footer
    (spectrum.css, shared with `/`). Nothing here restyles a `.sp-*` class.
 
-   Type is Geist only, sentence case: 64 display (clamp), 56 price, 36 h2
+   Type is Switzer only, sentence case: 64 display (clamp), 56 price, 36 h2
    (clamp), 20 plan name, 16 group / question / button, 15 body and rows,
    14 notes, 13 small. Money is tabular. Space is the --s-1…--s-9 scale.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -41,6 +41,8 @@
 
 .pricing .pr-hero { padding-top: calc(var(--chrome-h) + var(--s-8)); }
 
+.pricing .pr-h1-cup { display: inline-block; vertical-align: -0.12em; color: var(--accent); }
+.pricing .pr-h1-nowrap { white-space: nowrap; }
 .pricing .pr-h1 {
   margin: 0;
   max-width: 28ch;
@@ -48,7 +50,7 @@
   font-weight: 560;
   font-size: clamp(40px, 4.4vw, 64px);
   line-height: 1.04;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
   text-wrap: balance;
   color: var(--sp-ink);
 }
@@ -172,15 +174,22 @@
 }
 .pricing .pr-amt {
   min-width: 2ch;
+  /* A price never breaks mid-number: .pr-c's overflow-wrap would put "A$6.25"
+     on two lines on one cadence only, and the Pro button would jump. */
+  white-space: nowrap;
+  overflow-wrap: normal;
   font-family: var(--display);
   font-weight: 560;
   font-size: 56px;
   line-height: 1;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
   color: var(--sp-ink);
 }
 .pricing .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
+/* The ledger's Pro column is 227px wide at 1024: the size follows the width so
+   "A$10.00" fits it on one line. */
+.pricing .pr-c--pro .pr-amt:not(.is-word) { font-size: clamp(40px, 4.2vw, 56px); }
 .pricing .pr-per { font-size: 15px; color: var(--sp-dim); }
 
 .pricing .pr-note {
@@ -199,6 +208,7 @@
 
 .pricing .pr-under {
   display: block;
+  min-height: 1.4em;
   margin: var(--s-3) 0 0;
   font-size: 13px;
   line-height: 1.4;
@@ -471,20 +481,18 @@
   background: var(--sp-wash);
 }
 .pricing .pr-pro-main { display: flex; flex-direction: column; min-width: 0; }
-.pricing .pr-pro-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
+/* The saving is its own line under the plan name, reserved and never wrapped,
+   so it arriving with the prices moves nothing (it stays on one line at 320). */
+.pricing .pr-pro-top { display: block; }
 .pricing .pr-pro-top .pr-plan { margin: 0; }
 .pricing .pr-save {
   min-height: 1.4em;
-  margin: 0;
+  margin: var(--s-1) 0 0;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
-  text-align: right;
+  white-space: nowrap;
+  text-align: left;
   color: var(--accent-mid);
 }
 .pricing .pr-pro .pr-price { min-height: 48px; margin-top: var(--s-3); }
@@ -713,3 +721,16 @@
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::before,
 :where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::after { animation: none; transition: none; }
 :where(html[data-reduced-motion="true"]) .pricing .pr-cta:active { transform: none; }
+
+/* Below 360 the billing switch leaves room for the currency code only; the
+   words stay for screen readers so the row never wraps when prices land. */
+@media (max-width: 359px) {
+  .pricing .pr-offer-top .pr-cur-pre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

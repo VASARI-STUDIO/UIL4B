@@ -5,6 +5,11 @@
 // Explicit extension so `node --test` can import this module directly for the
 // unit suite; Vite resolves it identically.
 import { hexToRgb, contrastRatio } from './colors.js'
+import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
+import { tintLabelsFor } from './tintLabels.js'
+import { PALETTE_LABELS } from './paletteRoles.js'
+import { initialOf } from './initials.js'
+import { systemSentence, glyphStrip } from './exportTemplates/shared.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -44,9 +49,6 @@ function googleFontUrl(families) {
   return `https://fonts.googleapis.com/css2?${params}&display=swap`
 }
 
-const PALETTE_LABELS = ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface', 'Highlight']
-const TINT_LABELS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
-
 const ROUNDING_MAP = {
   none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },
   subtle: { radius: '6px', radiusS: '4px', radiusL: '8px', radiusXl: '12px' },
@@ -64,15 +66,19 @@ export function buildCSSVars({ palette, tints, fonts, typeScale, stateShades, ap
   })
 
   // Tints
-  ;(tints?.scale || []).forEach((c, i) => {
-    lines.push(`  --tint-${i + 1}: ${c};`)
+  // Named by the ramp's own step names (--tint-50 ... --tint-950), not by position.
+  const tintScale = tints?.scale || []
+  const tintNames = tintLabelsFor(tintScale.length)
+  tintScale.forEach((c, i) => {
+    lines.push(`  --tint-${tintNames[i]}: ${c};`)
   })
 
   // State colours
   if (stateShades) {
     Object.entries(stateShades).forEach(([state, shades]) => {
+      const labels = tintLabelsFor(shades.length)
       shades.forEach((c, i) => {
-        lines.push(`  --${state}-${TINT_LABELS[i] || i * 100}: ${c};`)
+        lines.push(`  --${state}-${labels[i]}: ${c};`)
       })
     })
   }
@@ -152,6 +158,8 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
       </div>`
   }).join('\n')
 
+  // Labels follow the saved ramp's own length: 9, 11 or 13 steps, not a fixed 50-900.
+  const tintLabels = tintLabelsFor((design?.tints?.scale || []).length)
   const tintsSection = (design?.tints?.scale || []).length ? `
     <section id="tints" class="sg-section">
       <div class="sg-section-head">
@@ -160,7 +168,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <p>Derived from your active colour for backgrounds, borders, and surfaces.</p>
       </div>
       <div class="sg-tint-row">
-        ${design.tints.scale.map((c, i) => `<div class="sg-tint-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${TINT_LABELS[i] || i * 100}</span></div>`).join('')}
+        ${design.tints.scale.map((c, i) => `<div class="sg-tint-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${tintLabels[i]}</span></div>`).join('')}
       </div>
     </section>
   ` : ''
@@ -172,14 +180,17 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <h2>State Colours</h2>
         <p>Semantic colour scales for feedback and status messaging.</p>
       </div>
-      ${Object.entries(stateShades).map(([state, shades]) => `
+      ${Object.entries(stateShades).map(([state, shades]) => {
+        const stateLabels = tintLabelsFor(shades.length)
+        return `
         <div class="sg-state">
           <div class="sg-state-label">${state}</div>
           <div class="sg-state-row">
-            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${TINT_LABELS[i] || i * 100}</span></div>`).join('')}
+            ${shades.map((c, i) => `<div class="sg-state-cell" style="background:${c};color:${contrastText(c)}" data-hex="${c}"><span>${stateLabels[i]}</span></div>`).join('')}
           </div>
         </div>
-      `).join('')}
+      `
+      }).join('')}
     </section>
   ` : ''
 
@@ -194,7 +205,8 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <div class="sg-font-card">
           <div class="sg-font-label">Heading · ${headingFamily} ${headingWeight}</div>
           <p class="sg-font-sample" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:48px">The quick brown fox</p>
-          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</p>
+          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">${systemSentence({ heading: headingFamily, headingWeight, ratio: ts.ratio || 1.25 }, 'heading')}</p>
+          ${glyphStrip(`font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight}`)}
         </div>
         <div class="sg-font-card">
           <div class="sg-font-label">Body · ${bodyFamily} ${bodyWeight}</div>
@@ -234,7 +246,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${projectName} — Style Guide</title>
+  <title>${projectName} | Style Guide</title>
   ${fontsUrl ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${fontsUrl}" rel="stylesheet">` : ''}
   <style>
 ${cssVars}
@@ -323,7 +335,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 .sg-footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--sg-border); text-align: center; }
 .sg-footer-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sg-text-3); font-weight: 500; text-decoration: none; transition: color var(--sg-t); }
 .sg-footer-brand:hover { color: var(--sg-text-2); }
-.sg-footer-mark { width: 18px; height: 18px; border-radius: 50%; background: ${primary}; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: ${primaryText}; font-family: '${headingFamily}', sans-serif; }
+.sg-footer-mark { display: inline-flex; align-items: center; line-height: 0; }
 .sg-main { flex: 1; min-width: 0; max-width: 1100px; padding: 56px clamp(24px, 5vw, 72px) 96px; }
 .sg-hero { margin-bottom: 56px; padding-bottom: 32px; border-bottom: 1px solid var(--sg-border); }
 .sg-hero-tag {
@@ -402,7 +414,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
   <button class="sg-theme-toggle" onclick="(function(b){var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;b.textContent=t==='dark'?'Light':'Dark'})(this)">${isDark ? 'Light' : 'Dark'}</button>
   <aside class="sg-sidebar">
     <div class="sg-brand">
-      <div class="sg-brand-mark">${projectName.charAt(0).toUpperCase()}</div>
+      <div class="sg-brand-mark">${initialOf(projectName)}</div>
       <h1>${projectName}</h1>
       <span class="sg-brand-sub">Style Guide</span>
       <span class="sg-brand-date">${date}</span>
@@ -422,7 +434,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
     <header class="sg-hero">
       <span class="sg-hero-tag">Brand Reference</span>
       <h1>${projectName} Style Guide</h1>
-      <p>The complete colour, typography, and token system for this brand — generated from your design choices and ready for production.</p>
+      <p>The complete colour, typography, and token system for this brand, generated from your design choices and ready for production.</p>
       <div class="sg-meta">
         <span>${(design?.palette?.colors || []).length} colours</span>
         <span>·</span>
@@ -461,7 +473,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
 
     <footer class="sg-footer">
       <a class="sg-footer-brand" href="https://uil4b.com" target="_blank" rel="noopener">
-        <span class="sg-footer-mark">U</span>
+        <span class="sg-footer-mark">${logoSvg({ kind: 'symbol', attrs: `height="12" width="${Math.round(12 * SYMBOL_WIDTH / LOGO_HEIGHT)}" aria-hidden="true"` })}</span>
         Built with UIL4B · ${date}
       </a>
     </footer>
@@ -469,7 +481,7 @@ ${watermark ? `    <div class="sg-watermark">
       <div class="sg-watermark-inner">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <div>
-          <strong>Free Export — Made with UIL4B</strong>
+          <strong>Free Export: Made with UIL4B</strong>
           <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this credit line and unlock the design system book</div>
         </div>
         <a href="https://uil4b.com/checkout?plan=yearly" target="_blank" rel="noopener" style="padding:6px 14px;border-radius:6px;background:${primary};color:${contrastText(primary)};font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Upgrade</a>

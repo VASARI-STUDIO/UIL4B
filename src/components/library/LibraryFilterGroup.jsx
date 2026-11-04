@@ -28,7 +28,7 @@ import { useToolbarMode } from './toolbarMode'
 // highlighting an option nobody chose.
 //
 // ── MULTI-SELECT (opt-in via `multiSelect`) ─────────────────────────────────
-// Founder request (2026-08-08): shift-click to pick more than one, and picking
+// Shift-click picks more than one option, and picking
 // every option collapses back to the reset option rather than reading as a
 // filter that excludes nothing while looking like it excludes something.
 //
@@ -51,8 +51,7 @@ import { useToolbarMode } from './toolbarMode'
 // the state either way, which is why hiding it costs nothing.
 //
 // ── THE TABLET BAND COLLAPSES THE TRAY TO A MENU ────────────────────────────
-// Founder direction, 2026-09-02: "on tablets and mobile … nest buttons and
-// menus if needed."
+// On tablets and mobile, buttons and menus nest where needed.
 //
 // Between 641 and 980px this tray had no layout of its own. It fell through
 // into the desktop row, where the search field beside it has no width ceiling,
@@ -86,8 +85,8 @@ import { useToolbarMode } from './toolbarMode'
 // is a list of sibling options, which is exactly what it was added for.
 
 // ── AND THE BAND WAS NEVER THE REAL CONDITION ───────────────────────────────
-// Founder, 2026-09-04: "the header design changes height switching from the
-// emoji to icon library. the bar is broken visually on a standard desktop."
+// The header changed height when switching from the emoji to the icon library,
+// and the bar was broken visually on a standard desktop.
 //
 // Measured at 1440x900: /create/icons rendered a 68px toolbar and /create/emoji
 // a 213px one, so switching tabs moved the whole page by 145px. On the emoji
@@ -105,8 +104,8 @@ import { useToolbarMode } from './toolbarMode'
 //
 // So the condition is now MEASURED rather than assumed: collapse when this
 // group's own tray is wider than the column it has to live in. The band stays
-// as a floor — below 981px the collapse is unconditional, which is #318's
-// decision and is about touch room rather than about fit.
+// as a floor — below 981px the collapse is unconditional, for touch room
+// rather than fit.
 //
 // WHY THIS CANNOT OSCILLATE, which is the obvious hazard in a
 // measure-then-change-layout loop. Both sides of the comparison are chosen so
@@ -179,7 +178,7 @@ export default function LibraryFilterGroup({
   // So this is a decision about the OPTIONS rather than about a viewport, taken
   // once at the call site: nine options is a menu everywhere, not a row of chips
   // that is a row of chips at some widths. That also removes the shape change
-  // itself, which is the fault #323 was fixing when it collapsed the emoji tray.
+  // itself, the fault that collapsing the emoji tray was meant to fix.
   alwaysCollapsed = false,
 }) {
   const trayRef = useRef(null)
@@ -268,11 +267,13 @@ export default function LibraryFilterGroup({
       intrinsicRef.current = { options, width: intrinsic }
     }
 
-    const action = row.querySelector('.lbry-toolbar-action')
+    // The action and the pinned control both claim the row's right end.
+    const reserved = ['.lbry-toolbar-action', '.lbry-toolbar-pinned']
+      .reduce((sum, selector) => sum + (row.querySelector(selector)?.getBoundingClientRect().width || 0), 0)
     setOverflows(trayOverflowsRow({
       intrinsic,
       rowWidth: row.clientWidth,
-      actionWidth: action ? action.getBoundingClientRect().width : 0,
+      actionWidth: reserved,
       searchCap: SEARCH_CAP,
       gap: ROW_GAP,
     }))

@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, memo } from 'react'
-import { atlas, atlasSubscribe, atlasVersion, atlasConfigure, atlasWant, atlasWarm, atlasTrim } from './emojiAtlas'
+import { atlas, atlasPending, atlasSubscribe, atlasVersion, atlasConfigure, atlasMounted, atlasWant, atlasWarm, atlasTrim, nearestFirst } from './emojiAtlas'
+import { composeSkinTone } from '../../utils/emojiSkinTone'
 
 // The Emoji Library's windowed grid, kept in its own component so the scroll
-// state (which row range is mounted, which cell just copied) re-renders THIS
+// state (which row range is mounted, which bitmaps are drawn) re-renders THIS
 // subtree and nothing above it. The page owns the search, the filters and the
 // toolbar; a scroll tick must never reach them.
 //
@@ -22,24 +23,30 @@ const CELL_GAP = 4
 const HEAD_H = 42         // section header row (text + bottom breathing room)
 const SECTION_GAP = 24    // extra space above each section after the first
 const OVERSCAN_PX = 500   // render this much beyond the viewport each way
+// A NEW layout (a search, a category, a new width) first mounts only the screen
+// plus this much, so its commit builds about half the cells; the window widens to
+// OVERSCAN_PX two frames later, after that first frame has painted.
+const FIRST_OVERSCAN_PX = 60
 
-// Insert the tone right after the base code point, dropping an emoji-presentation
-// selector (U+FE0F) that must not sit between the base and its modifier.
-function toneOf(emoji, tone) {
-  if (!tone) return emoji
-  const cps = [...emoji]
-  const rest = cps.slice(1).filter((c, i) => !(i === 0 && c.codePointAt(0) === 0xFE0F))
-  return cps[0] + tone + rest.join('')
-}
-
-// Text → bitmap cell. `sprite` is null until the glyph has been drawn.
-const EmojiCell = memo(function EmojiCell({ emoji, tone, shown, sprite, isCopied, onCopy }) {
+// Placeholder → bitmap cell. `sprite` is null until the glyph has been drawn;
+// `pending` says a bitmap is still coming, so the cell shows a quiet placeholder
+// instead of laying out live colour text. With neither (a glyph that stays text,
+// a failed or unsupported atlas) the cell shows the real text. The label is the
+// glyph in every case: the text is hidden in two of the three, and a hidden
+// element gives the button no name of its own.
+const EmojiCell = memo(function EmojiCell({ emoji, shown, sprite, pending, onOpen }) {
   return (
     <button
-      className={`emoji-cell${isCopied ? ' copied' : ''}${sprite ? ' has-bitmap' : ''}`}
-      onClick={() => onCopy(emoji, tone)}
-      title={`Copy ${shown}`}
-      aria-label={sprite ? shown : undefined}
+      className={`emoji-cell${sprite ? ' has-bitmap' : ''}${pending ? ' pending' : ''}`}
+      onClick={(e) => {
+        // Safari and Firefox on macOS do not focus a button on click. Focus it
+        // here so the dialog's close hands focus back to this cell.
+        e.currentTarget.focus()
+        onOpen(emoji)
+      }}
+      title={`Details for ${shown}`}
+      aria-haspopup="dialog"
+      aria-label={sprite || pending ? shown : undefined}
     >
       <span className="emoji-char">{shown}</span>
       {sprite && <span className="emoji-bitmap" style={sprite.style} aria-hidden="true" />}
@@ -58,8 +65,7 @@ function windowOf(rows, minY, maxY) {
 
 const NO_WINDOW = { layout: null, start: 0, end: 0 }
 
-export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
-  const [copied, setCopied] = useState(null)
+export default function EmojiGrid({ groups, catalogue, skinTone, onOpen, stale = false }) {
   const [gridW, setGridW] = useState(0)
   // Which rows are mounted, tagged with the layout they were measured against.
   const [win, setWin] = useState(NO_WINDOW)
@@ -121,7 +127,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     let band = { start: 0, end: 0 }
     if (el && layout.rows.length) {
       const top = -el.getBoundingClientRect().top
-      band = windowOf(layout.rows, top - OVERSCAN_PX, top + window.innerHeight + OVERSCAN_PX)
+      band = windowOf(layout.rows, top - FIRST_OVERSCAN_PX, top + window.innerHeight + FIRST_OVERSCAN_PX)
     }
     current = { layout, ...band }
     setWin(current)
@@ -145,7 +151,11 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
       setWin(next)
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
-    update()
+    // The window for this layout is the small first one (set during render): let
+    // the first frame paint, then widen. A scroll or resize in between still
+    // widens at once, through onScroll's own update.
+    if (winRef.current.layout === layout) raf = requestAnimationFrame(() => { raf = requestAnimationFrame(update) })
+    else update()
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
     return () => {
@@ -173,7 +183,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     }
   }, [cols, cellW, virtEl])
 
-  const shownOf = useCallback((item) => (item.tone && skinTone ? toneOf(item.char, skinTone) : item.char), [skinTone])
+  const shownOf = useCallback((item) => (item.tone && skinTone ? composeSkinTone(item.char, skinTone) : item.char), [skinTone])
 
   const visible = useMemo(() => layout.rows.slice(current.start, current.end), [layout, current.start, current.end])
 
@@ -191,31 +201,38 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     return plain.concat(toned)
   }, [catalogue, shownOf])
 
-  const visibleChars = useMemo(() => {
+  // The glyphs in the mounted rows, and for each the row it sits in.
+  const visibleCells = useMemo(() => {
     const chars = []
+    const rowOf = []
     for (const row of visible) {
-      if (row.type === 'cells') for (const item of row.items) chars.push(shownOf(item))
+      if (row.type === 'cells') for (const item of row.items) { chars.push(shownOf(item)); rowOf.push(row) }
     }
-    return chars
+    return { chars, rowOf }
   }, [visible, shownOf])
+  const visibleChars = visibleCells.chars
 
+  const visibleSet = useMemo(() => new Set(visibleChars), [visibleChars])
+
+  // The atlas re-renders this grid for a worker reply only when the reply holds
+  // a glyph mounted here; layout effect, so it is set in the commit that mounts.
+  useLayoutEffect(() => {
+    atlasMounted(visibleSet)
+    return () => atlasMounted(new Set())
+  }, [visibleSet])
+
+  // Drawn nearest the viewport first: the mounted band reaches 500px past the
+  // screen each way, and the glyphs on screen must not queue behind the ones above.
   useEffect(() => {
-    if (atlas.config) atlasWant(visibleChars)
-  }, [visibleChars, atlasGen])
+    if (!atlas.config || !virtEl) return
+    atlasWant(nearestFirst(visibleCells, -virtEl.getBoundingClientRect().top, window.innerHeight))
+  }, [visibleCells, virtEl, atlasGen])
 
   useEffect(() => {
     if (!atlas.config) return
-    atlasTrim(new Set(visibleChars), wanted)
+    atlasTrim(visibleSet, wanted)
     atlasWarm(wanted)
-  }, [visibleChars, wanted, atlasGen, atlasVer])
-
-  const handleCopy = useCallback((emoji, tone) => {
-    const text = tone ? toneOf(emoji, skinTone) : emoji
-    navigator.clipboard.writeText(text)
-    onCopy(text)
-    setCopied(emoji)
-    setTimeout(() => setCopied(null), 1200)
-  }, [onCopy, skinTone])
+  }, [visibleSet, wanted, atlasGen, atlasVer])
 
   return (
     // Windowed list: a relative container at full scroll height; only rows
@@ -223,6 +240,7 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
     <div
       className="emoji-virt"
       ref={setVirtEl}
+      aria-busy={stale || undefined}
       style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
     >
       {/* THE CATEGORY HEADINGS ARE h2, NOT h3. They are the only section
@@ -239,15 +257,15 @@ export default function EmojiGrid({ groups, catalogue, skinTone, onCopy }) {
           <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
             {row.items.map((item, i) => {
               const shown = shownOf(item)
+              const sprite = atlas.sprites.get(shown) || null
               return (
                 <EmojiCell
                   key={i}
                   emoji={item.char}
-                  tone={item.tone}
                   shown={shown}
-                  sprite={atlas.sprites.get(shown) || null}
-                  isCopied={copied === item.char}
-                  onCopy={handleCopy}
+                  sprite={sprite}
+                  pending={!sprite && atlasPending(shown)}
+                  onOpen={onOpen}
                 />
               )
             })}

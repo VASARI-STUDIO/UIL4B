@@ -1,9 +1,8 @@
-// THE TWO DECISIONS THE FOUNDER MADE ON 2026-09-10, RENDERED.
+// THE TWO HEADLINE DECISIONS, RENDERED.
 //
-// Both had been sitting open in docs/RELEASE-READINESS.md § 2 with an agent's
-// measurement under them and no answer. He answered both on the same day, and
-// this file is the record that the answers are what actually ships — not what a
-// comment or a changelog line says ships.
+// Both had been open, with a measurement under them and no answer. Both are now
+// decided, and this file is the record that the answers are what actually ships
+// — not what a comment or a changelog line says ships.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE HERO HEADLINE IS APPROVED
@@ -39,7 +38,7 @@
 //   · it spent one of the three free save slots, so a new free account had two;
 //   · it made `/projects`'s "No projects yet · Create your first project" panel
 //     unreachable while signed in — dead code that two other things (Onboarding's
-//     "Not now — take me to my projects", and first-run-destination.test.js's
+//     "Not now, take me to my projects", and first-run-destination.test.js's
 //     "the projects empty state still teaches") described as the landing.
 //
 // His call: stop seeding it. New accounts start empty, see the real empty
@@ -256,24 +255,26 @@ test.describe('a new account starts empty', () => {
 
         // Nothing was seeded: no card at all, and specifically not the one that
         // used to be there.
-        await expect(page.locator('.uh-grid .proj-card')).toHaveCount(0)
-        await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
+        // (A project is something with an Open link: the starter card is not one.)
+        await expect(page.locator('.uh-card-name')).toHaveCount(0)
+        await expect(page.locator('.uh-card-title')).toHaveCount(0)
+        await expect(page.getByText('Default Project')).toHaveCount(0)
 
-        // The panel that had never been on a screen.
+        // The first-palette card, in the lead slot where the newest project would be.
         //
-        // Selected on `.uh-empty`, the panel's own class, rather than on the
-        // shared `.card`. It was a card until the Spectrum pass (carried over
-        // from #481) — a centred, filled, rounded container with a circular
-        // tinted icon badge, the stock first-run screen. `.card` was never
-        // what this test was about: everything below reads the panel's words,
-        // its two links and its control, and all of those are unchanged.
-        const empty = page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })
+        // Selected on its test id: the card is `[data-testid="first-palette-card"]`,
+        // where the old page's panel was `.uh-empty` ("No projects yet") and, after it,
+        // the starter. The page no longer tells an account with no projects that it
+        // has none; it names the one action. The starter is gone for this account.
+        const empty = page.getByTestId('first-palette-card')
         await expect(empty).toBeVisible()
+        await expect(page.getByTestId('starter-card')).toHaveCount(0)
 
-        // IT SAYS WHAT TO DO NEXT, in the design's words: start with a colour. The
-        // tool it names is the lead tile of "Start something" on the same page.
-        await expect(empty).toContainText('Start with a colour and the rest of the project follows.')
-        await expect(page.locator('.uh-lead')).toHaveAttribute('href', '/create/palette')
+        // IT SAYS WHAT TO DO NEXT: one palette, from one colour. The lead tile of
+        // "Start something" on the same page goes to the same tool.
+        await expect(empty.getByRole('heading', { name: 'Turn one colour into a full palette' })).toBeVisible()
+        await expect(empty).toContainText('Pick a colour or paste a hex code. You get the shades, text colours and contrast checks, and you can keep it here.')
+        await expect(page.locator('a.uh-tool[data-tool="palette"]')).toHaveAttribute('href', '/create/palette')
 
         // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The design's layout puts
         // "Start something" above the recent projects, so on a phone this card
@@ -290,7 +291,7 @@ test.describe('a new account starts empty', () => {
 
         // The card's own control: big enough to hit, and hit-testable once it
         // is on screen (elementFromPoint is viewport-relative, so scroll first).
-        const cta = empty.getByRole('button', { name: 'Start a project' })
+        const cta = empty.getByRole('link', { name: 'Make your first palette' })
         await cta.scrollIntoViewIfNeeded()
         await expect(cta).toBeVisible()
         const box = await cta.boundingBox()
@@ -331,14 +332,14 @@ test.describe('a new account starts empty', () => {
 
     expect(outline.length, 'the page rendered no headings at all').toBeGreaterThan(1)
     expect(outline[0].level, 'the page must open on its h1').toBe(1)
-    const at = outline.findIndex((h) => h.text === 'No projects yet')
+    const at = outline.findIndex((h) => h.text === 'Turn one colour into a full palette')
     const heading = outline[at]
-    expect(heading, 'the empty state’s heading is not in the outline').toBeTruthy()
-    // The design's screen sets it as an h3 under the "Recent projects" h2 — one level
-    // under the section it belongs to (it was an h2 directly under the h1 on
-    // the old page, which had no sections).
-    expect(heading.level, 'the empty state’s heading must be one level under its section').toBe(3)
-    expect(outline[at - 1], 'and the section above it must be Recent projects').toEqual({ level: 2, text: 'Recent projects' })
+    expect(heading, 'the first-palette card’s heading is not in the outline').toBeTruthy()
+    // The card is the page's lead section, so its heading is an h2 directly under the h1
+    // (the old page set an h3 under a "Recent projects" h2; that section is gone, the lead
+    // card and this one carry their own h2).
+    expect(heading.level, 'the card’s heading must be an h2, one level under the page title').toBe(2)
+    expect(outline[at - 1], 'and what comes before it must be the page title').toEqual({ level: 1, text: 'Your workspace' })
 
     // No level may jump by more than one from the one before it.
     for (let i = 1; i < outline.length; i += 1) {
@@ -360,14 +361,17 @@ test.describe('a new account starts empty', () => {
     // so a selector that stops matching cannot report it clean by reading
     // nothing.
     const marks = await page.evaluate(() => {
-      const panel = [...document.querySelectorAll('.uh .uh-empty')]
-        .find((el) => el.textContent.includes('No projects yet'))
+      const panel = document.querySelector('.uh [data-testid="first-palette-card"]')
       if (!panel) return null
+      // The card's ramp is the one graphic that says something (a single labelled image of the
+      // palette, its swatches plain spans); every other graphic stays hidden.
       const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
-      return { found: graphics.length, announced: graphics.filter((g) => g.getAttribute('aria-hidden') !== 'true').length }
+      const announced = graphics.filter((g) => !g.closest('[aria-hidden="true"]'))
+      return { found: graphics.length, announced: announced.length, labelled: announced.filter((g) => g.matches('.uh-first-ramp[role="img"]') && g.getAttribute('aria-label')).length }
     })
     expect(marks, 'the empty state panel itself is not on the page').not.toBeNull()
-    expect(marks.announced, `${marks.announced} of the empty state’s ${marks.found} graphic(s) are announced`).toBe(0)
+    expect(marks.announced - marks.labelled, `${marks.announced - marks.labelled} of the empty state’s ${marks.found} graphic(s) are announced without being the ramp`).toBe(0)
+    expect(marks.labelled, 'the ramp is one labelled image').toBe(1)
 
     await context.close()
   })
@@ -379,7 +383,7 @@ test.describe('a new account starts empty', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    const cta = page.getByRole('button', { name: 'Start a project' })
+    const cta = page.getByRole('link', { name: 'Make your first palette' })
     await expect(cta).toBeVisible()
 
     // TAB FROM THE TOP OF THE DOCUMENT rather than calling .focus(): the
@@ -392,7 +396,7 @@ test.describe('a new account starts empty', () => {
       await page.keyboard.press('Tab')
       reached = await page.evaluate(() => {
         const el = document.activeElement
-        return !!el && el.tagName === 'BUTTON' && el.innerText.trim() === 'Start a project'
+        return !!el && el.tagName === 'A' && el.innerText.trim() === 'Make your first palette'
       })
     }
     expect(reached, 'the empty state’s only control cannot be reached by Tab').toBe(true)
@@ -415,12 +419,14 @@ test.describe('a new account starts empty', () => {
 
     // And through: the first project of this account's life, named as it is
     // kept.
+    // (The card opened the first-palette coach, so the save is the coach's: its own toast.)
     await saveFromBuilder(page, 'Brand v1')
-    await expect(page.locator('.toast.show')).toContainText('Project saved')
+    await expect(page.locator('.toast.show')).toContainText('Saved to your projects.')
     await go(page, '/projects')
-    await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
-    // The empty state is gone now that it is not true any more.
-    await expect(page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+    await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+    // The card is gone now that it is not true any more.
+    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
+    await expect(page.getByTestId('starter-card')).toHaveCount(0)
 
     await context.close()
   })
@@ -428,7 +434,7 @@ test.describe('a new account starts empty', () => {
   test('a new account is counted as having used none of its slots', async ({ browser }) => {
     // WHAT THE SEED USED TO MAKE THIS PAGE SAY: one slot spent on a project
     // nobody had made. The design's workspace screen meters the
-    // slots from the first visit ("Project slots  n of 3" in the plan strip —
+    // slots from the first visit ("Projects  n of 3" in the Today panel —
     // the design, which retires the old page's "no countdown until it is worth
     // knowing" rule), so the property is now read straight off the meter: a
     // new account is at 0, and one project later it is at 1, counted off the
@@ -442,7 +448,8 @@ test.describe('a new account starts empty', () => {
     const slots = page.locator('[data-testid="project-quota-note"]')
     await expect(slots).toContainText(`0 of ${CAP}`)
 
-    await page.getByRole('button', { name: 'Start a project' }).click()
+    // New project (not the card): that route opens the builder without the coach, so the save toast is the plain one.
+    await page.getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await saveFromBuilder(page, 'Brand v1')
     await expect(page.locator('.toast.show')).toContainText('Project saved')
@@ -490,10 +497,11 @@ test.describe('an account that already has a Default Project keeps it', () => {
       const card = page.locator('.proj-card').filter({ hasText: 'Default Project' })
       await expect(card, 'an existing account lost its Default Project').toHaveCount(1)
 
-      // The card reads it as complete…
-      await expect(card.locator('.uh-card-line')).toContainText('4 of 4 parts')
-      // The empty state must NOT be on this page: it is not true here.
-      await expect(page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+      // The lead card reads it as complete: tagged Ready, with all four parts ticked…
+      await expect(card.locator('.uh-card-line')).toContainText('Ready')
+      await expect(card.locator('.uh-parts > li.is-done')).toHaveCount(4)
+      // The starter must NOT be on this page: it is not true here.
+      await expect(page.getByTestId('starter-card')).toHaveCount(0)
 
       // NOT JUST PRESENT — INTACT. The project's own page reads every part off
       // the saved design (the slots on /projects/:id carry these values), so this is the
@@ -553,7 +561,7 @@ test.describe(`a new account gets all ${CAP} free slots`, () => {
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
-      await expect(page.getByRole('button', { name: 'Start a project' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toBeVisible()
 
       // ALL THREE, not two. This is the arithmetic the seed was costing: with
       // it, the third of these was the fourth save and was refused. Saved the
@@ -581,12 +589,12 @@ test.describe(`a new account gets all ${CAP} free slots`, () => {
       // opening a project that could never be saved.
       await go(page, '/projects')
       await expect(page.locator('[data-testid="project-quota-note"]')).toContainText(`${CAP} of ${CAP}`)
-      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(CAP)
+      await expect(page.locator('.proj-card')).toHaveCount(CAP)
       await page.getByRole('button', { name: 'New project' }).click()
       const refusal = page.locator('[data-testid="project-create-refusal"]')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
 
       await context.close()
     })

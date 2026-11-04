@@ -170,18 +170,17 @@ const shortName = (f) => {
   const inParens = /\(([^)]+)\)\s*$/.exec(f.name)
   return inParens ? inParens[1] : f.name
 }
-export const listNames = (formats) => {
-  const names = formats.map(shortName)
-  if (names.length < 2) return names.join('')
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-}
+const joinAnd = (items) => (items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
+export const listNames = (formats) => joinAnd(formats.map(shortName))
 
 export const EXPORTS = {
   free: FREE_EXPORTS,
   pro: PRO_EXPORTS,
   unbuilt: UNBUILT_EXPORTS,
   freeNames: listNames(FREE_EXPORTS),
-  proNames: PRO_EXPORTS.map((f) => f.name).join(' and '),
+  proNames: joinAnd(PRO_EXPORTS.map((f) => f.name)),
   unbuiltNames: listNames(UNBUILT_EXPORTS),
 }
 
@@ -326,6 +325,6 @@ export const FAQS = [
   },
   {
     q: 'Which export formats can I actually get?',
-    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are listed in the export panel as Soon: they are not built, so nobody has them and Pro does not sell them.`,
+    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length === 1 ? `One more format (${EXPORTS.unbuiltNames}) is` : `${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are`} listed in the export panel as Soon: not built, so nobody has it and Pro does not sell it.`,
   },
 ]

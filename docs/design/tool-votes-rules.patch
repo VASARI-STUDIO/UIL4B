@@ -1,0 +1,76 @@
+diff --git a/firestore.rules b/firestore.rules
+index 7c0fdb53..b6f06ade 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -443,5 +443,71 @@ service cloud.firestore {
+       allow update: if dayDocOk()
+         && (request.auth.token.admin == true || countersOnlyGrow());
+     }
++
++    // Tool votes. One voter document per account, keyed by uid, so each
++    // account has at most one vote per tool. The public count moves by
++    // exactly one, and only in the same write that adds or removes the
++    // caller's own voter document.
++    match /toolVotes/{toolId} {
++      function isSignedIn() { return request.auth != null; }
++      function voterDoc() {
++        return /databases/$(database)/documents/toolVotes/$(toolId)/voters/$(request.auth.uid);
++      }
++
++      allow read: if true;
++
++      // The first vote on a tool creates its counter at 1.
++      allow create: if isSignedIn()
++        && toolId.matches('^[a-z0-9-]{1,48}$')
++        && request.resource.data.keys().hasOnly(['count', 'open'])
++        && request.resource.data.count == 1
++        && request.resource.data.open == true
++        && !exists(voterDoc())
++        && existsAfter(voterDoc());
++
++      allow update: if
++        // A vote (+1) or a take-back (-1), paired with the caller's voter
++        // document appearing or disappearing in the same write.
++        (isSignedIn()
++          && resource.data.open == true
++          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
++          && request.resource.data.count >= 0
++          && ((request.resource.data.count == resource.data.count + 1
++                && !exists(voterDoc()) && existsAfter(voterDoc()))
++           || (request.resource.data.count == resource.data.count - 1
++                && exists(voterDoc()) && !existsAfter(voterDoc()))))
++        // Closing (or reopening) voting. An admin can never touch the count.
++        || (isSignedIn() && request.auth.token.admin == true
++          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open']));
++
++      allow delete: if false;
++
++      match /voters/{uid} {
++        function counter() {
++          return /databases/$(database)/documents/toolVotes/$(toolId);
++        }
++
++        // Only the owner reads their voter document.
++        allow read: if isSignedIn() && request.auth.uid == uid;
++
++        // Casting a vote: the counter must end the write one higher and
++        // still be open (the first vote creates it, so a missing counter
++        // counts as 0).
++        allow create: if isSignedIn() && request.auth.uid == uid
++          && request.resource.data.keys().hasOnly(['at'])
++          && request.resource.data.at == request.time
++          && getAfter(counter()).data.open == true
++          && getAfter(counter()).data.count
++               == (exists(counter()) ? get(counter()).data.count : 0) + 1;
++
++        // Taking a vote back: the counter must end the write one lower,
++        // while voting is open.
++        allow delete: if isSignedIn() && request.auth.uid == uid
++          && get(counter()).data.open == true
++          && getAfter(counter()).data.count == get(counter()).data.count - 1;
++
++        allow update: if false;
++      }
++    }
+   }
+ }

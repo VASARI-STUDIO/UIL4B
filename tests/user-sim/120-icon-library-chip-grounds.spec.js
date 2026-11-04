@@ -91,7 +91,7 @@ test.describe('the icon library draws no box where none is meant', () => {
           : page.getByRole('group', { name: 'Icon weight' })
         await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
         const status = seg.getByRole('status')
-        await expect(status).toHaveText('Flags come in one style')
+        await expect(status).toHaveText('These icons come in one style')
         await expect(status).toHaveCSS('text-decoration-line', 'none')
         const paint = await status.evaluate((el) => {
           const css = getComputedStyle(el)

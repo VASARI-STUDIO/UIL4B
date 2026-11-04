@@ -109,7 +109,7 @@ test('no curated colour is touched — only the ink moves', () => {
 })
 
 test('the accepted cost is real and pinned: ten of the twelve monograms are dark ink', () => {
-  // The founder accepted this explicitly. Pinned so nobody "restores the single
+  // This cost is accepted. Pinned so nobody "restores the single
   // white ink" believing it is a cosmetic tidy-up — it is the defect coming back.
   const dark = CARDS.filter((d) => {
     const ink = inkOnGradient(d.c1, d.c2, FLOOR)
@@ -156,7 +156,7 @@ test('a straddling gradient is NOT solved by ink, and no shipped pair is near on
   // Honest bound. If a ramp is light enough at one end to defeat a dark ink and
   // dark enough at the other to defeat a light one, no single ink clears it and
   // the answer would have to be a scrim or different seed colours — the two
-  // options the founder did not pick. Nothing ships near this, but the function
+  // options that were not chosen. Nothing ships near this, but the function
   // must not be read as a guarantee for arbitrary data.
   const ink = inkOnGradient('#000000', '#A0A0A0', FLOOR)
   assert.ok(

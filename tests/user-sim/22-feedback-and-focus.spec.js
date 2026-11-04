@@ -411,11 +411,11 @@ test.describe('feedback page opened from a link', () => {
   test('?from=support and any ?reason= preselect Help; no link defaults to a feature request', async ({ page }) => {
     const checked = () => form(page).locator('[role="radio"][aria-checked="true"]')
     await go(page, '/feedback?from=support')
-    await expect(checked()).toHaveText('Help Request')
+    await expect(checked()).toHaveText('Help request')
     await go(page, '/feedback?reason=anything_at_all')
-    await expect(checked()).toHaveText('Help Request')
+    await expect(checked()).toHaveText('Help request')
     await go(page, '/feedback')
-    await expect(checked()).not.toHaveText('Help Request')
+    await expect(checked()).not.toHaveText('Help request')
   })
 
   test('reason=payment_failed fills the subject and makes the email required', async ({ page }) => {

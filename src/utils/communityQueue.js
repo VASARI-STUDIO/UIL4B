@@ -37,14 +37,12 @@ export const QUEUE_COLLECTION = 'community-submissions'
 export const QUEUE_STATUSES = Object.freeze(['pending', 'approved', 'rejected'])
 export const CLIENT_WRITABLE_STATUS = 'pending'
 
-// 'icon' is the fourth, added 2026-09-18 on the founder's instruction ("people
-// can submit icons to the community they just need to be reviewed"). It needed
-// no fourth code path here, which is what this list being generalised over
+// 'icon' is the fourth, so people can submit icons to the community once they
+// are reviewed. It needed no fourth code path here, which is what this list being generalised over
 // `kind` was for — but it DOES need a rules change, because
 // firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an icon
-// also carries a payload key ('svg') the rules' allowlist does not name. That
-// diff is docs/design/community-icon-rules.patch and it is the founder's to
-// publish; until he does, an icon submission is refused by Firestore and the
+// also carries a payload key ('svg') the rules' allowlist does not name. Until
+// the rules are updated, an icon submission is refused by Firestore and the
 // submitter is told so rather than told it reached a reviewer.
 export const QUEUE_KINDS = Object.freeze(['gradient', 'design', 'palette', 'icon'])
 
@@ -63,7 +61,7 @@ export function buildQueueRecord({ kind, payload, user, name }) {
     name: title || `Untitled ${kind}`,
     authorUid: user.uid,
     // Display name only. The email is deliberately NOT copied here: this
-    // collection is readable by every signed-in user (same as community-prompts),
+    // collection is readable by every signed-in user once an item is approved,
     // and a submission does not need to disclose an address to be reviewed.
     authorName: (user.displayName || 'Anonymous').slice(0, 60),
     status: CLIENT_WRITABLE_STATUS,

@@ -1,7 +1,7 @@
 // Loads the generated per-emoji search index on demand.
 //
 // WHY IT IS NOT BUNDLED. The index is 88 KB raw / ~31 KB gzipped — three times
-// the rest of the Emoji Library chunk. The founder's report on this surface was
+// the rest of the Emoji Library chunk. This surface has been reported as
 // "slow to render/load", so paying that on every visit to make the search box
 // work would fix one complaint by worsening the other. Instead the grid renders
 // from the catalogue alone (unchanged first paint) and the index is fetched the

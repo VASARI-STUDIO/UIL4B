@@ -1,12 +1,12 @@
-// Regression coverage for the third founder-reported batch.
+// Regression coverage for the third batch of reported bugs.
 //
-// Same rule as batches 1 and 2 (14- and 16-): each of these reached the founder
+// Same rule as batches 1 and 2 (14- and 16-): each of these reached users
 // because nothing measured the rendered result. These tests measure it.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
 
 /* ── D5 · Auth from the nav must not navigate ────────────────────────────────
- * Founder: on the Palette Library, "Start for Free" changed the URL to /login,
+ * On the Palette Library, "Start for Free" changed the URL to /login,
  * and closing the popup landed on /home instead of back on the library.
  * Was: the nav CTAs were <Link to="/login">, so the SPA left the page before
  * any popup existed — and LoginRoute's dismiss handler fell back to /home. */
@@ -50,8 +50,8 @@ test.describe('nav auth opens over the page you are on', () => {
 
     await dialog.getByRole('button', { name: 'Close' }).click()
     await expect(dialog).toBeHidden()
-    // …and dismissing it is not a navigation either. This is the founder's
-    // report: the X used to land on /home.
+    // …and dismissing it is not a navigation either. This is the old bug:
+    // the X used to land on /home.
     expect(new URL(page.url()).pathname).toBe('/discover/palettes')
     // Nothing remounted, so the scroll position survived. The bug this guards
     // against was landing on a different page at scrollY 0 — a difference of
@@ -86,12 +86,16 @@ test.describe('nav auth opens over the page you are on', () => {
   test('/login still works as a route, for bookmarks and RequireAuth redirects', async ({ page }) => {
     watch(page, 'arriving on a bookmarked sign-in URL')
     await go(page, '/login')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    // The route is a page of its own now: its h1 and form sit in main, and no
+    // dialog is involved.
+    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UIL4B' })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // A protected route still bounces a signed-out visitor here rather than
     // rendering an empty page — and carries the query it was asked for.
     await go(page, '/checkout/return?session_id=cs_test_resume')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.locator('main').getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     expect(new URL(page.url()).pathname).toBe('/login')
     expect(await resumeTarget(page), 'the query survives the auth gate').toBe('/checkout/return?session_id=cs_test_resume')
   })
@@ -109,17 +113,17 @@ test.describe('nav auth opens over the page you are on', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await resumeTarget(page), 'onboarding will return them to the library').toBe('/discover/palettes')
 
-    // Dismissing and then arriving at the bare /login launcher must not leave
-    // the old page behind as a destination.
+    // Dismissing and then arriving at the bare /login page must not leave the
+    // old page behind as a destination.
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
     await go(page, '/login')
-    await expect(page.getByRole('dialog')).toBeVisible()
-    expect(await resumeTarget(page), 'a launcher is not a destination').toBeNull()
+    await expect(page.locator('main').getByRole('heading', { level: 1 })).toBeVisible()
+    expect(await resumeTarget(page), 'a bare /login is not a destination').toBeNull()
   })
 })
 
 /* ── D3 · The Font Pair config panel must fit the viewport ───────────────────
- * Founder: the "choose the pair" panel ran off the bottom of the screen and cut
+ * The "choose the pair" panel ran off the bottom of the screen and cut
  * off "Build a scale from this pair".
  * Was: .fpr-config was position:sticky with no max-height, inside
  * .fpr-panel{overflow:hidden}, so the overhang could not even be scrolled to.
@@ -205,7 +209,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
       await last.scrollIntoViewIfNeeded()
       await expect(last).toBeInViewport()
       // The hand-off itself rides the sticky tool toolbar, so it is on screen.
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a scale from this pair' })).toBeInViewport()
+      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a type scale from this pair' })).toBeInViewport()
     })
   }
 
@@ -246,7 +250,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
 })
 
 /* ── D1 · Temperature must not jump across zero ──────────────────────────────
- * Founder: dragging Temperature slowly across zero went 7 → 0 → −7.
+ * Dragging Temperature slowly across zero went 7 → 0 → −7.
  * Was: snapValue() was a hard step, discontinuous by exactly snapRadius (6) at
  * the boundary — an ~8px dead band mid-track then a seven-unit leap. The unit
  * contract is in tests/unit/slider-snap.test.js; this is the rendered drag. */

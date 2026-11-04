@@ -46,6 +46,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Reports known advisories in the production tree. Never fails the job
+      # (`|| true`): it makes new findings visible in the run log without
+      # blocking a merge on an upstream package we cannot patch ourselves.
+      - name: Dependency audit (non-blocking)
+        run: npm audit --omit=dev --audit-level=high || true
+
       # 0 errors required. ~34 pre-existing advisory warnings (react-hooks
       # set-state-in-effect / preserve-manual-memoization) are expected and
       # do not fail this step — only lint errors do.

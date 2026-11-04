@@ -4,8 +4,8 @@
 // BOTH 'auto' and 'monochromatic' to the tonal engine (autoTonalPalette). That
 // engine deliberately puts the SECONDARY role on a *sibling* hue 20–45° away,
 // so choosing "Mono" and hitting Randomise came back with two hues — the
-// founder's "if I change the colour system to mono and randomise it should use
-// the mono system". Only 'auto' is tonal now; every named harmony goes through
+// opposite of what mono promises (one hue). Only 'auto' is tonal now; every named
+// harmony goes through
 // generateHarmony. These tests assert the CONSTRAINT of each system on the
 // actual output, not merely which function got called.
 import test from 'node:test'

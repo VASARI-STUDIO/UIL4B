@@ -1,23 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import LibrarySearch from '../components/library/LibrarySearch'
-import LibraryGrid from '../components/library/LibraryGrid'
-import LibraryCard from '../components/library/LibraryCard'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import {
   ToolLayout, ToolButton, ToolPills, ToolSelect,
 } from '../components/tool/ToolLayout'
-import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from '../components/FontDossier'
+import FiltersSheet, { ViewToggle } from '../components/FontGalleryFilters'
+import FontDetailDialog from '../components/FontDetailDialog'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
 import {
-  bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
-  suggestPairings, verifyFontLoaded,
+  bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
+  verifyFontLoaded,
 } from '../utils/googleFonts'
-import { filterGalleryTypefaces, formatSubsets, ladderWeights, weightName } from '../utils/fontGallery'
+import { categoryWord, filterGalleryTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -70,13 +69,6 @@ const SORTS = [
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-// The row's body line. A 434px card could hold one pangram at 12px and that was
-// the whole running-text sample the gallery offered. A full-width row holds
-// about 110 characters at 15px, so the line is written to spend them: two
-// pangrams cover the alphabet twice in different letter pairs, and the tail
-// carries the figures, currency and punctuation you cannot judge from letters —
-// the parts of a face that most often turn out to be the disappointing ones.
-const SPECIMEN_LINE = 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. 0123456789 £$€ &@?!'
 // 24, not 48. A page of results is a scroll distance, not a card count: one
 // specimen per row makes each result about twice as tall, so keeping 48 would
 // have doubled the run to the "Show more" control and to the tools below it.
@@ -85,6 +77,146 @@ const SPECIMEN_LINE = 'The quick brown fox jumps over the lazy dog. Pack my box 
 // this changes how much arrives at once, not how much is reachable.
 const PAGE_SIZE = 24
 const MAX_COMPARE = 3
+
+// The three layouts. `name` is the band's name size and the size the list
+// opens at; `floor` is how far a long name may shrink before it is clipped;
+// `ratio` turns the size into the band's height, so changing the size moves the
+// whole list once and never one band on its own.
+const LAYOUTS = {
+  wide: { name: 96, floor: 72, ratio: 2.5, grid: 56 },
+  tablet: { name: 64, floor: 48, ratio: 3.125, grid: 40 },
+  phone: { name: 40, floor: 32, ratio: 3, grid: 24 },
+}
+const SIZE_MIN = 24
+const SIZE_MAX = 120
+const SIZE_CHOICES = [24, 32, 40, 48, 64, 72, 96, 120]
+const MIN_BAND = 72
+
+// Category names as they read in running text come from the shared helper, so
+// the pop-up, the browser and Font Pair spell them the same.
+const catWord = categoryWord
+const sentence = (word) => word.charAt(0).toUpperCase() + word.slice(1)
+
+function layoutFor() {
+  if (typeof window === 'undefined' || !window.matchMedia) return 'wide'
+  if (window.matchMedia('(min-width: 1024px)').matches) return 'wide'
+  return window.matchMedia('(min-width: 768px)').matches ? 'tablet' : 'phone'
+}
+
+// Which of the three layouts the viewport is in. The toolbar carries a
+// different set of controls in each, so the page needs to know.
+function useLayoutName() {
+  const [name, setName] = useState(layoutFor)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const queries = [window.matchMedia('(min-width: 1024px)'), window.matchMedia('(min-width: 768px)')]
+    const update = () => setName(layoutFor())
+    queries.forEach(mq => mq.addEventListener?.('change', update))
+    update()
+    return () => queries.forEach(mq => mq.removeEventListener?.('change', update))
+  }, [])
+  return name
+}
+
+// Fits are batched: every name queued in a frame is reset, then measured, then
+// written, so a page of bands costs one layout rather than one per band. A font
+// loading or a resize can queue every band at once; they all settle in one frame.
+const pendingFits = new Set()
+let fitFrame = 0
+function runFits() {
+  fitFrame = 0
+  const jobs = Array.from(pendingFits).filter(job => !job.dead)
+  pendingFits.clear()
+  jobs.forEach(job => job.el.style.setProperty('--fg-fit', '1'))
+  jobs.forEach(job => {
+    job.room = job.box.clientWidth
+    job.natural = job.el.scrollWidth
+  })
+  jobs.forEach(job => {
+    job.scale = job.room > 0 && job.natural > job.room ? Math.max(job.room / job.natural, job.floor) : 1
+    job.el.style.setProperty('--fg-fit', String(job.scale))
+  })
+  // Width is not exactly linear in font size: hinting and rounding can leave a
+  // scaled name a few pixels over. Measure again and shrink by what is left,
+  // still never below the floor.
+  for (let pass = 0; pass < 2; pass++) {
+    const over = jobs.filter(job => job.scale < 1 && job.scale > job.floor)
+      .map(job => ({ job, width: job.el.scrollWidth }))
+      .filter(({ job, width }) => width > job.room)
+    if (!over.length) break
+    over.forEach(({ job, width }) => {
+      job.scale = Math.max(job.scale * (job.room / width), job.floor)
+      job.el.style.setProperty('--fg-fit', String(job.scale))
+    })
+  }
+}
+// `now` fits synchronously, for the first measure after a name mounts, so it
+// never paints at the wrong size.
+function queueFit(job, now) {
+  if (now) {
+    pendingFits.add(job)
+    runFits()
+    return
+  }
+  pendingFits.add(job)
+  if (!fitFrame) fitFrame = requestAnimationFrame(runFits)
+}
+
+// Shrinks a long name to fit its band, down to `floor`, and no further. Past the
+// floor the name is clipped by its box, never ended with an ellipsis. The scale
+// is written as `--fg-fit`, which the name's font-size multiplies, so the
+// natural width is measured at fit 1 each time. The name is only in the DOM
+// once its face is confirmed, so it is measured in the right face.
+// In the grid view `size` is the tile's name size and the cell's width is the
+// room, so a long name shrinks to its cell rather than breaking mid-word.
+function useFitName(active, label, size, floor) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = el && el.parentElement
+    if (!el || !box) return undefined
+    const job = {
+      el,
+      box,
+      floor: Math.min(floor, size) / size,
+      natural: 0,
+      room: 0,
+    }
+    const fit = () => queueFit(job)
+    queueFit(job, true)
+    // A face can still land after this, such as a subset for typed preview
+    // text. Ask for this name's own face and fit again when it is in.
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
+      const cs = getComputedStyle(el)
+      document.fonts.load(`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`, el.textContent)
+        .then(() => { if (!job.dead) queueFit(job, true) }, () => {})
+    }
+    const fonts = typeof document !== 'undefined' ? document.fonts : null
+    // A face that arrives after the first measure changes the name's width, so
+    // the fit runs again for it. Only a face this name is set in counts.
+    const onLoaded = (event) => {
+      const faces = event && event.fontfaces
+      if (faces && faces.length) {
+        const stack = getComputedStyle(el).fontFamily
+        if (!faces.some(face => stack.includes(face.family.replace(/^["']|["']$/g, '')))) return
+      }
+      fit()
+    }
+    if (fonts) {
+      fonts.addEventListener?.('loadingdone', onLoaded)
+      if (fonts.ready) fonts.ready.then(fit, () => {})
+    }
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit)
+    if (ro) ro.observe(box)
+    return () => {
+      job.dead = true
+      pendingFits.delete(job)
+      if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
+      if (ro) ro.disconnect()
+    }
+  }, [active, label, size, floor])
+  return ref
+}
 
 // Set CSS custom properties on a node — the no-inline-styles route for values
 // that are genuinely per-item (a family, a weight, a size).
@@ -135,9 +267,18 @@ function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
     const start = () => {
       const extra = extraKey ? extraKey.split(',').map(Number) : []
       loadFont(font.family, [weight, bodyWeight(font), ...extra])
-      verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-        if (!cancelled && status === 'ok') setReadyKey(key)
-      })
+      verifyFontLoaded(font.family, bodyWeight(font))
+        .then(async status => {
+          // The name paints in `weight`, a separate file that only starts
+          // downloading once text is drawn in it. Wait for that cut too, so the
+          // first fit is measured in the real face. Its result is ignored: a
+          // heading cut that fails must not hold the band at a skeleton.
+          if (status === 'ok' && weight !== bodyWeight(font)) await verifyFontLoaded(font.family, weight)
+          return status
+        })
+        .then(status => {
+          if (!cancelled && status === 'ok') setReadyKey(key)
+        })
     }
 
     if (!defer) { start(); return () => { cancelled = true } }
@@ -171,133 +312,96 @@ function CloseIcon() {
   )
 }
 
-/* ── Catalogue row ────────────────────────────────────────────────────────── */
+/* ── Catalogue band ───────────────────────────────────────────────────────── */
 
-function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, previewSize }) {
+// One band per family: the name at band size in its own face, a meta line
+// along the bottom, and a compare button on the right. The pangram and the run
+// of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
+// faded in (hover or keyboard focus), so showing it never moves a box.
+function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles }) {
   const heading = headingWeight(font)
   const body = bodyWeight(font)
   const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
-  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
   const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
   const weights = font.variants.length
+  const typed = previewText.trim()
+  const nameRef = useFitName(
+    ready,
+    `${typed}|${font.family}`,
+    tiles ? gridName : nameSize,
+    tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
+  )
+  const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
+  // With the reader's own words in the name, the family name moves to the meta
+  // line so it is still on the band.
+  const meta = [
+    rank != null ? String(rank).padStart(2, '0') : null,
+    typed ? font.family : null,
+    sentence(catWord(font.category)),
+    weightLabel,
+  ].filter(Boolean).join(' · ')
 
   return (
-    <LibraryCard
+    <article
       className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'}
-      nameClassName="fg-card-name"
-      metaClassName="fg-card-info"
-      media={(
-        <button
-          type="button"
-          className="fg-card-open"
-          ref={ref}
-          onClick={() => onOpen(font)}
-          aria-label={`Open the ${font.family} specimen — ${font.category}, ${weights} weight${weights === 1 ? '' : 's'}`}
-        >
-          {/* The catalogue position, which the "Popular" sort makes a real fact
-              and every other ordering makes a place in the list you are reading.
-              It is also the row's left edge: a full-width row with nothing at its
-              start has no line for the eye to come back to down 24 of them. */}
-          <span className="fg-card-index" aria-hidden="true">{String(rank).padStart(2, '0')}</span>
-          {/* The specimen is decorative to assistive tech: the button's own label
-              already names the family, its category and its weight count, so
-              exposing the sample, the pangram and the ladder as well would repeat
-              the same family name three times and read a pangram out per row. */}
-          <span
-            className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'}
-            ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body), '--fg-card-size': `${previewSize}px` })}
-            aria-hidden="true"
-          >
-            {ready ? (
-              <>
-                {/* Three lines, three questions, and the row is full width because
-                    all three want the width:
-
-                      the display line  what do the letterforms look like at size,
-                                        in the reader's OWN words when they type
-                                        some — a 434px column showed about fifteen
-                                        characters of a 40px face and truncated the
-                                        rest, which is why the size slider had to
-                                        stop at 48px;
-                      the pangram       the same family as running text at body
-                                        weight, whole rather than ellipsised;
-                      the ladder        how much RANGE the family has, drawn
-                                        instead of counted. This is the one that
-                                        could not exist in the grid: nine weights
-                                        laid across a row need a row's width, and
-                                        "9w" in the card foot was the entire answer
-                                        the gallery gave to the question a designer
-                                        most often has to check. */}
-                <span className="fg-card-sample">{previewText.trim() || font.family}</span>
-                <span className="fg-card-pangram">{SPECIMEN_LINE}</span>
-                <span className="fg-card-ladder">
-                  {ladder.map(w => (
-                    <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{w}</span>
-                  ))}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="fg-card-skeleton fg-card-skeleton--sample" />
-                <span className="fg-card-skeleton fg-card-skeleton--body" />
-                <span className="fg-card-skeleton fg-card-skeleton--ladder" />
-              </>
-            )}
-          </span>
-        </button>
-      )}
-      float={(
-        <button
-          type="button"
-          className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
-          onClick={() => onToggleCompare(font)}
-          aria-pressed={inCompare}
-          aria-label={inCompare ? `Remove ${font.family} from the comparison` : `Add ${font.family} to the comparison`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            {inCompare
-              ? <polyline points="20 6 9 17 4 12" />
-              : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
-          </svg>
-        </button>
-      )}
-      name={font.family}
-      meta={`${font.category} · ${weights} weight${weights === 1 ? '' : 's'}`}
-      /* The far edge of a full-width row is the one place a fact can sit without
-         competing with the specimen, so it carries the one the gallery never
-         showed at all: which scripts the family actually covers. Three names and
-         a remainder, because the answer to "can I set my copy in this" is
-         usually settled by the first script in the list and never needs seven.
-         On the bundled fallback catalogue every entry is latin-only, so this
-         reads "Latin" down the whole page there. That is the fallback list being
-         thin, not the row being repetitive, and the banner above already says
-         which catalogue is on screen — reporting it honestly beats hiding a
-         field because the degraded data makes it dull. */
-      tail={scripts.length > 0 ? (
-        <span className="fg-card-scripts">
-          {scripts.slice(0, 3).join(', ')}
-          {scripts.length > 3 ? ` +${scripts.length - 3}` : ''}
+      ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+    >
+      <button
+        type="button"
+        className="fg-card-open"
+        ref={ref}
+        onClick={() => onOpen(font)}
+        aria-label={`Open the ${font.family} specimen — ${sentence(catWord(font.category))}, ${weightLabel}`}
+      >
+        {/* The band is decorative to assistive tech: the button's own label
+            already names the family, its category and its weight count, so the
+            name, pangram and weights would only say them again. */}
+        <span className={ready ? 'fg-card-preview' : 'fg-card-preview fg-card-preview--pending'} aria-hidden="true">
+          {ready
+            ? <span className="fg-card-name fg-card-sample" ref={nameRef}>{typed || font.family}</span>
+            : <span className="fg-card-skeleton fg-card-skeleton--sample" />}
         </span>
-      ) : null}
-    />
+        {ready && (
+          <span className="fg-card-reveal" aria-hidden="true">
+            <span className="fg-card-pangram">{PANGRAM}</span>
+            <span className="fg-card-weights">
+              {ladder.map(w => (
+                <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{weightName(w) || w}</span>
+              ))}
+            </span>
+          </span>
+        )}
+        <span className="fg-card-meta" aria-hidden="true">{meta}</span>
+      </button>
+      <button
+        type="button"
+        className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
+        onClick={() => onToggleCompare(font)}
+        aria-pressed={inCompare}
+        aria-label={inCompare ? `Remove ${font.family} from comparison` : `Add ${font.family} to comparison`}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {inCompare
+            ? <polyline points="20 6 9 17 4 12" />
+            : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+        </svg>
+      </button>
+    </article>
   )
 }
 
-// The reserved row geometry, drawn empty. Shown while the catalogue is still
+// The reserved band geometry, drawn empty. Shown while the catalogue is still
 // in flight so the list arrives into a shape the reader has already seen,
 // instead of a centred spinner collapsing into a full page.
 //
-// Four, not the grid's nine: one column means a skeleton row is a full-width
-// band, and nine of those is a screen and a half of shimmer promising more than
-// the first paint can deliver.
-function SkeletonRows({ count = 4 }) {
+// Four, not a screenful: each is a full band, and a screen of shimmer promises
+// more than the first paint can deliver.
+function SkeletonRows({ count = 4, vars }) {
   return (
-    <div className="lbry-grid fg-grid fg-grid--skeleton" aria-hidden="true">
+    <div className="fg-grid fg-grid--skeleton" aria-hidden="true" ref={vars}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="fg-skel-row">
           <span className="fg-card-skeleton fg-card-skeleton--sample" />
-          <span className="fg-card-skeleton fg-card-skeleton--body" />
-          <span className="fg-card-skeleton fg-card-skeleton--ladder" />
         </div>
       ))}
     </div>
@@ -306,7 +410,7 @@ function SkeletonRows({ count = 4 }) {
 
 /* ── Compare dialog ────────────────────────────────────────────────────────── */
 
-function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
+function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
   const ref = useModal(onClose)
   const [text, setText] = useState('')
   const [size, setSize] = useState(40)
@@ -330,9 +434,12 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
             <span className="fg-detail-label">Compare</span>
             <h2 className="fg-compare-title" id="fg-compare-title">{fonts.length} typefaces, side by side</h2>
           </div>
-          <button type="button" className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close the comparison">
-            <CloseIcon />
-          </button>
+          <div className="fg-compare-head-actions">
+            {onClear && <button type="button" className="fg-more-btn fg-compare-clear" onClick={onClear}>Clear</button>}
+            <button type="button" className="fg-detail-close fg-compare-close" onClick={onClose} aria-label="Close the comparison">
+              <CloseIcon />
+            </button>
+          </div>
         </div>
 
         <div className="fg-compare-controls">
@@ -384,7 +491,7 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
                   <CloseIcon />
                 </button>
               </div>
-              <div className="fg-compare-meta">{font.category} · {font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</div>
+              <div className="fg-compare-meta">{sentence(catWord(font.category))} · {font.variants.length} weight{font.variants.length === 1 ? '' : 's'}</div>
               <div className="fg-compare-sample">{text.trim() || PANGRAM}</div>
               <div className="fg-compare-charset">
                 <div>AaBbCcDd</div>
@@ -408,314 +515,11 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
   )
 }
 
-/* ── Specimen dialog ───────────────────────────────────────────────────────── */
-
-// THE POPUP. `FontBrowseDialog.jsx` was the backlog note's guess and it is not
-// this one — that belongs to `FontPicker`, which Font Pair and Type Scale use.
-// What the Font Gallery opens when you click a family is this component, and
-// what was wrong with it, measured at 1440×900:
-//
-//   IT WAS 1,763px TALL IN A 900px VIEWPORT, and it scrolls the overlay rather
-//   than itself, so every action it offers — Find a pairing, Copy import URL,
-//   Add to comparison — sat below the fold on arrival. A dialog whose purpose
-//   is to help you decide opened with none of the decisions visible.
-//
-//   "TYPE SCALE" PRINTED THE SAME SENTENCE SIX TIMES, five of them ellipsised
-//   mid-word at six different points. It was ~40% of that height, it told you
-//   nothing the first line had not, and the tool it imitates is one button away
-//   in the same dialog.
-//
-//   "ALL WEIGHTS" WAS SIX "Ag" TILES. Two letters cannot show what a weight
-//   does to a word, which is the entire question. It was the section that
-//   should have been the heart of the dialog and the least informative in it.
-//
-//   THE TAGS COUNTED FACTS INSTEAD OF STATING THEM — "1 subset" where the data
-//   holds the script names, "6 weights" beside a control that could have shown
-//   them.
-//
-//   THE WEIGHT SLIDER had no job the page could name: it re-set a hero that was
-//   already at heading weight and a type scale that is now gone.
-//
-// So the dialog is a fixed-height frame — pinned identity, scrolling body,
-// pinned actions — and its body is the weight list, one full-width line per
-// real cut, set in your own words. Head and foot are the Readymag specimen
-// modal; the weight list is Pitch's, which renders every style as a real
-// sentence for exactly the reason the Ag tiles failed to.
-function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
-  const ref = useModal(onClose)
-  // Same shape as useFontReady above, and for the same warning: this was
-  // `useState('checking')` with `setLoadState('checking')` as the first
-  // statement of the effect below. The result is recorded against the font it
-  // describes, so a font this dialog has not resolved yet reads 'checking' by
-  // derivation rather than by a second render.
-  const [loaded, setLoaded] = useState(null)
-  const loadState = loaded && loaded.font === font ? loaded.status : 'checking'
-  // Seeded from the gallery's own preview field. Opening a specimen used to
-  // throw away the words you had just typed into the toolbar and hand you a
-  // stock pangram instead — the one moment in the flow where your words matter
-  // most was the one that dropped them.
-  const [text, setText] = useState(previewText)
-  const [pairings, setPairings] = useState([])
-  // The founder's two tabs, on the same shared component the browse dialog
-  // uses. This dialog already WAS the per-family view, so it needed no new
-  // navigation — only somewhere to put About and Examples that does not make
-  // the specimen scroll past them. Everything that was here is now the Specimen
-  // tab, unchanged.
-  const [tab, setTab] = useState('specimen')
-  const scripts = useMemo(() => formatSubsets(font.subsets), [font.subsets])
-  const weights = font.variants.length
-
-  useEffect(() => {
-    let cancelled = false
-    loadFont(font.family, font.variants)
-    verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-      if (!cancelled) setLoaded({ font, status })
-    })
-    return () => { cancelled = true }
-  }, [font])
-
-  useEffect(() => {
-    let cancelled = false
-    suggestPairings(font, { limit: 3 }).then(list => {
-      if (cancelled) return
-      list.forEach(s => loadFont(s.font.family, [bodyWeight(s.font)]))
-      setPairings(list)
-    })
-    return () => { cancelled = true }
-  }, [font])
-
-  const retryFont = () => {
-    // Dropping the record is what puts the dialog back to 'checking' — the
-    // derivation above reads a null result as exactly that.
-    setLoaded(null)
-    reloadFont(font.family).then(() =>
-      verifyFontLoaded(font.family, bodyWeight(font)).then(status => setLoaded({ font, status })),
-    )
-  }
-
-  const fam = fontStack(font)
-
-  return (
-    <div className="fg-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div
-        className="fg-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fg-detail-title"
-        tabIndex={-1}
-        ref={ref}
-      >
-        {/* PINNED IDENTITY. The family name, in its own face, and the three
-            facts the catalogue actually holds — stated, not counted. Scripts
-            are the Readymag "Language Support" line: the only answer this
-            dialog has to "can I set my copy in this", and it was being spent
-            on the word "subset". */}
-        <header className="fg-detail-head">
-          <div className="fg-detail-id">
-            <h2
-              className="fg-detail-hero"
-              id="fg-detail-title"
-              ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(headingWeight(font)) })}
-            >
-              {font.family}
-            </h2>
-            <p className="fg-detail-facts">
-              <span className="fg-tag">{font.category}</span>
-              <span className="fg-tag">{weights} weight{weights === 1 ? '' : 's'}</span>
-              {scripts.length > 0 && <span className="fg-tag fg-tag--scripts">{scripts.join(', ')}</span>}
-            </p>
-          </div>
-          <button type="button" className="fg-detail-close" onClick={onClose} aria-label={`Close the ${font.family} specimen`}>
-            <CloseIcon />
-          </button>
-        </header>
-
-        {/* One control, and it drives everything below it. The old dialog had a
-            weight slider that re-set a hero already at heading weight; this sets
-            the words that every cut in the list is drawn with, which is the only
-            variable a person actually wants to change while judging a face. */}
-        <FontDossierTabs
-          value={tab}
-          onChange={setTab}
-          idBase="fg"
-          label={`${font.family} details`}
-        />
-
-        {/* The preview field drives the weight list and nothing else, so it
-            belongs to the Specimen tab rather than sitting above all three as a
-            control that does nothing on two of them. */}
-        {tab === 'specimen' && (
-          <div className="fg-detail-controls">
-            <label className="fg-detail-field">
-              <span>Preview text</span>
-              <input
-                type="text"
-                value={text}
-                maxLength={72}
-                spellCheck="false"
-                placeholder={PANGRAM}
-                onChange={e => setText(e.target.value)}
-              />
-            </label>
-          </div>
-        )}
-
-        <div className="fg-detail-body">
-
-        {loadState === 'unknown' && (
-          <div className="fg-loading-note" role="status">
-            <span className="fg-loading-note-spinner" aria-hidden="true" />
-            <span>Still loading this preview — showing a fallback face until {font.family} arrives.</span>
-          </div>
-        )}
-
-        {loadState === 'failed' && (
-          <div className="typ-notice" role="status">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div>
-              <strong>{font.family} couldn&rsquo;t load, so a fallback is shown.</strong>
-              <span>
-                The stylesheet or font file did not become usable. A privacy extension, dropped
-                connection or unavailable font-loading feature can cause this. The import URL and
-                CSS you copy below are unaffected.
-              </span>
-              <button type="button" className="typ-notice-retry" onClick={retryFont}>Retry this font</button>
-            </div>
-          </div>
-        )}
-
-        {tab === 'specimen' && (
-        <div className="fdx-panel" id="fg-panel-specimen" role="tabpanel" aria-labelledby="fg-tab-specimen" tabIndex={0}>
-        {/* THE BODY IS THE WEIGHT LIST. Every cut the family actually ships,
-            one full-width line each, drawn in that cut, set in the reader's own
-            words. This is the section the six "Ag" tiles were standing in for,
-            and it is the reason the type-scale block could go: a family read at
-            six weights tells you what six copies of one sentence at six sizes
-            never did, and sizes are the neighbouring tool's job. */}
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Every weight, in your words</div>
-          <ol className="fg-weight-rows">
-            {font.variants.map(w => (
-              <li key={w} className="fg-weight-row">
-                <span
-                  className="fg-weight-line"
-                  ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(w) })}
-                >
-                  {text.trim() || PANGRAM}
-                </span>
-                <span className="fg-weight-tag">
-                  <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Character set</div>
-          <div className="fg-charset" ref={varsRef({ '--fg-ff': fam, '--fg-fw': String(bodyWeight(font)) })}>
-            <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
-            <div>abcdefghijklmnopqrstuvwxyz</div>
-            <div>0123456789 !@#$%^&amp;*()+-=</div>
-          </div>
-        </div>
-
-        {pairings.length > 0 && (
-          <div className="fg-detail-section">
-            <div className="fg-detail-label">Pairs well with</div>
-            <div className="fg-pair-grid">
-              {pairings.map(({ font: pair, reason }) => (
-                <div
-                  key={pair.family}
-                  className="fg-pair-card"
-                  ref={varsRef({
-                    '--fg-ff': fam,
-                    '--fg-fw-h': String(headingWeight(font)),
-                    '--fg-pair-ff': fontStack(pair),
-                    '--fg-pair-fw': String(bodyWeight(pair)),
-                  })}
-                >
-                  <div className="fg-pair-preview">
-                    <span className="fg-pair-heading">{font.family}</span>
-                    <span className="fg-pair-body">{pair.family} keeps the body copy readable underneath.</span>
-                  </div>
-                  <p className="fg-pair-reason">{reason}</p>
-                  <div className="fg-pair-foot">
-                    <span className="fg-pair-name">{pair.family}</span>
-                    <button type="button" className="fg-pair-apply" onClick={() => onSendToPair(font, pair)}>
-                      Open in Font Pair
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        </div>
-        )}
-
-        {tab === 'about' && (
-          <FontAboutPanel font={font} id="fg-panel-about" labelledBy="fg-tab-about" />
-        )}
-
-        {tab === 'examples' && (
-          <FontExamplesPanel font={font} id="fg-panel-examples" labelledBy="fg-tab-examples" />
-        )}
-
-        {tab === 'inuse' && (
-          <FontInUsePanel font={font} id="fg-panel-inuse" labelledBy="fg-tab-inuse" />
-        )}
-
-        </div>
-
-        {/* PINNED ACTIONS. Every one of these used to sit past 1,700px of dialog
-            on a 900px screen, so the answer to "I like this one, now what" was
-            below the fold at the exact moment it was asked. "Take it further"
-            and the action row were also two bars doing one job — sending the
-            family somewhere — drawn differently. One bar now, with the two
-            hand-offs first because they are the reason this tool sits between
-            Font Pair and Type Scale. */}
-        <footer className="fg-detail-actions">
-          <button type="button" className="fg-detail-btn fg-detail-btn--primary" onClick={() => onSendToPair(font, null)}>
-            Find a pairing &rarr;
-          </button>
-          <button type="button" className="fg-detail-btn" onClick={() => onSendToScale(font)}>
-            Build a type scale &rarr;
-          </button>
-          <button type="button" className="fg-detail-btn" onClick={() => onCompare(font)} aria-pressed={inCompare}>
-            {inCompare ? 'In comparison' : 'Add to comparison'}
-          </button>
-          <button
-            type="button"
-            className="fg-detail-btn"
-            onClick={() => {
-              trackFontCopy(font.family)
-              onCopy?.(getFontImportUrl([{ family: font.family, weights: font.variants.slice(0, 4) }]))
-            }}
-          >
-            Copy import URL
-          </button>
-          <a
-            href={`https://fonts.google.com/specimen/${font.family.replace(/ /g, '+')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fg-detail-btn"
-          >
-            View on Google Fonts
-          </a>
-        </footer>
-      </div>
-    </div>
-  )
-}
-
 /* ── Page ──────────────────────────────────────────────────────────────────── */
 
 export default function FontGallery({ onCopy, toast }) {
   const navigate = useNavigate()
+  const mode = useLayoutName()
   const { setFonts } = useProject()
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
@@ -727,13 +531,9 @@ export default function FontGallery({ onCopy, toast }) {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
-  // 52, back up from the grid's 40. That 40 was chosen because three columns
-  // gave each specimen ~400px and 52px ellipsised the longer family names — the
-  // one thing a font gallery must never do to a name. A full-width row is not
-  // under that constraint: "Playfair Display" at 52px wants ~430px and has
-  // ~1,180px at 1440, so the reason for the smaller default has gone with the
-  // columns that caused it.
-  const [previewSize, setPreviewSize] = useState(52)
+  // The specimen size is the reader's choice once they make one; until then
+  // each layout opens at its own band size.
+  const [sizeOverride, setSizeOverride] = useState(null)
   const [page, setPage] = useState(1)
   // THE PAGE RESET, ADJUSTED DURING RENDER RATHER THAN IN AN EFFECT.
   // `useEffect(() => { setPage(1) }, [query, category, sort])` was the third
@@ -752,19 +552,27 @@ export default function FontGallery({ onCopy, toast }) {
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
   const [showCompare, setShowCompare] = useState(false)
+  const [view, setView] = useState('list')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const sentinelRef = useRef(null)
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
 
   const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
 
-  // The one catalogue figure that survived the hero (#surface-headers-read-as-ai).
-  // It is derived from the catalogue actually on screen, so a degraded fallback
-  // list scopes the search honestly rather than quoting the full catalogue's
-  // number. Rendered into the search placeholder, never as a standalone stat.
-  const searchPlaceholder = galleryCatalog.length
-    ? `Search ${galleryCatalog.length.toLocaleString()} families…`
-    : 'Search families…'
+  // The filtered figures are derived from the catalogue actually on screen, so
+  // a degraded fallback list scopes the search honestly rather than quoting the
+  // full catalogue's number. Both the count line and the search placeholder
+  // follow the category.
+  const inCategory = useMemo(
+    () => (category === 'all' ? galleryCatalog : galleryCatalog.filter(f => f.category === category)),
+    [galleryCatalog, category],
+  )
+  const rankOf = useMemo(() => new Map(galleryCatalog.map((f, i) => [f.family, i + 1])), [galleryCatalog])
+  const catPhrase = category === 'all' ? '' : `${catWord(category)} `
+  const searchPlaceholder = inCategory.length
+    ? `Search ${inCategory.length.toLocaleString()} ${catPhrase}${inCategory.length === 1 ? 'family' : 'families'}`
+    : 'Search families'
 
   const filtered = useMemo(() => {
     let out = galleryCatalog
@@ -795,7 +603,7 @@ export default function FontGallery({ onCopy, toast }) {
     setCompare(prev => {
       if (prev.some(f => f.family === font.family)) return prev.filter(f => f.family !== font.family)
       if (prev.length >= MAX_COMPARE) {
-        toast?.(`You can compare ${MAX_COMPARE} fonts at a time — remove one first`)
+        toast?.(`You can compare ${MAX_COMPARE} fonts at a time.`, 'warning')
         return prev
       }
       return [...prev, font]
@@ -836,22 +644,59 @@ export default function FontGallery({ onCopy, toast }) {
   }, [navigate, setFonts, toast])
 
   const ready = status !== 'loading'
-  const sizeControl = (
-    <label className="fg-size">
-      <span className="fg-size-k">Size</span>
-      {/* The ceiling is the reserved sample box, not a round number: a 72px
-          face needs ~84px of ascent plus descent inside its 92px line. */}
-      <input
-        type="range"
-        min="22"
-        max="72"
-        value={previewSize}
-        onChange={e => setPreviewSize(+e.target.value)}
-        aria-label="Specimen size"
-        aria-valuetext={`${previewSize} pixels`}
-      />
-      <span className="fg-size-v" aria-hidden="true">{previewSize}px</span>
-    </label>
+
+  // The tray is a bar fixed to the foot of the screen (on the tab bar at 390).
+  // Toasts and the feedback button read this class to ride above it. A phone and
+  // a tablet only show it once there is something to compare.
+  const trayShown = compare.length > 0 && !showCompare && (mode === 'wide' || compare.length >= 2)
+  useEffect(() => {
+    if (!trayShown) return undefined
+    const root = document.documentElement
+    root.classList.add('fg-tray')
+    return () => root.classList.remove('fg-tray')
+  }, [trayShown])
+
+  const tiles = view === 'grid'
+  // The sheet is a phone and tablet surface, so growing to the wide layout closes it.
+  if (mode === 'wide' && sheetOpen) setSheetOpen(false)
+  const sheetShown = sheetOpen && mode !== 'wide'
+  // One family stands for each category in the Filters sheet, so its pill is set
+  // in a face from that class.
+  const faces = useMemo(() => {
+    const out = {}
+    for (const f of galleryCatalog) if (!out[f.category]) out[f.category] = f
+    return out
+  }, [galleryCatalog])
+  // The empty state clears what narrows the list (search and category); the
+  // sheet's own Clear puts back the sheet's controls and leaves the search alone.
+  const clearFilters = () => { setQuery(''); setCategory('all') }
+  const sheetDirty = category !== 'all' || sort !== 'popularity' || sizeOverride !== null || view !== 'list' || previewText !== ''
+  const clearSheet = () => {
+    setCategory('all')
+    setSort('popularity')
+    setSizeOverride(null)
+    setView('list')
+    setPreviewText('')
+  }
+
+  const layout = LAYOUTS[mode]
+  const nameSize = sizeOverride ?? layout.name
+  const floor = Math.min(layout.floor, nameSize)
+  const band = Math.max(MIN_BAND, Math.round(nameSize * layout.ratio))
+  // The grid name follows the same Size choice, scaled to its cell.
+  const gridName = Math.max(16, Math.round(nameSize * layout.grid / layout.name))
+  const bandVars = varsRef({ '--fg-name': `${nameSize}px`, '--fg-band': `${band}px`, '--fg-gname': `${gridName}px` })
+
+  // The wide toolbar has room for a menu that reads "Size 96"; a tablet and a
+  // phone set the size with the slider in the Filters sheet.
+  const sizeSelect = (
+    <ToolSelect
+      label="Size"
+      ariaLabel="Specimen size"
+      value={nameSize}
+      options={SIZE_CHOICES.map(n => ({ value: n, label: String(n) }))}
+      onChange={v => setSizeOverride(Number(v))}
+    />
   )
   const categoryPills = (
     <ToolPills
@@ -872,65 +717,106 @@ export default function FontGallery({ onCopy, toast }) {
       disabled={!ready}
     />
   )
-
-  // Category, sort and size change what is shown and how; they sit on the row
-  // while it has room and move into the overflow (a sheet on a phone) when it
-  // does not. The row never wraps.
-  const items = [
-    { id: 'category', priority: 2, render: () => categoryPills, menu: () => categoryPills },
-    { id: 'sort', priority: 1, render: () => sortSelect, menu: () => sortSelect },
-    { id: 'size', priority: 0, render: () => sizeControl, menu: () => sizeControl },
-    { id: 'div', divider: true, align: 'end' },
-    {
-      id: 'pair',
-      priority: 3,
-      render: () => (
-        <ToolButton as={NavLink} to="/create/font-pair" icon="caret-right" className="fg-pair-link">
-          Build a font pair
-        </ToolButton>
-      ),
-      menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
-    },
-  ]
-
-  // Search and the preview words: the two fields a visitor types into, at the
-  // head of the results.
-  const fields = (
-    <div className="fg-controls">
-      <LibrarySearch
-        value={query}
-        onChange={setQuery}
-        placeholder={searchPlaceholder}
-        label="Search font families"
+  const searchField = (
+    <LibrarySearch
+      className="fg-search"
+      value={query}
+      onChange={setQuery}
+      placeholder={searchPlaceholder}
+      label="Search font families"
+    />
+  )
+  // On the toolbar the field has no room for a visible label; inside Filters it does.
+  const previewField = (labelled) => (
+    <label className={labelled ? 'fg-preview-field fg-preview-field--labelled' : 'fg-preview-field'}>
+      {labelled && <span className="fg-preview-k">Preview text</span>}
+      <input
+        type="text"
+        value={previewText}
+        maxLength={72}
+        spellCheck="false"
+        placeholder="Type your own words"
+        aria-label={labelled ? undefined : 'Preview text'}
+        onChange={e => setPreviewText(e.target.value)}
       />
-      <label className="fg-preview-field">
-        <span className="fg-preview-k">Preview text</span>
-        <input
-          type="text"
-          value={previewText}
-          maxLength={72}
-          spellCheck="false"
-          placeholder="Type something beautiful…"
-          onChange={e => setPreviewText(e.target.value)}
-        />
-      </label>
+    </label>
+  )
+  const pairLink = (
+    <ToolButton as={NavLink} to="/create/font-pair" icon="caret-right" className="fg-pair-link">
+      Build a font pair
+    </ToolButton>
+  )
+  const viewToggle = <ViewToggle view={view} onChange={setView} />
+  const filtersButton = (
+    <ToolButton onClick={() => setSheetOpen(true)} disabled={!ready} aria-haspopup="dialog" aria-expanded={sheetShown}>
+      Filters
+    </ToolButton>
+  )
+  const pairItem = {
+    id: 'pair',
+    priority: 9,
+    render: () => pairLink,
+    menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
+  }
+  const categoryItem = { id: 'category', priority: 5, render: () => categoryPills, menu: () => categoryPills }
+
+  // One item set per layout. The row never wraps: whatever does not fit goes
+  // into the Filters overflow, lowest priority first.
+  //   wide    every control on the row
+  //   tablet  category pills and Filters on the row; search, the view toggle and
+  //           the pair link sit on a second row
+  //   phone   the pair link on the row; search and Filters on a second row; the
+  //           rest is in the Filters sheet
+  let items
+  if (mode === 'wide') {
+    items = [
+      categoryItem,
+      { id: 'search', priority: 4, render: () => searchField, menu: () => searchField },
+      { id: 'preview', priority: 1, render: () => previewField(false), menu: () => previewField(true) },
+      { id: 'div', divider: true, align: 'end' },
+      { id: 'sort', priority: 3, render: () => sortSelect, menu: () => sortSelect },
+      { id: 'size', priority: 2, render: () => sizeSelect, menu: () => sizeSelect },
+      { id: 'view', priority: 2, render: () => viewToggle, menu: () => viewToggle },
+      pairItem,
+    ]
+  } else if (mode === 'tablet') {
+    items = [categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }]
+  } else {
+    items = [pairItem]
+  }
+
+  // The second toolbar row, below the sticky bar, for the layouts that cannot
+  // fit search on the first. It never wraps either.
+  const bar2 = mode === 'wide' ? null : (
+    <div className="fg-bar2">
+      {searchField}
+      {mode === 'phone' && filtersButton}
+      {mode === 'tablet' && viewToggle}
+      {mode === 'tablet' && pairLink}
     </div>
   )
 
-  // The layout, the fields and the row geometry are withheld from nothing
+  // The layout, the fields and the band geometry are withheld from nothing
   // while the catalogue resolves; only the filters wait, so half-working
   // filters never run over an empty list.
   if (!ready) {
     return (
-      <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
+      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
+        {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
-        <SkeletonRows />
+        <SkeletonRows vars={bandVars} />
       </ToolLayout>
     )
   }
 
+  const noun = filtered.length === 1 ? 'family' : 'families'
+  const query1 = query.trim()
+  const countText = `${filtered.length.toLocaleString()} ${catPhrase}${noun}`
+    + `${query1 ? ` ${filtered.length === 1 ? 'matches' : 'match'} “${query1}”` : ''}`
+    + `${sort === 'popularity' ? ', most popular first' : ''}`
+
   return (
-    <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
+    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
       <FontCatalogNotice
         online={online}
         degraded={degraded}
@@ -939,42 +825,38 @@ export default function FontGallery({ onCopy, toast }) {
         count={galleryCatalog.length}
       />
 
-      {fields}
+      {bar2}
 
       {/* The results are a region named by the live count line, so it stays
           in the landmark list in the empty state too. */}
-      <section className="fg-results" aria-labelledby="fg-count">
-        <p className="fg-count" id="fg-count" aria-live="polite">
-          {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
-          {category !== 'all' ? ` in ${CATS.find(c => c.id === category)?.label}` : ''}
-          {query.trim() ? ` matching “${query.trim()}”` : ''}
-        </p>
+      <section className={tiles ? 'fg-results fg-results--tiles' : 'fg-results'} aria-labelledby="fg-count" ref={bandVars}>
+        <p className="fg-count" id="fg-count" aria-live="polite">{countText}</p>
 
         {filtered.length === 0 ? (
           <LibraryEmpty
             className="fg-empty"
             title="Nothing matches that yet."
-            detail={`${query.trim()
-              ? `No family in the loaded catalogue contains “${query.trim()}”.`
-              : 'No family in the loaded catalogue is in this category.'} Clear the filters to see everything again.`}
-            onClear={() => { setQuery(''); setCategory('all') }}
+            onClear={clearFilters}
           />
         ) : (
           <>
-            <LibraryGrid className="fg-grid">
-              {paged.map((font, i) => (
+            <div className={tiles ? 'fg-grid fg-grid--tiles' : 'fg-grid'}>
+              {paged.map(font => (
                 <GalleryCard
                   key={font.family}
                   font={font}
-                  rank={i + 1}
+                  rank={sort === 'popularity' ? rankOf.get(font.family) : null}
                   onOpen={setSelected}
                   inCompare={compareIds.has(font.family)}
                   onToggleCompare={toggleCompare}
                   previewText={previewText}
-                  previewSize={previewSize}
+                  nameSize={nameSize}
+                  gridName={gridName}
+                  floor={floor}
+                  tiles={tiles}
                 />
               ))}
-            </LibraryGrid>
+            </div>
 
             {hasMore && (
               <>
@@ -990,27 +872,41 @@ export default function FontGallery({ onCopy, toast }) {
         )}
       </section>
 
-      {compare.length > 0 && !showCompare && (
-        <div className="fg-compare-tray">
-          <div className="fg-compare-tray-chips">
-            <span className="fg-compare-tray-label">Comparing</span>
-            {compare.map(f => (
-              <button
-                key={f.family}
-                type="button"
-                className="fg-compare-chip"
-                onClick={() => toggleCompare(f)}
-                aria-label={`Remove ${f.family} from the comparison`}
-              >
-                {f.family}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            ))}
-          </div>
+      {trayShown && (
+        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Fonts to compare" aria-live="polite">
+          {mode === 'wide' ? (
+            <>
+              <span className="fg-compare-tray-label">Comparing</span>
+              <div className="fg-compare-tray-chips">
+                {compare.map(f => (
+                  <button
+                    key={f.family}
+                    type="button"
+                    className="fg-compare-chip"
+                    onClick={() => toggleCompare(f)}
+                    aria-label={`Remove ${f.family} from the comparison`}
+                    ref={varsRef({ '--fg-ff': fontStack(f) })}
+                  >
+                    <span className="fg-compare-chip-name">{f.family}</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="fg-compare-tray-names">
+              {compare.map((f, i) => (
+                <span key={f.family}>
+                  {i > 0 && (i === compare.length - 1 ? ' and ' : ', ')}
+                  <span className="fg-compare-tray-name" ref={varsRef({ '--fg-ff': fontStack(f) })}>{f.family}</span>
+                </span>
+              ))}
+            </p>
+          )}
           <div className="fg-compare-tray-actions">
-            <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>
+            {mode === 'wide' && <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>}
             <button
               type="button"
               className="fg-more-btn fg-more-btn--primary"
@@ -1034,13 +930,41 @@ export default function FontGallery({ onCopy, toast }) {
           }}
           onOpen={(f) => { setShowCompare(false); setSelected(f) }}
           onCopy={onCopy}
+          onClear={mode === 'wide' ? undefined : () => { setCompare([]); setShowCompare(false) }}
+        />
+      )}
+
+      {sheetShown && (
+        <FiltersSheet
+          onClose={() => setSheetOpen(false)}
+          cats={CATS}
+          category={category}
+          onCategory={setCategory}
+          sorts={SORTS}
+          sort={sort}
+          onSort={setSort}
+          size={nameSize}
+          sizeMin={SIZE_MIN}
+          sizeMax={SIZE_MAX}
+          onSize={setSizeOverride}
+          view={view}
+          onView={setView}
+          previewText={previewText}
+          onPreviewText={setPreviewText}
+          faces={faces}
+          count={filtered.length}
+          canClear={sheetDirty}
+          onClear={clearSheet}
+          previewFirst={mode === 'phone'}
         />
       )}
 
       {selected && (
-        <DetailDialog
+        <FontDetailDialog
           font={selected}
           previewText={previewText}
+          categoryLabel={sentence(catWord(selected.category))}
+          layout={mode}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
           onCompare={compareFromDetail}

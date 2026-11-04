@@ -46,7 +46,7 @@ function stored(page, email) {
 
 /** Open a named project from the workspace, then its ⋯ menu. */
 async function openActions(page, projectName) {
-  await page.locator('.uh-card-name', { hasText: projectName }).click()
+  await page.locator(`.uh-card-name[data-project="${projectName}"]`).click()
   await expect(page.getByRole('heading', { level: 1, name: projectName })).toBeVisible()
   await page.getByRole('button', { name: `Actions for ${projectName}` }).click()
   // The menu is a real popover; wait for it rather than for a timeout.
@@ -122,7 +122,7 @@ test.describe('a returning free account managing its projects', () => {
 
   test('archiving marks it archived without destroying it, and Restore brings it back', async ({ page }) => {
     // The design's workspace keeps an archived project in "Recent projects" under an
-    // "Archived" tag (the old list hid it behind "Show archived (n)").
+    // "Archived" mark (the old list hid it behind "Show archived (n)").
     watch(page, 'a designer archiving a finished project')
     const account = await signIn(page, { plan: 'free', projects: 2 })
     await go(page, '/projects')
@@ -137,10 +137,10 @@ test.describe('a returning free account managing its projects', () => {
       'it is archived, not removed').toBe(true)
 
     await page.getByRole('link', { name: 'All projects' }).click()
-    await expect(page.locator('.proj-card', { hasText: 'Seeded Project 1' }).locator('.uh-card-tag'),
-      'and the workspace tells the account it still has it').toHaveText('Archived')
+    await expect(page.locator('.proj-card', { hasText: 'Seeded Project 1' }).locator('.uh-card-line'),
+      'and the workspace tells the account it still has it, marked archived').toHaveText(/^Archived · /)
 
-    await page.locator('.uh-card-name', { hasText: 'Seeded Project 1' }).click()
+    await page.locator('.uh-card-name[data-project="Seeded Project 1"]').click()
     await page.getByRole('button', { name: 'Restore', exact: true }).click()
     await expect.poll(() => stored(page, account.email).then((p) => p.find((x) => x.name === 'Seeded Project 1')?.archived),
       { message: 'Restore must un-archive it in the store' }).toBe(false)

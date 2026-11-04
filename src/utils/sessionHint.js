@@ -37,7 +37,7 @@
 // about that costs a wrong first paint, not access to anything.
 //
 // This is deliberately NOT written from src/contexts/AuthContext.jsx, which is
-// founder-gated (docs/reference/human-validation-zones.md). It is written by a
+// owner-gated. It is written by a
 // consumer of that context (src/hooks/useSessionHint.js), so the gated file is
 // untouched.
 

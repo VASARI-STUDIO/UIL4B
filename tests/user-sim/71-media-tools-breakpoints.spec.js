@@ -145,12 +145,13 @@ test.describe('/create/icons · the masthead pill says what the grid is showing'
     const sets = setsFor('anon')
     expect(sets, 'a signed-out visitor is entitled to no packs at all, so this would measure nothing').toBeGreaterThan(0)
     await expect(
-      page.locator('.ig-status'),
-      'the masthead never went back to stating the catalogue it is browsing',
-    ).toContainText(`${sets} sets`, { timeout: 20000 })
+      page.locator('.ig-end[data-gate="anon"] .ig-end-p'),
+      'the gate never went back to naming the sets this visitor is browsing',
+    ).toContainText(`from ${sets} sets`, { timeout: 20000 })
     // …and it is stating a POPULATED grid, not an empty one: the count is what
     // says the browse actually re-ran rather than the line merely re-rendering.
-    await expect(page.locator('.ig-status')).toContainText(/Showing [\d,]+ of [\d,]+/)
+    await expect(page.locator('.ig .ic').first()).toBeVisible()
+    await expect(page.locator('.ig-status')).toHaveCount(0)
     await expect(page.locator('.lib-net')).toHaveText('Live library connected')
     await expect(page.locator('.lib-net')).toHaveClass(/is-online/)
     await ctx.close()
@@ -303,7 +304,9 @@ for (const [width, status, body] of [
     await expect(page.locator('.alt-dropzone')).toBeVisible({ timeout: 15000 })
     await page.locator('.alt-dropzone input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
     await expect(page.locator('.alt-card-ready')).toBeVisible({ timeout: 10000 })
-    await page.locator('[data-tool-toolbar] .tl-btn--accent').click()
+    // The primary is in the toolbar from 768px and in the dock below it.
+    const primary = page.locator(width < 768 ? '[data-tl-dock] .tl-btn--accent' : '[data-tool-toolbar] .tl-btn--accent')
+    await primary.click()
 
     const card = page.locator('.alt-card.alt-card-error')
     await expect(card).toBeVisible({ timeout: 15000 })
@@ -321,9 +324,9 @@ for (const [width, status, body] of [
     expect(m.fontSize, 'the card did not inherit the message\'s 12px').not.toBe('12px')
     expect(m.msgPad, 'the message keeps its own padding').toBe('8px')
 
-    // The batch is over when the toolbar's primary is pressable again. If the
+    // The batch is over when the primary is pressable again. If the
     // old toast fired it is on screen right now — toasts stay for seconds.
-    await expect(page.locator('[data-tool-toolbar] .tl-btn--accent')).toBeEnabled({ timeout: 10000 })
+    await expect(primary).toBeEnabled({ timeout: 10000 })
     await expect(page.locator('.toast'), 'nothing was generated, so nothing says it was').not.toContainText(/Generated \d+ alt text/)
     await ctx.close()
   })
@@ -381,9 +384,9 @@ test('/create/semantic-color · the custom-hue slider is a 24px control that sti
   const { ctx, page } = await at(browser, 390)
   watch(page, 'a designer dialling a custom hue on a phone')
   await go(page, '/create/semantic-color')
-  // The role's preset is a select on this screen, and the
+  // The role's presets are chips on this screen, with Custom last, and the
   // slider is the shared tool slider (a 24px control over the drawn 6px track).
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
+  await page.getByRole('group', { name: 'Success preset' }).getByRole('button', { name: 'Custom' }).click()
   const slider = page.locator('.stc-hue input[type=range]').first()
   await slider.scrollIntoViewIfNeeded()
   await expect(slider).toBeVisible()

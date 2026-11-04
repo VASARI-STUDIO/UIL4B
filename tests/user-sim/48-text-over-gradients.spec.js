@@ -394,8 +394,8 @@ const MIN_MEASURED = 8
  *       monograms sat below the 3.0 large-text floor, worst 1.47:1 modelled
  *       over the whole gradient (s9, #059669 -> #6EE7B7) and 1.77:1 at the
  *       worst point actually behind a glyph.
- *       Four options were priced on [gradient-text-below-aa]; the founder
- *       picked per-item ink. CommunityCard.jsx now chooses the pole from each
+ *       Four options were priced on [gradient-text-below-aa]; per-item ink
+ *       was chosen. CommunityCard.jsx now chooses the pole from each
  *       card's OWN gradient via inkOnGradient() and sets --mono-ink/--mono-glow,
  *       and the rule's colour went opaque. NOT ONE CURATED COLOUR CHANGED.
  *       Worst across all twelve: 3.69:1 (s11, #7C3AED -> #C4B5FD), against 3.0.

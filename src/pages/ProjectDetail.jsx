@@ -9,17 +9,19 @@ import { buildCSSVars } from '../utils/exportBuilder'
 import { tintsCurrent } from '../utils/projectTints'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
+import IconPicker from '../components/userhome/IconPicker'
 import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
 import { usePrices, useProPrice } from '../hooks/usePrices'
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 import '../styles/pages/project.css'
-// `lazy` in this file is lazyRoute, not React's: if the file for the export panel
+import { readLastPick, resolvePreset } from '../config/dialogExport'
+// `lazy` in this file is lazyRoute, not React's: if the file for the export dialog
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 
-const ExportPanel = lazy(() => import('../components/ExportPanel'))
+const ExportDialog = lazy(() => import('../components/export/ExportDialog'))
 
 // ── ONE PROJECT ─────────────────────────────────────────────────────────────
 //
@@ -78,6 +80,8 @@ function ProjectDetail({ id, toast }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteText, setDeleteText] = useState('')
   const [exporting, setExporting] = useState(false)
+  // The pick the export dialog opens on, fixed when it opens.
+  const [exportPreset, setExportPreset] = useState(null)
   const copyTimer = useRef(null)
 
   const project = projects.find((p) => p.id === id)
@@ -127,7 +131,11 @@ function ProjectDetail({ id, toast }) {
   const freeSlots = Number.isFinite(projectLimit) ? projectLimit : null
 
   const openIn = (route) => { loadProject(project.id); navigate(route) }
-  const startExport = () => { loadProject(project.id); setExporting(true) }
+  const startExport = () => {
+    loadProject(project.id)
+    setExportPreset(resolvePreset(readLastPick()))
+    setExporting(true)
+  }
 
   const statusLine = project.archived
     ? `Archived, ${status.has}`
@@ -146,7 +154,7 @@ function ProjectDetail({ id, toast }) {
   const next = project.archived
     ? { label: 'Restore', run: () => { archiveProject(project.id); toast(`"${project.name}" restored`) } }
     : complete
-      ? { label: 'Export the project', run: startExport }
+      ? { label: 'Export project', run: startExport }
       : { label: 'Continue building', run: () => openIn(digest.next.tool) }
 
   const onCopy = (slot) => {
@@ -269,6 +277,8 @@ function ProjectDetail({ id, toast }) {
           <span className="pjd-progress-label">{status.has}</span>
         </div>
 
+        <IconPicker project={project} />
+
         <div className="pjd-slots">
           {slots.map((s) => (
             <section key={s.id} className={`pjd-slot${s.done ? ' is-done' : ''}`} aria-labelledby={`pjd-slot-${s.id}`}>
@@ -333,7 +343,7 @@ function ProjectDetail({ id, toast }) {
           </span>
           <button
             type="button"
-            className={`pjd-export-cta${complete ? ' is-accent' : ''}`}
+            className="pjd-export-cta"
             onClick={complete ? startExport : () => openIn(digest.next.tool)}
           >
             <Glyph name="download-simple" size={14} />
@@ -370,7 +380,10 @@ function ProjectDetail({ id, toast }) {
           {!isPro && !planLoading && (
             <div className="pjd-upgrade">
               <span className="pjd-upgrade-line">{UPGRADE_LINE}</span>
-              <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
+              <span className="pjd-upgrade-offer">
+                <Link to="/plans" className="pjd-upgrade-link">{upgrade.label}</Link>
+                {upgrade.billed && <span className="pjd-upgrade-billed">{upgrade.billed}</span>}
+              </span>
             </div>
           )}
         </div>
@@ -378,7 +391,7 @@ function ProjectDetail({ id, toast }) {
 
       {exporting && createPortal(
         <Suspense fallback={null}>
-          <ExportPanel onClose={() => setExporting(false)} />
+          <ExportDialog onClose={() => setExporting(false)} preset={exportPreset} projectId={project.id} />
         </Suspense>,
         document.querySelector('.app-shell'),
       )}

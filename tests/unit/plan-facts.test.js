@@ -63,6 +63,20 @@ test('the lines are derived from what the product enforces', () => {
   assert.equal(FREE_EXCLUSION, 'Small mark on exported files')
 })
 
+test('Pro has six ticks, in the order the card prints them, and the checkout reads the same array', () => {
+  assert.equal(PRO_POINTS.length, 6)
+  assert.match(PRO_POINTS[0], new RegExp(`^${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month$`))
+  assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing$/)
+  assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
+  assert.match(PRO_POINTS[3], /icons, at any size$/)
+  assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
+  assert.match(PRO_POINTS[5], /, with no UIL4B line on anything$/)
+  // Checkout builds its feature list straight from PRO_POINTS, so the card, the
+  // modal, Settings and the checkout summary cannot differ.
+  assert.match(code(SURFACES.checkout), /const FEATURES = PRO_POINTS\b/)
+  assert.match(code(SURFACES.modal), /const DEFAULT_FEATURES = PRO_POINTS\b/)
+})
+
 test('the cadences are exactly the buyable rungs of the ladder, yearly first choice', () => {
   assert.deepEqual(BILLING_OPTIONS.map((o) => o.id), PLAN_LADDER.filter((p) => p.checkoutPlan).map((p) => p.id))
   assert.equal(DEFAULT_BILLING, 'yearly')

@@ -1,14 +1,12 @@
 // THE ADMIN ALLOWLIST IS CONFIGURATION NOW, AND IT MUST FAIL CLOSED.
 //
-// ── What changed ────────────────────────────────────────────────────────────
+// ── Where the admin list lives ──────────────────────────────────────────────
 //
-// `export const ADMIN_EMAILS = ['<the founder's personal gmail>']` was written
-// out twice in tracked source — api/_lib/admin.js and api/_lib/plans.js — plus
-// a third time as a string comparison in firestore.rules. This repository is
-// public, so that published the one account whose compromise yields site-wide
-// admin AND the full user list, with the target named. The list is now the
-// ADMIN_EMAILS environment variable, parsed in exactly one place
-// (api/_lib/adminEmails.js).
+// The admin addresses are not written in tracked source. This repository is
+// public, so a literal `export const ADMIN_EMAILS = ['<a personal gmail>']`
+// would publish the one account whose compromise yields site-wide admin AND
+// the full user list, with the target named. The list is the ADMIN_EMAILS
+// environment variable, parsed in exactly one place (api/_lib/adminEmails.js).
 //
 // ── Why this file exists ────────────────────────────────────────────────────
 //
@@ -216,11 +214,11 @@ test('no Authorization header is 401, before the allowlist is consulted at all',
 // ── And the literal must not come back ──────────────────────────────────────
 
 test('no file under /api holds an email address any more', () => {
-  // The defect was a literal in tracked, public source. A future "just put it
-  // back for now" is exactly how it returns, so this reads the BYTES of every
+  // A literal in tracked source would publish the account. A future "just put
+  // it in for now" is exactly how one arrives, so this reads the BYTES of every
   // server file rather than trusting that the env var is still being used.
   //
-  // Address-SHAPED, not a search for one address: a grep for the founder's
+  // Address-SHAPED, not a search for one address: a grep for an admin's
   // gmail would go green the day somebody pastes a different one in. The same
   // net tests/unit/owner-email-not-public.test.js casts over dist/.
   const ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}/g

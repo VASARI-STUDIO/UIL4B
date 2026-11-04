@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { landOnHash } from '../../src/utils/hashLanding.js'
+import { landOnHash, refreshScrollLimit } from '../../src/utils/hashLanding.js'
 
 function frames(t) {
   let time = 0
@@ -144,4 +144,11 @@ test('empty hashes schedule nothing and malformed encoding does not throw', (t) 
   clock.tick()
   cancel()
   assert.equal(clock.pending.size, 0)
+})
+
+test('refreshScrollLimit re-measures Lenis and tolerates no scroller', () => {
+  let resizes = 0
+  refreshScrollLimit(() => ({ resize: () => { resizes++ } }))
+  assert.equal(resizes, 1)
+  assert.doesNotThrow(() => refreshScrollLimit(() => null))
 })

@@ -175,8 +175,8 @@ test.describe('palette library sections', () => {
     await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
   })
 
-  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE (founder decision,
-  // 2026-09-13). It was "Colour systems with a point of view - ours, plus the
+  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE.
+  // It was "Colour systems with a point of view - ours, plus the
   // published brand palettes behind the interfaces you already know...", the
   // same template the Gradient Library ran, and this test existed because the
   // first section blurb had opened on those same words 200px below it.

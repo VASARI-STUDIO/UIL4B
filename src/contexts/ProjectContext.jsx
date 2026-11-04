@@ -277,11 +277,18 @@ export function ProjectProvider({ children }) {
     })
     return copy.id
   }, [userKey, allProjects, projectLimit])
-  const updateProject = useCallback((id, patch) => {
+  // `opts.touch === false` writes the patch and leaves `updatedAt` alone. "Last edited" and the
+  // workspace's lead project are read from `updatedAt`, so a change that is not an edit of the
+  // design (the icon) must not move a project to the front. The caller stamps its own field
+  // (`iconAt`) so the change still syncs.
+  const updateProject = useCallback((id, patch, opts) => {
     if (!userKey) return
+    const touch = opts?.touch !== false
     setAllProjects(prev => {
       const list = prev[userKey] || []
-      const next = list.map(p => p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p)
+      const next = list.map(p => p.id === id
+        ? { ...p, ...patch, ...(touch ? { updatedAt: new Date().toISOString() } : null) }
+        : p)
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
@@ -364,8 +371,8 @@ export function ProjectProvider({ children }) {
   // ── NOTHING IS SEEDED. A NEW ACCOUNT STARTS EMPTY. ──────────────────────
   //
   // An effect here used to create a project called "Default Project" in any
-  // account that had none, on first sign-in. It is gone, on the founder's call
-  // of 2026-09-10, and the two things it cost are the reason:
+  // account that had none, on first sign-in. It is gone, and the two things it
+  // cost are the reason:
   //
   //   · IT SPENT A SLOT NOBODY ASKED FOR. The free plan saves three projects,
   //     the cap counts this array, and the seed was already in it — so a brand
@@ -376,9 +383,9 @@ export function ProjectProvider({ children }) {
   //     yet" panel that names the two tools to start with and offers the first
   //     save, and Onboarding's "Not now — take me to my projects" sends people
   //     straight at it. Signed in, the list was never empty, so that panel had
-  //     never once been on a real screen. The 2026-09-10 flow audit (#436)
-  //     measured both and put the choice to him; he chose to drop the seed so
-  //     the empty state does the teaching and the cap means three.
+  //     never once been on a real screen. Measuring both
+  //     favoured dropping the seed, so the empty state does the teaching and the
+  //     cap means three.
   //
   // REMOVING THIS TAKES NOTHING AWAY FROM ANYONE. The effect only ever WROTE,
   // and only into an account whose list was empty; no code path deleted or
@@ -573,9 +580,9 @@ export function ProjectProvider({ children }) {
     saveProject,
     duplicateProject,
     overwriteProject,
-    // Exported for the workspace's project icon, which is stored
-    // ON the project so it syncs with it. It stamps updatedAt like every other
-    // edit, which is what lets the change win a merge on the next device.
+    // Exported for the workspace's project icon, which is stored ON the project so it syncs with
+    // it. An icon write passes { touch: false } and stamps `iconAt` instead of `updatedAt`, so
+    // choosing an icon never changes when a project was last edited.
     updateProject,
     renameProject,
     loadProject,

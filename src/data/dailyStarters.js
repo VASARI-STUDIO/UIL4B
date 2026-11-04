@@ -4,8 +4,8 @@
 // ────────────────────────────────────────────────────────────────────────
 // WHY THIS REUSES THE HOMEPAGE'S MACHINERY RATHER THAN INVENTING ITS OWN
 // ────────────────────────────────────────────────────────────────────────
-// The founder asked for “suggested icons, palettes or gradients”. The homepage
-// already solved the hard half of that in `homepage-community-points-outward`:
+// This surface suggests icons, palettes or gradients. The homepage
+// already solved the hard half of that:
 // gradients come out of LIBRARY_GRADIENT_ROWS, palettes out of LIBRARY_PALETTE_ROWS, and
 // the link is built by gradientToolUrl() / paletteBuilderUrl() — the SAME
 // hand-offs the Discover galleries use, so the tool opens with the values loaded
@@ -19,7 +19,7 @@
 // ────────────────────────────────────────────────────────────────────────
 // WHY THERE ARE NO SUGGESTED ICONS
 // ────────────────────────────────────────────────────────────────────────
-// The founder's words were “icons, palettes OR gradients”, and two of the three
+// The brief allowed “icons, palettes OR gradients”, and two of the three
 // ship here. Icons are the one that cannot, honestly: /create/icons reads the
 // Iconify catalogue over the network (api.iconify.design), so a “suggested icon”
 // on this surface would be either a third-party request on the first paint of
@@ -28,7 +28,7 @@
 // meaningful sense. Gradients and palettes are local, static and already
 // hand-off-wired, so they are the two that can be suggested truthfully.
 //
-// This is a deliberate omission, not an oversight. If the founder wants icons
+// This is a deliberate omission, not an oversight. If icons are wanted
 // here, the honest way is a small pre-picked local set with its own provenance,
 // which is a separate piece of work.
 

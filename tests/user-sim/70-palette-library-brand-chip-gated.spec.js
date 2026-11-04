@@ -45,8 +45,7 @@ const MOOD_TRIGGER = '.pgl-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-
 const HEADING = 'Brand palettes are part of Pro'
 const FREE_BODY_COUNT = LIBRARY_PALETTES.length - GALLERY_TIER_LIMITS.free
 const FREE_BODY = `Another ${FREE_BODY_COUNT} palettes open with Pro, including every brand system.`
-const ANON_OPENS = GALLERY_TIER_LIMITS.free - GALLERY_TIER_LIMITS.anonymous
-const ANON_BODY = `Brand palettes need Pro. A free account opens ${ANON_OPENS} more curated palettes; Pro opens all ${LIBRARY_PALETTES.length}.`
+const ANON_BODY = `Pro opens all ${LIBRARY_PALETTES.length} palettes, brand systems included.`
 
 // What a Pro viewer lists under Brand: every brand system in the library.
 const PRO_BRAND_ROWS = LIBRARY_PALETTES.filter((p) => p.kind === 'brand').length

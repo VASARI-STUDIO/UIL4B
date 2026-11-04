@@ -437,9 +437,28 @@ test('S12 · the touch action row does not cover the palette it acts on', async 
 // it has to scroll; the defect was that nothing said so, and the primary submit
 // was sliced across the scroll boundary, which reads as a rendering fault.
 
+// The dialog opens over a page now (/login is a page of its own), from the
+// header's Menu. "Log in" carries no reason, so this is the chosen variant.
+async function openLoginDialog(browser, width, height) {
+  const t = await openTouch(browser, width, height, '/learn/help', width >= 700)
+  const desktopMenu = t.page.getByRole('button', { name: 'Menu', exact: true })
+  if (await desktopMenu.isVisible()) {
+    await desktopMenu.click()
+    await t.page.locator('.pnav-pop-item').filter({ hasText: /^Log in$/ }).click()
+  } else {
+    await t.page.getByRole('button', { name: 'Open menu' }).click()
+    await t.page.locator('.pnav-sheet').getByRole('button', { name: 'Log in', exact: true }).click()
+  }
+  await t.page.locator('.ui-modal').first().waitFor({ state: 'visible', timeout: 15000 })
+  await t.page.waitForTimeout(400)
+  return t
+}
+
 async function loginGeometry(page) {
   return page.evaluate(() => {
-    const m = document.querySelector('.ui-modal')
+    // The chosen variant at 768 and up is a clipped two-pane dialog whose form
+    // pane is the thing that scrolls, so that is what is measured then.
+    const m = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-modal')
     const mr = m.getBoundingClientRect()
     const visibleHeight = (el) => {
       const r = el.getBoundingClientRect()
@@ -475,7 +494,7 @@ async function loginGeometry(page) {
 // nothing should be buried at all; before the fix Forgot password? was.
 for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   test(`S7 · Login at ${w}x${h} shows a whole Sign In button and does not bury sign-up`, async ({ browser }) => {
-    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+    const { ctx, page } = await openLoginDialog(browser, w, h)
     const g = await loginGeometry(page)
     await ctx.close()
 
@@ -499,17 +518,19 @@ for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   })
 }
 
-test('S7 · portrait viewports still need no scrolling at all', async ({ browser }) => {
-  // The short-height rules must not leak upward. These four were measured clean
-  // by the audit and are the regression guard for the max-height:460px block.
-  for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
-    const { ctx, page } = await openTouch(browser, w, h, '/login', w >= 700, '.ui-modal')
+// One test per viewport: each opens its own context and walks the nav to the
+// dialog, which is too much for one test's time budget when run in a loop.
+// The short-height rules must not leak upward. These four were measured clean
+// by the audit and are the regression guard for the max-height:460px block.
+for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
+  test(`S7 · portrait ${w}x${h} still needs no scrolling at all`, async ({ browser }) => {
+    const { ctx, page } = await openLoginDialog(browser, w, h)
     const g = await loginGeometry(page)
     await ctx.close()
     expect(g.hiddenPx, `${w}x${h}: the login dialog scrolls by ${g.hiddenPx}px and should not`).toBe(0)
     expect(g.submitVisibleH).toBe(g.submitH)
-  }
-})
+  })
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // S8 · every Settings section is on screen, and no label loses a letter
@@ -561,7 +582,7 @@ test('S8 · all five Settings sections are reachable without swiping', async ({ 
 
 test('S8 · no Settings section label spills outside its own card', async ({ browser }) => {
   // Range over the rendered glyphs, not innerText — innerText reads
-  // "Data Management" whether or not the final t is on screen.
+  // "Your data" whether or not the final t is on screen.
   const damage = []
   for (const [w, h] of SETTINGS_VIEWPORTS) {
     const { ctx, page } = await openTouch(browser, w, h, '/settings', w >= 700, '.settings-nav')
@@ -722,12 +743,12 @@ test('S9 · opening a panel gives its links back to the keyboard', async ({ brow
     const b = document.getElementById(pid)
     return {
       open: b.classList.contains('is-open'),
-      inert: b.hasAttribute('inert'),
+      hidden: b.hasAttribute('hidden'),
       height: Math.round(b.querySelector('.ic-acc-body-inner').getBoundingClientRect().height),
     }
   }, id)
   expect(state.open).toBe(true)
-  expect(state.inert, 'inert must lift when the panel opens').toBe(false)
+  expect(state.hidden, 'hidden must lift when the panel opens').toBe(false)
   expect(state.height, 'an open panel should have real height').toBeGreaterThan(0)
 
   await page.evaluate((pid) => {
@@ -757,13 +778,13 @@ test('S9 · opening a panel gives its links back to the keyboard', async ({ brow
 // container's box.
 const STC_VIEWPORTS = [[320, 568], [360, 560], [390, 844], [430, 932], [560, 800], [640, 800], [700, 800], [768, 1024]]
 
-test('S1 · every tone in every ramp is on screen, with its hex', async ({ browser }) => {
+test('S1 · every tone in every ramp is on screen, labelled by its step, with its hex in the name', async ({ browser }) => {
   const damage = []
   for (const [w, h] of STC_VIEWPORTS) {
     const { ctx, page } = await openTouch(browser, w, h, '/color/semantic', w >= 700, '.stc-ramp')
     const r = await page.evaluate(() => {
       const ramps = [...document.querySelectorAll('.stc-ramp')]
-      let hiddenCells = 0, scrollers = 0, tiny = 0, clipped = 0, sample = ''
+      let hiddenCells = 0, scrollers = 0, tiny = 0, clipped = 0, faceHex = 0, sample = ''
       for (const ramp of ramps) {
         const rb = ramp.getBoundingClientRect()
         if (ramp.scrollWidth > ramp.clientWidth + 1) scrollers++
@@ -771,8 +792,11 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
           const cr = cell.getBoundingClientRect()
           if (cr.left < rb.left - 0.5 || cr.right > rb.right + 0.5) hiddenCells++
           if (cr.width < 24 || cr.height < 24) tiny++
-          // The tone number is the drawn label (D:934) and a clipped one is
-          // the S15 fault in a new place. The hex is in the cell's name.
+          // The step number is the drawn label and a clipped one is the S15
+          // fault in a new place. The face carries the step only; the hex is in
+          // the cell's name (and on the clipboard), so a hex printed on the
+          // face is counted as damage below.
+          if (/#[0-9a-f]{3,6}/i.test(cell.textContent || '')) faceHex++
           for (const t of cell.querySelectorAll('.stc-cell-tone')) {
             const range = document.createRange()
             range.selectNodeContents(t)
@@ -786,7 +810,8 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
         ramps: ramps.length,
         cells: document.querySelectorAll('.stc-cell').length,
         hexShown: [...document.querySelectorAll('.stc-cell')].filter((e) => /#[0-9A-F]{6}/.test(e.getAttribute('aria-label') || '')).length,
-        hiddenCells, scrollers, tiny, clipped, sample,
+        hiddenCells, scrollers, tiny, clipped, faceHex, sample,
+        faceSteps: [...document.querySelectorAll('.stc-cell')].map((e) => (e.textContent || '').trim()).slice(0, 10),
       }
     })
     await ctx.close()
@@ -803,6 +828,8 @@ test('S1 · every tone in every ramp is on screen, with its hex', async ({ brows
     if (r.hexShown !== expectedCells) damage.push(`${w}x${h}: only ${r.hexShown} of ${expectedCells} tone cells name their hex — the tool's output is unreadable here`)
     if (r.tiny) damage.push(`${w}x${h}: ${r.tiny} tone cell(s) under 24px`)
     if (r.clipped) damage.push(`${w}x${h}: ${r.clipped} clipped label(s), e.g. ${r.sample}`)
+    if (r.faceHex) damage.push(`${w}x${h}: ${r.faceHex} tone cell(s) print a hex on the face (the step number is all a cell shows)`)
+    expect(r.faceSteps, `${w}x${h}: a ramp's cells read 50 to 900`).toEqual(['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'])
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
@@ -869,41 +896,45 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
 // ──────────────────────────────────────────────────────────────────────────────
 // The 834px tool stack [palette-swatch-actions-tablet]
 // ──────────────────────────────────────────────────────────────────────────────
-// The REVEAL_CASES above ask whether a control is invisible-but-live. This asks
-// the opposite question, and neither one implies the other: are there simply
-// TOO MANY of them, permanently, on top of the thing the page exists to show?
+// From 768px up a swatch column is vertical and the quick tools (Edit in HCT,
+// Swap, Remove) run down it between the lock and the overflow control. A mouse
+// reveals them on hover; a device with no hover has nothing to reveal them with,
+// so on a touch tablet they are on show from the start and have to be pressable
+// at rest: painted, taking pointer events, and not covered by anything else.
+// The overflow control stays beside them.
 //
-// The defect was composed, not written. Above 768px a swatch column is vertical
-// and the tool stack runs down it; `@media(hover:hover)` was the only thing
-// hiding that stack at rest. An iPad in landscape is 834px wide AND reports
-// hover:none, so it took the desktop vertical column and the permanent
-// visibility together: seven unlabelled 32px icons stacked over ~450px of
-// swatch, five columns at once, 35 buttons sitting on the colours. 1280 hid
-// them until hover; 390 laid them out as a short row under the name and hex.
+// The 700px-tall viewport is shorter than 760px. A mouse screen that short swaps
+// the stack for the overflow menu; a touch screen keeps it. Under 600px tall
+// (a landscape phone, 768px or wider) every pointer drops the stack, which would
+// otherwise push the name, hex and ramp off screen, and the column keeps only
+// Lock and More actions.
 //
-// COUNT is what is asserted: only the lock and the overflow control are on a
-// colour in this band. (PLACEMENT was asserted too, the row below the name and
-// hex; the design's drawn board puts the lock at the column's top corner, D:1021, so
-// that half went with the redraw.)
-//
-// And the overflow control must be PRESENT, not merely the others absent: the
-// cheap way to pass a count assertion is to delete the actions outright, which
-// would be a worse product than the one being fixed.
-//
-// REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what makes this bug
-// exist. A desktop Chromium narrowed to 834px reports hover:hover, renders the
-// correct desktop layout, and would pass every assertion below on a fully
-// reverted stylesheet. The caps assertion is therefore not a formality — it is
-// the half that makes the rest mean anything.
+// REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what puts a device in
+// this branch of the stylesheet. A desktop Chromium narrowed to 834px reports
+// hover:hover, hides the stack until hover, and would fail every assertion below
+// for the wrong reason. The caps assertion is therefore not a formality: it
+// makes the rest mean what they say.
 const PINNED_BAND = [
-  [834, 1194],  // iPad portrait — the width the audit reported
-  [1180, 820],  // iPad Pro landscape
-  [1024, 768],  // the old 4:3 tablet, still above the 768px cutover
+  // [width, height, whether the quick stack is expected]
+  [834, 1194, true],   // iPad portrait
+  [1180, 820, true],   // iPad Pro landscape
+  [1024, 768, true],   // the old 4:3 tablet, still above the 768px cutover
+  [1024, 700, true],   // a touch screen under 760px tall keeps the stack
+  [844, 390, false],   // a landscape phone drops the stack
 ]
 
-test('S11b · the touch band collapses the swatch tool stack instead of pinning seven icons open', async ({ browser }) => {
+// [name, label, is a quick tool]
+const TABLET_TOOLS = [
+  ['Lock', /^(Lock|Unlock) /, false],
+  ['Edit in HCT', /^Edit .+ in HCT$/, true],
+  ['Swap', /^Choose a direction to swap /, true],
+  ['Remove', /^Remove /, true],
+  ['More actions', /^More actions for /, false],
+]
+
+test('S11b · on a touch tablet the swatch quick tools are on show and pressable at rest', async ({ browser }) => {
   const damage = []
-  for (const [w, h] of PINNED_BAND) {
+  for (const [w, h, withStack] of PINNED_BAND) {
     const { ctx, page } = await openTouch(browser, w, h, '/create/palette', true, '.plb-col')
 
     const caps = await page.evaluate(() => ({
@@ -913,54 +944,63 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
     expect(caps, `${w}x${h}: device emulation lost — this test is meaningless without hover:none, because the defect only exists on a device that cannot hover`)
       .toEqual({ hover: false, coarse: true })
 
-    const r = await page.evaluate(() => {
-      const shown = (el) => {
-        if (!el || el.offsetParent === null) return false
-        const s = getComputedStyle(el)
-        if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false
-        const b = el.getBoundingClientRect()
-        return b.width > 0 && b.height > 0
+    const r = await page.evaluate((wanted) => {
+      const effOpacity = (el) => {
+        let o = 1
+        for (let n = el; n && n !== document.body; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity)
+        return o
       }
       const cols = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)
       return cols.map((col, i) => {
-        const tools = [...col.querySelectorAll('.plb-tool')].filter(shown)
-        return {
-          i,
-          count: tools.length,
-          labels: tools.map(t => t.getAttribute('aria-label') || t.className),
-          hasOverflow: tools.some(t => t.classList.contains('plb-tool--more')),
-        }
+        const buttons = [...col.querySelectorAll('.plb-tool')]
+        const found = wanted.map(([name, source, quick]) => {
+          const re = new RegExp(source)
+          const tool = buttons.find(t => re.test(t.getAttribute('aria-label') || ''))
+          if (!tool) return { name, quick, missing: true }
+          if (tool.getBoundingClientRect().width > 0) tool.scrollIntoView({ block: 'nearest' })
+          const b = tool.getBoundingClientRect()
+          const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+          return {
+            name,
+            quick,
+            missing: false,
+            laidOut: b.width > 0 && b.height > 0,
+            opacity: effOpacity(tool),
+            pointerEvents: getComputedStyle(tool).pointerEvents,
+            hitsItself: !!hit && (hit === tool || tool.contains(hit)),
+          }
+        })
+        return { i, found }
       })
-    })
+    }, TABLET_TOOLS.map(([name, re, quick]) => [name, re.source, quick]))
     await ctx.close()
 
     // The sample cannot collapse to nothing: five columns, each with controls.
     expect(r.length, `${w}x${h}: no palette columns rendered, so this proves nothing`).toBeGreaterThan(2)
 
     for (const c of r) {
-      if (c.count > 2) {
-        damage.push(`${w}x${h} col${c.i}: ${c.count} controls pinned open — ${c.labels.join(', ')}`)
-      }
-      if (c.count === 0) {
-        damage.push(`${w}x${h} col${c.i}: no controls at all — touch must keep persistent controls`)
-      }
-      if (!c.hasOverflow) {
-        damage.push(`${w}x${h} col${c.i}: no .plb-tool--more, so the hidden actions are unreachable on touch`)
+      for (const t of c.found) {
+        if (t.quick && !withStack) {
+          if (!t.missing && t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} is laid out, but this screen is too short for the stack`)
+          continue
+        }
+        if (t.missing) { damage.push(`${w}x${h} col${c.i}: no ${t.name} control`); continue }
+        if (!t.laidOut) damage.push(`${w}x${h} col${c.i}: ${t.name} takes no space`)
+        else if (t.opacity < 0.99) damage.push(`${w}x${h} col${c.i}: ${t.name} is not painted at rest (opacity ${t.opacity})`)
+        else if (t.pointerEvents === 'none') damage.push(`${w}x${h} col${c.i}: ${t.name} takes no pointer events at rest`)
+        else if (!t.hitsItself) damage.push(`${w}x${h} col${c.i}: ${t.name} is covered by another element`)
       }
     }
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
 
-// REVERSED 2026-09-13, BY THE FOUNDER, AFTER USING THE PAGE. This test used to
+// REVERSED AFTER USING THE PAGE. This test used to
 // assert the opposite — that the phone row keeps all seven controls — on the
 // grounds that an audit had called that row "legible and clearly authored" and
 // that adding the overflow control there "would be an eighth icon in a row that
-// already works". The founder looked at /create/palette at ~660px and said:
-//
-//   "im finding alot of basic UI problems that can be replaced with better UI
-//    design such as replacing some buttons with a drop down or other large
-//    issues"
+// already works". Looking at /create/palette at ~660px showed basic UI problems
+// that better UI design fixes, such as replacing some buttons with a drop down.
 //
 // The old reasoning is answered by the SHAPE of the change rather than ignored:
 // the overflow control does not join seven icons, it replaces five of them. The
@@ -972,8 +1012,8 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
 // covered at 390x568, 390x640 or 320x568, and `.plb-role` — which had been
 // `display:none` below 769px — back in the 128px that frees.
 //
-// If this is ever reversed again, reverse it because the founder looked at the
-// rendered page again, not because an audit preferred the older row.
+// If this is ever reversed again, reverse it because the rendered page was
+// looked at again, not because an audit preferred the older row.
 //
 // The design's drawn board (D:1017-1043) puts one control on a colour, the
 // lock at its top corner; copy is the hex itself. The row is now Lock and the

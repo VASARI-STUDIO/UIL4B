@@ -9,7 +9,9 @@ import { go, watch } from './helpers.js'
 
 /* ── 1 · The adjust tracks preview the palette they would produce ─────────────
  * The drawn Adjust bar (D:1037-1044) paints each slider as a 20px gradient
- * pill with a light thumb that carries its own dark shadow. The earlier "lens"
+ * pill (the 24px control around it is taller; the focus ring is drawn on the
+ * pill itself, see 143-palette-colour-values-css-sheet-adjust) with a light
+ * 15px thumb centred in it that carries its own dark shadow. The earlier "lens"
  * thumb, which sampled the track colour into its centre, went with that
  * redraw; what these tests keep is that the tracks are painted from the
  * palette, follow each other, never rebuild under their own thumb, and that
@@ -243,45 +245,67 @@ test.describe('Gradient Generator · adding and fine-tuning a stop', () => {
   })
 })
 
-/* ── 5 · Submitting a gradient degrades honestly ──────────────────────────── */
+/* ── 5 · The gradient tool no longer offers "Submit for review" ───────────────
+ * Submitting moved to the account (Save or share, then the community queue
+ * from the gallery). The old toolbar item, its dialog and the browser-held
+ * queue write are gone; the sign-in and save paths are covered by
+ * 169-gradient-save-share.spec.js. */
 
-test.describe('Gradient Generator · submit for review', () => {
-  test('a signed-out creator is asked to sign in before the review form exists', async ({ page }) => {
-    watch(page, 'signed-out designer sharing a gradient')
+test.describe('Gradient Generator · no Submit for review', () => {
+  test('the toolbar has no Submit for review button and nothing is queued in the browser', async ({ page }) => {
+    watch(page, 'designer looking for the old submit button')
     await go(page, '/create/gradient')
+    // Positive control: the toolbar rendered and its primary is the new one,
+    // so the absences below are not "the page never loaded".
+    await expect(page.getByRole('button', { name: 'Save or share' })).toBeVisible()
 
-    const submit = page.getByRole('button', { name: 'Submit for review' })
-    await submit.click()
-    // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". The log-in
-    // title would be the defect here: the gate is only
-    // reached when there is no uid, so everybody who sees it is somebody with
-    // no account, and it was greeting them with a form for one they have never
-    // made. `signup: true` now opens it on the create-account form, matching
-    // PaletteBuilder's save and the export gate. Nobody is stranded — the
-    // dialog's own toggle reads "Already have an account? Sign in".
-    const login = page.getByRole('dialog', { name: /create your free account/i })
-    await expect(login).toBeVisible()
-    // What the gate is really for is unchanged and still checked: it names the
-    // action, it states the review promise, and the review form does not exist
-    // behind it.
-    await expect(login).toContainText('submit a gradient to the community library')
-    await expect(login).toContainText('reviewed before it appears')
-    await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
-  })
-
-  test('dismissing the sign-in gate queues nothing and returns focus to submit', async ({ page }) => {
-    watch(page, 'designer dismissing community sign-in')
-    await go(page, '/create/gradient')
-    const submit = page.getByRole('button', { name: 'Submit for review' })
-    await submit.click()
-    await page.keyboard.press('Escape')
-
-    // The create-account title, matching the gate above. Left as the log-in
-    // title this would pass on a locator that matches nothing, which is a
-    // dismissal test that stopped checking the dismissal.
-    await expect(page.getByRole('dialog', { name: /create your free account/i })).toBeHidden()
-    await expect(submit).toBeFocused()
+    await expect(page.getByRole('button', { name: /submit for review/i })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: /submit for review/i })).toHaveCount(0)
     await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
     await expect.poll(() => page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()
+  })
+})
+
+/* ── 6 · Stop swatches pick, rail handles open the tints menu ─────────────────
+ * The swatch in each stop row is a colour-picker trigger for THAT stop (it used
+ * to need the stop selected first), and a right-click on a stop, in the list or
+ * on the rail, is a menu gesture, not the start of a drag and not an "add a
+ * stop" press. The "Select stop N, #HEX" buttons keep their names. */
+
+test.describe('Gradient Generator · stop swatches and right-click', () => {
+  const selectBtn = (page, n) => page.getByRole('button', { name: new RegExp(`^Select stop ${n}, #[0-9A-F]{6}$`) })
+
+  test('a stop row swatch opens that stop\u2019s picker and changes only that stop', async ({ page }) => {
+    watch(page, 'designer recolouring the middle stop')
+    await go(page, '/create/gradient')
+    const before = []
+    for (let i = 0; i < 3; i++) before.push(await selectBtn(page, i + 1).getAttribute('aria-label'))
+
+    await page.getByRole('button', { name: 'Pick stop 2 colour', exact: true }).click()
+    await expect(page.locator('.cpk-pop')).toBeVisible()
+    await page.locator('.cpk-hex').fill('#FF0000')
+    await page.locator('.cpk-hex').press('Enter')
+
+    await expect(selectBtn(page, 2)).toHaveAccessibleName('Select stop 2, #FF0000')
+    expect(await selectBtn(page, 1).getAttribute('aria-label'), 'stop 1 untouched').toBe(before[0])
+    expect(await selectBtn(page, 3).getAttribute('aria-label'), 'stop 3 untouched').toBe(before[2])
+    // Opening a stop's own picker also selects it.
+    await expect(selectBtn(page, 2)).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('a right-click on a rail handle opens the tints menu, adds no stop and moves none', async ({ page }) => {
+    watch(page, 'designer right-clicking a stop on the rail')
+    await go(page, '/create/gradient')
+    const handles = page.locator('.grd-handle')
+    await expect(handles).toHaveCount(3)
+    const handle = page.getByRole('button', { name: /^Gradient stop 2 at \d+%/ })
+    const labelBefore = await handle.getAttribute('aria-label')
+    await handle.scrollIntoViewIfNeeded()
+
+    await handle.click({ button: 'right' })
+    await expect(page.getByRole('menu', { name: /^Tints of stop 2,/ })).toBeVisible()
+    await expect(handles, 'a right-click is not an add-a-stop press').toHaveCount(3)
+    await expect(handle, 'a right-click is not a drag').toHaveAttribute('aria-label', labelBefore)
+    await expect(page.locator('.grd-count')).toHaveText('3 stops')
   })
 })

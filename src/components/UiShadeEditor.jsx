@@ -53,9 +53,9 @@ export default function UiShadeEditor({ group, item, onClose, onSave }) {
     closeRef.current = onClose
   }, [onClose])
 
-  // The ref indirection is what makes this identity stable. useModalDialog keys
-  // its effect on the close handler, so passing `onClose` straight through
-  // would tear down and re-apply the scroll lock on every parent render.
+  // The ref indirection keeps this identity stable. useModalDialog no longer keys
+  // its effect on the close handler, so this is belt and braces: passing `onClose`
+  // straight through would now be safe too.
   const stableClose = useCallback(() => closeRef.current(), [])
 
   // This had a complete, correct focus trap of its own — it was the second of

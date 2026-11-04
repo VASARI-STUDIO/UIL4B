@@ -226,7 +226,7 @@ test('Resend and Dismiss have 44px targets on a phone and on any touch screen, w
   const css = stripComments(read('src/styles/global.css'))
   const block = css.match(/@media \(max-width:520px\),\(pointer:coarse\)\{[\s\S]*?\n\}/)
   assert.ok(block, 'a block for narrow widths and touch screens exists')
-  assert.match(block[0], /\.verify-notice \.btn-s::after\{[^}]*inset:-8px 0/)
+  assert.match(block[0], /\.verify-notice \.btn-s::after\{[^}]*inset:-9px 0/)
   assert.match(block[0], /\.verify-notice \.sync-notice-dismiss::after\{[^}]*inset:-10px -14px -10px -6px/)
   assert.doesNotMatch(block[0], /min-height|padding/)
 })
@@ -240,12 +240,15 @@ test('a keyboard landing on <main> draws no page-sized frame', () => {
 test('signing in from the signed-out landing re-reads the account and says the answer', () => {
   const settings = stripComments(read('src/pages/Settings.jsx'))
   assert.match(settings, /requireLogin\('finish verifying your email'\)\.then\(\(signedIn\) =>/)
-  assert.match(settings, /if \(signedIn\) \{\s*setActive\('account'\)\s*setPhoneView\('section'\)\s*setFinishAfterSignIn\(true\)/)
+  // Account opens as a section (a history entry on a phone) before the re-read.
+  // Only while Settings is still the page on screen: the toast outlives it.
+  assert.match(settings, /if \(signedIn && mountedRef\.current && window\.location\.pathname === here\.pathname\) \{\s*setActive\('account'\)\s*navigate\([^\n]*section: 'account'[^\n]*\)\s*setFinishAfterSignIn\(true\)/)
   // The re-read runs once the account is in (the callback belongs to the signed-in user).
   assert.match(settings, /if \(!finishAfterSignIn \|\| !user\) return\s*setFinishAfterSignIn\(false\)\s*refreshEmailVerified\(\)\.then/)
   // An account that changed mid-read answers null, which says nothing.
   const refresh = callbackBody(stripComments(read('src/contexts/AuthContext.jsx')), 'refreshEmailVerified')
-  assert.match(refresh, /firebaseUser !== A\.auth\.currentUser\) return null/)
+  assert.match(refresh, /reloadVerified\(A, firebaseUser\)/)
+  assert.match(refresh, /if \(verified === null\) return null/)
   assert.equal(verifiedLandingMessage({ signedIn: true, verified: null }), null)
 })
 

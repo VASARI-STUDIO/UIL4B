@@ -26,6 +26,8 @@ import { buildBrandGuidelines, guidelineSections, readGuidelines } from '../../s
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { EXPORT_FORMATS, proOnlyFormats } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
+import { formatFileName } from '../../src/utils/exportFileName.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -33,7 +35,9 @@ const stripComments = (src) => src
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
   .replace(/^\s*\/\/.*$/gm, ' ')
 
-const PANEL = read('src/components/ExportPanel.jsx')
+// The export engine makes the file; the dialog's steps decide what is offered beside it.
+const RUNNER = read('src/hooks/useExportRunner.js')
+const STEPS = read('src/components/export/ExportSteps.jsx')
 
 const DESIGN = {
   palette: {
@@ -62,8 +66,8 @@ const pageCount = (html) => (html.match(/<section class="sl[ "]/g) || []).length
 
 test('it has the furniture that makes it a brand book', () => {
   // Cover, numbered section openings, a running rail with a folio, a rationale
-  // beside every title, named swatches and alphabet grids. These are what the
-  // founder's references are made of, and losing any of them silently is the
+  // beside every title, named swatches and type spreads. These are what the
+  // reference brand books are made of, and losing any of them silently is the
   // regression worth catching.
   assert.match(DOC, /class="sl sl-cover"/, 'a cover')
   assert.match(DOC, /class="sl sl-open"/, 'section openings')
@@ -71,7 +75,7 @@ test('it has the furniture that makes it a brand book', () => {
   assert.match(DOC, /class="rail-folio"/, 'a printed page number')
   assert.match(DOC, /class="hd-notes"/, 'a rationale beside the page title')
   assert.match(DOC, /class="sw-name"/, 'swatches carrying a name, not only a hex')
-  assert.match(DOC, /class="alpha"/, 'the boxed alphabet grid')
+  assert.match(DOC, /class="tf-spec"/, 'a type spread with its sentence and glyph strip')
 })
 
 test('it is 16:9 and a plausible length', () => {
@@ -95,30 +99,33 @@ test('it is not the design system book at another paper size', () => {
   for (const marker of ['class="bd-chip"', 'class="mx"', 'class="pg pg-contents"']) {
     assert.ok(!DOC.includes(marker), `the guidelines have adopted the book's ${marker}`)
   }
-  for (const marker of ['class="alpha"', 'class="rail"', 'class="op-field"']) {
+  for (const marker of ['class="tf-spec"', 'class="rail"', 'class="op-field"']) {
     assert.ok(!BOOK.includes(marker), `the book has adopted the guidelines' ${marker}`)
   }
 })
 
-test('the sections are numbered from 01 with no gaps, whatever is present', () => {
+test('the section openings follow what is present, with no numeral to leave a hole', () => {
   // A "02" under a chapter that does not exist is the clearest possible tell
-  // that a fixed template had a piece removed. The numbering is therefore
-  // decided AFTER the sections, and this proves it in both shapes.
-  const nums = (html) => [...html.matchAll(/class="op-num">(\d+)</g)].map(m => Number(m[1]))
-  const withLogo = nums(DOC)
-  const bare = nums(BARE)
-  assert.deepEqual(withLogo, [1, 2, 3], 'a design with a logo should open three numbered sections')
-  assert.deepEqual(bare, [1, 2], 'without a logo the remaining sections must renumber from 01')
-  assert.ok(DOC.includes('>01</span> Logo') || /op-num">01<\/span> Logo/.test(DOC))
-  assert.match(BARE, /op-num">01<\/span> Colour/,
-    'Colour is not 01 in a document with no logo section — the numbering has a hole in it')
+  // that a fixed template had a piece removed. The openings now carry no numeral at all,
+  // and the sections are decided AFTER what is present: this proves both shapes.
+  const heads = (html) => [...html.matchAll(/class="op-head">([^<]*)</g)].map(m => m[1].trim())
+  assert.deepEqual(heads(DOC), ['Logo', 'Colour', 'Typography'], 'a design with a logo should open three sections')
+  assert.deepEqual(heads(BARE), ['Colour', 'Typography'], 'without a logo there is no Logo opening and nothing in its place')
+  for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
+    assert.ok(!html.includes('op-num'), `${label}: an opening still prints a section numeral`)
+  }
 })
 
-test('the folios run 01..n with none missing and none repeated', () => {
+test('the folio is the slide place in the PDF, the cover is 1, and openings carry none', () => {
   for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
-    const folios = [...html.matchAll(/class="rail-folio">(\d+)</g)].map(m => Number(m[1]))
-    assert.ok(folios.length >= 5, `${label}: too few numbered pages to be a document`)
-    assert.deepEqual(folios, folios.map((_, i) => i + 1), `${label}: the folio sequence is broken`)
+    const slides = html.split('<section class="sl').slice(1)
+    assert.equal(slides.length, pageCount(html), `${label}: the split lost a slide`)
+    const folios = slides.map((slide) => (/class="rail-folio">(\d+)</.exec(slide) || [])[1])
+    const numbered = folios.map((f, i) => (f === undefined ? null : [i + 1, Number(f)])).filter(Boolean)
+    assert.ok(numbered.length >= 5, `${label}: too few numbered pages to be a document`)
+    assert.deepEqual(numbered.filter(([place, folio]) => place !== folio), [], `${label}: a folio is not its slide place in the PDF`)
+    assert.equal(folios[0], undefined, `${label}: the cover carries a folio`)
+    slides.forEach((slide, i) => { if (slide.startsWith(' sl-open')) assert.equal(folios[i], undefined, `${label}: opening ${i + 1} carries a folio`) })
   }
 })
 
@@ -175,7 +182,7 @@ test('the scope page is always present and names what the document cannot contai
   // The absent list must actually DIFFER between the two shapes, or it is a
   // fixed paragraph rather than a description of the document in hand.
   assert.match(BARE, /A logo section/, 'a document with no logo does not say its logo section is missing')
-  assert.ok(!DOC.includes('A logo section —'),
+  assert.ok(!DOC.includes('A logo section:'),
     'a document WITH a logo still lists the logo section as missing — the disclosure is boilerplate')
   assert.ok(BARE.includes('Add your logo in the export panel'),
     'the missing-logo line does not say how to fix it')
@@ -263,53 +270,72 @@ test('the export table advertises it, and only because it is built', () => {
   assert.equal(entry.pro, true)
   assert.equal(entry.logo, true, 'the format no longer declares that it has logo pages')
   assert.ok(proOnlyFormats().some(f => f.id === 'guidelines'))
-  // "Multiple export variations" is the founder's ask. It is only true while
+  // "Multiple export variations" is a product claim. It is only true while
   // Pro offers more than one document.
   assert.ok(proOnlyFormats().length >= 2,
     'Pro is back to a single export document — "multiple export variations" is no longer true')
 })
 
-test('ExportPanel actually calls the generator for this format', () => {
-  // THE CALL SITE. Reverting the branch in ExportPanel must fail here — a test
+test('the export engine actually asks the server for this format', () => {
+  // THE CALL SITE. Reverting the branch in useExportRunner must fail here — a test
   // that only exercises buildBrandGuidelines() would stay green while nothing
-  // in the product could reach it.
-  const code = stripComments(PANEL)
-  assert.match(code, /format === 'guidelines'/, 'ExportPanel has no branch for the guidelines format')
-  assert.match(code, /await import\('\.\.\/utils\/brandGuidelines'\)/,
-    'ExportPanel no longer lazily imports the guidelines generator')
-  assert.match(code, /buildBrandGuidelines\(design, \{ projectName \}\)/,
-    'the generator is not being called with the saved design')
-  assert.match(code, /activation = 'brand-guidelines'/,
-    'the guidelines export reports under the book\'s activation name, so the two paid documents cannot be told apart')
-  assert.match(code, /brand-guidelines\.html/, 'the file is not named after the document it is')
+  // in the product could reach it. The generator itself is server-only now, so
+  // the engine's job is the request, the activation name and the file name.
+  const code = stripComments(RUNNER)
+  assert.match(code, /guidelines: \{[\s\S]*?activation: 'brand-guidelines'/,
+    'the guidelines export reports under its own activation name, so the two paid documents can be told apart')
+  assert.match(code, /formatFileName\(fileProject, format, \{ saved: true \}\)/, 'the file is not named through the one name helper')
+  assert.equal(formatFileName('Lumen', 'guidelines', { saved: true }), 'lumen-brand-guidelines.html', 'the file is not named after the document it is')
+  assert.match(code, /requestExportDocument\(\{ format: documentKey, design, projectName, template: chosenTemplates\[documentKey\] \}/,
+    'the engine is not asking the server for the document')
+  assert.ok(!/brandGuidelines/.test(code), 'useExportRunner imports the guidelines generator again')
+  // Both of its files (PDF and HTML) are the one document, so both ask for it by its own key.
+  assert.match(code, /const documentKey = htmlDocument \? fmt\.variantOf : format/)
+  assert.match(code, /format === 'guidelines-html'/)
 })
 
 test('the paywall names the document the user clicked, not the other one', () => {
-  const code = stripComments(PANEL)
+  const code = stripComments(RUNNER)
   // The gate expression itself is pinned by tests/unit/plans-truth.test.js. What
   // is asserted here is that the COPY behind it is keyed per format — one shared
   // modal would describe a token manual to somebody buying a brand book.
   // The wall links to /plans instead of raising the modal, so what is keyed per format is the gate id it
   // reports — which is the half of this test that still means something.
-  assert.match(code, /PRO_GATE\[format\]\?\.gate/, 'the export wall no longer reports its gate per format')
-  for (const f of proOnlyFormats()) {
-    assert.match(code, new RegExp(`\\n\\s{2}${f.id}: \\{`),
+  // The key is the format id, or the id of the document a variant (the book as PNG) belongs to.
+  assert.match(code, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/, 'the export wall no longer reports its gate per format')
+  const table = /export const PRO_GATE = \{([\s\S]*?)\r?\n\}/.exec(code)?.[1] || ''
+  assert.ok(table, 'PRO_GATE is no longer a table the engine exports')
+  for (const f of proOnlyFormats().filter(x => !x.variantOf)) {
+    assert.match(table, new RegExp(`\\n\\s{2}'?${f.id}'?: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)
   }
   // Distinct analytics ids, or the funnel cannot say which wall converted.
-  const gates = [...code.matchAll(/gate: '([^']+)'/g)].map(m => m[1])
+  const gates = [...table.matchAll(/gate: '([^']+)'/g)].map(m => m[1])
   assert.ok(gates.length >= 2, 'the gate ids are no longer being parsed — this assertion has gone blind')
   assert.equal(new Set(gates).size, gates.length, 'two Pro documents report the same conversion gate')
 })
 
 test('the logo field is offered beside the format that needs it, and nowhere else', () => {
-  const code = stripComments(PANEL)
-  assert.match(code, /import BrandLogoField from '\.\/BrandLogoField'/, 'the logo field is not imported')
-  assert.match(code, /\{activeFormat\?\.logo && <BrandLogoField \/>\}/,
-    'the logo field is not gated on the format table\'s own `logo` flag — it is either always on, or gone')
-  // The flag has to select something, or the gate above hides it for ever.
+  const code = stripComments(STEPS)
+  assert.match(code, /import BrandLogoField from '\.\.\/BrandLogoField'/, 'the logo field is not imported')
+  // The dialog's Details step is one branch per kind of document; the field sits in
+  // the branches of the two brand documents (the book's monograph layout and the
+  // slides both draw the logo) and in none of the others.
+  const details = /let details = null([\s\S]*?)\r?\n\s*return \(/.exec(code)?.[1] || ''
+  const branches = Object.fromEntries(
+    [...details.matchAll(/cat\.preview === '(\w+)'\) \{([\s\S]*?)(?=\r?\n {2}\} else if|\r?\n {2}\}\s*$)/g)].map(m => [m[1], m[2]]))
+  assert.deepEqual(Object.keys(branches).sort(), ['book', 'guide', 'guidelines', 'kit'],
+    'the Details step is no longer parsed — this assertion has gone blind')
+  const withField = Object.keys(branches).filter(k => /<BrandLogoField\b/.test(branches[k])).sort()
+  assert.deepEqual(withField, ['book', 'guidelines'],
+    'the logo field is offered beside a document that has no logo pages, or is gone from one that has')
+  // The format table's own `logo` flag must select a category that offers the field.
   assert.ok(EXPORT_FORMATS.some(f => f.logo), 'no format declares logo pages, so the field can never render')
   assert.ok(EXPORT_FORMATS.some(f => !f.logo), 'every format declares logo pages — the gate is not gating')
+  for (const f of EXPORT_FORMATS.filter(x => x.logo)) {
+    const home = EXPORT_TYPES.flatMap(t => t.categories).find(c => c.files.includes(f.id))
+    assert.ok(home && withField.includes(home.preview), `${f.id} has logo pages but its category does not offer the logo field`)
+  }
 })
 
 test('the panel writes the logo through the shared design store, not a second one', () => {
@@ -343,7 +369,7 @@ test('the clear-space page draws the geometry it states', () => {
   // drawing and the sentence have to agree — and the sentence has to admit it is
   // a default.
   assert.match(DOC, /X = ½ the height of the mark/, 'the rule is no longer printed')
-  assert.match(DOC, /the default rule this document applies, not a decision already taken/,
+  assert.match(DOC, /the default rule, not a decision already taken/,
     'the page no longer admits the rule is the document\'s default rather than the brand\'s')
   const box = /class="cs-box" style="width:([\d.]+)mm;height:([\d.]+)mm;padding:([\d.]+)mm"/.exec(DOC)
   assert.ok(box, 'the keep-out box is not drawn')

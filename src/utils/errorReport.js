@@ -202,3 +202,13 @@ export function openProblemReport(error, pathname) {
   const unhandled = window.dispatchEvent(event)
   if (unhandled) window.location.assign('/feedback')
 }
+
+/**
+ * Ask for the feedback dialog on the current page; FeedbackButton fills in the
+ * route and tool name itself. Returns true when nothing answered (no dialog is
+ * mounted), so the caller can send the visitor to the /feedback page instead.
+ */
+export function requestFeedbackDialog() {
+  const event = new CustomEvent(REPORT_PROBLEM_EVENT, { cancelable: true, detail: { typeId: 'feedback' } })
+  return window.dispatchEvent(event)
+}

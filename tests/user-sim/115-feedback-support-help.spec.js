@@ -6,7 +6,7 @@
 // contract; this file renders it, because a regex over source cannot see a form
 // that read the wrong parameter, or a link that shows to the wrong visitor.
 //
-//   signed out  Help Request selected, a "Get help" heading, the payment
+//   signed out  Help request selected, a "Get help" heading, the payment
 //               subject, and an email that is required: submitting without one
 //               puts an alert beside the field, moves focus to it and sends
 //               nothing.
@@ -19,6 +19,10 @@ import { go, signIn, watch } from './helpers.js'
 const PAYMENT_URLS = [
   '/feedback?from=support&ref=payment_failed',
   '/feedback?from=support&reason=payment_failed',
+  // The /support redirect keeps the query, so a link spelt the other way lands
+  // here as `?from=support&ref=failed-payment`.
+  '/feedback?from=support&ref=failed-payment',
+  '/feedback?ref=failed-payment',
 ]
 
 // A request to the support endpoint is a failure of these tests: a submit that
@@ -33,7 +37,7 @@ async function countSupportPosts(page) {
   return seen
 }
 
-const helpRadio = (page) => page.getByRole('radio', { name: 'Help Request' })
+const helpRadio = (page) => page.getByRole('radio', { name: 'Help request' })
 
 test.describe('the feedback form for a failed payment', () => {
   for (const url of PAYMENT_URLS) {
@@ -65,7 +69,7 @@ test.describe('the feedback form for a failed payment', () => {
     await go(page, '/feedback?from=support&ref=payment_failed')
 
     await page.getByLabel('Message').fill('My card was declined twice.')
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send' }).click()
 
     const email = page.getByLabel('Email')
     const alert = page.getByRole('alert')
@@ -82,7 +86,7 @@ test.describe('the feedback form for a failed payment', () => {
     // A real address clears the alert and the submit goes through.
     await email.fill('shopper@example.com')
     await expect(alert).toHaveCount(0)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send' }).click()
     await expect(page.locator('.fb-done')).toContainText('A reply can reach you at shopper@example.com')
     // The send runs in the background, after the confirmation is up.
     await expect.poll(() => posts.length).toBe(1)
@@ -118,7 +122,7 @@ test.describe('the feedback form for a failed payment', () => {
 
     await page.getByRole('link', { name: 'Update your card' }).click()
     await expect(page).toHaveURL(/\/settings(\?|#|$)/)
-    // It opens on the Subscription section (id `support`), not the last one used.
+    // It opens on the Plan and billing section (id `support`), not the last one used.
     await expect(page.locator('#settab-support')).toHaveClass(/(^| )active( |$)/)
     await expect(page.locator('#settab-support')).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('#set-support')).toBeVisible()
@@ -126,7 +130,7 @@ test.describe('the feedback form for a failed payment', () => {
 })
 
 test.describe('the other ways into the feedback form', () => {
-  test('a ref that is not a payment failure preselects Help Request without the payment copy', async ({ page }) => {
+  test('a ref that is not a payment failure preselects Help request without the payment copy', async ({ page }) => {
     watch(page, 'a visitor following a link with some other reason')
     await go(page, '/feedback?ref=billing_question')
 
@@ -136,7 +140,7 @@ test.describe('the other ways into the feedback form', () => {
     await expect(page.getByLabel('Email')).not.toHaveAttribute('required', '')
   })
 
-  test('a bare /support arrival preselects Help Request with the ordinary heading', async ({ page }) => {
+  test('a bare /support arrival preselects Help request with the ordinary heading', async ({ page }) => {
     watch(page, 'a visitor from the /support link')
     await go(page, '/feedback?from=support')
 

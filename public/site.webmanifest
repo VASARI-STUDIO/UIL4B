@@ -1,16 +1,14 @@
 {
-  "name": "UI L4B — Design Toolkit",
+  "name": "UI L4B",
   "short_name": "UI L4B",
   "start_url": "/",
   "display": "browser",
-  "background_color": "#EFEEE9",
-  "theme_color": "#EFEEE9",
+  "background_color": "#F5F5F2",
+  "theme_color": "#F5F5F2",
   "icons": [
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/web-app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/web-app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/web-app-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/web-app-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

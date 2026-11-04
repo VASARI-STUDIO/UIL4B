@@ -36,8 +36,7 @@
 // them; the test enforces it, so retarget the old entry rather than adding a
 // hop.
 
-// The 2026-08-20 founder decision: "all the urls for the create tools should be
-// /create/pagetitle not /color/ or other."
+// All Create tool URLs are /create/<pagetitle>, not /color/ or similar.
 //
 // `<pagetitle>` is the tool's own id from CREATE_GROUPS where that id already
 // stands alone as a name, and the existing final segment for the category
@@ -54,8 +53,8 @@
 //
 // Run-together words are hyphenated on the way through (`fontgallery` →
 // `font-gallery`, `typescale` → `type-scale`): the redirect is being issued
-// regardless, so this is the free moment to fix them, and it is what the
-// founder decision asked for.
+// regardless, so this is the free moment to fix them, and it matches the
+// /create/<pagetitle> convention.
 export const CREATE_ROUTE_MIGRATION = Object.freeze([
   // Colour
   ['/color', '/create/palette'],
@@ -98,9 +97,9 @@ export const CREATE_ROUTE_MIGRATION = Object.freeze([
 // the old path would have built `/palette` → `/color/palette` → `/create/palette`,
 // a two-hop chain, on the day this landed.
 //
-// RETARGETED AGAIN, 2026-09-18, for the same reason: `/color/ui`, `/color-studio`
-// and `/export` all pointed at `/create/color`, and the founder deleted the
-// colour landing when Spectrum became `/`. `/create/color` is now a redirect
+// RETARGETED AGAIN for the same reason: `/color/ui`, `/color-studio`
+// and `/export` all pointed at `/create/color`, and the colour landing was
+// deleted when Spectrum became `/`. `/create/color` is now a redirect
 // source itself, so leaving them would have rebuilt exactly the chain this
 // comment warns about — and the first hop would have landed on a URL the edge
 // answers with the noindex 404 shell. `/color` in the block above moved with
@@ -165,8 +164,8 @@ export const RETIRED_ROUTES = Object.freeze([
 // argument that the colour landing was "the only Create category with a LANDING
 // rather than a redirect to its first tool (the other four homes bounce), so it
 // is the only page in the surface that introduces it instead of dropping the
-// visitor straight into a workbench". That argument died with the page: the
-// founder's 2026-09-18 decision deleted ColorLanding when Spectrum became `/`,
+// visitor straight into a workbench". That argument died with the page:
+// ColorLanding was deleted when Spectrum became `/`,
 // so all five category homes bounce now and there is nothing to introduce the
 // surface with. Leaving `/create` aimed at `/create/color` would have been a
 // 301 into a 301.

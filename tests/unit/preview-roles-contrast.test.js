@@ -1,9 +1,9 @@
 // derivePreviewRoles' onPrimary/primary pair, checked as NUMBERS.
 //
-// role.onPrimary is painted ON role.primary at 11-12px/700 by four surfaces:
-// .plb-pv-cta, .plb-pvb-navcta and .plb-pvb-btn--primary in the Palette
-// Builder (all three read --pv-onprimary on --pv-primary), and .hw-ui-btn on
-// the homepage workbench. Small text, so the floor is 4.5:1.
+// role.onPrimary is painted ON role.primary at 12-13px/600 by the primary
+// buttons of the Palette Builder previews (Tally's .ty-btn--primary sits on
+// --pv-primary), and .hw-ui-btn on the homepage
+// workbench. Small text, so the floor is 4.5:1.
 //
 // WHY THIS FILE EXISTS. The engine used to derive the pair as
 //   let onPrimary = textColorOnSolid(primary)
@@ -37,6 +37,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { contrastRatio, derivePreviewRoles, hslToHex, mixHex } from '../../src/utils/colors.js'
+import { derivePaletteRoles, pvVars } from '../../src/utils/palettePreviewRoles.js'
 import { stripJs as stripSourceComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css on
@@ -596,29 +597,40 @@ test('14 . the empty and junk fallbacks carry the new roles too', () => {
   }
 })
 
-test('15 . the engine is WIRED to the page: the hand-off and the five rules', () => {
+test('15 . the engine is WIRED to the page: the hand-off and the ink rules', () => {
   // Correct-but-orphaned arithmetic is a failure this repo has shipped twice.
-  // Reverting any one of these three call sites has to turn this red.
-  // `pvRef` lived in src/pages/PaletteBuilder.jsx until 2026-09-11 and now lives
-  // beside its only caller in the preview module. The assertion is unchanged in
-  // kind — the arithmetic must still be handed to the element — and this test is
-  // how we know the hand-off came with the move rather than being left behind.
+  // The scene root gets its custom properties from pvVars(), so the ink roles
+  // must be in that map under the names the stylesheet reads, and the
+  // stylesheet must paint text in the INK role and fills in the FILL role.
   const jsx = stripSourceComments(readSource('src/components/palette/PalettePreview.jsx'))
-  assert.match(jsx, /setProperty\('--pv-accent-ink', roles\.accentInk\)/,
-    'PalettePreview no longer hands accentInk to the scene')
-  assert.match(jsx, /setProperty\('--pv-primary-ink', roles\.primaryInk\)/,
-    'PalettePreview no longer hands primaryInk to the scene')
+  assert.match(jsx, /style=\{pvVars\(roles\)\}/,
+    'PalettePreview no longer hands the derived roles to the scene root')
+
+  // A pale yellow primary and accent are too light to read as text, so each ink
+  // is a different colour from its fill and a mapping that swapped them shows.
+  const roles = derivePaletteRoles(['#f2c14e', '#1c2541', '#ffd43b', '#e8f0fe', '#0b132b'], { mode: 'light' })
+  assert.notEqual(roles.primaryInk, roles.primary, 'the probe palette no longer needs a primary ink')
+  assert.notEqual(roles.accentInk, roles.accent, 'the probe palette no longer needs an accent ink')
+  const vars = pvVars(roles)
+  assert.equal(vars['--pv-accent-ink'], roles.accentInk, 'pvVars no longer maps --pv-accent-ink to accentInk')
+  assert.equal(vars['--pv-primary-ink'], roles.primaryInk, 'pvVars no longer maps --pv-primary-ink to primaryInk')
+  assert.equal(vars['--pv-on-primary'], roles.onPrimary, 'pvVars no longer maps --pv-on-primary to onPrimary')
 
   const css = stripSourceComments(ALL_CSS)
+  // The shared stylesheet holds only the scene root and the legend's marks, so
+  // the text-in-ink rules to hold are Tally's: its state rows and the Limits
+  // form's error message. The brand-coloured text of the other examples is set
+  // in their own recipes, which preview-role-tags and 153-preview-examples hold.
+  const tallyCss = stripSourceComments(readSource('src/components/palette/examples/Tally.css'))
   const TEXT_RULES = [
-    ['.plb-pv-n--accent', '--pv-accent-ink'],
-    ['.plb-pvb-eyebrow', '--pv-accent-ink'],
-    ['.plb-pvg-kicker', '--pv-accent-ink'],
-    ['.plb-pv-settings nav .is-active', '--pv-primary-ink'],
-    ['.plb-pv-reply span', '--pv-primary-ink'],
+    ['.ty-tx[data-tone="success"] :is(.ty-note,.ty-money)', '--pv-success-ink'],
+    ['.ty-tx[data-tone="warning"] :is(.ty-note,.ty-money)', '--pv-warning-ink'],
+    ['.ty-tx[data-tone="error"] :is(.ty-note,.ty-money)', '--pv-error-ink'],
+    ['.ty-tx[data-tone="info"] :is(.ty-note,.ty-money)', '--pv-info-ink'],
+    ['.ty-err', '--pv-error-ink'],
   ]
   for (const [selector, token] of TEXT_RULES) {
-    const rule = ruleFor(css, selector)
+    const rule = ruleFor(tallyCss, selector)
     assert.ok(rule, `${selector} has gone from the stylesheet`)
     assert.ok(rule.includes(`color:var(${token})`),
       `${selector} sets text in a FILL role again instead of ${token} - that is the defect returning`)
@@ -629,15 +641,28 @@ test('15 . the engine is WIRED to the page: the hand-off and the five rules', ()
   // every chip, disc and CTA in the previews, which is the outcome this split
   // exists to prevent.
   const FILL_RULES = [
-    ['.plb-pv-cta', '--pv-primary'],
-    ['.plb-pvb-btn--primary', '--pv-primary'],
-    ['.plb-pv-logo', '--pv-primary'],
+    ['.ty-btn--primary', '--pv-primary'],
+    ['.ty-toggle.is-on', '--pv-primary'],
   ]
   for (const [selector, token] of FILL_RULES) {
-    const rule = ruleFor(css, selector)
+    const rule = ruleFor(tallyCss, selector)
     assert.ok(rule, `${selector} has gone from the stylesheet`)
     assert.ok(rule.includes(`background:var(${token})`),
       `${selector} no longer fills with ${token} - the ink split has leaked into the fills`)
   }
+
+  // Text may only take a raw fill role where the ground is another brand role
+  // that is checked against it or where it is a 3:1 icon. The scenes that did
+  // (the inverted button, the phone tab bar) are retired, so nothing is allowed
+  // here until a rule is added with its reason.
+  const ALLOWED_FILL_AS_COLOR = []
+  const offenders = []
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/(?:^|;)color:var\(--pv-(?:primary|accent)\)(?![-\w])/.test(m[2])) continue
+    const sel = m[1].trim()
+    if (!ALLOWED_FILL_AS_COLOR.some((a) => sel.endsWith(a))) offenders.push(sel)
+  }
+  assert.deepEqual(offenders, [],
+    'these rules set text colour straight from a fill role instead of its ink role')
 })
 

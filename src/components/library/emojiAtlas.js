@@ -34,7 +34,7 @@
 
 export const SLOT = 36           // css px each glyph is drawn into (24px font plus its overhang)
 export const SHEET_COLS = 12
-const URGENT_CHUNK = 48          // glyphs on screen: small sheets, so they arrive quickly
+const URGENT_CHUNK = 24          // glyphs on screen: small sheets, so the first lands quickly
 const BACKGROUND_CHUNK = 96
 const IDLE_TEARDOWN_MS = 30000   // the worker and sheets go this long after the grid unmounts
 
@@ -139,11 +139,13 @@ self.onmessage = async (e) => {
 export const atlas = {
   gen: 0,             // bumped whenever the drawing setup changes; older replies are dropped
   config: null,       // { key, scale, font, fontSize, advance, baseline, slotH } once measured from a real cell
+  measureFailed: false, // a measure found a cell with no size (hidden, not laid out): config stays null
   dpr: 0,             // the pixel ratio that config was measured at
   sprites: new Map(), // glyph string -> { style, sheet }
   textOnly: new Set(),// glyphs the worker judged cannot be a bitmap: they stay text
   sheets: [],         // { url, bytes, chars, last }, revoked when dropped
   bytes: 0,           // decoded bytes the sheets hold
+  badSheets: 0,       // sheets the browser failed to decode since the last reset
   queue: [],          // chunks waiting for the worker, front first
   current: null,      // the chunk the worker is drawing
   worker: null,
@@ -152,6 +154,13 @@ export const atlas = {
   listeners: new Set(),
   idle: 0,
   fullFor: null,      // the wanted list the background pass ran out of room for
+  mounted: new Set(), // glyphs in the cells mounted now: a reply for none of them changes nothing on screen
+}
+
+// The grid says which glyphs its mounted cells show, in the same commit that
+// mounts them, so no reply can land between a cell mounting and this being set.
+export function atlasMounted(chars) {
+  atlas.mounted = chars
 }
 
 export const atlasSupported = () => (
@@ -159,6 +168,24 @@ export const atlasSupported = () => (
   && typeof URL.createObjectURL === 'function' && typeof Blob !== 'undefined'
   && typeof OffscreenCanvas.prototype.convertToBlob === 'function'
 )
+
+// True while a glyph's bitmap is still on its way: the atlas is in play, has not
+// failed, and has not ruled this glyph out. A pending cell paints a quiet
+// placeholder, not the live colour text, because laying out that text is what
+// made a search or a fast scroll freeze (about 7 ms a cell at 4x CPU). Text stays
+// the answer for a glyph in `textOnly` (the worker found it cannot be a bitmap,
+// such as a flag the font has no picture for), once the atlas has failed, and
+// wherever the atlas is not supported at all. Before the first measure the
+// placeholder shows (the page must not paint a screenful of text cells while it
+// waits); a measure that was tried and found no size sends no job, so until a
+// later one succeeds the cells keep their text.
+let supported
+export function atlasPending(ch) {
+  if (atlas.failed || atlas.textOnly.has(ch)) return false
+  if (!atlas.config && atlas.measureFailed) return false
+  if (supported === undefined) supported = atlasSupported()
+  return supported
+}
 
 function atlasEmit() {
   atlas.version++
@@ -185,6 +212,7 @@ function atlasReset() {
   atlas.sheets.forEach(s => URL.revokeObjectURL(s.url))
   atlas.sheets = []
   atlas.bytes = 0
+  atlas.badSheets = 0
   atlas.sprites = new Map()
   atlas.textOnly = new Set()
   atlas.queue = []
@@ -199,13 +227,14 @@ function atlasTeardown() {
   if (atlas.listeners.size) return
   atlasReset()
   atlas.config = null
+  atlas.measureFailed = false
   if (atlas.worker) { atlas.worker.terminate(); atlas.worker = null }
 }
 
 function atlasInstall(job, reply) {
   const { blob, rows, w, h, text } = reply
   for (const i of text || []) atlas.textOnly.add(job.chars[i])
-  if (!blob) return
+  if (!blob) return null
   const skip = new Set(text || [])
   const url = URL.createObjectURL(blob)
   const sheet = { url, bytes: w * h * 4, chars: [], last: Date.now() }
@@ -227,6 +256,40 @@ function atlasInstall(job, reply) {
       },
     })
   })
+  return sheet
+}
+
+// A sheet the browser cannot decode (or whose blob has gone) paints nothing, and
+// every cell it serves is already hiding its text behind `has-bitmap`. So the
+// glyphs go back to text: sprites removed, the glyphs marked text-only so they are
+// not queued again, and the grid told so the cells re-render. The worker's own
+// check covers the first sheet only; this covers every sheet, off the paint path.
+// A sheet already trimmed or reset away (its blob URL revoked on purpose) is not
+// a failure.
+const SHEET_FAILURE_LIMIT = 3
+export function atlasSheetFailed(sheet) {
+  if (!atlas.sheets.includes(sheet)) return
+  atlas.sheets = atlas.sheets.filter(s => s !== sheet)
+  atlas.bytes -= sheet.bytes
+  URL.revokeObjectURL(sheet.url)
+  for (const ch of sheet.chars) {
+    if (atlas.sprites.get(ch)?.sheet === sheet) atlas.sprites.delete(ch)
+    atlas.textOnly.add(ch)
+  }
+  atlas.badSheets++
+  // Repeated failures mean the browser cannot be trusted with sheets at all.
+  if (atlas.badSheets >= SHEET_FAILURE_LIMIT) { atlasFail(); return }
+  if (sheet.chars.some(ch => atlas.mounted.has(ch))) atlasEmit()
+}
+
+// Decode the sheet the way the cell's background will. The browser shares the
+// decode with the background of the same URL, so this is not a second decode.
+function atlasProbe(sheet) {
+  if (typeof Image === 'undefined') return
+  const img = new Image()
+  img.src = sheet.url
+  if (typeof img.decode === 'function') img.decode().catch(() => atlasSheetFailed(sheet))
+  else img.onerror = () => atlasSheetFailed(sheet)
 }
 
 function atlasWorker() {
@@ -240,8 +303,12 @@ function atlasWorker() {
     if (reply.gen !== atlas.gen || !job) { if (reply.gen === atlas.gen) atlas.current = null; atlasPump(); return }
     atlas.current = null
     if (reply.error) { atlasFail(); return }
-    atlasInstall(job, reply)
-    atlasEmit()
+    const sheet = atlasInstall(job, reply)
+    if (sheet) atlasProbe(sheet)
+    // Tell the grid only when a mounted cell can change: a background sheet for
+    // glyphs nobody is looking at would re-render the whole grid for nothing. A
+    // cell mounted later reads the sprite straight from the atlas.
+    if (job.chars.some(ch => atlas.mounted.has(ch))) atlasEmit()
     atlasPump()
   }
   worker.onerror = () => atlasFail()
@@ -268,13 +335,27 @@ function glyphBytes() {
 }
 
 let jobId = 0
-// Queue the glyphs on screen now. They go ahead of everything waiting; anything
-// already drawn, in flight, queued to go first or known to stay text is skipped, and a glyph still
+// The glyphs of a grid's mounted cells ordered by how far their row is from the
+// viewport. `rowOf[i]` is the row ({ top, h }) holding `chars[i]`; `top` is the
+// scroll position in the grid's own coordinates and `height` the viewport's.
+// A stable sort, so glyphs at the same distance (all those in view are at 0)
+// keep their reading order.
+export function nearestFirst({ chars, rowOf }, top, height) {
+  const bottom = top + height
+  const gap = (row) => (row.top + row.h < top ? top - (row.top + row.h) : row.top > bottom ? row.top - bottom : 0)
+  return chars.map((ch, i) => [ch, gap(rowOf[i])]).sort((a, b) => a[1] - b[1]).map(c => c[0])
+}
+
+// Queue the glyphs on screen now, `chars` being nearest the viewport first. Every
+// call rebuilds the urgent part of the queue from this list, so after a scroll
+// what is now closest goes first even when an older urgent job holds it; a glyph
+// that has left the list drops out of the urgent jobs (the background pass takes
+// it up again if there is room). They go ahead of everything waiting. Anything
+// already drawn, in flight or known to stay text is skipped, and a glyph still
 // sitting in a waiting background chunk is pulled forward.
 export function atlasWant(chars) {
   if (atlas.failed || !atlas.config) return
   const flying = atlas.current ? new Set(atlas.current.chars) : new Set()
-  atlas.queue.forEach(job => { if (job.urgent) job.chars.forEach(ch => flying.add(ch)) })
   const seen = new Set()
   const missing = []
   for (const ch of chars) {
@@ -282,9 +363,10 @@ export function atlasWant(chars) {
     seen.add(ch)
     missing.push(ch)
   }
-  if (!missing.length) return
+  if (!missing.length && !atlas.queue.some(job => job.urgent)) return
   atlas.queue = atlas.queue
-    .map(job => (job.urgent ? job : { ...job, chars: job.chars.filter(ch => !seen.has(ch)) }))
+    .filter(job => !job.urgent)
+    .map(job => ({ ...job, chars: job.chars.filter(ch => !seen.has(ch)) }))
     .filter(job => job.chars.length)
   const jobs = []
   for (let i = 0; i < missing.length; i += URGENT_CHUNK) jobs.push({ id: ++jobId, urgent: true, chars: missing.slice(i, i + URGENT_CHUNK) })
@@ -368,7 +450,7 @@ export function atlasTrim(shown, wanted) {
   }
   atlas.sheets = atlas.sheets.filter(s => !drop.has(s))
   atlas.bytes = bytes
-  atlasEmit()
+  // No emit: a sheet holding a mounted glyph is never dropped, so no cell changes.
 }
 
 // Measure how a real cell lays its glyph out, so the bitmap lands on the same
@@ -392,7 +474,14 @@ export function atlasConfigure(host) {
   const fontSize = parseFloat(style.fontSize)
   const family = style.fontFamily
   host.removeChild(probe)
-  if (!spanRect.height || !fontSize) return
+  if (!spanRect.height || !fontSize) {
+    // Nothing to measure (the grid is hidden or not laid out yet). With no config
+    // no job is sent, so cells waiting on a bitmap fall back to their text until a
+    // later measure succeeds; tell the grid, which is showing placeholders.
+    if (!atlas.config && !atlas.measureFailed) { atlas.measureFailed = true; atlasEmit() }
+    return
+  }
+  atlas.measureFailed = false
   const dpr = window.devicePixelRatio || 1
   const scale = Math.round(SLOT * dpr) / SLOT
   // The bitmap box is the text's own line box plus a whole 2px margin above and

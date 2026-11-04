@@ -1,8 +1,8 @@
 // The header sweep, in a browser.
 //
-// #surface-headers-read-as-ai. The founder marked TWO elements of the Font
-// Gallery header "AI" — the taxonomy eyebrow and the three-up figure strip —
-// and wrote: "make sure to make that change to all the headers that match".
+// #surface-headers-read-as-ai. TWO elements of the Font Gallery header read as
+// AI — the taxonomy eyebrow and the three-up figure strip — and the change was
+// to be made to all the headers that match.
 //
 // #382 made the change on the Font Gallery, Font Pair and the shared Discover
 // masthead. #386 found the Type Scale still carrying both. This file covers the
@@ -10,7 +10,8 @@
 // the furniture cannot grow back.
 //
 // WHY IT IS NOT A GREP. Two of the four remaining eyebrows are not
-// `.sec-h-eyebrow` at all — Semantic Colours uses `.stc-hero-eyebrow`, the
+// `.sec-h-eyebrow` at all — Semantic Colours used `.stc-hero-eyebrow` (gone with
+// the rebuild; the string check below is what still measures that page), the
 // Gradient Generator uses `.ggn-eyebrow` — and the two worst findings here were
 // only visible by rendering and measuring:
 //
@@ -105,7 +106,7 @@ test.describe('no tool header restates the path the visitor walked', () => {
 // ── The figure strips ───────────────────────────────────────────────────────
 //
 // Four four-up strips, one per page, each a wider copy of the three-up the
-// founder marked. The reasoning for every individual figure is in the comment
+// first sweep removed. The reasoning for every individual figure is in the comment
 // beside the markup that carried it. What is asserted here is the shape: no
 // band of equal-weight figures in the masthead, and the facts that DID earn
 // their place still on the page.
@@ -123,6 +124,9 @@ const STRIPS = [
     survives: '3 stops',
   },
   {
+    // `.stc-status` is retired with the rebuild, so the class fence is only a
+    // tripwire for its return; the band detector below is what measures the page
+    // (its bundle cards and ramp rows are not a strip of equal figures).
     route: '/create/semantic-color', cls: '.stc-status', h1: 'Semantic Colour',
     // 50 was "canonical variables" in the strip. On the button it is the size
     // of what is about to reach your clipboard.
@@ -186,9 +190,9 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   // PRESENT: the output's sections are named in words. The controls are the
   // side panel, an <aside> named by its label rather than a visible head.
   const headings = page.locator('.fpr-section-head h2')
-  await expect(headings).toHaveCount(2)
-  await expect(headings.nth(0)).toContainText('Body faces that work under')
-  await expect(headings.nth(1)).toHaveText('Prepare the handoff')
+  await expect(headings).toHaveCount(1)
+  await expect(headings.nth(0)).toContainText('Bodies that suit')
+  await expect(page.locator('.fpr-delivery > summary')).toHaveText('Prepare the handoff')
   await expect(page.getByRole('complementary', { name: 'Font Pair controls' })).toBeVisible()
 
   // The specimen's sr-only h2 still names its region.
@@ -223,4 +227,4 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
 // Not tested: 'the Tint Scale audience switch is the one next to the
 // panel it changes'. The designer/developer switch and both of its panels went
 // with the rebuild to the design's drawn Tint screen, which has
-// one output — the scale — and one export, "Copy variables" in its toolbar.
+// one output — the scale — and one export, the Export menu in its toolbar.

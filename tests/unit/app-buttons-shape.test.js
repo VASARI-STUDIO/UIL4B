@@ -3,8 +3,9 @@
 // One token carries the shape: --btn-radius, set to --radius-pill in :root.
 // The .btn and .ui-pill families and the tool layout's buttons read it, and so
 // does every page rule that shapes a button. A 999px radius on a square box is
-// a circle, so icon-only buttons need nothing extra. Inputs, selects, search
-// fields, cards, panels and menus keep their own radii.
+// a circle, so icon-only buttons need nothing extra. Inputs, selects, cards,
+// panels and menus keep their own radii; search bars and pill toolbars are
+// pills too, pinned by pill-shapes-source.test.js.
 //
 // The sweep below reads every class the JSX puts on a <button> (or on an
 // element with role="button", or a link whose class names a btn / cta / pill),
@@ -39,19 +40,47 @@ function blocksFor(sel, source = css) {
 
 // Classes on button elements that are not drawn as buttons, by what they are.
 const KEEP = {
-  // colour swatches and swatch triggers: the sample is the control
-  swatch: ['cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
+  // colour swatches and swatch triggers: the sample is the control (a Contrast Checker swatch is the
+  // colour chip with its role name under it, in one 10px-cornered target)
+  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
-    'tl-menu-row', 'ic-acc-head', 'arc-select-btn', 'arc-opt'],
+    'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
+    // the export dialog's rail: type and category rows in a list, like the preview dialog's
+    'xd-type', 'xd-cat',
+    // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
+    'pvd-state',
+    // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
+    'grd-stop-select', 'grd-tintmenu-item',
+    // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
+    'plb-match-btn',
+    // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
+    'fpr-card-apply'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
-    'fg-card-open', 'arc-stat', 'icust-code-box'],
+    'fg-card-open', 'arc-stat', 'stc-bundle',
+    // a size-rail cell is a tile: the icon drawn at its size, with the number under it
+    'icust-size-cell',
+    // a line-style tile is a card: the icon drawn in that style, its name and note under it
+    'icust-line-tile',
+    // an export template choice without a thumbnail is a bordered card holding its name and description
+    'exp-tpl-tile',
+    // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
+    'grd-preset',
+    // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
+    'cc-lg-chip',
+    // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
+    'pl-card'],
   // fields drawn as inputs or selects
-  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select'],
+  field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
+    // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
+    'plb-imgmoodbtn'],
   // underline and folder tabs, and the phone tab bar's items
-  tab: ['pl-tab', 'pl-modal-view', 'fdx-tab', 'pnav-tab'],
+  tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
+  // the two halves of one split button: together they draw a single pill, so each keeps its
+  // outer corners round and squares the edge where they meet (.icust-foot .dl-main / .dl-more)
+  split: ['dl-main', 'dl-more'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
   // previews of the user's own design system, drawn at the user's radius
@@ -65,7 +94,7 @@ const KEEP_SET = new Set(Object.values(KEEP).flat())
 // Menu rows that reuse the filter-chip class inside a filter menu.
 const KEEP_CONTEXT = ['.lbry-filtermenu']
 // The sales pages are built to their own drawn radii.
-const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-chrome.css', 'pricing.css'])
+const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-tools.css', 'spectrum-chrome.css', 'pricing.css'])
 
 const PILL = /^(999px|9999px|var\(--radius-pill\)|var\(--btn-radius\)|50%)(\s*!important)?$/
 

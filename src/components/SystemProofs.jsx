@@ -24,11 +24,12 @@
 // BrandRampTable.jsx uses for the Learn guide, for the same reason.
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { contrastRatio, generateTintScale, T_LABELS } from '../utils/colors'
+import { contrastRatio } from '../utils/colors'
 import { stepName, stepPx } from '../utils/fluidType'
-import { DEFAULT_DESIGN, tintConfigFor } from '../data/designDefaults'
-import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
+import { DEFAULT_DESIGN } from '../data/designDefaults'
+import { documentFormats, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 
 /** --bg-0 in each theme, from the :root blocks in src/styles/global.css. */
 const LIGHT_GROUND = '#F5F5F2'
@@ -47,57 +48,6 @@ const LIGHT_FILL = '#0F6FFF'
 /** WCAG 2.2 SC 1.4.3 (text) and SC 1.4.11 (component boundaries). */
 const TEXT_MIN = 4.5
 const BOUNDARY_MIN = 3
-
-/**
- * /learn/help's opening visual: the value a new project starts from, the eleven
- * stops the product generates out of it, and the files those stops can leave
- * as. One colour in, a system out — shown rather than described.
- *
- * The file names come from freeFormats(), so this strip cannot advertise an
- * export that ExportPanel would render as a disabled Soon button.
- */
-export function SystemRunStrip() {
-  const cfg = useMemo(() => tintConfigFor(), [])
-  const ramp = useMemo(() => generateTintScale(cfg), [cfg])
-  const files = freeFormats()
-
-  if (ramp.length !== T_LABELS.length) return null
-
-  return (
-    <figure className="hlp-run" data-reveal>
-      <div className="hlp-run-seed">
-        <span className="hlp-run-chip" style={{ background: cfg.hex }} aria-hidden="true" />
-        <span className="hlp-run-seed-text">
-          <span className="hlp-run-hex">{cfg.hex.toUpperCase()}</span>
-          <span className="hlp-run-cap">what a new project starts from</span>
-        </span>
-      </div>
-
-      <ol className="hlp-run-ramp" aria-label="The eleven stops generated from that one value">
-        {ramp.map((hex, i) => (
-          <li className="hlp-run-stop" key={T_LABELS[i]}>
-            <span className="hlp-run-bar" style={{ background: hex }} aria-hidden="true" />
-            <span className="hlp-run-stop-name">{T_LABELS[i]}</span>
-            <span className="hlp-run-stop-hex">{hex.toUpperCase()}</span>
-          </li>
-        ))}
-      </ol>
-
-      <div className="hlp-run-out">
-        <span className="hlp-run-cap">leaves as</span>
-        <ul className="hlp-run-files">
-          {files.map((f) => <li key={f.id}>{f.name}</li>)}
-        </ul>
-      </div>
-
-      <figcaption className="hlp-run-note">
-        Generated on this page by <code>generateTintScale()</code> — the function
-        behind <Link to="/create/tint">the tint tool</Link> — from the one value on
-        the left. Nothing here was typed out.
-      </figcaption>
-    </figure>
-  )
-}
 
 /** Light --t0. The ink both samples' own labels are set in, so the proof about
  *  contrast does not itself ship text below its floor. */
@@ -299,7 +249,7 @@ export function ExportProof() {
         </div>
       </div>
       <figcaption className="prn-cap">
-        All {EXPORT_FORMATS.length} formats the export panel knows about, split by
+        All {documentFormats().length} formats the export panel knows about, split by
         the same <code>live</code> flag that decides whether its button does
         anything. The third column cannot be sold on any plan.
       </figcaption>
@@ -312,6 +262,9 @@ export function ExportProof() {
  * badge a visitor actually meets on the ones that are not ready.
  */
 export function SoonProof() {
+  // The "still being built" figure is admin-only: unfinished tools are hidden
+  // from everyone else, so a count of them would promise a list they cannot see.
+  const { isAdmin } = useIsAdmin()
   return (
     <figure className="prn-sn">
       <div className="prn-sn-figures">
@@ -319,10 +272,12 @@ export function SoonProof() {
           <b>{LIVE_TOOLS.length}</b>
           <span>open now</span>
         </span>
-        <span className="prn-sn-fig" data-soon="true">
-          <b>{SOON_TOOLS.length}</b>
-          <span>still being built <span className="soon-badge">Soon</span></span>
-        </span>
+        {isAdmin && (
+          <span className="prn-sn-fig" data-soon="true">
+            <b>{SOON_TOOLS.length}</b>
+            <span>still being built <span className="soon-badge">Soon</span></span>
+          </span>
+        )}
       </div>
       <figcaption className="prn-cap">
         Counted from <code>CREATE_GROUPS</code> when this page rendered, not

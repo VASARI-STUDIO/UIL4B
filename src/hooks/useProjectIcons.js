@@ -16,6 +16,12 @@ import {
  * On first use it moves any icon this browser kept in the old map onto its
  * project — see planIconMigration for the merge rule.
  */
+// An icon is not an edit of the design: it must not change `updatedAt`, which orders the projects and
+// picks the lead. `iconAt` is its own stamp, so the choice still syncs and the newer one wins a merge.
+function writeIcon(updateProject, id, icon) {
+  updateProject(id, { icon, iconAt: new Date().toISOString() }, { touch: false })
+}
+
 export default function useProjectIcons() {
   const { projects, updateProject, canSaveProjects } = useProject()
   const [legacy, setLegacy] = useState(() => {
@@ -26,7 +32,7 @@ export default function useProjectIcons() {
     if (!canSaveProjects || !updateProject || !projects.length) return
     const { moves, remaining } = planIconMigration(projects, legacy)
     if (!moves.length && Object.keys(remaining).length === Object.keys(legacy).length) return
-    for (const { id, icon } of moves) updateProject(id, { icon })
+    for (const { id, icon } of moves) writeIcon(updateProject, id, icon)
     try { writeLegacyIcons(localStorage, remaining) } catch { /* storage unavailable */ }
     setLegacy(remaining)
   }, [projects, legacy, canSaveProjects, updateProject])
@@ -35,7 +41,7 @@ export default function useProjectIcons() {
 
   const pickIcon = useCallback((id, icon) => {
     if (!updateProject) return
-    updateProject(id, { icon: icon || null })
+    writeIcon(updateProject, id, icon || null)
   }, [updateProject])
 
   return { icons, pickIcon }

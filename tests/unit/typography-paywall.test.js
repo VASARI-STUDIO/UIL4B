@@ -1,9 +1,9 @@
 // What Pro means for the typography tools, pinned.
 //
-// Founder decision, 2026-09-05, settling [typography-paywall-model]: browsing
+// The model, [typography-paywall-model]: browsing
 // is free, saving is Pro. Anyone may browse fonts, pair them and build a scale
-// without an account; what costs money is KEEPING a type system. He chose that
-// option because it matches how the colour tools already work, which makes
+// without an account; what costs money is KEEPING a type system. This option
+// was chosen because it matches how the colour tools already work, which makes
 // consistency with them the requirement rather than a nice-to-have.
 //
 // So this file guards BOTH halves, and the free half is the one more likely to
@@ -75,8 +75,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
 import { stripCss } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
-// asserts on were split out of global.css into src/styles/deferred/*.css on
-// 2026-09-13; a test that keeps reading one file after a lift like that does
+// asserts on were split out of global.css into src/styles/deferred/*.css; a test that keeps reading one file after a lift like that does
 // not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
 import { ALL_CSS } from './appStylesheets.js'
 
@@ -91,7 +90,8 @@ const stripComments = (src) => src
 const GALLERY = read('src/pages/FontGallery.jsx')
 const MATCHER = read('src/pages/FontMatcher.jsx')
 const SCALE = read('src/pages/TypeScale.jsx')
-const SAVE = read('src/components/SaveTypeSystem.jsx')
+// The view and the connected hook are two files; the assertions below read both.
+const SAVE = `${read('src/components/SaveTypeSystem.jsx')}\n${read('src/hooks/useSaveTypeSystem.js')}`
 const CSS = ALL_CSS
 const PLANS = read('src/pages/Pricing.jsx')
 
@@ -240,7 +240,7 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
 
 test('1 · no typography tool gates its own catalogue, controls or previews', () => {
   // The entitlement checks live in ONE component. A tool that grows its own
-  // isPro branch has started a second scheme, which is the thing the founder's
+  // isPro branch has started a second scheme, which is the thing the
   // "it matches the colour tools" reasoning rules out.
   for (const [name, src] of TOOLS) {
     const code = stripComments(src)
@@ -284,7 +284,7 @@ test('3 · every export and copy action stays ungated', () => {
   }
   // And the promise it has to keep.
   //
-  // ── CHANGED 2026-09-05, and the reason matters more than the strings ───────
+  // ── CHANGED, and the reason matters more than the strings ───────
   //
   // These two assertions used to pin the words "…, gradients and exports" and
   // "…, type scales and exports". Both sentences were removed from /plans in
@@ -332,17 +332,25 @@ test('4 · the tools that build a type system offer a way to keep it', () => {
   // Before this change typography had NO save path — the tools wrote to the
   // working kit and stopped — so "saving is Pro" gated nothing. The affordance
   // existing is half the decision.
-  for (const [name, src] of [['FontMatcher', MATCHER], ['TypeScale', SCALE]]) {
-    assert.match(src, /^import SaveTypeSystem from '\.\.\/components\/SaveTypeSystem'$/m,
-      `${name} does not mount the save gate`)
-    // Word-boundaried on purpose: /<SaveTypeSystem/ alone is a PREFIX match and
-    // stays green against <SaveTypeSystemRemoved, <SaveTypeSystemStub or any
-    // other rename that takes the real control off the page.
-    assert.match(src, /<SaveTypeSystem[\s/>]/, `${name} imports the save gate but never renders it`)
-  }
+  assert.match(MATCHER, /^import SaveTypeSystem from '\.\.\/components\/SaveTypeSystem'$/m,
+    'FontMatcher does not mount the save gate')
+  // Word-boundaried on purpose: /<SaveTypeSystem/ alone is a PREFIX match and
+  // stays green against <SaveTypeSystemRemoved, <SaveTypeSystemStub or any
+  // other rename that takes the real control off the page.
+  assert.match(MATCHER, /<SaveTypeSystem[\s/>]/, 'FontMatcher imports the save gate but never renders it')
+  // Type Scale keeps its save in the tool toolbar: the hook draws no markup, so
+  // the page must call it, put a trigger in the toolbar items and mount the panel.
+  assert.match(SCALE, /^import \{ useSaveTypeSystemToolbar \} from '\.\.\/hooks\/useSaveTypeSystem'$/m,
+    'TypeScale does not use the save gate')
+  assert.match(SCALE, /useSaveTypeSystemToolbar\(\{/, 'TypeScale imports the save gate but never calls it')
+  assert.match(SCALE, /onClick=\{save\.trigger\}/, 'TypeScale has no toolbar button wired to the save gate')
+  assert.match(SCALE, /<SaveTypeSystemPanel[\s/>]/, 'TypeScale never mounts the save menu')
   // Distinct gate ids, so P-001's funnel can say WHICH surface converted rather
   // than reporting one merged number for both tools.
-  const ids = [MATCHER, SCALE].map(src => /gate="([a-z-]+)"/.exec(src)?.[1])
+  const ids = [
+    /gate="([a-z-]+)"/.exec(MATCHER)?.[1],
+    /gate: '([a-z-]+)'/.exec(SCALE)?.[1],
+  ]
   assert.deepEqual(ids, ['type-save-font-pair', 'type-save-type-scale'])
 })
 
@@ -493,7 +501,7 @@ test('9 · saving needs an account, not a subscription', () => {
   // visitor who clicks Save must meet a login prompt, never a paywall.
   const code = stripComments(SAVE)
   // The options are matched as a SET rather than as one exact literal. This
-  // read `{ free: true }` character for character and went red on 2026-09-18
+  // read `{ free: true }` character for character and went red
   // for a change that strengthened the very thing it was protecting: adding
   // `signup: true`, so a visitor with no account meets the create-account form
   // instead of "Log in to continue" at the moment they first try to keep their

@@ -12,8 +12,8 @@
 //               copyright notice to travel with the font, and each of those
 //               files opens with that font's own line. We serve the .woff2
 //               files from public/, so we redistribute them, so the notice is
-//               owed. Retyping six copyright lines onto a page is how five of
-//               them end up right and one ends up describing the wrong project.
+//               owed. Retyping the copyright lines onto a page is how all but
+//               one end up right and one ends up describing the wrong project.
 //   the code    package.json's `dependencies`, and the licence each installed
 //               package declares in its own package.json. Firebase alone ships
 //               as `firebase` plus forty-odd `@firebase/*` packages, every one
@@ -80,8 +80,16 @@ const OUT = path.join(root, 'src', 'data', 'creditsManifest.json')
  * So: the words come from the FILENAME, and each word's spelling comes from a
  * dictionary built out of every project name in the directory. GEIST + MONO →
  * "Geist" (from Geist's notice) + "Mono" (from JetBrains Mono's) → "Geist
- * Mono". Nothing is written down; add a seventh font and it spells itself.
+ * Mono". Nothing is written down; add another font and it spells itself.
  */
+/* A notice quotes its own URL verbatim in `copyright`; `source` is where the
+ * "Project" link goes. Where the URL a notice carries no longer resolves, the
+ * link is overridden here by slug, and the quoted notice is left exactly as the
+ * licence file has it, which is what the OFL asks to travel. */
+const SOURCE_OVERRIDES = {
+  manrope: 'https://github.com/googlefonts/manrope',
+}
+
 const PROJECT_LINE = /^Copyright\s+(\d{4})\s+The\s+(.+?)\s+Project Authors\s*\(([^)]+)\)/
 
 async function fonts() {
@@ -109,9 +117,9 @@ async function fonts() {
       .map((w) => casing.get(w) || w.charAt(0) + w.slice(1).toLowerCase())
       .join(' '),
     copyright: row.copyright,
-    source: row.source,
+    source: SOURCE_OVERRIDES[row.file.replace(/-OFL\.txt$/, '').toLowerCase()] || row.source,
     // Served straight out of public/, so the full licence text is one link
-    // away and no page has to reprint 4.5 KB of it six times.
+    // away and no page has to reprint 4.5 KB of it once per font.
     licenceFile: `/fonts/${row.file}`,
   })).sort((a, b) => a.family.localeCompare(b.family))
 }

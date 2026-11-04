@@ -59,8 +59,15 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
    which is the right call: a bar that vanishes with no transition reads as a
    rendering fault, and someone who asked for less motion has not asked for
    less navigation. Both companions below say so. */
-.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:clamp(14px,2vw,26px) clamp(14px,3vw,40px) 0;pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:max(clamp(14px,2vw,26px),env(safe-area-inset-top,0px)) max(clamp(14px,3vw,40px),env(safe-area-inset-right,0px)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left,0px));pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
 .spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
+/* Keyboard focus inside the bar always shows it. :focus-visible rather than
+   :focus-within, so a mouse click on a control does not pin the bar open. Same
+   specificity as the hidden rule and later, so it wins. */
+.spnav:has(:focus-visible){transform:none;opacity:1}
+/* A section the menu jumps to takes focus by script, so the stylesheet's
+   keyboard ring is not drawn on a whole section. */
+.spectrum [data-menu-jump]:focus-visible{outline:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav{transition:none}
   html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
@@ -87,15 +94,14 @@ html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opac
    design's 55. */
 .spnav-mark{line-height:normal}
 .spnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em;white-space:nowrap}
-/* --accent-mid, the design's own `{{ accentMid }}`, and a DERIVED token: a
-   premium theme template moves --accent alone and this follows. */
-.spnav-word-mark{color:var(--accent-mid)}
-.spnav-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--t2);white-space:nowrap}
+/* The wrapper keeps its line box (the pill is 55px tall because of it); the
+   lockup sits on the baseline inside it, 0.85em tall. */
+.spnav-word .brand-logo{height:.85em}
 .spnav-rule{flex:0 0 auto;width:1px;height:20px;background:color-mix(in srgb,var(--t0) 11%,transparent)}
 .spnav-quiet{display:flex;align-items:center;gap:1px}
 /* No transition: the design writes `transition:none` inline on these three
    (226-228), which outranks its own [data-quiet] colour fade. */
-.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:9px 14px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);text-decoration:none;transition:none}
+.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:8px 14px;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:16px;letter-spacing:normal;text-transform:none;color:var(--t2);text-decoration:none;transition:none}
 @media(hover:hover){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
 /* THE SCREEN YOU ARE ON. The design colours the current screen's link with
    --ink and the others with --ink-faint (`navLanding` / `navMobile`,
@@ -104,7 +110,7 @@ html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opac
 .spnav-quiet-link.is-active{color:var(--t0)}
 /* 5.5% ink at rest, 11% on hover (230-233). */
 .spnav-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:0;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t0);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
-.spnav-icon:hover{background:color-mix(in srgb,var(--t0) 11%,transparent)}
+@media(hover:hover){.spnav-icon:hover{background:color-mix(in srgb,var(--t0) 11%,transparent)}}
 /* THE BURGER MORPH. Three bars, two of which rotate into a cross while the
    middle one squashes and fades -- Spectrum lines 234-237 and 129-132, with its
    own .34s curve. The 5.15px offsets are the design's; they are what make the
@@ -145,14 +151,14 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
    mono note, centred vertically, at padding clamp(28px,7vw,96px) inside a
    1200px column; the Close pill at top 26px / right clamp(20px,5vw,52px); a
    .28s fade in and a .24s fade out. Nothing else is in it (SpectrumNav.jsx says
-   why). The safe-area terms are 0 on every current page (no viewport-fit=cover)
-   and only keep the pill clear of a notch if that ever changes.
+   why). The safe-area terms keep the pill, and the menu's own padding, clear of
+   the notch and home indicator; they are 0 on screens without them.
 
    THE GROUND IS 97%, NOT THE DESIGN'S 90% — the one departure in this block.
    Rendered in WebKit at 390x844 the page behind showed through at 90% as
    crisp second copy under the menu items (the blur was not painted). At 97%
    the items read cleanly whether or not the engine paints the blur. */
-.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,7vw,96px);background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
+.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:max(clamp(28px,7vw,96px),env(safe-area-inset-top,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-right,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-bottom,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
 .spnav-menu[data-menu="in"]{animation:spnav-menu-in .28s cubic-bezier(.23,1,.32,1) both}
 .spnav-menu[data-menu="out"]{animation:spnav-menu-out .24s ease both;pointer-events:none}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -175,8 +181,8 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
 .spnav-mi:hover{text-decoration:none;color:var(--t0)}
 .spnav-mi--accent,.spnav-mi--accent:hover{color:var(--accent-text)}
 .spnav-mi::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .34s cubic-bezier(.23,1,.32,1)}
-/* The note (255): mono 11px, .14em, faint, 30px under the items. */
-.spnav-mi-note{margin:30px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--t2)}
+/* The note (255): faint, 30px under the items, in the interface sans. */
+.spnav-mi-note{margin:30px 0 0;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .spnav-mi-note::after{display:none}
 /* Hovering ANYWHERE on the open menu dims the items to .42, and the one under
    the pointer comes back to full in the link-hover colour with its underline
@@ -233,24 +239,36 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
   .spnav-quiet,.spnav-rule{display:none}
 }
 @media(max-width:479px){
-  .spnav-eyebrow{display:none}
   .spnav-mark{padding:8px 10px}
 }
 @media(max-width:389px){
   .spnav-cta{display:none}
 }
+/* While the page's own "Open the toolkit" is on screen the pill's copy of it
+   steps aside. Hidden, not removed: the pill keeps its width, so the mark never
+   moves, and `visibility` takes it out of the tab order. */
+@media(max-width:1000px){
+  .spnav[data-hero-cta="1"] .spnav-cta{opacity:0;visibility:hidden;pointer-events:none}
+  /* The hidden CTA keeps its width, so with the controls after it the pill would
+     show an empty stretch at its end. While it is hidden the controls take the
+     slot after it instead, so they end the pill and the gap sits inside it. */
+  .spnav[data-hero-cta="1"] .spnav-icon{order:1}
+}
 /* On phones the pill spans the viewport less a 16px gutter each side, the
    mark at its start and the controls at its end. */
 @media(max-width:767px){
-  .spnav{padding-left:16px;padding-right:16px}
+  .spnav{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .spnav-bar{width:100%;flex-wrap:nowrap;justify-content:flex-start}
   .spnav-bar > .spnav-mark{margin-right:auto}
 }
-/* The icon buttons are drawn at 38px; on a touch screen each takes a 44px hit
-   area centred on it, so the drawn size stays and the target is 44px. */
-@media(pointer:coarse){
-  .spnav-icon,.spnav-cta,.spnav-mark{position:relative}
-  .spnav-icon::after,.spnav-cta::after,.spnav-mark::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* The icon buttons are drawn at 38px and the quiet links about 32px tall; on a
+   touch screen each takes a 44px hit area centred on it, so the drawn size
+   stays and the target is 44px. The quiet links are wider than 44px, so only
+   their height grows and neighbouring areas never overlap. Any pointer gets them
+   below 768px, where the pill is the phone layout. */
+@media(pointer:coarse),(max-width:767px){
+  .spnav-icon,.spnav-cta,.spnav-mark,.spnav-quiet-link{position:relative}
+  .spnav-icon::after,.spnav-cta::after,.spnav-mark::after,.spnav-quiet-link::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 }
 
 
@@ -276,9 +294,9 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
    clamp(48px,6vw,80px) clamp(20px,4vw,52px); ONE auto-fit grid of
    minmax(min(220px,100%),1fr) at a 36px gap holding the brand cell and the
    link columns (the Footer nav is display:contents so its columns are cells of
-   that grid); headings in 10px mono at .18em, faint, weight 540; lists at an
+   that grid); headings in the caption size, faint, weight 540; lists at an
    11px gap, 16px under the heading; links in the design's link style above;
-   the baseline in 10.5px mono at .1em, faint, over another 9% hairline. */
+   the baseline in the caption size, faint, over another 9% hairline. */
 .sp-footer{position:relative;z-index:2;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);background:var(--bg-0);color:var(--t0)}
 /* The curtain reveal (SpectrumFooter `reveal`, set only while the whole footer
    fits the window and it is on the verge of view): stuck to the bottom of the window one layer under the
@@ -289,7 +307,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 @supports selector(:has(*)){
   .sp-footer[data-curtain][data-curtain-near]{position:sticky;bottom:0;z-index:1}
 }
-.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) clamp(20px,4vw,52px)}
+.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:36px;align-items:start}
 .sp-footer .sp-footer-links{display:contents}
 .sp-footer .sp-footer-say{margin:0;font-family:var(--display);font-weight:560;font-size:clamp(26px,3vw,38px);line-height:1.06;max-width:min(22ch,100%);text-wrap:balance}
@@ -310,7 +328,7 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta-icon{transition:none}
 html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:hover .sp-footer-cta-icon,
 html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none}
 .sp-footer .sp-footer-col{min-width:0}
-.sp-footer .sp-footer-col-h{margin:0;font-family:var(--mono);font-size:10px;font-weight:540;letter-spacing:.18em;color:var(--t2)}
+.sp-footer .sp-footer-col-h{margin:0;font-family:var(--font);font-size:var(--fs-caption);font-weight:540;letter-spacing:normal;text-transform:none;color:var(--t2)}
 /* The design's 11px gap between rows. Every footer link holds at least a 24px
    box (WCAG 2.5.8, 58-target-size-24). */
 .sp-footer .sp-footer-col ul{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:11px}
@@ -323,16 +341,73 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   .sp-footer .sp-footer-col ul{gap:0}
   .sp-footer .sp-footer-col a{display:flex;min-height:44px}
 }
+/* Phones and tablets: the brand cell takes the full width and the four link
+   columns sit under it, four across on a tablet and two by two on a phone, so
+   no column is left alone on its row. */
+@media(max-width:1000px){
+  .sp-footer .sp-footer-inner{padding-bottom:max(48px,env(safe-area-inset-bottom))}
+  .sp-footer .sp-footer-brand{grid-column:1 / -1}
+}
+@media(min-width:761px) and (max-width:1000px){
+  .sp-footer .sp-footer-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  /* Two stacks side by side, each holding whole columns in reading order, so the
+     short columns do not leave a hole beside the long one. */
+  .sp-footer .sp-footer-grid{grid-template-columns:minmax(0,1fr);row-gap:32px}
+  .sp-footer .sp-footer-links{display:block;columns:2;column-gap:16px;--sp-row:35px;--sp-row-gap:11px}
+  .sp-footer .sp-footer-col{break-inside:avoid;padding-bottom:var(--sp-row-gap)}
+  /* Everything in a stack sits on one row pitch: a link row (its 24px box plus the
+     11px gap, or 44px on touch) is a pitch, and a group head takes exactly one
+     pitch too, with its text on the lower edge. A second group's head in the
+     left stack then lands on a row of the right stack instead of between two. */
+  .sp-footer .sp-footer-col-h{display:flex;align-items:flex-end;box-sizing:border-box;min-height:var(--sp-row);padding-bottom:8px}
+  .sp-footer .sp-footer-col ul{margin-top:0}
+  /* The LEGAL column is hidden on a phone (its links sit in the baseline), so
+     the column before it is the last one drawn. */
+  .sp-footer .sp-footer-col--legal{display:none}
+  .sp-footer .sp-footer-col:nth-last-child(2){padding-bottom:0}
+}
+@media(max-width:760px) and (pointer:coarse){
+  .sp-footer .sp-footer-links{--sp-row:44px;--sp-row-gap:0px}
+}
+/* The notice row: small print a page owes (the icon sets' licences), between the
+   columns and the baseline. Sans, because it is prose; links are underlined at
+   rest because touch has no hover. The baseline follows it as one legal block:
+   it drops its own hairline and sits 24px under the notice. */
+.sp-footer .sp-footer-notice{margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent)}
+.sp-footer .sp-footer-notice p{margin:0}
+.sp-footer .sp-footer-notice-h{font-family:var(--font);font-size:13px;font-weight:540;line-height:1.4;color:var(--t1)}
+.sp-footer .sp-footer-notice-list{margin-top:8px;max-width:75ch;font-family:var(--font);font-size:14px;line-height:1.6;color:var(--t1);overflow-wrap:anywhere}
+.sp-footer .sp-footer-notice-list a{padding-block:2px;border-radius:var(--radius-xs);color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:3px}
+.sp-footer .sp-footer-notice-list a:hover{text-decoration-color:currentColor}
+.sp-footer .sp-footer-notice-list a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.sp-footer .sp-footer-notice-list{line-height:2}}
+.sp-footer .sp-footer-notice + .sp-footer-legal{margin-top:24px;padding-top:0;border-top:0}
 /* The baseline (1631). */
-.sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t2)}
+.sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t2)}
 .sp-footer .sp-footer-legal a{color:var(--t1)}
 .sp-footer .sp-footer-legal a:hover{color:var(--t0)}
-/* THE FOUNDER CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
+/* THE AUTHOR CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
    on touch there is no hover. 70% of the current ink at a 2px offset;
    07-public-shell-library-palette measures it by contrast in both themes. */
 .sp-footer .sp-footer-legal a.sp-footer-attrib{color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .sp-footer .sp-footer-legal a.sp-footer-attrib:hover{text-decoration-color:currentColor}
-/* The founder's note trigger, restyled to the baseline and nothing else — its
+/* The author's note trigger, restyled to the baseline and nothing else — its
    element, label, aria-haspopup and press-only opening are FounderNote's. */
-.sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sp-footer .app-footer-note:hover{color:var(--t0)}
+/* The baseline holds links on a phone, so it keeps the caption size (no smaller phone override). */
+@media(max-width:760px){.sp-footer .sp-footer-legal{margin-top:32px}}
+/* On a phone the legal links (Privacy, Terms, Credits) sit in the baseline row
+   with the copyright and the about note, in the same sans, each underlined like
+   the note so it reads as a link without a hover. The three share a row of their
+   own, so at 320px none is left alone on a wrapped line. On a touch screen each
+   is a box at least 44px tall and wide, so a thumb never meets two. */
+.sp-footer .sp-footer-legal-links{display:flex;flex-wrap:wrap;flex:1 0 100%;align-items:center;gap:0 clamp(14px,2vw,28px)}
+.sp-footer .sp-footer-legal-links a{display:inline-flex;align-items:center;justify-content:center;min-height:24px;text-decoration:underline;text-underline-offset:3px}
+@media(pointer:coarse){
+  .sp-footer .sp-footer-legal-links a{min-height:44px;min-width:44px}
+}
+/* From 761px up the links are the LEGAL column instead (see SpectrumFooter). */
+@media(min-width:761px){.sp-footer .sp-footer-legal-links{display:none}}

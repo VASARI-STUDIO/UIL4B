@@ -1,15 +1,15 @@
 // The compressed secondary landings, and the two homepage marks.
 //
-// Two founder requests of 2026-09-05 land here, and both are the kind of change
+// Two requests land here, and both are the kind of change
 // that regresses by ACCRETION rather than by breaking: somebody adds one more
 // "why it helps" band to /discover, or a stale count creeps back into a hero
 // hint, and nothing fails. So these assert the SHAPE and the DERIVATION, not
 // the wording.
 //
-//   1. [secondary-pages-compress-to-links] — "i want to compress our secondary
-//      sales pages to mostly act as linking pages showcasing a tools value
-//      proposition then a link". Three pages, and the founder chose the deepest
-//      of the three depths offered: value prop plus link, nothing else.
+//   1. [secondary-pages-compress-to-links] — the secondary sales pages act mostly
+//      as linking pages showcasing a tool's value proposition, then a link. Three
+//      pages, at the deepest of the three depths offered: value prop plus link,
+//      nothing else.
 //
 //   2. [homepage-hero-buffer-reference] — the drawn "give it a try" pointing at
 //      the command bar, and the step marker beside the tools heading.
@@ -28,15 +28,15 @@
 //   landing left to be compressed, so it is out of every table below rather
 //   than re-pointed — a tool shell is not a secondary sales page and asserting
 //   "two bands under main" of one would be measuring the wrong thing.
-// · The two remaining landings COMPRESSED FURTHER, by the founder's own
-//   2026-09-18 decision quoted in SurfaceIndex.jsx: "/discover and /learn lose
-//   their sales intro and go straight to the real library/guide index." The
+// · The two remaining landings COMPRESSED FURTHER, as recorded in
+//   SurfaceIndex.jsx: /discover and /learn lose their sales intro and go straight
+//   to the real library/guide index. The
 //   eyebrow, the pitch headline, the lede and the single hero CTA all went. So
 //   the hero's "exactly one way in" rule is now "no pitch in the head at all",
 //   which is the same request taken one notch deeper — see the test.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
-import { DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { DISCOVER_GROUPS } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 
 const COMPRESSED = ['/discover', '/learn']
@@ -46,7 +46,9 @@ const COMPRESSED = ['/discover', '/learn']
 // unit a reader scrolls past: one <header> plus one <section> on /discover, and
 // one extra on /learn for the guides that exist (which are links, so they
 // belong).
-const EXPECTED_BANDS = { '/discover': 2, '/learn': 3 }
+// Signed out. The roadmap of unwritten topics is an admin-only band, so /learn
+// is a head and the guides.
+const EXPECTED_BANDS = { '/discover': 2, '/learn': 2 }
 
 // Where each page's real destinations live.
 const LINKS = {
@@ -74,8 +76,8 @@ test.describe('the secondary landings stay compressed', () => {
 
       // NO PITCH IN THE HEAD. This used to read "exactly one `.ui-pill`",
       // because the fault it caught was a SECOND hero button pointing OUT of
-      // the surface the visitor had just arrived at. The founder took it a
-      // notch deeper on 2026-09-18 — the head is now the surface's own name and
+      // the surface the visitor had just arrived at. It later went a
+      // notch deeper — the head is now the surface's own name and
       // one derived count line, with no call to action at all, on the grounds
       // that a visitor who clicked Discover has already decided to browse.
       //
@@ -106,23 +108,25 @@ test.describe('the secondary landings stay compressed', () => {
     // The hero and cards share the registry's live and upcoming counts.
     await go(page, '/discover')
     const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
-    const soon = DISCOVER_GROUPS.length - live
     const discoverHint = await page.locator('.home-hero-hint').innerText()
     expect(discoverHint, 'the Discover hint no longer matches the group data')
-      .toMatch(new RegExp(`\\b${live}\\b[\\s\\S]*\\b${soon}\\b`))
+      .toMatch(new RegExp(`\\b${live}\\b`))
+    // Signed out, unfinished libraries are neither counted nor drawn.
+    expect(discoverHint).not.toMatch(/still being built/i)
 
-    // The live cards and the Soon cards are the two halves of that same count,
-    // so the hint cannot disagree with the grid beneath it.
     await expect(page.locator('.surface-card--link')).toHaveCount(live)
-    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(soon)
+    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
     await go(page, '/learn')
     const learnHint = await page.locator('.home-hero-hint').innerText()
     expect(learnHint, 'the Learn hint no longer matches the article registry')
       .toContain(String(LEARN_ARTICLES.length))
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
-    await expect(page.locator('.surface-card:not(.surface-card--link)'))
-      .toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
+    // The guides only: Help and Design Principles sit after them in the "Using
+    // UIL4B" group and are not articles (207-learn-hub.spec.js).
+    await expect(page.locator('.lidx-sections section:not(#learn-topic-using-uil4b) .lidx-card'))
+      .toHaveCount(LEARN_ARTICLES.length)
+    // The unwritten-topics roadmap is an admin-only sight.
+    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
 
     // /create/color's third assertion is gone with the page. It read one
     // `.surface-card--link` per LIVE colour tool, so the landing could not

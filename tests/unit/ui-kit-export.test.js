@@ -1,4 +1,4 @@
-// The UI kit export: src/templates/uiKit.html filled from a saved design by
+// The UI kit export: src/templates/kit/studio.html filled from a saved design by
 // src/utils/uiKitExport.js, with its fonts gathered by src/utils/kitFonts.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -11,10 +11,11 @@ import { readIdentity, IDENTITY_NAME_MAX, IDENTITY_DESCRIPTION_MAX } from '../..
 import { parseGoogleFontCss, loadKitFonts, licenseUrls, googleCssUrl, LICENSE_SOURCE_COMMIT } from '../../src/utils/kitFonts.js'
 import { EXPORT_FORMATS, freeFormats, styleGuideFormats } from '../../src/config/exportFormats.js'
 import { FREE_POINTS, PRO_POINTS } from '../../src/config/planFacts.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
+import { KIT_INVENTED, visibleText } from '../helpers/banned-copy.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
-const TEMPLATE = read('src/templates/uiKit.html')
-const MARK = read('public/favicon.svg')
+const TEMPLATE = read('src/templates/kit/studio.html')
 const DATE = new Date('2026-01-02T00:00:00Z')
 const OFL = { name: 'SIL Open Font License', text: 'Copyright 2020 The Test Project Authors\nSIL OPEN FONT LICENSE Version 1.1' }
 
@@ -35,7 +36,7 @@ const PUBLISHER = {
   publisherLicense: 'Geist licence text',
 }
 const render = (design, opts = {}) => renderUiKit(design, {
-  template: TEMPLATE, markSvg: MARK, fonts: FONTS, ...PUBLISHER, date: DATE, ...opts,
+  template: TEMPLATE, fonts: FONTS, ...PUBLISHER, date: DATE, ...opts,
 })
 const dataOf = (html) => JSON.parse(/<script type="application\/json" id="brand-data">([\s\S]*?)<\/script>/.exec(html)[1])
 
@@ -43,7 +44,7 @@ test('the renderer is deterministic for a fixture project', () => {
   const a = render(DESIGN, { tier: 'free' })
   const b = render(DESIGN, { tier: 'free' })
   assert.equal(a.html, b.html)
-  assert.equal(a.filename, 'uil4b-ui-kit.html')
+  assert.equal(a.filename, 'untitled-ui-kit.html', 'an unnamed kit is never filed under UIL4B')
   assert.ok(!/@@[A-Z_]+@@/.test(a.html), 'a placeholder was left unfilled')
   assert.ok(a.html.length > 30000, 'the kit is a real document')
 })
@@ -79,7 +80,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   }
   assert.match(html, /@page \{ @bottom-right/, 'Pro keeps page numbers only')
   assert.match(html, /<section class="chapter personal-identity" id="identity">[\s\S]*<div class="identity-name">Harbour<\/div>/)
-  assert.match(html, /<h2>Your identity\.<\/h2><p>Moorings and chandlery on the north quay\.<\/p>/,
+  assert.match(html, /<h2>Identity<\/h2><p>Moorings and chandlery on the north quay\.<\/p>/,
     'the description the person wrote replaces the template default')
   assert.ok(html.includes(`<img src="${logo.src}" alt="Harbour logo">`))
   assert.match(html, /<span class="pro-title">Harbour<\/span>/)
@@ -89,13 +90,13 @@ test('a pro kit has none of the attribution, and shows the identity it was given
 
   // A name with no description keeps the template's own line.
   const plain = render({ ...DESIGN, identity: { name: 'Harbour' } }, { tier: 'pro' })
-  assert.match(plain.html, /<h2>Your identity\.<\/h2><p>Your supplied identity, paired with the selected interface system\.<\/p>/)
+  assert.match(plain.html, /<h2>Identity<\/h2><p>Your supplied identity, paired with the selected interface system\.<\/p>/)
 
   // No name, no identity section — a logo or a description alone does not make one.
   const unnamed = render({ ...DESIGN, identity: { description: IDENTITY.description } }, { tier: 'pro', logo })
   assert.ok(!unnamed.html.includes('class="chapter personal-identity"'))
   assert.ok(!unnamed.html.includes(IDENTITY.description))
-  assert.equal(unnamed.filename, 'ui-kit.html')
+  assert.equal(unnamed.filename, 'untitled-ui-kit.html')
 })
 
 test('the identity is read from the working design, never from a field it does not have', () => {
@@ -145,14 +146,14 @@ test('the example selections never reach a real project', () => {
   for (const hex of DESIGN.palette.colors) assert.ok(html.includes(hex), `${hex} from the palette is missing`)
 })
 
-test('the five slots follow the palette positions, with shares that total 100', () => {
+test('the five slots follow the palette positions', () => {
   const slots = Object.fromEntries(kitPalette(DESIGN).map((p) => [p.id, p]))
   assert.equal(slots.pine.hex, '#2F6B5A')
   assert.equal(slots.lilac.hex, '#8C6BB1')
   assert.equal(slots.citron.hex, '#E3B23C')
   assert.equal(slots.chalk.hex, '#EEF3EE')
   assert.equal(slots.ink.hex, '#1B2A26')
-  assert.equal(Object.values(slots).reduce((n, p) => n + p.share, 0), 100)
+  for (const p of Object.values(slots)) assert.ok(!('share' in p) && !('note' in p), `${p.id}: carries an invented share or slogan`)
   for (const p of Object.values(slots)) {
     assert.equal(p.scale['500'], p.hex, `${p.id}: the 500 stop is the colour itself`)
     assert.equal(Object.keys(p.scale).length, 11)
@@ -174,7 +175,11 @@ test('every variable the document names is in the CSS and JSON it hands over', (
   // The JSON is the app's DTCG token file, not a second format.
   const json = JSON.parse(data.json)
   assert.equal(json.color.primary.$root.$type, 'color')
-  assert.equal(json.color.background.$value.hex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex)
+  // The canvas role is an alias when a palette or tint token holds its value, else a literal colour.
+  const background = json.color.background.$value
+  const target = typeof background === 'string' ? background.slice(1, -1).split('.').reduce((n, k) => n[k], json) : null
+  const canvasHex = (target ? (target.$root || target).$value.hex : background.hex)
+  assert.equal(canvasHex, kitPalette(DESIGN).find((p) => p.id === 'chalk').hex.toLowerCase())
   assert.deepEqual(json.space['4'].$value, { value: 4, unit: 'px' })
 })
 
@@ -221,19 +226,24 @@ test('user-supplied text renders inert', () => {
 test('the export panel offers the kit as a free format, and the plan lines say so', () => {
   const kit = EXPORT_FORMATS.find((f) => f.id === 'kit')
   assert.ok(kit && kit.live && !kit.pro, 'the UI kit must be built and free')
-  assert.equal(EXPORT_FORMATS[0].id, 'kit', 'the kit is the first format the panel offers')
+  assert.equal(EXPORT_FORMATS[0].id, 'kit', 'the kit is the first format in the shared table')
   assert.ok(freeFormats().includes(kit))
   assert.ok(!styleGuideFormats().includes(kit))
   assert.ok(FREE_POINTS.some((l) => l.startsWith('The UI kit')))
-  assert.ok(PRO_POINTS.some((l) => /UI kit with no “Made with UIL4B” line/.test(l)))
-  const panel = read('src/components/ExportPanel.jsx')
-  assert.match(panel, /useState\('kit'\)/, 'the kit is the panel\'s default format')
-  assert.match(panel, /tier: isPro \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
-  // The kit's identity comes from the working design inside the renderer. The
-  // design has no `name`, so passing one from here personalised nothing.
-  const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('download(blob, filename)'))
+  assert.ok(PRO_POINTS.some((l) => /with no UIL4B line on anything/.test(l)), 'Pro no longer says the UIL4B line comes off')
+  // The dialog gives the kit its own rail row, a free one with one file.
+  const row = EXPORT_TYPES.find((t) => t.id === 'kit')
+  assert.deepEqual(row?.categories.map((c) => [c.id, c.pro, c.files]), [['kit', false, ['kit']]], 'the kit is not a free row of its own')
+  const panel = read('src/hooks/useExportRunner.js')
+  assert.match(panel, /let proNow = isPro\b/, 'the export starts from the live entitlement')
+  assert.match(panel, /proNow = live\.current\.isPro/, 'an account that signed in at the gate is re-read before building')
+  assert.match(panel, /tier: proNow \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
+  // The kit is titled with the project's name, the one the dialog shows on its name line;
+  // a Pro identity name still takes its place inside the renderer.
+  const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('savedFile = download(blob, filename)'))
   assert.ok(call.length > 0, 'the kit call is no longer found — this assertion has gone blind')
-  assert.doesNotMatch(call, /design\?\.name|projectName/, 'the kit is handed a name the working design does not hold')
+  assert.match(call, /projectName/, 'the kit is not handed the project name the dialog shows')
+  assert.match(panel, /projects\.find\(\(p\) => String\(p\.id\) === String\(projectId\)\)\?\.name/, 'the name comes from the open project, not from a design that holds none')
 })
 
 test('the font requests name each selected family once, with the weights the kit sets', () => {
@@ -308,4 +318,79 @@ test('a self-hosted family is read from our own origin', async () => {
   const out = await loadKitFonts([{ family: 'Hanken Grotesk', weights: [400] }], { fetch: fakeFetch(routes) })
   assert.equal(out['Hanken Grotesk'].faces.length, 1)
   assert.equal(out['Hanken Grotesk'].faces[0].weight, '100 900')
+})
+
+test('kitSelections lists the first 13 colours in palette order, keeps the full count, and titles the kit by tier', () => {
+  const FIFTEEN = ['#2F6B5A', '#8C6BB1', '#E3B23C', '#EEF3EE', '#1B2A26', '#C0392B', '#2980B9', '#27AE60', '#8E44AD', '#D35400', '#16A085', '#7F8C8D', '#F39C12', '#34495E', '#E91E63']
+  const many = { ...DESIGN, palette: { base: FIFTEEN[0], harmony: 'auto', colors: FIFTEEN }, identity: IDENTITY }
+  const pro = kitSelections(many, { tier: 'pro' })
+  assert.equal(pro.colourCount, 15, 'the count is the design\'s, not the list\'s')
+  assert.deepEqual(pro.colours.map((c) => c.hex), FIFTEEN.slice(0, 13))
+  assert.deepEqual(pro.colours.map((c) => c.i), [...Array(13).keys()])
+  assert.equal(pro.colours[0].token, '--color-primary')
+  assert.equal(Object.keys(pro.colours[12].scale).length, 11)
+  assert.equal(pro.title, 'Harbour')
+  assert.equal(pro.name, 'Harbour')
+  // Free never takes the name, and the list and count follow the same rule.
+  const free = kitSelections(many, { tier: 'free' })
+  assert.equal(free.title, 'UI kit')
+  assert.notEqual(free.name, 'Harbour')
+  assert.equal(free.colourCount, 15)
+  assert.equal(free.colours.length, 13)
+  // The five-colour design lists all five and counts five; no identity titles a Pro kit "UI kit".
+  const five = kitSelections(DESIGN, { tier: 'pro' })
+  assert.equal(five.colourCount, 5)
+  assert.equal(five.colours.length, 5)
+  assert.equal(five.title, 'UI kit')
+})
+
+// ── Slice 2: the kit states only what the project holds ────────────────────
+
+const LUMEN = { projectName: 'Lumen' }
+const text = (html) => visibleText(html)
+
+test('a free kit is titled with the project name and saved under it, and keeps the UIL4B mark', () => {
+  const { html, filename, selections } = render(DESIGN, { tier: 'free', ...LUMEN })
+  assert.equal(filename, 'lumen-ui-kit.html')
+  assert.equal(selections.title, 'Lumen')
+  assert.match(html, /<title>Lumen \| UI kit<\/title>/)
+  assert.match(html, /<h1 class="cover-title"[^>]*><span class="ct">Lumen<\/span>/, 'the cover reads the project name')
+  assert.match(html, /class="section-watermark">Made with /, 'the mark stays')
+  const data = dataOf(html)
+  assert.match(data.css, /Lumen: design tokens/)
+  assert.ok(data.css.indexOf('Lumen') < 200 && !data.css.startsWith('/* Made'), 'the CSS download opens with the project, not the credit')
+  assert.match(data.cssCredit, /Made with UIL4B/, 'the credit is kept')
+  assert.ok(!/Download selected font styles separately/.test(html), 'the stray instruction opens no download')
+  // The description and logo are still Pro: a free kit reads neither.
+  const named = render({ ...DESIGN, identity: IDENTITY }, { tier: 'free', ...LUMEN, logo: { src: 'data:image/png;base64,AAAA' } })
+  assert.ok(!named.html.includes('Harbour') && !named.html.includes(IDENTITY.description))
+  assert.equal(named.filename, 'lumen-ui-kit.html')
+  // A Pro identity name takes the title's place; without one, Pro falls back to the project name.
+  assert.equal(render({ ...DESIGN, identity: IDENTITY }, { tier: 'pro', ...LUMEN }).filename, 'harbour-ui-kit.html')
+  assert.equal(render(DESIGN, { tier: 'pro', ...LUMEN }).filename, 'lumen-ui-kit.html')
+  // The name is escaped wherever it lands.
+  assert.ok(!render(DESIGN, { tier: 'free', projectName: '<b>x</b>' }).html.includes('<b>x</b>'))
+})
+
+test('no layout draws a usage-share bar or states a share the project never set', () => {
+  for (const name of ['studio', 'manual', 'showcase']) {
+    const template = read(`src/templates/kit/${name}.html`)
+    for (const tier of ['free', 'pro']) {
+      const { html } = render(DESIGN, { tier, template, ...LUMEN })
+      assert.ok(!/class="proportion/i.test(html.replace(/<style[\s\S]*?<\/style>/gi, '')), `${name} ${tier}: a proportion bar is back`)
+      for (const re of KIT_INVENTED) assert.ok(!re.test(text(html)), `${name} ${tier}: the kit says ${re}`)
+    }
+  }
+})
+
+test('the kit says only what the project holds: its name, its colour count and its faces', () => {
+  const { html, selections } = render(DESIGN, { tier: 'free', ...LUMEN })
+  assert.equal(selections.website.headline, 'Lumen')
+  assert.equal(selections.website.description, '5 colours. Headings in Space Grotesk, body in Work Sans.')
+  assert.equal(selections.tagline, '5 colours')
+  assert.match(html, /<h3>Lumen<\/h3><p>5 colours\. Headings in Space Grotesk, body in Work Sans\.<\/p>/)
+  // Every sample pair is one the kit itself sets, and is labelled for the job it does.
+  const pairs = [...html.matchAll(/<div class="contrast-pair">[\s\S]*?<strong>(.*?)<\/strong><small>([\d.]+):1 · (.*?)<\/small>/g)]
+  assert.deepEqual(pairs.map((m) => m[1]), ['Text on canvas', 'Text on primary', 'Text on accent', 'Text on supporting'])
+  for (const m of pairs) assert.ok(Number(m[2]) >= 4.5, `${m[1]} is a sample pair that fails AA (${m[2]})`)
 })

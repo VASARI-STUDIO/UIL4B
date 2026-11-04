@@ -9,9 +9,9 @@
 // it is easy to lose in a refactor, and losing any of it is invisible — which
 // is the same fault one level up.
 //
-// docs/OWNER-ACTIONS.md tells the founder to read `provider` in devtools as THE
-// procedure for closing `openrouter-path-verification`. These tests are what
-// keep that procedure from quietly becoming impossible.
+// The owner procedure for closing `openrouter-path-verification` is to read
+// `provider` in devtools. These tests are what keep that procedure from
+// quietly becoming impossible.
 //
 // ── WHAT CHANGED, AND WHY (2026-09-08) ──────────────────────────────────────
 //
@@ -67,6 +67,7 @@ import vm from 'node:vm'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
 import { cleanKey } from '../../api/_lib/env.js'
+import { usageDayKey, usageMonthKey } from '../../api/_lib/aiUsage.js'
 import {
   altTextGenerationConfig,
   altTextOutcome,
@@ -75,6 +76,10 @@ import {
   ALT_TEXT_CUTOFF_ERRORS,
 } from '../../api/_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
+import {
+  geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+} from '../../api/_lib/geoBlock.js'
+import { emailGateBody } from '../../api/_lib/emailGate.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
@@ -181,6 +186,10 @@ function loadAi({
     credentialProblem: () => credential,
     FieldValueIncrement: async () => INC,
     requireAdmin: async () => admin,
+    // api/_lib/aiUsage.js — the real day and month keys, so the provider-health
+    // window reads the same documents the handler writes.
+    usageDayKey, usageMonthKey,
+    serveUsage: () => { throw new Error('not modelled here') },
     planForUser: () => { throw new Error('not modelled here') },
     dailyLimitFor: () => { throw new Error('not modelled here') },
     monthlyLimitFor: () => { throw new Error('not modelled here') },
@@ -197,6 +206,10 @@ function loadAi({
     altTextOutcome: () => { throw new Error('not modelled here') },
     altTextCutoffReply: () => { throw new Error('not modelled here') },
     ALT_TEXT_CUTOFF_REFUND_CAP,
+    // api/_lib/geoBlock.js — the real, pure region gate.
+    geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+    // api/_lib/emailGate.js — the real, pure email gate.
+    emailGateBody,
     // Per-test replacements for the stubs above, for the paths a test drives.
     ...stubs,
   }
@@ -248,7 +261,7 @@ test('the harness executes api/ai.js, so nothing below is vacuous', () => {
 test('THE ONE THAT MATTERS: a generation says which provider served it', async () => {
   // Without this field there is NO way, from outside the deployment, to tell a
   // healthy OpenRouter from a dead one — both return a good prompt. It is the
-  // whole of the founder procedure in docs/OWNER-ACTIONS.md.
+  // whole of the owner procedure for checking it.
   const healthy = loadAi()
   const { result } = await healthy.generate()
   assert.ok(result, 'a healthy OpenRouter did not produce a generation')
@@ -787,8 +800,8 @@ const { describeProvider, providerBadgeStyle } = await import('../../src/utils/a
 const srcFile = (f) => stripJs(fs.readFileSync(path.join(process.cwd(), 'src', f), 'utf8'))
 
 // ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
-// The repository is public and that document is the founder's own console and
-// credential worklist, so he keeps it on his machine and out of every
+// The repository is public and that document is the owner's own console and
+// credential worklist, so it is kept on one machine and out of every
 // clone (.gitignore carries the decision and the reason). The one test below
 // that reads it SKIPS WITH A REASON where it is absent and runs in full where
 // it is present — it must not go quietly green, because "the document does not
@@ -861,7 +874,7 @@ test('THE ONE THAT MATTERS: the prompt tool keeps `provider` and renders it', ()
   // so it failed with ENOENT rather than an assertion, which is how the
   // reference was proven load-bearing before it was removed.
   // AiPromptGenerator.jsx is deliberately NOT deleted: it is the only caller of
-  // the OpenRouter path and docs/OWNER-ACTIONS.md §4.5 asks the founder to
+  // the OpenRouter path, and the owner still has to
   // choose between wiring it and cancelling OpenRouter. So this test still
   // guards the surface the item is about, on the one page that can reach it.
   for (const page of ['pages/AiPromptGenerator.jsx']) {
@@ -870,9 +883,11 @@ test('THE ONE THAT MATTERS: the prompt tool keeps `provider` and renders it', ()
       `${page} drops data.provider off the response again — the failover is invisible on this page`)
     assert.match(src, /describeProvider\(r\.provider\)/,
       `${page} stores the provider but never renders it, which is the same silence one step later`)
-    assert.match(src, /data-testid="ai-provider-badge"/,
-      `${page} renders the provider without a stable hook to find it by`)
+    assert.match(src, /<ProviderBadge provider=\{describeProvider\(r\.provider\)\}/,
+      `${page} describes the provider but does not render the badge`)
   }
+  assert.match(srcFile('components/ProviderBadge.jsx'), /data-testid="ai-provider-badge"/,
+    'the provider badge renders without a stable hook to find it by')
 })
 
 // ── the durable counters (pure) ──────────────────────────────────────────────
@@ -964,9 +979,25 @@ test('an intermittent primary is degraded, not ok and not failing', () => {
   assert.match(v.summary, /3 of 10/)
 })
 
+test('one healthy generation reads as the only one, not "all 1"', () => {
+  const one = summariseProviderHealth([day('2026-09-03', { openrouterOk: 1 })])
+  assert.equal(one.status, 'ok')
+  assert.match(one.summary, /^OpenRouter served the only generation in the last \d+ days\.$/)
+  const two = summariseProviderHealth([day('2026-09-03', { openrouterOk: 2 })])
+  assert.match(two.summary, /^OpenRouter served all 2 generations/)
+})
+
+test('the Brand Starter prompt asks for Australian English and no first person in the rationale', () => {
+  const src = fs.readFileSync(path.join(process.cwd(), AI_PATH), 'utf8')
+  const prompt = src.slice(src.indexOf('const STARTER_SYSTEM_PROMPT'), src.indexOf('async function runBrandStarter'))
+  assert.match(prompt, /Australian English/)
+  assert.match(prompt, /never as yourself: no "I", "we" or "my"/)
+  assert.doesNotMatch(prompt, /what you did about it/)
+})
+
 test('the panel says out loud when nothing will come and find the operator', () => {
   // Counters only work if someone looks. Whether anyone is TOLD depends on an
-  // env pair the founder has to provision, so the absence is stated rather than
+  // env pair the owner has to provision, so the absence is stated rather than
   // left as an empty field that reads like "fine".
   const off = summariseProviderHealth([day('2026-09-03', { openrouterOk: 1 })], { alerting: false })
   assert.match(off.alerting, /^OFF/, 'an unprovisioned alert path is not flagged as off')
@@ -983,7 +1014,7 @@ test('the panel says out loud when nothing will come and find the operator', () 
   })
 })
 
-// ── the admin surface, and the founder's procedure ──────────────────────────
+// ── the admin surface, and the owner's procedure ────────────────────────────
 
 test('the Admin overview renders the verdict, and never on a page a non-admin can load', () => {
   // SOURCE ASSERTION, kept on purpose — see the header. Admin.jsx cannot be
@@ -1014,4 +1045,172 @@ test('the owner action does not tell the founder the diagnostic can close it', {
     'OWNER-ACTIONS.md must name the `provider` field and the value that means PASS — it is the only thing that closes this')
   assert.match(doc, /provider: "gemini"/,
     'OWNER-ACTIONS.md must say what a silent failover looks like, or the founder cannot recognise the failure')
+})
+
+// ── The region gate, EXECUTED ───────────────────────────────────────────────
+//
+// Google's Gemini terms don't let the free tier serve the EEA, UK or CH, so
+// api/ai.js refuses those visitors on the Gemini-only tasks (451) and skips the
+// Gemini fallback on the text tasks. The country list is tested on its own in
+// ai-region-block.test.js; what is pinned HERE is where in the request the gate
+// sits, because a gate in the wrong place passes every list test: after auth (a
+// stranger learns nothing), before the quota reservation and the provider fetch
+// (a refused request costs nothing and calls nobody).
+
+const from = (country) => (country ? { 'x-vercel-ip-country': country } : {})
+
+const REGION_STUBS = {
+  ...ALT_STUBS,
+  adminAuth: () => ({ verifyIdToken: async () => ({ uid: 'u', email_verified: true }) }),
+  planForUser: () => ({ id: 'free' }),
+  dailyLimitFor: () => 5,
+  monthlyLimitFor: () => 60,
+  generationBucket: () => ({ suffix: 'life', limit: 1, period: 'life' }),
+  MAX_PROMPT_CHARS: 500, MIN_PROMPT_CHARS: 3,
+  parseStarterJson: () => ({ ok: true }),
+  sanitizeBrandStarter: () => ({ ok: true, starter: { name: 'x' } }),
+  // The reservation is a Firestore write in the real runMeteredTask, so the
+  // stub makes one: a test can then say "a refused request wrote nothing".
+  runMeteredTask: async ({ meters, run }) => {
+    for (const m of meters) await m.ref.set({ [m.field]: 1 }, { merge: true })
+    const result = await run(meters.map(() => 0), { refundCapped: async () => 'kept' })
+    return { ok: true, result, counts: meters.map(() => 1) }
+  },
+}
+const SCAN_ANSWER = ok({ candidates: [{ content: { parts: [{ text: '[]' }] }, finishReason: 'STOP' }] })
+const BOTH_KEYS = { OPENROUTER_API_KEY: OPENROUTER_KEY, GEMINI_API_KEY: GEMINI_KEY }
+const FREE_METER = { plan: { id: 'free' }, limit: 5, used: 1, monthUsed: 3, monthLimit: 60 }
+
+const post = async (ai, { task, country, auth = true }) => {
+  const res = ai.response()
+  await ai.handler({
+    method: 'POST',
+    query: {},
+    headers: { ...(auth ? { authorization: 'Bearer token' } : {}), ...from(country) },
+    body: { task, image: 'aGVsbG8=', mimeType: 'image/jpeg', description: 'a calm booking app for dog groomers' },
+  }, res)
+  return res
+}
+const refusedByRegion = (res) => res.statusCode === 451 && res.body?.code === 'region-unavailable'
+
+test('GET /api/ai?region=1 tells a German visitor they are blocked, and says not to cache it', async () => {
+  const ai = loadAi({ env: BOTH_KEYS })
+  const res = ai.response()
+  await ai.handler({ method: 'GET', query: { region: '1' }, headers: from('DE') }, res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.blocked, true)
+  assert.deepEqual(Object.keys(res.body), ['blocked'], 'the region answer carries more than the one fact')
+  assert.match(res.headers['Cache-Control'], /no-store/, 'a per-visitor answer must not be cacheable or one country would serve another')
+  assert.deepEqual(ai.fetches, [], 'the region check called a provider')
+  assert.deepEqual(ai.writes, [], 'the region check touched Firestore')
+})
+
+test('GET /api/ai?region=1 says open for Australia and for a request with no country header', async () => {
+  for (const headers of [from('AU'), {}]) {
+    const ai = loadAi({ env: BOTH_KEYS })
+    const res = ai.response()
+    await ai.handler({ method: 'GET', query: { region: '1' }, headers }, res)
+    assert.equal(res.statusCode, 200)
+    assert.equal(res.body.blocked, false, `headers ${JSON.stringify(headers)} read as blocked`)
+    assert.deepEqual(ai.fetches, [])
+  }
+})
+
+test('the vision tasks refuse a signed-in German visitor with 451 before anything is spent or sent', async () => {
+  for (const task of ['alt-text', 'scan-photo']) {
+    const ai = loadAi({ env: BOTH_KEYS, gemini: SCAN_ANSWER, stubs: REGION_STUBS })
+    const res = await post(ai, { task, country: 'DE' })
+    assert.equal(res.statusCode, 451, `${task} from DE answered ${res.statusCode}`)
+    assert.equal(res.body.code, 'region-unavailable')
+    assert.equal(res.body.quotaSpent, false)
+    assert.equal(res.body.error, REGION_BLOCKED_ERROR)
+    assert.deepEqual(ai.fetches, [], `${task}: a refused request still called a provider`)
+    assert.deepEqual(ai.writes, [], `${task}: a refused request still reserved quota or wrote health`)
+  }
+})
+
+test('the same vision calls from Australia are not refused and do reach Gemini', async () => {
+  for (const task of ['alt-text', 'scan-photo']) {
+    const gemini = task === 'scan-photo' ? SCAN_ANSWER : geminiReply('STOP', 'A finished sentence.')
+    const ai = loadAi({ env: BOTH_KEYS, gemini, stubs: REGION_STUBS })
+    const res = await post(ai, { task, country: 'AU' })
+    assert.ok(!refusedByRegion(res), `${task} from AU was refused by region`)
+    assert.ok(hosts(ai).includes('generativelanguage.googleapis.com'), `${task} from AU never reached Gemini — the gate may be refusing everyone`)
+  }
+})
+
+test('a Gemini-only task refuses a blocked visitor even when an OpenRouter key exists', async () => {
+  // OpenRouter cannot read an image here, so the key's presence must not let a
+  // UK visitor through to Gemini.
+  const ai = loadAi({ env: BOTH_KEYS, stubs: REGION_STUBS })
+  const res = await post(ai, { task: 'alt-text', country: 'GB' })
+  assert.ok(refusedByRegion(res))
+  assert.deepEqual(ai.fetches, [])
+})
+
+test('generate-prompt from Germany with only a Gemini key is refused with 451', async () => {
+  const ai = loadAi({ env: { GEMINI_API_KEY: GEMINI_KEY }, stubs: REGION_STUBS })
+  const res = await post(ai, { task: 'generate-prompt', country: 'DE' })
+  assert.ok(refusedByRegion(res), `answered ${res.statusCode} ${JSON.stringify(res.body)}`)
+  assert.deepEqual(ai.fetches, [])
+  assert.deepEqual(ai.writes, [])
+})
+
+test('generate-prompt from Germany with an OpenRouter key is served by OpenRouter, not refused', async () => {
+  const ai = loadAi({ env: BOTH_KEYS, stubs: REGION_STUBS })
+  const res = await post(ai, { task: 'generate-prompt', country: 'DE' })
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.provider, 'openrouter')
+  assert.deepEqual(hosts(ai), ['openrouter.ai'])
+})
+
+test('an anonymous POST from Germany still gets 401, so the gate tells a stranger nothing', async () => {
+  const ai = loadAi({ env: BOTH_KEYS, stubs: REGION_STUBS })
+  for (const task of ['alt-text', 'generate-prompt']) {
+    const res = await post(ai, { task, country: 'DE', auth: false })
+    assert.equal(res.statusCode, 401, `${task}: an anonymous caller from DE got ${res.statusCode}`)
+    assert.notEqual(res.body.code, 'region-unavailable')
+  }
+  assert.deepEqual(ai.fetches, [])
+})
+
+test('generate-prompt skips the Gemini fallback for a French visitor whose OpenRouter call fails', async () => {
+  const ai = loadAi({ openrouter: fail(401, 'bad key') })
+  const res = ai.response()
+  await ai.runGeneratePrompt({ body: { description: 'a red bicycle at dusk' }, headers: from('FR') }, res, FREE_METER)
+  assert.equal(res.statusCode, 502)
+  assert.deepEqual(hosts(ai), ['openrouter.ai'], 'a French visitor was sent to generativelanguage.googleapis.com')
+})
+
+test('generate-prompt still falls back to Gemini for an Australian visitor whose OpenRouter call fails', async () => {
+  const ai = loadAi({ openrouter: fail(401, 'bad key') })
+  const res = ai.response()
+  const result = await ai.runGeneratePrompt({ body: { description: 'a red bicycle at dusk' }, headers: from('AU') }, res, FREE_METER)
+  assert.equal(result.provider, 'gemini')
+  assert.deepEqual(hosts(ai), ['openrouter.ai', 'generativelanguage.googleapis.com'])
+})
+
+test('brand-starter skips the Gemini fallback for a French visitor, and keeps it for an Australian one', async () => {
+  const run = async (country) => {
+    const ai = loadAi({ openrouter: fail(401, 'bad key'), stubs: REGION_STUBS })
+    const res = ai.response()
+    const result = await ai.TASKS['brand-starter'].run(
+      { body: { description: 'a calm booking app for dog groomers' }, headers: from(country) },
+      res, { plan: { id: 'free' }, bucket: { limit: 1, period: 'life' }, used: 0 },
+    )
+    return { ai, res, result }
+  }
+  const fr = await run('FR')
+  assert.equal(fr.res.statusCode, 502)
+  assert.deepEqual(hosts(fr.ai), ['openrouter.ai'], 'a French visitor was sent to Gemini by the Brand Starter')
+  const au = await run('AU')
+  assert.equal(au.result.provider, 'gemini')
+  assert.deepEqual(hosts(au.ai), ['openrouter.ai', 'generativelanguage.googleapis.com'])
+})
+
+test('a plain GET with no query is still a 405 whatever the country, so the region check is opt-in', async () => {
+  const ai = loadAi({ env: BOTH_KEYS })
+  const res = ai.response()
+  await ai.handler({ method: 'GET', query: {}, headers: from('DE') }, res)
+  assert.equal(res.statusCode, 405)
 })

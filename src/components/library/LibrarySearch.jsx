@@ -4,7 +4,7 @@
 // their own: `.pgl-search` (46px tall, --inp, radius-xl) and `.pl-search-wrap`
 // (borrowed wholesale from the Prompt Library — 8px padding, --bg-2, capped at
 // 360px). Same job, two different heights, two different surfaces, on two pages
-// the founder asked to feel like one product.
+// that should feel like one product.
 //
 // The clear button is deliberately part of the field rather than a page-level
 // "clear filters" link: a search with no way back out is the single most common

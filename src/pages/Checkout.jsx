@@ -4,12 +4,16 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
-import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, resolveOffers } from '../config/planFacts'
+import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, canCheckout, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
-import { refreshPrices, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
+import { usePriceRetry, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
 import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
+import { verifyErrorText } from '../utils/emailVerification'
+import { checkoutErrorText, checkoutErrorAction, plainError } from '../utils/checkoutError'
+import ReportProblemLink from '../components/ReportProblemLink'
+import useMediaQuery from '../hooks/useMediaQuery'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -95,14 +99,14 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
     let instance = null
     // Only the instance on screen reports a failure: a request for a period
     // the buyer has already left fails quietly and leaves the new one alone.
-    const fail = (e) => { if (live) onFail(e?.message || 'Could not start checkout') }
+    const fail = (e) => { if (live) onFail(e) }
     const created = embedQueue.then(async () => {
       if (!live) return
       let stripe
       try {
         stripe = await getStripe()
       } catch {
-        throw new Error(STRIPE_LOAD_ERROR)
+        throw plainError(STRIPE_LOAD_ERROR)
       }
       if (!stripe || !live) return
       instance = await stripe.createEmbeddedCheckoutPage({
@@ -124,7 +128,7 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
       }
     })
     embedQueue = created.catch(() => {})
-    const timer = setTimeout(() => fail(new Error(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
+    const timer = setTimeout(() => fail(plainError(EMBED_TIMEOUT_ERROR)), EMBED_TIMEOUT_MS)
     created.then(() => clearTimeout(timer), (e) => { clearTimeout(timer); fail(e) })
     return () => {
       live = false
@@ -157,19 +161,75 @@ function SignInToPay({ className = '', cadence, onClick }) {
   )
 }
 
+// Shown when the server refuses checkout because the account's email is not
+// verified (code 'email-unverified'). It reuses the verification link the
+// reminder bar and Settings send. "I've verified" re-reads the account and mints
+// a fresh ID token first, because the server judges the token's own copy of the
+// flag, then asks for the form again.
+function VerifyEmailPrompt({ email, onResend, onRetry }) {
+  const [state, setState] = useState('idle') // idle | sending | sent | failed
+  const [failure, setFailure] = useState('')
+  const resend = async () => {
+    if (state === 'sending') return
+    setState('sending')
+    try {
+      await onResend()
+      setState('sent')
+    } catch (e) {
+      setFailure(verifyErrorText(e))
+      setState('failed')
+    }
+  }
+  return (
+    <>
+      <span className="checkout-error-p" role="status">
+        {state === 'sent'
+          ? <> Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
+          : <> We sent a link{email ? <> to {email}</> : null} when you signed up. Open it, or send a new one.</>}
+      </span>
+      {state === 'failed' && <span className="checkout-error-p" role="alert"> {failure}</span>}
+      <div>
+        <button type="button" className="btn btn-s checkout-error-retry" aria-disabled={state === 'sending' || undefined} onClick={resend}>
+          {state === 'sending' ? 'Sending…' : state === 'sent' ? 'Resend link' : 'Send link'}
+        </button>
+        {' '}
+        <button type="button" className="btn btn-s checkout-error-retry" onClick={onRetry}>I’ve verified, try again</button>
+      </div>
+    </>
+  )
+}
+
 export default function Checkout() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
   const { requireLogin } = useLoginPrompt()
+  // The features list is open beside the form and folded on a phone. The
+  // breakpoint is the sheet's one-column break.
+  const wide = useMediaQuery('not all and (max-width: 760px)')
 
+  // Which surface sent the buyer here (the export gallery sends `kit-gallery`).
+  const from = params.get('from')
   const requestedPlan = params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
   const plan = PLANS[planKey]
   const proPrice = useProPrice()
   const { prices } = usePrices()
+  const { retrying, retry } = usePriceRetry()
   const [error, setError] = useState('')
+  // The server's reason code for the error, when it sent one, or 'log-in' when
+  // the sign-in expired (what the panel offers instead of Try again).
+  const [errorCode, setErrorCode] = useState('')
+  // One failure can report twice (the fetch wrapper, then Stripe's own
+  // rejection), so a later call without a code keeps the code already set.
+  // Every path that clears the error clears the code with it.
+  const failCheckout = useCallback((err) => {
+    // The buyer reads a sentence of this page's own; the raw text stays here.
+    console.warn('checkout: the payment session failed:', err?.message, { code: err?.code, status: err?.status })
+    setError(checkoutErrorText(err))
+    setErrorCode((prev) => err?.code || checkoutErrorAction(err) || prev)
+  }, [])
   // The plan the payment form is built for. It follows the chosen plan once
   // the choice has rested for SESSION_DEBOUNCE_MS.
   const [sessionPlan, setSessionPlan] = useState(planKey)
@@ -206,7 +266,7 @@ export default function Checkout() {
   // the page before checkout rather than through every period tried.
   const choosePlan = (next) => {
     if (paying || next === planKey || !Object.hasOwn(PLANS, next)) return
-    setError('')
+    setError(''); setErrorCode('')
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev)
       nextParams.set('plan', next)
@@ -231,38 +291,27 @@ export default function Checkout() {
     amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
     months: plan?.months,
   })
-  // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
-  // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
-  // the moment the fetch SETTLES — including when it settled by failing — and
-  // null for every amount it could not confirm. So with /api/get-prices down:
-  //
-  //   amount slot   `{proPrice.loaded ? amount : '—'}` → loaded was true and
-  //                 amount was null, so React rendered NOTHING. Measured on the
-  //                 built preview: `.checkout-plan-amount` textContent "" above
-  //                 "per year". A blank where a price goes reads as free.
-  //   note          the yearly branch interpolated the per-month figure
-  //                 unconditionally, so the page printed the string
-  //                 "USD · null/mo", in accent colour, on the screen where
-  //                 money changes hands.
-  //
-  // src/pages/Pricing.jsx — the step immediately before this one — already
-  // answers this exact outage, and these are ITS sentences, not new ones. Two
-  // steps of one funnel must not describe one outage two ways.
-  //
-  // "Down" is "no cadence has a live price in this currency", not "the request
-  // failed": a Stripe outage still answers 200, with every cadence a fallback.
-  const priceServiceDown = resolved.priceServiceDown
+  // The price state is one of loading, retrying, unreachable, no-currency,
+  // cadence-missing or live, the same state and the same words /plans and
+  // Settings use (planFacts.js). `useProPrice` reports `loaded: true` once the
+  // fetch settles, even when it settled by failing, and null for every amount it
+  // could not confirm, so the page reads the state and never infers an outage
+  // from a missing amount. Only `live` sells: the payment form mounts on it.
+  const priceStatus = priceState({ price: proPrice, offers: resolved.offers, selectedId: chosenOption?.id, retrying })
+  const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
+  const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
   const note = !proPrice.loaded
-    // Not settled: no rate yet, because there is no offer to take it from.
-    ? 'Checking the live price…'
-    : priceServiceDown
-      ? 'Live pricing is unreachable · no price can be shown right now'
+    // Not settled: no rate yet, because there is no offer to take it from. The
+    // loading and retrying states share one line.
+    ? priceCopy.line1
+    : priceStatus === 'unreachable'
+      ? priceCopy.line1
       // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
       // THIS ONE IN THIS CURRENCY (a fallback default is not one). Without this
       // branch the line would print "GBP · null/mo". Settings' sentence for the
       // same state.
       : !amount
-        ? (chosenOption?.unavailableNote || `No ${proPrice.currencyLabel} price for this billing period right now`)
+        ? priceCopy.line1
         : chosenOption.months > 1
           // A cadence longer than a month names its per-month rate, how often it
           // bills, and its saving when it has one.
@@ -283,12 +332,12 @@ export default function Checkout() {
     // a new session, not a new checkout, so it is sent once per visit.
     if (!startedSent.current) {
       startedSent.current = true
-      sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval })
+      sendEvent(EVENTS.checkoutStarted, { plan: sessionInterval, from })
     }
     return createCheckoutSession(sessionInterval, (session) => {
       setSessionCurrencies((prev) => ({ ...prev, [sessionInterval]: session?.currency || null }))
     })
-  }, [createCheckoutSession, sessionInterval])
+  }, [createCheckoutSession, sessionInterval, from])
 
   // The payment panel is waiting on the auth answer, so ask for it now rather
   // than when the browser is idle. A no-op in a build that loads auth eagerly.
@@ -317,7 +366,9 @@ export default function Checkout() {
       <div className="sec checkout-page">
         <div className="checkout-return">
           <div className="card checkout-return-card">
-            <div className="checkout-error-icon" aria-hidden="true">!</div>
+            <div className="checkout-error-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            </div>
             <h1>Invalid checkout selection</h1>
             {/* The cadences are read from the plan ladder, not typed. */}
             <p>Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
@@ -331,11 +382,9 @@ export default function Checkout() {
   return (
     <div className="sec checkout-page">
       <div className="sec-h checkout-head">
-        {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
-            common AI trait, scan the whole site and remove alot of them where
-            applied." This continues #382 and #386, where he marked this exact
-            element "AI" and it was deleted from the Font Gallery, Font Pair,
-            the Type Scale and the Tint tool. A 10px mono-caps label restating
+        {/* NO TAXONOMY EYEBROW. It is a common AI tell, and the same element was
+            removed from the Font Gallery, Font Pair, the Type Scale and the
+            Tint tool. A 10px mono-caps label restating
             the page's own section, directly above an h1 that names the page,
             on a route the nav already has lit. Hierarchy is a control, not a
             label. */}
@@ -387,10 +436,11 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                {/* `amount || 'Unavailable'` is the same word /plans prints, for
-                    the reason given above: `loaded` means settled, not known. */}
-                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
-                <span className="checkout-plan-per">{plan.per}</span>
+                {/* Without an amount the slot prints the state's word from the
+                    shared copy, and neither the cadence suffix nor the trial
+                    band below renders: `loaded` means settled, not known. */}
+                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{amount || priceCopy.word}</span>
+                {amount && <span className="checkout-plan-per">{plan.per}</span>}
               </div>
             </div>
 
@@ -399,13 +449,19 @@ export default function Checkout() {
             {/* usePrices caches the failure for the life of the module, so
                 without this the summary stays on "Unavailable" until a full
                 reload. Same control and same label as /plans. */}
-            {priceServiceDown && (
-              <button type="button" className="btn btn-s checkout-price-retry" onClick={() => refreshPrices()}>
-                Retry live pricing
+            {canRetryPrice(priceStatus) && (
+              <button
+                type="button"
+                className="btn btn-s checkout-price-retry"
+                aria-disabled={priceStatus === 'retrying' ? 'true' : undefined}
+                aria-busy={priceStatus === 'retrying' ? 'true' : undefined}
+                onClick={() => { if (priceStatus !== 'retrying') retry() }}
+              >
+                {priceCopy.button}
               </button>
             )}
 
-            {plan.trial && (
+            {plan.trial && amount && (
               <div className="checkout-trial">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 {plan.trial}
@@ -417,14 +473,15 @@ export default function Checkout() {
                 copy is hidden at that width. */}
             {!loading && !user && <SignInToPay className="checkout-signin--inline" cadence={plan.cadence} onClick={signInToPay} />}
 
-            <ul className="checkout-features">
-              {FEATURES.map(f => (
-                <li key={f}><Check /> {f}</li>
-              ))}
-            </ul>
+            <details className="checkout-included" open={wide}>
+              <summary>What’s included</summary>
+              <ul className="checkout-features">
+                {FEATURES.map(f => (
+                  <li key={f}><Check /> {f}</li>
+                ))}
+              </ul>
+            </details>
           </div>
-
-          {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
         </aside>
 
         {/* Embedded Stripe checkout */}
@@ -435,13 +492,14 @@ export default function Checkout() {
             <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
           ) : !proPrice.loaded ? (
             <div className="checkout-error">Checking the live Stripe price…</div>
-          ) : !amount ? (
-            // No live price for this cadence in this currency: no payment form.
+          ) : !canCheckout(priceStatus) || !amount ? (
+            // No live price for this cadence in this currency (not `live`, or no
+            // amount): no payment form.
             // The server would refuse it, or worse, charge something the
             // summary does not show.
             <div className="checkout-error">
               <strong className="checkout-error-h">Checkout unavailable</strong>
-              <span className="checkout-error-p">{note}</span>
+              <span className="checkout-error-p">{priceCopy.line2 || note}</span>
             </div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">
@@ -449,15 +507,40 @@ export default function Checkout() {
             </div>
           ) : error ? (
             <div className="checkout-error" role="alert" tabIndex={-1} ref={errorRef}>
-              <strong className="checkout-error-h">Checkout unavailable</strong>
-              <span className="checkout-error-p">{error}</span>
-              {error.includes('Server configuration') && (
-                <p className="checkout-error-note">
-                  This usually means the Firebase service account key isn't configured on the server.
-                  If you're the site owner, check Vercel environment variables.
-                </p>
+              {errorCode === 'email-unverified' ? (
+                <>
+                  <strong className="checkout-error-h">Verify your email to continue</strong>
+                  <VerifyEmailPrompt
+                    email={user.email}
+                    onResend={sendVerificationEmail}
+                    onRetry={async () => {
+                      await refreshEmailVerified().catch(() => {})
+                      setError(''); setErrorCode('')
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <strong className="checkout-error-h">Checkout unavailable</strong>
+                  <span className="checkout-error-p">{error}</span>
+                  {errorCode === 'log-in' ? (
+                    // The session is no good, so a retry would fail the same way:
+                    // sign in again (forced, though the account looks signed in),
+                    // then ask for the form again.
+                    <button className="btn btn-s checkout-error-retry" onClick={() => {
+                      requireLogin('continue to checkout', { force: true, email: user?.email }).then((back) => {
+                        if (back) { setError(''); setErrorCode('') }
+                      })
+                    }}>Log in</button>
+                  ) : (
+                    <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
+                  )}
+                </>
               )}
-              <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
+              {/* Quiet, and drawn only where the Feedback bubble is hidden. */}
+              {errorCode !== 'email-unverified' && (
+                <div><ReportProblemLink subject="Problem at checkout" /></div>
+              )}
             </div>
           ) : (
             <>
@@ -474,7 +557,7 @@ export default function Checkout() {
               {/* A new period destroys the form at once; the next is created
                   once the choice has rested, with a new session request. */}
               {sessionPlan === planKey && (
-                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={setError} onPaying={setPaying} />
+                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={failCheckout} onPaying={setPaying} />
               )}
               {/* From the moment a form is destroyed until the next one
                   mounts. Kept in the tree and emptied, so each new load is
@@ -486,6 +569,11 @@ export default function Checkout() {
             </>
           )}
         </div>
+
+        {/* After the payment panel, so the tab order is the reading order on a
+            phone, where it stacks last. From 761px the sheet puts it back
+            under the summary card by grid area. */}
+        {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
       </div>
     </div>
   )

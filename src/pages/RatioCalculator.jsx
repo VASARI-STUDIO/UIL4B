@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, SlidePills,
 } from '../components/tool/ToolLayout'
 // The page's own sheet; every rule is scoped under `.arc-page`, the page root.
 import '../styles/pages/aspect-ratio.css'
@@ -112,10 +112,9 @@ const COMMON_RATIOS = [
 // Returns the nearest standard AND its two numbers, because a suggestion you
 // cannot adopt is not a suggestion.
 //
-// Founder, 2026-09-15: "i put in 1280x 589 thats the resoltion of the area, it
-// should suggest the closent neighbour for aspect ratio this makes sure im
-// working in real sizes not partial ratios or other things." The tool already
-// computed the neighbour — 1280x589 is 19.5:9 to within 0.3% — and printed it
+// Someone who enters 1280x589 (the resolution of an area) should be offered
+// the closest neighbouring standard ratio, so they work in real sizes rather
+// than partial ratios. The tool already computed the neighbour — 1280x589 is 19.5:9 to within 0.3% — and printed it
 // as plain text beside the exact-but-useless "1280:589". You could read it and
 // not get into it, so the size ladder underneath went on building itself from
 // the partial ratio.
@@ -490,9 +489,8 @@ export default function RatioCalculator({ onCopy }) {
   // 816, say — and the ratio is almost never one of those, so the standard-size
   // picker vanished exactly when the user had done the work to earn it.
   //
-  // Founder, 2026-09-15: "lock the ratio based on the numbers supplied then
-  // chose a standard size to match the ratio such as 1920 x or 800 x or 2480x
-  // or 1600x or whatever else."
+  // The ratio locks from the numbers supplied, then the user chooses a standard
+  // size to match it (1920 wide, 800 wide, 2480 wide, 1600 wide and so on).
   //
   // The curated list still WINS where it applies, because it carries names a
   // function cannot derive: "Full HD 1080p" is worth more than "1920 × 1080".
@@ -681,7 +679,7 @@ export default function RatioCalculator({ onCopy }) {
           <ToolSection label="Start from">
             {/* A toggle group with aria-pressed: each button announces whether
                 it is the chosen preset list. */}
-            <div className="rc-tabs tl-pills tl-pills--block" role="group" aria-label="Preset list">
+            <SlidePills className="rc-tabs tl-pills tl-pills--block" role="group" aria-label="Preset list" value={tab}>
               {TABS.map(t => (
                 <button
                   key={t} type="button"
@@ -692,7 +690,7 @@ export default function RatioCalculator({ onCopy }) {
                   {t}
                 </button>
               ))}
-            </div>
+            </SlidePills>
             {presetBody}
             {sizeOptions.length > 0 && (
               <div className="rc-field">
@@ -720,11 +718,11 @@ export default function RatioCalculator({ onCopy }) {
 
           <ToolSection label="I know the…" labelId="arc-known-label">
             <div className="rc-known">
-              <div className="arc-sides tl-pills tl-pills--block" role="group" aria-labelledby="arc-known-label">
+              <SlidePills className="arc-sides tl-pills tl-pills--block" role="group" aria-labelledby="arc-known-label" value={side}>
                 <button type="button" className={`pt-t tl-pill${side === 'width' ? ' on is-on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
                 <button type="button" className={`pt-t tl-pill${side === 'height' ? ' on is-on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
                 <button type="button" className={`pt-t tl-pill${side === 'both' ? ' on is-on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
-              </div>
+              </SlidePills>
               {side === 'both'
                 ? (
                   <div className="rc-ratio-row">

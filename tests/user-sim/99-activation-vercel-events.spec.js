@@ -22,8 +22,8 @@ test('a signed-out visitor: first tool use and first export, once each', async (
   await go(page, '/create/gradient')
   expect(await named(page, 'first_tool_used'), 'arriving is not using').toEqual([])
 
-  // The toolbar primary, labelled "Copy <format>".
-  const copy = page.locator('[data-tool-toolbar] .tl-primary button')
+  // The code well's Copy button: the toolbar primary is now Save or share.
+  const copy = page.locator('.grd .grd-copy')
   await expect(copy).toBeVisible()
   await copy.click()
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/gradient/i)

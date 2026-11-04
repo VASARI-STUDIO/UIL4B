@@ -1,3 +1,8 @@
+/** Re-measure the page for Lenis so its scroll limit matches the layout that just mounted. */
+export function refreshScrollLimit(getScroller) {
+  getScroller()?.resize()
+}
+
 /** Land after the route's scroll reset, allowing lazy content up to two seconds. */
 export function landOnHash(hash, getScroller, onlyIfNeeded = false) {
   if (!hash) return () => {}

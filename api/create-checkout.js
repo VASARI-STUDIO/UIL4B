@@ -12,12 +12,81 @@ import { ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
+import { clientIp, consume } from './_lib/rateLimit.js'
+
+// Opening a checkout creates a Stripe customer on first use and a session every
+// time, and a free account costs nothing to make, so a script with a stream of
+// throwaway accounts could otherwise create Stripe objects without limit. The
+// per-account limit stops one login looping; the per-address limit stops many
+// logins from one machine. A real buyer opens a checkout a handful of times.
+// The per-address figure is higher because an office, a school or a mobile
+// carrier puts many real buyers behind one address.
+export const CHECKOUT_LIMITS = Object.freeze({
+  perUid: Object.freeze({ limit: 10, windowMs: 60 * 60 * 1000 }),
+  perIp: Object.freeze({ limit: 60, windowMs: 60 * 60 * 1000 }),
+})
+
+/**
+ * Counts this request against both limits. Returns null when it may go ahead,
+ * or `{ retryAfter }` (whole seconds) for the first limit that is spent. The
+ * account is checked first, so a refused account does not use up the shared
+ * address allowance.
+ *
+ * A request with no address at all is REFUSED (`{ noAddress: true }`), not
+ * counted against the account alone: consume() skips an empty key, so passing
+ * one through would exempt the request from the per-address limit. Vercel
+ * always supplies an address, so a blank one is not a real buyer's request.
+ * Nothing is counted for it.
+ *
+ * Both limits fail CLOSED on a database outage (`failOpen: false`): a refused
+ * call costs the buyer a retry, while an uncounted one creates Stripe objects.
+ */
+export async function checkoutRateLimit(db, { uid, ip, now = Date.now() }) {
+  if (!ip) return { noAddress: true, retryAfter: 0 }
+  const uidVerdict = await consume(db, { bucket: 'checkout-uid', key: uid, ...CHECKOUT_LIMITS.perUid, now, failOpen: false })
+  if (!uidVerdict.allowed) return { retryAfter: uidVerdict.retryAfter }
+  const ipVerdict = await consume(db, { bucket: 'checkout-ip', key: ip, ...CHECKOUT_LIMITS.perIp, now, failOpen: false })
+  if (!ipVerdict.allowed) return { retryAfter: ipVerdict.retryAfter }
+  return null
+}
 
 // Resolved price ids, per interval, for a few minutes. Short enough that a
 // price archived in Stripe stops being sold on the next refresh; only a
 // sellable price is ever cached, so a fixed configuration is picked up at once.
 export const PRICE_CACHE_TTL_MS = 5 * 60 * 1000
 const priceCache = new Map()
+
+/**
+ * Forget the cached price for `interval`, so the next checkout re-reads Stripe.
+ * Pass '*' to forget every interval. A missing or unknown interval does nothing,
+ * so a failed parse can never empty the whole cache by accident.
+ */
+export function forgetCachedPrice(interval, cache = priceCache) {
+  if (interval === '*') cache.clear()
+  else if (interval) cache.delete(interval)
+}
+
+/**
+ * Whether a Stripe error from creating a session says the PRICE cannot be sold:
+ * archived, on an inactive product, or gone. That is a price that was sellable
+ * when it was cached and is not now, so the customer is told it is unavailable
+ * instead of seeing a generic failure. Two shapes count, both invalid_request_error:
+ * `resource_missing` on the line item's price, or a message saying the price or
+ * product is inactive or archived. A `param` that merely mentions "price" is not
+ * enough: it would also match an error about the customer's locked currency.
+ */
+export function isUnsellablePriceError(err) {
+  if (!err) return false
+  const invalidRequest = err.type === 'StripeInvalidRequestError' || err.rawType === 'invalid_request_error'
+  if (!invalidRequest) return false
+  if (err.code === 'resource_missing' && typeof err.param === 'string' && /price/i.test(err.param)) return true
+  const message = typeof err.message === 'string' ? err.message : ''
+  return /\b(price|product)\b[^.]*\b(inactive|archived|not active|no longer active)\b/i.test(message)
+    || /\b(inactive|archived)\b[^.]*\b(price|product)\b/i.test(message)
+}
+
+const priceUnavailableMessage = (interval) =>
+  `The ${interval} price is temporarily unavailable. No payment session was created.`
 
 /**
  * The Stripe price a checkout for `interval` charges, or null when there is no
@@ -41,7 +110,7 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
   const envPrice = env[envKey]
   if (envPrice) {
     try {
-      const price = await stripe.prices.retrieve(envPrice)
+      const price = await stripe.prices.retrieve(envPrice, { expand: ['product'] })
       if (priceIsSellable(price, key)) {
         cache.set(key, { id: envPrice, at: now })
         return envPrice
@@ -57,7 +126,7 @@ export async function resolvePrice(stripe, interval, { env = process.env, cache 
   }
 
   try {
-    const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1 })
+    const found = await stripe.prices.list({ lookup_keys: [LOOKUP_KEYS[key]], active: true, limit: 1, expand: ['data.product'] })
     const price = found?.data?.[0]
     if (!priceIsSellable(price, key)) return null
     cache.set(key, { id: price.id, at: now })
@@ -229,12 +298,40 @@ export default async function handler(req, res) {
 
   let uid
   let email
+  let emailVerified
   try {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     uid = decoded.uid
     email = decoded.email || null
+    emailVerified = decoded.email_verified === true
   } catch (e) {
     return res.status(401).json({ error: e?.code === 'auth/id-token-expired' ? 'Session expired — please sign in again' : 'Invalid auth token' })
+  }
+
+  // Paying needs a verified email. Google sign-ins arrive verified; a password
+  // account is asked to verify first. Placed before the rate limit on purpose:
+  // this refusal does no Firestore or Stripe work, so there is nothing to
+  // protect, and counting it would let an unverified account spend the allowance
+  // it needs once it has verified. The client reads `code` to offer the link.
+  if (!emailVerified) {
+    return res.status(403).json({
+      code: 'email-unverified',
+      error: 'Verify your email address before subscribing. No payment session was created.',
+    })
+  }
+
+  // After the body checks above and the token check, so a malformed or unsigned
+  // call never uses up anyone's allowance, and before any Stripe work.
+  const limited = await checkoutRateLimit(adminDb(), { uid, ip: clientIp(req) })
+  if (limited?.noAddress) {
+    return res.status(400).json({ error: 'Your connection could not be identified, so checkout cannot open. No payment session was created.' })
+  }
+  if (limited) {
+    res.setHeader('Retry-After', String(limited.retryAfter))
+    return res.status(429).json({
+      error: 'Too many checkout attempts. Try again later, or contact support if you need help. No payment session was created.',
+      retryAfter: limited.retryAfter,
+    })
   }
 
   try {
@@ -247,7 +344,7 @@ export default async function handler(req, res) {
     const priceId = await resolvePrice(stripe, interval)
     if (!priceId) {
       console.error('create-checkout: no Stripe price resolved for interval', interval)
-      return res.status(503).json({ error: `The ${interval} price is temporarily unavailable. No payment session was created.` })
+      return res.status(503).json({ error: priceUnavailableMessage(interval) })
     }
 
     const userDoc = await adminDb().collection('users').doc(uid).get()
@@ -324,12 +421,25 @@ export default async function handler(req, res) {
       mode: sessionParams.mode,
     })
   } catch (err) {
+    const failedInterval = parseBillingInterval(req.body?.interval)
+    if (isUnsellablePriceError(err)) {
+      // The price was sellable when it was cached and Stripe now refuses it.
+      // Drop it so the next request resolves a live price (or reports none).
+      forgetCachedPrice(failedInterval)
+      return failRequest(res, {
+        status: 503,
+        scope: 'create-checkout price refused by Stripe',
+        message: priceUnavailableMessage(failedInterval),
+        err,
+        context: { uid, interval: failedInterval, param: err?.param ?? null },
+      })
+    }
     return failRequest(res, {
       status: 500,
       scope: 'create-checkout',
       message: 'Could not start checkout. No payment was taken — please try again, or contact support with the reference below.',
       err,
-      context: { uid, interval: parseBillingInterval(req.body?.interval) },
+      context: { uid, interval: failedInterval },
     })
   }
 }

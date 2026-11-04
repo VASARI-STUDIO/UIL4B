@@ -26,13 +26,12 @@ export const BASE_CURRENCY = 'usd'
 //
 //     What a customer is actually billed comes from the live Stripe price
 //     resolved via PRICE_ENV_KEYS / LOOKUP_KEYS below. Those prices are created
-//     and edited in the Stripe dashboard by the founder and do not exist in
+//     and edited in the Stripe dashboard and do not exist in
 //     this repository. Editing this table changes the number a visitor is
 //     SHOWN when /api/get-prices cannot answer. It changes no charge.
 //
-//     Keeping the charge and the display in step is the founder's, tracked in
-//     docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in
-//     this repository; .gitignore records the decision.
+//     Keeping them in step is manual: change the Stripe price (dashboard or
+//     the admin Stripe panel) and this table in the same release.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // USD is $7 monthly · $48 yearly. src/config/planLadder.js carries the same
@@ -72,9 +71,17 @@ export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, yearly: 1 })
  * sellable. The price list and checkout both apply this one check, so the price
  * a visitor is shown and the price a checkout charges are chosen by the same
  * rule.
+ *
+ * The price's product must be active too: an active price on an archived product
+ * is rejected by Stripe at session create. The caller has to EXPAND the product
+ * (`expand: ['product']` on a retrieve, `['data.product']` on a list); a product
+ * that is still a bare id, missing or deleted cannot be checked, so the price is
+ * refused rather than guessed at.
  */
 export function priceIsSellable(price, interval) {
   if (!price?.active) return false
+  const product = price.product
+  if (!product || typeof product !== 'object' || product.active !== true) return false
   return !!INTERVAL_MAP[interval]
     && price.recurring?.interval === INTERVAL_MAP[interval]
     && price.recurring?.interval_count === INTERVAL_COUNTS[interval]

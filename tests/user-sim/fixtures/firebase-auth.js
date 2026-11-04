@@ -64,6 +64,14 @@ export function onAuthStateChanged(auth, next, error, complete) {
 
 export function signOut(auth) {
   if (!isFakeAuth(auth)) return realSignOut(auth)
+  // `authFail: { signOut: code }` makes the call reject; a spec clears
+  // window.__UIL4B_TEST_SESSION__.authFail to let a retry succeed.
+  const refused = authFailFor('signOut')
+  if (refused) return Promise.reject(refused)
+  // `__UIL4B_TEST_AUTH__.delays.signOut = ms` holds the call, so a spec can read
+  // the page while a sign-out is in flight.
+  const wait = fakeAuth.delays.signOut || 0
+  if (wait) return new Promise((resolve) => setTimeout(resolve, wait)).then(() => auth.signOut())
   return auth.signOut()
 }
 
@@ -172,9 +180,17 @@ export function reload(user) {
   return Promise.resolve()
 }
 
+/* Every call is counted in `fakeAuth.calls` (read from a spec as
+ * `window.__UIL4B_TEST_AUTH__.calls`), and `delays.updatePassword` holds the
+ * answer back that many ms, so a spec can click again while the first call is
+ * still in flight. Both are inert unless a spec sets them. */
 export function updatePassword(user, newPassword) {
   if (!isFakeUser(user)) return realUpdatePassword(user, newPassword)
-  return Promise.resolve()
+  fakeAuth.calls.push('updatePassword')
+  const refused = authFailFor('updatePassword')
+  if (refused) return Promise.reject(refused)
+  const wait = fakeAuth.delays.updatePassword || 0
+  return wait ? new Promise((resolve) => setTimeout(resolve, wait)) : Promise.resolve()
 }
 
 /* Reauthentication SUCCEEDS for a declared session, and that is a decision.
@@ -186,6 +202,8 @@ export function updatePassword(user, newPassword) {
  * read a resolved reauthentication as proof the password was right. */
 export function reauthenticateWithCredential(user, credential) {
   if (!isFakeUser(user)) return realReauthenticateWithCredential(user, credential)
+  const refused = authFailFor('reauthenticateWithCredential')
+  if (refused) return Promise.reject(refused)
   return Promise.resolve({ user, providerId: 'password', operationType: 'reauthenticate' })
 }
 

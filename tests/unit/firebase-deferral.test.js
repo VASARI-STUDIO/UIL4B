@@ -10,7 +10,7 @@
 //     which puts the whole 116268-byte chunk back;
 //   · the two brokers drifting apart, so a flagged build calls something the
 //     lazy half does not export — a runtime failure no unflagged test can see;
-//   · the founder-gated patch going stale against the tree it was written for,
+//   · the approval-gated patch going stale against the tree it was written for,
 //     which would make the whole design unappliable exactly when it is approved.
 //
 // The build itself catches the FIRST of those at `VITE_DEFER_FIREBASE=1` (see
@@ -97,7 +97,7 @@ test('every import of a deferral seam is written in the form the build alias mat
 // 2. What still reaches Firebase statically
 // ─────────────────────────────────────────────────────────────────────────────
 
-// HAS THE FOUNDER APPLIED IT YET? Everything below has two correct answers, one
+// HAS THE PATCH BEEN APPLIED YET? Everything below has two correct answers, one
 // for each side of that, and getting the wrong one is not a matter of taste: an
 // inventory of static Firebase importers that still names the two contexts
 // after they have been converted is a lie about the codebase, and one that
@@ -121,8 +121,8 @@ const PATCH_IS_APPLIED = fs
 // is meant to import the SDK; GoogleOneTap is reached only through the
 // oneTapMount seam, so its own import is held back with it.
 const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
-  // Founder-gated. The first two are closed by docs/design/firebase-deferral-gated.patch,
-  // which `npm run apply:gated` applies — so on the day the founder runs it they
+  // Approval-gated. The first two are closed by docs/design/firebase-deferral-gated.patch,
+  // which `npm run apply:gated` applies — so on the day the owner runs it they
   // drop off this list, and PATCH_IS_APPLIED below is what takes them off.
   ...(PATCH_IS_APPLIED ? [] : ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx']),
   'src/components/GoogleOneTap.jsx',
@@ -145,7 +145,6 @@ const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
   // sourcemap in a production build. The `vanished` half of the assertion below
   // is what caught it: a name left in this list after its file is gone makes the
   // test red, which is the property that keeps the list honest.
-  'src/components/prompt/SubmitPromptPanel.jsx',
   'src/utils/communityQueueApi.js',
   'src/utils/feedbackQueueApi.js',
   'src/utils/mediaUpload.js',
@@ -250,7 +249,7 @@ test('the deferred broker never imports Firebase statically, and the eager one a
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. The unapplied founder-gated patch
+// 4. The unapplied approval-gated patch
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PATCH = 'docs/design/firebase-deferral-gated.patch'
@@ -296,9 +295,9 @@ test('the founder-gated files are unmodified on this branch', (t) => {
   // docs/ plus a quiet edit to the file it describes would be worse than either.
   //
   // Once the patch is IN, that premise has been retired on purpose — the
-  // founder ran `npm run apply:gated` and the files are meant to differ — so
-  // this stops being a rule and would only be a trap that fires the moment he
-  // commits what he was told to apply.
+  // owner ran `npm run apply:gated` and the files are meant to differ — so
+  // this stops being a rule and would only be a trap that fires the moment the
+  // applied changes are committed.
   if (PATCH_IS_APPLIED) return t.skip('the gated patch has been applied; these files are meant to differ')
   const gated = ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx', 'src/utils/firebase.js', 'src/components/GoogleOneTap.jsx']
   let changed
@@ -306,7 +305,7 @@ test('the founder-gated files are unmodified on this branch', (t) => {
     changed = execFileSync('git', ['diff', '--name-only', 'origin/main...HEAD', '--', ...gated], { cwd: ROOT, encoding: 'utf8' }).trim()
   } catch {
     // A shallow clone has no merge base with origin/main, and a checkout with
-    // no origin at all has no ref. Neither is a founder-gated file being
+    // no origin at all has no ref. Neither is an approval-gated file being
     // edited, and reporting it as one would make the suite unrunnable
     // wherever it is not a full clone.
     return t.skip('origin/main is not reachable from here, so this branch cannot be compared to it')

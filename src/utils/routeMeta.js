@@ -20,7 +20,7 @@ import { PAGE_TITLES } from '../data/routeMetaMap.js'
 // `cname.vercel-dns.com`. So every shell shipped before this told crawlers
 // its authoritative URL was a host that does not answer, and every shared
 // link unfurled with a broken preview image on Slack, LinkedIn, X, Discord
-// and iMessage. Founder decision, 2026-09-13: point the site at the apex,
+// and iMessage. The decision is to point the site at the apex,
 // which already serves and is the only configured domain, rather than do the
 // DNS work to make the second spelling real.
 //
@@ -30,10 +30,12 @@ import { PAGE_TITLES } from '../data/routeMetaMap.js'
 export const SITE_ORIGIN = 'https://uil4b.com'
 
 // Routes that exist and work, but must never be indexed: they are either
-// private to one account or a step inside a flow that means nothing on its own.
+// private to one account, a step inside a flow that means nothing on its own, or
+// parked behind the admin gate (/discover/prompts).
 // Landing on any of these from a search result is a dead end.
 const PRIVATE_PREFIXES = Object.freeze([
   '/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide',
+  '/discover/prompts',
 ])
 
 // Routes that render the same page as another URL and must point their canonical

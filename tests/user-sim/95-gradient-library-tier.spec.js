@@ -1,7 +1,7 @@
 // The Gradient Library's rungs, measured in a browser.
 //
-// The founder's tiers — "non logged in users get 3 free ones logged in get 10
-// and paid get full" — reached this surface on 2026-09-18, and it is the one of
+// The tiers — 3 for signed-out users, 10 for logged-in users and everything for
+// paid — reach this surface here, and it is the one of
 // the three gated galleries that had NO gate before: every gradient was open,
 // so nothing here was ever asserted. 44 covers the palettes and 45 the prompts;
 // without this file the gradient gate is proved only by a source assertion, and
@@ -106,7 +106,7 @@ for (const rung of RUNGS) {
       // line is the one number a visitor reads before deciding the library is
       // small rather than metered.
       await expect(page.locator(CARD)).toHaveCount(rung.cap)
-      await expect(page.locator('.drh-head p')).toHaveText(`${rung.cap} gradients`)
+      await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_GRADIENTS.length} gradients · ${rung.cap} shown`)
       const names = await page.locator('.grg-card .lbry-card-name, .grg-card h3').allInnerTexts()
       expect(names.map((n) => n.trim()).sort()).toEqual(OPEN.map((g) => g.name).sort())
     })

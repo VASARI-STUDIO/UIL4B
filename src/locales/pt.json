@@ -11,7 +11,6 @@
     "search": "Buscar",
     "loading": "Carregando…",
     "noResults": "Nenhum resultado",
-    "signIn": "Entrar",
     "signOut": "Sair",
     "signUp": "Cadastrar",
     "tools": "Ferramentas",
@@ -34,7 +33,7 @@
     "name": "UIL4B",
     "tagline": "Design Toolkit",
     "full": "UIL4B",
-    "fullToolkit": "UIL4B Design Toolkit"
+    "fullToolkit": "UIL4B"
   },
   "nav": {
     "dashboard": "Painel",
@@ -118,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "Biblioteca de Ícones",
-      "description": "Pesquise milhares de ícones pela API do Iconify."
+      "description": "Pesquise packs de ícones de código aberto e copie SVG ou JSX."
     },
     "altText": {
       "label": "Alt Text Generator",
@@ -127,10 +126,6 @@
     "docsDesign": {
       "label": "Princípios de Design",
       "description": "Hierarquia visual, equilíbrio e psicologia do design."
-    },
-    "promptLibrary": {
-      "label": "Biblioteca de Prompts",
-      "description": "Salvar prompts de geração de imagens com IA com pré-visualizações."
     },
     "fontGallery": {
       "label": "Galeria de Fontes",
@@ -434,41 +429,68 @@
     }
   },
   "auth": {
-    "welcomeBack": "Bem-vindo de Volta",
-    "createAccount": "Criar Conta",
-    "resetPassword": "Redefinir Senha",
-    "signInSubtitle": "Entre na sua conta UIL4B.",
-    "signUpSubtitle": "Cadastre-se para salvar seu trabalho e acessar todos os recursos.",
-    "resetSubtitle": "Digite seu email e escolha uma nova senha.",
-    "displayName": "Nome de Exibição",
-    "namePlaceholder": "Seu nome",
+    "logInTitle": "Entre no UIL4B",
+    "logInContinue": "Entre para continuar",
+    "createAccount": "Crie sua conta gratuita",
+    "resetTitle": "Redefina sua senha",
+    "sentTitle": "Verifique seu e-mail",
+    "switchTitle": "Trocar de conta",
+    "signUpSub": "Salve paletas, escalas tipográficas e gradientes como projetos que você pode reabrir em qualquer dispositivo.",
+    "interruptLogIn": "Você ia {reason}. Entre ou crie uma conta gratuita e você voltará a esta página.",
+    "interruptSignUp": "Você ia {reason}. Assim que sua conta estiver pronta, você voltará a esta página.",
+    "resetSub": "Digite o e-mail com que você entra e enviaremos um link para definir uma nova senha.",
+    "sentSub": "Se existir uma conta para {email}, um link de redefinição está a caminho. Pode levar alguns minutos, então confira também o spam.",
+    "switchSub": "Entre como {email}. Você continuará conectado como está, a menos que isso funcione.",
+    "whyWeAsk": "Por que pedimos isso primeiro",
+    "continueWithGoogle": "Continuar com Google",
+    "googleLoading": "Abrindo o Google…",
+    "orEmail": "ou com e-mail",
+    "name": "Nome (opcional)",
     "email": "E-mail",
     "emailPlaceholder": "you@example.com",
     "password": "Senha",
-    "passwordPlaceholder": "Mín. 6 caracteres",
+    "passwordHelp": "Pelo menos 6 caracteres.",
+    "showPassword": "Mostrar",
+    "hidePassword": "Ocultar",
+    "submitLogin": "Entrar",
+    "submitSignup": "Criar conta",
     "sendResetLink": "Enviar Link de Redefinição",
-    "backToSignIn": "Voltar para o login",
-    "haveAccount": "Já tem uma conta? Entre",
-    "noAccount": "Não tem uma conta? Cadastre-se",
+    "submitSwitch": "Trocar de conta",
+    "loadingLogin": "Entrando…",
+    "loadingSignup": "Criando sua conta…",
+    "loadingReset": "Enviando…",
+    "loadingSwitch": "Trocando de conta…",
+    "legal": "Ao continuar, você concorda com os {terms} e a {privacy}. Você precisa ter 16 anos ou mais para criar uma conta.",
+    "legalTerms": "Termos de Serviço",
+    "legalPrivacy": "Política de Privacidade",
+    "noAccount": "Não tem uma conta?",
+    "noAccountAction": "Crie uma",
+    "haveAccount": "Já tem uma conta?",
+    "haveAccountAction": "Entrar",
     "forgotPassword": "Esqueceu a senha?",
-    "pleaseWait": "Aguarde…",
+    "backToLogIn": "Voltar para entrar",
+    "resend": "Não recebeu? Enviar de novo",
+    "resendWait": "Enviar de novo em {n} s",
+    "notNow": "Agora não",
     "accountCreated": "Conta criada",
     "signedIn": "Conectado",
     "resetSent": "E-mail de redefinição de senha enviado",
     "errors": {
-      "emailInUse": "Já existe uma conta com este e-mail",
-      "invalidEmail": "Digite um endereço de e-mail válido",
-      "weakPassword": "A senha deve ter pelo menos 6 caracteres",
-      "invalidCredential": "E-mail ou senha inválidos",
-      "tooManyRequests": "Muitas tentativas — tente novamente mais tarde",
+      "invalidEmail": "Esse endereço de e-mail parece incompleto. Confira e tente de novo.",
+      "invalidCredential": "Esse e-mail e essa senha não conferem. Tente de novo ou redefina sua senha.",
+      "noAccountSwitched": "Ainda não há uma conta para {email}. Escolha uma senha abaixo para criar uma.",
+      "emailInUse": "Já existe uma conta com esse e-mail.",
+      "emailInUseAction": "Entrar",
+      "weakPassword": "Use pelo menos 6 caracteres.",
+      "tooManyRequests": "Muitas tentativas seguidas. Espere um minuto e tente de novo, ou redefina sua senha.",
+      "network": "Não conseguimos acessar o servidor. Verifique sua conexão e tente de novo.",
+      "popupBlocked": "Seu navegador bloqueou a janela do Google. Permita pop-ups neste site ou entre com e-mail.",
+      "googleUnavailable": "O login com o Google não está funcionando agora. Use seu e-mail.",
+      "generic": "Não deu certo. Tente de novo em instantes.",
+      "offline": "Você está offline. Entrar exige conexão, então vai funcionar quando você voltar a ficar online.",
       "serviceUnavailable": "Serviço temporariamente indisponível",
-      "authFailed": "Falha na autenticação",
-      "userNotFound": "Nenhuma conta encontrada com este e-mail",
-      "googleUnavailable": "Login com Google não disponível neste domínio",
-      "noAccountSwitched": "Nenhuma conta encontrada — cadastre-se abaixo"
+      "userNotFound": "Nenhuma conta encontrada com este e-mail"
     },
-    "continueWithGoogle": "Continuar com Google",
-    "orEmail": "ou continuar com email",
     "newPassword": "Nova senha",
     "passwordReset": "Senha redefinida"
   },
@@ -496,79 +518,5 @@
     "reportIssue": "Reportar um Problema",
     "reportIssueDesc": "Encontrou um bug? Nos avise.",
     "visitLink": "Visitar"
-  },
-  "privacy": {
-    "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: março de 2026",
-    "s1Title": "1. Sobre Esta Política",
-    "s1Text": "UIL4B (\"nós\", \"nos\", \"nosso\") está comprometido em proteger suas informações pessoais em conformidade com a Lei de Privacidade Australiana de 1988 (Cth) e os Princípios de Privacidade Australianos (APPs). Esta política explica como coletamos, usamos, divulgamos e protegemos suas informações pessoais.",
-    "s2Title": "2. Informações que Coletamos (APP 3)",
-    "s2Intro": "Coletamos apenas as informações razoavelmente necessárias para nossos serviços:",
-    "s2Items": [
-      "Informações da conta: endereço de e-mail, nome de exibição, foto de perfil (se usar login do Google)",
-      "Preferências de uso: configurações de tema, paletas salvas, configurações de tons, prompts",
-      "NÃO coletamos: dados de cartão de pagamento (processados pelo Stripe), dados de localização, identificadores de dispositivo ou cookies de rastreamento"
-    ],
-    "s3Title": "3. Como Usamos Suas Informações (APP 6)",
-    "s3Intro": "Suas informações são usadas exclusivamente para:",
-    "s3Items": [
-      "Fornecer e manter sua conta e os recursos do toolkit",
-      "Sincronizar suas configurações de design entre dispositivos",
-      "Enviar notificações essenciais do serviço (segurança da conta, alterações de política)",
-      "NUNCA venderemos seus dados a terceiros ou os usaremos para publicidade"
-    ],
-    "s4Title": "4. Armazenamento e Segurança de Dados (APP 8 e 11)",
-    "s4Text": "Seus dados são armazenados no Google Cloud Firestore na região australia-southeast1 (Sydney). A autenticação é gerenciada pelo Firebase Authentication. Implementamos:",
-    "s4Items": [
-      "Criptografia em repouso e em trânsito (TLS 1.3)",
-      "Regras de segurança do Firestore para controle de acesso",
-      "Auditorias regulares de segurança da nossa configuração Firebase",
-      "Nenhuma transferência de dados transfronteiriça sem proteções de privacidade equivalentes"
-    ],
-    "s5Title": "5. Seus Direitos (APP 12 e 13)",
-    "s5Intro": "Você tem o direito de:",
-    "s5Items": [
-      "Acessar suas informações pessoais a qualquer momento pelas Configurações",
-      "Corrigir suas informações pessoais atualizando seu perfil",
-      "Exportar todos os seus dados como arquivo JSON em Configurações > Exportar Meus Dados",
-      "Excluir sua conta e todos os dados associados em Configurações > Excluir Conta",
-      "Revogar o consentimento saindo e excluindo sua conta"
-    ],
-    "s6Title": "6. Serviços de Terceiros",
-    "s6Items": [
-      "Firebase/Google Cloud — Autenticação e banco de dados (região de Sydney)",
-      "Google Fonts — Carregamento de fontes (nenhum dado pessoal enviado)",
-      "Iconify — API de busca de ícones (nenhum dado pessoal enviado)",
-      "Stripe — Processamento de pagamentos (em conformidade com PCI DSS, entidade australiana)"
-    ],
-    "s7Title": "7. Contato",
-    "s7Text": "Para consultas sobre privacidade, solicitações de acesso a dados ou reclamações, entre em contato conosco em:",
-    "s7Complaint": "Se você não estiver satisfeito com nossa resposta, pode registrar uma reclamação junto ao Escritório do Comissário de Informação da Austrália (OAIC) em"
-  },
-  "terms": {
-    "title": "Termos de Serviço",
-    "lastUpdated": "Última atualização: março de 2026",
-    "s1Title": "1. Aceitação",
-    "s1Text": "Ao usar o UIL4B Design Toolkit (\"o Serviço\"), você concorda com estes Termos de Serviço. O Serviço é fornecido pela UIL4B, uma empresa sediada na Austrália. Estes termos são regidos pelas leis da Austrália.",
-    "s2Title": "2. Conta",
-    "s2Text": "Você pode criar uma conta usando e-mail/senha ou autenticação do Google. Você é responsável por manter a segurança das credenciais da sua conta. Você deve ter pelo menos 16 anos para criar uma conta.",
-    "s3Title": "3. Planos Gratuito e Pro",
-    "s3Text": "O Serviço oferece um plano gratuito com recursos essenciais e um plano Pro com ferramentas adicionais. As assinaturas Pro são cobradas mensal ou anualmente. Você pode cancelar a qualquer momento; o acesso continua até o final do período de cobrança. Reembolsos são tratados caso a caso, em conformidade com a Lei do Consumidor Australiana.",
-    "s4Title": "4. Propriedade Intelectual",
-    "s4Text": "Designs, paletas, gradientes e outros resultados que você criar usando o Serviço pertencem a você. O Serviço em si, incluindo seu código, design e documentação, é de propriedade da UIL4B e protegido pela lei de direitos autorais australiana.",
-    "s5Title": "5. Uso Aceitável",
-    "s5Intro": "Você concorda em não:",
-    "s5Items": [
-      "Usar o Serviço para qualquer finalidade ilegal",
-      "Tentar obter acesso não autorizado às contas de outros usuários",
-      "Fazer engenharia reversa, descompilar ou desmontar o Serviço",
-      "Usar sistemas automatizados para extrair dados do Serviço"
-    ],
-    "s6Title": "6. Limitação de Responsabilidade",
-    "s6Text": "O Serviço é fornecido \"como está\", sem garantias de qualquer tipo, exceto conforme exigido pela Lei do Consumidor Australiana. Na máxima extensão permitida por lei, a UIL4B não é responsável por quaisquer danos indiretos, incidentais ou consequenciais decorrentes do uso do Serviço.",
-    "s7Title": "7. Alterações",
-    "s7Text": "Podemos atualizar estes Termos periodicamente. Alterações significativas serão comunicadas por e-mail ou notificação no aplicativo com pelo menos 30 dias de antecedência antes de entrarem em vigor.",
-    "s8Title": "8. Contato",
-    "s8Text": "Dúvidas sobre estes Termos? Entre em contato conosco em"
   }
 }

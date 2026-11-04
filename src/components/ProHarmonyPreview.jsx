@@ -82,7 +82,7 @@ export default function ProHarmonyPreview({ seed: explicitSeed }) {
       </ul>
 
       <p className="ui-pro-rail-foot">
-        Generated live from {source === 'brand' ? 'the brand seed' : 'your last palette'} —
+        Generated live from {source === 'brand' ? 'the brand seed' : 'your last palette'}.
         {' '}{proCount} of these {proCount === 1 ? 'system is' : 'systems are'} Pro.
       </p>
     </aside>

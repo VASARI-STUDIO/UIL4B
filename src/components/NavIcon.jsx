@@ -1,8 +1,10 @@
 // Per-group line icons for the nav mega-menus (and reusable later in the in-tool
 // rail and surface landings). One inline SVG set, keyed by the group `id` from
 // src/data/toolTree.js. Every glyph is stroke="currentColor" so it inherits its
-// category hue from the parent `.pnav-ico` tile — zero asset dependencies, and
-// the menu can never drift from the tree.
+// category colour from the row's `.pnav-tool-ico` slot — zero asset dependencies,
+// and the menu can never drift from the tree.
+
+import { useId } from 'react'
 
 const ICONS = {
   // ── Create ──
@@ -132,6 +134,92 @@ const ICONS = {
       <path d="M13.5 9.5h5M16 9.5v6" />
     </>
   ),
+  // -- Menu glyphs drawn for the compact mega menu: one distinct mark per tool --
+  'palette-strip': (
+    <>
+      <rect x="3.5" y="6" width="17" height="12" rx="2.5" />
+      <path d="M9.2 6v12M14.8 6v12" />
+    </>
+  ),
+  'type-scale': (
+    <>
+      <path d="M3.5 20h17" />
+      <path d="M6 20v-4.5M4.5 15.5h3" />
+      <path d="M11.5 20v-9M9.6 11h3.8" />
+      <path d="M17.5 20V5.5M15.2 5.5h4.6" />
+    </>
+  ),
+  'icon-library': <path d="m12 4 2.4 5 5.4.7-4 3.7 1.1 5.4L12 16.1l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" />,
+  'file-converter': (
+    <>
+      <path d="M4 8.5h15" />
+      <path d="m15.5 5 3.5 3.5-3.5 3.5" />
+      <path d="M20 15.5H5" />
+      <path d="M8.5 12 5 15.5 8.5 19" />
+    </>
+  ),
+  '3d-converter': (
+    <>
+      <path d="M12 3.5 19.5 7.8v8.4L12 20.5 4.5 16.2V7.8z" />
+      <path d="M4.5 7.8 12 12l7.5-4.2M12 12v8.5" />
+    </>
+  ),
+  // A front gradient square with a second sheet behind it: a library of them,
+  // so it no longer wears the Gradient tool's own mark.
+  'gradient-library': (
+    <>
+      <rect x="3.5" y="8" width="12.5" height="12.5" rx="2.5" />
+      <path d="M3.5 20.5 16 8" />
+      <path d="M8 4.5h10.5a2 2 0 0 1 2 2V17" />
+    </>
+  ),
+  // A pill-shaped button with its label line: a library of buttons.
+  'button-library': (
+    <>
+      <rect x="3" y="8" width="18" height="8" rx="4" />
+      <path d="M8.5 12h7" />
+    </>
+  ),
+  // -- Learn guides: one mark each, none shared with a tool --
+  'guide-contrast': (
+    <>
+      <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </>
+  ),
+  'guide-scale': (
+    <>
+      <path d="M4 18 8.5 6 13 18M5.8 13.5h5.4" />
+      <path d="m15.5 18 2.6-6.5 2.6 6.5M16.4 16h3.4" />
+    </>
+  ),
+  'guide-metrics': (
+    <>
+      <path d="M5 6.5h14M5 17.5h14" />
+      <path d="M12 6.5v11" />
+    </>
+  ),
+  'guide-colour-spaces': (
+    <>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+      <circle cx="9" cy="7" r="1.7" />
+      <circle cx="15" cy="12" r="1.7" />
+      <circle cx="8" cy="17" r="1.7" />
+    </>
+  ),
+  'guide-theme': (
+    <>
+      <circle cx="12" cy="12" r="3.6" />
+      <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18" />
+    </>
+  ),
+  'guide-brand': (
+    <>
+      <path d="M12 3.5 18 12l-6 8.5L6 12z" />
+      <path d="M12 12v4.5" />
+      <circle cx="12" cy="10.5" r="1" />
+    </>
+  ),
   // ── Discover ──
   inspiration: (
     <>
@@ -204,14 +292,196 @@ const ICONS = {
       <path d="M12 16.5h.01" />
     </>
   ),
+  // ── Account (the site map's group tiles) ──
+  user: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 19.5c1.4-3.6 4-5.2 7-5.2s5.6 1.6 7 5.2" />
+    </>
+  ),
+  legal: (
+    <>
+      <path d="M6.5 3.5h7l4 4v13h-11z" />
+      <path d="M13.5 3.5v4h4M9 12.5h6M9 16h6" />
+    </>
+  ),
 }
 
 const FALLBACK = <circle cx="12" cy="12" r="7" />
 
-export default function NavIcon({ id, className }) {
+// Hover-moment variants for the mega menu. The same glyph at rest, with
+// its moving parts classed so global.css ("HOVER MOMENTS") can animate them. Only
+// the menu rows ask for these (`moment`), so every other use of an icon is untouched.
+// Rest geometry is identical to ICONS (Contrast aside: its solid half is hatching here); the extra
+// parts are hidden at rest by CSS. Every part is a stroke in the row's hue: a moment moves, turns,
+// draws (stroke-dashoffset) or fades line work, and never paints a fill. A part with the `dr`
+// class is drawn by dashoffset, which needs pathLength="1" on it.
+// A value that is a function gets a unique id, for a clipPath.
+const MOMENT_ICONS = {
+  // The diameter stays; the hatching that marks the shaded half turns with it to the other side.
+  contrast: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 4v16" />
+      <path className="half" d="M14.5 5.2v13.6M17 6.4v11.2M19.3 9.5v5" />
+    </>
+  ),
+  // The ramp (tint at the top, shade at the bottom) is three lines that rise inside the drop,
+  // which is the clip; the outline is drawn last so the stroke stays above them.
+  tint: (uid) => (
+    <>
+      <clipPath id={uid}><path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" /></clipPath>
+      <g clipPath={`url(#${uid})`}>
+        <g className="rise">
+          <path d="M5 8.5h14" opacity=".4" />
+          <path d="M5 12h14" opacity=".7" />
+          <path d="M5 15.5h14" />
+        </g>
+      </g>
+      <path d="M12 3.5s5.5 5.8 5.5 9.5A5.5 5.5 0 0 1 6.5 13c0-3.7 5.5-9.5 5.5-9.5z" />
+    </>
+  ),
+  // A short level line draws along the inside of each bar.
+  semantic: (
+    <>
+      <rect x="4" y="5" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="10.4" width="16" height="4.2" rx="2.1" />
+      <rect x="4" y="15.8" width="10" height="4.2" rx="2.1" />
+      <path className="dr" pathLength="1" d="M8 7.1h8" />
+      <path className="dr dr2" pathLength="1" d="M8 12.5h8" />
+      <path className="dr dr3" pathLength="1" d="M8 17.9h3" />
+    </>
+  ),
+  // Banding lines draw in either side of the diagonal, like the steps of a gradient.
+  gradient: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      <path d="M4 20 20 4" />
+      <path className="dr" pathLength="1" d="M4 8 8 4" />
+      <path className="dr dr2" pathLength="1" d="M4 14 14 4" />
+      <path className="dr dr3" pathLength="1" d="M10 20 20 10" />
+      <path className="dr dr4" pathLength="1" d="M16 20 20 16" />
+    </>
+  ),
+  'type-scale': (
+    <g className="ts">
+      <path d="M3.5 20h17" />
+      <g className="t1"><path d="M6 20v-4.5M4.5 15.5h3" /></g>
+      <g className="t2"><path d="M11.5 20v-9M9.6 11h3.8" /></g>
+      <g className="t3"><path d="M17.5 20V5.5M15.2 5.5h4.6" /></g>
+    </g>
+  ),
+  icons: (
+    <>
+      <path className="i1" d="m12 4 2.4 5 5.4.7-4 3.7 1.1 5.4L12 16.1l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" />
+      <path className="i2" d="M12 19s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 7.6a3.8 3.8 0 0 1 7 2.2C19 14.6 12 19 12 19z" />
+      <path className="i3" d="M13 3.5 6 13.5h5l-1 7 7-10h-5z" />
+      <path className="i4" d="M7 4.5h10v15l-5-3.6-5 3.6z" />
+      <g className="i5">
+        <circle cx="12" cy="12" r="3.6" />
+        <path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M6.7 6.7l1.4 1.4M15.9 15.9l1.4 1.4M17.3 6.7l-1.4 1.4M8.1 15.9l-1.4 1.4" />
+      </g>
+    </>
+  ),
+  // The face tilts and its right eye winks once: the dot hides and a closed lid shows.
+  emoji: (
+    <g className="face">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9 10.5h.01" />
+      <path className="er" d="M15 10.5h.01" />
+      <path className="ew" d="M13.3 10.9q1.7-1.5 3.4 0" />
+      <path d="M8.5 14.5c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7" />
+    </g>
+  ),
+  // Two arrows that run through once, like a file passing.
+  'file-converter': (
+    <>
+      <g className="a1">
+        <path d="M4 8.5h15" />
+        <path d="m15.5 5 3.5 3.5-3.5 3.5" />
+      </g>
+      <g className="a2">
+        <path d="M20 15.5H5" />
+        <path d="M8.5 12 5 15.5 8.5 19" />
+      </g>
+    </>
+  ),
+  // The inner frame turns from landscape to portrait.
+  ratio: (
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <rect className="in" x="7" y="9.5" width="7" height="5" rx="1" />
+    </>
+  ),
+  // Three glint lines draw across the faces of the cube, one per face.
+  'model-3d': (
+    <>
+      <path d="M12 3.5 19.5 7.8v8.4L12 20.5 4.5 16.2V7.8z" />
+      <path d="M4.5 7.8 12 12l7.5-4.2M12 12v8.5" />
+      <path className="dr" pathLength="1" d="M8 8 12 5.7" />
+      <path className="dr dr2" pathLength="1" d="M8 12.8v3.4" />
+      <path className="dr dr3" pathLength="1" d="M16 12.8v3.4" />
+    </>
+  ),
+  // The picture steps back and the T comes forward.
+  'alt-text': (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <g className="pic">
+        <circle cx="8" cy="9.5" r="1.4" />
+        <path d="M4 16l4-3.5 3 2.5" />
+      </g>
+      <path className="tx" d="M13.5 9.5h5M16 9.5v6" />
+    </>
+  ),
+  // A short glint line draws across each swatch, in reading order.
+  'palette-library': (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+      <path className="dr" pathLength="1" d="M6 9l3-3" />
+      <path className="dr dr2" pathLength="1" d="M15 9l3-3" />
+      <path className="dr dr3" pathLength="1" d="M6 18l3-3" />
+      <path className="dr dr4" pathLength="1" d="M15 18l3-3" />
+    </>
+  ),
+  // Banding lines draw into the front square while the sheet behind it slides out.
+  'gradient-library': (
+    <>
+      <rect x="3.5" y="8" width="12.5" height="12.5" rx="2.5" />
+      <path d="M3.5 20.5 16 8" />
+      <path className="dr" pathLength="1" d="M3.5 15.5 11 8" />
+      <path className="dr dr2" pathLength="1" d="M8.5 20.5 16 13" />
+      <path className="sh" d="M8 4.5h10.5a2 2 0 0 1 2 2V17" />
+    </>
+  ),
+  inspiration: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path className="needle" d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z" />
+    </>
+  ),
+  // The line becomes three dots that hop once, like a reply on its way.
+  'prompt-library': (
+    <>
+      <path d="M4 5.5h16v9H9l-4 3.5v-3.5H4z" />
+      <path className="ln" d="M8.5 10h7" />
+      <path className="d d1" d="M9 10h.01" />
+      <path className="d d2" d="M12 10h.01" />
+      <path className="d d3" d="M15 10h.01" />
+    </>
+  ),
+}
+
+export default function NavIcon({ id, className, moment }) {
+  const uid = `nvi${useId().replace(/:/g, '')}`
+  const variant = moment ? MOMENT_ICONS[moment] : null
+  const glyph = variant ? (typeof variant === 'function' ? variant(uid) : variant) : ICONS[id] || FALLBACK
   return (
     <svg
-      className={className}
+      className={variant ? ['mm-gl', className].filter(Boolean).join(' ') : className}
       viewBox="0 0 24 24"
       width="20"
       height="20"
@@ -222,7 +492,7 @@ export default function NavIcon({ id, className }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {ICONS[id] || FALLBACK}
+      {glyph}
     </svg>
   )
 }

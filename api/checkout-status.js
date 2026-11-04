@@ -26,6 +26,9 @@ export default async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  // The body carries the buyer's email and plan state, so no shared cache may
+  // keep it. Set before any return so the error responses are covered too.
+  res.setHeader('Cache-Control', 'private, no-store')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
@@ -70,7 +73,7 @@ export default async function handler(req, res) {
     // `stripeCustomerId` is a WEAKER signal: it lives on a document the user is
     // allowed to delete (firestore.rules `allow delete: if isOwner()`), and a
     // self-deleted document used to 403 a paying customer out of their own
-    // session with no recovery but founder intervention. So its absence no
+    // session with no recovery but manual intervention. So its absence no
     // longer blocks — but when it is present the session's customer must agree.
     const userDoc = await adminDb().collection('users').doc(uid).get()
     const userData = userDoc.exists ? userDoc.data() : {}

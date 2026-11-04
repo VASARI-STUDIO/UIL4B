@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
@@ -115,11 +116,10 @@ const PREVIEWS = {
 
 // ── The Discover + Learn INDEXES ────────────────────────────────────────────
 //
-// COMPRESSED to a value proposition and the links, on the founder's 2026-09-05
-// instruction: "i want to compress our secondary sales pages to mostly act as
-// linking pages showcasing a tools value proposition then a link". He was
-// offered three depths and chose the deepest — value prop plus link, nothing
-// else — so what a visitor now meets is: what is in here, one line on why it is
+// COMPRESSED to a value proposition and the links. These secondary sales pages
+// mostly act as linking pages that showcase a tool's value proposition and then
+// link to it. The deepest cut of the three depths considered won — value prop
+// plus link, nothing else — so what a visitor now meets is: what is in here, one line on why it is
 // worth opening, and every destination as a real link. Then the page stops.
 //
 // THREE SECTIONS WERE DELETED, and the reason is the same for all three: none
@@ -165,32 +165,32 @@ const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
 
 const SURFACES = {
-  // ── Discover, after the anti-slop audit of 2026-09-09 ──────────────────
+  // ── Discover ───────────────────────────────────────────────────────────
   //
-  // THE HEADLINE WAS A SENTENCE THE FOUNDER HAD ALREADY THROWN OUT. It read
+  // THE HEADLINE WAS A SENTENCE ALREADY REJECTED. It read
   // "Find systems worth stealing." — and "Systems worth stealing." is one of
   // the four homepage headings 56-homepage-headline-copy.spec.js keeps off
-  // the page, on his verdict: '"Systems worth stealing." is bad copy'. Adding
+  // the page, as bad copy. Adding
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the
   // tool that uses them.") was agent copy built on "earn a tab", an idiom
   // that had spread to the nav promo, the library heroes and two grid
   // headings — a motif by repetition, not a UIL4B signature.
   //
-  // Neither is replaced with a new sentence, because there is no founder line
-  // about Discover to derive from (see the PR: "sentences the founder needs to
-  // write"). The h1 is the surface's own name, which is how every library
+  // Neither is replaced with a new sentence, because there is no approved line
+  // about Discover to derive from. The h1 is the surface's own name, which is how every library
   // under it is already headed ("Palette Library", "Gradient Library"), and
-  // the eyebrow that repeated that name above it is gone — the founder marked
-  // the taxonomy-label-above-an-h1 motif "AI" on the gallery mastheads and
-  // asked for the change to reach every header that matches
-  // (DiscoverGalleryHero.jsx). The derived hint under the button still says
-  // what is open. Learn is untouched: #431 just reworked it.
+  // the eyebrow that repeated that name above it is gone — a taxonomy
+  // label above an h1 reads as AI-generated on the gallery mastheads, so it is
+  // removed from every header that matches (DiscoverGalleryHero.jsx). The
+  // derived hint under the button still says what is open. Learn is untouched.
   discover: {
     title: 'Discover',
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
     hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
+    // What everyone but an admin sees: unfinished libraries are not mentioned.
+    liveHint: `${DISCOVER_LIVE} libraries open`,
     gridTitle: 'Every library, and what is in it.',
   },
   learn: {
@@ -201,15 +201,19 @@ const SURFACES = {
     // too would put a second link to the same page under a heading that says
     // nothing in the grid is written yet.
     groups: LEARN_ROADMAP,
-    hint: `${LEARN_ARTICLES.length} guides live · every figure cited or computed`,
+    hint: `${LEARN_ARTICLES.length} guides. Every figure is cited or measured on the page.`,
     gridTitle: 'Topics still being written.',
-    gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
+    gridLede: "These topics aren't written yet.",
   },
 }
 
 export default function SurfaceIndex({ surface }) {
   useReveal()
   const s = SURFACES[surface] || SURFACES.discover
+  // Unfinished libraries and topics are shown, badged, to admins only.
+  const { isAdmin } = useIsAdmin()
+  const groups = s.groups.filter((g) => isAdmin || !g.soon)
+  const hint = isAdmin ? s.hint : (s.liveHint || s.hint)
   useEffect(() => {
     if (surface === 'discover') readCommunitySubmissions()
   }, [surface])
@@ -224,9 +228,9 @@ export default function SurfaceIndex({ surface }) {
           compressed-landing contract (52) counts main's direct children as the
           page's bands, and a wrapper would fold them into one. */}
       <main id="main" className="srf-wrap" tabIndex={-1}>
-      {/* ── The page head. NOT a hero, and that is the founder's 2026-09-18
-          decision: "/discover and /learn lose their sales intro and go straight
-          to the real library/guide index."
+      {/* ── The page head. NOT a hero, and that is deliberate: /discover and
+          /learn lose their sales intro and go straight to the real
+          library/guide index.
 
           What stays is the surface's own NAME as the h1 — the label the nav
           already uses, and how every library under it is headed — and the
@@ -236,7 +240,7 @@ export default function SurfaceIndex({ surface }) {
           index under it is the page. */}
       <header className="home-hero home-hero--surface srf-head">
         <h1 className="home-hero-h1 srf-h1">{s.title}</h1>
-        <p className="home-hero-hint srf-hint">{s.hint}</p>
+        <p className="home-hero-hint srf-hint">{hint}</p>
       </header>
 
       {/* ── Learn only: the guides that exist, before the ones that do not ──
@@ -245,7 +249,7 @@ export default function SurfaceIndex({ surface }) {
       {surface === 'learn' && (
         <section className="srf-sec" aria-labelledby="surface-guides-heading">
           <div className="srf-sec-head" data-reveal>
-            <h2 className="srf-h2" id="surface-guides-heading">Reference, not opinion.</h2>
+            <h2 className="srf-h2" id="surface-guides-heading">Why colour and type behave the way they do on screen.</h2>
           </div>
           {/* Grouped by the topic each guide declares, behind a search over
               their full text. See src/components/LearnGuideIndex.jsx. */}
@@ -257,14 +261,30 @@ export default function SurfaceIndex({ surface }) {
           NAMED, so that it is a landmark: a <section> with no accessible name
           computes to `generic`, and the grid this comment calls "the page" was
           absent from the landmark list. The name is the h2 already here. */}
+      {groups.length > 0 && (
       <section className="srf-sec" aria-labelledby="surface-grid-heading">
         <div className="srf-sec-head" data-reveal>
           <h2 className="srf-h2" id="surface-grid-heading">{s.gridTitle}</h2>
           {s.gridLede && <p className="srf-lede">{s.gridLede}</p>}
         </div>
 
+        {/* Learn's unwritten topics are plain rows in the guide index's own
+            shape: title, one line, and "Soon" where the read time goes. Not
+            cards, no link and no arrow, so they carry less weight than the
+            guides above them and never break into a 2 + 1 grid. */}
+        {surface === 'learn' ? (
+          <div className="lidx-grid">
+            {groups.map((g) => (
+              <div className="lidx-card lidx-card--soon" key={g.id} data-reveal>
+                <h3 className="lidx-title">{g.label}</h3>
+                <span className="lidx-time">Soon</span>
+                <p className="lidx-dek">{g.desc}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="surface-grid">
-          {s.groups.map((g) => {
+          {groups.map((g) => {
             const hue = g.accent ? 'accent' : s.hue
             // Live libraries lead with what is inside them; the ones still on
             // the way stay a plain card, which is the honest difference and
@@ -309,7 +329,9 @@ export default function SurfaceIndex({ surface }) {
             )
           })}
         </div>
+        )}
       </section>
+      )}
       </main>
     </div>
   )

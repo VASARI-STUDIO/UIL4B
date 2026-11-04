@@ -1,4 +1,4 @@
-// THE HEADLINE IN THE SERVED SHELL IS THE FOUNDER'S, NOT A SECOND COPY OF IT.
+// THE HEADLINE IN THE SERVED SHELL IS THE POSITIONING LINE, NOT A SECOND COPY OF IT.
 //
 // ── What is being guarded ───────────────────────────────────────────────────
 //
@@ -6,9 +6,9 @@
 // homepage's largest paint no longer waits for the entry chunk (the measurement
 // is in that file's header). The moment a sentence is rendered from two places,
 // the two can disagree — and this particular sentence was ASSEMBLED FROM THE
-// FOUNDER'S OWN WORDS AND APPROVED BY HIM on 2026-09-10, so a shell that drifts
+// APPROVED POSITIONING WORDS, so a shell that drifts
 // from src/data/positioning.js is not a typo, it is the product saying something
-// he did not say, to the visitor who has not yet loaded the page that says it
+// it was not meant to say, to the visitor who has not yet loaded the page that says it
 // correctly.
 //
 // This is the same guard tests/unit/index-html-pricing.test.js is for prices,
@@ -138,7 +138,7 @@ test('the marked run is the marked run, not merely present somewhere', () => {
   // Spectrum paints the highlight as a colour on the WORDS rather than as a
   // <mark> around the run, so the run is reassembled from the marked words and
   // compared as one string. That also proves the whole-word match: a substring
-  // match would put `sp-w--mark` on a word the founder's run does not contain,
+  // match would put `sp-w--mark` on a word the marked run does not contain,
   // and the join would not equal HERO_HEADLINE.mark.
   const shell = homeShellRoot()
   const marked = [...shell.matchAll(/class="sp-w sp-w--mark"[^>]*>([\s\S]*?)<\/span>/g)]

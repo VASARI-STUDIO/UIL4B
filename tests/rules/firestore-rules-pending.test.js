@@ -6,8 +6,8 @@
 // firestore-rules.test.js runs against `firestore.rules` as it stands. This file
 // runs against the same file with the two fixes applied to an in-memory copy
 // (tests/rules/pending-firestore-rules.mjs). It was written while they were
-// still a diff waiting on the founder — `firestore.rules` is founder-gated, so
-// the diff shipped in a pull request body for him to apply by hand — and it
+// still a diff waiting on approval — `firestore.rules` is approval-gated, so
+// the diff shipped in a pull request body for the owner to apply by hand — and it
 // stays because handing someone a rules diff nobody has ever run is not a fix,
 // it is a suggestion. Both fixes have since landed in `firestore.rules` itself
 // (the feedback rule in #472), so what this suite proves now is that they STAY.
@@ -39,9 +39,9 @@ import { pendingRulesText } from './pending-firestore-rules.mjs'
 const ALICE = 'alice-uid'
 const BOB = 'bob-uid'
 // The administrator is a CLAIM now, not an address. `analytics-daily` read used
-// to be gated on `request.auth.token.email == '<the founder's gmail>'` — a
-// personal address written into a rules file in a public repository, naming the
-// one account whose compromise yields site-wide admin. api/verify-admin.js has
+// to be gated on `request.auth.token.email == '<an admin address>'` — a
+// personal address written into a rules file in a public repository.
+// api/verify-admin.js has
 // minted the `admin` claim since #241, so the rule matches on that instead and
 // nothing here needs to know anybody's address.
 const ADMIN_CLAIM = { admin: true }
@@ -70,8 +70,8 @@ const adminDb = () =>
   testEnv.authenticatedContext('admin-uid', { ...ADMIN_CLAIM }).firestore()
 const ownerDb = () => testEnv.authenticatedContext('owner-uid', { ...ADMIN_CLAIM }).firestore()
 // Signed in, carrying an email and no claim — what every ordinary account looks
-// like, and what the founder's own session looked like before the handshake
-// minted his claim.
+// like, and what an admin's session looked like before the handshake
+// minted the claim.
 const emailOnlyDb = () =>
   testEnv.authenticatedContext('email-only-uid', { email: 'someone@example.com' }).firestore()
 
@@ -184,7 +184,7 @@ test('POSITIVE CONTROL: the real submission the form writes is still accepted', 
 })
 
 test('POSITIVE CONTROL: the optional fields the form adds are still accepted', async () => {
-  // ownerId (the founder's own handle), and the media pair — both conditional,
+  // ownerId (the site owner's own handle), and the media pair — both conditional,
   // which is why the allowlist is hasOnly and not an exact key set.
   await assertSucceeds(setDoc(promptDoc(aliceDb(), 'p2'), promptRecord({
     ownerId: 'uil4b', mediaType: 'image', mediaUrl: 'https://storage.example/x.webp',
@@ -258,7 +258,7 @@ test('a signed-out client still cannot create a prompt', async () => {
 // buildQueueRecord (utils/communityQueue.js) plus the three real payloads from
 // Community.jsx, GradientGenerator.jsx and PaletteBuilder.jsx.
 const PAYLOADS = {
-  gradient: { type: 'linear', angle: 90, stops: [{ color: '#0F172A', pos: 0 }, { color: '#38BDF8', pos: 100 }] },
+  gradient: { type: 'Linear', angle: 90, stops: [{ color: '#0F172A', position: 0 }, { color: '#38BDF8', position: 100 }] },
   design: { author: 'Alice', category: 'Branding', url: 'https://example.com/a', c1: '#0F172A', c2: '#38BDF8' },
   palette: { colors: ['#0F172A', '#38BDF8', '#F8FAFC'], category: 'Branding', url: 'https://example.com/p', author: 'alice' },
 }
@@ -400,7 +400,7 @@ test('a signed-out client still cannot write a counter', async () => {
 // 5 · WHAT THIS PATCH DELIBERATELY DOES NOT WIDEN
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// The gated file this diff asks the founder to edit is the same one that decides
+// The gated file this diff asks the owner to edit is the same one that decides
 // whether a client can grant itself Pro. Re-asserted here, against the PATCHED
 // text, so "it does not touch users/{uid}" is a checked statement rather than a
 // sentence in a pull request.

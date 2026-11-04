@@ -30,7 +30,7 @@ import { roleFromClaims } from '../utils/moderation'
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS IS A HOOK AND NOT A CHANGE TO AuthContext
 // ─────────────────────────────────────────────────────────────────────────────
-// AuthContext.jsx is founder-gated by docs/reference/human-validation-zones.md
+// AuthContext.jsx is owner-gated
 // and roles are a privilege-escalation surface, so it is exactly the file an
 // agent must not quietly extend. It does not need to be: everything here reads
 // `auth.currentUser` from utils/firebase directly, the same way Admin.jsx

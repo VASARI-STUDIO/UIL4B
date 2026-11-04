@@ -139,3 +139,24 @@ test('a project name cannot break out of the document', () => {
   assert.ok(!/<script>alert/.test(html), 'the name was not escaped')
   assert.ok(html.includes('&lt;script&gt;'))
 })
+
+test('the type scale is set at true size: each step is larger than the one before, none held at a cap', () => {
+  const sizes = (design) => [...buildStyleGuideHtml(design, { watermark: false, date: AT }).matchAll(/<td class="spec" style="font-size:([\d.]+)px/g)].map((m) => Number(m[1]))
+  const ladder = typeLadder(readDesign(DESIGN))
+  const px = sizes(DESIGN)
+  assert.equal(px.length, ladder.length)
+  // A 1.25 scale from 16px fits the sheet at its true sizes, so the column says "Specimen", not a percentage.
+  assert.deepEqual(px, ladder.map((s) => s.px))
+  const html = buildStyleGuideHtml(DESIGN, { watermark: false, date: AT })
+  assert.match(html, /<th style="text-align:right">Specimen<\/th>/)
+
+  // A steeper scale keeps strictly decreasing sizes down the ladder; it is shrunk by one factor, and the column says so.
+  const steep = { ...DESIGN, typeScale: { base: 18, ratio: 1.618, lineHeight: 1.5 } }
+  const big = sizes(steep)
+  const order = typeLadder(readDesign(steep)).map((s) => s.px)
+  const idx = [...order.keys()].sort((a, b) => order[b] - order[a])
+  for (let i = 1; i < idx.length; i += 1) assert.ok(big[idx[i]] < big[idx[i - 1]], 'sizes do not strictly decrease')
+  const k = big[idx[0]] / order[idx[0]]
+  big.forEach((v, i) => assert.ok(Math.abs(v - order[i] * k) < 0.02, 'steps are not scaled by one factor'))
+  if (k < 1) assert.match(buildStyleGuideHtml(steep, { watermark: false, date: AT }), /Specimen, at \d+%/)
+})

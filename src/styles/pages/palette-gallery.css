@@ -12,8 +12,8 @@
 
    KEPT, deliberately: the like button stays a circle. It is a single-glyph
    toggle floating on the artwork, the shape every gallery uses for it, not a
-   toolbar control; it loses only its backdrop blur (the founder's rejected
-   list names blur), with the ground raised from .42 to .56 so the heart keeps
+   toolbar control; it loses only its backdrop blur (blur is not
+   used on this page), with the ground raised from .42 to .56 so the heart keeps
    its contrast over a pale stripe without it. */
 
 /* Selection: the ring and the tick are non-text, so the plain accent. The tick
@@ -68,6 +68,43 @@
   .lib-surface.pgl-page .pgal-act{min-width:44px;justify-content:center}
 }
 
+/* The five swatch actions as one row of icon buttons. Wherever the labelled
+   pills cannot fit the card (a touch device, where the row sits under the
+   swatch, or a narrow window, where it overlays it) the words leave the face
+   and stay in each control's aria-label and title. Five 44px buttons and their
+   gaps are 252px, which fits every card at 320px and up, so the row wraps
+   rather than scrolls or clips if a card is ever narrower. */
+@media(hover:none),(max-width:1000px){
+  .lib-surface.pgl-page .pgal-act span{display:none}
+  .lib-surface.pgl-page .pgal-act{padding:0;min-width:36px;min-height:36px;justify-content:center}
+  .lib-surface.pgl-page .pgal-card .lbry-card-actions{flex-wrap:wrap;overflow:visible}
+}
+@media(hover:none){
+  .lib-surface.pgl-page .pgal-act{min-width:44px;min-height:44px}
+  /* Under the swatch, the row lines up with the card's title and clears the swatch edge. */
+  .lib-surface.pgl-page .pgal-card .lbry-card-actions{margin-top:12px;padding-inline:18px}
+}
+
+/* Phone toolbar: the search field takes the first row on its own; the second
+   holds the collection switch, the filter button and the create button. The
+   toolbar row dissolves into this grid so its children can sit in either row
+   (LibraryToolbar is unchanged, and stays on its phone stage). */
+@media(max-width:640px){
+  .lib-surface .lbry-toolbar.pgl-toolbar{
+    display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;
+    gap:8px;align-items:center;
+  }
+  .lib-surface .pgl-toolbar .lbry-toolbar-row{display:contents}
+  .lib-surface .pgl-toolbar .lbry-search{grid-column:1 / -1;grid-row:1}
+  .lib-surface .pgl-toolbar .lbry-toolbar-quick{
+    grid-column:1;grid-row:2;min-width:0;
+    margin:-3px;padding:3px;
+  }
+  .lib-surface .pgl-toolbar .lbry-toolbar-quick .lbry-filters .lbry-filter{padding:0 12px}
+  .lib-surface .pgl-toolbar .lbry-filterpanel{grid-column:2;grid-row:2}
+  .lib-surface .pgl-toolbar .lbry-toolbar-action{grid-column:3;grid-row:2;margin-left:0}
+}
+
 
 /* ══ The app file's Palette Library, value for value ═══════════════════════
    Source: UIL4B App.dc.html, the palettes screen (lines 219–282). */
@@ -86,6 +123,14 @@
 }
 .lib-surface.pgl-page .pgal-stripes,
 .lib-surface.pgl-page .lockt-stripes{height:clamp(200px,34vw,260px);border:0}
+/* A near-white swatch ends against the card's own ground, so the stripes get a
+   hairline along their foot and the last one reads as a swatch, not a hole. */
+.lib-surface.pgl-page .pgal-stripes{border-bottom:1px solid var(--border)}
+/* The three locked cards wrap by hand from the same 320px floor as the grid
+   above. When a row holds two, the third takes the whole row instead of sitting
+   beside an empty cell. */
+.lib-surface.pgl-page .pgal-grid--locked{display:flex;flex-wrap:wrap}
+.lib-surface.pgl-page .pgal-grid--locked > .lockt-card{flex:1 1 min(320px,100%);min-width:0}
 .lib-surface.pgl-page .pgal-card:hover .pgal-stripes{transform:none;box-shadow:none}
 .lib-surface.pgl-page .lbry-card-foot{align-items:baseline}
 .lib-surface.pgl-page .lbry-card .lbry-card-id{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
@@ -95,7 +140,7 @@
 .lib-surface.pgl-page .pgal-chip{
   padding:5px 9px;border-radius:8px;
   background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:color-mix(in srgb,var(--t0) 78%,transparent);
-  font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;
+  font-family:var(--mono);font-size:10.5px;
 }
 
 /* On a phone the CTA keeps its circled arrow and gives its words to the
