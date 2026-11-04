@@ -470,8 +470,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* PR #298 gave this band a second column here — `--lbry-col-min:360px` across
    700–980 — because at 834 a 794px grid JUST missed two columns and left a
    790px row with type in its left ~300px, 77 times over, for a 12,231px page.
-   That fix was right for a grid and is moot for a list: the founder's direction
-   of 2026-09-02 is one specimen per row at every width, so the band has no
+   That fix was right for a grid and is moot for a list: the layout
+   is one specimen per row at every width, so the band has no
    column count of its own to set and the rule is gone rather than overridden.
    The emptiness #298 measured is answered above instead, by a row whose three
    lines each want the full width. Removing the override is deliberate; see the

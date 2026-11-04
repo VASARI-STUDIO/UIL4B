@@ -132,7 +132,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 .fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
 .fbd-empty{margin-bottom:8px}
 
-/* ── The per-family detail view, and the two tabs the founder asked for ──────
+/* ── The per-family detail view, and its two tabs ──────
    Three fixed rows and ONE scroller: head, tabs, scrolling panel, pinned
    action. #305 found the Font Gallery's specimen dialog 1,763px tall in a 900px
    viewport with every action below the fold, and noted that adding tabs is
@@ -333,8 +333,8 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 
 /* ── The outbound search, worded as a search ──────────────────────────────── */
 .fdx-fiu-note{margin:18px 0 0;padding-top:14px;font-size:11.5px;line-height:1.55;color:var(--t2);border-top:1px solid var(--border)}
-/* Resting underline, not a hover one — founder direction 2026-09-02 rules out
-   hover-only affordances on touch, and the footer attribution link settled the
+/* Resting underline, not a hover one — hover-only affordances don't work
+   on touch, and the footer attribution link settled the
    same question the same way. 70% of currentColor rather than a fixed token,
    which is what measured clear of 1.4.11 there. */
 /* Radius at REST, not on :focus-visible — see the note on the global
@@ -347,7 +347,7 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 /* ── The "In use" tab ────────────────────────────────────────────────────────
    Photographs of real work set in the family. It ships EMPTY for every family
    and will stay that way until an image arrives with its provenance attached —
-   see src/data/fontRealWorldUses for the rule and the founder's decision.
+   see src/data/fontRealWorldUses for the rule and the reason.
 
    THE EMPTY STATE HAS NO ILLUSTRATION, AND THAT IS THE DESIGN DECISION HERE.
    Jira's and Xero's empty states both draw one and both work, but neither of

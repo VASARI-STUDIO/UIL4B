@@ -108,7 +108,7 @@
 
 
 /* ── The modal ─────────────────────────────────────────────────────────────
-   No blur on the scrim (the founder's rejected list names it); the panel is
+   No blur on the scrim; the panel is
    the app's 18px card; the close is a 10px rectangle like every other control
    on the page. The foot is ONE ink primary ("Copy prompt" — the thing the
    page exists for) beside a hairline secondary, via the shared `.lib-btn`. */

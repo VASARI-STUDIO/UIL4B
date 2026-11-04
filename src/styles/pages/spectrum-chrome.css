@@ -388,12 +388,12 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
 .sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t2)}
 .sp-footer .sp-footer-legal a{color:var(--t1)}
 .sp-footer .sp-footer-legal a:hover{color:var(--t0)}
-/* THE FOUNDER CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
+/* THE AUTHOR CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
    on touch there is no hover. 70% of the current ink at a 2px offset;
    07-public-shell-library-palette measures it by contrast in both themes. */
 .sp-footer .sp-footer-legal a.sp-footer-attrib{color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .sp-footer .sp-footer-legal a.sp-footer-attrib:hover{text-decoration-color:currentColor}
-/* The founder's note trigger, restyled to the baseline and nothing else — its
+/* The author's note trigger, restyled to the baseline and nothing else — its
    element, label, aria-haspopup and press-only opening are FounderNote's. */
 .sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sp-footer .app-footer-note:hover{color:var(--t0)}

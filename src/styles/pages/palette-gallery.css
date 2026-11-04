@@ -12,8 +12,8 @@
 
    KEPT, deliberately: the like button stays a circle. It is a single-glyph
    toggle floating on the artwork, the shape every gallery uses for it, not a
-   toolbar control; it loses only its backdrop blur (the founder's rejected
-   list names blur), with the ground raised from .42 to .56 so the heart keeps
+   toolbar control; it loses only its backdrop blur (blur is not
+   used on this page), with the ground raised from .42 to .56 so the heart keeps
    its contrast over a pale stripe without it. */
 
 /* Selection: the ring and the tick are non-text, so the plain accent. The tick
