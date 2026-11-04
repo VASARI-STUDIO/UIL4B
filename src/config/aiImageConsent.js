@@ -6,7 +6,7 @@
 // chosen — not in a tooltip and not after.
 //
 // The full statement of what the providers may do with a submission is the
-// Terms, section 4 (src/pages/Terms.jsx, `terms.s4AiText`). The Alt Text page
+// Terms, section 8 (src/pages/Terms.jsx, the Ai section). The Alt Text page
 // states where the image goes and links there (AI_IMAGE_SENT + AI_TERMS_PATH);
 // the prompt generator's reference image still carries the longer
 // AI_IMAGE_CONSENT sentence. ONE copy of each in one place so the tools cannot
