@@ -1592,6 +1592,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the HCT solver ever throws.
   const randomize = useCallback(() => {
     setColPanel(null)
+    // Every swatch locked leaves nothing to shuffle. Say so, in the same words
+    // Font Pair uses, rather than doing nothing.
+    if (colors.length > 0 && colors.every((_, i) => locked.has(i))) {
+      toast?.('Every colour is locked. Unlock one to shuffle.')
+      return
+    }
     // Same free-system guard as regen: a free user randomising from a paid/brand
     // system gets a free system instead, and the UI snaps to match.
     const sys = resolveSystem(harmony)
@@ -1612,7 +1618,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }))
     if (!locked.has(0)) { setSeed(fresh[0]); setSeedInput(fresh[0]) }
     setLiveMsg('Palette randomised')
-  }, [harmony, locked, toast, resolveSystem])
+  }, [harmony, colors, locked, toast, resolveSystem])
 
   // imgOpen is deliberately NOT here. The image picker is a centred modal now,
   // and this layer closes anything whose pointerdown misses a .plb-menuwrap —

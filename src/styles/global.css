@@ -3573,6 +3573,9 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
 .cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
+/* The refusal under the value field: a live region that is empty, and so takes no room, until a typed value is refused. */
+.cpk-hint{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong)}
+.cpk-hint:not(:empty){margin-top:var(--s-1)}
 /* Eyedropper. Present only where the browser has the API — see the component. */
 .cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}

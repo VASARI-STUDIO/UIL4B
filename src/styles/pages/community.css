@@ -172,19 +172,20 @@
 }
 /* One line at every width: the chips scroll sideways instead of wrapping into
    rows. The block padding (and the matching negative margin) keeps the focus
-   ring inside the scroll box, which clips whatever lies outside it. */
+   ring inside the scroll box, which clips whatever lies outside it.
+   The scrolling itself, the edge fade that says there is more and the thin
+   scrollbar come from `.rail-overflow` (global.css), put on the row in the
+   markup. The fade only draws while the row overflows and has more to show on
+   that side, so it is off where all seven chips fit. */
 .ch-spectrum .ch-filters {
+  --rail-fade: 48px;
   display: flex;
   flex-wrap: nowrap;
   gap: 6px;
   min-width: 0;
   margin-block: -6px;
   padding-block: 6px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
 }
-.ch-spectrum .ch-filters::-webkit-scrollbar { display: none; }
 
 .ch-spectrum .ch-filter {
   display: inline-flex;
@@ -556,19 +557,15 @@
 }
 
 /* Phone and tablet: the chips take a row of their own and the sort switch sits
-   under them, each one line. The chips fade out at the right edge to show there
-   are more; the end padding lets the last chip scroll clear of the fade. */
+   under them, each one line. The end padding lets the last chip scroll clear of
+   the fade. */
 @media (max-width: 900px) {
   /* nowrap: deferred/account.css still gives `.ch-toolbar` `flex-wrap: wrap`, and
      a wrapping column sizes its line to the chips' full width (660px), which
      pushed the page sideways instead of letting the row scroll. */
   .ch-spectrum .ch-toolbar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .ch-spectrum .ch-sort { align-self: flex-start; }
-  .ch-spectrum .ch-filters {
-    padding-inline-end: 28px;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-  }
+  .ch-spectrum .ch-filters { padding-inline-end: var(--rail-fade); }
 }
 
 @media (min-width: 561px) and (max-width: 900px) {

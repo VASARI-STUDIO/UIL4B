@@ -23,6 +23,7 @@ import { infoToolGroup } from '../data/infoTools'
 // Where an image goes in an AI tool, and where the Terms say what the
 // providers may do with it. One copy of each, shared with the tool itself.
 import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -190,7 +191,7 @@ const SECTIONS = [
         <ToolLinks group={GROUP.ai} />
         {/* The one group that sends an image to a server, so the page that
             explains the tools says where it goes. */}
-        <p>{AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link></p>
+        <p>{AI_IMAGE_SENT} <Link className="ic-hit" to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>How providers may use them</Link></p>
       </>
     ),
   },
