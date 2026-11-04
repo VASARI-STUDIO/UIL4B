@@ -4,9 +4,15 @@
 //      to /plans, like every other upgrade call to action. It does not stack a
 //      second dialog over the first.
 //   2. A Soon tool's URL still redirects, but the arrival says so in a toast.
+//   3. The palette library has one builder link per card and a skip link past
+//      the grid.
 //   7. The palette Pro walls preview the seed on screen, not the saved history.
 //
 // MUTATIONS (each should fail the named test):
+//   * restore the `pgal-act` Builder link in PaletteGalleryGrid.jsx
+//       -> "a card has one link to the builder ..."
+//   * delete the skip link or the `pgl-after-grid` marker in PaletteGallery.jsx
+//       -> "the skip link moves focus past the palettes"
 //   * make `openProModal` in PaletteBuilder.jsx pass no `seed` again
 //       -> "after a randomise, the "Go beyond 8 colours" wall shows the toolbar seed"
 //   * put `onOpen={openVariationGate}` back on the Suggest ProBlock in PaletteBuilder.jsx
@@ -119,5 +125,79 @@ test.describe('palette Pro walls: the colour preview follows the board', () => {
     const wall = page.getByRole('dialog').filter({ hasText: 'Go beyond 8 colours' })
     await expect(wall).toBeVisible()
     await expect(wall.locator('.ui-pro-rail-seed')).toHaveText(onScreen.toUpperCase())
+  })
+})
+
+// ── 3. Palette gallery: one builder link per card, and a way past the grid ───
+
+test.describe('palette gallery: tab stops', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  const frames = (page, n = 3) => page.evaluate(
+    (count) => new Promise((resolve) => {
+      let left = count
+      const tick = () => { left -= 1; if (left <= 0) resolve(); else requestAnimationFrame(tick) }
+      requestAnimationFrame(tick)
+    }),
+    n,
+  )
+
+  test('a card has one link to the builder and fewer tab stops than the swatches plus seven', async ({ page }) => {
+    watch(page, 'a keyboard user walking the palette library')
+    await go(page, '/discover/palettes')
+    const card = page.locator('.pgal-card:has(.pgal-act)').first()
+    await expect(card).toBeVisible({ timeout: 20000 })
+
+    const builder = card.locator('a[href^="/create/palette"]')
+    await expect(builder, 'one link to the builder per card').toHaveCount(1)
+    await expect(builder).toBeVisible()
+
+    // Tab from the first swatch to the card's last stop, counting each one.
+    const stripes = await card.locator('.pgal-stripe').count()
+    await card.locator('.pgal-stripe').first().focus()
+    let stops = 1
+    for (let i = 0; i < 30; i += 1) {
+      await page.keyboard.press('Tab')
+      await frames(page)
+      const inside = await card.evaluate((el) => el.contains(document.activeElement))
+      if (!inside) break
+      stops += 1
+    }
+    // Before: swatches + like + five actions + the foot link = swatches + 7.
+    expect(stops, 'the tab stops in one card').toBeLessThan(stripes + 7)
+    expect(stops).toBe(stripes + 1 + 4 + 1)
+  })
+
+  test('the skip link moves focus past the palettes', async ({ page }) => {
+    watch(page, 'a keyboard user skipping the palette grid')
+    await go(page, '/discover/palettes')
+    await expect(page.locator('.pgal-card').first()).toBeVisible({ timeout: 20000 })
+
+    const skip = page.getByRole('link', { name: 'Skip past the palettes' })
+    await expect(skip).toHaveCount(1)
+    const first = await skip.evaluate((a) => !!(a.compareDocumentPosition(document.querySelector('.pgal-card')) & Node.DOCUMENT_POSITION_FOLLOWING))
+    expect(first, 'it comes before the first card').toBe(true)
+
+    await skip.focus()
+    await expect(skip, 'it shows on focus').toBeInViewport()
+    await page.keyboard.press('Enter')
+    await frames(page)
+
+    const where = await page.evaluate(() => {
+      const active = document.activeElement
+      const cards = [...document.querySelectorAll('.pgal-card')]
+      const last = cards[cards.length - 1]
+      return {
+        insideACard: !!active?.closest('.pgal-card'),
+        afterLastCard: !!(last.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING),
+      }
+    })
+    expect(where.insideACard).toBe(false)
+    expect(where.afterLastCard, 'focus is past the last card').toBe(true)
+
+    // The next Tab goes on from there, not back into the grid.
+    await page.keyboard.press('Tab')
+    await frames(page)
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.pgal-card'))).toBe(false)
   })
 })
