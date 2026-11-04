@@ -105,6 +105,15 @@ export function allowanceSentence(planId) {
     : `${total} ${unit} a month`
 }
 
+/**
+ * The same allowance for a visitor with no account, who has to hear that an
+ * account is needed before they hear the number.
+ */
+export function signedOutAllowanceSentence() {
+  const { total } = generationAllowance('free')
+  return `Sign in to use your ${total} ${total === 1 ? 'generation' : 'generations'}.`
+}
+
 /** What is left, floored at zero. Used by the meter and by the refusal copy. */
 export function generationsRemaining(planId, used) {
   const { total } = generationAllowance(planId)

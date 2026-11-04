@@ -8,9 +8,12 @@
 //      the grid.
 //   4. /discover/prompts shows the not-found page to anyone but an admin.
 //   5. Search fields show a keyboard focus ring (the palette sliders already did).
+//   6. Brand Starter tells a signed-out visitor they need an account.
 //   7. The palette Pro walls preview the seed on screen, not the saved history.
 //
 // MUTATIONS (each should fail the named test):
+//   * drop `signedOut={!user && !authLoading}` from BrandStarter.jsx
+//       -> "signed out, it says an account is needed"
 //   * delete the `.lbry-search:has(input:focus-visible)` rule in global.css
 //       -> "the search field shows a ring on focus"
 //   * drop `notFound` from the /discover/prompts route in App.jsx
@@ -277,5 +280,26 @@ test.describe('keyboard focus rings', () => {
       expect(track.style, `slider ${i + 1} has a ring on its track`).not.toBe('none')
       expect(track.width).toBeGreaterThanOrEqual(2)
     }
+  })
+})
+
+// ── 6. Brand Starter says an account is needed ───────────────────────────────
+
+test.describe('Brand Starter: the allowance line', () => {
+  test('signed out, it says an account is needed', async ({ page }) => {
+    watch(page, 'a signed-out visitor reading the Brand Starter allowance')
+    await go(page, '/create/auto-builder')
+    const line = page.getByTestId('brand-starter-allowance')
+    await expect(line).toContainText('Sign in to use your 1 generation.')
+    await expect(line).not.toContainText('once per account')
+  })
+
+  test('signed in on Free, it keeps the per-account figure', async ({ page }) => {
+    watch(page, 'a free member reading the Brand Starter allowance')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/create/auto-builder')
+    const line = page.getByTestId('brand-starter-allowance')
+    await expect(line).toContainText('1 generation, once per account')
+    await expect(line).not.toContainText('Sign in')
   })
 })
