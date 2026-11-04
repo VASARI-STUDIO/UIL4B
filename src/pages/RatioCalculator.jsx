@@ -112,10 +112,9 @@ const COMMON_RATIOS = [
 // Returns the nearest standard AND its two numbers, because a suggestion you
 // cannot adopt is not a suggestion.
 //
-// Founder, 2026-09-15: "i put in 1280x 589 thats the resoltion of the area, it
-// should suggest the closent neighbour for aspect ratio this makes sure im
-// working in real sizes not partial ratios or other things." The tool already
-// computed the neighbour — 1280x589 is 19.5:9 to within 0.3% — and printed it
+// Someone who enters 1280x589 (the resolution of an area) should be offered
+// the closest neighbouring standard ratio, so they work in real sizes rather
+// than partial ratios. The tool already computed the neighbour — 1280x589 is 19.5:9 to within 0.3% — and printed it
 // as plain text beside the exact-but-useless "1280:589". You could read it and
 // not get into it, so the size ladder underneath went on building itself from
 // the partial ratio.
@@ -490,9 +489,8 @@ export default function RatioCalculator({ onCopy }) {
   // 816, say — and the ratio is almost never one of those, so the standard-size
   // picker vanished exactly when the user had done the work to earn it.
   //
-  // Founder, 2026-09-15: "lock the ratio based on the numbers supplied then
-  // chose a standard size to match the ratio such as 1920 x or 800 x or 2480x
-  // or 1600x or whatever else."
+  // The ratio locks from the numbers supplied, then the user chooses a standard
+  // size to match it (1920 wide, 800 wide, 2480 wide, 1600 wide and so on).
   //
   // The curated list still WINS where it applies, because it carries names a
   // function cannot derive: "Full HD 1080p" is worth more than "1920 × 1080".

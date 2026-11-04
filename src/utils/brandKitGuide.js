@@ -1,12 +1,11 @@
 // THE BRAND KIT WALKTHROUGH — the reading behind the guided flow.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// THE FOUNDER'S ASK, 2026-09-05
+// WHAT IT IS FOR
 // ─────────────────────────────────────────────────────────────────────────────
-// “lets make the one in the navigation the create Brand system should start a
-// guided walkthrough to build a full system”, and separately “build a brand kit
-// should go straight into step 1 then provide a popup with a quick set of
-// information”.
+// The nav's “Create Brand system” starts a guided walkthrough to build a full
+// system, and separately “Build a brand kit” goes straight into step 1 and then
+// provides a popup with a quick set of information.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHAT WAS ACTUALLY WRONG, MEASURED BEFORE ANY DESIGN WORK
@@ -21,7 +20,7 @@
 // links with no step bar, no popup and no step 1. Reproduced in a browser: flag
 // `1`, `.uikit-stepbar` absent, `.uikit-intro` absent.
 //
-// That is both founder complaints in one defect, and it is why step one below is
+// That is both problems in one defect, and it is why step one below is
 // `/create/palette`. That is the route SYSTEM_PARTS (utils/userHome.js) and
 // FIRST_WINS (utils/firstWin.js) already name as the colour tool, and the one
 // that actually writes `design.palette`.
@@ -267,8 +266,8 @@ export function firstIncompleteStep(design, options) {
 /**
  * The destination for the nav's brand-kit action.
  *
- * A FRESH start always opens step one. That is the founder's instruction —
- * “build a brand kit should go straight into step 1” — and it holds even for
+ * A FRESH start always opens step one. That is by design —
+ * “Build a brand kit” goes straight into step 1 — and it holds even for
  * someone whose design already has colours in it, because starting a brand kit
  * is a decision to go through the whole thing.
  *

@@ -9,7 +9,7 @@
 // 🤫 "still building" state, so they carry `soon: true` and show a "Soon" badge
 // in the nav. The first LIVE category is Icons & Emoji (`soon: false`) — its
 // tools mount for real inside the Create shell. Each tool ALSO carries its own
-// `soon` flag: when the founder builds a category they flip the group to
+// `soon` flag: when a category is built its group is flipped to
 // `soon: false`, and any still-unbuilt sub-tool then surfaces its own badge.
 // Category `hue` maps to a `--hue-*` token in global.css via `data-hue` (never
 // an inline colour).
@@ -121,8 +121,8 @@ export const CREATE_GROUPS = [
 // /create/imagery, /create/ai-tools and /create/icons-emoji are redirects, not
 // destinations; /create/components is `soon` and renders the workshop state.
 // /create/color used to be the one exception — App.jsx intercepted it above
-// CreateTool and rendered ColorLanding, the colour sales page. The founder
-// deleted that landing on 2026-09-18 when Spectrum became `/`, so the intercept
+// CreateTool and rendered ColorLanding, the colour sales page. That
+// landing was deleted when Spectrum became `/`, so the intercept
 // is gone and the colour home bounces to /create/palette like the other four.
 // It keeps its 301 as well, in src/data/legacyRoutes.js, because unlike the
 // other four it WAS a prerendered, indexed page.
@@ -355,7 +355,7 @@ const DISCOVER_SPEC = [
   // Reachable from BOTH surfaces on purpose. The page is already a Discover
   // gallery in everything but its URL — #292 put it on the shared Library
   // browse components and #306 put it under DiscoverGalleryHero — so listing it
-  // here is the founder's “access icon library from the discover tab” without a
+  // here gives access to the icon library from the Discover tab without a
   // canonical move. Same shape as Font Gallery above: one entry, one live route,
   // no redirect table entry and no change to the prerendered route count. The
   // Emoji Library is deliberately not a second entry — it is the other tab of
@@ -703,7 +703,7 @@ export const NAV_SECTIONS = [
       // Collections are the two DISCOVER_GROUPS carrying `soon: true`, so the
       // heading led on an unbuilt surface and the blurb opened by promising
       // community UI systems that do not exist. "curated, never scraped" is
-      // also the "not an X" defensive negation the founder rejected by name on
+      // also the "not an X" defensive negation that was rejected on
       // the export heading and on /discover's own h1.
       //
       // Both are COUNTED off the groups the menu is already listing, which is
@@ -716,9 +716,8 @@ export const NAV_SECTIONS = [
       // gradient arrays to print their lengths would pull 137 records into
       // every bundle that loads the nav, which is every page.
       //
-      // This is an inventory, not a voice. The sentence with a point of view
-      // is still the founder's to write — see the anti-slop audit row in
-      // pipeline.js, which lists the three nav promo lines as his.
+      // This is an inventory, not a voice. A sentence with a point of view
+      // is still the owner's to write.
       title: discoverPromoTitle(),
       blurb: discoverPromoBlurb(),
       href: '/discover',

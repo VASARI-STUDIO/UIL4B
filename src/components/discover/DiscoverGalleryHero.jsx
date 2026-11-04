@@ -7,9 +7,9 @@
 // beyond whatever `action` / `aside` node the caller hands it. That keeps it
 // usable from any browse page without dragging that page's concerns in.
 //
-// THE EYEBROW AND THE COUNTER ARE GONE (#surface-headers-read-as-ai). The
-// founder marked both motifs “AI” on the Font Gallery masthead and asked for
-// the change to reach every header that matches. This one matched twice:
+// THE EYEBROW AND THE COUNTER ARE GONE. Both motifs read as AI-generated on the
+// Font Gallery masthead, so they are removed from every header that matches.
+// This one matched twice:
 //
 //   • `eyebrow` rendered a taxonomy path (“Discover / Colour”) in letter-spaced
 //     mono caps directly above an <h1> that said the same thing. No browse

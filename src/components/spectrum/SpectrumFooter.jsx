@@ -30,7 +30,7 @@ import '../../styles/pages/spectrum-chrome.css'
 //   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
 //     Cookies is dropped; /credits is a licence condition (the CC-BY icon sets
 //     and OFL faces ask for their notices to be reachable).
-//   · THE BASELINE KEEPS THE FOUNDER'S NOTE AND THE BRISBANE CREDIT beside the
+//   · THE BASELINE KEEPS THE AUTHOR'S NOTE AND THE BRISBANE CREDIT beside the
 //     copyright line. The note never opens by itself: it is a button a person
 //     presses.
 //

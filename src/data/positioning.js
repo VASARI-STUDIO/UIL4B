@@ -1,12 +1,12 @@
-// THE FOUNDER'S VALUE PROPOSITION, IN HIS WORDS, IN ONE PLACE.
+// THE VALUE PROPOSITION, IN ITS APPROVED WORDS, IN ONE PLACE.
 //
 // ── Why this module exists ──────────────────────────────────────────────────
 //
 // Every sales surface in this app used to write its own value claim. The hero
 // said one thing, /plans framed it another way, /learn/help opened on a third, and
 // public/llms.txt told a machine a fourth. None of them was wrong exactly, but
-// no two agreed, and nothing in the repo could tell you which one the founder
-// had actually approved — so each rewrite of any one of them was a fresh guess.
+// no two agreed, and nothing in the repo could tell you which one had
+// actually been approved — so each rewrite of any one of them was a fresh guess.
 //
 // That is the same failure `src/config/exportFormats.js` was extracted to fix
 // (a pricing page describing the export offer from memory, and describing it

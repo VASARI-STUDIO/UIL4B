@@ -40,7 +40,7 @@ export default function useSmoothScroll() {
     // of those attributes in total (three in PaletteBuilder, one in
     // IconLibrary) against a dozen scrollable overlays, so for the rest the
     // wheel scrolled the page while the user's pointer sat inside the popup.
-    // That is the founder's 2026-09-03 report, and it reproduces exactly: with
+    // That is a reported bug, and it reproduces exactly: with
     // the pointer in the prompt modal's body, one wheel gesture moved the PAGE
     // 500px and the modal 0.
     //

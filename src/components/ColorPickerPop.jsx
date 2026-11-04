@@ -15,9 +15,8 @@ import { lockScroll } from '../utils/scrollLock'
 // generators, the icon colour, the tint ramps, the contrast pair, the JPEG
 // matte, the UI-system seed and the homepage workbench.
 //
-// Founder request (2026-09-03): "i want a better colour picker maybe even one
-// that matches the apps UI, and i want this one used for all colour pickers."
-// Before that pass this component had THREE call sites and there were NINE live
+// One picker that matches the app's UI, used for every colour input.
+// Before that was done this component had THREE call sites and there were NINE live
 // `<input type="color">` elsewhere, so the same act — choose a colour — looked
 // and behaved differently depending on which tool you were standing in. A native
 // colour input cannot be styled, cannot offer the app's shared recents, and
@@ -32,10 +31,10 @@ import { lockScroll } from '../utils/scrollLock'
 // through it is also what gives this panel #316's scroll containment for free.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT THE FOUNDER ASKED FOR, AND WHAT IS HERE
+// WHAT IS HERE, AND WHAT IS NOT
 // ─────────────────────────────────────────────────────────────────────────────
-// Request (2026-08-08): "Solid / Gradient / Image tabs, an SV field, hue and
-// alpha sliders, a format dropdown and saved swatches."
+// The wishlist for this panel was solid / gradient / image tabs, an SV field,
+// hue and alpha sliders, a format dropdown and saved swatches.
 //
 // The SV field, hue slider and preset swatches already existed. Added since:
 //
@@ -55,12 +54,12 @@ import { lockScroll } from '../utils/scrollLock'
 //   three tools of it.
 //
 //   The list is written at the four SETTLE boundaries, and two of them were
-//   missing until [colour-picker-ui] closed them: the pad recorded a pointer
+//   missing at first: the pad recorded a pointer
 //   release but not an arrow-key release, and the hue strip recorded nothing at
 //   all. A keyboard user could mix a colour and watch the Recent grid stay
 //   empty; so could anyone who only moved hue. See the note on `commit`.
 //
-//   EYEDROPPER — the one control added in the 2026-09-03 pass, and it is here
+//   EYEDROPPER — a later addition, and it is here
 //   rather than in the declined list below because of the emit contract, not
 //   taste: `EyeDropper.open()` resolves to an opaque `sRGBHex`, which is already
 //   exactly what this component emits. Every one of the twelve consumers can
@@ -90,9 +89,7 @@ import { lockScroll } from '../utils/scrollLock'
 //   from here either. Note the shape of the call sites: two of them ARE gradient
 //   stops, and a stop cannot itself be a gradient. Which surface should take a
 //   gradient or image fill is product direction, not a defect, so it is raised
-//   in docs/PROPOSALS.md rather than guessed at. That queue is local-only
-//   since 2026-09-16 and is not in this repository (see .gitignore); if you
-//   cannot open it, raise the question with the founder rather than deciding.
+//   as a product question rather than guessed at here.
 //
 // tests/user-sim/35-colour-picker.spec.js asserts the ABSENCE of both — by
 // visible text AND by role, so neither a tab strip nor a bare alpha track can

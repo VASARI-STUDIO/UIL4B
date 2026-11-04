@@ -1,12 +1,11 @@
 // WHO SEES WHICH ICON PACK. One table, one line per pack.
 //
-// ── The founder's rule, in his words ────────────────────────────────────────
+// ── The rule ────────────────────────────────────────────────────────────────
 //
-// "the icon gallery i want to limit the amount of icons non logged in users can
-//  see free users dont get access to brands and maybe some of the other packs
-//  that dont have free public libraries built into them (some of the packs you
-//  can search and their creators have a similar tool; for that pack only, these
-//  ones probably need to stay visable to logged in free users."
+// Signed-out visitors see a limited number of icons. Free users do not get
+// brands, or other packs that have no free public library of their own (some
+// packs can be searched via a tool their creators run; those stay visible to
+// logged-in free users, for that pack only).
 //
 // So the line is: DOES THIS PACK'S OWN CREATOR RUN A FREE BROWSER FOR IT?
 // If they do, gating it here buys nothing — the visitor opens lucide.dev in the
@@ -29,12 +28,12 @@
 //
 // ── Why every line carries a `why` ─────────────────────────────────────────
 //
-// Because for several packs THE RULE AND THE FOUNDER'S CALL DISAGREE, and a
+// Because for several packs THE RULE AND THE PRODUCT CALL DISAGREE, and a
 // table that hid that would be a table nobody could audit. simpleicons.org,
 // svgporn.com, devicon.dev, skillicons.dev, flagicons.lipis.dev, flagpack.xyz
 // and openmoji.org are all free browsers run by the pack's own creator — and
-// all seven sit in 'paid', because "free users dont get access to brands" and
-// the flag and emoji sets were named paid explicitly. That is a PRODUCT
+// all seven sit in 'paid', because free users do not get brands and
+// the flag and emoji sets are paid explicitly. That is a PRODUCT
 // decision rather than a browser-availability one, and each line says so in
 // those words so the next person to read it knows it was decided, not missed.
 //
@@ -44,7 +43,7 @@
 // browser. Here that is stronger than not rendering — a pack the viewer cannot
 // see is never REQUESTED. No /collection, no batched /{prefix}.json?icons=, no
 // prefix in the /search scope. Fetch-then-hide would leak the payload and spend
-// the rate limit that IconLibrary.jsx was rescued from on 2026-09-18.
+// the rate limit that IconLibrary.jsx was rescued from.
 
 // The tiers, widest last. Exported so a caller can compare rather than
 // hard-code the ordering.
@@ -61,7 +60,7 @@ export const ICON_PACK_TIERS = {
   // ── anon · the signed-out sample ─────────────────────────────────────────
   // All five are outlined interface sets and all five have a free official
   // browser, so they would be 'free' on the rule alone. They are 'anon'
-  // because the founder wants a logged-out visitor to see the product work:
+  // because a logged-out visitor should see the product work:
   // this is the sample, capped by ANON_ICON_CAP below.
   lucide:             { tier: 'anon', why: 'lucide.dev/icons — Lucide run it themselves, free, no account. Outlined, so it is also the signed-out sample.' },
   tabler:             { tier: 'anon', why: 'tabler.io/icons — Tabler run it themselves, free, no account. Outlined.' },
@@ -80,8 +79,8 @@ export const ICON_PACK_TIERS = {
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free
-  // official browser; they are paid because brand marks are the founder's
-  // named exclusion, which is a product decision, not an oversight.
+  // official browser; they are paid because brand marks are an
+  // explicit exclusion, which is a product decision, not an oversight.
   'simple-icons':     { tier: 'paid', group: 'brand', why: 'simpleicons.org IS free and official — so this is a PRODUCT decision, not a browser one: "free users dont get access to brands".' },
   logos:              { tier: 'paid', group: 'brand', why: 'svgporn.com is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
   devicon:            { tier: 'paid', group: 'brand', why: 'devicon.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
@@ -141,7 +140,7 @@ export function isBlockedPack(prefix) {
 
 /* ── ICONS INSIDE AN OPEN PACK THAT ARE PRO ONLY ────────────────────────────
  *
- * Brand marks are Pro (the founder's rule), and Carbon carries 49 of them
+ * Brand marks are Pro (see the rule at the top), and Carbon carries 49 of them
  * inside an otherwise free pack, all named logo-*. A free or signed-out viewer
  * never lists, searches or fetches these; Pro sees them. One rule per pack. */
 export const PRO_ONLY_ICONS = Object.freeze({

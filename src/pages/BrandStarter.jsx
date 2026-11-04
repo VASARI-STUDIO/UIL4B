@@ -43,7 +43,7 @@ import '../styles/pages/brand-starter.css'
 // implementation; public activation is deferred", with the next step written
 // down as "AI mode deferred to stay under Vercel 12-function limit — revisit".
 //
-// So the founder's request is not a new feature — it is the revisit. The
+// So this is not a new feature — it is the revisit. The
 // twelve-function limit no longer blocks it, because /api/ai is a consolidated
 // multi-task route and a generation is a MODE inside it rather than a
 // thirteenth file (which tests/unit/account-deletion.test.js fails the build
@@ -61,7 +61,7 @@ import '../styles/pages/brand-starter.css'
 // hero with invented copy — "Professional services you can trust" — over the
 // generated colours. That is the anti-slop bar's "decorative product mock-ups
 // contain implausible data" and "glow, blur, gradients layered as a generic
-// premium signal", on the one surface in the product where the founder's own
+// premium signal", on the one surface in the product where the
 // "AI slop" worry is sharpest.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,9 +71,8 @@ import '../styles/pages/brand-starter.css'
 // instantly in every tool. It deliberately does not.
 //
 // That store holds the work the person is already doing, and overwriting it
-// from a text box is the founder's own reported bug in another form: "sometimes
-// I open the palette builder and it has added many colours and it's a different
-// swatch" (see the EXPIRE note in utils/handoffSlot.js). A generator that
+// from a text box is the reported palette-builder bug in another form: it opens
+// with colours it was never given and a different swatch (see the EXPIRE note in utils/handoffSlot.js). A generator that
 // silently replaces your system is worse than one that does nothing.
 //
 // So each artefact carries an explicit hand-off into the tool that owns it,

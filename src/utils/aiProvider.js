@@ -8,10 +8,7 @@
 // provider is gone. The only surface that disagreed was a devtools Network tab.
 //
 // This turns the field into something a person can see without opening
-// devtools, which is the cheapest half of ai-failover-invisible and the whole
-// of the founder verification procedure in docs/OWNER-ACTIONS.md — that register
-// is local-only since 2026-09-16 and is not in this repository (.gitignore says
-// why), so the procedure is named here rather than linked.
+// devtools, which is the cheapest way to check which provider answered.
 //
 // It deliberately does NOT hide the healthy case. A badge that appears only on
 // failure teaches nobody what the normal state looks like, so its absence would

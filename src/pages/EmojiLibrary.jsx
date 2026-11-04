@@ -233,16 +233,16 @@ export default function EmojiLibrary({ onCopy }) {
           Unreachable, and not inert: the block kept a second copy of the h1 and
           subtitle that the wrapper owns, which is a drift bug waiting for the
           next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
-          element the founder marked "AI" and #382 deleted from every tool
-          masthead it reached. A retired motif that cannot be rendered still
+          element that read as AI-generated and was deleted from every tool
+          masthead it appeared on. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
       {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
           Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed from
           the Prompt Library) and outlined `.pl-chip` pills — while the Palette
           and Gradient libraries had already converged on
-          src/components/library/. Founder request: make this and the Icon
-          Library match the galleries.
+          src/components/library/. This and the Icon Library now match the
+          galleries.
 
           Two things the shared components did not do, and now do, rather than
           being dropped to force a match: the search field takes an `onFocus`

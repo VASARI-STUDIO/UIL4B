@@ -39,14 +39,14 @@ export const BRAND_STARTER_TOOL_ID = 'brand-starter'
 // THE TWO NUMBERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// The founder's own words, 2026-09-06: "free users will get 1 free usage".
+// Free users get one free generation.
 // ONE PER ACCOUNT, EVER — not one per day and not one per month. A free trial
 // that silently refills is not a trial, it is an unmetered feature with a
 // slow tap, and this one calls a paid provider on every press.
 export const FREE_TOTAL_GENERATIONS = 1
 
-// ⚠️ THE FOUNDER'S NUMBER TO CHANGE. He said "paid get more" and did not say
-// how many; this is the defensible reading, and it is deliberately the ONLY
+// ⚠️ A PRODUCT NUMBER TO REVISIT. Paid users get more than free, but no figure
+// was set; this is the defensible reading, and it is deliberately the ONLY
 // place the figure appears.
 //
 // How it was derived, so it can be argued with rather than guessed at again:
@@ -131,10 +131,10 @@ export function exhaustedMessage(planId, used) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT THE FEATURE PRODUCES — the founder's "and more", named
+// WHAT THE FEATURE PRODUCES — the "and more", named
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// The founder asked for "a pallete, font, and more". `and more` is ONE further
+// The feature produces a palette, fonts and more. `and more` is ONE further
 // artefact, and it is the TYPE SCALE, chosen for a reason that is not "it was
 // easy": palette, fonts and type scale are three of the four steps the brand
 // kit walkthrough already walks (utils/brandKitGuide.js — Colours, Fonts, Type
@@ -181,7 +181,7 @@ export const BRAND_STARTER_ARTEFACTS = Object.freeze([
 // INPUT LIMITS — cost control, stated where the field can print them
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Provider input tokens are real money and the founder is a solo developer, so
+// Provider input tokens are real money and this is a solo-developer project, so
 // the brief is capped rather than trusted. 500 matches the cap alt-text already
 // applies to its `context` field, which keeps one number across the AI surface.
 // The server slices to the same figure — the field showing a counter is a
@@ -207,9 +207,7 @@ export const PALETTE_MAX_ROLES = 8
 // Declared as data so the nav badge, the tool header and the plans table read
 // one flag instead of three hand-typed "Beta" strings that can be removed
 // individually. The word is the whole treatment: no sparkle, no shimmer, no
-// gradient — see .claude/skills/uil4b-brand-design/references/anti-slop-quality-bar.md,
-// and the founder's own note that these surfaces "can provoke an unwanted AI
-// slop feeling".
+// gradient. AI surfaces "can provoke an unwanted AI slop feeling".
 export const BRAND_STARTER_BETA = true
 
 // What "beta" is actually promising, in one sentence, wherever the badge needs

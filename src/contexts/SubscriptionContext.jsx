@@ -21,7 +21,7 @@ const BILLING_INTERVALS = new Set(['monthly', 'yearly'])
 
 // The billing APIs return a generic message plus a correlation id (the real
 // Stripe/Firebase error stays in the server log). Show the id so a user can
-// quote it to support and the founder can find the exact log line.
+// quote it to support and the exact log line can be found.
 function billingError(data, status, fallback) {
   const base = data?.error || `${fallback} (server returned ${status})`
   const error = new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)

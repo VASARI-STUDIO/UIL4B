@@ -50,8 +50,8 @@ export const EXPORT_FORMATS = Object.freeze([
   // the same document at two paper sizes: the book is an A4 portrait
   // SPECIFICATION an engineer implements from, and the guidelines are a 16:9
   // landscape PRESENTATION a brand is argued from. See the long note at the top
-  // of utils/brandGuidelines.js for why the founder's reference material
-  // (UI Examples/Brand kit examples) could not be served by extending the book.
+  // of utils/brandGuidelines.js for why the brand-guidelines reference material
+  // could not be served by extending the book.
   Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'An A4 book of your system: cover, contents, colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true, group: 'book', option: 'PDF', action: 'Export book (PDF)' }),
   // The same book as page images. Not a third Pro document: `variantOf` marks it as another file of the book,
   // so the plan lines count and name the book once. Drawn in the browser (utils/bookRaster.js), one layout.

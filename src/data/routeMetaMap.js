@@ -103,11 +103,11 @@ export const PAGE_TITLES = {
 // consistent across meta, og, twitter AND the JSON-LD on every route.
 //
 // Deleted rather than rewritten because a replacement is a new claim and
-// those are the founder's to write. What is left is only what ships. The
+// those are the owner's to write. What is left is only what ships. The
 // tools DO have per-tool Copy CSS buttons, and index.html already words that
 // honestly — "Copy colour values and CSS from the individual tools that
-// support them" — so if he wants CSS mentioned here, that sentence is the
-// shape, and it is his call.
+// support them" — so if CSS should be mentioned here, that sentence is the
+// shape, and it is the owner's call.
 export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.'
 export const PAGE_DESCRIPTIONS = {
   '/': DEFAULT_DESCRIPTION,

@@ -49,7 +49,7 @@ import '../styles/pages/font-pair.css'
 const PREVIEW_PRESETS = [
   { id: 'article', label: 'Article' },
   { id: 'product', label: 'Product page' },
-  // "Letterforms", not "Specimen" — founder, 2026-09-14. The other two presets
+  // "Letterforms", not "Specimen". The other two presets
   // name what you are looking AT in plain words, an article and a product page;
   // "specimen" named it in type-trade language, on the one preset that is not a
   // page at all. The id stays `specimen` because it is a stored preference key,

@@ -26,7 +26,7 @@
 // is correct; the ORIGINAL tab is left holding a staged record that nothing
 // will ever consume. It then sits there for the life of the tab and ambushes
 // the next visit to the destination, however much later and by whatever route.
-// That is the founder's "sometimes I open the palette builder and it has added
+// That is the reported "sometimes I open the palette builder and it has added
 // many colours and it's a different swatch".
 //
 // The stagers are fixed at the call site too, but a permanent trap is the wrong

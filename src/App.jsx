@@ -339,19 +339,17 @@ function AppInner({ toast }) {
 
   // ── THE FRONT DOOR ────────────────────────────────────────────────────
   //
-  // `/` decides; `/home` never does. That split is the whole routing change, and
-  // it is the founder's own wording, approved explicitly on 2026-09-05:
-  //
-  //     “i want the sales page to mostly be for new users if a user is already
-  //      logged in and navigates to the website it takes them to the dashboard
-  //      page unless they click they home button or navigate to specifly /home”
+  // `/` decides; `/home` never does. That split is the whole routing change.
+  // The sales page is mostly for new users: a signed-in visitor who opens the
+  // site is taken to their dashboard, unless they click the home button or go to
+  // /home on purpose.
   //
   // So there are two URLs for one page and they answer different questions:
   //
   //   /home  is the sales page, unconditionally, for everybody. It is what the
   //          nav logo links to (PillNav), it is prerendered, and the branch below
   //          reads no auth state at all — there is no code path on which a signed-in
-  //          visitor at /home is sent anywhere. That is the founder's exception,
+  //          visitor at /home is sent anywhere. That is deliberate,
   //          and tests/unit/user-home.test.js asserts it structurally.
   //
   //   /      is the decision. Signed out it renders the same sales page (so the
@@ -515,8 +513,8 @@ function AppInner({ toast }) {
     // live Create tool shell.
     //
     // /create/color IS NO LONGER INTERCEPTED. It was the one Create category home
-    // that rendered a page — ColorLanding, the colour sales page — and the founder
-    // deleted it with the other two landings. It now falls through to <CreateTool />
+    // that rendered a page — ColorLanding, the colour sales page — and it was
+    // deleted with the other two landings. It now falls through to <CreateTool />
     // and bounces to /create/palette exactly like /create/typography,
     // /create/imagery, /create/ai-tools and /create/icons-emoji already do.
     // CREATE_HOMES_THAT_RENDER in toolTree.js is the fact that says so, and it is
@@ -702,7 +700,7 @@ export default function App() {
 
             Both now render as rows inside <NoticeStack>, which reserves the
             height they occupy instead of floating them over the toolbar of
-            whatever tool is open — founder decision, 2026-09-14. */}
+            whatever tool is open. */}
         {/* And the feedback entry points, for the same reason a fourth time —
             except that this one is about the RIGHT-CLICK menu rather than a
             banner. Mounted inside AppInner's shell it was absent from every

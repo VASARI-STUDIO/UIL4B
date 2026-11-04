@@ -116,11 +116,10 @@ const PREVIEWS = {
 
 // ── The Discover + Learn INDEXES ────────────────────────────────────────────
 //
-// COMPRESSED to a value proposition and the links, on the founder's 2026-09-05
-// instruction: "i want to compress our secondary sales pages to mostly act as
-// linking pages showcasing a tools value proposition then a link". He was
-// offered three depths and chose the deepest — value prop plus link, nothing
-// else — so what a visitor now meets is: what is in here, one line on why it is
+// COMPRESSED to a value proposition and the links. These secondary sales pages
+// mostly act as linking pages that showcase a tool's value proposition and then
+// link to it. The deepest cut of the three depths considered won — value prop
+// plus link, nothing else — so what a visitor now meets is: what is in here, one line on why it is
 // worth opening, and every destination as a real link. Then the page stops.
 //
 // THREE SECTIONS WERE DELETED, and the reason is the same for all three: none
@@ -166,27 +165,25 @@ const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
 
 const SURFACES = {
-  // ── Discover, after the anti-slop audit of 2026-09-09 ──────────────────
+  // ── Discover ───────────────────────────────────────────────────────────
   //
-  // THE HEADLINE WAS A SENTENCE THE FOUNDER HAD ALREADY THROWN OUT. It read
+  // THE HEADLINE WAS A SENTENCE ALREADY REJECTED. It read
   // "Find systems worth stealing." — and "Systems worth stealing." is one of
   // the four homepage headings 56-homepage-headline-copy.spec.js keeps off
-  // the page, on his verdict: '"Systems worth stealing." is bad copy'. Adding
+  // the page, as bad copy. Adding
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the
   // tool that uses them.") was agent copy built on "earn a tab", an idiom
   // that had spread to the nav promo, the library heroes and two grid
   // headings — a motif by repetition, not a UIL4B signature.
   //
-  // Neither is replaced with a new sentence, because there is no founder line
-  // about Discover to derive from (see the PR: "sentences the founder needs to
-  // write"). The h1 is the surface's own name, which is how every library
+  // Neither is replaced with a new sentence, because there is no approved line
+  // about Discover to derive from. The h1 is the surface's own name, which is how every library
   // under it is already headed ("Palette Library", "Gradient Library"), and
-  // the eyebrow that repeated that name above it is gone — the founder marked
-  // the taxonomy-label-above-an-h1 motif "AI" on the gallery mastheads and
-  // asked for the change to reach every header that matches
-  // (DiscoverGalleryHero.jsx). The derived hint under the button still says
-  // what is open. Learn is untouched: #431 just reworked it.
+  // the eyebrow that repeated that name above it is gone — a taxonomy
+  // label above an h1 reads as AI-generated on the gallery mastheads, so it is
+  // removed from every header that matches (DiscoverGalleryHero.jsx). The
+  // derived hint under the button still says what is open. Learn is untouched.
   discover: {
     title: 'Discover',
     hue: 'imagery',
@@ -231,9 +228,9 @@ export default function SurfaceIndex({ surface }) {
           compressed-landing contract (52) counts main's direct children as the
           page's bands, and a wrapper would fold them into one. */}
       <main id="main" className="srf-wrap" tabIndex={-1}>
-      {/* ── The page head. NOT a hero, and that is the founder's 2026-09-18
-          decision: "/discover and /learn lose their sales intro and go straight
-          to the real library/guide index."
+      {/* ── The page head. NOT a hero, and that is deliberate: /discover and
+          /learn lose their sales intro and go straight to the real
+          library/guide index.
 
           What stays is the surface's own NAME as the h1 — the label the nav
           already uses, and how every library under it is headed — and the
