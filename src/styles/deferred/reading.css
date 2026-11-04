@@ -145,7 +145,7 @@ html[data-reduced-motion="true"] [data-reveal]{animation:none!important;opacity:
 .nf .nf-card-label{font-size:16px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
 .nf .nf-card:hover .nf-card-label{color:var(--accent-mid)}
 .nf .nf-card-desc{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;line-height:1.5;color:var(--t2);text-align:left}
-/* The three "where else" links are full-width 48px text rows on a hairline,
+/* The "where else" links are full-width 48px text rows on a hairline,
    not a run of inline links. trail.css supplies the item and link boxes; this
    turns its one-line wrapping row into a column and drops the dot separators,
    which a column does not need. */

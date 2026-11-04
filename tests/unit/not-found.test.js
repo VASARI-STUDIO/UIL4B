@@ -216,7 +216,7 @@ test('the 404 page keeps the user on the URL they typed', () => {
 
 test('the 404 offers a route back, including the way to report the broken link', () => {
   const src = read('src/pages/NotFound.jsx')
-  for (const to of ['/', '/sitemap']) {
+  for (const to of ['/', '/sitemap', '/learn/help']) {
     assert.ok(src.includes(`to="${to}"`), `the 404 should link to ${to}`)
   }
   // The report link carries the broken path, so it is built, not literal.
