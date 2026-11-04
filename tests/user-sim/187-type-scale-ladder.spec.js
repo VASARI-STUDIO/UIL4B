@@ -131,7 +131,9 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
   // While the brand kit walkthrough is on, its bar takes the foot of a phone, the
   // tab bar goes, and the docked bar lifts onto the walkthrough's bar. The
   // sheet has to lift with it, or its last controls sit under the docked bar.
-  test('13b. with the brand kit bar showing, the 390 sheet ends where the docked bar begins', async ({ page }) => {
+  // The tool's own dock keeps the screen's bottom edge and the walkthrough bar
+  // sits on it; the sheet ends above both.
+  test('13b. with the brand kit bar showing, the 390 sheet ends where the walkthrough bar begins', async ({ page }) => {
     watch(page, 'designer changing a family on a phone, mid walkthrough')
     await page.addInitScript(() => {
       try {
@@ -150,10 +152,14 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
     const m = await page.evaluate(() => ({
       sheetBottom: document.querySelector('#tsc-sheet').getBoundingClientRect().bottom,
       dockTop: document.querySelector('.tsc-dock').getBoundingClientRect().top,
+      dockBottom: document.querySelector('.tsc-dock').getBoundingClientRect().bottom,
       railTop: document.querySelector('[aria-label="Brand kit walkthrough"]').getBoundingClientRect().top,
+      railBottom: document.querySelector('[aria-label="Brand kit walkthrough"]').getBoundingClientRect().bottom,
+      vh: window.innerHeight,
     }))
-    expect(m.dockTop, 'the docked bar sits on the walkthrough bar').toBeLessThanOrEqual(m.railTop)
-    expect(Math.round(m.sheetBottom), 'the sheet stops at the docked bar, not under it').toBeLessThanOrEqual(Math.round(m.dockTop) + 1)
+    expect(Math.round(m.dockBottom), 'the tool dock keeps the bottom edge').toBe(m.vh)
+    expect(Math.abs(Math.round(m.railBottom) - Math.round(m.dockTop)), 'the walkthrough bar sits directly on the tool dock').toBeLessThanOrEqual(1)
+    expect(Math.round(m.sheetBottom), 'the sheet stops at the walkthrough bar, not under it').toBeLessThanOrEqual(Math.round(m.railTop) + 1)
   })
 
   test('K17 and K19: letter spacing survives Reset, and no step is larger on a phone', async ({ page }) => {

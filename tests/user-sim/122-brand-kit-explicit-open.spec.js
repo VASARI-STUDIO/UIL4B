@@ -1,8 +1,9 @@
 import { test, expect } from './base.js'
 import { go, watch, overlaysSettled } from './helpers.js'
+import { kitRail as rail, helpCard as card } from './kit-bar.js'
 
-const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const card = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
+// `card` is the walkthrough's help card at the width: the popover named "Step N of 4: ..."
+// from 768px, the steps panel named "Brand kit" on a phone.
 
 async function pressEntry(page, width, label) {
   if (width === 390) {

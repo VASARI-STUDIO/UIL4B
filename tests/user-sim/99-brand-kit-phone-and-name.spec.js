@@ -1,11 +1,12 @@
 // The brand kit walkthrough on a phone, and its closing step.
 //
-//   · On a phone the bar takes the bottom edge (the tab bar is hidden) and the panel sits on it as a sheet, so a
-//     tap on any of their controls lands on that control, across at least 44px.
+//   · On a phone the bar takes the bottom edge (the tab bar is hidden) and holds the steps
+//     trigger and Next; the steps panel opens upward from it and the name sheet sits on it, so
+//     a tap on any of their controls lands on that control, across at least 44px.
 //   · On a touch screen the name card does not raise the keyboard by itself,
 //     and once the field is focused Save stays above the keyboard.
-//   · On a phone the "What's this?" trigger is a visible icon button with the
-//     same name, and Escape on the card returns focus to it.
+//   · On a phone the steps trigger is a visible, named button, and Escape on the
+//     panel it opens returns focus to it.
 //   · The last tool's Next opens "Name your project": one name saves the project
 //     and names the kit, then the person lands on the project. The free cap
 //     refuses without losing anything; signed out, saving asks for an account
@@ -14,14 +15,16 @@
 //     finishes at 4 of 4.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { kitRail, helpCard, stepsTrigger, stepsPanel, stepLink, leaveWalkthrough, expectOnStep } from './kit-bar.js'
 
 const GUIDE_KEY = 'vs-uikit-guide'
 const SEEN_KEY = 'vs-uikit-guide-seen'
 const DESIGN_KEY = 'vs-current-design'
 const SEED_COLOURS = ['#1D3557', '#E63946', '#F1FAEE']
 
-const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const introCard = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
+const rail = kitRail
+// The orientation card at this width: the popover named "Step N of 4: ..." from 768px, the steps panel on a phone.
+const introCard = helpCard
 const nameCard = (page) => page.getByRole('dialog', { name: 'Name your project' })
 // The closing step is one panel at every width: a sheet joined to the bar on a phone, a popover above it from 768px.
 const nameForm = nameCard
@@ -106,23 +109,35 @@ async function expectHitArea(locator, what) {
 // hides its Next and its X while the sheet is up (one X on screen).
 async function railControlsAllLand(page, { nameOpen = false } = {}) {
   const r = rail(page)
-  const chips = r.locator('.bkit-step')
-  // Waited for, not counted once: a navigation swaps the page, and the rail of
-  // the page being left is still in the DOM until the new page has rendered its own.
-  await expect(chips).toHaveCount(4)
-  for (let i = 0; i < 4; i++) await expectTapsLand(chips.nth(i), `step chip ${i + 1}`)
-  await expectTapsLand(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
-  for (let i = 0; i < 4; i++) await expectHitArea(chips.nth(i), `step chip ${i + 1}`)
-  await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
+  const phone = (page.viewportSize()?.width ?? 1280) < 768
+  if (phone) {
+    // A phone's bar is the steps trigger and Next: the four steps, the help and Close are in the panel.
+    await expect(r.locator('.bkit-rail-steps')).toHaveCount(1)
+    await expectTapsLand(r.locator('.bkit-rail-steps'), 'steps trigger')
+    await expectHitArea(r.locator('.bkit-rail-steps'), 'steps trigger')
+  } else {
+    const chips = r.locator('.bkit-step')
+    // Waited for, not counted once: a navigation swaps the page, and the rail of
+    // the page being left is still in the DOM until the new page has rendered its own.
+    await expect(chips).toHaveCount(4)
+    for (let i = 0; i < 4; i++) await expectTapsLand(chips.nth(i), `step chip ${i + 1}`)
+    await expectTapsLand(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
+    for (let i = 0; i < 4; i++) await expectHitArea(chips.nth(i), `step chip ${i + 1}`)
+    await expectHitArea(r.getByRole('button', { name: /What.s this\?/ }), 'What’s this?')
+  }
   if (nameOpen) {
     await expect(r.locator('.bkit-rail-next'), 'the bar keeps no Next under the name sheet').toBeHidden()
     await expect(r.getByRole('button', { name: 'Leave the walkthrough' }), 'only the sheet has an X').toBeHidden()
   } else {
     await expectTapsLand(r.locator('.bkit-rail-next'), 'Next')
-    await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
     await expectHitArea(r.locator('.bkit-rail-next'), 'Next')
-    await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+    if (!phone) {
+      await expectTapsLand(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+      await expectHitArea(r.getByRole('button', { name: 'Leave the walkthrough' }), 'Leave (X)')
+    }
   }
+  // None of the old phone controls are drawn: Close, help and the step chips moved into the panel.
+  if (phone) await expect(r.locator('.bkit-rail-close, .bkit-rail-help, .bkit-steps')).toHaveCount(0)
   // The walkthrough hides the tab bar and the rail takes the bottom edge; its
   // action row has not wrapped.
   const geo = await page.evaluate(() => {
@@ -171,22 +186,29 @@ test.describe('Brand kit walkthrough on a phone', () => {
       // The card opens itself on step one; its controls must take taps too.
       await expect(introCard(page)).toBeVisible()
       await introCard(page).evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))))
-      await expectTapsLand(introCard(page).getByRole('button', { name: 'Close' }), 'card Close')
-      await expectTapsLand(introCard(page).getByRole('button', { name: /^Start with/ }), 'card Start')
-      await expectHitArea(introCard(page).getByRole('button', { name: 'Close' }), 'card Close')
+      // The panel's own controls: the four step links and the Close row.
+      const panelLinks = introCard(page).getByRole('link')
+      await expect(panelLinks).toHaveCount(4)
+      for (let i = 0; i < 4; i++) await expectTapsLand(panelLinks.nth(i), `panel step link ${i + 1}`)
+      await expectTapsLand(introCard(page).getByRole('button', { name: /^Close the walkthrough/ }), 'panel Close')
+      for (let i = 0; i < 4; i++) await expectHitArea(panelLinks.nth(i), `panel step link ${i + 1}`)
+      await expectHitArea(introCard(page).getByRole('button', { name: /^Close the walkthrough/ }), 'panel Close')
+      // The panel's foot is the bar's top edge (its own 1px hairline may overlap by a pixel).
       const cardBottom = await introCard(page).evaluate((el) => el.getBoundingClientRect().bottom)
       const railTop = await rail(page).evaluate((el) => el.getBoundingClientRect().top)
-      expect(cardBottom, 'the card overlaps the rail').toBeLessThanOrEqual(railTop)
-      await introCard(page).getByRole('button', { name: 'Close' }).click()
+      expect(cardBottom, 'the panel overlaps the rail').toBeLessThanOrEqual(railTop + 2)
+      // Closed with the trigger that opened it.
+      await stepsTrigger(page).click()
+      await expect(introCard(page)).toBeHidden()
 
       await railControlsAllLand(page)
 
       // The tallest step, and the one with the longest Next label.
-      await rail(page).getByRole('link', { name: /Icons/ }).click()
+      await (await stepLink(page, /Icons/)).click()
       await expect(page).toHaveURL(/\/create\/icons$/)
       // The URL changes before the page does, so the rail on screen at this
       // point can still be the Colours page's. Wait for the Icons page's own.
-      await expect(rail(page).locator('.bkit-step[aria-current="step"]')).toContainText('Icons')
+      await expectOnStep(page, 'Icons', 4)
       await expect(rail(page)).toBeVisible()
       await railControlsAllLand(page)
 
@@ -248,39 +270,38 @@ test.describe('Brand kit walkthrough on a phone', () => {
     }).toEqual({ rail: 16, card: 74, help: 'absolute', gap: 8 })
   })
 
-  test('390px: the help trigger is a visible, named icon button and Escape returns focus to it', async ({ page }) => {
+  test('390px: the steps trigger is a visible, named button and Escape on its panel returns focus to it', async ({ page }) => {
     watch(page, 'keyboard user on a narrow screen')
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page, { seen: false })
     await go(page, '/create/palette')
 
-    const help = rail(page).getByRole('button', { name: /What.s this\?/ })
-    await expect(help).toBeVisible()
-    const box = await help.boundingBox()
-    expect(box.width).toBeGreaterThanOrEqual(24)
-    expect(box.height).toBeGreaterThanOrEqual(24)
-    // The icon stays compact; the tap target around it is 44px.
-    expect(await hitAreaMisses(help), 'a tap within 22px of the help icon misses it').toEqual([])
+    const trigger = stepsTrigger(page)
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAccessibleName('Colours, step 1 of 4, 0 built. Steps and help.')
+    const box = await trigger.boundingBox()
+    expect(box.height, 'the trigger is under 44px high').toBeGreaterThanOrEqual(44)
+    expect(await hitAreaMisses(trigger), 'a tap within 22px of the trigger centre misses it').toEqual([])
 
-    // The close icons are decoration inside named buttons.
-    await expect(introCard(page).getByRole('button', { name: 'Close' }).locator('svg')).toHaveAttribute('aria-hidden', 'true')
-    await expect(rail(page).getByRole('button', { name: 'Leave the walkthrough' }).locator('svg')).toHaveAttribute('aria-hidden', 'true')
-
-    // Opened by itself on arrival: Escape must not drop focus on <body>.
-    await expect(introCard(page).getByRole('button', { name: /^Start with/ })).toBeFocused()
+    // Opened by itself on arrival: the trigger says so, and focus is in the panel, on its heading.
+    await expect(introCard(page)).toBeVisible()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect(introCard(page).getByRole('heading', { name: 'Brand kit' })).toBeFocused()
+    // Escape must not drop focus on <body>.
     await page.keyboard.press('Escape')
     await expect(introCard(page)).toBeHidden()
-    await expect(help).toBeFocused()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect(trigger).toBeFocused()
 
     // Reopened from the trigger, and closed again with Escape.
-    await help.click()
+    await trigger.click()
     await expect(introCard(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(introCard(page)).toBeHidden()
-    await expect(help).toBeFocused()
+    await expect(trigger).toBeFocused()
   })
 
-  test('390px: the X closes the rail in place and the tab bar is there', async ({ page }) => {
+  test('390px: Close the walkthrough ends it in place and the tab bar is there', async ({ page }) => {
     watch(page, 'designer leaving the walkthrough on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page)
@@ -289,7 +310,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect(page.locator('.pnav-tabs'), 'the tab bar is hidden while the walkthrough is on').toBeHidden()
 
     const before = page.url()
-    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+    await leaveWalkthrough(page)
 
     await expect(rail(page)).toBeHidden()
     expect(page.url()).toBe(before)
@@ -299,17 +320,25 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await expect(page.locator('#main')).toBeFocused()
   })
 
-  test('390px: the current step is the chip in view', async ({ page }) => {
+  test('390px: the current step is named on the bar and is the current link in view in the panel', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page)
     await go(page, '/create/icons')
-    const current = rail(page).locator('.bkit-step[aria-current="step"]')
+    await expectOnStep(page, 'Icons', 4)
+    await expect(stepsTrigger(page).locator('.bkit-rail-steps-name')).toHaveText('Icons')
+    await expect(stepsTrigger(page).locator('.bkit-rail-steps-count')).toHaveText('Step 4 of 4')
+    // Four segments in the strip, the fourth the current one.
+    await expect(rail(page).locator('.bkit-progress-seg')).toHaveCount(4)
+    await expect(rail(page).locator('.bkit-progress-seg').nth(3)).toHaveClass(/is-current/)
+
+    await stepsTrigger(page).click()
+    const current = stepsPanel(page).locator('a[aria-current="step"]')
     await expect(current).toContainText('Icons')
     await expect.poll(() => current.evaluate((el) => {
-      const s = el.closest('.bkit-steps').getBoundingClientRect()
+      const p = el.closest('.bkit-card').getBoundingClientRect()
       const c = el.getBoundingClientRect()
-      return c.left >= s.left - 1 && c.right <= s.right + 1
-    }), { message: 'the Icons chip is scrolled out of the strip', timeout: 3000 }).toBe(true)
+      return c.top >= p.top - 1 && c.bottom <= p.bottom + 1 && c.top >= 0
+    }), { message: 'the Icons link is scrolled out of the panel', timeout: 3000 }).toBe(true)
   })
 })
 
@@ -606,8 +635,8 @@ test.describe('Brand kit walkthrough: Name your project', () => {
   const NAME_PANEL_WIDTHS = [
     { width: 1440, height: 900, barHeight: 50, gap: 8, float: 16 },
     { width: 1024, height: 900, barHeight: 50, gap: 8, float: 16 },
-    { width: 768, height: 900, barHeight: 76, gap: 8, float: 0 },
-    { width: 390, height: 844, barHeight: 132, gap: 0, float: 0 },
+    { width: 768, height: 900, barHeight: 60, gap: 8, float: 0 },
+    { width: 390, height: 844, barHeight: 60, gap: 0, float: 0 },
   ]
   for (const { width, height, barHeight, gap, float } of NAME_PANEL_WIDTHS) {
     test(`${width}px: the name step is a panel ${gap ? `${gap}px above` : 'joined to'} the bar, and the bar does not change`, async ({ page }) => {
@@ -617,7 +646,9 @@ test.describe('Brand kit walkthrough: Name your project', () => {
       await go(page, '/create/icons')
       const r = rail(page)
       const next = r.getByRole('button', { name: /^Name your project/ })
-      await expect(r.locator('.bkit-steps')).toBeVisible()
+      // The four steps are a row of links from 768px; on a phone the bar shows the steps trigger.
+      const stepsControl = width < 768 ? r.locator('.bkit-rail-steps') : r.locator('.bkit-steps')
+      await expect(stepsControl).toBeVisible()
       await expect(next).toHaveClass(/btn-accent/)
       await next.click()
 
@@ -635,16 +666,23 @@ test.describe('Brand kit walkthrough: Name your project', () => {
 
       // The bar is untouched: the same steps, the same buttons, and nothing in it
       // is a form. Its Next is the outline pill and says it opened the panel.
-      await expect(r.locator('.bkit-steps')).toBeVisible()
+      await expect(stepsControl).toBeVisible()
       await expect(r.locator('form')).toHaveCount(0)
       await expect(r.getByRole('button', { name: 'Save project' })).toHaveCount(0)
       await expect(r.getByRole('button', { name: 'Back' })).toHaveCount(0)
       // By class, not by role: under 768px the sheet hides this button, and a
       // hidden button has no role to find.
       const nextEl = r.locator('.bkit-rail-next')
-      await expect(nextEl).toHaveClass(/is-outline/)
-      await expect(nextEl).not.toHaveClass(/btn-accent/)
-      await expect(r.getByRole('button', { name: /What.s this\?/ })).toBeVisible()
+      if (width < 768) {
+        // The phone's bar hides Next under the sheet (the sheet has its own Save), so the
+        // outline would never be seen; Next keeps its fill for when the sheet closes.
+        await expect(nextEl).toBeHidden()
+      } else {
+        await expect(nextEl).toHaveClass(/is-outline/)
+        await expect(nextEl).not.toHaveClass(/btn-accent/)
+      }
+      // Help: its own button from 768px, the steps trigger on a phone.
+      await expect(width < 768 ? stepsControl : r.getByRole('button', { name: /What.s this\?/ })).toBeVisible()
       if (width < 768) {
         // The sheet has its own Close and Save: one X, and no Next, on the bar.
         await expect(next).toBeHidden()
@@ -780,12 +818,12 @@ test.describe('Brand kit walkthrough: rail polish and leaving', () => {
     expect(await page.locator('#main').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
   })
 
-  test('390px: an open card closes with the X and the tab bar comes back', async ({ page }) => {
+  test('390px: an open panel closes with Close the walkthrough and the tab bar comes back', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page, { seen: false })
     await go(page, '/create/palette')
     await expect(introCard(page)).toBeVisible()
-    await rail(page).getByRole('button', { name: 'Leave the walkthrough' }).click()
+    await leaveWalkthrough(page)
     await expect(introCard(page)).toBeHidden()
     await expect(nameCard(page)).toBeHidden()
     await expect(rail(page)).toBeHidden()
