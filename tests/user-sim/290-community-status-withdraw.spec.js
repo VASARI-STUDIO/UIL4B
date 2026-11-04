@@ -220,3 +220,77 @@ test.describe('community · a design that did not reach the queue', () => {
     expect(await inQueue(page), 'Retry must put the design in the account').toBe(1)
   })
 })
+
+// ── the reviewer's side ──────────────────────────────────────────────────────
+// /api/verify-admin is stubbed as 204-admin-report-queue.spec.js stubs it
+// (vite preview runs no functions); the claim on the signed token is what the
+// rules read, and the session double stands in for Firestore.
+async function openCommunityQueue(page, docs) {
+  await signIn(page, { admin: true, claims: { admin: true, email_verified: true }, docs })
+  await page.route((url) => url.pathname === '/api/verify-admin', (route) => route.fulfill({
+    json: { isAdmin: true, uid: 'test-uid-admin', email: 'founder@uil4b.test', moderator: false, role: 'founder', claimUpdated: false, rosterError: null },
+  }))
+  await go(page, '/admin')
+  await page.locator('#admtab-community').click()
+}
+const adminRow = (page, name) => page.locator('.cq-item', { hasText: name })
+const statusOf = (page, id) => page.evaluate((k) => window.__UIL4B_TEST_STORE__?.docs?.get(k)?.status ?? null, `community-submissions/${id}`)
+
+test.describe('admin · community queue shows what is being approved', () => {
+  test('a design row shows its link, its category and the address the author typed', async ({ page }) => {
+    watch(page, 'a founder reviewing a design')
+    await openCommunityQueue(page, {
+      'community-submissions/d-1': designDoc({ name: 'Harbour Dashboard', authorUid: 'test-uid-someone' }),
+      'community-submissions/d-2': designDoc({
+        name: 'Sneaky Design', authorUid: 'test-uid-someone', createdAt: '2026-10-19T09:00:00.000Z',
+        payload: { author: 'X', category: 'Landing', url: 'javascript:alert(1)', c1: '#3B82F6', c2: '#8B5CF6' },
+      }),
+    })
+    const row = adminRow(page, 'Harbour Dashboard')
+    await expect(row).toBeVisible()
+    await expect(row, 'the category the author chose').toContainText('Dashboard')
+    const link = row.getByRole('link', { name: 'https://example.com/harbour' })
+    await expect(link, 'the address must be shown as typed').toBeVisible()
+    await expect(link).toHaveAttribute('href', 'https://example.com/harbour')
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow')
+
+    // The control: an address that is not http(s) is named, never made a link.
+    const sneaky = adminRow(page, 'Sneaky Design')
+    await expect(sneaky).toContainText(/not an http or https address/i)
+    await expect(sneaky.getByRole('link')).toHaveCount(0)
+  })
+
+  test('Delete asks once more before it deletes', async ({ page }) => {
+    watch(page, 'a founder deleting a rejected design')
+    await openCommunityQueue(page, {
+      'community-submissions/d-1': designDoc({ name: 'Harbour Dashboard', status: 'rejected', authorUid: 'test-uid-someone' }),
+    })
+    await page.getByRole('tab', { name: /Rejected/ }).click()
+    const row = adminRow(page, 'Harbour Dashboard')
+    await row.getByRole('button', { name: /^Delete$/ }).click()
+    expect(await inQueue(page), 'one press must not delete').toBe(1)
+    await row.getByRole('button', { name: /^No, keep/ }).click()
+    await expect(row.getByRole('button', { name: /^Delete$/ })).toBeVisible()
+    expect(await inQueue(page), 'declining must not delete').toBe(1)
+
+    await row.getByRole('button', { name: /^Delete$/ }).click()
+    await row.getByRole('button', { name: /^Yes, delete/ }).click()
+    await expect(row).toHaveCount(0)
+    expect(await inQueue(page), 'confirming must delete').toBe(0)
+  })
+
+  test('a rejected submission can be moved back to pending', async ({ page }) => {
+    watch(page, 'a founder reversing a decision')
+    await openCommunityQueue(page, {
+      'community-submissions/d-1': designDoc({ name: 'Harbour Dashboard', status: 'rejected', authorUid: 'test-uid-someone' }),
+    })
+    await page.getByRole('tab', { name: /Rejected/ }).click()
+    await adminRow(page, 'Harbour Dashboard').getByRole('button', { name: /^Back to pending$/ }).click()
+    await expect(adminRow(page, 'Harbour Dashboard'), 'it leaves the rejected list').toHaveCount(0)
+    expect(await statusOf(page, 'd-1'), 'the stored status must be pending again').toBe('pending')
+
+    await page.getByRole('tab', { name: /Awaiting review/ }).click()
+    await expect(adminRow(page, 'Harbour Dashboard'), 'and it is waiting for review').toBeVisible()
+  })
+})

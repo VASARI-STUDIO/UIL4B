@@ -203,6 +203,12 @@
 .cq-item-meta{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .cq-kind{font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--accent-text);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
 .cq-item-actions{display:flex;gap:6px;flex-shrink:0}
+.cq-item-link{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.cq-item-link a{color:var(--accent-text);overflow-wrap:anywhere;min-width:0}
+.cq-cat{font-family:var(--font);font-size:var(--fs-caption);font-weight:560;color:var(--t1);border:1px solid var(--border);border-radius:var(--radius-s);padding:1px 7px}
+.cq-confirm-q{align-self:center;font-size:12px;font-weight:600;color:var(--err-strong)}
+.cq-delete-yes{background:var(--err);border-color:var(--err);color:var(--err-fg)}
+@media (pointer:coarse){.cq-item-actions .btn,.cq-item-link a{min-height:44px;display:inline-flex;align-items:center}}
 .cq-approve{border-color:var(--ok);color:var(--ok-strong)}
 .cq-approve:hover:not(:disabled){background:var(--ok);border-color:var(--ok);color:var(--ok-fg)}
 .cq-delete{border-color:var(--err);color:var(--err-strong)}
