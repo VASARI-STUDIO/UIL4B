@@ -41,7 +41,13 @@ html:has(.tsc-page),
 }
 html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
 html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
-html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve) + var(--bkit-toolbar-h, 0px) + 8px); }
+/* Under the walkthrough the dock holds the screen edge and the kit bar sits on it
+   (--bkit-toolbar-h is the dock's height), so both are counted once. From 1024px
+   the dock sits above the floating pill instead. */
+html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + var(--bkit-toolbar-h, 0px) + 8px); }
+@media (min-width: 1024px) {
+  html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve) + 8px); }
+}
 .tsc-page .tsc-output { gap: var(--tl-gap); container-type: inline-size; container-name: tsc-work; }
 
 /* Labels are Geist, sentence case: the shared section label is uppercase mono. */
@@ -161,6 +167,10 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
     overflow: auto;
     overscroll-behavior: contain;
   }
+  /* With the walkthrough's bar over the foot, the page half ends above it too. */
+  html.bkit-on .tsc-page .tsc-view[data-view="split"] .tsc-page-view {
+    max-height: calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - var(--bkit-reserve) - 16px);
+  }
 }
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
@@ -205,8 +215,10 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + va
 .tsc-page .tsc-export { max-height: 420px; overflow: auto; font-size: 12px; }
 
 /* ── The docked bar ──────────────────────────────────────────────────────────
-   Sticky to the foot of the viewport from 768px (fixed on a phone, below),
-   over the brand-kit bar while that is showing. 768 and wider: Save to a
+   Sticky to the foot of the viewport from 768px (fixed on a phone, below). While
+   the brand kit walkthrough shows, it keeps the screen's bottom edge below 1024px
+   and the kit bar sits directly on it; from 1024px it sits above the floating
+   pill. 768 and wider: Save to a
    project. 390: Save and Copy CSS. */
 .tsc-page .tsc-dock {
   position: sticky;
@@ -548,11 +560,29 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
   }
   html.has-tabbar .tsc-page .tsc-dock { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
-  /* The walkthrough bar takes the foot of the screen and lifts the dock, so the sheet lifts with it. */
+  /* The walkthrough's bar stacks on the dock (the tab bar is hidden then), so the
+     sheet sits above both. */
   html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve)); }
+  /* The spacer under the page already clears the dock and the kit bar. */
+  html.bkit-on .tsc-page .tl-body { padding-bottom: 12px; }
   .tsc-page .tsc-page-bar { flex-wrap: wrap; }
 }
-html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-reserve); }
+/* The walkthrough's bar stacks on the dock, never under it: the dock is pinned to
+   the screen edge below 1024px (UIKitGuide publishes its height as
+   --bkit-toolbar-h; the bar and its spacer read it). From 1024px the pill floats
+   and the dock sits above it. */
+@media (max-width: 1023px) {
+  html.bkit-on .tsc-page .tsc-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    margin: 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 1024px) {
+  html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-reserve); }
+}
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
   .tsc-page .tsc-sample-input,

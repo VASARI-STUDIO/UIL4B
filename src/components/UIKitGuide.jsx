@@ -4,6 +4,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useExport } from '../contexts/ExportContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { getRecentIcons } from '../utils/recentIcons'
 import { IDENTITY_NAME_MAX } from '../utils/kitIdentity'
 import SaveRefusal from './SaveRefusal'
@@ -31,6 +32,16 @@ import {
 // there (an Add column button, the tab bar's You tab).
 const EXIT_SHIELD_MS = 500
 
+// Each tool's own bottom toolbar, which keeps the screen's bottom edge while the
+// bar sits directly on it: [the page root, the toolbar inside it]. Colours' Adjust
+// row is pinned from 768px; Font Pair's and Type scale's docks are pinned below
+// 1024px (from there they sit above the floating pill instead).
+const BOTTOM_TOOLBAR = {
+  color: ['.plb', '.plb-adjust'],
+  fonts: ['.fpr-page', '.fpr-dock'],
+  typescale: ['.tsc-page', '.tsc-dock'],
+}
+
 // The Brand kit walkthrough, rendered by each of the four tools it walks.
 //
 // The reading behind it (what was broken, where the state lives, why progress
@@ -50,8 +61,10 @@ const EXIT_SHIELD_MS = 500
 //      four tools and on every step.
 //
 //   2. THE PANEL. One surface that holds both the orientation copy and the
-//      closing step where the project is named: a bottom sheet joined to the bar
-//      on a phone, a popover hung from the button that opened it from 768px.
+//      closing step where the project is named: from 768px a popover hung from
+//      the button that opened it. On a phone the orientation half is the steps
+//      panel (the four steps, the help line and Close), opened upward from the
+//      bar's steps trigger, and the naming step is its own sheet.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THE PANEL IS NOT A MODAL
@@ -106,6 +119,10 @@ export default function UIKitGuide({ step }) {
   const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
+  // Under 768px the bar is a different set of controls, not the tablet row
+  // restyled: one trigger that opens the steps panel, and Next. CSS cannot swap
+  // markup, so the width is read here.
+  const phone = useMediaQuery('(max-width: 767px)')
   // A new blank project opens the panel again, seen before or not.
   const newProject = location.state?.newProject === NEW_PROJECT_STATE.newProject
   const firstStep = step === BRAND_KIT_STEPS[0].id
@@ -165,6 +182,8 @@ export default function UIKitGuide({ step }) {
   }, [firstStep, newProject])
   const cardRef = useRef(null)
   const goRef = useRef(null)
+  // The phone's steps panel has no "go" button; its heading takes focus instead.
+  const panelHeadRef = useRef(null)
   const introTriggerRef = useRef(null)
   const nameTriggerRef = useRef(null)
   const titleId = useId()
@@ -176,7 +195,7 @@ export default function UIKitGuide({ step }) {
   // dashboard rail already reads. Read once per render rather than kept in
   // state: it changes on another route, and this component remounts there.
   const iconsTouched = getRecentIcons().length > 0
-  const { steps, total } = guideProgress(design, { iconsTouched, accepted })
+  const { steps, total, done: built } = guideProgress(design, { iconsTouched, accepted })
 
   const current = steps.find((s) => s.id === step) || null
   const next = nextStep(step)
@@ -195,7 +214,7 @@ export default function UIKitGuide({ step }) {
     // Focus goes to the card's own button rather than to the card: a ring on a
     // button reads as "you are here", and the same ring round the whole card read
     // as an error. The card still names itself to a screen reader as focus enters.
-    if (!hasOpenOverlays(document.body)) (goRef.current || cardRef.current)?.focus()
+    if (!hasOpenOverlays(document.body)) (goRef.current || panelHeadRef.current || cardRef.current)?.focus()
     // Copied into the effect's own scope rather than read off the ref inside the
     // cleanup: by the time cleanup runs the ref may point at a different node,
     // and this is the fallback that has to still BE the trigger.
@@ -236,8 +255,15 @@ export default function UIKitGuide({ step }) {
     return () => window.clearTimeout(timer)
   }, [shield])
   const exit = useCallback(() => {
-    const box = railRef.current?.getBoundingClientRect()
-    if (box) setShield({ top: box.top, left: box.left, width: box.width, height: box.height })
+    // The bar and, on a phone, the open steps panel above it: "Close the
+    // walkthrough" is in the panel, so a second press would land on the page there.
+    const rail = railRef.current
+    const boxes = [rail, rail?.querySelector('.bkit-card--steps')].filter(Boolean).map((el) => el.getBoundingClientRect())
+    if (boxes.length) {
+      const top = Math.min(...boxes.map((b) => b.top))
+      const left = Math.min(...boxes.map((b) => b.left))
+      setShield({ top, left, width: Math.max(...boxes.map((b) => b.right)) - left, height: Math.max(...boxes.map((b) => b.bottom)) - top })
+    }
     leftInPlaceRef.current = true
     endGuide()
     setActive(false)
@@ -399,20 +425,36 @@ export default function UIKitGuide({ step }) {
     root.classList.add('bkit-on')
     // A tool's own bottom toolbar keeps the screen's bottom edge and the bar sits
     // directly on it. Only a toolbar that is pinned to the viewport counts: one
-    // that scrolls with the page has nothing to stack on.
-    const toolbar = step === 'color' ? railRef.current?.closest('.plb')?.querySelector('.plb-adjust') : null
-    const docked = window.matchMedia('(min-width:768px)')
-    const measure = () => {
+    // that scrolls with the page has nothing to stack on. It is looked up again on
+    // a change, because it can arrive or leave after the bar mounts (Type scale's
+    // dock exists on a phone and in the split) and is pinned or not by width.
+    const spot = BOTTOM_TOOLBAR[step]
+    const page = spot ? railRef.current?.closest(spot[0]) : null
+    const find = () => page?.querySelector(spot[1]) || null
+    let toolbar = null
+    const resizes = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => measure())
+    function measure() {
+      const found = find()
+      if (found !== toolbar) {
+        resizes?.disconnect()
+        toolbar = found
+        if (toolbar) resizes?.observe(toolbar)
+      }
       if (toolbar && getComputedStyle(toolbar).position === 'fixed') root.style.setProperty('--bkit-toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
       else root.style.removeProperty('--bkit-toolbar-h')
     }
     measure()
-    const observer = toolbar && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
-    observer?.observe(toolbar)
-    docked.addEventListener('change', measure)
+    const widths = [window.matchMedia('(min-width:768px)'), window.matchMedia('(min-width:1024px)')]
+    widths.forEach((mq) => mq.addEventListener('change', measure))
+    let frame = 0
+    const later = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; if (find() !== toolbar) measure() }) }
+    const arrivals = page && typeof MutationObserver !== 'undefined' ? new MutationObserver(later) : null
+    arrivals?.observe(page, { childList: true, subtree: true })
     return () => {
-      observer?.disconnect()
-      docked.removeEventListener('change', measure)
+      cancelAnimationFrame(frame)
+      arrivals?.disconnect()
+      resizes?.disconnect()
+      widths.forEach((mq) => mq.removeEventListener('change', measure))
       root.style.removeProperty('--bkit-toolbar-h')
       // Each tool mounts its own copy, so moving between steps unmounts one and
       // mounts the next with a gap between (a lazy route). While the flow is still
@@ -541,12 +583,14 @@ export default function UIKitGuide({ step }) {
   // "Start with" belongs to the first step. Reopened on a later one, the same
   // button leads back to where the person already is.
   const goLabel = `${firstStep ? 'Start with' : 'Back to'} ${current.label.toLowerCase()}`
+  const outlineNext = panelOpen && !phone
 
   return (
     <>
-      {showIntro && (
+      {showIntro && !phone && (
         // No overlay element at all: the panel is docked directly, so there is
-        // nothing between the visitor and the tool.
+        // nothing between the visitor and the tool. (On a phone the steps panel
+        // inside the bar stands in for it.)
         <BkitPanel
           key="intro"
           id={cardId}
@@ -632,11 +676,94 @@ export default function UIKitGuide({ step }) {
       )}
 
       <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}${showName ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
-        <div className="bkit-rail-head">
-          <span className="bkit-rail-eyebrow">Brand kit</span>
-          {/* Drawn at every width; the title shows only from 1024px. */}
-          <span className="bkit-rail-count" aria-live="polite">{count}</span>
-        </div>
+        {phone && (
+          <>
+            {/* Under 768px: the steps panel opens upward from the bar, in the
+                bar's own region. Same non-modal contract as the popover: no
+                scrim, no focus trap, no aria-modal. It stays a .bkit-card so
+                utils/openOverlays.js treats it as the guide's own. */}
+            {showIntro && (
+              <div
+                id={cardId}
+                className="bkit-card bkit-card--steps"
+                role="dialog"
+                aria-labelledby={titleId}
+                tabIndex={-1}
+                ref={cardRef}
+                onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeIntro() } }}
+              >
+                <div className="bkit-sheet-head">
+                  <h2 id={titleId} className="bkit-sheet-title" tabIndex={-1} ref={panelHeadRef}>Brand kit</h2>
+                  <span className="bkit-sheet-count">{built} of {total} parts</span>
+                </div>
+                <p className="bkit-sheet-help">
+                  {firstStep
+                    ? 'Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.'
+                    : 'This step uses what you chose in the steps before it.'}
+                </p>
+                <ol className="bkit-card-steps">
+                  {steps.map((s) => (
+                    <li key={s.id} className={`${s.id === step ? 'is-current' : ''}${s.done ? ' is-done' : ''}`}>
+                      <Link
+                        to={s.path}
+                        aria-current={s.id === step ? 'step' : undefined}
+                        onClick={(e) => { onStepPress(e, s); if (s.id === step) closeIntro() }}
+                      >
+                        <span className="bkit-card-num" aria-hidden="true">
+                          <span className="bkit-step-num">{s.number}</span>
+                          {TICK_ICON}
+                        </span>
+                        <span className="bkit-card-text">
+                          <strong>{s.label}</strong>
+                          {hasArtefact(s)
+                            ? <span className="bkit-card-artefact"><StepArtefact step={s} /></span>
+                            : <span className="bkit-card-blurb">{s.blurb}</span>}
+                        </span>
+                        <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+                <button type="button" className="bkit-sheet-close" onClick={exit}>
+                  <span className="bkit-sheet-close-label">Close the walkthrough</span>
+                  <span className="bkit-sheet-close-note">Not saved as a project until you name it.</span>
+                </button>
+              </div>
+            )}
+            {/* Decoration: the facts are in the trigger's name and the panel's list. */}
+            <div className="bkit-progress" aria-hidden="true">
+              {steps.map((s) => (
+                <span key={s.id} className={`bkit-progress-seg${s.id === step ? ' is-current' : ''}${s.done ? ' is-done' : ''}`} />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="bkit-rail-steps"
+              onClick={(e) => {
+                setShowName(false)
+                introOpenerRef.current = e.currentTarget
+                setIntroFull(true)
+                setShowIntro((v) => !v)
+              }}
+              aria-label={`${current.label}, step ${position} of ${total}, ${built} built. Steps and help.`}
+              aria-expanded={showIntro}
+              aria-controls={showIntro ? cardId : undefined}
+              ref={introTriggerRef}
+            >
+              <span className="bkit-rail-steps-name">{current.label}</span>
+              <span className="bkit-rail-steps-count">{count}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15" /></svg>
+            </button>
+          </>
+        )}
+
+        {!phone && (
+          <div className="bkit-rail-head">
+            <span className="bkit-rail-eyebrow">Brand kit</span>
+            {/* Drawn from 1024px up, where the title shows too; read out on a tablet. */}
+            <span className="bkit-rail-count" aria-live="polite">{count}</span>
+          </div>
+        )}
 
         {/* Real links, not buttons: the bar is a map of the flow, so
             middle-click and open-in-new-tab should work on it. Nothing is
@@ -644,69 +771,83 @@ export default function UIKitGuide({ step }) {
             saved design both ends already read), so there is no draft that a
             modified click could strand in a tab that never navigates. See
             utils/brandKitGuide.js. */}
-        <ol className="bkit-steps" ref={stepsRef}>
-          {steps.map((s) => (
-            <li key={s.id}>
-              <Link
-                to={s.path}
-                className={`bkit-step${s.id === step ? ' is-current' : ''}${s.done ? ' is-done' : ''}`}
-                aria-current={s.id === step ? 'step' : undefined}
-                onClick={(e) => onStepPress(e, s)}
-              >
-                <span className="bkit-step-mark" aria-hidden="true">
-                  <span className="bkit-step-num">{s.number}</span>
-                  {TICK_ICON}
-                </span>
-                <span className="bkit-step-body">
-                  <span className="bkit-step-label" data-label={s.label}>{s.label}</span>
-                  <StepArtefact step={s} decorative />
-                </span>
-                <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        {!phone && (
+          <ol className="bkit-steps" ref={stepsRef}>
+            {steps.map((s) => (
+              <li key={s.id}>
+                <Link
+                  to={s.path}
+                  className={`bkit-step${s.id === step ? ' is-current' : ''}${s.done ? ' is-done' : ''}`}
+                  aria-current={s.id === step ? 'step' : undefined}
+                  onClick={(e) => onStepPress(e, s)}
+                >
+                  <span className="bkit-step-mark" aria-hidden="true">
+                    <span className="bkit-step-num">{s.number}</span>
+                    {TICK_ICON}
+                  </span>
+                  <span className="bkit-step-body">
+                    <span className="bkit-step-label" data-label={s.label}>{s.label}</span>
+                    <StepArtefact step={s} decorative />
+                  </span>
+                  <span className="sr-only">{s.done ? ', done' : ', not started'}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {/* Close first, so the walkthrough's exit sits away from its primary
-            action; Next is last, at the trailing end. */}
+            action; Next is last, at the trailing end. On a phone Close and the
+            help live in the steps panel, so Next is all that is left. */}
         <div className="bkit-rail-actions">
-          <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
-            {CLOSE_ICON(14, 2.4)}
-          </button>
-          {/* Icon only at every width: the text is visually hidden, so the
-              control keeps its name, and the title repeats it for a pointer. */}
-          <button
-            type="button"
-            className="bkit-rail-help"
-            title="What&rsquo;s this?"
-            onClick={(e) => {
-              setShowName(false)
-              // Open on arrival, it grows to the full list; open with the list, it closes.
-              if (showIntro && !introFull) { setIntroFull(true); return }
-              introOpenerRef.current = e.currentTarget
-              setIntroFull(true)
-              setShowIntro((v) => !v)
-            }}
-            aria-expanded={showIntro}
-            aria-controls={showIntro ? cardId : undefined}
-            ref={introTriggerRef}
-          >
-            <svg className="bkit-rail-help-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9.5" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8" /><line x1="12" y1="17.2" x2="12" y2="17.3" />
-            </svg>
-            <span className="bkit-rail-help-text">What&rsquo;s this?</span>
-          </button>
+          {!phone && (
+            <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
+              {CLOSE_ICON(14, 2.4)}
+            </button>
+          )}
+          {/* Icon and the word "Help" from 768 to 1023px; icon only from 1024px,
+              where the text is visually hidden and the control keeps its name. The
+              title repeats it for a pointer. */}
+          {!phone && (
+            <button
+              type="button"
+              className="bkit-rail-help"
+              title="What&rsquo;s this?"
+              onClick={(e) => {
+                setShowName(false)
+                // Open on arrival, it grows to the full list; open with the list, it closes.
+                if (showIntro && !introFull) { setIntroFull(true); return }
+                introOpenerRef.current = e.currentTarget
+                setIntroFull(true)
+                setShowIntro((v) => !v)
+              }}
+              aria-expanded={showIntro}
+              aria-controls={showIntro ? cardId : undefined}
+              ref={introTriggerRef}
+            >
+              <svg className="bkit-rail-help-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.5" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8" /><line x1="12" y1="17.2" x2="12" y2="17.3" />
+              </svg>
+              {/* Name: "Help: What's this?". The label that shows from 768 to 1023px
+                  is its first word, so what is drawn is contained in the name. */}
+              <span className="bkit-rail-help-text">
+                <span className="bkit-rail-help-label">Help</span>
+                <span className="bkit-rail-help-rest">: What&rsquo;s this?</span>
+              </span>
+            </button>
+          )}
           {/* One filled button per view: while the panel is open its own button
-              takes the fill and this one draws as an outline. */}
+              takes the fill and this one draws as an outline. The phone's steps
+              panel has no filled button of its own, so Next keeps the fill. */}
           {next ? (
-            <button type="button" className={`btn bkit-rail-next${panelOpen ? ' is-outline' : ' btn-accent'}`} onClick={goNext}>
+            <button type="button" className={`btn bkit-rail-next${outlineNext ? ' is-outline' : ' btn-accent'}`} onClick={goNext}>
               <span className="bkit-rail-next-text">Next: {next.label}</span>
               {ARROW_ICON}
             </button>
           ) : (
             <button
               type="button"
-              className={`btn bkit-rail-next${panelOpen ? ' is-outline' : ' btn-accent'}`}
+              className={`btn bkit-rail-next${outlineNext ? ' is-outline' : ' btn-accent'}`}
               onClick={goNext}
               aria-expanded={showName}
               aria-controls={showName ? nameCardId : undefined}
@@ -787,4 +928,12 @@ function StepArtefact({ step, decorative = false }) {
   const text = step.artefact.text
   if (!text) return null
   return <span className="bkit-step-value" aria-hidden={decorative ? 'true' : undefined}>{text}</span>
+}
+
+// Whether StepArtefact has anything to draw, so the phone's list can fall back
+// to the step's blurb on the second line instead of leaving it empty.
+function hasArtefact(step) {
+  if (!step.done) return false
+  if (step.id === 'color') return (step.artefact.colors || []).length > 0
+  return !!step.artefact.text
 }

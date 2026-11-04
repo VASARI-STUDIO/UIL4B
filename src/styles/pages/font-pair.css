@@ -231,8 +231,10 @@
 .fpr-page .fpr-export { max-height: 340px; overflow: auto; margin-bottom: 12px; font-size: 12px; }
 
 /* ── The docked bar ──────────────────────────────────────────────────────────
-   Sticky to the foot of the viewport, over the tab bar's height on a phone,
-   over the brand-kit bar while that is showing. 1440: the note and Save. 768:
+   Sticky to the foot of the viewport, over the tab bar's height on a phone. While
+   the brand kit walkthrough shows, it keeps the screen's bottom edge below 1024px
+   and the kit bar sits directly on it; from 1024px it sits above the floating
+   pill. 1440: the note and Save. 768:
    Shuffle and Save. 390: Save, Shuffle, Copy CSS. */
 .fpr-page .fpr-dock {
   position: sticky;
@@ -271,7 +273,24 @@ html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 7
   .fpr-page .fpr-dock .fpr-copy-primary .tl-btn-ico { display: none; }
   .fpr-page .fpr-dock .fpr-copy-primary { padding-inline: 12px; }
 }
-html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-reserve); }
+/* The walkthrough's bar stacks on the dock, never under it: the dock is pinned to
+   the screen edge, UIKitGuide publishes its height as --bkit-toolbar-h, and the
+   bar and its spacer read it, so content and focus scroll clear of both. The tab
+   bar is hidden then, so the dock also pads for the home-indicator inset. From
+   1024px the pill floats and the dock sits above it. */
+@media (max-width: 1023px) {
+  html.bkit-on .fpr-page .fpr-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    margin: 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  html.bkit-on:has(.fpr-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + var(--bkit-toolbar-h, 0px) + 8px); }
+}
+@media (min-width: 1024px) {
+  html.bkit-on .fpr-page .fpr-dock { bottom: var(--bkit-reserve); }
+}
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
