@@ -707,7 +707,7 @@ function AltRow({ it, busy, showPlans, onRemove, onEdit, onWrite, onDecorative, 
         {pending && <p className="alt-row-note" role="status">Preparing image…</p>}
         {writing && <p className="alt-row-note alt-row-writing" role="status" aria-live="polite">Writing alt text…</p>}
         {it.status === 'error' && (
-          <p className="alt-row-error" role="status" aria-live="polite">
+          <p className="alt-row-problem" role="status" aria-live="polite">
             <ToolIcon name="warning-circle" size={15} />
             <span>{it.error || "That didn't work. Try again, or try a smaller image."}</span>
             {showPlans && <Link to="/plans">See plans</Link>}

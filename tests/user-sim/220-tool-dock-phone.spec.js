@@ -43,7 +43,7 @@ const TOOLS = [
   { route: '/create/tint', title: 'Tint', primary: /^Copy or save/, field: (page) => page.getByRole('textbox', { name: 'Base colour 1 hex' }) },
   { route: '/create/contrast', title: 'Contrast Checker', primary: /^Copy/, field: (page) => page.locator('.cc-hex-input').first() },
   { route: '/create/aspect-ratio', title: 'Aspect & Resolution', primary: /^Copy size/, field: (page) => page.getByRole('spinbutton', { name: 'Known width in pixels' }) },
-  { route: '/create/alt-text', title: 'Alt Text Generator', primary: /^Generate/, field: (page) => page.locator('.alt-field').first() },
+  { route: '/create/alt-text', title: 'Alt Text Generator', primary: /^Add images/, field: (page) => page.locator('.alt-field').first() },
   { route: '/create/semantic-color', title: 'Semantic Colour', primary: /^Copy /, field: null },
 ]
 

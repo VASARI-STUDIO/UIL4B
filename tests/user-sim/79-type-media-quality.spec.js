@@ -348,7 +348,7 @@ test.describe('/create/alt-text · a refused generation is announced', () => {
   // `.alt-card-warn` in the same card already announces politely.
   //
   // MUTATION: remove `role="status" aria-live="polite"` from
-  // `.alt-card-error-msg` in AltTextGenerator.jsx — this test fails on
+  // `.alt-row-error` in AltTextGenerator.jsx — this test fails on
   // getByRole('status').
   test('the card error is a status region carrying the message that was on screen', async ({ page }) => {
     watch(page, 'a free account whose generation is refused')
@@ -365,13 +365,13 @@ test.describe('/create/alt-text · a refused generation is announced', () => {
 
     await page.locator('.alt-dropzone input[type=file]')
       .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: PNG })
-    await expect(page.locator('.alt-card')).toHaveCount(1)
+    await expect(page.locator('.alt-row')).toHaveCount(1)
 
-    await page.getByRole('button', { name: /^Generate/ }).last().click()
+    await page.getByRole('button', { name: /^Write alt text/ }).last().click()
 
     const message = page.getByRole('status').filter({ hasText: /generator is unavailable/ })
     await expect(message).toBeVisible({ timeout: 20000 })
-    await expect(message).toHaveClass(/alt-card-error-msg/)
+    await expect(message).toHaveClass(/alt-row-problem/)
     await expect(message).toHaveAttribute('aria-live', 'polite')
   })
 })

@@ -28,7 +28,9 @@ test('both image tools render their notice, and before their dropzone', () => {
     const src = stripComments(read(file))
     const at = src.indexOf(notice)
     assert.ok(at > -1, `${file} does not render its notice`)
-    assert.ok(at < src.indexOf(dropzone), `${file} shows the notice after the dropzone`)
+    // Alt Text puts the line under its dropzone, which points at it with aria-describedby.
+    if (file.includes('AltText')) assert.ok(src.includes('aria-describedby="alt-ai-consent"'), `${file} dropzone does not point at its notice`)
+    else assert.ok(at < src.indexOf(dropzone), `${file} shows the notice after the dropzone`)
   }
   const alt = stripComments(read('src/pages/AltTextGenerator.jsx'))
   assert.match(alt, /<Link to=\{AI_TERMS_PATH\}>/, 'the Alt Text notice does not link to the Terms')
