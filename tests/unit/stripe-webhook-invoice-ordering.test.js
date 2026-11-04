@@ -274,6 +274,7 @@ test('an invoice.payment_failed event is flagged through the event path, re-read
   assert.deepEqual(stripe.calls, ['in_new'], 'the invoice is re-read before the failure is written')
   assert.equal(stored(db).paymentFailed, true)
   assert.equal(stored(db).failedInvoiceId, 'in_new')
+  assert.equal(stored(db).paymentFailedEventCreated, 1_700_000_400, 'the event time reaches storage through the dispatcher')
 
   // The same invoice paid in the meantime: the failure is not written at all.
   const paidDb = memoryDb({ 'users/uid_1': { stripeCustomerId: 'cus_1', subscription: { status: 'active' } } })
@@ -590,6 +591,25 @@ test('a re-flag keeps the later of the stored and the new event time', async (t)
   await flagAt(db, FAILED_EVENT + 200, 'in_next')
   assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT + 500, 'an earlier redelivery cannot move it back')
   assert.equal(stored(db).paymentFailed, true)
+})
+
+test('a late failure for an older invoice keeps the newer invoice on record, so paying the older one cannot clear it', async (t) => {
+  quiet(t)
+  const db = flaggedAccount()
+  await flagAt(db, FAILED_EVENT, 'in_new')
+  await flagAt(db, FAILED_EVENT - 300, 'in_old')
+  assert.equal(stored(db).failedInvoiceId, 'in_new')
+  assert.equal(stored(db).hostedInvoiceUrl, 'https://pay.example/in_new')
+  assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT)
+
+  // Paying the older invoice asks Stripe about the one on record, which is still open.
+  const outcome = await clearPaymentFailure(openInvoices('in_new'), paidInvoice('in_old', FAILED_AT), db)
+  assert.equal(outcome, 'kept_newer_failure')
+  assert.equal(stored(db).paymentFailed, true)
+
+  // A newer failing invoice still takes over the record.
+  await flagAt(db, FAILED_EVENT + 300, 'in_next')
+  assert.equal(stored(db).failedInvoiceId, 'in_next')
 })
 
 test('an older active subscription.updated leaves the newer failure in place but still updates the rest', async (t) => {

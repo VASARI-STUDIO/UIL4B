@@ -582,6 +582,9 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
   // each time, which is the same as having no window at all.
   let failedAt = Date.now()
   let failedEventCreated = Number.isFinite(eventCreated) ? eventCreated : null
+  // A late delivery for an OLDER failing invoice keeps the newer invoice on
+  // record, or paying the older one would clear a failure it does not settle.
+  let keepRecordedInvoice = null
   try {
     const existing = (await ref.get()).data()?.subscription
     if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)) {
@@ -590,6 +593,10 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
     // A Smart Retry re-flag keeps the latest event time seen for this failure.
     if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedEventCreated)) {
       failedEventCreated = Math.max(existing.paymentFailedEventCreated, failedEventCreated ?? -Infinity)
+      const olderDelivery = Number.isFinite(eventCreated) && eventCreated < existing.paymentFailedEventCreated
+      if (olderDelivery && typeof existing.failedInvoiceId === 'string' && existing.failedInvoiceId) {
+        keepRecordedInvoice = { id: existing.failedInvoiceId, url: existing.hostedInvoiceUrl ?? null }
+      }
     }
   } catch (err) {
     // A read failure must not swallow the failure flag. Stamping "now" can only
@@ -603,11 +610,11 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
       paymentFailedAt: failedAt,
       paymentFailedEventCreated: failedEventCreated,
       // Hosted invoice page the customer can use to retry payment.
-      hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+      hostedInvoiceUrl: keepRecordedInvoice ? keepRecordedInvoice.url : (invoice.hosted_invoice_url || null),
       // Which invoice the failure belongs to, so a later invoice.paid only clears
       // the failure it actually settles (clearPaymentFailure). Unlike
-      // paymentFailedAt this follows the NEWEST failing invoice.
-      failedInvoiceId: invoice.id || null,
+      // paymentFailedAt this follows the failing invoice with the newest event.
+      failedInvoiceId: keepRecordedInvoice ? keepRecordedInvoice.id : (invoice.id || null),
       updatedAt: Date.now(),
     },
   }, { merge: true })
