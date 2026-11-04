@@ -24,6 +24,8 @@ const monthlyPrice = (id, overrides = {}) => ({
   unit_amount: 900,
   currency_options: {},
   recurring: { interval: 'month', interval_count: 1 },
+  // Expanded and active: a price on an archived product is not sellable.
+  product: { id: 'prod_pro', active: true },
   ...overrides,
 })
 const yearlyPrice = (id, overrides = {}) => monthlyPrice(id, {
