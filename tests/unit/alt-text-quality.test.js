@@ -267,8 +267,8 @@ test('the client shows only finished answers, and a failed card can be retried',
   assert.ok(!/truncated/.test(PAGE), 'the page still carries a half-answer path')
   assert.ok(!/\.alt-row-warn\s*\{/.test(CSS), 'the half-answer warning style is dead and should go')
   assert.match(PAGE, /altText: data\.altText, status: 'done'/)
-  // A card in the error state still offers a button to try again.
-  assert.match(PAGE, /!hasText && !it\.decorative && !writing && \(it\.status === 'ready' \|\| it\.status === 'error'\)/)
+  // A card in the error state still offers a button to try again, unless the allowance is used up.
+  assert.match(PAGE, /!hasText && !it\.decorative && !writing && \(it\.status === 'ready' \|\| \(it\.status === 'error' && !blocked\)\)/)
   assert.match(PAGE, /\{it\.status === 'error' \? 'Try again' : 'Write'\}/)
 })
 

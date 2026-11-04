@@ -70,6 +70,10 @@ const TONES = [
 const toneOf = (id) => TONES.find(t => t.id === id) || TONES[0]
 const COPY_FEEDBACK_MS = 1600
 
+// Shown in the empty state: what good alt text looks like, before anything is
+// uploaded. Written by a person, and measured the way a result is.
+const EXAMPLE_ALT = 'Golden retriever puppy curled asleep on a grey wool blanket'
+
 // The count against the length the row was written at, in words so colour is
 // never the only signal.
 function countText(n, toneId) {
@@ -569,7 +573,7 @@ export default function AltTextGenerator({ toast }) {
               </div>
             </div>
 
-            <section className="alt-brief" aria-label="Brief">
+            <section className="alt-brief" aria-label="Alt text settings">
               <div className="alt-brief-col alt-length">
                 <span className="alt-brief-label" id="alt-tone-label">Length</span>
                 <SlidePills className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label" value={tone}>
@@ -625,7 +629,13 @@ export default function AltTextGenerator({ toast }) {
               )}
             </section>
 
-            {guide}
+            {items.length === 0 && (
+              <figure className="alt-example">
+                <figcaption className="alt-example-label">Example, written by a person</figcaption>
+                <p className="alt-example-words">{EXAMPLE_ALT}</p>
+                <p className="alt-row-count">{countText(EXAMPLE_ALT.length, 'concise').text}</p>
+              </figure>
+            )}
 
             {items.length > 0 && (
               <section className="alt-sheet" aria-labelledby="alt-sheet-title">
@@ -634,7 +644,7 @@ export default function AltTextGenerator({ toast }) {
                   <p className="alt-sheet-sum">
                     {preparingCount > 0 && <span>Preparing {preparingCount} image{preparingCount === 1 ? '' : 's'}…</span>}
                     <span>{writtenCount} written{failedIds.length > 0 ? ` · ${failedIds.length} failed` : ''}</span>
-                    {failedIds.length > 0 && (
+                    {failedIds.length > 0 && !quota.blocked && (
                       <ToolButton className="alt-retry-failed" disabled={busy} onClick={() => generateAll(failedIds)}>Retry failed</ToolButton>
                     )}
                   </p>
@@ -645,6 +655,7 @@ export default function AltTextGenerator({ toast }) {
                     it={it}
                     busy={busy}
                     showPlans={quota.blocked && !isPro}
+                    blocked={quota.blocked}
                     onRemove={() => removeItem(it.id)}
                     onEdit={(value) => editAlt(it.id, value)}
                     onWrite={(useTone) => generateOne(it, useTone)}
@@ -654,6 +665,8 @@ export default function AltTextGenerator({ toast }) {
                 ))}
               </section>
             )}
+
+            {guide}
           </>
         )}
       </ToolMain>
@@ -663,7 +676,7 @@ export default function AltTextGenerator({ toast }) {
 
 // One image beside its words. The copy confirmation is the row's own state, so
 // it shows in place and a polite live region announces it.
-function AltRow({ it, busy, showPlans, onRemove, onEdit, onWrite, onDecorative, onCopy }) {
+function AltRow({ it, busy, showPlans, blocked, onRemove, onEdit, onWrite, onDecorative, onCopy }) {
   const [copyState, setCopyState] = useState(null)
   const timer = useRef(0)
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -757,7 +770,7 @@ function AltRow({ it, busy, showPlans, onRemove, onEdit, onWrite, onDecorative, 
                   className="tl-btn tl-btn--quiet alt-rewrite"
                 />
               )}
-              {!hasText && !it.decorative && !writing && (it.status === 'ready' || it.status === 'error') && (
+              {!hasText && !it.decorative && !writing && (it.status === 'ready' || (it.status === 'error' && !blocked)) && (
                 <ToolButton onClick={() => onWrite()} disabled={!canAct}>{it.status === 'error' ? 'Try again' : 'Write'}</ToolButton>
               )}
             </div>

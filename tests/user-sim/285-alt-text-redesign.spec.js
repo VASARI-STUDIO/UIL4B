@@ -568,3 +568,24 @@ test('the stylesheet has no gradient, glow or transition: all', async () => {
   expect(css).not.toMatch(/box-shadow:\s*0\s+0\s+(?!0\b)\d{2,}px/)
   expect(css).not.toMatch(/drop-shadow\(/)
 })
+
+test.describe('empty state', () => {
+  test('shows a person-written example measured against its target, and the guide says it opens', async ({ browser }) => {
+    const { ctx, page } = await open(browser, 1280)
+    try {
+      await go(page, '/create/alt-text')
+      const example = page.locator('.alt-example')
+      await expect(example).toBeVisible()
+      await expect(example).toContainText('Example, written by a person')
+      await expect(example).toContainText('59 of 125 characters')
+      // The guide comes after the brief and the example, and draws its own caret.
+      const caret = () => page.locator('.alt-guide summary').evaluate((el) => getComputedStyle(el, '::after').transform)
+      const closed = await caret()
+      expect(closed, 'the summary draws a caret').not.toBe('none')
+      await page.locator('.alt-guide summary').click()
+      await expect.poll(caret, { message: 'the caret turns when the guide opens' }).not.toBe(closed)
+      const [ex, guide] = [await example.boundingBox(), await page.locator('.alt-guide').boundingBox()]
+      expect(guide.y, 'the guide sits below the example').toBeGreaterThan(ex.y)
+    } finally { await ctx.close() }
+  })
+})

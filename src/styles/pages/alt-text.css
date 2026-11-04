@@ -17,7 +17,7 @@
 
 .alt-page .alt-sheet-wrap { max-width: 960px; width: 100%; margin-inline: auto; gap: var(--s-4); }
 
-/* The Gemini notice sits under the dropzone and describes it. */
+/* The Gemini notice sits above the dropzone and describes it. */
 .alt-page .ai-image-consent {
   margin: 0;
   font-size: 12.5px;
@@ -98,7 +98,7 @@
 
 .alt-page .alt-field:hover { border-color: var(--tl-line-on); }
 
-.alt-page .alt-field:focus-visible { border-color: var(--tl-line); box-shadow: none; }
+.alt-page .alt-field:focus-visible { border-color: var(--tl-line); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .alt-page .alt-field-help { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); }
 
@@ -116,6 +116,12 @@
 
 /* ── Guide ────────────────────────────────────────────────────────────────── */
 
+/* The empty state's example: the words and their count, as a written row shows them. */
+.alt-page .alt-example { display: grid; gap: var(--s-1); margin: 0; padding-block: var(--s-3); border-block-start: 1px solid var(--tl-hair); }
+.alt-page .alt-example-label { font-size: var(--fs-caption); color: var(--tl-dim); }
+.alt-page .alt-example-words { margin: 0; font-size: 16px; line-height: 1.5; color: var(--tl-ink); }
+@media (min-width: 768px) { .alt-page .alt-example-words { font-size: 17px; } }
+
 .alt-page .alt-guide { padding-block: var(--s-2); border-block: 1px solid var(--tl-hair); }
 
 .alt-page .alt-guide summary {
@@ -129,6 +135,20 @@
 }
 
 .alt-page .alt-guide summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* display:flex drops the native disclosure marker, so the caret is drawn here:
+   it points right while closed and down once open. */
+.alt-page .alt-guide summary::-webkit-details-marker { display: none; }
+.alt-page .alt-guide summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-inline-start: auto;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--dur-1) ease;
+}
+.alt-page .alt-guide[open] summary::after { transform: rotate(45deg); }
 
 .alt-page .alt-tips { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: var(--s-2) 0 var(--s-3) 18px; max-width: 72ch; }
 
@@ -153,7 +173,7 @@
 
 .alt-page .alt-sheet-head h2 { margin: 0; font-size: 15px; font-weight: 560; color: var(--tl-ink); }
 
-.alt-page .alt-sheet-sum { display: flex; align-items: center; gap: var(--s-3); margin: 0; font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.alt-page .alt-sheet-sum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin: 0; font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
 .alt-page .alt-row {
   display: grid;
@@ -215,7 +235,7 @@
 
 .alt-page .alt-row-text:hover { border-color: var(--tl-line); }
 
-.alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: 0 0 0 2px var(--accent-wash-4); }
+.alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @keyframes alt-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
@@ -308,6 +328,10 @@
   .alt-page .alt-row-actions { grid-template-columns: auto auto; }
   .alt-page .alt-row-actions .tl-btn { width: auto; height: 36px; min-height: 36px; min-width: 96px; }
 }
+/* A finger still needs 44px on a tablet, where the row actions sit side by side. */
+@media (min-width: 768px) and (pointer: coarse) {
+  .alt-page .alt-row-actions .tl-btn { height: 44px; min-height: 44px; }
+}
 
 @media (min-width: 1024px) {
   .alt-page .alt-row { grid-template-columns: 200px minmax(0, 1fr); }
@@ -374,6 +398,7 @@
 }
 
 html[data-reduced-motion="true"] .alt-page .alt-row-text { animation: none; }
+html[data-reduced-motion="true"] .alt-page .alt-guide summary::after { transition: none; }
 
 html[data-reduced-motion="true"] .alt-page .alt-swap .tl-ico { transition: none; }
 
