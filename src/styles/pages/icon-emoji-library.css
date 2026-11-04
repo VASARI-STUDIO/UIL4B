@@ -797,7 +797,7 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
 .iel-page .lib-net-wrap{display:contents}
 .iel-page .lib-net-short{display:none}
 @media(max-width:767px){
-  .iel-page.lib-surface .dgh-hero{--hero-pad-y:16px;padding-block:var(--hero-pad-y)}
+  .iel-page.lib-surface .dgh-hero{--hero-pad-y:20px;padding-block:var(--hero-pad-y)}
   .iel-page.lib-surface .dgh-hero--controls{gap:12px}
   /* Static, so the pill below positions against the hero (which is relative)
      and can sit on the title row; the controls stay above the glow. */
