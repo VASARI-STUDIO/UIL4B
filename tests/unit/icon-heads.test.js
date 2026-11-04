@@ -44,14 +44,23 @@ test('heads are long enough for the grids built from them', () => {
   assert.ok(read('lucide').names.length >= 120, 'lucide leads the grid and fills its first page')
 })
 
-test('Fluent lists its 24px Regular and Filled glyphs once each, not every size', () => {
-  for (const keep of ['home-24-regular', 'home-24-filled', 'accessibility-checkmark-24-filled']) assert.equal(matchesRegular('fluent', keep), true, keep)
-  for (const drop of ['home-16-regular', 'home-20-filled', 'home-28-regular', 'home-48-regular', 'home-12-filled', 'add-32-light', 'home']) {
+test('Fluent lists its 24px Regular glyph once per concept, not every size or its fill', () => {
+  for (const keep of ['home-24-regular', 'accessibility-checkmark-24-regular']) assert.equal(matchesRegular('fluent', keep), true, keep)
+  for (const drop of ['home-24-filled', 'home-16-regular', 'home-20-filled', 'home-28-regular', 'home-48-regular', 'home-12-filled', 'add-32-light', 'home']) {
     assert.equal(matchesRegular('fluent', drop), false, drop)
   }
   const { names } = read('fluent')
-  assert.ok(names.length === 250 && names.every((n) => /-24-(?:regular|filled)$/.test(n)), 'the committed head holds 24px names only')
-  assert.equal(matchesRegular('bi', 'house-fill'), true, 'the rule is Fluent-only')
+  assert.ok(names.length === 250 && names.every((n) => /-24-regular$/.test(n)), 'the committed head holds 24px Regular names only')
+})
+
+test('Bootstrap Icons and Pixelarticons keep their fills and alternates out of Regular', () => {
+  assert.equal(matchesRegular('bi', 'house'), true)
+  assert.equal(matchesRegular('bi', 'house-fill'), false)
+  assert.equal(matchesRegular('pixelarticons', 'home'), true)
+  for (const drop of ['home-sharp', 'heart-solid']) assert.equal(matchesRegular('pixelarticons', drop), false, drop)
+  assert.ok(read('bi').names.every((n) => !/-fill$/.test(n)), 'the committed bi head has no -fill names')
+  assert.ok(read('pixelarticons').names.every((n) => !/-(?:sharp|solid)$/.test(n)), 'the committed pixelarticons head has no -sharp or -solid names')
+  assert.equal(matchesRegular('radix-icons', 'home'), true, 'Radix draws one style, so every name is Regular')
 })
 
 test('the default listing never asks /collection for a Regular-weight pack', () => {

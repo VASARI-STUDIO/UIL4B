@@ -4,7 +4,8 @@
 //   - Each pack is in the pack menu under its name, and a free account opens it (390 and 1440).
 //   - The footer credits it with its name and MIT licence.
 //   - Signed out, each sits behind the free-account wall and nothing is fetched for it.
-//   - Fluent lists only its 24px Regular and Filled glyphs: its fixture holds 20 names, 4 of other sizes.
+//   - Fluent lists only its 24px Regular glyphs, and Fill shows only its 24px Filled ones: its fixture
+//     holds 8 of each plus 4 of other sizes. Bootstrap's -fill glyphs move to Fill the same way.
 //   - A search finds the new packs' icons (and drops Fluent's 16px hit).
 //   - LICENSES.txt for a download carries each pack's MIT text. No group uses these packs yet
 //     (they are not in GROUP_STYLE_PACKS), so a group download must not carry their notices.
@@ -25,10 +26,10 @@ const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, 
 const WIDTHS = [1440, 390]
 // Each fixture (tests/user-sim/fixtures/iconify/collection/<pack>.json) lists 20 names; Fluent shows 16 of them.
 const PACKS = [
-  { prefix: 'fluent', label: 'Fluent UI', credit: 'Fluent UI System Icons', shown: 16, sample: 'home-24-regular' },
+  { prefix: 'fluent', label: 'Fluent UI', credit: 'Fluent UI System Icons', shown: 8, sample: 'home-24-regular' },
   { prefix: 'pixelarticons', label: 'Pixelarticons', credit: 'Pixelarticons', shown: 20, sample: 'home' },
   { prefix: 'radix-icons', label: 'Radix Icons', credit: 'Radix Icons', shown: 20, sample: 'magnifying-glass' },
-  { prefix: 'bi', label: 'Bootstrap Icons', credit: 'Bootstrap Icons', shown: 20, sample: 'house' },
+  { prefix: 'bi', label: 'Bootstrap Icons', credit: 'Bootstrap Icons', shown: 17, sample: 'house' },
 ]
 
 test.beforeEach(() => { test.skip(isLiveIconify(), LIVE) })
@@ -139,13 +140,28 @@ for (const width of WIDTHS) {
   })
 }
 
-test('Fluent lists only its 24px Regular and Filled glyphs', async ({ page }) => {
+test('Fluent lists only its 24px Regular glyphs, and Fill shows only its 24px Filled ones', async ({ page }) => {
   await openLibrary(page, 1440, 'designer on the free plan browsing Fluent', 'free')
   await pickPack(page, 'fluent')
-  await packListed(page, 'Fluent UI', 16)
+  await packListed(page, 'Fluent UI', 8)
   const names = await cellNames(page)
-  expect(names.length).toBe(16)
-  expect(names.filter((n) => !/-24-(regular|filled)$/.test(n)), 'no 12, 16, 20, 32 or 48px duplicate, no light variant').toEqual([])
+  expect(names.length).toBe(8)
+  expect(names.filter((n) => !/-24-regular$/.test(n)), 'no filled twin, no other size, no light variant').toEqual([])
+  await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Fill/ }).click()
+  await expect.poll(() => cellNames(page), { timeout: 15000 }).toContain('home-24-filled')
+  const filled = await cellNames(page)
+  expect(filled.length).toBe(8)
+  expect(filled.filter((n) => !/-24-filled$/.test(n)), 'Fill is the 24px Filled set only').toEqual([])
+})
+
+test('Bootstrap Icons keeps its -fill glyphs under Fill, not beside their outlines', async ({ page }) => {
+  await openLibrary(page, 1440, 'designer on the free plan browsing Bootstrap Icons', 'free')
+  await pickPack(page, 'bi')
+  await expect.poll(() => cellNames(page), { timeout: 15000 }).toContain('house')
+  await packListed(page, 'Bootstrap Icons', 17)
+  expect((await cellNames(page)).filter((n) => /-fill$/.test(n)), 'no -fill twin in Regular').toEqual([])
+  await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Fill/ }).click()
+  await expect.poll(async () => (await cellNames(page)).sort(), { timeout: 15000 }).toEqual(['bell-fill', 'heart-fill', 'star-fill'])
 })
 
 test('a free account’s search finds the new packs’ icons and drops Fluent’s 16px one', async ({ page }) => {

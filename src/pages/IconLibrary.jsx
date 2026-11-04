@@ -315,6 +315,9 @@ const CUSTOMISER_DEFAULTS = Object.freeze({
 //   Heroicons              outline, -solid                   — Fill
 //   Tabler                 outline, -filled (a subset)       — Fill
 //   Iconoir                outline, -solid  (a subset)       — Fill
+//   Fluent UI              -24-regular, -24-filled           — Fill
+//   Bootstrap Icons        outline, -fill   (a subset)       — Fill
+//   Pixelarticons          outline, -solid  (a subset)       — Fill
 //
 // Lucide draws one weight and so offers Regular only. A segment the current
 // scope cannot honour is DISABLED with the reason (which packs do draw it),
@@ -336,10 +339,13 @@ const WEIGHT_RULES = {
     heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
     tabler: n => /-filled$/.test(n),
     iconoir: n => /-solid$/.test(n),
+    fluent: n => /-24-filled$/.test(n),
+    bi: n => /-fill$/.test(n),
+    pixelarticons: n => /-solid$/.test(n),
   },
   duo: { ph: n => /-duotone$/.test(n) },
 }
-const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
 // `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
