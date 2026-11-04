@@ -101,8 +101,8 @@ export async function readTokens() {
  * to "Design toolkit" — the retired framing ("a free browser-based design
  * toolkit" is the story docs/reference/positioning.md replaced), set as a
  * letter-spaced category label above a headline, which is the exact kicker
- * the homepage card dropped when the founder retired "UI system toolkit" as
- * "a huge AI Slop feature". A section that has something true to say above
+ * the homepage card dropped when "UI system toolkit" was retired as slop. A
+ * section that has something true to say above
  * its name (Learn: "Reference guides") still says it; the rest say nothing.
  */
 export function sectionEyebrow(section) {

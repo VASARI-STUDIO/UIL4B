@@ -1,7 +1,7 @@
 // Three rungs, not two — and the cap that makes the third one real.
 //
-// Founder instruction, 2026-09-18: "for the galleries non logged in users get 3
-// free ones logged in get 10 and paid get full". tests/unit/locked-library-tease
+// The tiers: signed-out visitors get 3 free items in the galleries, signed-in
+// users get 10, and paid users get everything. tests/unit/locked-library-tease
 // .test.js already proves the OLD half of this gate: that a locked row's payload
 // never reaches a preview, and that only an exact `true` opens it. This file
 // proves the new half, and the new half is where the danger is:
@@ -14,7 +14,7 @@
 //   that bug with a nicer name.
 //
 // So the assertions below are about three things and nothing else:
-//   1. the numbers are the founder's, and the ladder only ever climbs on an
+//   1. the numbers are the agreed ones, and the ladder only ever climbs on an
 //      exact `true`;
 //   2. the cap is applied to the CANONICAL library, inside the splitter, before
 //      any control on the page can reach the data;

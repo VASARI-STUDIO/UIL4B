@@ -31,7 +31,7 @@ const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
 
 // ── The rules, as the moderator role leaves them ────────────────────────────
 //
-// firestore.rules is founder-gated, so `isReviewer()` is not in the file on
+// firestore.rules is approval-gated, so `isReviewer()` is not in the file on
 // disk until `npm run apply:gated` has been run. Asserting it against the file
 // would be red every day until then and green afterwards; asserting the
 // unpatched shape would be the reverse. Both are a test that measures the
@@ -79,11 +79,11 @@ test('only a reviewer may approve, and the owner may only withdraw', () => {
 //
 // Against the PLANNED rules, not the file — see the note at the top. These are
 // the properties the role must not cost, asserted where they can be asserted
-// today rather than on the day the founder runs the command.
+// today rather than on the day the owner runs the command.
 
 test('a reviewer is the founder OR a moderator, and nothing else', () => {
   // The predicate the whole role rests on. Both arms are asserted, because
-  // dropping either one is silent: without the admin arm the founder loses his
+  // dropping either one is silent: without the admin arm the admin loses their
   // own queue, and without the moderator arm the role is decoration.
   const fn = /function isReviewer\(\) \{[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
   assert.ok(fn, 'isReviewer() is gone')

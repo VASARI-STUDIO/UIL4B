@@ -1,4 +1,4 @@
-// Build the Firebase deferral AS DESIGNED — including the two founder-gated
+// Build the Firebase deferral AS DESIGNED — including the two approval-gated
 // files — without a byte changing in either of them.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6,10 +6,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // `firebase-critical-path` is blocked on a design, and the design needs
 // `src/contexts/AuthContext.jsx` and `src/contexts/SubscriptionContext.jsx` to
-// stop importing the Firebase SDK statically. Both are founder-gated
+// stop importing the Firebase SDK statically. Both are approval-gated
 // (docs/reference/human-validation-zones.md), so the change ships as an
 // UNAPPLIED patch — `docs/design/firebase-deferral-gated.patch` — for the
-// founder to approve and apply.
+// owner to approve and apply.
 //
 // An unapplied patch cannot be measured, and a design nobody can price is an
 // argument rather than evidence. That is what this closes. It applies the

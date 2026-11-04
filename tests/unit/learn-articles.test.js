@@ -242,7 +242,7 @@ test('a roadmap row that has stopped saying Soon points at a guide that renders'
   // Design Principles and Help & Getting Started wore Soon badges in the mega
   // menu, the mobile sheet and the visual sitemap while /principles and /help
   // both answered 200 — and /sitemap already listed both as live rows of its
-  // own, so it contradicted itself twice on one page. Founder's call: point
+  // own, so it contradicted itself twice on one page. The fix: point
   // them at the live pages. What the guard is actually FOR — no row advertising
   // a topic as done with nothing behind it — is unchanged and enforced below;
   // only the definition of "something behind it" widened from a published guide

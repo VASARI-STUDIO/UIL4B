@@ -27,11 +27,11 @@
 // ── AND IT ASKS GIT, NOT THE DISK. Changed 2026-09-16 ───────────────────────
 //
 // Some files this repository is responsible for are deliberately NOT in it. The
-// internal boards went first (2026-09-16, #477), the founder's own documents
+// internal boards went first (2026-09-16, #477), the owner's own documents
 // followed the same day (#478), and then the working notes, the agent tooling
 // and the release record — CLAUDE.md, CHANGELOG.md and every Markdown file
 // under docs/ — in a third cut; .gitignore carries all three decisions and the
-// reasons. They are on the founder's machine and in no clone.
+// reasons. They are on the owner's machine and in no clone.
 //
 // That splits "does this file exist?" in two, and the two answers disagree for
 // exactly those files: on his disk they are there, on a public runner they are
@@ -49,7 +49,7 @@
 // follow. Reading the disk would have called that one green.
 //
 // The document WALK is narrowed the same way and for the same reason: a
-// git-ignored Markdown file is not scanned, so the founder's copy of
+// git-ignored Markdown file is not scanned, so the owner's copy of
 // `OWNER-ACTIONS.md` does not get link-checked on his machine and skipped in
 // CI. Same document set, same paths, same verdict, both places.
 import test from 'node:test'
@@ -190,7 +190,7 @@ const TOMBSTONES = new Map(Object.entries({
 
 // ── The documents that are on one machine and in no clone ───────────────────
 //
-// Local-only by founder decision, 2026-09-16; .gitignore carries which and why.
+// Local-only by decision; .gitignore carries which and why.
 // Listed here BY NAME so the exemption below is a named set of documents rather
 // than a rule of the shape "anything absent is forgiven", which would quietly
 // excuse the next document somebody deletes by accident. The test under it
@@ -202,7 +202,7 @@ const TOMBSTONES = new Map(Object.entries({
 // tree, and the controls below are sized to it rather than to the twenty-three
 // documents the walk used to reach.
 const LOCAL_ONLY_DOCS = new Set([
-  // #478 — the founder's own documents.
+  // #478 — the owner's own documents.
   'docs/OWNER-ACTIONS.md',
   'docs/PROPOSALS.md',
   'docs/MARKETING.md',

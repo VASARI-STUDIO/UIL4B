@@ -145,8 +145,8 @@ test('swatches are capped, because the rail renders them in a chip', () => {
 })
 
 test('a fresh start opens step one even when the design already has colours', () => {
-  // The founder's instruction is literal: "build a brand kit should go straight
-  // into step 1". Starting the kit is a decision to go through the whole thing.
+  // The rule is literal: building a brand kit goes straight into step 1.
+  // Starting the kit is a decision to go through the whole thing.
   const entry = guideEntry(designWith({ palette: true, fonts: true }), { active: false })
   assert.equal(entry.resume, false)
   assert.equal(entry.step.id, 'color')

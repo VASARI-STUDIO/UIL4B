@@ -14,7 +14,7 @@
 //     per-ROUTE half of the canonical and left the HOST half unchecked: on
 //     2026-09-13 all 40 shells still named a `www` host that does not
 //     serve. See SITE_ORIGIN in src/utils/routeMeta.js for the measurement
-//     and the founder's decision;
+//     and the decision;
 //   • the <noscript> block was homepage copy on every one of them, so a non-JS
 //     crawler also saw ~26 byte-identical pages.
 //
@@ -260,7 +260,7 @@ async function main() {
     // the top of this file means by "This does NOT render React". That is still
     // true: nothing here runs a component. What `/` additionally gets is its
     // HEADLINE — one <h1>, in the markup the hydrated page uses, out of the
-    // founder's sentence in src/data/positioning.js.
+    // positioning sentence in src/data/positioning.js.
     //
     // It is scoped to the two sales-page URLs and the 404 shell never sees it.
     // See scripts/home-shell.mjs for the measurement that motivated it and for

@@ -9,9 +9,9 @@
 // it is easy to lose in a refactor, and losing any of it is invisible — which
 // is the same fault one level up.
 //
-// docs/OWNER-ACTIONS.md tells the founder to read `provider` in devtools as THE
-// procedure for closing `openrouter-path-verification`. These tests are what
-// keep that procedure from quietly becoming impossible.
+// The owner procedure for closing `openrouter-path-verification` is to read
+// `provider` in devtools. These tests are what keep that procedure from
+// quietly becoming impossible.
 //
 // ── WHAT CHANGED, AND WHY (2026-09-08) ──────────────────────────────────────
 //
@@ -253,7 +253,7 @@ test('the harness executes api/ai.js, so nothing below is vacuous', () => {
 test('THE ONE THAT MATTERS: a generation says which provider served it', async () => {
   // Without this field there is NO way, from outside the deployment, to tell a
   // healthy OpenRouter from a dead one — both return a good prompt. It is the
-  // whole of the founder procedure in docs/OWNER-ACTIONS.md.
+  // whole of the owner procedure for checking it.
   const healthy = loadAi()
   const { result } = await healthy.generate()
   assert.ok(result, 'a healthy OpenRouter did not produce a generation')
@@ -792,8 +792,8 @@ const { describeProvider, providerBadgeStyle } = await import('../../src/utils/a
 const srcFile = (f) => stripJs(fs.readFileSync(path.join(process.cwd(), 'src', f), 'utf8'))
 
 // ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
-// The repository is public and that document is the founder's own console and
-// credential worklist, so he keeps it on his machine and out of every
+// The repository is public and that document is the owner's own console and
+// credential worklist, so it is kept on one machine and out of every
 // clone (.gitignore carries the decision and the reason). The one test below
 // that reads it SKIPS WITH A REASON where it is absent and runs in full where
 // it is present — it must not go quietly green, because "the document does not
@@ -866,7 +866,7 @@ test('THE ONE THAT MATTERS: the prompt tool keeps `provider` and renders it', ()
   // so it failed with ENOENT rather than an assertion, which is how the
   // reference was proven load-bearing before it was removed.
   // AiPromptGenerator.jsx is deliberately NOT deleted: it is the only caller of
-  // the OpenRouter path and docs/OWNER-ACTIONS.md §4.5 asks the founder to
+  // the OpenRouter path, and the owner still has to
   // choose between wiring it and cancelling OpenRouter. So this test still
   // guards the surface the item is about, on the one page that can reach it.
   for (const page of ['pages/AiPromptGenerator.jsx']) {
@@ -971,7 +971,7 @@ test('an intermittent primary is degraded, not ok and not failing', () => {
 
 test('the panel says out loud when nothing will come and find the operator', () => {
   // Counters only work if someone looks. Whether anyone is TOLD depends on an
-  // env pair the founder has to provision, so the absence is stated rather than
+  // env pair the owner has to provision, so the absence is stated rather than
   // left as an empty field that reads like "fine".
   const off = summariseProviderHealth([day('2026-09-03', { openrouterOk: 1 })], { alerting: false })
   assert.match(off.alerting, /^OFF/, 'an unprovisioned alert path is not flagged as off')
@@ -988,7 +988,7 @@ test('the panel says out loud when nothing will come and find the operator', () 
   })
 })
 
-// ── the admin surface, and the founder's procedure ──────────────────────────
+// ── the admin surface, and the owner's procedure ────────────────────────────
 
 test('the Admin overview renders the verdict, and never on a page a non-admin can load', () => {
   // SOURCE ASSERTION, kept on purpose — see the header. Admin.jsx cannot be

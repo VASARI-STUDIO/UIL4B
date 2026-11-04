@@ -142,7 +142,7 @@ test('storage that throws does not crash the router', () => {
 })
 
 test('the signed-in home is the User Home, not the sales page', () => {
-  // Founder direction, 2026-09-05, approved explicitly: a signed-in visitor
+  // A signed-in visitor
   // who navigates to the site lands on the dashboard, not on the page selling
   // it to them. Onboarding’s exit shares that destination, so it is pinned
   // here rather than left as a literal in five assertions above.

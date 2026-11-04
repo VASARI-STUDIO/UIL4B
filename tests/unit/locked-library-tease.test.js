@@ -300,7 +300,7 @@ const LOCKED_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free !== true)
 // the coupling the fix removed.
 //
 // Changing this list widens or narrows the free tier, which is a PRICING
-// decision and founder-owned. The test is here so that change has to be made
+// decision and the owner's call. The test is here so that change has to be made
 // on purpose rather than as a side effect of editing a number in a data file.
 const PINNED_FREE = ['c-1', 'c-2', 'c-3', 'c-9', 'c-13', 'c-14', 'c-15', 'c-16', 'c-17', 'c-18']
 

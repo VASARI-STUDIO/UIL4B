@@ -1,8 +1,7 @@
 // The hero entrance has to be smooth, and "smooth" here has specific causes.
 //
-// FOUNDER REPORT, twice: "the hero animation it kind of sucks, its not smooth"
-// and later, after a first attempt, "also make the hero animation better its not
-// smooth". Measuring rather than guessing found three separate faults:
+// The hero animation read as choppy rather than smooth. Measuring rather than
+// guessing found three separate faults:
 //
 //   1. The entrance ran from a GSAP timeline, so it could not START until a
 //      ~40KB dynamic import resolved. Until then a JS class held the headline at
@@ -48,7 +47,7 @@ const html = stripHtml(read('index.html'))
 //
 // Their subject is deleted. src/pages/Home.jsx, src/hooks/useHomeMotion.js and
 // the `.home-hero-line` / `.home-hero-line-in` clip-up went on 2026-09-18, when
-// the founder made src/pages/Spectrum.jsx the front door. There is no hero left
+// src/pages/Spectrum.jsx became the front door. There is no hero left
 // with a GSAP timeline to avoid, an arming class to refuse, or a clip to size.
 //
 // THE ARGUMENTS SURVIVED THE PAGE, and they are held where the new hero lives:

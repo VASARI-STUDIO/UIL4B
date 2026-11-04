@@ -6,9 +6,8 @@
 // corners change at the moment of focus, and sees a ring that does not match
 // the control they were looking at a frame earlier.
 //
-// The founder reported it as "the search bar has a weird visual, i have noticed
-// this on many of the search bars" (2026-09-04, with a screenshot of a blue ring
-// whose corners did not follow the field).
+// It showed up on the search bars: a blue ring whose corners did not follow the
+// field.
 //
 // The cause was the global rule, which had carried a `border-radius` for a long
 // time:
@@ -99,7 +98,7 @@ test('the global :focus-visible rule still paints a visible ring (WCAG 2.4.7)', 
 const FIELD_RESET = /:where\(([^)]*\binput\[type="text"\][^)]*)\)\s*\{([^}]*)\}/
 
 test('input[type=search] takes the shared field reset, so its ring has a shape to trace', () => {
-  // The field the founder screenshotted was `input[type=search].adm-search`,
+  // The affected field was `input[type=search].adm-search`,
   // which set no radius, border or ground of its own and was NOT covered by the
   // element reset — so it rendered as a bare UA box with square corners, and the
   // global rule then drew a 10px-radius ring around it.

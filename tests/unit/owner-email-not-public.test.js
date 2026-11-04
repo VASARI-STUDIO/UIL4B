@@ -5,9 +5,9 @@
 // Measured against LIVE production on 2026-09-13, with no credentials sent:
 //
 //   curl https://uil4b.com/assets/constants-KnpCfm5i.js
-//   -> 200, 1945 bytes, containing the founder's personal address TWICE
+//   -> 200, 1945 bytes, containing a personal address TWICE
 //
-// `src/utils/constants.js` held the founder's personal address twice: once as
+// `src/utils/constants.js` held a personal address twice: once as
 // the only entry of ADMIN_EMAILS, and once as the KEY of OWNER_HANDLES. Its
 // chunk is in the `modulepreload` list of every prerendered shell, so it was
 // fetched in the first request wave by every anonymous visitor, on every route,
@@ -51,19 +51,19 @@
 //     directory, and the allowlist must refuse it;
 //   · the real scan must find the allowlisted addresses, so "none of the hits
 //     is forbidden" is a claim about a non-empty set;
-//   · the raw substring search for the founder's address must FIND it in a
+//   · the raw substring search for the owner's address must FIND it in a
 //     fixture, before it is trusted to report dist/ clean.
 //
 // ── And the public identity must survive ────────────────────────────────────
 //
-// The founder's NAME is deliberately public; his address is not. A future
+// The owner's NAME is deliberately public; the address is not. A future
 // "cleanup" that deleted the crown, the handle, the tooltip or the publicId
 // along with the address would be a product regression, so the last groups
 // EXECUTE the shipped chunk and require the owner record to come back whole.
 //
 // ── AND THE ADDRESS IS NO LONGER IN THE REPOSITORY TO TEST WITH ─────────────
 //
-// This file used to read the founder's address out of api/_lib/plans.js — "the
+// This file used to read the owner's address out of api/_lib/plans.js — "the
 // one copy that is allowed to hold it, because api/_lib is never bundled". That
 // stopped being true when the repository went public: a plaintext address in
 // tracked source is published whether or not a browser ever fetches it. The
@@ -80,7 +80,7 @@
 //     definition;
 //   · the stronger sweep is unchanged and needs no address at all: every hit
 //     must be a published role address or an RFC 2606 placeholder, so the
-//     founder's gmail would fail it twice over;
+//     owner's gmail would fail it twice over;
 //   · the shipped chunk is exercised through the PUBLIC owner id, which reaches
 //     the same record by the other door.
 //
@@ -809,7 +809,7 @@ function answersFor(mod, input) {
   return out
 }
 
-// The founder's deliberate public identity, spelled with escapes so that a file
+// The owner's deliberate public identity, spelled with escapes so that a file
 // whose encoding was mangled fails here rather than comparing mojibake to
 // mojibake.
 const OWNER_RECORD = {
@@ -882,7 +882,7 @@ test('the client check agrees with the server allowlist it mirrors', { skip: NO_
   // decides what to RENDER from a digest compiled into the bundle; the server
   // decides what is GRANTED from ADMIN_EMAILS in the deployment environment.
   // Nothing holds them together any more except this assertion, and this
-  // assertion is only possible where the variable is set — on the founder's
+  // assertion is only possible where the variable is set — on the owner's
   // machine, or in a CI job given it. Where it is not, the skip above says so.
   //
   // A disagreement is not fatal, and is worth knowing: the server would grant
@@ -906,11 +906,11 @@ test('the client check says no to everybody else', () => {
 })
 
 test('the founder-gated call site still gets a working admin check', () => {
-  // src/contexts/SubscriptionContext.jsx is one of the four founder-gated files
+  // src/contexts/SubscriptionContext.jsx is one of the four approval-gated files
   // (tests/unit/firebase-deferral.test.js), so it still writes
   // `ADMIN_EMAILS.includes(user.email.toLowerCase())` and could not be rewritten
-  // on this branch. If that stops answering true the founder silently loses his
-  // Pro entitlement — a downgraded founder on a green build — and if it starts
+  // on this branch. If that stops answering true the owner silently loses their
+  // Pro entitlement — a downgraded owner on a green build — and if it starts
   // holding addresses again the leak is back.
   // The positive half needs an address the shim should say yes to, and the
   // only one this repository can name is a configured server allowlist entry —

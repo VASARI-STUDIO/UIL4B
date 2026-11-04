@@ -5,8 +5,8 @@
 // functions import exactly two of them. Measured 2026-09-14: 977 KB kept, 280
 // KB of files nothing imports shipped inside the function on every deploy.
 //
-// That is per deployment, and deployments are retained. The founder reported a
-// spike in deployment and function storage on the same day.
+// That is per deployment, and deployments are retained. A spike in deployment
+// and function storage was seen on the same day.
 //
 // THE OTHER HALF OF THAT SPIKE IS NOT A BUG AND WAS NOT FIXED HERE:
 // src/data/pipeline.js is the backlog of record and it grows every time a PR
@@ -21,16 +21,16 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // The repository went PUBLIC to use free GitHub Actions minutes, which made the
-// backlog world-readable. The founder kept the repository public and took the
+// backlog world-readable. The repository stayed public and the
 // notes out of it instead: src/data/pipeline.js and src/data/moduleBoard.js are
-// gitignored, on his machine only. .gitignore carries the decision and its cost.
+// gitignored, on one machine only. .gitignore carries the decision and its cost.
 //
 // `includeFiles` then named two paths that do not exist in a clone, so it was
 // removed, and the `functions` block was empty after it and went too.
 //
 // THAT CHANGES WHAT THIS FILE CAN ASSERT, NOT WHY IT EXISTS. The old assertion
 // was "includeFiles names exactly what api/ imports". Pinned to the literal
-// glob, it would now be a line saying the founder must undo his own decision.
+// glob, it would now be a line saying the decision must be undone.
 // The property underneath it survives intact and is what is checked below:
 //
 //   EVERY src/ FILE api/ IMPORTS IS EITHER BUNDLED BY includeFiles OR
@@ -207,7 +207,7 @@ const NO_GIT = IGNORED === null
  *
  * Roots that are gitignored (the two internal boards) are not walked: they are not
  * in the deploy, so nothing they import is either, and walking them would make this
- * answer differ between a clone and the founder's machine.
+ * answer differ between a clone and the owner's machine.
  */
 function reachableFromApi(roots, ignored) {
   const seen = new Set()
