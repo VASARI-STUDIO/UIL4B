@@ -14,7 +14,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments } from './helpers/source-text.js'
 import {
-  BILLING_OPTIONS, BILLED_EVERY, priceState, resolveOffers,
+  BILLING_OPTIONS, BILLED_EVERY, PRICE_STATE_COPY, priceState, priceStateCopy, resolveOffers,
 } from '../../src/config/planFacts.js'
 import {
   cheapestPerMonth, livePlans, livePriceOf, resolvePlanLadder, savingsVsMonthly,
@@ -230,6 +230,35 @@ test('/checkout prints no rate until the chosen offer is available', () => {
   assert.match(note, /^const note = !proPrice\.loaded/, 'the note no longer waits for the prices to settle')
   assert.doesNotMatch(note, /chosenOption\?\.months/, 'the rate branch is guarded by months alone again — "A$0.00/mo" before the prices land')
   assert.ok(note.indexOf('!amount') < note.indexOf('chosenOption.months'), 'the rate branch comes before the available check')
+})
+
+test('/checkout and Settings print no cadence suffix and no trial band beside an unavailable price', () => {
+  const checkout = stripComments(read('src/pages/Checkout.jsx'))
+  // The slot's word comes from the shared copy; the suffix and the band need an amount.
+  assert.match(checkout, /\{amount \|\| priceCopy\.word\}/, 'Checkout does not print the shared word when there is no amount')
+  assert.match(checkout, /\{amount && <span className="checkout-plan-per">\{plan\.per\}<\/span>\}/, 'Checkout prints "per month" beside a price that is not there')
+  assert.match(checkout, /\{plan\.trial && amount && \(\s*<div className="checkout-trial">/, 'Checkout shows the trial band without a live amount')
+  const settings = stripComments(read('src/pages/Settings.jsx'))
+  assert.match(settings, /\{canCheckout\(priceStatus\) \? offer\.amountLabel : priceCopy\.word\}/, 'Settings does not print the shared word when the price is not live')
+  assert.match(settings, /\{canCheckout\(priceStatus\) && <span className="sub-tier-per">per month<\/span>\}/, 'Settings prints "per month" beside a price that is not live')
+})
+
+test('the three price surfaces keep none of the shared outage sentences as literals', () => {
+  // A probe currency and labels, so a sentence built from them splits into its fixed parts.
+  const probe = { currencyLabel: 'ZZZ', selectedLabel: 'SSS', otherLabel: 'OOO' }
+  const fixed = new Set()
+  for (const id of Object.keys(PRICE_STATE_COPY)) {
+    const copy = priceStateCopy(id, probe)
+    for (const text of [copy.line1, copy.line2, copy.button, copy.under]) {
+      if (!text) continue
+      for (const part of text.split(/ZZZ|SSS|OOO/)) if (part.trim().length >= 12) fixed.add(part)
+    }
+  }
+  assert.ok(fixed.size >= 6, 'the sentences were not collected from the copy table')
+  for (const file of ['src/pages/Pricing.jsx', 'src/pages/Checkout.jsx', 'src/pages/Settings.jsx']) {
+    const page = stripComments(read(file))
+    for (const part of fixed) assert.ok(!page.includes(part), `${file} types "${part}" instead of taking it from PRICE_STATE_COPY`)
+  }
 })
 
 test('/checkout and Settings take the outage from the shared priceState, with the Retry', () => {
