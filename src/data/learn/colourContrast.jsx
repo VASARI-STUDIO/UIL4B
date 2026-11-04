@@ -219,7 +219,8 @@ ratio  = (L_lighter + 0.05) / (L_darker + 0.05)`}</Formula>
           the same size. The thin word puts far less ink on the screen and looks
           much fainter. WCAG 2 splits size into two coarse bands and ignores stroke
           width. The WCAG 3 draft has not chosen a contrast method yet. APCA is one
-          candidate under discussion, and it does take weight into account. Until
+          proposal that does take weight into account, but it is not part of the
+          current draft. Until
           a method is final, a light-weight face is a reason to set a higher
           target than 4.5 in your own work. It does not change the WCAG number.
         </p>
