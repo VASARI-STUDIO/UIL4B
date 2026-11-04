@@ -39,11 +39,12 @@ const EXIT_SHIELD_MS = 500
 //
 //   1. THE BAR. A strip docked to the bottom of every step (a floating glass
 //      pill from 1024px), showing all four steps at once with a tick on the
-//      ones that are built AND THE ARTEFACT EACH ONE PRODUCED: the real
-//      swatches, the real family names, the real base and ratio. That is the
-//      difference between a guided flow and four bookmarks: standing on Icons
-//      you can see the palette you drew on Colours. Every value comes off the
-//      saved design, so the bar cannot show a system the tools did not build.
+//      ones that are built. The help panel lists THE ARTEFACT EACH ONE
+//      PRODUCED: the real swatches, the real family names, the real base and
+//      ratio. That is the difference between a guided flow and four bookmarks:
+//      standing on Icons you can see the palette you drew on Colours. Every
+//      value comes off the saved design, so neither can show a system the tools
+//      did not build.
 //      The bar is fixed over the foot of the viewport at every width
 //      (tool-shell.css), so it has the same height, width and position on all
 //      four tools and on every step.
@@ -633,7 +634,7 @@ export default function UIKitGuide({ step }) {
       <div className={`bkit-rail${lifted ? ' bkit-rail--kbd' : ''}${showName ? ' bkit-rail--name' : ''}`} ref={railRef} role="region" aria-label="Brand kit walkthrough">
         <div className="bkit-rail-head">
           <span className="bkit-rail-eyebrow">Brand kit</span>
-          {/* Drawn at every width; the title shows only from 1056px. */}
+          {/* Drawn at every width; the title shows only from 1024px. */}
           <span className="bkit-rail-count" aria-live="polite">{count}</span>
         </div>
 
@@ -672,9 +673,8 @@ export default function UIKitGuide({ step }) {
           <button type="button" className="bkit-rail-close" onClick={exit} aria-label="Leave the walkthrough" title="Leave the walkthrough. It is not saved as a project until you name it.">
             {CLOSE_ICON(14, 2.4)}
           </button>
-          {/* Text on a bar wider than 1040px (never the 896px pill); otherwise
-              the text is visually hidden and the icon shows, so the control and
-              its name both stay (the title repeats the name for a pointer user). */}
+          {/* Icon only at every width: the text is visually hidden, so the
+              control keeps its name, and the title repeats it for a pointer. */}
           <button
             type="button"
             className="bkit-rail-help"

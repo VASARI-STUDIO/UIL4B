@@ -213,8 +213,8 @@
 }
 .bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px))}
 
-/* The lead. Below 1056px it is the band at the top of the bar, with only the
-   count drawn; the title is read out but not shown. From 1056px it sits in the
+/* The lead. Below 1024px it is the band at the top of the bar, with only the
+   count drawn; the title is read out but not shown. From 1024px it sits in the
    row, title first. The count reserves the width of its longest reading, so
    moving between steps never changes the bar's width. */
 .bkit-rail-head{position:absolute;top:6px;inset-inline-start:max(var(--s-4),env(safe-area-inset-left,0px));display:flex;align-items:center;height:20px;white-space:nowrap}
@@ -236,8 +236,7 @@
 .bkit-step-label::after{content:attr(data-label);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:540}
 .bkit-tick{display:block;flex:none;stroke-width:2.5}
 
-/* What a step produced: in the panel's list, and on the bar only where there
-   is room. */
+/* What a step produced: in the panel's list. The bar never draws it. */
 .bkit-step-swatches{display:flex;gap:3px}
 .bkit-step-swatch{display:block;width:12px;height:12px;border-radius:3px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 12%,transparent)}
 .bkit-step-value{font-size:var(--fs-caption);font-weight:400;line-height:1.5;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
