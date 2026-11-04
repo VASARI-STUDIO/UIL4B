@@ -34,7 +34,7 @@ export const SUBMIT_INTENT_VERSION = 1
 // standing in front of. /community now has two — a design form and an icon form
 // — and one name for both would sign somebody in for an icon and hand them back
 // the design form, which is the exact failure the intent exists to prevent.
-export const SUBMIT_SURFACES = ['community', 'community-icon', 'palette', 'prompt']
+export const SUBMIT_SURFACES = ['community', 'community-icon', 'palette', 'gradient', 'prompt']
 
 // The plain-language "why do I need an account" answer, shared by every entry
 // point so the promise is identical wherever the user meets it.

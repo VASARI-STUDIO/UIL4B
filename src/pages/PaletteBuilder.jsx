@@ -2958,6 +2958,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       kind: 'palette',
       name,
       user,
+      authorName: publicHandle,
       payload: { colors: adjusted, category: 'Branding', url, author: publicHandle },
     })
     if (!queued) {
