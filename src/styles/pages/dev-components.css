@@ -66,4 +66,4 @@
 /* input:focus,select:focus,textarea:focus */
 .dcs-field-focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 /* .lib-surface .lbry-search:focus-within */
-.lib-surface .lbry-search.dcs-focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.lib-surface .lbry-search.dcs-focus-within { border-color: var(--accent); }

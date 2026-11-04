@@ -94,6 +94,13 @@ export default function NotFound() {
     if (arrivedInApp(pathname)) headingRef.current?.focus()
   }, [pathname])
 
+  // A known route can render this page too (an admin-only route seen by
+  // everyone else), and the app's route title would then name that route. The
+  // tab says what the visitor is looking at; the string matches App.jsx.
+  useEffect(() => {
+    document.title = 'UI L4B | Page not found'
+  }, [pathname])
+
   // The report form opens as a bug report with the broken path filled in.
   const report = new URLSearchParams({ type: 'bug', page: pathname })
   const from = linkingPath(pathname)

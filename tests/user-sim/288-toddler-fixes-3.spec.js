@@ -240,7 +240,9 @@ test.describe('/discover/prompts: parked behind the admin check', () => {
 // ── 5. Keyboard focus is visible on search fields and palette sliders ────────
 //
 // Already ringed before this change: the four palette Adjust sliders (a 2px
-// outline on the track), the Font Gallery preview field and its compare range.
+// outline on the track under :focus, palette-builder.css; Chromium does not
+// report a focused pseudo-element's style, so it is not asserted here), the
+// Font Gallery preview field and its compare range.
 // Search fields drew only a border colour and a faint wash, and no outline.
 
 test.describe('keyboard focus rings', () => {
@@ -251,7 +253,7 @@ test.describe('keyboard focus rings', () => {
     return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) }
   })
 
-  for (const route of ['/create/icons', '/discover/emoji', '/create/font-gallery']) {
+  for (const route of ['/create/icons', '/create/emoji', '/create/font-gallery']) {
     test(`${route}: the search field shows a ring on focus`, async ({ page }) => {
       watch(page, 'a keyboard user reaching the search field')
       await go(page, route)
@@ -265,22 +267,6 @@ test.describe('keyboard focus rings', () => {
       expect(ring.width).toBeGreaterThanOrEqual(2)
     })
   }
-
-  test('/create/palette: each Adjust slider shows a ring on its track', async ({ page }) => {
-    watch(page, 'a keyboard user adjusting the palette')
-    await go(page, '/create/palette?c=14224A,249EAF,F2C14E,2563EB,C0392B')
-    const sliders = page.locator('.plb-adjust').getByRole('slider')
-    await expect(sliders).toHaveCount(4)
-    for (let i = 0; i < 4; i += 1) {
-      await sliders.nth(i).focus()
-      const track = await sliders.nth(i).evaluate((el) => {
-        const s = getComputedStyle(el, '::-webkit-slider-runnable-track')
-        return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) }
-      })
-      expect(track.style, `slider ${i + 1} has a ring on its track`).not.toBe('none')
-      expect(track.width).toBeGreaterThanOrEqual(2)
-    }
-  })
 })
 
 // ── 6. Brand Starter says an account is needed ───────────────────────────────
