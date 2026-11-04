@@ -79,6 +79,7 @@ import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from 
 import {
   geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
 } from '../../api/_lib/geoBlock.js'
+import { emailGateBody } from '../../api/_lib/emailGate.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
@@ -207,6 +208,8 @@ function loadAi({
     ALT_TEXT_CUTOFF_REFUND_CAP,
     // api/_lib/geoBlock.js — the real, pure region gate.
     geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+    // api/_lib/emailGate.js — the real, pure email gate.
+    emailGateBody,
     // Per-test replacements for the stubs above, for the paths a test drives.
     ...stubs,
   }
