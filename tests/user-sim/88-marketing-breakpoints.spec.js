@@ -5,7 +5,7 @@
 // Every assertion in here is the shipped form of something that was measured
 // wrong first. The four it was written for:
 //
-// 1. THE GALLERY MASTHEAD'S DEAD SPACE (founder decision, 2026-09-13).
+// 1. THE GALLERY MASTHEAD'S DEAD SPACE.
 //    .dgh-hero carried `min-height` (300px, 280 below 720px) together with
 //    `align-items:end`. Those two declarations together mean the box cannot be
 //    right at two content lengths at once: the floor holds it open, the end
@@ -127,7 +127,7 @@ test.describe('the Discover masthead is sized by its content at every width', ()
           bad.push(`  ${route} @${width}: ${m.dead}px of empty masthead `
             + `(hero ${m.heroH}, content ${m.contentH}, padding ${m.padY})`)
         }
-        // The founder's own framing, and the only one that catches the
+        // The framing, and the only one that catches the
         // two-column case, where the box has no spare height and still paints
         // black above the headline.
         if (m.emptyAboveH1 > 4) {
@@ -156,8 +156,8 @@ test.describe('the Discover masthead is sized by its content at every width', ()
   }
 
   // The deleted sentences, pinned by absence. Both mastheads ran the same
-  // template line and the founder deleted both; the replacement, if there ever
-  // is one, is his to write, so this asserts the template cannot come back
+  // template line and both were deleted; the replacement, if there ever
+  // is one, is for the owner to write, so this asserts the template cannot come back
   // rather than asserting any particular wording.
   test('neither library masthead runs the shared template sentence', async ({ page }) => {
     let checked = 0
@@ -381,8 +381,7 @@ test.describe('the marketing set exposes a usable landmark list', () => {
 // ── The two legal pages ─────────────────────────────────────────────────────
 // ── THE HOMEPAGE HEADLINE IS SIZED BY HEIGHT AS WELL AS WIDTH ───────────────
 //
-// Founder, 2026-09-15, with a screenshot of his own window: "on smaller
-// desktop pages the scale seems too large."
+// On smaller desktop pages the scale seemed too large, as seen in a screenshot.
 //
 // `.home-hero-h1` was `clamp(46px, 6.6vw, 96px)` — viewport WIDTH only. A
 // laptop is wide and short, so the width said "big screen" while the height
@@ -492,7 +491,7 @@ test('the height rule is on the homepage headline and nowhere else', async ({ br
 })
 
 test('/terms and /privacy set a section heading the same way', async ({ page }) => {
-  // Founder decision, 2026-09-13. /terms ran .legal-h--sm (16px, body font,
+  // /terms ran .legal-h--sm (16px, body font,
   // weight 700) where /privacy ran .legal-h (22px, display, 500) — the same
   // content type, the same <h2>, two answers. This compares the COMPUTED type,
   // so it fails whether the divergence comes back as a class, an inline style
@@ -526,7 +525,7 @@ test('/discover does not describe its own libraries as external', async ({ page 
   // The sentence Google prints under the result and every share card shows.
   // It called eight groups "the best external design resources"; seven of them
   // are UI L4B's own libraries and two are badged Soon. Asserted against the
-  // claims rather than the wording, so the founder can rewrite the sentence
+  // claims rather than the wording, so the sentence can be rewritten
   // without rewriting the test.
   await go(page, '/discover')
   const description = await page.evaluate(() =>

@@ -1,15 +1,15 @@
 // The compressed secondary landings, and the two homepage marks.
 //
-// Two founder requests of 2026-09-05 land here, and both are the kind of change
+// Two requests land here, and both are the kind of change
 // that regresses by ACCRETION rather than by breaking: somebody adds one more
 // "why it helps" band to /discover, or a stale count creeps back into a hero
 // hint, and nothing fails. So these assert the SHAPE and the DERIVATION, not
 // the wording.
 //
-//   1. [secondary-pages-compress-to-links] — "i want to compress our secondary
-//      sales pages to mostly act as linking pages showcasing a tools value
-//      proposition then a link". Three pages, and the founder chose the deepest
-//      of the three depths offered: value prop plus link, nothing else.
+//   1. [secondary-pages-compress-to-links] — the secondary sales pages act mostly
+//      as linking pages showcasing a tool's value proposition, then a link. Three
+//      pages, at the deepest of the three depths offered: value prop plus link,
+//      nothing else.
 //
 //   2. [homepage-hero-buffer-reference] — the drawn "give it a try" pointing at
 //      the command bar, and the step marker beside the tools heading.
@@ -28,9 +28,9 @@
 //   landing left to be compressed, so it is out of every table below rather
 //   than re-pointed — a tool shell is not a secondary sales page and asserting
 //   "two bands under main" of one would be measuring the wrong thing.
-// · The two remaining landings COMPRESSED FURTHER, by the founder's own
-//   2026-09-18 decision quoted in SurfaceIndex.jsx: "/discover and /learn lose
-//   their sales intro and go straight to the real library/guide index." The
+// · The two remaining landings COMPRESSED FURTHER, as recorded in
+//   SurfaceIndex.jsx: /discover and /learn lose their sales intro and go straight
+//   to the real library/guide index. The
 //   eyebrow, the pitch headline, the lede and the single hero CTA all went. So
 //   the hero's "exactly one way in" rule is now "no pitch in the head at all",
 //   which is the same request taken one notch deeper — see the test.
@@ -76,8 +76,8 @@ test.describe('the secondary landings stay compressed', () => {
 
       // NO PITCH IN THE HEAD. This used to read "exactly one `.ui-pill`",
       // because the fault it caught was a SECOND hero button pointing OUT of
-      // the surface the visitor had just arrived at. The founder took it a
-      // notch deeper on 2026-09-18 — the head is now the surface's own name and
+      // the surface the visitor had just arrived at. It later went a
+      // notch deeper — the head is now the surface's own name and
       // one derived count line, with no call to action at all, on the grounds
       // that a visitor who clicked Discover has already decided to browse.
       //

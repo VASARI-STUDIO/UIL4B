@@ -20,8 +20,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * THE SEAM, AND WHY IT IS THIS ONE
  * ═══════════════════════════════════════════════════════════════════════════
- * `src/contexts/AuthContext.jsx` is founder-gated by
- * docs/reference/human-validation-zones.md and is NOT TOUCHED by any of this.
+ * `src/contexts/AuthContext.jsx` is approval-gated and is NOT TOUCHED by any
+ * of this.
  * It does not need to be. Every piece of session state in the app descends from
  * one line inside it:
  *

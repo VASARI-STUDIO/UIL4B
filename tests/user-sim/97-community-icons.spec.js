@@ -1,8 +1,7 @@
 // SUBMITTING AN ICON TO THE COMMUNITY — rendered, not inferred.
 //
-// Founder, 2026-09-18: "people can submit icons to the community they just need
-// to be reviewed - all submissions of any sorts are tied to the account not
-// browser."
+// People can submit icons to the community; they just need to be reviewed. All
+// submissions of any sort are tied to the account, not the browser.
 //
 // tests/unit/community-icon-submission.test.js proves the RULES about what may
 // be submitted. It cannot prove any of the following, because all four are
@@ -18,7 +17,7 @@
 //      cards would be the page implying a publication that has not happened.
 //   4. THE ACCOUNT HOLDS IT. Submitted in one session, still there after the
 //      browser's own storage is wiped and the page reloaded — which is the
-//      founder's requirement stated as something a test can watch.
+//      requirement stated as something a test can watch.
 //
 // ── MUTATION — all five applied, seen red, and restored byte-exact ─────────
 //
@@ -191,7 +190,7 @@ test.describe('community icon submissions', () => {
   })
 
   test('a submission this browser has never seen is shown, because the ACCOUNT holds it', async ({ page }) => {
-    // The founder's requirement, stated as something a test can watch. The
+    // The requirement, stated as something a test can watch. The
     // strongest form of "tied to the account, not the browser" is a submission
     // made somewhere else entirely: this browser has no record of it, and the
     // page shows it anyway.

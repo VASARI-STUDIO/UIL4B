@@ -373,11 +373,10 @@ test.describe('Font Gallery', () => {
     await fillGalleryPreviewText(page, 'Make the words the interface')
     // ONE SPECIMEN PER ROW, AT EVERY WIDTH.
     //
-    // This assertion has now been turned twice, and both turns were founder
-    // decisions rather than tests relaxed to go green. It first pinned a
-    // full-width list; then a grid, on the direction that the typography tools
-    // browse like the gradient and palette libraries; and now a list again, on
-    // the direction of 2026-09-02 — "1 font per row and 1 column".
+    // This assertion has been turned twice, and both turns were design decisions
+    // rather than tests relaxed to go green. It first pinned a full-width list;
+    // then a grid, so the typography tools browse like the gradient and palette
+    // libraries; and now a list again: one font per row, one column.
     //
     // What is NOT the same as the first version is what a row now contains, and
     // that is the part worth pinning. The audit that produced the grid was
@@ -429,8 +428,8 @@ test.describe('Font Gallery', () => {
     await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
   })
 
-  // The founder asked three times for "real world examples not the same UI
-  // examples for each one". These two tests are the browser half of that: the
+  // Each typeface should show real-world examples, not the same UI examples for
+  // each one. These two tests are the browser half of that: the
   // unit suite proves the RULES, this proves a real reader actually sees
   // different examples for different typefaces, in the app, on the catalogue
   // this runner really has.
@@ -472,7 +471,7 @@ test.describe('Font Gallery', () => {
     const sans = await scenesFor('Rubik')
     const script = await scenesFor('Yesteryear')
 
-    // THE ASSERTION THE FOUNDER'S REPORT REDUCES TO: not one fixed set.
+    // THE ASSERTION THE REPORT REDUCES TO: not one fixed set.
     expect(new Set([serif.join(), sans.join(), script.join()]).size,
       `three kinds of face must not share one set of examples — got serif=${serif}, sans=${sans}, script=${script}`)
       .toBe(3)
@@ -528,11 +527,9 @@ test.describe('Font Gallery', () => {
   })
 
   test('the two example sections are separate, adjacent, and read as different kinds of thing', async ({ page }) => {
-    // The founder's ask, 2026-09-05: "1 tab showing Usage examples using some
-    // made mockup use cases, but ... a tab showing real world use applications
-    // for each font and an image to show it". The pop-up now holds them as two
-    // headed sections of one scroll rather than two tabs, and a reader has to be
-    // able to tell from the headings which one is invented.
+    // The pop-up shows mockup use cases and real-world applications for each
+    // font as two headed sections of one scroll rather than two tabs, and a
+    // reader has to be able to tell from the headings which one is invented.
     watch(page, 'designer looking for what this face does in the world')
     await go(page, '/create/font-gallery')
     await page.getByLabel('Search font families').fill('Lora')
@@ -1117,8 +1114,8 @@ test.describe('typography tools under a failing font catalogue', () => {
 })
 
 // ── Choosing a family is BROWSABLE, not recall-and-type ──────────────────────
-// The founder's report was that picking a pair "expects you to remember and
-// type font names". The cause was structural rather than cosmetic: the picker
+// Picking a pair used to expect you to remember and type font names. The cause
+// was structural rather than cosmetic: the picker
 // was a native <select>, and a <select> renders every option in the UI font, so
 // there was no arrangement of it that could show a face. These tests pin the
 // property that fixes it — you can SEE what you are choosing — plus the

@@ -74,8 +74,8 @@ const RETIRED_OR_THIN_ROUTES = [
   // Hidden tools retain live routes but are excluded from EXPECTED_CRAWLER_ROUTES.
   '/create/ai-prompt',
   '/create/landing-prompts',
-  // '/create/alt-text' was here while the tool was staged. It is live again (founder
-  // batch 4), mounted in CreateTool's LIVE_TOOLS and listed in the crawler
+  // '/create/alt-text' was here while the tool was staged. It is live again,
+  // mounted in CreateTool's LIVE_TOOLS and listed in the crawler
   // sitemap, so EXPECTED_CRAWLER_ROUTES now derives it from the tool tree above.
   '/create/typography',
   '/create/imagery',

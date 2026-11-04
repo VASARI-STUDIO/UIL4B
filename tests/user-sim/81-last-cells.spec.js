@@ -36,7 +36,7 @@
 //                    long as it was open, and an <h2> sitting 8px above the
 //                    primary action — less space than any two form fields in
 //                    the same dialog get between them. The heading's WORDS are
-//                    untouched and stay founder-blocked; see the PR body.
+//                    untouched and stay approval-gated.
 import { test, expect } from './base.js'
 import { go, signIn, watch, openChosenDialog } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -461,7 +461,7 @@ test.describe('the login surfaces paint only what is true', () => {
       expect(m.gap, `${width}: the h2 sits ${m.gap}px above the primary action, against a ${m.fieldGap}px field rhythm`)
         .toBeGreaterThanOrEqual(m.fieldGap)
       // The words and the type are untouched — this cell is a SPACING fix and
-      // nothing else. `auth.welcomeBack` is founder-blocked.
+      // nothing else. `auth.welcomeBack` is approval-gated.
       expect(m.titleSize).toBe('22px')
       await expect(page.locator('#ui-login-title')).toHaveText('Log in to UIL4B')
 

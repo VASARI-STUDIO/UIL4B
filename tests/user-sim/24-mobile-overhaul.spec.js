@@ -995,15 +995,12 @@ test('S11b · on a touch tablet the swatch quick tools are on show and pressable
   expect(damage, damage.join('\n')).toEqual([])
 })
 
-// REVERSED 2026-09-13, BY THE FOUNDER, AFTER USING THE PAGE. This test used to
+// REVERSED AFTER USING THE PAGE. This test used to
 // assert the opposite — that the phone row keeps all seven controls — on the
 // grounds that an audit had called that row "legible and clearly authored" and
 // that adding the overflow control there "would be an eighth icon in a row that
-// already works". The founder looked at /create/palette at ~660px and said:
-//
-//   "im finding alot of basic UI problems that can be replaced with better UI
-//    design such as replacing some buttons with a drop down or other large
-//    issues"
+// already works". Looking at /create/palette at ~660px showed basic UI problems
+// that better UI design fixes, such as replacing some buttons with a drop down.
 //
 // The old reasoning is answered by the SHAPE of the change rather than ignored:
 // the overflow control does not join seven icons, it replaces five of them. The
@@ -1015,8 +1012,8 @@ test('S11b · on a touch tablet the swatch quick tools are on show and pressable
 // covered at 390x568, 390x640 or 320x568, and `.plb-role` — which had been
 // `display:none` below 769px — back in the 128px that frees.
 //
-// If this is ever reversed again, reverse it because the founder looked at the
-// rendered page again, not because an audit preferred the older row.
+// If this is ever reversed again, reverse it because the rendered page was
+// looked at again, not because an audit preferred the older row.
 //
 // The design's drawn board (D:1017-1043) puts one control on a colour, the
 // lock at its top corner; copy is the hex itself. The row is now Lock and the

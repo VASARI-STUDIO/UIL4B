@@ -15,7 +15,7 @@
 // off the source. A skipped test is honest; a test asserting against a nav
 // nobody can reach is not.
 //
-// WHAT IT GUARDS. The founder's number-one constraint is that no functionality
+// WHAT IT GUARDS. The top constraint is that no functionality
 // is lost, and this bar carries five controls where the app header carries
 // fifteen. Everything the pill drops has to be in the full-screen menu, and
 // that menu has to behave like a dialog: focus in, focus trapped, scroll

@@ -1,6 +1,6 @@
 // Where the typography paywall sits, driven rather than read.
 //
-// Founder decision 2026-09-05, settling [typography-paywall-model]: browsing is
+// The model: browsing is
 // free, saving is Pro. This file proves both halves against the production
 // build, and the FREE half gets the longer treatment, because it is the half
 // that fails silently.
@@ -182,7 +182,7 @@ test.describe('Typography: browsing stays free under every view', () => {
   })
 
   test('pairing and scale-building work signed out, exports included', async ({ page }) => {
-    // The founder is selling the tools. A crippled free surface undermines the
+    // The tools are what is sold. A crippled free surface undermines the
     // thing that does the selling, so this asserts the tools still WORK, not
     // merely that they load.
     watch(page, 'a developer taking tokens out of the type tools signed out')

@@ -1,8 +1,8 @@
 // The header sweep, in a browser.
 //
-// #surface-headers-read-as-ai. The founder marked TWO elements of the Font
-// Gallery header "AI" — the taxonomy eyebrow and the three-up figure strip —
-// and wrote: "make sure to make that change to all the headers that match".
+// #surface-headers-read-as-ai. TWO elements of the Font Gallery header read as
+// AI — the taxonomy eyebrow and the three-up figure strip — and the change was
+// to be made to all the headers that match.
 //
 // #382 made the change on the Font Gallery, Font Pair and the shared Discover
 // masthead. #386 found the Type Scale still carrying both. This file covers the
@@ -106,7 +106,7 @@ test.describe('no tool header restates the path the visitor walked', () => {
 // ── The figure strips ───────────────────────────────────────────────────────
 //
 // Four four-up strips, one per page, each a wider copy of the three-up the
-// founder marked. The reasoning for every individual figure is in the comment
+// first sweep removed. The reasoning for every individual figure is in the comment
 // beside the markup that carried it. What is asserted here is the shape: no
 // band of equal-weight figures in the masthead, and the facts that DID earn
 // their place still on the page.

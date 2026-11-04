@@ -10,7 +10,7 @@ async function enter(page) {
 
 // SKIPPED, not deleted — and the reason written here was wrong twice over.
 //
-// It used to say: "UI System mode went ADMIN-ONLY (founder decision, this batch
+// It used to say: "UI System mode went ADMIN-ONLY (this batch
 // — see canUseUiSystem in PaletteBuilder.jsx) … this suite runs signed out —
 // there is no auth harness, so the surface is genuinely unreachable from here."
 // Neither half survives contact with the tree.
@@ -18,17 +18,17 @@ async function enter(page) {
 //   THERE IS AN AUTH HARNESS. #407 landed signIn(page, { admin: true }), and
 //   tests in this very suite use it. "Runs signed out" stopped being a reason.
 //
-//   AND THE DOOR IS NOT LOCKED, IT IS GONE. On 2026-09-05 the founder removed
-//   BOTH entry points from the Palette Builder — the "Build UI system" toolbar
-//   button AND the "UI System / Admin" breadcrumb — in favour of a guided
+//   AND THE DOOR IS NOT LOCKED, IT IS GONE. BOTH entry points were removed
+//   from the Palette Builder — the "Build UI system" toolbar button AND the
+//   "UI System / Admin" breadcrumb — in favour of a guided
 //   walkthrough from the nav (components/UIKitGuide.jsx). `canUseUiSystem` is
 //   gone with them. Nothing imports components/UiSystemBuilder.jsx, so it is in
 //   no chunk of any production build. NO ADMIN CAN REACH IT EITHER.
 //
-// That mattered because a note saying "admin-only" sends the next agent looking
+// That mattered because a note saying "admin-only" sends the next reader looking
 // for an auth gate to satisfy, and there is no gate to find. Settled by
 // RENDERING rather than by reading source: "UI System mode is unreachable for an
-// ADMIN too" in 57-signed-in-session.spec.js signs in as the founder, proves the
+// ADMIN too" in 57-signed-in-session.spec.js signs in with the founder role, proves the
 // session is admin by opening /admin, proves the Palette Builder rendered, and
 // only then asserts the controls are absent.
 //

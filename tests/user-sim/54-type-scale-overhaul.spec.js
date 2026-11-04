@@ -1,7 +1,7 @@
 // The Type Scale overhaul, in a browser.
 //
-// #type-scale-ui-overhaul. The founder: "the type scale UI needs a overhaul it
-// looks AI generated. design the tool with a user centric design".
+// #type-scale-ui-overhaul. The type scale UI looked AI generated and needed a
+// user-centric redesign.
 //
 // Every assertion here is a thing that was true of the page BEFORE the change
 // and must stay false, or a wiring that the change introduced and that a green
@@ -30,7 +30,7 @@ test.describe('Type Scale · the overhaul', () => {
     watch(page, 'the founder re-reading the page he marked AI')
     await go(page, '/create/type-scale')
 
-    // 1. THE TAXONOMY EYEBROW. Marked "AI" by the founder on the Font Gallery
+    // 1. THE TAXONOMY EYEBROW. Marked as an AI tell on the Font Gallery
     //    and deleted from every tool masthead #382 reached. It did not reach
     //    this page, so "Create / Typography" was still here.
     await expect(page.locator('.tsc-page .sec-h-eyebrow')).toHaveCount(0)

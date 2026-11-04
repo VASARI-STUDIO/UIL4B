@@ -1,6 +1,6 @@
 // THE FLOW AUDIT, 2026-09-09 — six journeys a real person takes, rendered.
 //
-// The founder's standing ask is that every flow "feels intentional" and that
+// The standing aim is that every flow "feels intentional" and that
 // the value is visible before anything is asked for. 57-signed-in-session and
 // the 58-flows files reach each surface; this file walks the SEAMS between
 // them — the moment a refusal, a gate, a modal or a confirmation answers the
@@ -351,7 +351,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     }
     await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
 
-    // THE CTA NAMES THE TRIAL. The founder asked for it to be more obvious than
+    // THE CTA NAMES THE TRIAL. It must be more obvious than
     // a line of small print, and the button is the last thing read before the
     // decision. A cadence with no trial must NOT say it.
     const cta = modal.locator('.ui-pro-cta .btn').first()

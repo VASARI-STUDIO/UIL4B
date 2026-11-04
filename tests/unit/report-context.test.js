@@ -131,10 +131,9 @@ test('context rides in an existing field, so no API change was needed', () => {
 
 // ── The right-click capture (backlog `right-click-feedback`) ────────────────
 //
-// Founder request 2026-09-02: open feedback with the details PREFILLED, so a
-// report is easy to find and replicate. The note is explicit that "PRIVACY IS
-// PART OF THE TASK, not an afterthought: show the user exactly what is
-// attached before they send, and let them remove any of it". These tests hold
+// Opens feedback with the details PREFILLED, so a report is easy to find and
+// replicate. Privacy is part of the feature: the user sees exactly what is
+// attached before they send, and can remove any of it. These tests hold
 // both halves — what may be captured, and that removal is real rather than
 // cosmetic.
 

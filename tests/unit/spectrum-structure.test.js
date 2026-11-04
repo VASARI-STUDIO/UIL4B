@@ -2,15 +2,13 @@
 //
 // Three properties, each of which has cost this repository something before:
 //
-//   1. THE FOUNDER'S NOTE STAYS REACHABLE, and stays opt-in. It is an open
-//      founder ask ("i also still want my little about message accessable in the
-//      footer") and the whole design of FounderNote.jsx is that it never opens
-//      itself. Spectrum ships its own footer, so the note has to be carried
-//      across rather than inherited.
+//   1. THE ABOUT NOTE STAYS REACHABLE, and stays opt-in. The whole design of
+//      FounderNote.jsx is that it never opens itself, and the footer is where
+//      it is reached. Spectrum ships its own footer, so the note has to be
+//      carried across rather than inherited.
 //   2. NOTHING IS DROPPED FROM THE FOOTER. Spectrum's footer replaces AppFooter
-//      on its route. "make sure to not remove any functionality of the app this
-//      is important" is the founder's stated top priority for this redesign, and
-//      a footer link is functionality.
+//      on its route, and a footer link is functionality: the redesign must not
+//      remove any functionality of the app.
 //   3. THE REDUCED-MOTION COMPANIONS AND THE VISIBLE RESTING STATE SURVIVE. A
 //      word reveal is a transform that hides text, and `useReveal`'s own comment
 //      records the last time a reveal with a hidden resting state shipped: /learn
@@ -64,7 +62,7 @@ test('the stripper still works, so every source read below can be trusted', () =
   assertStripperWorks(assert)
 })
 
-/* ── 1. the founder's note ─────────────────────────────────────────────────── */
+/* ── 1. the about note ─────────────────────────────────────────────────── */
 
 test('the Spectrum footer carries the founder\'s note', () => {
   assert.ok(FOOTER.includes("from '../FounderNote'"),
@@ -79,8 +77,8 @@ test('nothing on this page opens the founder\'s note by itself', () => {
   // The note is opt-in BY CONSTRUCTION — it owns its own `open` state and
   // exposes no way in from outside. This check is the guard against the
   // temptation that the front door creates: a timer, a scroll depth, a
-  // first-visit flag. Any of those would rebuild the welcome popup the founder
-  // was offered and turned down.
+  // first-visit flag. Any of those would rebuild a welcome popup, which this
+  // note deliberately is not.
   for (const [file, src] of Object.entries(SOURCES)) {
     assert.ok(!/FounderNote[^>]*\bopen\b/.test(src),
       `${file} passes an \`open\` prop to FounderNote. It has none, and adding one turns an `

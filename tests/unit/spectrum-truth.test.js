@@ -148,7 +148,7 @@ test('the page offers no cadence that cannot reach checkout', () => {
 /* ── claims the rest of the app has already retracted ──────────────────────── */
 
 test('the page does not promise a cancellation the portal cannot do', () => {
-  // /plans deleted "cancel any time" under a founder flag because the Stripe
+  // /plans deleted "cancel any time" pending owner approval because the Stripe
   // Customer Portal has no cancellation flow enabled. Re-adding it on the front
   // page retracts nothing. The prototype says it twice — an assurance chip and
   // an FAQ answer ("From the dashboard, in two clicks, no email required").

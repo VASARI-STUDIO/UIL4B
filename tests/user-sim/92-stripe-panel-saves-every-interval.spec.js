@@ -11,7 +11,7 @@
 // That distinction is the whole bug. The old panel looked completely healthy —
 // it loaded, it showed the right currencies, it took edits — and failed only
 // at the last step, on the server, naming an interval the screen never
-// mentioned. The founder is about to press this button against LIVE Stripe
+// mentioned. The owner is about to press this button against LIVE Stripe
 // with a real card ladder behind it. "The source no longer contains a literal"
 // is not the assurance that deserves; "the click produces this exact body" is.
 //

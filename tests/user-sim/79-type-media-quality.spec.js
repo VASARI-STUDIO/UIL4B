@@ -385,7 +385,7 @@ test.describe('the icon and emoji libraries carry one masthead between them', ()
   // `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a route
   // that has not existed since the two merged: the only import of either module
   // is IconEmojiLibrary.jsx, which passed `embedded` unconditionally. The
-  // eyebrow was `sec-h-eyebrow`, the element the founder marked "AI" and #382
+  // eyebrow was `sec-h-eyebrow`, the element marked as an AI tell and #382
   // deleted from every tool masthead it reached.
   //
   // This asserts the PROPERTY that made the block dead rather than its absence

@@ -50,8 +50,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(pickerColour).toBe(firstColour)
 
     // This used to assert the seed SURVIVED a reload, which was true because
-    // `vs-palette-session-seed` pinned the first draw to the tab. The founder's
-    // 2026-09-03 request is that the page auto-loads a random palette, so an
+    // `vs-palette-session-seed` pinned the first draw to the tab. The page now
+    // auto-loads a random palette, so an
     // untouched board is now redrawn on arrival — and it must be, because the
     // board was also being persisted on mount, which meant "random on load"
     // held exactly once per device and never again.
@@ -418,9 +418,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   })
 })
 
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset restores the default settings but randomises the colour.
 //
 // The two rules with teeth — that the default settings are the FREE ones, and
 // that a shared link outranks the draw — are enumerated in

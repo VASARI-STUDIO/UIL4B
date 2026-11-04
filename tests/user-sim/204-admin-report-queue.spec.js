@@ -204,7 +204,7 @@ for (const theme of THEMES) {
       await openQueue(page, { theme })
       await card(page, '(forged)').locator('.adm-submission-head').click()
       const body = card(page, '(forged)').locator('.adm-submission-body')
-      // CONTROL: the forged line really is in the stored message the founder reads.
+      // CONTROL: the forged line really is in the stored message the owner reads.
       await expect(body.locator('.adm-submission-msg')).toContainText('Reporter: signed in')
       await expect(body).toContainText('From: forger@example.test')
       await expect(body).toContainText('(unverified, typed by the reporter)')

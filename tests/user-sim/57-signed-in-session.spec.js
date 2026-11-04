@@ -433,9 +433,9 @@ test('the admin dashboard has no backlog tab, asks no backlog endpoint, and fetc
   // Then it required the tab to ask GET /api/ai?backlog=1 with a Bearer token
   // and fetch no chunk at all — the data had moved behind requireAdmin().
   //
-  // Since 2026-09-16 the two board modules are local-only and not deployed, so
+  // Later the two board modules are local-only and not deployed, so
   // that endpoint answered 501 everywhere and both tabs rendered a paragraph
-  // saying so. The founder asked for the pipeline to go, and it went, with the
+  // saying so. The pipeline was then removed, with the
   // module board beside it. So the property is now the strongest of the three:
   // the dashboard has NO TAB for the backlog, and touring every tab it does
   // have makes NO request for it — by endpoint or by chunk.
@@ -485,13 +485,13 @@ test('the admin dashboard has no backlog tab, asks no backlog endpoint, and fetc
 test('UI System mode is unreachable for an ADMIN too, which is not what the docs said', async ({ page }) => {
   // [ui-system-mode-unreachable-for-admins-too]. README, CLAUDE-adjacent docs
   // and this suite's own 12-ui-system-builder.spec.js all described UI System
-  // mode as "admin-only", which sends the next agent looking for an auth
+  // mode as "admin-only", which sends the next reader looking for an auth
   // harness that would prove nothing. The harness now exists (#407) and this is
   // it being used to settle the question by RENDERING the page rather than by
   // reading PaletteBuilder.jsx.
   //
-  // The truth: PaletteBuilder.jsx removed BOTH doors on the founder's 2026-09-05
-  // instruction - the "UI System / Admin" breadcrumb and the "Build UI system"
+  // The truth: PaletteBuilder.jsx removed BOTH doors:
+  // the "UI System / Admin" breadcrumb and the "Build UI system"
   // toolbar button - and nothing imports components/UiSystemBuilder.jsx, so it
   // is in no chunk of any build. The surface is UNWIRED, not gated.
   //

@@ -1,9 +1,8 @@
-// THE TWO DECISIONS THE FOUNDER MADE ON 2026-09-10, RENDERED.
+// THE TWO HEADLINE DECISIONS, RENDERED.
 //
-// Both had been sitting open in docs/RELEASE-READINESS.md § 2 with an agent's
-// measurement under them and no answer. He answered both on the same day, and
-// this file is the record that the answers are what actually ships — not what a
-// comment or a changelog line says ships.
+// Both had been open, with a measurement under them and no answer. Both are now
+// decided, and this file is the record that the answers are what actually ships
+// — not what a comment or a changelog line says ships.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE HERO HEADLINE IS APPROVED

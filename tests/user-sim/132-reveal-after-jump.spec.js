@@ -1,6 +1,6 @@
 // A BLOCK THAT IS ON SCREEN MUST BE VISIBLE, WHETHER OR NOT THE VISITOR SCROLLED.
 //
-// Founder report, 2026-10-21 (card 259702de0b), measured on the live site: after
+// Measured on the live site: after
 // a hash link jump or a reload that restores scroll, the reveal block just
 // inside the fold stayed at opacity 0 and appeared only after 1-40px of
 // scrolling. Seen on /learn/principles (1440, mid-page reload, the 2nd

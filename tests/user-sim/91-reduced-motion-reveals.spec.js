@@ -1,7 +1,7 @@
 // ANIMATION OFF MUST NOT MEAN CONTENT MISSING.
 //
-// Founder report, 2026-09-15, verbatim: "if people have animation off it looks
-// broken". Reproduced on the LIVE site with prefers-reduced-motion set,
+// Reported: with animation off the site looks broken. Reproduced on the LIVE
+// site with prefers-reduced-motion set,
 // measured at load before any scroll:
 //
 //   /learn          13 of 14 blocks blank   1,659 characters invisible
