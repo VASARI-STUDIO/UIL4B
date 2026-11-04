@@ -22,7 +22,7 @@ import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } 
 import { useModerationRole } from '../hooks/useModerationRole'
 import {
   FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, nextFeedbackStatus,
-  canReview, canSeeReporterEmail, canAssignModerators,
+  canReview, canSeeReporterEmail, canAssignModerators, canManageBilling,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { replyMailto } from '../utils/replyMailto'
@@ -91,7 +91,7 @@ const TABS = [
   { id: 'submissions', label: 'Submissions' },
   { id: 'community', label: 'Community' },
   { id: 'prompts', label: 'Prompts' },
-  { id: 'stripe', label: 'Stripe' },
+  { id: 'stripe', label: 'Stripe', show: canManageBilling },
 ]
 
 function fmtDate(iso) {
@@ -1343,7 +1343,8 @@ function UsersPanel({ localUsers, toast, role }) {
     // the raw word beside it — a spreadsheet that collapsed past-due into
     // "free" would rebuild the defect this panel was fixed for, one export
     // later and somewhere nobody is looking.
-    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'stripeStatus', 'interval', 'access', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
+    // The address goes in only for the founder, as in the feedback export.
+    const cols = [...(canSeeReporterEmail(role) ? ['email'] : []), 'displayName', 'provider', 'emailVerified', 'plan', 'stripeStatus', 'interval', 'access', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
     // displayName, company and location are user-controlled profile fields, so
     // the cells go through csvCell rather than bare quote-escaping. See utils/csv.js.
     const csv = toCsv(cols, filtered, (r, c) => (
@@ -1740,20 +1741,21 @@ export default function Admin({ toast }) {
   // refresh that makes a freshly minted claim usable in the same session.
   const { role, loading: roleLoading } = useModerationRole()
   const [tab, setTab] = useState('overview')
+  const tabs = TABS.filter(t => !t.show || t.show(role))
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
   // stop; arrows move within it. Without this the ten tabs were ten separate
   // stops, so reaching the content of the last one meant ten presses.
   const tabRefs = useRef({})
   const onTabKeyDown = (e) => {
-    const i = TABS.findIndex(t => t.id === tab)
+    const i = tabs.findIndex(t => t.id === tab)
     let next = null
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + TABS.length) % TABS.length
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length
     else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = TABS.length - 1
+    else if (e.key === 'End') next = tabs.length - 1
     if (next === null) return
     e.preventDefault()
-    const id = TABS[next].id
+    const id = tabs[next].id
     setTab(id)
     tabRefs.current[id]?.focus()
   }
@@ -2228,7 +2230,7 @@ export default function Admin({ toast }) {
         aria-label="Admin sections"
         onKeyDown={onTabKeyDown}
       >
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button
             key={t.id}
             role="tab"
@@ -2772,7 +2774,7 @@ export default function Admin({ toast }) {
       )}
 
       {/* ═══════ STRIPE TAB ═══════ */}
-      {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
+      {tab === 'stripe' && canManageBilling(role) && <StripeSetupPanel toast={toast} />}
       </div>
     </div>
   )

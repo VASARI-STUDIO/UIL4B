@@ -248,3 +248,39 @@ test('a moderator export has no email column and no address in the file', async 
   expect(csv).toContain('Content report: Aurora Card')
   for (const row of FEEDBACK) expect(csv, `the moderator file leaks ${row.email}`).not.toContain(row.email)
 })
+
+// The Stripe tab and the address column in the Users export are the founder's.
+// Break it: drop `show: canManageBilling` from the Stripe entry in TABS, or the
+// canSeeReporterEmail check in exportUsersCSV (src/pages/Admin.jsx).
+test.describe('what a moderator is not shown', () => {
+  test('the founder has a Stripe tab and a moderator does not', async ({ page }) => {
+    await openQueue(page, { theme: 'light', role: 'moderator' })
+    await expect(page.locator('#admtab-users')).toBeVisible()
+    await expect(page.locator('#admtab-stripe')).toHaveCount(0)
+    // Arrow keys walk only the tabs that are there: End lands on Prompts.
+    await page.locator('#admtab-submissions').focus()
+    await page.keyboard.press('End')
+    await expect(page.locator('#admtab-prompts')).toBeFocused()
+  })
+
+  test('the founder still has the Stripe tab', async ({ page }) => {
+    await openQueue(page, { theme: 'light' })
+    await expect(page.locator('#admtab-stripe')).toBeVisible()
+  })
+
+  for (const role of ['founder', 'moderator']) {
+    test(`the Users export carries an email column only for the founder (${role})`, async ({ page }) => {
+      await openQueue(page, { theme: 'light', role, tab: 'users' })
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.locator('#adm-panel').getByRole('button', { name: 'Export CSV' }).click(),
+      ])
+      const fs = await import('node:fs')
+      const header = fs.readFileSync(await download.path(), 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/)[0]
+      const cols = header.split(',').map((c) => c.replace(/"/g, ''))
+      expect(cols).toContain('displayName')
+      if (role === 'founder') expect(cols).toContain('email')
+      else expect(cols).not.toContain('email')
+    })
+  }
+})

@@ -102,6 +102,16 @@ export function canAssignModerators(role) {
 }
 
 /**
+ * May this role open the Stripe price panel?
+ *
+ * Founder only. /api/setup-stripe answers anyone else with a 403, so showing a
+ * moderator the panel would only offer a Save button that cannot work.
+ */
+export function canManageBilling(role) {
+  return role === 'founder'
+}
+
+/**
  * May this role see the reporter's email address on a feedback item?
  *
  * Founder only. Feedback is submitted through /api/support, which accepts an
