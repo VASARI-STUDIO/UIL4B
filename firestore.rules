@@ -124,7 +124,8 @@ service cloud.firestore {
     // Community submissions — the shared review queue for gradients, designs
     // and palettes (utils/communityQueue.js). The owner may withdraw their own
     // submission. Pending, rejected and withdrawn items are readable only by
-    // their author and reviewers; approved items by any signed-in user.
+    // their author and reviewers; approved items by any signed-in user, and
+    // approved designs by anyone.
     match /community-submissions/{submissionId} {
       function isSignedIn() { return request.auth != null; }
       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
@@ -196,9 +197,19 @@ service cloud.firestore {
 
       // Rules are not filters: listMySubmissions filters on authorUid and the
       // reviewers' queue on status, which is what lets those lists through.
+      //
+      // An approved design is readable by anyone, signed out included: it is
+      // what /community shows every visitor, through a list query on
+      // status == 'approved' and kind == 'design'. Every other approved kind
+      // stays behind sign-in, and nothing that is not approved is open to
+      // anyone but its author and reviewers. A rule cannot hide fields, so the
+      // whole document is public once approved. A queued document carries no
+      // email (the create rule pins its keys); the reviewer's write adds only
+      // reviewedAt and reviewedBy, a reviewer uid.
       allow read: if isReviewer()
         || isOwner()
-        || (isSignedIn() && resource.data.status == 'approved');
+        || (resource.data.status == 'approved'
+            && (isSignedIn() || resource.data.kind == 'design'));
 
       // Reviewers may update; the owner may only set status to 'withdrawn',
       // and no other field may change in the same write.
