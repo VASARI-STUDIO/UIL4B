@@ -9,7 +9,7 @@
     "dev": "vite",
     "fonts:fetch": "node scripts/fetch-switzer.mjs",
     "prebuild": "node scripts/fetch-switzer.mjs",
-    "build": "vite build && node scripts/prerender.mjs",
+    "build": "vite build && node scripts/prerender.mjs && node scripts/check-no-test-session.mjs",
     "lint": "eslint .",
     "apply:gated": "node scripts/apply-gated-patches.mjs",
     "preview": "vite preview",

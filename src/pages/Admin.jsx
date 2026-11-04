@@ -25,6 +25,7 @@ import {
   canReview, canSeeReporterEmail, canAssignModerators,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
+import { isTrustedMediaUrl } from '../utils/mediaUrl'
 import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
 import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
@@ -509,7 +510,9 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             )}
             {prompt.mediaUrl && (
               <div style={{ marginBottom: 8, padding: 8, background: 'var(--bg-1)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                {prompt.mediaType === 'image' ? (
+                {!isTrustedMediaUrl(prompt.mediaUrl) ? (
+                  <div style={{ fontSize: 11, color: 'var(--t2)' }}>Media link not shown: it isn&rsquo;t hosted by UIL4B.</div>
+                ) : prompt.mediaType === 'image' ? (
                   <img src={prompt.mediaUrl} alt="Prompt media" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 'var(--radius-s)', display: 'block' }} />
                 ) : (
                   <video src={prompt.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 'var(--radius-s)', display: 'block' }} />
