@@ -114,6 +114,9 @@
 .adm-submission-notes{background:var(--bg-2);border-radius:var(--radius-s);padding:12px;margin-bottom:12px}
 .adm-submission-notes-title{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);margin-bottom:8px}
 .adm-submission-actions{display:flex;gap:6px;flex-wrap:wrap}
+/* The triage buttons are small on purpose at a desk; to a finger, or in a
+   phone-width window, each is a full 44px target. */
+@media(pointer:coarse),(max-width:767px){.adm-submission-actions .btn,.adm-submission-notes .btn{min-height:44px}}
 
 /* Prompt admin cards */
 .adm-prompt{border-left:3px solid var(--border);margin-bottom:8px}

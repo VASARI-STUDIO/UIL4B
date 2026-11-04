@@ -12,6 +12,7 @@ import {
   colourShares,
   extractPalette,
   hexToRgb,
+  isTruncatedPng,
   nextCandidate,
   oklabToRgb,
   pickPalette,
@@ -19,7 +20,10 @@ import {
   rankClusters,
   rgbToHex,
   rgbToOklab,
+  sampleRadius,
+  visibleShare,
 } from '../../src/utils/imagePalette.js'
+import * as palette from '../../src/utils/imagePalette.js'
 
 // Build an image from a function (x, y) -> [r, g, b, a?].
 function image(width, height, paint) {
@@ -124,6 +128,13 @@ test('a small vivid accent survives among large neutral areas', () => {
   assert.ok(colours.some((c) => colourDistance(c.hex, ORANGE) < 0.02), colours.map((c) => c.hex).join(' '))
 })
 
+test('a flat page with a tiny accent keeps the accent', () => {
+  // 0.33% of the picture: a 40px square on 800x600, scaled down to 200x150.
+  const img = image(200, 150, (x, y) => (x >= 150 && x < 160 && y >= 105 && y < 115 ? hex('#FF5A1F') : hex('#FFFFFF')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(colours.some((c) => colourDistance(c.hex, '#FF5A1F') < 0.02), colours.map((c) => c.hex).join(' '))
+})
+
 test('no two colours are closer than the merge distance', () => {
   // A smooth gradient with grain: lots of near-identical shades.
   let seed = 7
@@ -209,6 +220,243 @@ test('averageHex reads a neighbourhood, skips transparent pixels, and clips at t
   assert.equal(averageHex(img.data, 9, 9, 0, 0, 2), '#900000')   // a 3x3 corner window
 })
 
+// ── Flat art, small images and damaged files ─────────────────────────────────
+
+const deltaE = (a, b) => colourDistance(a, b) * 100        // OKLab x 100: about 1 is barely visible
+const TEAL = [42, 157, 143]
+const YELLOW = [233, 196, 106]
+const CORAL = [231, 111, 81]
+const mix = (a, b) => a.map((v, i) => Math.round((v + b[i]) / 2))
+
+// Three flat colours side by side on a transparent page, with the two things a
+// real logo has: a one-pixel blend where two colours meet, and a rim of partly
+// transparent pixels round the outside.
+function logo() {
+  return image(64, 64, (x, y) => {
+    if (x < 5 || x > 58 || y < 5 || y > 58) return [0, 0, 0, 0]
+    if (x === 5 || x === 58 || y === 5 || y === 58) return [...(x < 23 ? TEAL : x < 42 ? YELLOW : CORAL), 150]
+    if (x === 22) return [...mix(TEAL, YELLOW), 255]
+    if (x === 41) return [...mix(YELLOW, CORAL), 255]
+    return [...(x < 22 ? TEAL : x < 41 ? YELLOW : CORAL), 255]
+  })
+}
+
+test('a logo with anti-aliased edges and a transparent page gives exactly its three colours', () => {
+  const { status, colours } = extractPalette(logo(), 5)
+  assert.equal(status, 'ok')
+  assert.equal(colours.length, 3, colours.map((c) => c.hex).join(' '))
+  for (const want of [TEAL, YELLOW, CORAL]) {
+    const hexWant = rgbToHex(...want)
+    assert.ok(colours.some((c) => deltaE(c.hex, hexWant) <= 2), `${hexWant} is missing from ${colours.map((c) => c.hex).join(' ')}`)
+  }
+})
+
+test('every marker of a logo stands inside a flat area, so the readout is the colour', () => {
+  const img = logo()
+  const { colours } = extractPalette(img, 5)
+  for (const c of colours) {
+    // The 5x5 window round the marker is one colour all the way.
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        assert.deepEqual(rgbAt(img, c.px + dx, c.py + dy), hex(c.hex), `${c.hex} marker at ${c.px},${c.py}`)
+      }
+    }
+  }
+})
+
+test('a faded image with no fully opaque area still gives its colours', () => {
+  const img = image(30, 30, (x) => (x < 15 ? [...hex(RED), 200] : [...hex(BLUE), 200]))
+  const { colours } = extractPalette(img, 4)
+  assert.deepEqual(colours.map((c) => c.hex).sort(), [BLUE, RED].sort())
+})
+
+test('an 8x8 image of four blocks gives its four colours exactly', () => {
+  const blocks = [hex('#E63946'), hex('#2A9D8F'), hex('#E9C46A'), hex('#264653')]
+  const img = image(8, 8, (x, y) => blocks[(y < 4 ? 0 : 2) + (x < 4 ? 0 : 1)])
+  const { colours } = extractPalette(img, 5)
+  assert.deepEqual(colours.map((c) => c.hex).sort(), ['#264653', '#2A9D8F', '#E63946', '#E9C46A'])
+})
+
+test('on a tiny image a marker reads the one pixel it stands on, not its neighbours', () => {
+  const blocks = [hex('#E63946'), hex('#2A9D8F'), hex('#E9C46A'), hex('#264653')]
+  const img = image(8, 8, (x, y) => blocks[(y < 4 ? 0 : 2) + (x < 4 ? 0 : 1)])
+  assert.equal(sampleRadius(8, 8), 0)
+  const r = sampleRadius(img.width, img.height)
+  assert.equal(averageHex(img.data, 8, 8, 1, 1, r), '#E63946')
+  assert.equal(averageHex(img.data, 8, 8, 6, 6, r), '#264653')
+  // The old fixed 5x5 window crossed into the next block here.
+  assert.notEqual(averageHex(img.data, 8, 8, 3, 3, 2), '#E63946')
+})
+
+test('the sample radius grows with the image and tops out at 2', () => {
+  assert.equal(sampleRadius(8, 8), 0)
+  assert.equal(sampleRadius(500, 31), 0)       // the short side decides
+  assert.equal(sampleRadius(32, 32), 1)
+  assert.equal(sampleRadius(63, 400), 1)
+  assert.equal(sampleRadius(64, 64), 2)
+  assert.equal(sampleRadius(4000, 3000), 2)
+})
+
+test('a flat single-colour image returns that one colour, exactly', () => {
+  const { status, colours } = extractPalette(image(40, 40, () => hex('#336699')), 5)
+  assert.equal(status, 'flat')
+  assert.equal(colours.length, 1)
+  assert.equal(colours[0].hex, '#336699')
+})
+
+test('a five-band flag with a little noise stays within a barely visible step of each band', () => {
+  // Channel values sit mid-bucket (3 mod 8) so +-2 of noise never changes bucket.
+  const bands = [[227, 59, 67], [243, 251, 235], [171, 219, 227], [67, 123, 163], [27, 51, 91]]
+  let seed = 11
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+  const img = image(100, 100, (x, y) => bands[Math.floor(y / 20)].map((v) => v + Math.round((rnd() - 0.5) * 4)))
+  const { colours } = extractPalette(img, 5)
+  assert.equal(colours.length, 5, colours.map((c) => c.hex).join(' '))
+  for (const band of bands) {
+    const want = rgbToHex(...band)
+    assert.ok(colours.some((c) => deltaE(c.hex, want) <= 1), `${want} is missing from ${colours.map((c) => c.hex).join(' ')}`)
+  }
+})
+
+test('visibleShare tells an empty image from one with something in it', () => {
+  assert.equal(visibleShare(image(20, 20, () => [0, 0, 0, 0])), 0)
+  assert.equal(visibleShare(image(20, 20, () => [9, 9, 9, 255])), 1)
+  assert.equal(visibleShare(image(20, 20, (x) => (x < 5 ? [9, 9, 9, 255] : [9, 9, 9, 60]))), 0.25)
+  assert.equal(visibleShare({ data: new Uint8ClampedArray(0), width: 0, height: 0 }), 0)
+})
+
+test('averageHex prefers fully opaque pixels over the soft rim beside them', () => {
+  const img = image(5, 5, (x) => (x < 2 ? [...hex(RED), 255] : [...hex(BLUE), 180]))
+  assert.equal(averageHex(img.data, 5, 5, 2, 2, 2), RED)
+  const soft = image(5, 5, () => [...hex(BLUE), 180])
+  assert.equal(averageHex(soft.data, 5, 5, 2, 2, 2), BLUE)
+})
+
+// ── Flat art must not swallow what is not flat ───────────────────────────────
+
+const clamp8 = (v) => Math.max(0, Math.min(255, Math.round(v)))
+const noise = (seed0) => {
+  let seed = seed0
+  return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+}
+const has = (colours, want, within = 2) => colours.some((c) => deltaE(c.hex, want) <= within)
+const list = (colours) => colours.map((c) => c.hex).join(' ')
+
+test('a grainy photo on a plain white page is not flat art, and the photo keeps its colours', () => {
+  // The photo covers 30% of the picture, +-6 of grain; no 3x3 patch of it is flat.
+  const rnd = noise(7)
+  const W = 384, H = 256
+  const bw = Math.sqrt(0.3) * W, bh = Math.sqrt(0.3) * H
+  const x0 = (W - bw) / 2, y0 = (H - bh) / 2
+  const img = image(W, H, (x, y) => {
+    if (x < x0 || x >= x0 + bw || y < y0 || y >= y0 + bh) return [255, 255, 255]
+    const t = (x - x0) / bw
+    return [clamp8(200 - 100 * t + 12 * (rnd() - 0.5)), clamp8(120 + 60 * Math.sin(y / 20) + 12 * (rnd() - 0.5)), clamp8(60 + 100 * t + 12 * (rnd() - 0.5))]
+  })
+  const { status, colours } = extractPalette(img, 5)
+  assert.notEqual(status, 'flat')
+  assert.ok(colours.length > 2, list(colours))
+  assert.ok(colours.some((c) => c.hex !== '#FFFFFF' && colourDistance(c.hex, '#FFFFFF') > 0.1), list(colours))
+})
+
+test('a screenshot with a photo thumbnail keeps a colour of the thumbnail', () => {
+  const rnd = noise(3)
+  const thumb = [150, 100, 70]
+  const img = image(384, 256, (x, y) => {
+    if (x < 60) return [30, 30, 40]                                   // dark sidebar
+    if (x >= 100 && x < 240 && y >= 60 && y < 142) {                  // 11% photo
+      return [clamp8(thumb[0] + 20 * Math.sin(x / 15) + 30 * (rnd() - 0.5)), clamp8(thumb[1] + 20 * Math.cos(y / 12) + 30 * (rnd() - 0.5)), clamp8(thumb[2] + 30 * (rnd() - 0.5))]
+    }
+    return [250, 250, 250]
+  })
+  const { colours } = extractPalette(img, 6)
+  assert.ok(has(colours, rgbToHex(...thumb), 8), list(colours))
+})
+
+test('a one-pixel line on a white page is a colour of the picture', () => {
+  const img = image(384, 256, (x, y) => (y === 128 ? hex('#DC1E1E') : hex('#FFFFFF')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#DC1E1E'), list(colours))
+  assert.ok(has(colours, '#FFFFFF'), list(colours))
+})
+
+test('a line chart of three two-pixel lines gives all three line colours', () => {
+  const lines = [[220, 40, 40], [40, 160, 60], [40, 60, 220]]
+  const img = image(384, 256, (x, y) => {
+    const at = [x * 0.3 + 20, 200 - x * 0.2, 128 + 30 * Math.sin(x / 20)]
+    for (let k = 0; k < 3; k++) if (Math.abs(y - at[k]) < 1) return lines[k]
+    return [255, 255, 255]
+  })
+  const { colours } = extractPalette(img, 5)
+  for (const line of lines) assert.ok(has(colours, rgbToHex(...line)), `${rgbToHex(...line)} missing from ${list(colours)}`)
+})
+
+test('a button with one-pixel black text keeps the black', () => {
+  const img = image(384, 256, (x, y) => {
+    if (x < 100 || x >= 260 || y < 100 || y >= 140) return [255, 255, 255]
+    return x % 6 === 0 && y >= 110 && y < 130 ? [0, 0, 0] : [30, 90, 220]
+  })
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#000000'), list(colours))
+  assert.ok(has(colours, '#1E5ADC'), list(colours))
+})
+
+test('a 12px red accent on a 384x288 page is kept', () => {
+  // 0.13% of the picture, and only 100 of its 144 pixels have a flat 3x3 around them.
+  const img = image(384, 288, (x, y) => (x >= 20 && y >= 20 && x < 32 && y < 32 ? hex('#FF0000') : hex('#F0F0F0')))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#FF0000'), list(colours))
+})
+
+test('a mostly translucent area beside a smaller solid one keeps both colours', () => {
+  // 70% blue at alpha 180, 30% solid white: the white must not cancel the blue.
+  const img = image(200, 200, (x) => (x < 140 ? [40, 80, 220, 180] : [255, 255, 255, 255]))
+  const { colours } = extractPalette(img, 5)
+  assert.ok(has(colours, '#2850DC'), list(colours))
+  assert.ok(has(colours, '#FFFFFF'), list(colours))
+  assert.equal(colours.length, 2, list(colours))
+})
+
+test('a one-pixel line over an anti-aliased edge does not turn the blends into colours', () => {
+  // A red disc with a soft edge on white, plus a 1px black line: three colours, no pinks.
+  const img = image(300, 200, (x, y) => {
+    if (y === 20) return [0, 0, 0]
+    const t = Math.max(0, Math.min(1, 70 - Math.hypot(x - 150, y - 110) + 0.5))
+    return [255, 255, 255].map((v, k) => Math.round(v * (1 - t) + [220, 40, 40][k] * t))
+  })
+  const { colours } = extractPalette(img, 8)
+  assert.equal(colours.length, 3, list(colours))
+})
+
+test('a PNG with no IEND chunk is cut short; a complete one, or a non-PNG, is not', () => {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+  const iend = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+  assert.equal(isTruncatedPng(signature, new Array(64).fill(0xab)), true)
+  assert.equal(isTruncatedPng(signature, [...new Array(52).fill(7), ...iend]), false)
+  assert.equal(isTruncatedPng([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0], new Array(64).fill(0xab)), false)
+  assert.equal(isTruncatedPng([1, 2, 3], []), false)
+})
+
+// A tiny PNG-shaped byte string: the signature, some data, an IEND chunk and
+// `after` more bytes (a valid file can carry metadata or padding after IEND).
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+const pngBytes = ({ after = 0, cut = false } = {}) => {
+  const iend = [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+  return Uint8Array.from([...PNG_SIGNATURE, ...new Array(200).fill(7), ...(cut ? [] : iend), ...new Array(after).fill(0)])
+}
+
+test('a PNG with 100 bytes after IEND is not called damaged, and one cut before IEND is', async () => {
+  // The picker reads the whole file, so the check sees what follows IEND.
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ after: 100 })])), false)
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ after: 5000 })])), false)
+  assert.equal(await palette.isCutShort(new Blob([pngBytes({ cut: true })])), true)
+  assert.equal(await palette.isCutShort(new Blob([new Uint8Array(500).fill(0xab)])), false)   // not a PNG
+  assert.equal(await palette.isCutShort(new Blob([])), false)
+  const rest = (bytes) => bytes.slice(PNG_SIGNATURE.length)
+  assert.equal(isTruncatedPng(PNG_SIGNATURE, rest(pngBytes({ after: 100 }))), false)
+  assert.equal(isTruncatedPng(PNG_SIGNATURE, rest(pngBytes({ cut: true }))), true)
+})
+
 // ── Putting picks on a board ─────────────────────────────────────────────────
 
 const BOARD = ['#111111', '#222222', '#333333', '#444444']
@@ -276,4 +524,21 @@ test('appendPicks on a full board leaves it unchanged', () => {
   assert.deepEqual(full, copy)
   // A board already past the cap (the cap fell) does not shrink or grow either.
   assert.equal(appendPicks([...full, '#090909'], PICKS, 8).used, 0)
+})
+
+test('a thin line with a little noise keeps its colour', () => {
+  // A lightly compressed chart: a red line about 2px tall on near-white, every
+  // pixel off by up to 1 per channel. Its colour straddles two buckets, and
+  // the two halves must not reject each other as blends.
+  for (const amp of [2, 4, 6]) {
+    let seed = 3
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+    const cl = (v) => Math.max(0, Math.min(255, v))
+    const img = image(384, 256, (x, y) => {
+      const n = amp * (rnd() - 0.5)
+      return Math.abs(y - (x * 0.3 + 20)) < 1.2 ? [cl(220 + n), cl(40 + n), cl(40 + n)] : [cl(250 + n), cl(250 + n), cl(250 + n)]
+    })
+    const { colours } = extractPalette(img, 5)
+    assert.ok(colours.some((c) => colourDistance(c.hex, '#DC2828') < 0.05), `noise ${amp}: ${colours.map((c) => c.hex).join(' ')}`)
+  }
 })
