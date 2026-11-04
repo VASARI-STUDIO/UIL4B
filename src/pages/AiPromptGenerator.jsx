@@ -233,8 +233,7 @@ export default function AiPromptGenerator({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        {/* THE EYEBROW IS GONE, THE ALPHA BADGE IS NOT. Founder, 2026-09-14,
-            continuing #382/#386: the 10px mono-caps "AI Tools" restated the
+        {/* THE EYEBROW IS GONE, THE ALPHA BADGE IS NOT. The 10px mono-caps "AI Tools" restated the
             section directly above an h1 reading "AI Image Prompt Generator",
             on a route the nav already has lit. But the badge riding inside it
             is the opposite of decoration — it is the only thing on the page

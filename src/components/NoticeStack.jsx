@@ -18,8 +18,8 @@ import SyncNotice from './SyncNotice'
 // the nav. That coordinate is where every sticky toolbar on the site parks
 // itself — .plb-toolbar, .uis-command, .lbry-toolbar, .pgl-section-head all
 // derive from the nav height — so a notice covered the toolbar of whatever
-// tool was open. The founder reported it on the Palette Builder on 2026-09-14
-// and decided the notices move into the page flow.
+// tool was open (seen on the Palette Builder), so the notices now move into the
+// page flow.
 //
 // A notice cannot be a plain flow element here: the nav is position:fixed and
 // every page starts its own content below it with --nav-clear, so an element

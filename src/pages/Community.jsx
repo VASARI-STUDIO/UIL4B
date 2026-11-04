@@ -136,9 +136,8 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
 
 // THE ICON FORM — the second thing this page takes.
 //
-// Founder, 2026-09-18: "people can submit icons to the community they just need
-// to be reviewed - all submissions of any sorts are tied to the account not
-// browser."
+// People can submit icons to the community; they only need to be reviewed.
+// All submissions of any sort are tied to the account, not the browser.
 //
 // It is a SEPARATE modal behind a SEPARATE button rather than a type switch
 // inside the design form, for the reason Behance's "New Asset" is its own entry
@@ -498,9 +497,9 @@ export default function Community({ toast }) {
     try {
       return await publishToQueue({ ...queued, localId: item.id })
     } catch (err) {
-      // Never claim it reached the queue when it did not. Until the founder
-      // publishes docs/design/community-icon-rules.patch, firestore.rules does
-      // not know the 'icon' kind and this is the branch every submission takes.
+      // Never claim it reached the queue when it did not. Until
+      // firestore.rules learns the 'icon' kind, this is the branch every
+      // submission takes.
       // A refusal by the post limits says so instead; the icon stays unsynced
       // and can be sent again once the limit allows.
       toast?.(isPostLimit(err)
@@ -766,7 +765,7 @@ export default function Community({ toast }) {
           Every string here already existed. The heading and the status come from
           GradientGallery's own queue; the note is the submission form's own
           sentence, which is the accurate one for icons (they DO reach the
-          account, which is what the founder asked for). */}
+          account). */}
       {myIcons.length > 0 && (
         <section aria-labelledby="ch-icons-heading">
           {/* THE THREE INLINE `style` OBJECTS HERE ARE GONE, and the row keeps

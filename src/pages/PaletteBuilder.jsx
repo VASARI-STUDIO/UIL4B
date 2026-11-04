@@ -890,7 +890,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   useEffect(() => {
     consumeBoardDraft()
     // One line, once per mount, saying WHY this board looks the way it does.
-    // The founder's report is intermittent and state-shaped, so the thing worth
+    // The bug report is intermittent and state-shaped, so the thing worth
     // shipping is not a guess about which branch misfired but a record that
     // names it the next time it happens. `handoff` in particular should only
     // ever be minutes-fresh; an age near the ttl in a report is the smoking gun
@@ -927,12 +927,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   })
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
 
-  // P-003, founder verdict: the free tier is A FOOT IN THE DOOR.
+  // The free tier is A FOOT IN THE DOOR.
   //
   // That settles what this collapse should feel like. A free user opening a
   // board saved on a paid system got Auto silently: the chip still read
   // "Analogous" while the board rendered something else, so the product looked
-  // unreliable rather than paid. The proposal's own smallest version is "make
+  // unreliable rather than paid. The principle is "make
   // every gate EXPLICIT rather than silent — the user should always know they
   // hit a paid edge, never merely find that something behaved oddly."
   //
@@ -1226,12 +1226,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   })
   const [handleInput, setHandleInput] = useState('')
   const [handleErr, setHandleErr] = useState('')
-  // UI SYSTEM MODE IS GONE FROM THIS PAGE. Founder instruction, 2026-09-05:
-  // “lets remove the build UI system from the colour pallete also, lets make the
-  // one in the navigation the create Brand system should start a guided
-  // walkthrough to build a full system”. Both halves are one decision — the
-  // palette tool stops being a side door into system-building, and the nav
-  // becomes the single front door (see components/UIKitGuide.jsx).
+  // UI SYSTEM MODE IS GONE FROM THIS PAGE. Both halves are one decision — the
+  // palette tool stops being a side door into system-building, and the nav's
+  // “Create Brand system” becomes the single front door, starting a guided
+  // walkthrough to build a full system (see components/UIKitGuide.jsx).
   //
   // BOTH entry points went, not one: the “UI System / Admin” breadcrumb beside
   // the title AND the “Build UI system” toolbar button. They were already
@@ -1498,7 +1496,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // rapid changes collapse into one write ~200ms after the user settles.
   //
   // An UNTOUCHED RANDOM DRAW IS NOT SAVED WORK. Skipping the mount write for it
-  // is what makes the founder's "auto load a random palette" true on every
+  // is what makes "auto load a random palette" true on every
   // visit rather than only the first: this effect used to persist the drawn
   // board immediately, which turned a throwaway default into a saved palette
   // the user never made, and from then on the saved branch of the precedence
@@ -1561,7 +1559,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setSeed(norm)
     regen(norm, harmony)
     // Zero the lens, so the colour the user just named is the colour they get.
-    // Regenerating UNDER an active lens is what produced the founder's report:
+    // Regenerating UNDER an active lens is what produced a reported bug:
     // type #4A56AE with hue at +116° and every swatch lands 116° away from it,
     // including the seed swatch the field is supposedly reporting. There is no
     // reading of "set the seed to this" that ends with the seed being something
@@ -2292,8 +2290,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // ── The loupe ────────────────────────────────────────────────────────────
   //
-  // Founder: "show me a large zoomed in view so i can [see] exactly what pixel
-  // im selecting". Five markers over a ~400px preview of a 4000px photo means
+  // The picker needs a large zoomed-in view so you can see exactly which pixel
+  // you are selecting. Five markers over a ~400px preview of a 4000px photo means
   // one marker covers roughly a hundred source pixels, so "which one am I on"
   // was genuinely unanswerable.
   //
@@ -2435,8 +2433,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       importedSig: importedSigRef.current,
       at: Date.now(),
     }
-    // Founder request, 2026-09-03: "reset should reset the settings to default
-    // but randomise the colour." So the settings go back to DEFAULT_SYSTEM with
+    // Reset puts the settings back to default and randomises the colour. So the
+    // settings go back to DEFAULT_SYSTEM with
     // the lens at zero, and the COLOURS are a fresh draw from the same engine
     // the Randomise button uses — not a return to the fixed #4338E0 board, and
     // not the paid analogous system this used to rebuild under a free label.
@@ -2906,7 +2904,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Save the one-time community handle after the profanity/evasion filter.
   // NOTE: uniqueness is only checked against handles seen on THIS device — the
   // community store is localStorage today. Server-side (Firestore) uniqueness
-  // is deferred to the founder (flagged: needs a Firestore rule/transaction).
+  // is deferred (needs a Firestore rule/transaction).
   const saveHandle = () => {
     const problem = handleProblem(handleInput)
     if (problem) { setHandleErr(problem); return }
@@ -2987,7 +2985,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // "Save / export" used to ask for an account before it would OPEN, and behind
   // it sat Copy link to this palette, Copy CSS variables and Copy hex values.
   // So on this one surface copying was gated — which is the opposite of the rule
-  // the founder set on 2026-09-15: producing a FILE needs a free account,
+  // that producing a FILE needs a free account,
   // copying a value never does. The board's own per-swatch Copy and the
   // toolbar's Copy CSS were free the whole time, so the product disagreed with
   // itself inside a single page.

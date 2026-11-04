@@ -12,14 +12,12 @@ import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 import { weightName } from '../utils/fontGallery'
 import { fontStack, loadFont } from '../utils/googleFonts'
 
-// The ABOUT and EXAMPLES panels — the founder's request, three times stated:
-// "a tab that shows real world examples of the font this will help users
-// understand font use cases" and "lets also include an about tab".
+// The ABOUT and EXAMPLES panels: a tab of real-world examples of the font, to
+// help users understand its use cases, and an about tab.
 //
 // ONE component, used by BOTH font popups (FontBrowseDialog, which FontPicker
 // opens for Font Pair and Type Scale, and the Font Gallery's specimen dialog).
-// The backlog asked explicitly whether they should share one rather than
-// diverge again; they should. A typeface's facts do not change with which
+// They should share one rather than diverge again. A typeface's facts do not change with which
 // dialog you opened it from, and the two dialogs have already drifted once.
 //
 // ── WHERE THE CONTENT COMES FROM, AND WHY IT IS HONEST ──────────────────────
@@ -55,9 +53,8 @@ import { fontStack, loadFont } from '../utils/googleFonts'
 //
 // The first version of this panel held a module-level array of FOUR FIXED
 // SCENES and rendered them identically for all 1,946 families — `font.category`
-// was not read once. The founder reported it three times (2026-08-08,
-// 2026-08-15, 2026-09-04): "for the font examples i want real world examples
-// not the same UI examples for each one".
+// was not read once. The examples need to be real-world ones that fit each
+// family, not the same UI examples for every font.
 //
 // src/utils/fontScenes.js now picks the scenes from what the family IS, using
 // two catalogue fields /api/fonts previously discarded (`classifications` and

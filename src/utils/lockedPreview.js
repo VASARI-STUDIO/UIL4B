@@ -65,7 +65,7 @@ const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 
 // How many locked rows to tease before the call to action.
 //
-// The founder asked for "a couple". The number comes from what makes the value
+// The brief was "a couple". The number comes from what makes the value
 // legible, not from the word:
 //   - Fewer than three reads as a stub — an error state rather than a library
 //     that continues.
@@ -82,8 +82,8 @@ export const LOCKED_TEASE = 3
 
 // ── THREE TIERS, NOT TWO ────────────────────────────────────────────────────
 //
-// Founder instruction, 2026-09-18: "for the galleries non logged in users get 3
-// free ones logged in get 10 and paid get full". The module was built for two
+// In the galleries, signed-out visitors get 3 free rows, signed-in users get
+// 10, and Pro gets the full set. The module was built for two
 // answers — entitled or not — and this is the third: an account is now worth
 // something on its own, so the ladder is anonymous → free account → Pro.
 //

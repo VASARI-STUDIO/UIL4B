@@ -526,10 +526,10 @@ export function queryCommandIndex(query, { tools = [], categories = [], actions 
 // The homepage hero bar types these one character at a time, and the PillNav
 // search field types the same list into a <span> (its field is a button, so it
 // has no placeholder attribute to drive). They stand in for the "Try …" chips
-// the founder removed on 2026-09-03: they are the only thing left telling a
+// that were removed: they are the only thing left telling a
 // visitor what is in the box. That makes correctness the whole point, which is
 // why they are SELECTED FROM THE REGISTRY rather than written down — PillNav
-// kept its own array until 2026-09-03 and it had already gone wrong, advertising
+// used to keep its own array and it had already gone wrong, advertising
 // "palette builder" and "contrast checker", both of which returned "No results",
 // and "gradients", which landed on the colour sales page.
 //

@@ -20,7 +20,7 @@ import { PAGE_TITLES } from '../data/routeMetaMap.js'
 // `cname.vercel-dns.com`. So every shell shipped before this told crawlers
 // its authoritative URL was a host that does not answer, and every shared
 // link unfurled with a broken preview image on Slack, LinkedIn, X, Discord
-// and iMessage. Founder decision, 2026-09-13: point the site at the apex,
+// and iMessage. The decision is to point the site at the apex,
 // which already serves and is the only configured domain, rather than do the
 // DNS work to make the second spelling real.
 //

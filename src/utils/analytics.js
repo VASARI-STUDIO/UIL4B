@@ -591,7 +591,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

@@ -217,8 +217,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const [mobileRatioId, setMobileRatioId] = useState('1.2')
   const [mobileCustomRatio, setMobileCustomRatio] = useState(DEFAULTS.custom)
   // Fluid joins the two ends with clamp(); fixed emits per-breakpoint values in
-  // media queries. Fluid is the default because it is what the founder chose
-  // and what avoids a visible step on resize, but the choice is real — a team
+  // media queries. Fluid is the default because it
+  // avoids a visible step on resize, but the choice is real — a team
   // with strict per-breakpoint specs needs the other one.
   const [fluid, setFluid] = useState(true)
   const [width, setWidth] = useState(deviceWidth)

@@ -1,8 +1,7 @@
 // What a palette FEELS like, derived from its own hex values.
 //
-// Founder request (2026-09-07): "for our pallete library lets include filters
-// of neutral, and others" — Neutral, Warm, Cool, Pastel, Vivid, Dark, Light,
-// Monochrome.
+// The palette library filters by mood: Neutral, Warm, Cool, Pastel, Vivid, Dark,
+// Light, Monochrome.
 //
 // ── EVERY MOOD IS MEASURED, NONE IS TAGGED ──────────────────────────────────
 //
@@ -32,8 +31,8 @@
 //     HCT moved 12 palettes across the Dark boundary in testing — a silent
 //     change to three shipped controls, in exchange for nothing the user can
 //     see.
-//   · The founder asked to ADD filters. Redefining the three that already work
-//     is not that request.
+//   · The job is to ADD filters. Redefining the three that already work
+//     is out of scope.
 //
 // Where a new mood has to be DISJOINT from an old one, it is expressed in the
 // OLD one's own measure — see PASTEL below. That is what makes the disjointness

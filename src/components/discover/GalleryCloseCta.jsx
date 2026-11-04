@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 
 // The last thing on a gallery page.
 //
-// Founder request (2026-09-07): "at the very bottom of all gallery pages,
-// include a CTA, 'cant find what you are looking for' Create and Submit your
-// own or something."
+// It closes every gallery page with a CTA for people who cannot find what they
+// are looking for: create or submit your own.
 //
 // ── WHAT IT IS, AND THE FOUR THINGS IT IS NOT ───────────────────────────────
 //
@@ -25,7 +24,7 @@ import { Link } from 'react-router-dom'
 // distinguish with iconography.
 //
 // It is NOT FIVE COPIES. Every gallery renders this component. The wording is
-// the founder's, once, in one file — five hand-written variants would drift on
+// written once, in one file — five hand-written variants would drift on
 // the first edit and the drift would be invisible until somebody read all five.
 //
 // Mobbin, for how a browse surface closes:

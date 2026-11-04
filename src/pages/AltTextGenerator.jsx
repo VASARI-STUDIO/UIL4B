@@ -66,7 +66,7 @@ const ALT_TEXT_MAX_HEIGHT = 260
 // result does not fit in three rows, so a complete answer arrived looking
 // clipped and the user had to scroll a tiny box to read their own output —
 // which is what a truncated generation looks like from the outside, and is
-// almost certainly the "generation gets cut off" in the founder's report.
+// almost certainly the reported "generation gets cut off" problem.
 // Sizing to content is what makes a finished answer LOOK finished.
 function AutoGrowTextarea({ value, maxHeight = ALT_TEXT_MAX_HEIGHT, ...rest }) {
   const ref = useRef(null)

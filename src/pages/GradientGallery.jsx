@@ -97,8 +97,8 @@ export default function GradientGallery({ toast }) {
   // follows it. Keyed on the URL's mood only: picking a mood in the tray does
   // not touch the URL and so is not undone here.
   useEffect(() => { setTag(moodFromUrl) }, [moodFromUrl])
-  // An ARRAY, because the type tray is multi-select (founder request,
-  // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
+  // An ARRAY, because the type tray is multi-select.
+  // `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.
   const [types, setTypes] = useState(['all'])
   // "Your submissions" belongs to the ACCOUNT, not to this browser: it is read
@@ -280,7 +280,7 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec lib-surface grg-wrap">
-      {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
+      {/* NO `description`: the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on
           purpose-and-content. Deleted, not rewritten. The masthead is sized by

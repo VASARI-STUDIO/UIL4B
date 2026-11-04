@@ -442,7 +442,7 @@ const outline = (x, y, w, h, stroke, radius = 0) => ({ op: 'strokeRect', x, y, w
 const hair = (x1, y, x2, stroke, dash) => ({ op: 'line', x1, y1: y, x2, y2: y, stroke, ...(dash ? { dash } : {}) })
 
 // A label is sentence case in the body face at weight 500, a point above the size
-// it was drawn at as a tracked cap, with no letter spacing (Dylan's type rule).
+// it was drawn at as a tracked cap, with no letter spacing (the house type rule).
 const labelText = (t, x, y, fill, { px = 8, weight = 500, align, family } = {}, c) =>
   text(String(t), x, y, face(weight, px + 1, family || c.d.body), fill, align ? { align } : {})
 

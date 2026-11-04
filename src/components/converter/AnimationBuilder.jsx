@@ -13,7 +13,7 @@ import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../../utils/ffmpeg
 
 // ── FRAMES IN, ONE ANIMATED FILE OUT ─────────────────────────────────────────
 //
-// Founder request, 2026-09-16: an animation builder inside the converter —
+// An animation builder inside the converter —
 // frames in, animated WebP / GIF / APNG / MP4 / WebM out, with reorder, frame
 // rate, loop and a real preview.
 //

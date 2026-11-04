@@ -4,7 +4,7 @@ import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 
 // The line above "Your workspace". It is text, not a heading.
 //
-//   signed in, a name on the profile   Welcome back, Dylan.   (Welcome, Dylan. in the first ten minutes)
+//   signed in, a name on the profile   Welcome back, Alex.   (Welcome, Alex. in the first ten minutes)
 //   signed in, no name                 Welcome back.  + Add your name (asks, saves to the profile)
 //   signed out                         Hey, you look new around here.  + Tell us your name (opens sign-up)
 //   still resolving                    nothing, with its height kept, so no one is told the wrong thing

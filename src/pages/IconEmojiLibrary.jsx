@@ -142,12 +142,12 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
   return (
     <>
     <div className="sec lib-surface iel-page">
-      {/* THE SHARED LIBRARY MASTHEAD. #292 moved this surface's browse language
+      {/* THE SHARED LIBRARY MASTHEAD. This surface's browse language moved
           onto the Palette/Gradient components; the hero was not part of that,
           so it stayed on a bespoke `.lib-head` — light, flush, 56px/720-weight
-          — next to two galleries wearing a 110px serif on a dark band. Founder
-          request: match the feeling of the other gallery pages. Same direction
-          of travel as #292: this page joins the existing pattern.
+          — next to two galleries wearing a 110px serif on a dark band. It now
+          matches the feeling of the other gallery pages: this page joins the
+          existing pattern.
 
           THE HEADLINE IS NOW THE LIBRARY'S NAME. The galleries' agreed
           vocabulary is title case with no trailing full stop ("Palette
@@ -209,7 +209,7 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
                   The OFFLINE reading stays on both tabs and is true on both —
                   the emoji set is exactly the "built-in assets" it promises
                   remain available. A truthful online reading for the emoji tab
-                  is the founder's sentence to write. */}
+                  is a sentence for the owner to write. */}
               {(!online || tab === 'icon') && (
                 <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
                   <i aria-hidden="true" />

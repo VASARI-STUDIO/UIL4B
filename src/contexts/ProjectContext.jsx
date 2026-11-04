@@ -371,8 +371,8 @@ export function ProjectProvider({ children }) {
   // ── NOTHING IS SEEDED. A NEW ACCOUNT STARTS EMPTY. ──────────────────────
   //
   // An effect here used to create a project called "Default Project" in any
-  // account that had none, on first sign-in. It is gone, on the founder's call
-  // of 2026-09-10, and the two things it cost are the reason:
+  // account that had none, on first sign-in. It is gone, and the two things it
+  // cost are the reason:
   //
   //   · IT SPENT A SLOT NOBODY ASKED FOR. The free plan saves three projects,
   //     the cap counts this array, and the seed was already in it — so a brand
@@ -383,9 +383,9 @@ export function ProjectProvider({ children }) {
   //     yet" panel that names the two tools to start with and offers the first
   //     save, and Onboarding's "Not now — take me to my projects" sends people
   //     straight at it. Signed in, the list was never empty, so that panel had
-  //     never once been on a real screen. The 2026-09-10 flow audit (#436)
-  //     measured both and put the choice to him; he chose to drop the seed so
-  //     the empty state does the teaching and the cap means three.
+  //     never once been on a real screen. Measuring both
+  //     favoured dropping the seed, so the empty state does the teaching and the
+  //     cap means three.
   //
   // REMOVING THIS TAKES NOTHING AWAY FROM ANYONE. The effect only ever WROTE,
   // and only into an account whose list was empty; no code path deleted or

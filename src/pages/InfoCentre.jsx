@@ -37,10 +37,8 @@ const INTRO_KEY = 'vs-info-intro'
 // -stats heading, one in the page's own eyebrow, and five here.
 //
 // They are not replaced with icons. An emoji beside a heading is the cheapest
-// available signal that a page was generated rather than designed, and the
-// founder has been deleting that family of tell by name since 2026-09-14
-// ("remove this text its such a common AI trait, scan the whole site and
-// remove alot of them where applied"). Beyond the taste argument they are
+// available signal that a page was generated rather than designed, and that
+// family of tell is being removed across the site. Beyond the taste argument they are
 // measurably worse than nothing here: an emoji cannot be themed, cannot be
 // measured for contrast, renders as a different picture on every platform,
 // and five of these fourteen were the same phone glyph standing for five
@@ -466,9 +464,9 @@ export default function InfoCentre() {
         {/* NO TAXONOMY EYEBROW. It read "Information Centre" behind an open-book
             glyph — a 10px mono-caps label, in --accent-strong, restating the
             page's own name directly above an h1 that names it, on a route the
-            nav already has lit. The founder has marked this exact element "AI"
-            and had it deleted from the Font Gallery, Font Pair, the Type Scale,
-            the Tint tool (#382, #386) and /privacy. Hierarchy is a control, not
+            nav already has lit. This exact element reads as AI-generated and
+            has been deleted from the Font Gallery, Font Pair, the Type Scale,
+            the Tint tool and /privacy. Hierarchy is a control, not
             a label. */}
         <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
         <p className="ic-head-sub">What each tool does, the keyboard shortcuts, and how your screen measures up, all on one page.</p>
