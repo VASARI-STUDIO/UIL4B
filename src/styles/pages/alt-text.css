@@ -225,7 +225,12 @@
 .alt-page .alt-row-error .alt-row-note,
 .alt-page .alt-row-pending .alt-row-note { min-height: 0; }
 
-.alt-page .alt-row-writing { color: var(--tl-dim); }
+/* The writing line holds the height of a three-line result at the words' own
+   size (3 lines x 1.5 + 16px padding + 2px border), so the row does not jump
+   when the text lands. The foot keeps its action row while it is empty. */
+.alt-page .alt-row-writing { min-height: calc(3 * 1.5 * 16px + 18px); color: var(--tl-dim); }
+
+.alt-page .alt-row-generating .alt-row-actions:empty { display: grid; min-height: 44px; }
 
 .alt-page .alt-row-deco-alt { margin: 0; }
 
@@ -295,6 +300,7 @@
   .alt-page .alt-row-facts { grid-column: auto; }
   .alt-page .alt-row-remove { grid-column: 4; grid-row: 1; }
   .alt-page .alt-row-text { font-size: 17px; }
+  .alt-page .alt-row-writing { min-height: calc(3 * 1.5 * 17px + 18px); }
   .alt-page .alt-row-deco-alt code { font-size: 17px; }
   .alt-page .alt-dropzone-title { font-size: 17px; }
   .alt-page .alt-dropzone--compact .alt-dropzone-title { font-size: 13px; }
@@ -364,6 +370,7 @@
 @media (pointer: coarse) {
   .alt-page .alt-field { min-height: 44px; }
   .alt-page .alt-row-text { font-size: 16px; }
+  .alt-page .alt-row-writing { min-height: calc(3 * 1.5 * 16px + 18px); }
 }
 
 html[data-reduced-motion="true"] .alt-page .alt-row-text { animation: none; }
