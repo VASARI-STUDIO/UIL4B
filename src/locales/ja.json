@@ -267,6 +267,7 @@
     "title": "アイコンライブラリ",
     "eyebrow": "アイコンライブラリ",
     "heading": "あらゆるアイコンを見つけて、カスタマイズして、コピー。",
+    "subtitleShort": "色を変えて、きれいな SVG をコピー。",
     "subtitle": "20万以上のオープンソースアイコンを検索 — Lucide、Tabler、Phosphor、Material など。どんなアイコンも色・サイズ・スタイルを変更でき（線の太さを調整、色を設定）、きれいな SVG をコピーするか、ワンクリックでエクスポートできます。閲覧とコピーは無料 — Pro ならカスタムアイコンを保存できます。",
     "searchPlaceholder": "アイコンを検索…",
     "allPacks": "すべてのパック",
@@ -280,9 +281,13 @@
     "noIcons": "上からアイコンを検索",
     "loadingPacks": "アイコンパックを読み込み中…"
   },
+  "iconGroups": {
+    "subtitleShort": "テーマ別アイコンセット、統一スタイル。"
+  },
   "emojiLibrary": {
     "eyebrow": "絵文字ライブラリ",
     "heading": "どんな絵文字も、どんな肌の色でもコピー。",
+    "subtitleShort": "カテゴリ別の絵文字を、クリックでコピー。",
     "subtitle": "カテゴリ別にすべての絵文字を閲覧し、セット全体の肌の色を切り替えて、クリックでコピー。いつでも無料。"
   },
   "imageConverter": {

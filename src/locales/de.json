@@ -267,6 +267,7 @@
     "title": "Icon-Bibliothek",
     "eyebrow": "ICON-BIBLIOTHEK",
     "heading": "Jedes Icon finden, anpassen und kopieren.",
+    "subtitleShort": "Icons umfärben, dann sauberes SVG kopieren.",
     "subtitle": "Färbe, skaliere und gestalte jedes Icon neu (Linienstärke anpassen, Farbe setzen), kopiere dann sauberes SVG oder exportiere mit einem Klick. Mit Pro speicherst du deine eigenen Icons.",
     "searchPlaceholder": "Icons suchen…",
     "allPacks": "Alle Pakete",
@@ -280,9 +281,13 @@
     "noIcons": "Suchen Sie oben nach Icons",
     "loadingPacks": "Icon-Pakete werden geladen…"
   },
+  "iconGroups": {
+    "subtitleShort": "Themen-Sets in einem einheitlichen Stil."
+  },
   "emojiLibrary": {
     "eyebrow": "EMOJI-BIBLIOTHEK",
     "heading": "Kopiere jedes Emoji in jedem Hautton.",
+    "subtitleShort": "Alle Emojis nach Kategorie, per Klick kopieren.",
     "subtitle": "Durchsuche alle Emojis nach Kategorie, ändere den Hautton für den gesamten Satz und klicke zum Kopieren. Kostenlos, für immer."
   },
   "imageConverter": {

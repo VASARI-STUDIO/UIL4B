@@ -31,17 +31,17 @@ const NO_CREDITS = []
 // keys, the keep-alive panels and the masthead all read this array.
 const LIB_TABS = [
   {
-    id: 'icon', route: '/create/icons', title: 'Icon Library', subtitle: 'iconLibrary.subtitle',
+    id: 'icon', route: '/create/icons', title: 'Icon Library', subtitle: 'iconLibrary.subtitle', subtitleShort: 'iconLibrary.subtitleShort',
     label: 'Icons', sub: 'SVG and JSX', Body: IconLibrary,
     glyph: <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5" /><circle cx="17" cy="7" r="3" /><path d="m7 14-3 6h6zM14 14h6v6h-6z" /></svg>,
   },
   {
-    id: 'emoji', route: '/create/emoji', title: 'Emoji Library', subtitle: 'emojiLibrary.subtitle',
+    id: 'emoji', route: '/create/emoji', title: 'Emoji Library', subtitle: 'emojiLibrary.subtitle', subtitleShort: 'emojiLibrary.subtitleShort',
     label: 'Emoji', sub: 'Unicode, copy-ready', Body: EmojiLibrary,
     glyph: <span className="lib-switch-emoji" aria-hidden="true">🙂</span>,
   },
   {
-    id: 'groups', route: ICON_GROUPS_ROUTE, title: 'Icon Groups', subtitle: 'iconGroups.subtitle',
+    id: 'groups', route: ICON_GROUPS_ROUTE, title: 'Icon Groups', subtitle: 'iconGroups.subtitle', subtitleShort: 'iconGroups.subtitleShort',
     label: 'Groups', sub: 'Themed sets, one style', Body: IconGroups,
     glyph: <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>,
   },
@@ -160,6 +160,7 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
       <DiscoverGalleryHero
         title={current.title}
         description={t(current.subtitle)}
+        descriptionShort={t(current.subtitleShort)}
         aside={(
           <>
             {/* The galleries put a decorative count in this column. This surface
@@ -210,10 +211,16 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
                   the emoji set is exactly the "built-in assets" it promises
                   remain available. A truthful online reading for the emoji tab
                   is a sentence for the owner to write. */}
+              {/* On a phone the pill is a dot and one short word, sitting on the
+                  title row (icon-emoji-library.css). The short word is a separate
+                  aria-hidden sibling so the pill's own text stays the full reading. */}
               {(!online || tab === 'icon') && (
-                <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
-                  <i aria-hidden="true" />
-                  {!online ? 'Offline · built-in assets remain available' : iconFallback ? 'Built-in icons' : 'Live library connected'}
+                <span className="lib-net-wrap">
+                  <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
+                    <i aria-hidden="true" />
+                    {!online ? 'Offline · built-in assets remain available' : iconFallback ? 'Built-in icons' : 'Live library connected'}
+                  </span>
+                  <span className="lib-net-short" aria-hidden="true">{!online ? 'Offline' : iconFallback ? 'Built-in' : 'Live'}</span>
                 </span>
               )}
               <span className="lib-keyhint">Use ← → to switch</span>
@@ -221,7 +228,7 @@ export default function IconEmojiLibrary({ onCopy, onCredits }) {
                   drawn here and a touch screen has no right-click. This opens the
                   same dialog the Create tools' More menu does. */}
               <button type="button" className="lib-feedback" onClick={() => { if (requestFeedbackDialog()) navigate('/feedback') }}>
-                Send feedback
+                <span><span className="lib-feedback-pre">Send </span>feedback</span>
               </button>
             </div>
           </>
