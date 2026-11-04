@@ -14,8 +14,9 @@
 //
 //   Phone tab bar and sheet (390)
 //     · With the menu sheet open from the Create tab on /projects, only the
-//       Dashboard tab (the current route) reads as selected. The Create tab,
-//       which is aria-expanded, does not.
+//       Create tab (the section the sheet shows) reads as selected and carries
+//       aria-current; Dashboard does not. Closing the sheet hands it back to the
+//       route's tab.
 //     · Signed out on /create/palette, only the Create tab reads as selected;
 //       the You tab matches the other resting tabs, before and after the
 //       sign-in dialog opens and closes, with a finger, with a mouse and with
@@ -41,9 +42,8 @@
 //     row as selected" fails (Palette has a .07 tile) at 768 and 1440.
 //   · Remove aria-current from the mega menu rows (isHere in PillNav.jsx): "the
 //     row for this page is the only one marked" fails.
-//   · Change `.pnav-tab.is-current{...}` back to
-//     `.pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{...}`: "with the sheet
-//     open, only the current route's tab reads as selected" fails (two tabs).
+//   · Drop `sheetSection` from the `current` line in PhoneTabBar.jsx: "with the
+//     sheet open, only the section's tab reads as selected" fails (Dashboard).
 //   · Add `font-weight:560` to `.pnav-tab[aria-haspopup]` (or give the signed-out
 //     You button className 'pnav-tab is-current'): the You-tab tests fail.
 //   · Delete the `.pnav-mobile::after` rule inside @media(max-width:767px) in
@@ -206,10 +206,10 @@ for (const theme of THEMES) {
   for (const who of [null, FREE]) {
     const label = `${theme}, ${who ? 'signed in' : 'signed out'}`
     test.describe(`phone sheet at 390, ${label}`, () => {
-      test('with the sheet open, only the current route\'s tab reads as selected', async ({ browser }) => {
+      test('with the sheet open, only the section\'s tab reads as selected, and the route\'s tab returns on close', async ({ browser }) => {
         const { ctx, page } = await openPage(browser, PHONE, theme, who, '/projects')
         const before = await readTabs(page)
-        expect(selectedLabels(before), 'POSITIVE CONTROL: the bar starts with the current tab drawn').toEqual(['Dashboard'])
+        expect(selectedLabels(before), 'POSITIVE CONTROL: the bar starts with the route\'s tab drawn').toEqual(['Dashboard'])
 
         await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
         await expect(page.locator('.pnav-sheet')).toBeVisible()
@@ -217,12 +217,17 @@ for (const theme of THEMES) {
         const tabs = await readTabs(page)
         const create = tabs.find((t) => t.label === 'Create')
         expect(create.expanded, 'the Create tab is the one that opened the sheet').toBe('true')
-        expect(selectedLabels(tabs), 'only one tab reads as selected').toEqual(['Dashboard'])
-        expect(tabs.filter((t) => t.current === 'page').map((t) => t.label)).toEqual(['Dashboard'])
-        // The opened tab rests like the tabs that are not open.
-        const rest = tabs.find((t) => t.label === 'Discover')
-        expect(create.colour, 'Create is inked like a resting tab').toBe(rest.colour)
+        expect(create.current, 'Create is the current tab while its section is open').toBe('page')
+        expect(tabs.find((t) => t.label === 'Dashboard').current, 'Dashboard is no longer current').toBeNull()
+        expect(selectedLabels(tabs), 'only one tab reads as selected').toEqual(['Create'])
+        expect(tabs.filter((t) => t.current === 'page').map((t) => t.label)).toEqual(['Create'])
         await shot(page, `sheet-create-from-dashboard-390-${theme}-${who ? 'in' : 'out'}`)
+
+        await page.getByRole('button', { name: 'Close menu' }).tap()
+        await expect(page.locator('.pnav-sheet')).toBeHidden()
+        const after = await readTabs(page)
+        expect(after.filter((t) => t.current === 'page').map((t) => t.label), 'the route\'s tab is current again').toEqual(['Dashboard'])
+        expect(selectedLabels(after)).toEqual(['Dashboard'])
         await ctx.close()
       })
 
@@ -246,7 +251,7 @@ for (const theme of THEMES) {
     })
   }
 
-  test(`on Create's own page the sheet still shows one selected tab, ${theme}`, async ({ browser }) => {
+  test(`from Create's own page the account sheet still shows one selected tab, ${theme}`, async ({ browser }) => {
     const { ctx, page } = await openPage(browser, PHONE, theme, FREE, '/create/palette')
     expect(selectedLabels(await readTabs(page)), 'the page loads with Create selected').toEqual(['Create'])
     await page.locator('.pnav-tab', { hasText: 'You' }).tap()
@@ -254,7 +259,7 @@ for (const theme of THEMES) {
     await page.waitForTimeout(450)
     const tabs = await readTabs(page)
     expect(tabs.find((t) => t.label === 'You').expanded).toBe('true')
-    expect(selectedLabels(tabs), 'You opened the account, Create is still the page').toEqual(['Create'])
+    expect(selectedLabels(tabs), 'the sheet shows the account, so You is the one selected').toEqual(['You'])
     await shot(page, `sheet-account-on-palette-390-${theme}`)
     await ctx.close()
   })
