@@ -267,6 +267,7 @@
     "title": "Bibliothèque d'icônes",
     "eyebrow": "BIBLIOTHÈQUE D'ICÔNES",
     "heading": "Trouvez, personnalisez et copiez n'importe quelle icône.",
+    "subtitleShort": "Recolorez une icône, copiez un SVG propre.",
     "subtitle": "Recolorez, redimensionnez et restylisez n'importe quelle icône (ajustez le contour, définissez la couleur), puis copiez un SVG propre ou exportez en un clic. Passez à Pro pour enregistrer vos icônes personnalisées.",
     "searchPlaceholder": "Rechercher des icônes…",
     "allPacks": "Tous les packs",
@@ -280,9 +281,13 @@
     "noIcons": "Recherchez des icônes ci-dessus",
     "loadingPacks": "Chargement des packs d'icônes…"
   },
+  "iconGroups": {
+    "subtitleShort": "Jeux d'icônes thématiques, au style cohérent."
+  },
   "emojiLibrary": {
     "eyebrow": "BIBLIOTHÈQUE D'EMOJIS",
     "heading": "Copiez n'importe quel emoji, dans n'importe quelle teinte de peau.",
+    "subtitleShort": "Emojis par catégorie, un clic pour copier.",
     "subtitle": "Parcourez tous les emojis par catégorie, changez la teinte de peau pour l'ensemble et cliquez pour copier. Gratuit, toujours."
   },
   "imageConverter": {

@@ -783,3 +783,41 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
 @media(hover:hover){.iel-page .lib-feedback:hover{color:#F7F7F4}}
 .iel-page .lib-feedback:focus-visible{outline:2px solid #F7F7F4;outline-offset:3px}
 @media(pointer:coarse){.iel-page .lib-feedback{min-height:44px;padding-inline:8px;margin-inline:-8px}}
+
+
+/* ── The masthead on a phone ──────────────────────────────────────────────
+   Under 768px the tabs and the status share one row's worth of height with the
+   title instead of adding a row of their own, so the first icons sit higher:
+   - the connection pill moves to the right end of the title row, as a dot and
+     one short word (the aria-hidden .lib-net-short; the pill's own full text
+     stays in the DOM for assistive tech and is only drawn at zero size);
+   - the ← → hint goes, since a phone has no arrow keys;
+   - "Send feedback" becomes a compact "Feedback" at the end of the tabs row. It
+     keeps its 44px height there, which costs nothing beside 44px tabs. */
+.iel-page .lib-net-wrap{display:contents}
+.iel-page .lib-net-short{display:none}
+@media(max-width:767px){
+  .iel-page.lib-surface .dgh-hero{--hero-pad-y:20px;padding-block:var(--hero-pad-y)}
+  .iel-page.lib-surface .dgh-hero--controls{gap:12px}
+  /* Static, so the pill below positions against the hero (which is relative)
+     and can sit on the title row; the controls stay above the glow. */
+  .iel-page.lib-surface .dgh-aside{position:static;flex-direction:row;align-items:center;gap:8px}
+  .iel-page.lib-surface .lib-switch{flex:0 1 auto;min-width:0}
+  .iel-page .lib-head-status{display:contents}
+  .iel-page .lib-keyhint{display:none}
+  .iel-page .lib-net-wrap{
+    position:absolute;z-index:1;top:var(--hero-pad-y);right:clamp(18px,3vw,40px);
+    display:inline-flex;align-items:center;gap:7px;height:calc(clamp(28px,4.2vw,52px)*.96);
+  }
+  .iel-page .lib-net{gap:0;font-size:0}
+  .iel-page .lib-net-short{display:inline}
+  .iel-page .lib-feedback{
+    position:relative;flex:none;margin:0 -8px 0 auto;min-height:44px;padding-inline:8px;
+    text-transform:capitalize;
+  }
+  .iel-page .lib-feedback-pre{display:none}
+}
+@media(max-width:430px){
+  .iel-page.lib-surface .lib-switch-btn>svg,
+  .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
+}
