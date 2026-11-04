@@ -102,4 +102,22 @@ test.describe('Unsaved work is put aside, not lost', () => {
     expect(await pressActionAndReadWorking(page)).toBe(before)
     expect(await read(page, PARKED)).toBeNull()
   })
+
+  test('a shared ?c= link parks the unsaved design before writing its palette, and Go back to it restores it', async ({ page }) => {
+    watch(page, 'a designer with unsaved work opening a shared palette link')
+    await seedWork(page)
+    await page.addInitScript(() => { try { localStorage.setItem('vs-uikit-guide', '1') } catch { /* blocked */ } })
+    await go(page, '/create/palette?c=4338E0,7C6CF0,A5B4FC,1E1B4B,F5F3FF')
+    await expectRendered(page, '/create/palette')
+
+    // The link's palette is on the board and in the working design; the old one is in the slot.
+    await expect.poll(async () => (await readJson(page, CURRENT))?.palette?.colors?.[0]?.toUpperCase()).toBe('#4338E0')
+    expect((await readJson(page, PARKED))?.design, 'the parked design is the unsaved one').toEqual(WORK)
+    await expect(toast(page)).toContainText('Your unsaved work is put aside.')
+    await expect(toast(page).getByRole('button', { name: 'Go back to it' })).toBeVisible()
+
+    expect(await pressActionAndReadWorking(page)).toBe(JSON.stringify(WORK))
+    expect(await read(page, PARKED)).toBeNull()
+    expect(new URL(page.url()).search, 'the link\'s colours are off the address').toBe('')
+  })
 })
