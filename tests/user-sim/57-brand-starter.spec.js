@@ -480,3 +480,39 @@ test.describe('the pricing page and the server agree', () => {
     await expect(page.locator('.bs-sample')).toBeVisible()
   })
 })
+
+// The provider badge's meaning used to sit in a hover tooltip, out of reach on
+// a touch screen and from the keyboard.
+for (const width of [390, 1440]) {
+  test(`${width}px: the provider badge is 11px and says what it means when pressed`, async ({ page }) => {
+    watch(page, 'a designer asking what OpenRouter on the result means')
+    await page.setViewportSize({ width, height: 900 })
+    await stubAi(page)
+    await openFixture(page)
+    await writeBrief(page)
+    await generate(page).click()
+
+    const badge = page.getByTestId('brand-starter-result').getByTestId('ai-provider-badge')
+    await expect(badge).toBeVisible()
+    expect(await badge.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(11)
+    await expect(badge).toHaveAttribute('aria-expanded', 'false')
+
+    await badge.focus()
+    await page.keyboard.press('Enter')
+    const note = page.getByTestId('ai-provider-note')
+    await expect(note).toBeVisible()
+    await expect(note).toContainText('primary provider')
+    const box = await note.boundingBox()
+    expect(box.x, 'the note runs off the left edge').toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width, 'the note runs off the right edge').toBeLessThanOrEqual(width)
+
+    await page.keyboard.press('Escape')
+    await expect(note).toHaveCount(0)
+    await expect(badge).toBeFocused()
+
+    await badge.click()
+    await expect(note).toBeVisible()
+    await page.locator('.bs-result-name').click()
+    await expect(note).toHaveCount(0)
+  })
+}

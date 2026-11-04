@@ -643,7 +643,9 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     summary = `No prompt generations in the last ${window} days, so nothing has exercised the OpenRouter path. This is not a pass — generate one prompt and look again.`
   } else if (totals.openrouterFail === 0) {
     status = 'ok'
-    summary = `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
+    summary = totals.openrouterOk === 1
+      ? `OpenRouter served the only generation in the last ${window} days.`
+      : `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
   } else if (totals.openrouterOk === 0) {
     status = 'failing'
     summary = `OpenRouter failed all ${totals.openrouterFail} times in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
@@ -747,7 +749,7 @@ The object has exactly these keys:
 
 {
   "name": "a short name for this direction, 2-4 words, max 48 characters",
-  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and what you did about it",
+  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and how the draft answers it",
   "palette": [ { "role": "Background", "hex": "#FFFFFF" }, ... ],
   "fonts": { "heading": "Family Name", "body": "Family Name" },
   "typeScale": { "base": 16, "ratio": 1.25 }
@@ -777,7 +779,7 @@ ${fontChoiceList()}
 
 # rationale
 
-One sentence, in plain English, that a designer would accept from a colleague. Say what in the brief drove the choice. Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
+One sentence, in plain Australian English (colour, centre, organise), that a designer would accept from a colleague. Say what in the brief drove the choice. Write about the draft, never as yourself: no "I", "we" or "my". Write "Soft, neutral colours keep the focus on the product", not "I chose soft, neutral colors". Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
 
 # If the brief is thin
 

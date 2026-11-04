@@ -11,7 +11,8 @@ import { loadFont } from '../utils/googleFonts'
 import { paletteBuilderUrl } from '../data/paletteGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import { navigatesThisTab } from '../utils/handoffSlot'
-import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
+import { describeProvider } from '../utils/aiProvider'
+import ProviderBadge from '../components/ProviderBadge'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
 import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
@@ -529,11 +530,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
           <header className="bs-result-h">
             <h2 className="bs-result-name">{result.name}</h2>
             <AiLabel what="brand starter" />
-            {provider && (
-              <span style={providerBadgeStyle(provider)} title={provider.title} data-testid="ai-provider-badge">
-                {provider.label}
-              </span>
-            )}
+            <ProviderBadge provider={provider} />
           </header>
           {result.rationale && <p className="bs-rationale">{result.rationale}</p>}
 

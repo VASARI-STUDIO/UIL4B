@@ -61,8 +61,8 @@ export function providerBadgeStyle(described) {
   return {
     padding: '3px 10px',
     borderRadius: 'var(--radius)',
-    fontSize: 9,
-    fontWeight: 700,
+    fontSize: 11,
+    fontWeight: 600,
     letterSpacing: '.04em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
