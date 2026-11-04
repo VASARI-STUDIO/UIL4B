@@ -19,7 +19,7 @@ async function resolveLivePrice(stripe, interval) {
   const envId = process.env[PRICE_ENV_KEYS[interval]]
   if (envId) {
     try {
-      const price = await stripe.prices.retrieve(envId, { expand: ['currency_options'] })
+      const price = await stripe.prices.retrieve(envId, { expand: ['currency_options', 'product'] })
       if (priceIsSellable(price, interval)) return price
     } catch (err) {
       // Falling through to the lookup key is correct, but doing it in silence is
@@ -34,7 +34,7 @@ async function resolveLivePrice(stripe, interval) {
     lookup_keys: [LOOKUP_KEYS[interval]],
     active: true,
     limit: 1,
-    expand: ['data.currency_options'],
+    expand: ['data.currency_options', 'data.product'],
   })
   const price = found.data[0]
   return priceIsSellable(price, interval) ? price : null

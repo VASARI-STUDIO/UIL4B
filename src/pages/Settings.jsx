@@ -73,8 +73,13 @@ function Chevron({ back = false }) {
 // Stripe's portal answers with a URL or an error. An error used to vanish:
 // A rejected openPortal() is shown, never dropped, so "Manage billing" and
 // "Cancel plan" say why when the portal is not configured. The reference is
-// what support needs.
+// what support needs. An account the server says is not linked to this login
+// cannot be fixed by retrying, so that case points at support instead.
 function portalErrorText(e) {
+  if (e?.code === 'billing-unlinked') {
+    const ref = e.correlationId || /\[ref ([^\]]+)\]/.exec(e.message || '')?.[1]
+    return `Billing could not be opened because this billing account isn't linked to your login. Nothing about your plan has changed. Email support@uil4b.com and we'll link it.${ref ? ` Quote reference ${ref}.` : ''}`
+  }
   const detail = e?.message ? ` (${e.message})` : ''
   return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
 }

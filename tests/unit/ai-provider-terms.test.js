@@ -7,49 +7,43 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { read, stripComments } from './helpers/source-text.js'
 
-const locale = (name) => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'locales', `${name}.json`), 'utf8'))
+const TERMS = stripComments(read('src/pages/Terms.jsx'))
+const PRIVACY = stripComments(read('src/pages/Privacy.jsx'))
+const aiSection = () => TERMS.slice(TERMS.indexOf('function Ai('), TERMS.indexOf('\n}', TERMS.indexOf('function Ai(')))
 
 test('the Terms name the AI providers and what they may do with submissions', () => {
-  for (const name of ['en', 'en-US']) {
-    const text = locale(name).terms?.s4AiText
-    assert.ok(text, `${name}.json has no terms.s4AiText`)
-    assert.match(text, /third-party AI providers/)
-    assert.match(text, /Google Gemini/)
-    assert.match(text, /OpenRouter/)
-    assert.match(text, /improve its products/)
-    assert.match(text, /do not retain or train/)
-  }
+  const ai = aiSection()
+  assert.match(ai, /third-party AI providers/)
+  assert.match(ai, /Google Gemini/)
+  assert.match(ai, /OpenRouter/)
+  assert.match(ai, /improve its products/)
+  assert.match(ai, /do not retain or train/)
 })
 
 test('the Terms page renders the statement', () => {
-  const src = stripComments(read('src/pages/Terms.jsx'))
-  const ai = src.slice(src.indexOf('function Ai('), src.indexOf('\n}', src.indexOf('function Ai(')))
+  const ai = aiSection()
   assert.match(ai, /processed by third-party AI providers under those providers&apos; own terms/, 'the AI section does not carry the provider statement')
   assert.match(ai, /may allow Google to use what it receives to improve its products/)
   assert.match(ai, /do not retain or train on it/)
-  assert.match(src, /\{ id: 'terms-s8', heading: '8\. AI features', render: Ai \}/, 'the AI section is not in SECTIONS')
+  assert.match(TERMS, /\{ id: 'terms-s8', heading: '8\. AI features', render: Ai \}/, 'the AI section is not in SECTIONS')
 })
 
-test('the Privacy policy lists the AI providers and the use, and points at its own section 6', () => {
-  for (const name of ['en', 'en-US']) {
-    const p = locale(name).privacy
-    assert.ok(p.s3Items.some((i) => /AI providers listed in section 6/.test(i)), `${name}.json s3Items has no AI use`)
-    assert.match(p.s6Title, /^6\./, 'the AI use line points at "section 6" but that is no longer the third-party list')
-    assert.ok(p.s6Items.some((i) => /^Google Gemini/.test(i) && /images and text/.test(i)), `${name}.json s6Items does not list Gemini`)
-    assert.ok(p.s6Items.some((i) => /^OpenRouter/.test(i)), `${name}.json s6Items does not list OpenRouter`)
-  }
+test('the Privacy policy lists each AI provider with what it receives', () => {
+  assert.match(PRIVACY, /'Google Gemini API \(Google LLC\)'[^\]]*'Images and text you send to those tools'/, 'the third-party list does not say Gemini receives images and text')
+  assert.match(PRIVACY, /'OpenRouter \(OpenRouter, Inc\.\)[^\]]*'Text you send to those tools'/, 'the third-party list does not list OpenRouter')
+  assert.match(PRIVACY, /Google may use what we send to improve its products/, 'the Privacy policy no longer says how Google may use submissions')
 })
 
-test('both legal pages carry a last-updated line that is not the pre-AI date', () => {
-  for (const name of ['en', 'en-US']) {
-    const l = locale(name)
-    for (const page of ['terms', 'privacy']) {
-      assert.match(l[page].lastUpdated, /2026/, `${name}.json ${page}.lastUpdated has no year`)
-      assert.doesNotMatch(l[page].lastUpdated, /March/, `${name}.json ${page}.lastUpdated is still the date before the AI wording`)
-    }
-  }
+test('both legal pages carry a last-updated line, and the text lives in the pages, not the locales', () => {
   for (const file of ['src/pages/Terms.jsx', 'src/pages/Privacy.jsx']) {
-    assert.match(read(file), /lgl-updated/, `${file} no longer renders the last-updated line`)
+    assert.match(read(file), /lgl-updated">Last updated: \d{1,2} [A-Z][a-z]+ 20\d\d</, `${file} no longer renders a dated last-updated line`)
+  }
+  // The pages were rewritten in English in place of the old locale-driven
+  // text. A legal block left in a locale ships in the bundle as words no page
+  // shows, which is how a stale claim outlives its correction.
+  for (const name of fs.readdirSync(path.join(process.cwd(), 'src', 'locales'))) {
+    const l = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'locales', name), 'utf8'))
+    assert.ok(!('privacy' in l) && !('terms' in l), `${name} still holds an old privacy or terms block`)
   }
 })
 
