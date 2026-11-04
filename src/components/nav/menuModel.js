@@ -4,7 +4,7 @@
 // The copy is the design's, from that table, word for word. The NUMBERS in it
 // are not typed: each is counted here from the data the menus list, so the
 // sentence cannot be wrong on the day a tool ships.
-import { createTools, DISCOVER_GROUPS } from '../../data/toolTree'
+import { createTools, DISCOVER_LIBRARIES } from '../../data/toolTree'
 import { LEARN_ARTICLES } from '../../data/learnIndex'
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
@@ -26,7 +26,7 @@ export function betaCreateToolCount() {
 }
 
 export function liveLibraryCount() {
-  return DISCOVER_GROUPS.filter((g) => !g.soon).length
+  return DISCOVER_LIBRARIES.length
 }
 
 export function publishedGuideCount() {
