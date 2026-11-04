@@ -301,8 +301,9 @@ export default function Checkout() {
   const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
   const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
   const note = !proPrice.loaded
-    // Not settled: no rate yet, because there is no offer to take it from.
-    ? 'Checking the live price…'
+    // Not settled: no rate yet, because there is no offer to take it from. The
+    // loading and retrying states share one line.
+    ? priceCopy.line1
     : priceStatus === 'unreachable'
       ? priceCopy.line1
       // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
@@ -435,8 +436,9 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                {/* `amount || 'Unavailable'` is the same word /plans prints, for
-                    the reason given above: `loaded` means settled, not known. */}
+                {/* Without an amount the slot prints the state's word from the
+                    shared copy, and neither the cadence suffix nor the trial
+                    band below renders: `loaded` means settled, not known. */}
                 <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{amount || priceCopy.word}</span>
                 {amount && <span className="checkout-plan-per">{plan.per}</span>}
               </div>

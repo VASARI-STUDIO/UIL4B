@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { detectCurrency, formatCurrency } from '../utils/currency'
 import { livePriceOf } from '../config/planLadder'
 
@@ -56,6 +56,9 @@ function subscribe(notify) {
 const getSnapshot = () => version
 const getServerSnapshot = () => 0
 
+// The store's two halves, exported so a test can drive them without a renderer.
+export { subscribe as subscribeToPrices, getSnapshot as getPricesSnapshot }
+
 export function usePrices() {
   useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   return { prices: priceCache, settled: priceSettled }
@@ -66,10 +69,17 @@ export function usePrices() {
 // its own place.
 export function usePriceRetry() {
   const [retrying, setRetrying] = useState(false)
+  // False once the component is gone: a request that settles after that must
+  // not set state on it.
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   const retry = useCallback(() => {
     const request = refreshPrices()
     setRetrying(true)
-    request.finally(() => setRetrying(false))
+    request.finally(() => { if (mounted.current) setRetrying(false) })
   }, [])
   return { retrying, retry }
 }
