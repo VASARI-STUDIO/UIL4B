@@ -147,16 +147,12 @@ test('the page offers no cadence that cannot reach checkout', () => {
 
 /* ── claims the rest of the app has already retracted ──────────────────────── */
 
-test('the page does not promise a cancellation the portal cannot do', () => {
-  // /plans deleted "cancel any time" pending owner approval because the Stripe
-  // Customer Portal has no cancellation flow enabled. Re-adding it on the front
-  // page retracts nothing. The prototype says it twice — an assurance chip and
-  // an FAQ answer ("From the dashboard, in two clicks, no email required").
-  for (const phrase of [/cancel (?:pro )?any ?time/i, /in two clicks/i]) {
-    assert.ok(!phrase.test(ALL_JSX),
-      `the Spectrum page says ${phrase} again. That is the claim /plans removed by name; `
-      + 'the portal has no cancellation flow until [stripe-retention-config] is finished.')
-  }
+test('the page does not promise a two-click cancellation', () => {
+  // The Stripe portal does cancel, at the end of the paid period, so "cancel
+  // any time" is true. The prototype's FAQ answer ("From the dashboard, in two
+  // clicks, no email required") counts steps nobody has counted.
+  assert.ok(!/in two clicks/i.test(ALL_JSX),
+    'the Spectrum page promises a cancellation "in two clicks" again; count the real path first')
 })
 
 test('the page sells no export the panel cannot build', () => {
@@ -333,7 +329,6 @@ test('the FAQ answers quote figures rather than typing them', () => {
 test('the assurance row states nothing the product cannot honour', () => {
   assert.ok(ASSURANCES.length >= 2, 'the assurance row has been gutted')
   const text = ASSURANCES.map((a) => a.label).join(' | ')
-  assert.ok(!/cancel/i.test(text), 'the assurance row promises a cancellation again')
   // The privacy assurance must not be the absolute one: AltTextGenerator.jsx
   // posts the image itself to /api/ai, so "files stay in your browser" is false
   // for the AI tools. surface-claims-truth.test.js bans that exact phrasing on

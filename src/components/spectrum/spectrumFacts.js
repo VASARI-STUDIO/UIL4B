@@ -45,11 +45,11 @@ import { LIBRARY_TOTALS } from '../../data/libraryTotals.js'
 //   Offered billing cadences             Monthly and Yearly, derived from
 //                                         planLadder.js. Quarterly is absent
 //                                         from the offered ladder.
-//   "Cancel Pro any time" · "Cancel? From  The Stripe Customer Portal has no
-//   the dashboard, in two clicks"          cancellation flow enabled
-//                                         ([stripe-retention-config]); /plans
-//                                         deleted this claim by name and
-//                                         surface-claims-truth.test.js bans it.
+//   "Cancel Pro any time" · "Cancel? From  Cancelling works from the Stripe
+//   the dashboard, in two clicks"          portal, at the end of the paid
+//                                         period. "In two clicks" is not a
+//                                         path anyone has counted, so it stays
+//                                         out (spectrum-truth.test.js).
 //   "138 kits exported · 27 designers ·   Fabricated. Removed entirely; nothing
 //   4 studios · 9,176 palettes"            replaces it. See PROOF below.
 //   "Copy as CSS, JSON, Tailwind or        CSS, JSON and Tailwind are `Soon` in
@@ -230,8 +230,8 @@ export const COMPARE = [
 
 /* ── The reassurance row ──────────────────────────────────────────────────── */
 
-// The design's three assurances, minus the two that may not ship: a
-// cancellation claim (the Stripe portal has no cancellation flow) and a
+// The design's three assurances, minus two: the cancellation chip (bringing it
+// back is a homepage design call, not a fact fix) and a
 // payment-reassurance tagline (tests/user-sim/62-retired-taglines.spec.js
 // sweeps every prerendered route for it). The remaining two are true.
 export const ASSURANCES = [
@@ -302,8 +302,8 @@ export const PROOF = [
 /* ── FAQ ──────────────────────────────────────────────────────────────────────
  *
  * The design ships four. Three are kept — the answers hold — and the fourth ("Can I cancel? From the dashboard, in two
- * clicks, no email required.") is replaced, because it is false twice over: the
- * portal has no cancellation flow, and there is no two-click path to one.
+ * clicks, no email required.") is replaced, because nobody has counted a
+ * two-click path to cancel; the portal cancels at the end of the paid period.
  *
  * Where an answer states a figure, the figure is interpolated rather than typed,
  * and where /plans already answers the same question its answer is used rather
