@@ -168,15 +168,16 @@ export function YourPaletteRow({ colors, detail, help, onCompare, compareLabel }
 }
 
 // The end-of-list Pro block: flat, hairline above, no card. `onOpen` runs for a
-// gate that opens a modal; `to` makes it a link to the plans page instead.
-export function ProBlock({ heading, body, gate, onOpen }) {
+// gate that opens a modal; without it the block links to the plans page, and
+// `onNavigate` lets the host close its own panel as the link is followed.
+export function ProBlock({ heading, body, gate, onOpen, onNavigate }) {
   return (
     <div className="plb-sw-problock">
       <p className="plb-sw-pro-head">{heading}</p>
       <p className="plb-sw-pro-body">{body}</p>
       {onOpen
         ? <button type="button" className="tl-btn" onClick={onOpen}>See Pro plans</button>
-        : <Link className="tl-btn" to="/plans" onClick={() => { reportUpgradeGate(gate) }}>See Pro plans</Link>}
+        : <Link className="tl-btn" to="/plans" onClick={() => { reportUpgradeGate(gate); onNavigate?.() }}>See Pro plans</Link>}
     </div>
   )
 }

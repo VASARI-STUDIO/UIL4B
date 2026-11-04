@@ -3668,7 +3668,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       <ProBlock
                         heading={`${variations.length - freeVarIds.size} more ${variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro`}
                         body="Free covers the three best-balanced variations for your palette."
-                        onOpen={openVariationGate}
+                        gate="palette-variation-apply"
+                        onNavigate={() => setGalleryOpen(false)}
                       />
                     )}
                   </>
