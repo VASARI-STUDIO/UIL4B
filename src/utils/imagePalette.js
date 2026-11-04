@@ -328,14 +328,17 @@ function withStragglers(px, st, real) {
   cand.forEach((key, c) => {
     const at = real.length + c
     const [r, g, b] = cols[at]
-    // Close to a bigger colour (a neighbouring bucket of the same flat area), or
-    // on a line between any two others: a blend, not a colour.
+    // Close to a bigger accepted colour (a neighbouring bucket of the same flat
+    // area or line), or on a line between two accepted colours: a blend, not a
+    // colour. Only accepted colours count: two halves of one noisy line colour
+    // must not each reject the other.
     for (let o = 0; o < at; o++) {
       if (o >= real.length && !out.includes(pool[o])) continue
       if (Math.hypot(r - cols[o][0], g - cols[o][1], b - cols[o][2]) <= BLEND_EPS) return
     }
-    if (nearSegment(r, g, b, blendSegments(cols, at), eps2)) return
-    if (partial(key) && nearSegment(r, g, b, blackSegments(cols, at), eps2)) return
+    const accepted = out.map(colourOf)
+    if (nearSegment(r, g, b, blendSegments(accepted), eps2)) return
+    if (partial(key) && nearSegment(r, g, b, blackSegments(accepted), eps2)) return
     out.push(key)
   })
   if (out.length > FLAT_MAX_BUCKETS) return null

@@ -525,3 +525,20 @@ test('appendPicks on a full board leaves it unchanged', () => {
   // A board already past the cap (the cap fell) does not shrink or grow either.
   assert.equal(appendPicks([...full, '#090909'], PICKS, 8).used, 0)
 })
+
+test('a thin line with a little noise keeps its colour', () => {
+  // A lightly compressed chart: a red line about 2px tall on near-white, every
+  // pixel off by up to 1 per channel. Its colour straddles two buckets, and
+  // the two halves must not reject each other as blends.
+  for (const amp of [2, 4, 6]) {
+    let seed = 3
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+    const cl = (v) => Math.max(0, Math.min(255, v))
+    const img = image(384, 256, (x, y) => {
+      const n = amp * (rnd() - 0.5)
+      return Math.abs(y - (x * 0.3 + 20)) < 1.2 ? [cl(220 + n), cl(40 + n), cl(40 + n)] : [cl(250 + n), cl(250 + n), cl(250 + n)]
+    })
+    const { colours } = extractPalette(img, 5)
+    assert.ok(colours.some((c) => colourDistance(c.hex, '#DC2828') < 0.05), `noise ${amp}: ${colours.map((c) => c.hex).join(' ')}`)
+  }
+})
