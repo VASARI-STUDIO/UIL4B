@@ -114,7 +114,7 @@ for (const view of VIEWS) {
         await press(view, row)
         await expect(dialog(page)).toBeVisible()
         await expect(page.locator('[data-tl-menu-item="feedback"]'), 'the menu closed behind the dialog').toHaveCount(0)
-        await expect(dialog(page).locator('.fb-type.on')).toContainText('Feedback')
+        await expect(dialog(page).locator('.fb-type.on')).toContainText('General')
         const context = dialog(page).locator('.fb-cap-row')
         await expect(context.filter({ hasText: 'Page you were on' })).toContainText(tool.route)
         await expect(context.filter({ hasText: 'Tool' }).first()).toContainText(tool.label)
@@ -374,7 +374,7 @@ for (const view of VIEWS) {
 
       await press(view, button)
       await expect(dialog(page)).toBeVisible()
-      await expect(dialog(page).locator('.fb-type.on')).toContainText('Feedback')
+      await expect(dialog(page).locator('.fb-type.on')).toContainText('General')
       await expect(dialog(page).locator('.fb-cap-row').filter({ hasText: 'Page you were on' })).toContainText(lib.route)
       await test.info().attach(`dialog-${lib.label}-${view.name}`, { body: await page.screenshot(), contentType: 'image/png' })
 
@@ -403,3 +403,29 @@ test('the library button opens the dialog from the keyboard and Escape returns f
   await expect(button).toBeFocused()
   await ctx.close()
 })
+
+// The dialog and the /feedback page name the four types the same way, so a
+// person never wonders whether "Feature" and "Feature request" are two queues.
+// Each name stays on one line in its cell.
+for (const view of VIEWS) {
+  test(`the dialog's type names are the page's, one line each, at ${view.name}`, async ({ browser }) => {
+    const { ctx, page } = await newPage(browser, view, 'someone comparing the dialog with the feedback page')
+    await go(page, '/feedback')
+    const pageNames = (await page.locator('.fb-page [role="radio"]').allTextContents()).map((s) => s.trim()).sort()
+    expect(pageNames).toEqual(['Bug report', 'Feature request', 'General', 'Help request'])
+
+    await go(page, '/create/palette')
+    await sendFeedbackFromMore(page, view)
+    const cells = dialog(page).locator('.fb-type > span')
+    expect((await cells.allTextContents()).map((s) => s.trim()).sort()).toEqual(pageNames)
+    const lines = await cells.evaluateAll((els) => els.map((el) => {
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.2
+      return [el.textContent.trim(), Math.round(el.getBoundingClientRect().height / lh), el.getBoundingClientRect().width <= el.parentElement.clientWidth]
+    }))
+    for (const [name, n, fits] of lines) {
+      expect(n, `"${name}" wraps to ${n} lines`).toBe(1)
+      expect(fits, `"${name}" is wider than its cell`).toBe(true)
+    }
+    await ctx.close()
+  })
+}

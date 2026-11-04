@@ -595,7 +595,7 @@ for (const variant of VARIANTS) {
         await page.getByRole('link', { name: 'Report a broken link' }).click()
         const form = page.locator('.fb-page')
         await expect(form).toBeVisible()
-        await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug Report')
+        await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug report')
         await expect(form.locator('#fb-subject')).toHaveValue('Broken link: /nope-xyz')
         await expect(form.locator('#fb-message')).toHaveValue('The link to /nope-xyz on /plans doesn\'t work.')
       })
@@ -611,7 +611,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
 
   test('a same-site page and referrer fill the subject and the message', async ({ page }) => {
     await go(page, '/feedback?type=bug&page=%2Fnope-xyz%3Fa%3D1&referrer=%2Flearn%2Fhelp')
-    await expect(checked(page)).toHaveText('Bug Report')
+    await expect(checked(page)).toHaveText('Bug report')
     await expect(form(page).locator('#fb-subject')).toHaveValue('Broken link: /nope-xyz?a=1')
     await expect(form(page).locator('#fb-message')).toHaveValue('The link to /nope-xyz?a=1 on /learn/help doesn\'t work.')
   })
@@ -633,7 +633,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
       await expect(form(page).locator('#fb-subject')).toHaveValue('')
       await expect(form(page).locator('#fb-message')).toHaveValue('')
       // The type is still honoured: it names no address.
-      await expect(checked(page)).toHaveText('Bug Report')
+      await expect(checked(page)).toHaveText('Bug report')
     })
   }
 
@@ -659,7 +659,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
 
   test('an unknown type falls back to the default', async ({ page }) => {
     await go(page, '/feedback?type=sneaky')
-    await expect(checked(page)).toHaveText('Feature Request')
+    await expect(checked(page)).toHaveText('Feature request')
   })
 
   test('a payment reason still gives "Get help", its own subject, and ignores a broken-link page', async ({ page }) => {
