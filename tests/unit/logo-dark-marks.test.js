@@ -31,6 +31,8 @@ test('brands whose only mark is dark keep their plate', () => {
 
 test('the swap applies on dark only, and copy still gives the Logo.dev file', () => {
   assert.match(SRC, /const darkMark = theme !== 'light' \? DARK_LOGO_MARKS\[icon\.ref\] : null/)
-  assert.match(SRC, /api\.iconify\.design\/logos\/\$\{darkMark\}\.svg/)
+  // One batched request for every mark, never one image request per cell.
+  assert.match(SRC, /loadGlyphBatch\('logos', Object\.values\(DARK_LOGO_MARKS\)\)/, 'the marks no longer come in one batch')
+  assert.match(SRC, /src=\{markUri\}/)
   assert.match(SRC, /onCopy\?\.\(logodevUrl\(icon\.ref, 512\)\)/)
 })

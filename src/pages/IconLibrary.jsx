@@ -929,6 +929,8 @@ function probeDefaultPlate(ref, themePlate, done) {
 // transparent mark from SVG Logos (CC0) instead. Brands whose only mark is dark
 // (PayPal, Visa, Notion, Anthropic) keep the plate, because their mark would
 // vanish on the dark ground. Copy and download still give the Logo.dev file.
+// The marks arrive in ONE batched request for all of them, like every other
+// glyph; until it lands, or if it fails, the tile shows the Logo.dev plate.
 const DARK_LOGO_MARKS = Object.freeze({
   'microsoft.com': 'microsoft-icon',
   'meta.com': 'meta-icon',
@@ -938,10 +940,27 @@ const DARK_LOGO_MARKS = Object.freeze({
   'airtable.com': 'airtable',
 })
 
+let darkMarksBatch = null
+const loadDarkMarks = () => {
+  darkMarksBatch ||= loadGlyphBatch('logos', Object.values(DARK_LOGO_MARKS)).then((ok) => {
+    if (!ok) darkMarksBatch = null
+    return ok
+  })
+  return darkMarksBatch
+}
+
 function LogoDevGlyph({ icon }) {
   const { theme } = useTheme()
   const key = `logodev:${icon.ref}:${theme}`
   const darkMark = theme !== 'light' ? DARK_LOGO_MARKS[icon.ref] : null
+  const [, setMarkReady] = useState(0)
+  const markUri = darkMark ? glyphDataUri('logos', darkMark) : ''
+  useEffect(() => {
+    if (!darkMark || markUri) return undefined
+    let live = true
+    loadDarkMarks().then((ok) => { if (ok && live) setMarkReady((n) => n + 1) })
+    return () => { live = false }
+  }, [darkMark, markUri])
   const [measured, setMeasured] = useState(null)
   const [plainKey, setPlainKey] = useState(null)
   const plain = plainKey === key
@@ -961,11 +980,11 @@ function LogoDevGlyph({ icon }) {
     }
     setMeasured({ key, shape: glyphCache.get(key) })
   }
-  if (darkMark) {
+  if (markUri) {
     return (
       <span className="ig-chip" data-mark-source="svg-logos">
         <img
-          src={`https://api.iconify.design/logos/${darkMark}.svg`}
+          src={markUri}
           width="28"
           height="28"
           className="ig-logo"

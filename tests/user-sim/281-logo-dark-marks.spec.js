@@ -48,16 +48,15 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
       watch(page, `a Pro designer browsing brand logos in dark (${width}px)`)
       await openLogoDev(page)
       for (const name of ['Microsoft', 'YouTube']) {
-        const img = tile(page, name)
-        await img.scrollIntoViewIfNeeded()
-        await expect(img).toHaveAttribute('src', /api\.iconify\.design\/logos\//)
+        // The mark arrives in one batch and replaces the plate in place.
+        const mark = page.locator(`.ig .ic [data-mark-source="svg-logos"] img.ig-logo[alt="${name}"]`)
+        await expect(mark).toHaveAttribute('src', /^data:image\/svg\+xml/, { timeout: 20_000 })
       }
       // POSITIVE CONTROL: a brand outside the swap still comes from Logo.dev.
       await expect(tile(page, 'Google')).toHaveAttribute('src', /img\.logo\.dev/)
       const paypal = tile(page, 'PayPal')
       await paypal.scrollIntoViewIfNeeded()
       await expect(paypal).toHaveAttribute('src', /img\.logo\.dev/)
-      await tile(page, 'Microsoft').scrollIntoViewIfNeeded()
       await page.screenshot({ path: test.info().outputPath(`logo-dark-${width}.png`) })
     } finally { await ctx.close() }
   })
