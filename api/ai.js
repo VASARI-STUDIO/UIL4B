@@ -1109,12 +1109,10 @@ async function serveBacklog(req, res) {
     if (isBoardModuleMissing(err)) {
       return res.status(501).json({
         localOnly: true,
-        since: '2026-09-16',
         modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
-        error: 'The internal boards are not part of this deployment. They are kept on the founder\'s '
-          + 'machine and out of this public repository, because their notes are candid prose written '
-          + 'for us, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — the rows exist, '
-          + 'on the checkout that has the files.',
+        error: 'The internal boards are not part of this deployment: their data files are kept out of '
+          + 'this public repository, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — '
+          + 'the rows exist on a checkout that has the files.',
       })
     }
     // Named in words rather than swallowed. A board that silently rendered zero
