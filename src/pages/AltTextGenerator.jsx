@@ -540,6 +540,14 @@ export default function AltTextGenerator({ toast }) {
         ) : (
           <>
             {verifyNeeded && <VerifyEmailPrompt onVerified={retryAfterVerify} />}
+            {/* Above the dropzone, so it is read before anything is uploaded,
+                and outside it so no control sits inside another. The
+                dropzone points at it with aria-describedby. What the
+                provider may do with an image is in the Terms, linked rather
+                than repeated. */}
+            <p id="alt-ai-consent" className="ai-image-consent">
+              {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link>
+            </p>
             <div
               aria-describedby="alt-ai-consent"
               className={`alt-dropzone${items.length > 0 ? ' alt-dropzone--compact' : ''}${isDragging ? ' dragging' : ''}`}
@@ -560,13 +568,6 @@ export default function AltTextGenerator({ toast }) {
                 {items.length === 0 && <div className="alt-dropzone-sub">JPG, PNG, WebP, GIF or HEIC. Add as many as you like.</div>}
               </div>
             </div>
-            {/* Below the dropzone, outside it so no control sits inside another.
-                The dropzone points at it with aria-describedby. What the
-                provider may do with an image is in the Terms, linked rather
-                than repeated. */}
-            <p id="alt-ai-consent" className="ai-image-consent">
-              {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link>
-            </p>
 
             <section className="alt-brief" aria-label="Brief">
               <div className="alt-brief-col alt-length">

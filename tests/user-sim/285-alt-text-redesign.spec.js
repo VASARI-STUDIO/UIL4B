@@ -173,12 +173,12 @@ for (const width of [390, 768, 1280]) {
       await expect(allowance).toContainText('left today')
       expect(await allowance.evaluate((el) => getComputedStyle(el).fontSize), 'the allowance is one caption line').toBe('13px')
 
-      // The Gemini line is under the drop zone, outside it, at 12.5px.
+      // The Gemini line is above the drop zone, read before anything is uploaded, outside it, at 12.5px.
       const zone = page.locator('.alt-dropzone')
       await expect(zone.locator('.ai-image-consent')).toHaveCount(0)
       const consent = page.locator('.ai-image-consent')
       const [z, c] = [await zone.boundingBox(), await consent.boundingBox()]
-      expect(c.y, 'the Gemini line sits below the drop zone').toBeGreaterThanOrEqual(z.y + z.height - 1)
+      expect(c.y + c.height, 'the Gemini line sits above the drop zone').toBeLessThanOrEqual(z.y + 1)
       expect(await consent.evaluate((el) => getComputedStyle(el).fontSize)).toBe('12.5px')
 
       await expectOneRow(page, `${width}px, empty`)
@@ -302,7 +302,7 @@ for (const width of [390, 768, 1280]) {
       await expect(row.locator('.sr-only[role="status"]')).toHaveText('Alt text copied')
       await expect(page.locator('.toast.show'), 'a single copy raises no toast').toHaveCount(0)
       const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(() => null)
-      if (clip !== null) expect(clip).toBe(BY_TONE.concise)
+      if (clip !== null) expect(clip.replace(/\r\n/g, '\n'), 'CRLF from a Windows clipboard is normalised').toBe(BY_TONE.concise)
       // It returns to Copy by itself, about 1.6 seconds later.
       await expect(row.getByRole('button', { name: 'Copy', exact: true })).toBeVisible({ timeout: 4000 })
       await ctx.close()
@@ -338,7 +338,7 @@ for (const width of [390, 768, 1280]) {
       // Copy all hands over a tab-separated sheet with an empty alt for the decorative row.
       await primary.click()
       const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(() => null)
-      if (clip !== null) expect(clip).toBe(`photo.png\t${BY_TONE.concise}\nspacer.png\t`)
+      if (clip !== null) expect(clip.replace(/\r\n/g, '\n'), 'CRLF from a Windows clipboard is normalised').toBe(`photo.png\t${BY_TONE.concise}\nspacer.png\t`)
 
       // The CSV is on the toolbar from 1280 and in the overflow below it.
       if (width >= 1280) {
@@ -346,7 +346,7 @@ for (const width of [390, 768, 1280]) {
         await bar(page).getByRole('button', { name: 'Download CSV' }).click()
         const file = fs.readFileSync(await (await downloaded).path(), 'utf8')
         expect(file.split('\n')[0]).toBe('filename,alt_text')
-        expect(file, 'the decorative row has an empty alt_text').toMatch(/^spacer\.png,(""|)\r?$/m)
+        expect(file, 'the decorative row has an empty alt_text').toMatch(/^"?spacer\.png"?,(""|)\r?$/m)
       }
 
       // Untick: the row is a normal one again.

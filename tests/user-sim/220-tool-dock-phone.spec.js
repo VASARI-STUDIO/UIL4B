@@ -104,6 +104,8 @@ const contentBottom = (page) => page.evaluate(() => {
     const cs = getComputedStyle(el)
     if (r.width <= 0 || r.height <= 0 || cs.position === 'fixed' || cs.visibility !== 'visible' || cs.display === 'contents') continue
     if (el.closest('svg, .sr-only, [aria-hidden="true"]')) continue
+    // The body of a closed <details> keeps a layout box but is never painted.
+    if (el.checkVisibility && !el.checkVisibility()) continue
     const bottom = clipBottom(el)
     if (bottom > low.bottom) low = { bottom, what: `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}` }
   }

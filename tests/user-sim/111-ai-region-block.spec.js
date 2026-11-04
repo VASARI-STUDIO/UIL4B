@@ -94,7 +94,7 @@ for (const width of [390, 768, 1440]) {
     // The guide on writing it by hand is still there. There is no side panel
     // while blocked (nothing in it can be used), so the "every other tool works"
     // line lives inside the card, with the way out.
-    await expect(page.getByRole('heading', { name: 'How to write good alt text' })).toBeVisible()
+    await expect(page.locator('summary', { hasText: 'How to write good alt text' })).toBeVisible()
     await expect(page.locator('.alt-brief')).toHaveCount(0)
     await expect(card.getByText('Every other UIL4B tool works as normal where you are.')).toBeVisible()
     await expect(card.getByRole('link', { name: 'Browse other tools' })).toHaveAttribute('href', '/create')
@@ -134,6 +134,8 @@ for (const [what, answer] of OPEN_ANSWERS) {
     // The side panel is there when open, so its absence while blocked is a
     // statement about the block and not about a panel that never renders.
     await expect(page.locator('.alt-brief')).toBeVisible()
+    // The guide is a closed disclosure until opened; open it to read the tips.
+    await page.locator('.alt-guide summary').click()
     await expect(page.locator('.alt-guide').getByText('Add what the page is about')).toBeVisible()
 
     if (what === 'the server says blocked:false') await shot(page, 'alt-text-open-1440.png')
@@ -244,7 +246,7 @@ test('1440px · Alt Text: after a 451 with images added, the guide is shown and 
   await refusedWith451(page)
   const guide = page.locator('.alt-guide')
   await expect(guide).toBeVisible()
-  await expect(guide.getByRole('heading', { name: 'How to write good alt text' })).toBeVisible()
+  await expect(guide.locator('summary', { hasText: 'How to write good alt text' })).toBeVisible()
   await expect(guide.getByText('Add what the page is about')).toHaveCount(0)
   // The queued cards are gone with the rest of the tool.
   await expect(page.locator('.alt-row')).toHaveCount(0)
