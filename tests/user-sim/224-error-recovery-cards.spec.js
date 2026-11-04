@@ -346,7 +346,7 @@ for (const variant of VARIANTS) {
         await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on /settings: .*${PROBE}`))
         await expect(dialog.locator('#fb-message')).toHaveValue(/Route: \/settings\n/)
         await expect(dialog.locator('#fb-message')).toHaveValue(/What were you doing when this happened\?/)
-        await expect(dialog.getByRole('button', { name: 'Bug', exact: true })).toHaveAttribute('aria-pressed', 'true')
+        await expect(dialog.getByRole('button', { name: 'Bug report', exact: true })).toHaveAttribute('aria-pressed', 'true')
         // The card behind the dialog still shows no raw error.
         expect(await card.innerText()).not.toContain(PROBE)
       })
