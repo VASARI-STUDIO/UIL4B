@@ -248,3 +248,19 @@ test('a moderator export has no email column and no address in the file', async 
   expect(csv).toContain('Content report: Aurora Card')
   for (const row of FEEDBACK) expect(csv, `the moderator file leaks ${row.email}`).not.toContain(row.email)
 })
+
+test.describe('the Submissions card on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  // Break it: delete the `.adm-submission-actions .btn` min-height rule in
+  // src/styles/deferred/admin.css and the buttons measure about 38px.
+  test('every triage button is a 44px target', async ({ page }) => {
+    await openQueue(page, { theme: 'light' })
+    await card(page, 'Gradient export drops').locator('.adm-submission-head').click()
+    const buttons = card(page, 'Gradient export drops').locator('.adm-submission-actions .btn, .adm-submission-notes .btn')
+    await expect(buttons.first()).toBeVisible()
+    const heights = await buttons.evaluateAll((els) => els.map((el) => [el.textContent.trim(), Math.round(el.getBoundingClientRect().height)]))
+    expect(heights.length, 'the card shows its triage buttons').toBeGreaterThanOrEqual(3)
+    for (const [label, h] of heights) expect(h, `"${label}" is ${h}px tall`).toBeGreaterThanOrEqual(44)
+  })
+})
