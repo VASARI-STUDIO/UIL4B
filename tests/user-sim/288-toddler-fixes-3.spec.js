@@ -3,13 +3,17 @@
 //   1. The Suggest variations "See Pro plans" button closes its panel and goes
 //      to /plans, like every other upgrade call to action. It does not stack a
 //      second dialog over the first.
+//   2. A Soon tool's URL still redirects, but the arrival says so in a toast.
 //
 // MUTATIONS (each should fail the named test):
 //   * put `onOpen={openVariationGate}` back on the Suggest ProBlock in PaletteBuilder.jsx
 //       -> "the Suggest Pro button goes to /plans with no dialog left open"
+//   * delete the `soonNote` effect in CreateTool.jsx
+//       -> "a Soon tool redirects and says so"
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, goRaw, ready, signIn, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
+import { resolveTool, soonRedirect } from '../../src/data/toolTree.js'
 
 // ── 1. Suggest's upgrade button goes to /plans ───────────────────────────────
 
@@ -38,4 +42,42 @@ test.describe('Suggest variations: the Pro button', () => {
       })
     }
   }
+})
+
+// ── 2. A Soon redirect says where the visitor was headed ─────────────────────
+
+test.describe('Soon tools: the redirect leaves a note', () => {
+  const pathOf = (page) => new URL(page.url()).pathname
+
+  // One route of each kind: a Soon section (goes to the palette) and a Soon
+  // tool in a live section (goes to its first live tool, Alt Text).
+  const CASES = [
+    { from: '/create/box-shadow', note: 'Box Shadow is coming soon. Here’s the Palette tool meanwhile.' },
+    { from: '/create/components', note: 'UI Component Builder is coming soon. Here’s the Palette tool meanwhile.' },
+    { from: '/create/ai-prompt', note: 'Image Prompt is coming soon. Here’s the Alt Text tool meanwhile.' },
+  ]
+
+  test('the notes are the tool names from the tool tree', () => {
+    for (const { from, note } of CASES) {
+      const to = soonRedirect(from)
+      expect(to, `${from} is a Soon route`).toBeTruthy()
+      expect(note).toBe(`${resolveTool(from).name} is coming soon. Here’s the ${resolveTool(to).name} tool meanwhile.`)
+    }
+  })
+
+  for (const { from, note } of CASES) {
+    test(`a Soon tool redirects and says so: ${from}`, async ({ page }) => {
+      watch(page, 'a visitor following an old link to an unfinished tool')
+      await goRaw(page, from)
+      await expect.poll(() => pathOf(page)).toBe(soonRedirect(from))
+      await ready(page, soonRedirect(from))
+      await expect(page.locator('.toast.show')).toContainText(note)
+    })
+  }
+
+  test('a live tool opens with no note', async ({ page }) => {
+    watch(page, 'a visitor opening the palette directly')
+    await go(page, '/create/palette')
+    await expect(page.locator('.toast.show')).toHaveCount(0)
+  })
 })

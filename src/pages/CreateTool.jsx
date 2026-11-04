@@ -213,6 +213,16 @@ export default function CreateTool({ toast }) {
     if (waitForAuth) loadAuthSdk().catch(() => {})
   }, [waitForAuth])
 
+  // The redirect itself is silent, so say where the visitor was headed and why
+  // they landed elsewhere. The toast host sits above the routes and outlives
+  // this redirect.
+  const soonNote = soonTarget && !waitForAuth
+    ? `${name} is coming soon. Here’s the ${resolveTool(soonTarget).name} tool meanwhile.`
+    : ''
+  useEffect(() => {
+    if (soonNote) toast?.(soonNote, 'info')
+  }, [soonNote, toast])
+
   // A tool's `views` (toolTree.js) mount the tool's own component.
   const LiveTool = !group || group.soon ? null : (LIVE_TOOLS[normPath(location.pathname)] || (tool && LIVE_TOOLS[normPath(tool.route)]) || null)
 
