@@ -29,6 +29,14 @@ export function isReauthFresh(authTimeMs, now = Date.now(), window = REAUTH_WIND
   return age <= window
 }
 
+// The address to match feedback rows against, or null to match none. Feedback is
+// stored by the address typed on the form, so an email Firebase has not verified
+// could be someone else's: it is used only when the token says it is verified.
+export function feedbackEmailFor(decoded) {
+  if (decoded?.email_verified !== true) return null
+  return typeof decoded.email === 'string' && decoded.email ? decoded.email : null
+}
+
 // Whether a stored stripeCustomerId really belongs to this uid.
 //
 // `stripeCustomerId` sat on a client-writable document until the

@@ -5,6 +5,7 @@ import { emailGateBody } from './_lib/emailGate.js'
 import { serveUsage, usageDayKey, usageMonthKey } from './_lib/aiUsage.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
+import { failRequest } from './_lib/http.js'
 import {
   altTextGenerationConfig,
   altTextOutcome,
@@ -57,6 +58,10 @@ import {
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 }
+
+// What a caller is told when the plan or usage read fails. The real error is
+// logged server-side with a correlation id (see failRequest), never returned.
+const STORE_READ_ERROR = 'Could not read your plan or usage. Please try again in a moment.'
 
 // Gemini API key — accept the common env var names so it works regardless of
 // what it was named in Vercel. Sanitised (quotes/whitespace stripped) and
@@ -1235,8 +1240,12 @@ export default async function handler(req, res) {
       res.setHeader('Allow', 'POST')
       return res.status(405).json({ error: 'Method not allowed' })
     }
+    // The code is read from the x-diag-code header only. A query string is
+    // written to request logs; a header is not. `?diag=` just selects the
+    // diagnostic, so a code sent there never opens it.
     const breakGlass = process.env.DIAG_CODE
-    const codeMatches = Boolean(breakGlass) && timingSafeEqual(req.query.diag, breakGlass)
+    const sentCode = req.headers?.['x-diag-code']
+    const codeMatches = Boolean(breakGlass) && typeof sentCode === 'string' && timingSafeEqual(sentCode, breakGlass)
     if (!codeMatches) {
       const admin = await requireAdmin(req)
       // 404 rather than 403 — see requireAdmin. A caller who is not the
@@ -1350,7 +1359,7 @@ export default async function handler(req, res) {
       lifetimeEntitlement = snap.data()?.lifetimeEntitlement || null
       plan = planForUser({ subscription, lifetimeEntitlement, email })
     } catch (e) {
-      return res.status(500).json({ error: `Could not read your plan from Firestore (${String(e?.message || e).slice(0, 140)}).` })
+      return failRequest(res, { status: 500, scope: 'ai plan read', message: STORE_READ_ERROR, err: e })
     }
 
     // Before the meter is touched, so a refused request reserves nothing.
@@ -1382,8 +1391,7 @@ export default async function handler(req, res) {
     })
 
     if (metered.storeError) {
-      const e = metered.storeError
-      return res.status(500).json({ error: `Could not read your usage from Firestore (${String(e?.message || e).slice(0, 140)}).` })
+      return failRequest(res, { status: 500, scope: 'ai usage read', message: STORE_READ_ERROR, err: metered.storeError })
     }
     if (!metered.ok) {
       return res.status(429).json({
@@ -1408,7 +1416,7 @@ export default async function handler(req, res) {
     limit = dailyLimitFor(plan, toolId)
     monthLimit = monthlyLimitFor(plan, toolId)
   } catch (e) {
-    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+    return failRequest(res, { status: 500, scope: 'ai plan/usage read', message: STORE_READ_ERROR, err: e })
   }
 
   // Free use of a paid task needs a verified email; see _lib/emailGate.js. It
@@ -1448,8 +1456,7 @@ export default async function handler(req, res) {
   })
 
   if (metered.storeError) {
-    const e = metered.storeError
-    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+    return failRequest(res, { status: 500, scope: 'ai plan/usage read', message: STORE_READ_ERROR, err: metered.storeError })
   }
 
   if (!metered.ok) {
