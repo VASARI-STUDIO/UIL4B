@@ -27,7 +27,7 @@
 //     giving #main a visible outline.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { kitRail, helpCard, helpTrigger, stepLink, leaveControl, leaveWalkthrough, stepsPanel, expectOnStep } from './kit-bar.js'
+import { kitRail, helpCard, helpTrigger, stepLink, leaveControl, stepsPanel, expectOnStep } from './kit-bar.js'
 
 const GUIDE_KEY = 'vs-uikit-guide'
 const SEEN_KEY = 'vs-uikit-guide-seen'
