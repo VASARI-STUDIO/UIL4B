@@ -365,6 +365,23 @@
   white-space: nowrap;
 }
 
+/* The viewer's own card: where it stands, set apart from the credit line by a
+   hairline. The status reads in the full ink and a heavier weight than the
+   category beside it, because it is the one fact on the card that changes. */
+.ch-spectrum .ch-card-own {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cm-line);
+  min-width: 0;
+}
+.ch-spectrum .ch-card-status {
+  font-weight: 500;
+  color: var(--cm-ink);
+  white-space: normal;
+}
+
 /* The button is the 44px hit area; the dark pill the eye sees is its ::before,
    32px high, so the target is larger than the mark. */
 .ch-spectrum .ch-heart {

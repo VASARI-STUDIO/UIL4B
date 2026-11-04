@@ -44,7 +44,10 @@ function HeartIcon({ filled }) {
   )
 }
 
-export default function CommunityCard({ item, saved, count, onToggle, offline = false }) {
+// `own` is passed only for the viewer's own submission: { label } is the status
+// tag ("Pending review", "Approved", "Not approved", "Not sent"). A curated card
+// passes nothing and renders exactly as before.
+export default function CommunityCard({ item, saved, count, onToggle, offline = false, own = null }) {
   const href = safeHttpUrl(item.url)
   const mono = monoInk(item.c1, item.c2)
   // THE STOPS AND THE INK ARE SET TOGETHER OR NOT AT ALL.
@@ -132,6 +135,11 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
             : <UserName name={item.author} ownerId={item.ownerId} bold={!!item.ownerId} />}
           <span className="ch-card-tag">{item.category}</span>
         </div>
+        {own && (
+          <div className="ch-card-own">
+            <span className="ch-card-tag ch-card-status">{own.label}</span>
+          </div>
+        )}
       </div>
     </article>
   )
