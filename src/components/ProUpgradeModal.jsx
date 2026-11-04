@@ -310,7 +310,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                 <>
                   <li><strong>Days 1 to {choice.trialDays}:</strong> full Pro access. Nothing is charged.</li>
                   <li>
-                    <strong>Day {choice.trialDays}:</strong> {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
+                    <strong>Day {choice.trialDays + 1}:</strong> {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
                   </li>
                 </>
               ) : (
