@@ -28,7 +28,10 @@ const proMark = mark => <span className="menu-select-mark">{mark === 'Pro' && <T
 // `placeholder` is the trigger's text while no row matches `value`: the control
 // then reads as a command ("Jump to section") rather than as a current choice,
 // and its spoken name is the label alone.
-export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote, placeholder }) {
+// `triggerLabel` is the trigger's visible text when the control is an action
+// that takes a value (Rewrite, with the current length ticked in the list):
+// the list still marks `value`, and the spoken name still ends with it.
+export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote, placeholder, triggerLabel }) {
   const uid = useId()
   const triggerId = id || `select-${uid}`
   const listId = `${triggerId}-list`
@@ -194,7 +197,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       }}>
       {toolbar && <span className="tl-select-k">{label}</span>}
       {toolbar && current?.triggerIcon}
-      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{toolbar && current?.short ? current.short : currentLabel}</span>
+      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{triggerLabel ?? (toolbar && current?.short ? current.short : currentLabel)}</span>
       <ToolIcon name="caret-up-down" size={13} className={toolbar ? 'tl-select-caret' : 'menu-select-caret'} />
     </button>
     {open && !disabled && createPortal(<>
