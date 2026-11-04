@@ -13,10 +13,11 @@ test('the notices name where the image goes', () => {
 })
 
 test('the Alt Text notice links to the Terms section that holds the statement', () => {
-  assert.equal(AI_TERMS_PATH, '/terms#terms-s4')
+  assert.equal(AI_TERMS_PATH, '/terms#terms-s8')
   const terms = stripComments(read('src/pages/Terms.jsx'))
-  assert.ok(terms.includes(`id: '${AI_TERMS_PATH.split('#')[1]}'`), 'the link points at a Terms section id that does not exist')
-  assert.match(terms, /more: 'terms\.s4AiText'/, 'the linked section no longer carries the AI statement')
+  assert.ok(terms.includes(`{ id: '${AI_TERMS_PATH.split('#')[1]}', heading: '8. AI features', render: Ai }`), 'the link does not point at the AI features section')
+  const ai = terms.slice(terms.indexOf('function Ai('), terms.indexOf('\n}', terms.indexOf('function Ai(')))
+  assert.match(ai, /may allow Google to use what it receives to improve its products/, 'the linked section no longer carries the AI statement')
 })
 
 test('both image tools render their notice, and before their dropzone', () => {
