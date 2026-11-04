@@ -792,3 +792,37 @@ test.describe('Brand kit walkthrough: rail polish and leaving', () => {
     await expect(page.locator('.pnav-tabs')).toBeVisible()
   })
 })
+
+// From 768px the bar keeps its X while the name card is open (below that the
+// sheet has the only close control). Pressing it from inside the form has to
+// close both, leave no ring round the tool, and hand Tab on from the page.
+for (const width of [768, 1440]) {
+  test(`${width}px: the X pressed from the name field closes the card and the bar`, async ({ page }) => {
+    watch(page, 'keyboard designer leaving while naming the kit')
+    await page.setViewportSize({ width, height: 900 })
+    await seed(page, { colours: true })
+    await go(page, '/create/icons')
+
+    await rail(page).getByRole('button', { name: /^Name your project/ }).click()
+    await expect(nameField(page)).toBeVisible()
+    await nameField(page).focus()
+    await nameField(page).fill('Draft name')
+
+    const leave = rail(page).getByRole('button', { name: 'Leave the walkthrough' })
+    await leave.focus()
+    await page.keyboard.press('Enter')
+
+    await expect(rail(page)).toBeHidden()
+    await expect(nameCard(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/\/create\/icons$/)
+    await expect(page.locator('#main')).toBeFocused()
+    expect(await page.locator('#main').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+
+    // The next Tab moves into the tool, not back up to the site header.
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => {
+      const el = document.activeElement
+      return !!el && el !== document.body && !!document.getElementById('main')?.contains(el)
+    }), 'Tab after the X left the tool').toBe(true)
+  })
+}
