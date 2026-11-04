@@ -14,8 +14,12 @@ import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
 import { projectSnapshot } from '../utils/designPatch'
+import { parkIfAtRisk, takeParked } from '../utils/parkedDesign'
 
 const ProjectContext = createContext()
+
+// What the toast says when unsaved work has been moved out of the way.
+const PUT_ASIDE = 'Your unsaved work is put aside.'
 
 const CURRENT_KEY = 'vs-current-design'
 const PROJECTS_KEY = 'vs-projects'
@@ -146,8 +150,14 @@ export function ProjectProvider({ children }) {
   // then, so "no such project" cannot be said before it (see projectsLoading).
   const [pulledUid, setPulledUid] = useState(null)
 
+  // The working design as the last write left it. A replace (reset, open a
+  // project) sets it at once, so a second call in the same tick checks the
+  // design that is really there and not the previous render's.
+  const designRef = useRef(design)
+
   // Auto-persist current design
   useEffect(() => {
+    designRef.current = design
     saveCurrent(design)
   }, [design])
 
@@ -204,6 +214,43 @@ export function ProjectProvider({ children }) {
     updateDesign({ gradient: patch })
   }, [updateDesign])
 
+  // Take a parked design back as the working design, exactly as it was parked.
+  // A tool reads the design once, as it opens, so `restoredCount` goes up and
+  // the Create tool on screen opens again on it (see CreateTool).
+  // `onRestore(design)` is for a screen that needs to tidy up after that (the
+  // palette board drops the shared link's colours from the address).
+  const [restoredCount, setRestoredCount] = useState(0)
+  const restoreParked = useCallback((slot, onRestore) => {
+    let restored = null
+    try { restored = takeParked(slot, localStorage) } catch { /* storage blocked */ }
+    if (!restored) return
+    designRef.current = restored
+    setDesign(restored)
+    onRestore?.(restored)
+    setRestoredCount((n) => n + 1)
+  }, [])
+
+  // Before the working design is replaced: if it holds work nobody has saved,
+  // put it in the one parking slot and say so, with a button that brings it back.
+  // `message` and `label` word the toast. Returns true when it was parked now.
+  // Parking never creates a project, so it never meets the project cap.
+  const parkWorkingDesign = useCallback(({ message = PUT_ASIDE, label = 'Undo', onRestore } = {}, list) => {
+    let parked = { slot: null, fresh: false }
+    try {
+      parked = parkIfAtRisk({
+        design: designRef.current,
+        projects: list || allProjects[userKey] || [],
+        storage: localStorage,
+      })
+    } catch { /* storage blocked: nothing can be parked, the replace goes ahead as before */ }
+    if (!parked.slot || !parked.fresh) return false
+    const { slot } = parked
+    window.dispatchEvent(new CustomEvent('uil4b:toast', {
+      detail: { message, type: 'info', action: { label, onAction: () => restoreParked(slot, onRestore) } },
+    }))
+    return true
+  }, [allProjects, userKey, restoreParked])
+
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
     // Free-tier cap: block a NEW save once the allowance is reached. Never
@@ -236,6 +283,9 @@ export function ProjectProvider({ children }) {
     // `opts.blank` creates an empty shell, which is a container, not work.
     if (!opts.blank) {
       try { trackActivation('project', 'save') } catch { /* never break a save */ }
+      // The working design now IS this project: it carries the same changes the
+      // saved copy was given, and remembers where it came from.
+      setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
     }
     return id
   }, [design, userKey, allProjects, projectLimit])
@@ -304,23 +354,30 @@ export function ProjectProvider({ children }) {
     setAllProjects(prev => {
       const list = prev[userKey] || []
       const next = list.map(p => p.id === id
-        ? { ...p, design: JSON.parse(JSON.stringify(design)), updatedAt: new Date().toISOString() }
+        ? { ...p, design: JSON.parse(JSON.stringify(projectSnapshot(design))), updatedAt: new Date().toISOString() }
         : p
       )
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
     })
+    setDesign(prev => (prev.source?.projectId === id ? prev : { ...prev, source: { projectId: id } }))
   }, [design, userKey])
 
+  // Open a saved project as the working design. Unsaved work already on the
+  // board is parked first. Returns true when it was parked (so a caller with a
+  // toast of its own can leave it to this one).
   const loadProject = useCallback((id) => {
-    if (!userKey) return
+    if (!userKey) return false
     const list = allProjects[userKey] || []
     const project = list.find(p => p.id === id)
-    if (project) {
-      setDesign({ ...DEFAULT_DESIGN, ...project.design })
-    }
-  }, [allProjects, userKey])
+    if (!project) return false
+    const parked = parkWorkingDesign({ message: `Opened ${project.name}. ${PUT_ASIDE}` }, list)
+    const next = { ...DEFAULT_DESIGN, ...project.design, source: { projectId: id } }
+    designRef.current = next
+    setDesign(next)
+    return parked
+  }, [allProjects, userKey, parkWorkingDesign])
 
   /**
    * Delete, and RECORD THE DELETE.
@@ -353,8 +410,10 @@ export function ProjectProvider({ children }) {
   }, [userKey])
 
   const resetDesign = useCallback(() => {
+    parkWorkingDesign()
+    designRef.current = DEFAULT_DESIGN
     setDesign(DEFAULT_DESIGN)
-  }, [])
+  }, [parkWorkingDesign])
 
   const archiveProject = useCallback((id) => {
     if (!userKey) return
@@ -589,6 +648,8 @@ export function ProjectProvider({ children }) {
     deleteProject,
     archiveProject,
     resetDesign,
+    parkWorkingDesign,
+    restoredCount,
   }
 
   return (

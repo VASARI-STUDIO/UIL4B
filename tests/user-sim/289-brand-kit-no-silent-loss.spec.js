@@ -1,0 +1,83 @@
+// Starting something new, or opening something else, never throws away work
+// nobody has saved.
+//
+// The working design (`vs-current-design`) used to be overwritten with no
+// question asked by a new project, by opening a project and by a shared palette
+// link. Each of those now puts the old design aside first, in one slot of its own
+// (`vs-previous-design`, this browser only), and the toast that says so carries a
+// button that brings it back exactly.
+//
+// One test per path. Each one fails on the code that overwrote the design.
+import { test, expect } from './base.js'
+import { go, watch, signIn, expectRendered } from './helpers.js'
+import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
+
+const CURRENT = 'vs-current-design'
+const PARKED = 'vs-previous-design'
+
+// Unsaved work: a palette nobody has saved, in the shape the app writes it back
+// in (the defaults first), so the stored text can be compared as text.
+const WORK = {
+  ...DEFAULT_DESIGN,
+  palette: {
+    ...DEFAULT_DESIGN.palette,
+    base: '#E4572E',
+    colors: ['#E4572E', '#17BEBB', '#FFC914', '#2E294E', '#76B041'],
+  },
+}
+
+/** Put the unsaved work in storage once per tab, before the app reads it. */
+async function seedWork(page, design = WORK) {
+  await page.addInitScript(({ key, value }) => {
+    try {
+      if (sessionStorage.getItem('__t289_seeded') === '1') return
+      sessionStorage.setItem('__t289_seeded', '1')
+      localStorage.setItem(key, JSON.stringify(value))
+    } catch { /* a blocked store is the app's problem */ }
+  }, { key: CURRENT, value: design })
+}
+
+const read = (page, key) => page.evaluate((k) => localStorage.getItem(k), key)
+const readJson = async (page, key) => JSON.parse((await read(page, key)) || 'null')
+const toast = (page) => page.locator('.toast.show')
+
+/** Press the toast's action, and read the working design in the same turn, before
+ *  the palette board's own debounced write (200ms) can restate it. */
+const pressActionAndReadWorking = (page) => page.evaluate(async (key) => {
+  document.querySelector('.toast.show .toast-action').click()
+  await new Promise((r) => setTimeout(r, 0))
+  return localStorage.getItem(key)
+}, CURRENT)
+
+/** The working design as the app stores it, once the page has settled on it. */
+async function settledWorking(page, design) {
+  await expect.poll(async () => (await readJson(page, CURRENT))?.palette?.colors).toEqual(design.palette.colors)
+  return read(page, CURRENT)
+}
+
+test.describe('Unsaved work is put aside, not lost', () => {
+  test('New project on /projects parks the unsaved design, and Undo brings it back byte for byte', async ({ page }) => {
+    watch(page, 'a designer with unsaved work pressing New project')
+    await signIn(page, { plan: 'free', projects: 1 })
+    await seedWork(page)
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    const before = await settledWorking(page, WORK)
+    expect(await read(page, PARKED), 'nothing is parked before anything is replaced').toBeNull()
+
+    await page.getByRole('button', { name: 'New project' }).click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+
+    // The old design is in the slot, whole, with the time it was put aside.
+    const slot = await readJson(page, PARKED)
+    expect(slot?.design, 'the parked design is the unsaved one').toEqual(WORK)
+    expect(typeof slot.parkedAt).toBe('number')
+    await expect(toast(page)).toContainText('Your unsaved work is put aside.')
+    await expect(toast(page).getByRole('button', { name: 'Undo' })).toBeVisible()
+
+    // Undo gives back exactly what was there, and empties the slot.
+    expect(await pressActionAndReadWorking(page)).toBe(before)
+    expect(await read(page, PARKED)).toBeNull()
+    await expect.poll(async () => (await readJson(page, CURRENT))?.palette?.colors).toEqual(WORK.palette.colors)
+  })
+})
