@@ -23,8 +23,11 @@ test('the Terms name the AI providers and what they may do with submissions', ()
 
 test('the Terms page renders the statement', () => {
   const src = stripComments(read('src/pages/Terms.jsx'))
-  assert.match(src, /more: 'terms\.s4AiText'/, 'the statement is not listed in SECTIONS')
-  assert.match(src, /\{s\.more && <p className="lgl-p">\{t\(s\.more\)\}<\/p>\}/, 'SECTIONS lists it but nothing renders it')
+  const ai = src.slice(src.indexOf('function Ai('), src.indexOf('\n}', src.indexOf('function Ai(')))
+  assert.match(ai, /processed by third-party AI providers under those providers&apos; own terms/, 'the AI section does not carry the provider statement')
+  assert.match(ai, /may allow Google to use what it receives to improve its products/)
+  assert.match(ai, /do not retain or train on it/)
+  assert.match(src, /\{ id: 'terms-s8', heading: '8\. AI features', render: Ai \}/, 'the AI section is not in SECTIONS')
 })
 
 test('the Privacy policy lists the AI providers and the use, and points at its own section 6', () => {

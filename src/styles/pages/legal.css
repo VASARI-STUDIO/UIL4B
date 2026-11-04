@@ -395,6 +395,63 @@
   .lgl .storage-table td:last-child { min-width: 120px; white-space: nowrap; }
 }
 
+/* ── Tables of prose: AI tools, providers, plans ──
+ * `.storage-table` is the localStorage list: a short key, one sentence and a
+ * Yes / No tag, and its phone layout and nowrap last column are built for that
+ * shape. These tables hold sentences in every cell, so they are a separate
+ * class: the same hairline-ruled look, and on a phone each row stacks with its
+ * `data-label` above each value. */
+.lgl .lgl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lgl .lgl-table thead { background: var(--cpg-wash); }
+.lgl .lgl-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--cpg-faint);
+  border-bottom: 1px solid var(--cpg-line);
+}
+.lgl .lgl-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  line-height: 1.5;
+  color: var(--cpg-dim);
+  border-bottom: 1px solid var(--cpg-line);
+  overflow-wrap: break-word;
+}
+.lgl .lgl-table tr:last-child td { border-bottom: 0; }
+.lgl .lgl-table td strong { color: var(--cpg-ink); font-weight: 560; }
+@media (max-width: 640px) {
+  .lgl .lgl-table thead { display: none; }
+  .lgl .lgl-table,
+  .lgl .lgl-table tbody,
+  .lgl .lgl-table tr,
+  .lgl .lgl-table td { display: block; width: 100%; }
+  .lgl .lgl-table tbody tr {
+    padding: var(--s-3) 0;
+    border-top: 1px solid var(--cpg-line);
+  }
+  .lgl .lgl-table tbody tr:first-child { border-top: 0; }
+  .lgl .lgl-table tbody td {
+    padding: 2px 0;
+    border: 0;
+    font-size: 14px;
+  }
+  .lgl .lgl-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cpg-faint);
+  }
+}
+
 /* ── Narrow ── */
 @media (max-width: 1000px) {
   /* The contents is a row above the document, so the whole page is one column.
@@ -447,7 +504,7 @@
   .lgl .lgl-h { font-size: 13pt; break-after: avoid; }
   .lgl-p, .lgl-list { font-size: 10.5pt; line-height: 1.5; orphans: 3; widows: 3; }
   .lgl-aside { font-size: 9.5pt; }
-  .lgl .storage-table tr { break-inside: avoid; }
-  .lgl .storage-table { font-size: 9.5pt; }
+  .lgl .storage-table tr, .lgl .lgl-table tr { break-inside: avoid; }
+  .lgl .storage-table, .lgl .lgl-table { font-size: 9.5pt; }
   .lgl-a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .9em; }
 }

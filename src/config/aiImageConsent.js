@@ -13,7 +13,7 @@
 // drift apart; tests/unit/ai-image-consent.test.js checks they name Google
 // Gemini and the Terms section, not the exact words.
 export const AI_IMAGE_SENT = 'Images you upload here are sent to Google Gemini to generate the text.'
-export const AI_TERMS_PATH = '/terms#terms-s4'
+export const AI_TERMS_PATH = '/terms#terms-s8'
 export const AI_IMAGE_CONSENT =
   'Images you upload here are sent to Google Gemini to generate the text, and Google may use them to improve its products.'
 

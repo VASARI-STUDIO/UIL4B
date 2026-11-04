@@ -46,8 +46,8 @@ test('/info reads its tool sections from the tree and types no tool name or lega
   }
   assert.ok(INFO.includes('AI_IMAGE_SENT') && INFO.includes('AI_TERMS_PATH'),
     '/info no longer reuses the AI image notice and its Terms link')
-  assert.equal(AI_TERMS_PATH, '/terms#terms-s4')
-  assert.ok(!INFO.includes('terms#terms-s4'), '/info types the Terms path instead of reading it')
+  assert.equal(AI_TERMS_PATH, '/terms#terms-s8')
+  assert.ok(!INFO.includes('terms#terms-s8'), '/info types the Terms path instead of reading it')
   for (const phrase of ['Colour Studio', 'fully searchable', 'Imagery, Icons', 'Free vs Pro', 'Saving & syncing']) {
     assert.ok(!INFO.includes(phrase), `/info carries "${phrase}" again`)
   }
