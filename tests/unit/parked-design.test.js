@@ -126,12 +126,19 @@ test('park then take back returns the design byte for byte and empties the slot'
   assert.equal(s.has(PARKED_KEY), false)
 })
 
-test('taking back an old toast\'s design leaves a newer parked design in the slot', () => {
+test('an old toast gives nothing back once a newer design is parked, and the newer one stays', () => {
   const s = store()
   const { slot: older } = parkIfAtRisk({ design: WORK, projects: [], storage: s, now: 1 })
   parkIfAtRisk({ design: OTHER, projects: [], storage: s, now: 2 })
-  assert.deepEqual(takeParked(older, s), clone(WORK))
+  assert.equal(takeParked(older, s), null)
   assert.equal(readParked(s).parkedAt, 2)
+})
+
+test('a slot cleared since (sign-out, a switch) gives nothing back', () => {
+  const s = store()
+  const { slot } = parkIfAtRisk({ design: WORK, projects: [], storage: s, now: 1 })
+  s.removeItem(PARKED_KEY)
+  assert.equal(takeParked(slot, s), null, 'the toast must not restore work into a browser that changed hands')
 })
 
 test('a full or blocked store parks nothing and does not throw', () => {

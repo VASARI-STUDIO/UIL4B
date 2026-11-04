@@ -89,12 +89,16 @@ export function parkIfAtRisk({ design, projects, storage, now = Date.now() }) {
 
 /**
  * Take a parked design back. Returns the design exactly as it was parked and
- * empties the slot, unless a newer design has been parked since (that one stays).
+ * empties the slot, but only while storage still holds that same slot. A slot
+ * cleared since (sign-out, an account switch) or replaced by a newer park
+ * gives nothing back, so an old toast can never restore work into a browser
+ * that has changed hands.
  */
 export function takeParked(slot, storage) {
   if (!slot || !isObj(slot.design)) return null
   try {
-    if (readParked(storage)?.parkedAt === slot.parkedAt) storage.removeItem(PARKED_KEY)
-  } catch { /* the slot stays; the design is still returned */ }
+    if (readParked(storage)?.parkedAt !== slot.parkedAt) return null
+    storage.removeItem(PARKED_KEY)
+  } catch { return null }
   return slot.design
 }
