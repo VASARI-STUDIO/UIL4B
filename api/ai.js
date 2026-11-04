@@ -648,7 +648,7 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
       : `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
   } else if (totals.openrouterOk === 0) {
     status = 'failing'
-    summary = `OpenRouter failed all ${totals.openrouterFail} times in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
+    summary = `OpenRouter failed ${totals.openrouterFail === 1 ? 'the only time it was tried' : `all ${totals.openrouterFail} times`} in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
   } else {
     status = 'degraded'
     summary = `OpenRouter failed ${totals.openrouterFail} of ${attempts} attempts in the last ${window} days.`

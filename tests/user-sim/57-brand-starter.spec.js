@@ -71,7 +71,7 @@ const STARTER = Object.freeze({
  * exactly what api/ai.js does by placing the usage increment after the runner's
  * early return.
  */
-async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', startUsed = 0, failFirst = false } = {}) {
+async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', startUsed = 0, failFirst = false, provider = 'openrouter' } = {}) {
   const state = { used: startUsed, calls: [], failuresLeft: failFirst ? 1 : 0 }
   const period = plan === 'pro' ? 'month' : 'lifetime'
 
@@ -117,7 +117,7 @@ async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', sta
       contentType: 'application/json',
       body: JSON.stringify({
         starter: STARTER,
-        provider: 'openrouter',
+        provider,
         plan,
         beta: true,
         generation: { used: state.used, limit, remaining: limit - state.used, period },
@@ -482,12 +482,13 @@ test.describe('the pricing page and the server agree', () => {
 })
 
 // The provider badge's meaning used to sit in a hover tooltip, out of reach on
-// a touch screen and from the keyboard.
-for (const width of [390, 1440]) {
-  test(`${width}px: the provider badge is 11px and says what it means when pressed`, async ({ page }) => {
-    watch(page, 'a designer asking what OpenRouter on the result means')
+// a touch screen and from the keyboard. The fallback label is the wider one,
+// so it is the case that would run off a phone screen first.
+for (const [width, provider, says] of [[390, 'gemini', 'backup AI provider'], [390, 'openrouter', 'main AI provider'], [1440, 'openrouter', 'main AI provider']]) {
+  test(`${width}px, ${provider}: the provider badge is 11px and says what it means when pressed`, async ({ page }) => {
+    watch(page, 'a designer asking what the provider name on the result means')
     await page.setViewportSize({ width, height: 900 })
-    await stubAi(page)
+    await stubAi(page, { provider })
     await openFixture(page)
     await writeBrief(page)
     await generate(page).click()
@@ -499,12 +500,15 @@ for (const width of [390, 1440]) {
 
     await badge.focus()
     await page.keyboard.press('Enter')
+    await expect(badge).toHaveAttribute('aria-expanded', 'true')
     const note = page.getByTestId('ai-provider-note')
     await expect(note).toBeVisible()
-    await expect(note).toContainText('primary provider')
+    await expect(note).toContainText(says)
+    await expect(note, 'the note shows the admin diagnosis').not.toContainText(/key|healthy state/i)
     const box = await note.boundingBox()
     expect(box.x, 'the note runs off the left edge').toBeGreaterThanOrEqual(0)
     expect(box.x + box.width, 'the note runs off the right edge').toBeLessThanOrEqual(width)
+    expect(box.y, 'the note is not on its own line under the badge').toBeGreaterThan((await badge.boundingBox()).y)
 
     await page.keyboard.press('Escape')
     await expect(note).toHaveCount(0)
@@ -513,6 +517,13 @@ for (const width of [390, 1440]) {
     await badge.click()
     await expect(note).toBeVisible()
     await page.locator('.bs-result-name').click()
+    await expect(note).toHaveCount(0)
+
+    // Tab moving on closes it too.
+    await badge.focus()
+    await page.keyboard.press('Enter')
+    await expect(note).toBeVisible()
+    await page.keyboard.press('Tab')
     await expect(note).toHaveCount(0)
   })
 }
