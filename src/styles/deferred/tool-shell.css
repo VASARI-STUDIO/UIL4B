@@ -518,6 +518,8 @@
 .bkit-name-input[aria-invalid="true"]:focus-visible{border-color:var(--err-strong);box-shadow:0 0 0 3px color-mix(in srgb,var(--err-strong) 18%,transparent)}
 .bkit-name-save{width:100%;height:44px;padding:0 var(--s-4);justify-content:center;white-space:nowrap;font-size:15px;font-weight:560}
 .bkit-card-go:active,.bkit-name-save:not(:disabled):active{transform:scale(.97)}
+.bkit-name-save-to{display:inline-block;max-width:16ch;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.bkit-name-alt{width:100%;height:44px;padding:0 var(--s-4);justify-content:center;white-space:nowrap;font-size:15px;font-weight:560}
 /* The message line is always one line tall, so swapping the note for the error moves nothing. */
 .bkit-name-msg{display:flex;flex-direction:column;gap:var(--s-1);min-height:1.5em;font-size:var(--fs-caption)}
 .bkit-name-note,.bkit-name-error{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}

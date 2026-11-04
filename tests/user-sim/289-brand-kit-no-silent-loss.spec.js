@@ -120,4 +120,29 @@ test.describe('Unsaved work is put aside, not lost', () => {
     expect(await read(page, PARKED)).toBeNull()
     expect(new URL(page.url()).search, 'the link\'s colours are off the address').toBe('')
   })
+
+  test('finishing the walkthrough on an opened project saves to it and keeps the project count', async ({ page }) => {
+    watch(page, 'a designer finishing the walkthrough on a project they opened')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const at = '2026-09-01T09:00:00.000Z'
+    const alpha = { id: 'proj-a', name: 'Alpha', design: JSON.parse(JSON.stringify(WORK)), createdAt: at, updatedAt: at }
+    await signIn(page, { plan: 'free', projects: [alpha] })
+    await seedWork(page, { ...WORK, source: { projectId: 'proj-a' } })
+    await page.addInitScript(() => { try { localStorage.setItem('vs-uikit-guide', '1') } catch { /* blocked */ } })
+    await go(page, '/create/icons')
+    await expectRendered(page, '/create/icons')
+
+    await page.getByRole('region', { name: 'Brand kit walkthrough' }).getByRole('button', { name: /^Name your project/ }).click()
+    const form = page.getByRole('dialog', { name: 'Name your project' })
+    await expect(form.getByRole('button', { name: 'Save to Alpha' })).toBeVisible()
+    await expect(form.getByRole('button', { name: 'Save as a new project' })).toBeVisible()
+    await form.getByRole('textbox', { name: 'Project name' }).fill('Alpha kit')
+    await form.getByRole('button', { name: 'Save to Alpha' }).click()
+
+    await expect(page).toHaveURL(/\/projects\/proj-a\/export$/)
+    const saved = Object.values(await readJson(page, 'vs-projects')).flat()
+    expect(saved.map((p) => p.id), 'no second project, no slot spent').toEqual(['proj-a'])
+    expect(saved[0].design.identity?.name).toBe('Alpha kit')
+    expect('source' in saved[0].design, 'the working copy\'s source stays out of the project').toBe(false)
+  })
 })

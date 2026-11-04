@@ -349,19 +349,20 @@ export function ProjectProvider({ children }) {
     updateProject(id, { name: name.trim() })
   }, [updateProject])
 
-  const overwriteProject = useCallback((id) => {
+  // `opts` folds a caller's same-event changes into the saved copy, as saveProject does.
+  const overwriteProject = useCallback((id, opts = {}) => {
     if (!userKey) return
     setAllProjects(prev => {
       const list = prev[userKey] || []
       const next = list.map(p => p.id === id
-        ? { ...p, design: JSON.parse(JSON.stringify(projectSnapshot(design))), updatedAt: new Date().toISOString() }
+        ? { ...p, design: JSON.parse(JSON.stringify(projectSnapshot(design, opts))), updatedAt: new Date().toISOString() }
         : p
       )
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
     })
-    setDesign(prev => (prev.source?.projectId === id ? prev : { ...prev, source: { projectId: id } }))
+    setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
   }, [design, userKey])
 
   // Open a saved project as the working design. Unsaved work already on the

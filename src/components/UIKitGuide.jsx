@@ -115,7 +115,7 @@ const TICK_ICON = (
 export default function UIKitGuide({ step }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { design, updateDesign, saveProject, canSaveProjects } = useProject()
+  const { design, updateDesign, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
@@ -335,9 +335,27 @@ export default function UIKitGuide({ step }) {
     }
   }, [design, navigate, saveProject, setBusy])
 
+  // A walkthrough that began on a saved project finishes by saving over it: no
+  // new project, no slot, no cap. Saving as a new project stays one press away.
+  const sourceProject = canSaveProjects && design?.source?.projectId
+    ? projects.find((p) => p.id === design.source.projectId) || null
+    : null
+  const saveOver = useCallback((name) => {
+    try {
+      overwriteProject(sourceProject.id, { identityName: name, patch: savePatch(design) })
+      endGuide()
+      setActive(false)
+      navigate(`/projects/${sourceProject.id}/export`)
+    } catch (err) {
+      setRefusal(err?.message || 'That project could not be saved.')
+      setBusy(false)
+    }
+  }, [design, navigate, overwriteProject, setBusy, sourceProject])
+
   const nameInputRef = useRef(null)
   const nameTitleRef = useRef(null)
-  const submitName = useCallback(async (e) => {
+  // `asNew` is the secondary button: a new project even when this one was opened from a saved project.
+  const submitName = useCallback(async (e, asNew = false) => {
     e.preventDefault()
     if (savingRef.current) return
     const name = draft.trim()
@@ -361,7 +379,8 @@ export default function UIKitGuide({ step }) {
     setOffline(false)
     setBusy(true)
     if (canSaveProjects) {
-      save(name)
+      if (sourceProject && !asNew) saveOver(name)
+      else save(name)
       return
     }
     pendingNameRef.current = name
@@ -370,7 +389,7 @@ export default function UIKitGuide({ step }) {
       pendingNameRef.current = null
       setBusy(false)
     }
-  }, [canSaveProjects, draft, requireLogin, save, setBusy, updateDesign])
+  }, [canSaveProjects, draft, requireLogin, save, saveOver, setBusy, sourceProject, updateDesign])
 
   // After a sign-in from the closing step, the save runs once the account's own
   // plan has arrived (not the free default held until it does), so the cap is
@@ -668,8 +687,24 @@ export default function UIKitGuide({ step }) {
                 aria-invalid={nameError ? 'true' : undefined}
                 aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
               />
-              <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>{saving ? 'Saving…' : 'Save project'}</button>
+              <button
+                type="submit"
+                className="btn btn-accent bkit-name-save"
+                disabled={saving}
+                aria-label={sourceProject && !saving ? `Save to ${sourceProject.name}` : undefined}
+              >
+                {saving
+                  ? 'Saving…'
+                  : sourceProject
+                    ? <>Save to <span className="bkit-name-save-to">{sourceProject.name}</span></>
+                    : 'Save project'}
+              </button>
             </div>
+            {sourceProject && (
+              <button type="button" className="btn bkit-name-alt" disabled={saving} onClick={(e) => submitName(e, true)}>
+                Save as a new project
+              </button>
+            )}
             <div className="bkit-name-msg">{nameMessage}</div>
           </form>
         </BkitPanel>
