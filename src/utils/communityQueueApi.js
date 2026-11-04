@@ -6,7 +6,7 @@
 // and utils/aiQuota.js use for the same reason.
 import {
   collection, setDoc, getDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, limit,
-  writeBatch, serverTimestamp,
+  startAfter, writeBatch, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS } from './communityQueue'
@@ -100,6 +100,35 @@ export async function listMySubmissions(uid, kind = null, max = 100) {
   if (kind) parts.push(where('kind', '==', kind))
   const snap = await getDocs(query(...parts, orderBy('createdAt', 'desc'), limit(max)))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+/** How many approved designs one read brings to the public grid. */
+export const PUBLIC_DESIGN_PAGE = 24
+
+/**
+ * One page of approved designs, newest approval first — what /community shows
+ * every visitor, signed out included. firestore.rules opens a read to anyone
+ * only when the query is held to approved designs, so both filters stay.
+ * `after` is the cursor a previous page returned. One extra document is asked
+ * for to learn whether another page exists, and is not returned.
+ *
+ * @returns {Promise<{ items: object[], cursor: object|null, hasMore: boolean }>}
+ */
+export async function listApprovedDesigns({ after = null, pageSize = PUBLIC_DESIGN_PAGE } = {}) {
+  const snap = await getDocs(query(
+    collection(db, QUEUE_COLLECTION),
+    where('status', '==', 'approved'),
+    where('kind', '==', 'design'),
+    orderBy('reviewedAt', 'desc'),
+    ...(after ? [startAfter(after)] : []),
+    limit(pageSize + 1),
+  ))
+  const shown = snap.docs.slice(0, pageSize)
+  return {
+    items: shown.map(d => ({ id: d.id, ...d.data() })),
+    cursor: shown.length ? shown[shown.length - 1] : null,
+    hasMore: snap.docs.length > pageSize,
+  }
 }
 
 /** Everything awaiting review — the admin queue. */

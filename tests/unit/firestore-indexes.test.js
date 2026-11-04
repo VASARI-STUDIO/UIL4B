@@ -173,3 +173,9 @@ test('no other src/ or api/ query combines where with orderBy, or filters on two
   assert.deepEqual(multiInequality, [], 'inequality filters on different fields need a composite index')
   assert.deepEqual([...orderedWhere].sort(), [...COVERED].sort(), 'the covered file no longer holds a where + orderBy query')
 })
+
+test('listApprovedDesigns (the public grid) has its composite index', () => {
+  const shapes = requiredShapes(functionBody(queueApi, 'listApprovedDesigns'))
+  assert.deepEqual(shapes, [{ eq: ['status', 'kind'], sortField: 'reviewedAt', dir: 'DESCENDING' }])
+  for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
+})

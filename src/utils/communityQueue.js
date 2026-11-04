@@ -29,6 +29,8 @@
 // which are the part worth getting wrong-proof — are testable under
 // `node --test` without a browser or a network. The Firestore reads and writes
 // are in communityQueueApi.js.
+import { safeHttpUrl } from './urlSafety'
+
 export const QUEUE_COLLECTION = 'community-submissions'
 
 // 'approved' and 'rejected' are a REVIEWER's words. firestore.rules refuses a
@@ -88,6 +90,60 @@ export const QUEUE_STATUS_LABEL = Object.freeze({
 export function submissionStatusLabel({ status, synced = true, sending = false } = {}) {
   if (!synced) return sending ? 'Sending…' : 'Not sent'
   return Object.hasOwn(QUEUE_STATUS_LABEL, status) ? QUEUE_STATUS_LABEL[status] : QUEUE_STATUS_LABEL.pending
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/
+const clip = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+
+/**
+ * One approved design from the public query, as a card. Anything that is not an
+ * approved design with a name is dropped, so a document the query should never
+ * have returned cannot reach the grid.
+ *
+ * Built field by field from the payload rather than spread over it: the card
+ * takes only what it draws, the link passes the http(s) check, and a colour the
+ * thumbnail cannot parse falls back to the default pair. The credit is the
+ * author the submitter typed, else the account's display name. `ownerId` is
+ * never set, so no stored value can claim the site-owner treatment.
+ *
+ * `authorUid` and `docId` are kept for de-duplication against the viewer's own
+ * entries (see publicDesignsForViewer); the card does not draw them.
+ */
+export function publicDesignFromDoc(doc) {
+  if (!doc || doc.kind !== 'design' || doc.status !== 'approved') return null
+  const name = clip(doc.name, 80)
+  if (!name || typeof doc.id !== 'string' || !doc.id) return null
+  const payload = doc.payload && typeof doc.payload === 'object' ? doc.payload : {}
+  return {
+    id: `pub-${doc.id}`,
+    docId: doc.id,
+    authorUid: typeof doc.authorUid === 'string' ? doc.authorUid : '',
+    name,
+    author: clip(payload.author, 60) || clip(doc.authorName, 60) || 'Community member',
+    category: clip(payload.category, 40),
+    url: safeHttpUrl(payload.url),
+    c1: HEX.test(payload.c1 || '') ? payload.c1 : '#3B82F6',
+    c2: HEX.test(payload.c2 || '') ? payload.c2 : '#8B5CF6',
+    saves: 0,
+  }
+}
+
+/**
+ * The public designs a viewer should see in the grid. Their own designs are
+ * left out: those render from their own list with a status tag, so an approved
+ * design of theirs would otherwise appear twice, once without the tag.
+ *
+ * @param {object[]} items cards from publicDesignFromDoc
+ * @param {{ uid?: string|null, own?: object[] }} viewer `own` is their merged
+ *   list; a design counts as theirs when its document id matches any entry
+ */
+export function publicDesignsForViewer(items, { uid = null, own = [] } = {}) {
+  const ownDocs = new Set()
+  for (const o of own || []) {
+    if (o?.docId) ownDocs.add(o.docId)
+    if (o?.id) ownDocs.add(o.id)
+  }
+  return (items || []).filter(i => i && !(uid && i.authorUid === uid) && !ownDocs.has(i.docId))
 }
 
 /**

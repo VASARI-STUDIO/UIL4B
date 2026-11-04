@@ -19,7 +19,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  buildQueueRecord, mergeSubmissions, QUEUE_KINDS, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS,
+  buildQueueRecord, mergeSubmissions, publicDesignFromDoc, publicDesignsForViewer,
+  QUEUE_KINDS, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS,
 } from '../../src/utils/communityQueue.js'
 import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
@@ -342,4 +343,47 @@ test('the listing can ask for a bigger page than the 100 the gallery shows', () 
   assert.match(src, /listMySubmissions\(uid, kind = null, max = 100\)/)
   assert.match(src, /limit\(max\)/)
   assert.match(read('src/hooks/useGradientSubmissionMigration.js'), /listMySubmissions\(uid, kind, LIST_MAX\)/)
+})
+
+// ── Approved designs in the public grid ─────────────────────────────────────
+
+const approvedDoc = (over = {}) => ({
+  id: 'doc1',
+  kind: 'design',
+  status: 'approved',
+  name: 'Harbour',
+  authorUid: 'u-other',
+  authorName: 'Account Name',
+  payload: { author: 'Typed Name', category: 'Landing', url: 'https://example.com/h', c1: '#3B82F6', c2: '#8B5CF6' },
+  ...over,
+})
+
+test('publicDesignFromDoc draws only an approved design, field by field', () => {
+  const card = publicDesignFromDoc(approvedDoc())
+  assert.equal(card.id, 'pub-doc1')
+  assert.equal(card.author, 'Typed Name')
+  assert.equal(card.url, 'https://example.com/h')
+  assert.equal(card.ownerId, undefined, 'no stored value may claim the site-owner treatment')
+  for (const over of [{ status: 'pending' }, { status: 'rejected' }, { status: 'withdrawn' }, { kind: 'icon' }, { kind: 'palette' }, { name: '  ' }, { id: '' }]) {
+    assert.equal(publicDesignFromDoc(approvedDoc(over)), null, JSON.stringify(over))
+  }
+  assert.equal(publicDesignFromDoc(null), null)
+})
+
+test('publicDesignFromDoc credits the account name when no author was typed, and cleans links and colours', () => {
+  assert.equal(publicDesignFromDoc(approvedDoc({ payload: { url: 'https://example.com' } })).author, 'Account Name')
+  assert.equal(publicDesignFromDoc(approvedDoc({ payload: {}, authorName: '' })).author, 'Community member')
+  const bad = publicDesignFromDoc(approvedDoc({ payload: { url: 'javascript:alert(1)', c1: 'nope', c2: 'url(x)' } }))
+  assert.equal(bad.url, '')
+  assert.equal(bad.c1, '#3B82F6')
+  assert.equal(bad.c2, '#8B5CF6')
+})
+
+test('publicDesignsForViewer drops the viewer\'s own designs, by author and by document', () => {
+  const a = publicDesignFromDoc(approvedDoc({ id: 'a', authorUid: 'me' }))
+  const b = publicDesignFromDoc(approvedDoc({ id: 'b', authorUid: 'them' }))
+  const c = publicDesignFromDoc(approvedDoc({ id: 'c', authorUid: 'them' }))
+  assert.deepEqual(publicDesignsForViewer([a, b, c], { uid: 'me', own: [] }).map(i => i.docId), ['b', 'c'])
+  assert.deepEqual(publicDesignsForViewer([a, b, c], { uid: null, own: [{ docId: 'c' }] }).map(i => i.docId), ['a', 'b'])
+  assert.deepEqual(publicDesignsForViewer([a, b], { uid: null }).map(i => i.docId), ['a', 'b'])
 })
