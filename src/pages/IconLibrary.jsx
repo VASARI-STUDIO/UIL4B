@@ -75,6 +75,7 @@ import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCr
 import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
+import { iconSynonymFor } from '../data/iconSynonyms'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -3950,6 +3951,15 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     debounceSearch(next, { pack, group })
   }
 
+  // The "Search “house” instead" button of the empty state. Runs the other word
+  // at once, in the scope already chosen, with no debounce: it is a press, not
+  // typing.
+  const handleTrySynonym = (word) => {
+    clearTimeout(timer.current)
+    setQuery(word)
+    doSearch(word, { pack, group })
+  }
+
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
@@ -4435,6 +4445,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // which says what it is and how to open it.
   const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
+  // A word the catalogues name differently ("home" for "house"): offered as a
+  // button on the empty state, so no second search runs unless it is pressed.
+  const synonym = searchEmpty ? iconSynonymFor(query) : ''
 
   /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
@@ -5141,9 +5154,18 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <p>{query.trim()
-                  ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
-                  : 'No icons to show — try another pack or search.'}</p>
+                {synonym ? (
+                  <>
+                    <p>{`No icons match “${query.trim()}”. Try “${synonym}”.`}</p>
+                    <button type="button" className="btn pl-empty-try" onClick={() => handleTrySynonym(synonym)}>
+                      {`Search “${synonym}” instead`}
+                    </button>
+                  </>
+                ) : (
+                  <p>{query.trim()
+                    ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                    : 'No icons to show — try another pack or search.'}</p>
+                )}
               </div>
             )}
 
