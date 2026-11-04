@@ -170,10 +170,13 @@ function RequireAuth({ children }) {
 // lie about why they can't be here, and the route's existence is not something
 // they need told.
 //
+// `notFound` swaps that redirect for the not-found page at the same address, for
+// a route whose existence should not be hinted at or silently redirected away from.
+//
 // Presentation only — see isAdminEmail in utils/constants.js. Routes holding
 // real data verify server-side (/api/verify-admin), which the Admin dashboard
 // already does and which this does not replace.
-function RequireAdmin({ children }) {
+function RequireAdmin({ children, notFound = false }) {
   const { user, loading } = useAuth()
   useEffect(() => { openFirebaseGate() }, [])
   if (loading) {
@@ -183,7 +186,7 @@ function RequireAdmin({ children }) {
       </div>
     )
   }
-  if (!isAdminEmail(user?.email)) return <Navigate to="/" replace />
+  if (!isAdminEmail(user?.email)) return notFound ? <NotFound /> : <Navigate to="/" replace />
   return children
 }
 
@@ -572,8 +575,8 @@ function AppInner({ toast }) {
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
               {/* Parked: admins only until the library is opened up. Everyone
-                  else is sent to the homepage by RequireAdmin. */}
-              <Route path="/discover/prompts" element={<RequireAdmin><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
+                  else sees the not-found page, at this same address. */}
+              <Route path="/discover/prompts" element={<RequireAdmin notFound><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
               {/* Copy-ready button designs. `onCopy` is required: every copy
                   button on the page calls it. */}
               <Route path="/discover/buttons" element={<ButtonLibrary onCopy={copy} />} />

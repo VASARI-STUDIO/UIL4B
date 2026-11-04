@@ -6,9 +6,12 @@
 //   2. A Soon tool's URL still redirects, but the arrival says so in a toast.
 //   3. The palette library has one builder link per card and a skip link past
 //      the grid.
+//   4. /discover/prompts shows the not-found page to anyone but an admin.
 //   7. The palette Pro walls preview the seed on screen, not the saved history.
 //
 // MUTATIONS (each should fail the named test):
+//   * drop `notFound` from the /discover/prompts route in App.jsx
+//       -> "signed out: the not-found page, at the same address"
 //   * restore the `pgal-act` Builder link in PaletteGalleryGrid.jsx
 //       -> "a card has one link to the builder ..."
 //   * delete the skip link or the `pgl-after-grid` marker in PaletteGallery.jsx
@@ -199,5 +202,31 @@ test.describe('palette gallery: tab stops', () => {
     await page.keyboard.press('Tab')
     await frames(page)
     expect(await page.evaluate(() => !!document.activeElement?.closest('.pgal-card'))).toBe(false)
+  })
+})
+
+// ── 4. /discover/prompts shows the not-found page to non-admins ──────────────
+
+test.describe('/discover/prompts: parked behind the admin check', () => {
+  const NOT_FOUND = /That page doesn.t exist/
+  const pathOf = (page) => new URL(page.url()).pathname
+
+  for (const who of ['signed out', 'free', 'pro']) {
+    test(`${who}: the not-found page, at the same address`, async ({ page }) => {
+      watch(page, 'a visitor following a link to a parked page')
+      if (who !== 'signed out') await signIn(page, { plan: who })
+      await go(page, '/discover/prompts')
+      await expect(page.getByRole('heading', { level: 1, name: NOT_FOUND })).toBeVisible()
+      await expect(page).toHaveTitle('UI L4B | Page not found')
+      expect(pathOf(page), 'the address was not changed').toBe('/discover/prompts')
+    })
+  }
+
+  test('an admin still gets the library', async ({ page }) => {
+    watch(page, 'the owner opening the parked library')
+    await signIn(page, { admin: true })
+    await go(page, '/discover/prompts')
+    await expect(page.getByRole('heading', { level: 1, name: NOT_FOUND })).toHaveCount(0)
+    expect(pathOf(page)).toBe('/discover/prompts')
   })
 })
