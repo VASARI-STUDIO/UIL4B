@@ -27,8 +27,7 @@
    300–700, Geist Mono 300–600.
 
    ── SPECTRUM, 2026-09-18: Manrope and JetBrains Mono are retired ────────────
-   The founder commissioned a full design system ("UIL4B - Spectrum") and it
-   sets the whole product in GEIST, with Geist Mono for every value a user
+   The "UIL4B - Spectrum" design system sets the whole product in GEIST, with Geist Mono for every value a user
    copies and Caveat for the one handwritten annotation the homepage has always
    carried. Adopting it half-way — new layout on the old faces — is exactly the
    disjointedness the 2026-09-16 audit measured, so the faces move with it.
@@ -127,7 +126,7 @@
      than backed by a real serif because V2 budgets exactly two self-hosted
      families and a third is a first-paint cost, not a token edit — see the
      @font-face note at the top of this file. If you ever DO want serif/sans
-     contrast, that is a founder call on the type system, not a token rename.
+     contrast, that is a type-system decision, not a token rename.
      Contrast in this system comes from Manrope vs JetBrains Mono, plus
      weight and scale. Fallback stacks are unchanged from the Outfit era. */
   /* Display tracking scale. Switzer's word space is narrow, so heavy negative
@@ -137,7 +136,7 @@
      same tiers so a price sits level with the heading beside it. */
   --font:'Switzer','Switzer Fallback',system-ui,-apple-system,sans-serif;--display:'Switzer','Switzer Fallback',system-ui,-apple-system,sans-serif;--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   /* The handwritten annotation, and nothing else. It has ONE job — the "give it
-     a try" note the founder drew on the homepage — so it is a token rather than
+     a try" note on the homepage — so it is a token rather than
      an inline font-family only so that job has a name. Never use it for reading
      text: Caveat has no mono figures, no tabular numerals and poor contrast at
      small sizes, and the accessibility sweeps treat it as decorative. */
@@ -180,7 +179,7 @@
   --fl-stagger:55ms;--stagger:70ms;--fl-shimmer-dur:1.4s}
 /* ── DARK — V2 reseed. Docs: docs/reference/design-language-v2.md#palette ──
    Page #060607 · chrome #0B0C0E · surface #111215 · ink #F2F1EC · mute #8E8E88 · line #202125.
-   NEAR-BLACK, 2026-09-23 (founder: "the dark mode i want darker"). The first
+   NEAR-BLACK: dark mode is meant to read darker. The first
    pass moved the ramp down while holding every step at its old lightness gap,
    and it photographed as unchanged. This is the Linear/Vercel reading of dark:
    a near-black page, cards only just lifted, separation carried by hairlines.
@@ -614,8 +613,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* Semantic colour workbench */
 .stc-head.solo{padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}
 .stc-head.solo .stc-toolbar{align-items:center}
-/* THE TRAY LISTS EVENLY (founder, 2026-08-08: "so the premade packs list
-   evenly"). Measured before it was touched: seven cards is a PRIME number, so
+/* THE TRAY LISTS EVENLY (the premade packs must fill whole rows). Measured before it was touched: seven cards is a PRIME number, so
    it was ragged at every width the suite checks - rows of 4,3 at 1280 and
    2,2,2,1 at 390/640/834. No column count fixes that; only the cell count does.
    The extra cell goes to the FIRST card rather than to an invented eighth pack,
@@ -841,7 +839,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
 /* Success motion: the checkmark draws, which is the state ("done") being
    said. The spring pop that scaled the tile from .5 went: it said nothing the
-   draw does not, and springy decoration is on the founder's rejected list. */
+   draw does not, and springy decoration is not used in this product. */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
 @keyframes toast-draw{to{stroke-dashoffset:0}}
@@ -890,7 +888,7 @@ html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-re
 
    `.bento-hero-name-in{animation:fl-name-in}` above is still declared, so if
    the dashboard bento is ever rebuilt the guard is correct and waiting.
-   Deleting is a founder call, not a drive-by. */
+   Deleting it is a product decision, not a drive-by cleanup. */
 html[data-reduced-motion="true"] .sk::after{animation:none;background:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .sk::after{animation:none;background:none}
@@ -1423,7 +1421,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
      .ggn-handle   20 x 20  the gradient stop handle
    Real, and left alone on purpose: it is dragged along a bar whose stops can
    sit 20px apart, so growing the handle changes how the bar is manipulated.
-   That is a design call for the founder, not a defect fix. */
+   That is a design decision, not a defect fix. */
 .plb-hex,
 .ggn-copy{display:inline-flex;align-items:center;justify-content:center;min-height:24px}
 
@@ -1601,7 +1599,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* 94.8x21.4 measured, at every width. These stack in a column with a 9px gap,
    so a 24px circle centred on each one clears its neighbour by a hair and the
    SPACING exception technically covers them — but "technically conforming and
-   still a 21px touch target" is the founder's standing complaint about this
+   still a 21px touch target" is the failure to avoid in this
    footer, and the vertical rhythm in the stacked link columns on
    Mobbin/Pitch and Mobbin/Retool is looser than this, not tighter.
    https://mobbin.com/sites/sections/86c62119-372f-4602-9e63-254535ff22f4
@@ -1617,10 +1615,10 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-style:normal;color:var(--t3);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none}
 .app-footer-legal{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding-top:var(--s-5);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3)}
 .app-footer-copy{font-family:var(--font);letter-spacing:normal;text-transform:none}
-/* Founder attribution. Lifts off the --t3 sentence around it and keeps a
+/* Author credit. Lifts off the --t3 sentence around it and keeps a
    RESTING underline: every sibling in this footer is an internal NavLink, so
    the one link that leaves the app has to say so without being hovered
-   (founder direction 2026-09-02 — no hover-only affordances on touch).
+   (no hover-only affordances on touch).
    The underline derives from currentColor rather than a fixed token because a
    fixed one cannot serve both themes: --bh reads 1.7:1 on the dark footer,
    which is an affordance only in the sense that it technically exists. 70% is
@@ -1636,7 +1634,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer--compact .app-footer-legal{padding-top:var(--s-4)}
 @media(max-width:768px){.app-footer-inner,.app-footer--compact .app-footer-inner{grid-template-columns:minmax(0,1fr)}.app-footer-brand,.app-footer-links,.app-footer-group,.app-footer-legal{min-width:0}.app-footer-links{grid-template-columns:repeat(3,minmax(0,1fr))}.app-footer-legal{grid-column:auto}}
 @media(max-width:480px){.app-footer-links{grid-template-columns:1fr 1fr}.app-footer-legal{align-items:flex-start;flex-direction:column}}
-/* ─── "About this project" — the founder's note, opened from the footer ─── */
+/* ─── "About this project" — the author's note, opened from the footer ─── */
 /* THE TRIGGER. A <button> that reads as a link, and both halves of that are
    deliberate.
 
@@ -1646,12 +1644,12 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    keyboard contracts in this app exist to remove.
 
    Reading as a link because of where it stands: between the copyright and the
-   founder attribution, in a row of quiet text. A filled or bordered control
+   author credit, in a row of quiet text. A filled or bordered control
    there would out-rank both of the things it sits between, and the note is the
    least urgent item in the footer, not the most.
 
    The underline RESTS rather than waiting for hover — same reason as
-   .app-footer-attrib above (founder direction 2026-09-02, no hover-only
+   .app-footer-attrib above (no hover-only
    affordances on touch), and more so here: its two neighbours are plain spans,
    so nothing else in the row tells a reader this one is pressable. */
 /* min-height 24 is WCAG 2.2 AA 2.5.8, and this control could not claim either
@@ -2305,7 +2303,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
    rail was meant to be guarded — and the reasoning above it is what the two
    rails that DO ship were missing. Those are now guarded (see
    `.plb-toolbar-group:last-child` and `.ggn-presets`, and
-   tests/user-sim/27-motion-guards.spec.js). Deleting is a founder call.
+   tests/user-sim/27-motion-guards.spec.js). Deleting it is a product decision.
    Note the base rule is `x mandatory`, the only one in the file — the four
    live rails are all `x proximity`. */
 
@@ -2414,7 +2412,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
   --page-inline:max(var(--page-gutter),env(safe-area-inset-left,0px),env(safe-area-inset-right,0px),calc((100vw - var(--page-content-max))/2))
 }
 
-/* Large-desktop gutter step — founder direction, 2026-08-08. Below
+/* Large-desktop gutter step. Below
    --page-content-max the centring branch has no slack to give, so a 1440-class
    screen fell back to the ~22px minimum gutter and the page ran flush to the
    viewport edge. This is the same shared scale one step wider, not a parallel
@@ -2708,7 +2706,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
    harmless" — and no such CSS existed. The only rules on the attribute were the
    two above, so the ONLY thing that ever cleared `opacity:0` was `.is-in`,
    added by an IntersectionObserver when the element scrolls into view.
-   Founder report, 2026-09-15: "if people have animation off it looks broken".
+   The symptom: with animation off, the page looks broken.
    Reproduced on the live site with prefers-reduced-motion set, measuring at
    load before any scroll: /learn 13 of 14 blocks blank (1,659 characters
    invisible), /create/color 5 of 6 (691), /discover 5 of 9 (640), /plans 1 of 1
@@ -3517,8 +3515,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .cpk-trigger{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .cpk-trigger:hover,.cpk-trigger[aria-expanded="true"]{border-color:var(--bh)}
 /* The open state has to be legible WITHOUT hover. A touch user never has one,
-   and this trigger now stands on twelve surfaces rather than three (founder
-   direction 2026-09-02: no hover-dependent affordances on touch). */
+   and this trigger now stands on twelve surfaces rather than three. */
 .cpk-trigger[aria-expanded="true"]{box-shadow:0 0 0 3px var(--accent-bg)}
 .cpk-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cpk-trigger[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
@@ -3802,8 +3799,8 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 /* ── Command bar (structural pattern 2) ── */
 .hcmd{max-width:660px;margin:var(--s-5) auto 0;text-align:left}
 /* Short laptop screens: the hero's own rhythm tightens so the primary CTA and
-   the trust line stay above the fold at 1280×800, which is the founder-reported
-   condition the below-the-fold test guards. Type sizes are untouched — only the
+   the trust line stay above the fold at 1280×800, which is the condition the
+   below-the-fold test guards. Type sizes are untouched — only the
    gaps between blocks give way. */
 @media(max-height:900px){
   .home-hero{padding-top:calc(var(--chrome-h) + var(--s-6))}
@@ -3824,7 +3821,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
    1px-bordered rectangle inside .hcmd-bar — and on focus a second ring inside
    the bar's — plus taking the reset's 13px over the --fs-body this rule asks
    for. Visible on every viewport since the bar shipped, and unmissable now the
-   founder has removed the label and chips that used to flank it. */
+   label and chips that used to flank it are gone. */
 input.hcmd-input{min-width:0;height:56px;padding:0;border:0;border-radius:0;background:none;color:var(--t0);font-family:var(--font);font-size:var(--fs-body);font-weight:500}
 .hcmd-input::placeholder{color:var(--t3)}
 input.hcmd-input:focus{outline:none;box-shadow:none}
@@ -3944,9 +3941,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 .plb-strip-c{width:12px;height:20px;border-radius:4px;background:var(--plb-rc)}
 
 /* ── Desktop rhythm ───────────────────────────────────────────────────────
-   Founder, 2026-09-05: the toolbar "is a run of icon-only buttons of uneven
-   weight and spacing sitting beside two labelled buttons and a select, and
-   it reads as unresolved rather than designed."
+   The toolbar read as a run of icon-only buttons of uneven weight and spacing
+   sitting beside two labelled buttons and a select: unresolved rather than
+   designed.
    Measured at 1440: ten 36px icon squares interleaved with three controls of
    135, 171 and 152px in no order, at a uniform 10px gap except a stray 21px
    before Save / export. Every gap said the same thing, so nothing said which
@@ -4297,8 +4294,8 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    and the paragraph was the variable: 6, 4 and 5 lines (140/96/116px) of a
    sentence written for a 630px measure. The h1, the action and the
    Icon/Emoji tablist are the masthead's job; a description that runs to a
-   third of the screen is not. The clamp is the whole fix: the sentences are
-   the founder's to shorten, not an agent's. The Font Gallery's masthead is
+   third of the screen is not. The clamp is the whole fix: the sentences themselves
+   stay as written. The Font Gallery's masthead is
    its own component with the same paragraph in the same place, so it takes
    the same cap. */
 @media(max-width:640px){
@@ -4586,9 +4583,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    `calc(var(--nav-h) + 10px)`. That coordinate is not empty. It is exactly
    where `.plb-toolbar`, `.uis-command`, `.lbry-toolbar` and `.pgl-section-head`
    park themselves, because every one of them derives from the same nav height
-   — so the notice landed on the toolbar of whatever tool you were using. The
-   founder reported it on the Palette Builder on 2026-09-14 and decided the
-   notices move into the page flow. The geometry says it was true of every
+   — so the notice landed on the toolbar of whatever tool you were using. It
+   showed on the Palette Builder first, and the notices now sit in the page
+   flow. The geometry says it was true of every
    sticky toolbar on the site, not just that one.
 
    The strip carries the chrome — background, bottom border — and the notices
@@ -4736,8 +4733,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* ============================================================
    W3 · V2 SHARED UI — one popover language, app-wide
    ------------------------------------------------------------
-   The founder's brief: "a nice round app where all tools feel part of this
-   app." Before this block there were four different popover treatments —
+   The aim: a nice round app where all tools feel part of this app. Before this block there were four different popover treatments —
    .pnav-pop (radius-xl / warm-shadow-lg / 8px), .cpk-pop (radius-l / 12px),
    .plb-menu, .dsc-menu, .cs-ctx, .emoji-tone-pop, .profile-menu — each styled
    in isolation and each slightly wrong next to the others.
@@ -4907,7 +4903,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    Rebuilt as a plan chooser. References studied on Mobbin (all web):
    Replit  https://mobbin.com/screens/017bf4cb-ade3-42e5-bf6f-2c8be1ba931c
            - the per-month figure huge, "per month / billed annually" stacked
-             small beside it. The closest thing to what the founder asked for.
+             small beside it. The closest match to this layout.
    Bloom   https://mobbin.com/screens/4999c558-9dcd-412f-b522-0ceb3ed6a83b
            - "$16 /mo" dominant with "$192 billed annually" as one quiet line,
              and a save badge that sits ON the tile rather than shouting.
@@ -4994,8 +4990,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .ui-pro-plan-amount{font-size:23px}
 }
 
-/* Touch: nothing on this surface may be discoverable only on hover
-   (founder direction, 2026-09-02). Two controls here were.
+/* Touch: nothing on this surface may be discoverable only on hover.
+   Two controls here were.
 
    .ui-modal-x is a bare glyph on a transparent ground with a transparent
    border — its entire affordance was :hover{background:var(--hvr)}, so on a
@@ -5013,7 +5009,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 
 /* -- Pro modal: two columns, and a rail that draws the product --------------
-   Founder direction, 2026-08-17: the decorative purple/pink gradient with the
+   The decorative purple/pink gradient with the
    abstract circle diagram is gone. In its place the modal renders the actual
    colour systems the subscription buys, generated live from the user's own
    seed by generateHarmony() / autoTonalFromSeed().
@@ -5370,7 +5366,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    ═══════════════════════════════════════════════════════════════════════════
 
    THE RULE THIS SURFACE IS BUILT UNDER. It is the one page in the product whose
-   subject is AI, which is where the founder's "AI generated" worry peaks and
+   subject is AI, which is where the "AI generated" worry peaks and
    where the anti-slop bar's warnings land hardest. So, deliberately absent:
    no gradient, no glow, no blur, no shimmer, no skeleton pretending to be an
    answer, and no card grid. There are exactly three enclosed shapes on the page

@@ -306,7 +306,7 @@
 .stg .settings-facts li { max-width: 64ch; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
 .stg .settings-legal-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding: 14px 0; border-top: 1px solid var(--stg-hair); }
 
-/* The founder credit under the panels. Underlined at rest, so the credit is
+/* The author credit under the panels. Underlined at rest, so the credit is
    discoverable without hover. */
 .stg .stg-credit { padding: 28px 0 12px; font-family: var(--font); font-size: 12.5px; text-align: center; color: var(--t2); }
 .stg .stg-credit a { display: inline-flex; align-items: center; min-height: 24px; color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }

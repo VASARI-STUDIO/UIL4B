@@ -160,7 +160,7 @@
  * leftover: tests/user-sim/88-marketing-breakpoints.spec.js reads the first
  * visible `.legal-card h2` on /terms and on /privacy and compares the two
  * pages' computed heading styles to each other — the check that caught the
- * 16px-vs-22px split the 2026-09-13 founder decision resolved. Drop the class
+ * 16px-vs-22px split that setting both headings the same way resolved. Drop the class
  * and that check has nothing to measure and fails on its own positive control.
  * It costs nothing to keep: `.legal-card` in global.css is only
  * `max-width:72ch; margin-inline:auto; line-height:1.8`. The BOX was `.card`,
@@ -179,7 +179,7 @@
  * class) whatever order the two sheets end up in. global.css's rule is NOT
  * edited and must not be: tests/unit/heading-and-meta.test.js asserts the
  * literal `.legal-h{…font-size:22px…}` in that file, because it is the record
- * of the founder's 2026-09-13 decision that the two legal pages set a section
+ * of the decision that the two legal pages set a section
  * heading the same way. This rule keeps that true — both pages read it — and
  * only lifts the size onto the Spectrum display clamp.
  *

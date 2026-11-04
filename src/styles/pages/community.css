@@ -536,8 +536,8 @@
    One ring, on the accent, offset so it clears the card radius and the chip
    tracks. NO `border-radius` here: an outline follows its own element's radius,
    so declaring one would round the CONTROL at the instant of focus rather than
-   the ring — the defect the founder reported on 2026-09-04 and that
-   `focus-ring-geometry.test.js` has banned in every sheet since. */
+   the ring — a defect that
+   `focus-ring-geometry.test.js` bans in every sheet. */
 .ch-spectrum :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;

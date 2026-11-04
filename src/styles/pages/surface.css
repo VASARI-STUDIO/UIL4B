@@ -17,8 +17,8 @@
  * 96px display headline over an empty first screen, a 48px grid-line wash
  * behind it, a second 56px centred headline, an orange dot before every
  * library title, cards that lifted 4px on hover, and --accent-strong / --brand
- * on every link and hover. The founder's call (2026-09-18) was that these two
- * pages "go straight to the real library/guide index". So they are laid out as
+ * on every link and hover. The decision was that these two
+ * pages go straight to the real library/guide index. So they are laid out as
  * an app surface: the title on the left at a page scale, section heads in the
  * design file's own form (a heading over a hairline), the library cards as its
  * "New in Discover" cards (18px, --card, the contents as a band across the top,

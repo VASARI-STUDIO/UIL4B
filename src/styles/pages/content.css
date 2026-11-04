@@ -230,9 +230,9 @@
    NO `border-radius` IN A FOCUS RULE. An outline follows its own element's
    radius, so declaring one here would round the CONTROL at the instant of
    focus rather than rounding the ring, and the ring would trace a shape the
-   reader was not looking at a frame earlier. The founder reported that as "the
-   search bar has a weird visual" (2026-09-04) and
-   tests/unit/focus-ring-geometry.test.js has banned it in every sheet since.
+   reader was not looking at a frame earlier. On the search bar that showed as a
+   weird visual, and tests/unit/focus-ring-geometry.test.js bans it in every
+   sheet.
    Every control here carries its radius at rest, so the ring is the right
    shape for free. */
 .cpg :focus-visible {

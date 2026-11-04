@@ -211,16 +211,14 @@
    narrow widths — ten tabs plus badges never fit, and a wrapped tab bar makes
    the page header taller than the content it labels.
    overflow / scrollbar / edge fade come from `.rail-overflow`; this was the
-   ninth instance of the hidden-scroller shape. Founder-gated, so it was never
-   going to be found by a user report — which is exactly why it is swept here
-   with the rest rather than left for someone to notice. */
+   ninth instance of the hidden-scroller shape. It is admin-only, so no user
+   report would ever surface it; it gets the same fix as the rest. */
 .adm-tabs{flex-wrap:nowrap}
 .adm-tab{flex:0 0 auto}
 /* ── Admin: the Users tab ───────────────────────────────────────────────────
  *
- * The founder's instruction of 2026-09-16 was for better UX "in terms of
- * managing user resources". Everything below serves one of four questions he
- * has to answer about a person — who are they, what are they paying, what can
+ * This tab is for managing user resources. Everything below serves one of
+ * four questions an admin has to answer about a person — who are they, what are they paying, what can
  * they reach, and is anything wrong — and nothing below is here for texture.
  *
  * It borrows the dashboard's existing vocabulary rather than introducing a
@@ -242,7 +240,7 @@
 .adm-user-view-n{font-size:22px;font-weight:600;line-height:1.1;color:var(--t0);font-family:var(--display,var(--font));letter-spacing:-.02em}
 .adm-user-view-l{font-size:11px;font-weight:600;color:var(--t2)}
 /* Colour only when there is something to colour. A "Needs attention" tile that
- * is amber at zero teaches the founder to ignore amber. */
+ * is amber at zero teaches the admin to ignore amber. */
 .adm-user-view.warn .adm-user-view-n{color:var(--warn-strong)}
 .adm-user-view.warn.active{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--card-grad))}
 
@@ -298,7 +296,7 @@
 .adm-detail-access{border-top:1px solid var(--border);padding-top:14px}
 .adm-detail-foot{font-size:11px;color:var(--t3);line-height:1.6;margin:0;border-top:1px solid var(--border);padding-top:12px}
 
-/* The two handles that let the founder act on this person somewhere else. */
+/* The two handles that let an admin act on this person somewhere else. */
 .adm-copy-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
 .adm-copy-label{color:var(--t3);flex:0 0 auto;min-width:58px}
 .adm-copy-value{flex:1 1 auto;min-width:0;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -333,10 +331,10 @@
  *
  * THE CHOICE, AND WHY IT IS NOT HORIZONTAL SCROLL. A user table narrowed to a
  * phone has three honest options. Horizontal scroll keeps every column and
- * pushes the identity column off the left edge, so the founder scrolls a plan
- * badge he cannot attribute to anybody. A reduced column set has to drop
+ * pushes the identity column off the left edge, so an admin scrolls a plan
+ * badge they cannot attribute to anybody. A reduced column set has to drop
  * either who someone is or what state they are in, and both of those are the
- * reason he opened the tab. A card per row keeps all of it, labelled, and
+ * reason anyone opens the tab. A card per row keeps all of it, labelled, and
  * costs vertical space — which on a phone is the cheap axis.
  *
  * It is the SAME DOM. No second rendering is mounted and hidden, because a
@@ -511,7 +509,7 @@
   color: var(--t1);
 }
 
-/* The two handles the founder copies out to act in Firebase or Stripe. An id
+/* The two handles an admin copies out to act in Firebase or Stripe. An id
    is the canonical case for mono: it is compared character by character. */
 .adm-copy-value {
   font-family: var(--mono);
