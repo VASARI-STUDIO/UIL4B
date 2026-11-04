@@ -254,15 +254,12 @@ const SECTIONS = [
             "Settings → Support" is corrected to "Settings → Plan and billing",
             which is the label Settings.jsx gives that tab (`{ id: 'support',
             label: 'Plan and billing' }`) — a visitor looking for "Support" would
-            not find it. And "or cancel" is deleted from the second sentence
-            on the same evidence /plans used to delete "cancel any time": the
-            Stripe portal has no cancellation flow enabled until the
-            [stripe-retention-config] owner action is done (pipeline.js,
-            status 'blocked'), so the Cancel plan button opens a portal with
-            nothing to cancel in it. The guard test reads that row's status,
-            so finishing the dashboard work retires the check. */}
+            not find it. The second sentence says the visitor can cancel
+            there: the Stripe portal the Cancel plan button opens has
+            cancellation on, at the end of the paid period, so Pro stays
+            until then. */}
         <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
-        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>.</p>
+        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing or cancel in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>. Pro stays on until the end of the period you&rsquo;ve paid for.</p>
       </>
     ),
   },
@@ -270,12 +267,16 @@ const SECTIONS = [
     id: 'troubleshooting',
     title: 'Troubleshooting',
     body: (
+      <>
       <ul>
         <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy. Give it a moment and try again.</li>
         <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
         <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
         <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
       </ul>
+      {/* Ends the list with the way to a person, set to a help request. */}
+      <p className="ic-still-stuck">Still stuck? <Link to="/feedback?type=help">Contact support</Link></p>
+      </>
     ),
   },
   {

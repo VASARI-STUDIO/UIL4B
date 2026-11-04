@@ -10,6 +10,7 @@ import {
   altTextOutcome,
   altTextCutoffReply,
   ALT_TEXT_CUTOFF_REFUND_CAP,
+  thinkingConfigFor,
 } from './_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
@@ -77,7 +78,9 @@ const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-cha
 const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
 // Allowlist, not a denylist: prompts only reach these US-based, zero-retention hosts, so a new host never gets them by default.
 const OPENROUTER_PROVIDER = { only: ['deepinfra'], data_collection: 'deny', zdr: true }
-const GEMINI_MODEL = 'gemini-2.0-flash'
+// Scan Photo and the text fallback. Alt Text picks its own model per plan (modelFor).
+// 2.0 Flash is retired, so this is the 2.5 Flash that Alt Text already runs.
+export const GEMINI_MODEL = 'gemini-2.5-flash'
 
 // `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
 // set of day docs by id, which needs no composite index and no ordering trick.
@@ -318,7 +321,7 @@ async function runScanPhoto(req, res) {
     return res.status(400).json({ error: 'unsupported mimeType' })
   }
 
-  const model = 'gemini-2.0-flash'
+  const model = GEMINI_MODEL
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`
 
   try {
@@ -342,6 +345,7 @@ async function runScanPhoto(req, res) {
           generationConfig: {
             temperature: 0.3,
             maxOutputTokens: 1000,
+            ...(thinkingConfigFor(model) ? { thinkingConfig: thinkingConfigFor(model) } : {}),
           },
         }),
       })
@@ -455,7 +459,10 @@ async function callGemini(userMessage, opts = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: `${opts.system || PROMPT_SYSTEM_PROMPT}\n\n${userMessage}` }] }],
-      generationConfig: { temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9 },
+      generationConfig: {
+        temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9,
+        ...(thinkingConfigFor(GEMINI_MODEL) ? { thinkingConfig: thinkingConfigFor(GEMINI_MODEL) } : {}),
+      },
     }),
   })
   if (!r.ok) {

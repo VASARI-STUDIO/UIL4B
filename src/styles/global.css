@@ -4307,6 +4307,17 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 @media(max-width:640px){
   .dgh-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}}
 
+/* A page may hand the masthead a one-line phone description alongside the full
+   one (DiscoverGalleryHero's descriptionShort). Both are real text; the media
+   query shows one at a time, so there is no script and no layout shift. The
+   selectors carry the paragraph's tag so they outrank the 640px clamp above. */
+.dgh-copy>p.dgh-desc-short{display:none}
+@media(max-width:767px){
+  .dgh-copy>p.dgh-desc-full{display:none}
+  .dgh-copy>p.dgh-desc-short{display:block}}
+@media(max-width:640px){
+  .dgh-copy>p.dgh-desc-short{display:-webkit-box}}
+
 
 /* Palette Library */
 .pgl-page{padding-bottom:72px}

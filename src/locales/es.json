@@ -267,6 +267,7 @@
     "title": "Biblioteca de iconos",
     "eyebrow": "BIBLIOTECA DE ICONOS",
     "heading": "Encuentra, personaliza y copia cualquier icono.",
+    "subtitleShort": "Cambia el color y copia un SVG limpio.",
     "subtitle": "Cambia el color, el tamaño y el estilo de cualquier icono (ajusta el trazo, define el color) y luego copia un SVG limpio o expórtalo con un clic. Hazte Pro para guardar tus iconos personalizados.",
     "searchPlaceholder": "Buscar iconos…",
     "allPacks": "Todos los paquetes",
@@ -280,9 +281,13 @@
     "noIcons": "Busca iconos arriba",
     "loadingPacks": "Cargando paquetes de iconos…"
   },
+  "iconGroups": {
+    "subtitleShort": "Conjuntos de iconos con un solo estilo."
+  },
   "emojiLibrary": {
     "eyebrow": "BIBLIOTECA DE EMOJIS",
     "heading": "Copia cualquier emoji, en cualquier tono de piel.",
+    "subtitleShort": "Emojis por categoría, un clic para copiar.",
     "subtitle": "Explora todos los emojis por categoría, cambia el tono de piel de todo el conjunto y haz clic para copiar. Gratis, siempre."
   },
   "imageConverter": {
@@ -501,6 +506,9 @@
     "bugReport": "Informe de error",
     "general": "General",
     "messagePlaceholder": "Cuéntanos lo que piensas…",
+    "helpTitle": "Contactar con soporte",
+    "helpSubtitle": "¿Te has atascado o algo no funciona? Cuéntanos qué intentabas hacer y qué ocurrió. Añade tu correo si quieres recibir una respuesta.",
+    "helpPlaceholder": "¿Qué intentabas hacer y qué ocurrió en su lugar?",
     "submitFeedback": "Enviar comentarios",
     "enterFeedback": "Introduce tus comentarios",
     "thankYou": "¡Gracias por tus comentarios!",

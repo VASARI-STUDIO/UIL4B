@@ -262,6 +262,11 @@
       "permanent": true
     },
     {
+      "source": "/contact",
+      "destination": "/feedback?type=help",
+      "permanent": true
+    },
+    {
       "source": "/resources",
       "destination": "/discover",
       "permanent": true
