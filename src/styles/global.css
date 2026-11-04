@@ -3317,15 +3317,17 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;border-radius:6px;color:var(--accent-mid);font-size:12.5px;text-decoration:none}
 .pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 .pnav-menu-foot-link:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-/* 768 to 900: Create's three columns are about 245px each, and the 3D Model Converter row
-   (tile, name, Beta pill) needs more than the column holds at 768. The list track is
-   minmax(0,1fr) above, so a row can never run past its column; this band also trims the side
-   padding, the tile-to-name gaps and the badge so the full name and pill fit. Rows stay 48px. */
+/* 768 to 900: Create's three columns are about 248px each, and the 3D Model Converter row
+   (tile, name, Beta pill) needs about 8px more than the column holds at 768 with the
+   desktop spacing. The list track is minmax(0,1fr) above, so a row can never run past its
+   column; this band trims the column inset, the row's side padding, the tile-to-name gaps
+   and the badge's side padding (16px in all) so the full name and pill fit with room to
+   spare. Rows stay 48px. */
 @media(max-width:900px){
   .pnav-menu{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
-  .pnav-menu[data-menu="create"] .pnav-colstack{padding-inline:6px}
-  .pnav-menu[data-menu="create"] .pnav-tool{gap:10px;padding-inline:8px}
-  .pnav-menu[data-menu="create"] .pnav-tool .soon-badge,.pnav-menu[data-menu="create"] .pnav-tool .beta-badge{padding-inline:6px}
+  .pnav-menu[data-menu="create"] .pnav-colstack{padding-inline:4px}
+  .pnav-menu[data-menu="create"] .pnav-tool{gap:8px;padding-inline:6px}
+  .pnav-menu[data-menu="create"] .pnav-tool .soon-badge,.pnav-menu[data-menu="create"] .pnav-tool .beta-badge{padding-inline:4px}
 }
 /* 768-1240: the promo content stays (the brief), and moves under the columns
    as one full-width band — text and button on the left, its picture on the
@@ -3388,8 +3390,11 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 /* ── The phone menu sheet ───────────────────────────────────────────────────
    A page between the header and the tab bar, on the opaque page ground, so
    nothing scrolls under the translucent header (audit A9). Live rows only,
-   one line each, at a 48px touch height. */
-.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
+   one line each, at a 48px touch height. The sheet is the scroller and it ends
+   where the bar begins (bottom), so no row can sit under the bar; the end
+   padding lets the last row scroll clear of the sheet's edge, and the scroll
+   padding does the same for a row scrolled into view by focus. */
+.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));scroll-padding-block:8px 28px;overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
 /* Opacity only: a rise would put the segments 8px low while the sheet opens, so they would not sit at one top on every tab. */
 @keyframes pnav-sheet-in{from{opacity:0}to{opacity:1}}
 @media(min-width:768px){.pnav-sheet{bottom:0}}
@@ -3447,10 +3452,11 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
     .pnav-tab[aria-disabled="true"]:hover{color:rgba(var(--ink-rgb),var(--ink-dim))}
   }
   .pnav-tab[aria-disabled="true"]{opacity:.55;cursor:default}
-  /* Only the page's own tab is drawn as selected: ink, weight and a bar on the
-     bar's top edge. A tab that opened the menu sheet (aria-expanded) or is
-     hovered or focused is never drawn this way, so two tabs never both read as
-     current, and the bar is a cue that does not depend on colour. */
+  /* Only one tab is drawn as selected: ink, weight and a bar on the bar's top
+     edge. It is the route's tab, or, while the menu sheet is open, the tab for
+     the section the sheet shows (PhoneTabBar sets is-current for both). A tab
+     that is merely hovered or focused is never drawn this way, so two tabs never
+     both read as current, and the bar is a cue that does not depend on colour. */
   .pnav-tab.is-current{color:rgb(var(--ink-rgb));font-weight:560}
   .pnav-tab.is-current::before{content:"";position:absolute;top:-6px;left:50%;width:24px;height:2px;margin-left:-12px;border-radius:0 0 2px 2px;background:currentColor}
   .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}

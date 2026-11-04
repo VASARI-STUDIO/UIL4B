@@ -1109,6 +1109,7 @@ function AppHeader() {
       <PhoneTabBar
         signedIn={!!user}
         loading={accountPending}
+        sheetSection={sheet ? sheetSection : null}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}
