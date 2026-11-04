@@ -209,6 +209,10 @@
     /* A ring in the page colour keeps the form from showing through around it. */
     box-shadow: 0 0 0 8px rgb(var(--page-rgb));
   }
+  /* While the message is being typed the bar would sit over its last lines and
+     hide the caret, so it drops back into place under the box until focus moves. */
+  .fb-page .fb-form:has(#fb-message:focus) .fb-submit { position: static; }
+  .fb-page #fb-message { scroll-margin-bottom: calc(var(--fb-send-bottom) + 16px); }
   /* The error sits just under the message, which on a short screen is where the
      sticky Send bar is. It sticks above the bar's ring (48px bar + 8px ring + 4px)
      instead of being hidden behind it, with the page colour behind the text. */

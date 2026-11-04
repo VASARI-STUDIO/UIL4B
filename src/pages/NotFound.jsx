@@ -131,6 +131,8 @@ export default function NotFound() {
           {/* The audit found four surfaces pointing here as the way to report a
               problem, so a dead link is exactly the moment to offer it again. */}
           <span className="trail-item"><NavLink to={`/feedback?${report}`}>Report a broken link</NavLink></span>
+          {/* Someone who hit a dead link may be looking for help, not a page. */}
+          <span className="trail-item"><NavLink to="/learn/help">Help centre</NavLink></span>
         </span>
       </p>
     </div>
