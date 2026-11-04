@@ -96,7 +96,7 @@ export function LoginPromptProvider({ children }) {
       if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
         restore.setAttribute('tabindex', '-1')
       }
-      restore.focus()
+      restore.focus({ preventScroll: true })
     })
   }, [])
 
