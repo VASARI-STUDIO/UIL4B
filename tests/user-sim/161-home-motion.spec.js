@@ -18,7 +18,7 @@
 // `largest-contentful-paint` observer, and a wrapper on addEventListener that
 // knows which scroll listeners are still attached.
 //
-// Hand-checked numbers (spec: handover/specs/home-motion-spec-2026-10-27.md):
+// Hand-checked numbers (from the home motion spec):
 //   bar:  600ms at 1001px and up, 420ms at 1000px and below; the bar at place i
 //         starts i*14ms (i*10ms) after the arrival begins; 21 bars in the band and
 //         21 in its reflection = 42

@@ -929,8 +929,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 
 /* ── Suggest and Explore: one docked panel beside the board ────────────────────
    Rows, not cards: a name line over a strip of equal chips, so chip n of every
-   row sits under chip n of "Your palette". Design:
-   memory/designs/design-2026-10-31-suggest-explore.md. At 1024 and up it is a
+   row sits under chip n of "Your palette". At 1024 and up it is a
    flex sibling of the board (it pushes it, never covers it); 641-1023 a bottom
    dock on top of the adjust bar; 640 and under a sheet with Peek and Full. ──── */
 .plb .plb-sx {

@@ -4,7 +4,7 @@
 // h2): a rail (Brand book > Book / Slides / Style guide, UI kit, Code), one
 // scrolling column (File, Layout, Details) and a dock with the price line and the
 // primary button. This file is the Done-when list of
-// memory/designs/design-2026-10-30-export-v3-spec.md section 6, and it replaces
+// the export v3 spec, section 6, and it replaces
 // the old 124-export-panel-polish, 137-export-panel-five and 177-kit-export-gallery
 // specs.
 //

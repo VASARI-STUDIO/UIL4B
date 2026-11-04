@@ -346,8 +346,8 @@ const PATCH = 'docs/design/community-icon-rules.patch'
 test('the rules diff exists, still applies, and grants exactly what the client needs', () => {
   // firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an
   // allowlist of payload keys that does not include `svg`, so an icon
-  // submission is REFUSED until this lands. The file is approval-gated (the
-  // auto-mode classifier refuses to stage it), so it ships as a diff somebody
+  // submission is REFUSED until this lands. The file is approval-gated (automated
+  // commits may not stage it), so it ships as a diff somebody
   // has to apply — the same shape as the four in scripts/gated-patches.mjs.
   //
   // Asserted as "either it is already in the file, or the diff that puts it

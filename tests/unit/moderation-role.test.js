@@ -456,7 +456,7 @@ test('AuthContext stays untouched by the role', () => {
 // THE ROUTE THAT MINTS THE CLAIM
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// api/verify-admin.js is approval-gated AND refused by the auto-mode classifier,
+// api/verify-admin.js is approval-gated AND may not be staged by automated commits,
 // so the roster half of it lives as a committed, unapplied diff that
 // `npm run apply:gated` puts in (docs/design/moderator-verify-admin.patch).
 //

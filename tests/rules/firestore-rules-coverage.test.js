@@ -2,7 +2,7 @@
 //
 //   npm run test:rules
 //
-// board card a36c027015. The other files in this folder prove the headline
+// The other files in this folder prove the headline
 // guarantees; this one fills in the path-and-operation pairs they never tried
 // (list queries, delete, create-on-an-absent-document, field caps, the
 // reviewer's real update shape, collection-group queries) and gives every

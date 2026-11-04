@@ -173,7 +173,7 @@ const SURFACES = {
   // the page, as bad copy. Adding
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the
-  // tool that uses them.") was agent copy built on "earn a tab", an idiom
+  // tool that uses them.") was copy built on "earn a tab", an idiom
   // that had spread to the nav promo, the library heroes and two grid
   // headings — a motif by repetition, not a UIL4B signature.
   //
