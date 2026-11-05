@@ -25,7 +25,6 @@ import { GALLERY_TIER_LIMITS } from '../utils/lockedPreview.js'
 import { ICON_PACK_TIERS } from '../data/iconPackTiers.js'
 import { CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, ICON_SIZE_PRESETS } from '../utils/iconSize.js'
 import { LINE_STYLES } from '../utils/iconLineStyle.js'
-import { PREVIEW_SCENES } from '../data/palettePreviewScenes.js'
 import { PLAN_LADDER, formatMoney, livePriceOf } from './planLadder.js'
 import { createTools } from '../data/toolTree.js'
 import { BILLED_EVERY } from '../utils/billingCadence.js'
@@ -140,20 +139,13 @@ export const PRO_VALUE = Object.freeze([
   ] },
 ])
 
-/** The palette preview scenes only Pro opens (a Free account opens the rest).
- *  Not printed as a figure: Settings may carry only the figures /plans compares. */
-export const PRO_SCENE_COUNT = PREVIEW_SCENES.filter((s) => !s.free).length
-
-/** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order.
- *  Each claim is a gate a Free account meets: the Contrast Checker tool is free, so
- *  the contrast line names the read-out on every palette colour, not "contrast". */
+/** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
 export const PRO_POINTS = Object.freeze([
   `${AI.pro.daily} AI generations a day, ${AI.pro.monthly} a month`,
-  `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing and contrast on every colour`,
+  `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
   'Every palette, gradient, prompt and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
-  'Extra palette previews, gradient tints and guided Random, button quick edits and UI system editing',
   `${PRO_EXPORT_NAMES}, with no UIL4B line on anything`,
 ])
 

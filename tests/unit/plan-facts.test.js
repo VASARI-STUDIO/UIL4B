@@ -63,15 +63,14 @@ test('the lines are derived from what the product enforces', () => {
   assert.equal(FREE_EXCLUSION, 'Small mark on exported files')
 })
 
-test('Pro has seven ticks, in the order the card prints them, and the checkout reads the same array', () => {
-  assert.equal(PRO_POINTS.length, 7)
+test('Pro has six ticks, in the order the card prints them, and the checkout reads the same array', () => {
+  assert.equal(PRO_POINTS.length, 6)
   assert.match(PRO_POINTS[0], new RegExp(`^${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month$`))
-  assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing and contrast on every colour$/)
+  assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing$/)
   assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
   assert.match(PRO_POINTS[3], /icons, in any size and line style$/)
   assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
-  assert.equal(PRO_POINTS[5], 'Extra palette previews, gradient tints and guided Random, button quick edits and UI system editing')
-  assert.match(PRO_POINTS[6], /, with no UIL4B line on anything$/)
+  assert.match(PRO_POINTS[5], /, with no UIL4B line on anything$/)
   // Checkout builds its feature list straight from PRO_POINTS, so the card, the
   // modal, Settings and the checkout summary cannot differ.
   assert.match(code(SURFACES.checkout), /const FEATURES = PRO_POINTS\b/)
@@ -147,21 +146,4 @@ test('"no card needed" stays out of the surfaces that sell Pro, and cancelling i
   for (const l of lines) {
     assert.match(l, /\buser \?/, `the upgrade modal offers cancelling to a visitor with no account: ${l.trim()}`)
   }
-})
-
-// Each new Pro claim is tied to the gate a Free account meets, so ungating the
-// feature (or making every scene free) turns this red, not just a copy edit.
-test('the Pro ticks for previews, contrast, gradients, buttons and UI systems name real gates', async () => {
-  const { PREVIEW_SCENES } = await import('../../src/data/palettePreviewScenes.js')
-  const { PRO_SCENE_COUNT } = await import('../../src/config/planFacts.js')
-  const locked = PREVIEW_SCENES.filter((s) => !s.free).length
-  assert.ok(locked > 0, 'every preview scene is free, so Pro opens no more of them')
-  assert.equal(PRO_SCENE_COUNT, locked)
-  assert.ok(PRO_POINTS[5].startsWith('Extra palette previews'))
-  assert.match(code('src/pages/PaletteBuilder.jsx'), /gate: 'palette-contrast-view'/, 'the per-colour contrast read-out is no longer gated')
-  assert.doesNotMatch(code('src/pages/ContrastChecker.jsx'), /isPro|openProModal/, 'the Contrast Checker became Pro: say so, or keep the tick to the palette read-out')
-  assert.match(code('src/components/library/ButtonLibraryDialog.jsx'), /gate="button-library-quick-edits"/, 'button quick edits are no longer gated')
-  assert.match(code('src/utils/gradientRandom.js'), /PRO_MOODS = Object\.freeze\(\[/, 'guided Random has no Pro moods')
-  assert.match(code('src/components/UiSystemBuilder.jsx'), /if \(!canEdit\) return gate\(/, 'UI system editing is no longer gated')
-  assert.match(code('src/components/tool/StopTintMenu.jsx'), /isPro \?/, 'applying a gradient tint is no longer Pro')
 })
