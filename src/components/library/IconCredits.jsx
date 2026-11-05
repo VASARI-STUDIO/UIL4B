@@ -22,7 +22,7 @@ export default function IconCredits({ rows, scope = 'page' }) {
       <p className="sp-footer-notice-h">{scope === 'group' ? 'Icon sets in this group' : 'Icon sets on this page'}</p>
       <p className="sp-footer-notice-list">
         {rows.map((row, i) => (
-          <span key={row.prefix}>
+          <span key={row.prefix} className="sp-footer-notice-item">
             <a href={row.url} target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>{row.name}</a>
             {` (${row.licenceName})`}
             {i < rows.length - 1 ? ', ' : '. '}

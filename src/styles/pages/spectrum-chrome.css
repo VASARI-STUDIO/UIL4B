@@ -381,11 +381,10 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
 .sp-footer .sp-footer-notice p{margin:0}
 .sp-footer .sp-footer-notice-h{font-family:var(--font);font-size:13px;font-weight:540;line-height:1.4;color:var(--t1)}
 .sp-footer .sp-footer-notice-list{margin-top:8px;max-width:75ch;font-family:var(--font);font-size:14px;line-height:1.6;color:var(--t1);overflow-wrap:anywhere;text-wrap:pretty}
-.sp-footer .sp-footer-notice-list a{white-space:nowrap}
-.sp-footer .sp-footer-notice-list a{padding-block:2px;border-radius:var(--radius-xs);color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:3px}
+.sp-footer .sp-footer-notice-item{white-space:nowrap}
+.sp-footer .sp-footer-notice-list a{position:relative;white-space:nowrap;padding-block:2px;border-radius:var(--radius-xs);color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:3px}
 .sp-footer .sp-footer-notice-list a:hover{text-decoration-color:currentColor}
 .sp-footer .sp-footer-notice-list a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media(pointer:coarse){.sp-footer .sp-footer-notice-list{line-height:2}}
 .sp-footer .sp-footer-notice + .sp-footer-legal{margin-top:24px;padding-top:0;border-top:0}
 /* The baseline (1631). */
 .sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t2)}
@@ -420,5 +419,7 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   .sp-footer .sp-footer-legal{row-gap:0}
   .sp-footer .app-footer-note,
   .sp-footer .sp-footer-legal a.sp-footer-attrib{display:inline-flex;align-items:center;min-height:44px}
-  .sp-footer .sp-footer-notice-list a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding-block:0}
+  /* The licence row keeps its prose rhythm: each link reaches 44px with an invisible
+     box (22px lines, so the boxes of two lines meet and do not overlap). */
+  .sp-footer .sp-footer-notice-list a::after{content:"";position:absolute;inset:-11px -4px;min-width:44px}
 }
