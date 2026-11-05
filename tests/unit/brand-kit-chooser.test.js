@@ -4,7 +4,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import {
-  CHOOSER_GAP_MS, chooserDecision, classifyArrival, continueCopy, otherProjects,
+  CHOOSER_GAP_MS, chooserDecision, classifyArrival, colourKey, continueCopy, editKey, otherProjects,
   startNewMeta, whenText, workingStatus,
 } from '../../src/utils/brandKitChooser.js'
 
@@ -91,4 +91,14 @@ test('copy: whole strings for each row', () => {
   assert.equal(startNewMeta({ status: 'saved', name: 'A' }), 'A stays in your projects.')
   assert.equal(startNewMeta({ status: 'unsaved' }), 'This one moves to Your workspace as an unsaved brand kit.')
   assert.match(startNewMeta({ status: 'unsaved', slotWhen: '4 Nov' }), /replaces the unsaved brand kit from 4 Nov/)
+})
+
+test('editKey: the board restating a kit it opened is not an edit', () => {
+  const restated = { ...work, palette: { ...work.palette, colors: work.palette.colors.map((c) => c.toLowerCase()), baseColors: work.palette.colors, globalAdjust: { h: 0, s: 0, b: 0, temp: 0 }, locked: [false, false, false, false, false] } }
+  assert.equal(editKey(restated), editKey(work))
+  assert.equal(colourKey({ palette: { colors: ['#abc'] } }), colourKey({ palette: { colors: ['#AABBCC'] } }))
+  const edited = { ...work, palette: { ...work.palette, colors: ['#111111', ...work.palette.colors.slice(1)] } }
+  assert.notEqual(editKey(edited), editKey(work), 'a changed swatch is an edit')
+  assert.notEqual(editKey({ ...work, fonts: { ...work.fonts, heading: 'Something Else' } }), editKey(work), 'a change to another part is an edit')
+  assert.equal(editKey(null), 'null')
 })

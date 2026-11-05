@@ -30,6 +30,7 @@ import {
   withDefaults,
 } from '../utils/brandKitGuide'
 import {
+  colourKey,
   atRisk,
   capLine,
   chooserDecision,
@@ -177,9 +178,9 @@ export default function UIKitGuide({ step, linked = false }) {
   const [chooserEditedAt, setChooserEditedAt] = useState(readEditedAt)
   const [chooserOpenOther, setChooserOpenOther] = useState(false)
   // An edit to a swatch while the chooser is open answers it as "carry on". Only
-  // the colours are compared: the board restates the same palette a moment after
-  // it mounts, and that is not an edit.
-  const paletteKey = JSON.stringify(design?.palette?.colors ?? null)
+  // the colours are compared, in one spelling: the board restates the same
+  // palette a moment after it mounts, and that is not an edit.
+  const paletteKey = colourKey(design)
   const [chooserPalette, setChooserPalette] = useState(paletteKey)
   // A kit that is not asked about on a press is the answer for this tab: the next
   // arrival carries on without asking. Opening the page by address answers

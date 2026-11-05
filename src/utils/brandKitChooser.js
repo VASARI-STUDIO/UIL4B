@@ -10,6 +10,7 @@ import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { withDefaults } from './brandKitGuide.js'
 import { designsMatch } from './parkedDesign.js'
 import { SESSION_AUTH, SESSION_DONE, SESSION_ON } from './kitSession.js'
+import { normaliseHex } from './paletteAdjust.js'
 
 /** How long a working design can sit before coming back to it is a question. */
 export const CHOOSER_GAP_MS = 6 * 60 * 60 * 1000
@@ -61,6 +62,25 @@ export function classifyArrival({ state, navType, key, linked = false } = {}) {
   if (state?.brandKitArrival || state?.openBrandKitCard) return 'brand-kit'
   if (navType === 'POP' && key && key !== 'default') return 'back'
   return 'direct'
+}
+
+/** The palette's colours in one spelling ('#abc' and '#AABBCC' are the same colour). */
+export function colourKey(design) {
+  const colors = design?.palette?.colors
+  return JSON.stringify(Array.isArray(colors) ? colors.map((c) => normaliseHex(c) || c) : null)
+}
+
+/**
+ * The design as an edit is judged. The board restates a kit a moment after it
+ * opens, filling in the fields it derives the swatches from (`baseColors`,
+ * `globalAdjust`, `locked`) and respelling the colours; none of that is an edit,
+ * so those fields are left out and the colours compared by `colourKey`.
+ */
+export function editKey(design) {
+  if (!design || typeof design !== 'object') return JSON.stringify(design ?? null)
+  // eslint-disable-next-line no-unused-vars
+  const { baseColors, globalAdjust, locked, ...palette } = design.palette || {}
+  return JSON.stringify({ ...design, palette: { ...palette, colors: JSON.parse(colourKey(design)) } })
 }
 
 /**

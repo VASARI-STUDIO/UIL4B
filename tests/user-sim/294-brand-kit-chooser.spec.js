@@ -264,6 +264,8 @@ test.describe('The brand kit chooser', () => {
     await form.getByRole('textbox', { name: 'Project name' }).fill('Alpha kit')
     await form.getByRole('button', { name: 'Save to Alpha' }).click()
     await expect(page).toHaveURL(/\/projects\/proj-a\/export$/)
+    // The export page opens the project on mount; the mark is read after that.
+    await expect(page.getByRole('heading', { level: 1, name: /^Export / })).toBeVisible()
     expect(Object.values(await readJson(page, 'vs-projects')).flat().map((p) => p.id)).toEqual(['proj-a'])
     expect(await sessionMark(page), 'T16: finishing marks the tab done').toBe('done')
 
@@ -274,6 +276,17 @@ test.describe('The brand kit chooser', () => {
 
     await pressBrandKit(page)
     await expect(chooser(page).getByRole('button', { name: /^Start a new brand kit/ }), 'T18: a finished kit defaults to Start new').toBeFocused()
+  })
+
+  test('T19 opening step one does not count as an edit, so the next press still asks', async ({ page }) => {
+    watch(page, 'a designer who opens the palette and leaves without touching it')
+    await seedKit(page, { hoursAgo: 7 })
+    await go(page, '/create/palette')
+    await expect(chooser(page)).toBeVisible()
+    // Long enough for the board to restate the kit it opened with.
+    await page.waitForTimeout(600)
+    const at = Number(await read(page, 'vs-current-design-at'))
+    expect(Date.now() - at, 'the last-edited time is still seven hours ago').toBeGreaterThan(6 * HOUR)
   })
 
   test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {

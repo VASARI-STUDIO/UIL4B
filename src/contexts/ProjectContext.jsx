@@ -15,7 +15,8 @@ import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
 import { projectSnapshot } from '../utils/designPatch'
 import { PARKED_KEY, parkIfAtRisk, readParked, takeParked } from '../utils/parkedDesign'
-import { SESSION_AUTH, SESSION_ON, markSession, stampEdited } from '../utils/kitSession'
+import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
+import { editKey } from '../utils/brandKitChooser'
 
 const ProjectContext = createContext()
 
@@ -158,12 +159,12 @@ export function ProjectProvider({ children }) {
   const designRef = useRef(design)
 
   // Auto-persist current design
-  // "Last edited" is stamped when the design's text changes, never on the first
-  // run: opening the app is not an edit.
+  // "Last edited" is stamped when the design's work changes (see editKey), never
+  // on the first run: opening the app is not an edit, nor is the board restating it.
   const persistedRef = useRef(null)
   useEffect(() => {
     designRef.current = design
-    const text = JSON.stringify(design)
+    const text = editKey(design)
     if (persistedRef.current !== null && persistedRef.current !== text) stampEdited()
     persistedRef.current = text
     saveCurrent(design)
@@ -405,9 +406,10 @@ export function ProjectProvider({ children }) {
     designRef.current = next
     setDesign(next)
     // Opening a project answers the brand kit question, and counts as an edit
-    // now so the screen it opens on does not read the design as old.
+    // now so the screen it opens on does not read the design as old. A kit just
+    // finished keeps its mark: its export page opens it, and the next press asks.
     stampEdited()
-    markSession(SESSION_ON)
+    if (readSession() !== SESSION_DONE) markSession(SESSION_ON)
     return parked
   }, [allProjects, userKey, parkWorkingDesign])
 
