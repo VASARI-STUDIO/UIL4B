@@ -16,8 +16,9 @@ import { whenText } from '../../utils/brandKitChooser'
 import { partsPresent } from '../../utils/userHome'
 
 // The one "Unsaved brand kit" row: work that was put aside when a new brand kit,
-// a project or a shared palette took the working design's place. It lives in a
-// single slot, so there is never more than one row. Continue takes it back as the
+// a project or a shared palette took the working design's place. It shows one
+// kit, the newest; older ones wait behind it (the meta line counts them) and take
+// its place when it is continued, saved or discarded. Continue takes it back as the
 // working design, Save as project files it (the Free plan's cap applies, and a
 // signed-out visitor signs in first), and Discard empties the slot with an Undo.
 
@@ -25,7 +26,7 @@ const toast = (detail) => window.dispatchEvent(new CustomEvent('uil4b:toast', { 
 
 export default function ParkedRow() {
   const navigate = useNavigate()
-  const { parked, canSaveProjects, saveProject, continueParked, discardParked, putBackParked } = useProject()
+  const { parked, parkedMore = 0, canSaveProjects, saveProject, continueParked, discardParked, putBackParked } = useProject()
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   const headId = useId()
@@ -98,7 +99,10 @@ export default function ParkedRow() {
       <div className="spt-thumb"><ProjectPlate size="thumb" colors={colours} /></div>
       <div className="uh-parked-text">
         <h2 id={headId} className="uh-parked-name" title={name || undefined}>{name || 'Unsaved brand kit'}</h2>
-        <p className="uh-parked-meta">Not saved yet · edited {whenText(parked.parkedAt)}</p>
+        <p className="uh-parked-meta">
+          Not saved yet · edited {whenText(parked.parkedAt)}
+          {parkedMore > 0 && ` · ${parkedMore} more waiting behind it`}
+        </p>
       </div>
       <div className="uh-parked-actions">
         <button type="button" className="uh-ghost" onClick={onContinue}>Continue</button>

@@ -252,9 +252,10 @@ test('sign-out and a switch clear work put aside on this browser', () => {
   const meta = { ...emptyMeta(), owner: 'A', stamps: {}, pushed: {} }
   assert.equal(releaseCache(s, meta).released, true)
   assert.equal(s.has('vs-previous-design'), false, 'the next person never sees the work the last one put aside')
-  const t = store({ 'vs-previous-design': parked })
+  const t = store({ 'vs-previous-design': parked, 'vs-previous-designs': `[${parked}]` })
   clearMirrors(t)
   assert.equal(t.has('vs-previous-design'), false, 'an account switch drops it too')
+  assert.equal(t.has('vs-previous-designs'), false, 'and the kits waiting behind it')
 })
 
 test('sign-out keeps the cache while a change has not reached the account', () => {

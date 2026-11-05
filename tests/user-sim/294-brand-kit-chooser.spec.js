@@ -11,6 +11,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const CURRENT = 'vs-current-design'
 const PARKED = 'vs-previous-design'
+const SHELF = 'vs-previous-designs'
 const HOUR = 60 * 60 * 1000
 // A tool page past step one: the press from here is what brings a person back to
 // the first step, where the chooser asks.
@@ -316,6 +317,41 @@ test.describe('The brand kit chooser', () => {
     await toast(page).getByRole('button', { name: 'Undo' }).click()
     await expect.poll(() => colours(page)).toEqual(WORK.palette.colors)
     await expect.poll(() => read(page, 'vs-uikit-guide'), { message: 'the ticks come back with the kit' }).toBe('1:color,fonts')
+  })
+
+  test('T22 starting new over a second unsaved kit keeps both, and Undo of a discard never overwrites', async ({ page }) => {
+    watch(page, 'a designer with two unsaved kits')
+    const OLDER = withColours(['#2E294E', '#541388', '#F1E9DA', '#FFD400', '#D90368'])
+    await seedKit(page, { hoursAgo: 7 })
+    await page.addInitScript((slot) => {
+      try {
+        if (sessionStorage.getItem('__t22_slot') === '1') return
+        sessionStorage.setItem('__t22_slot', '1')
+        localStorage.setItem('vs-previous-design', JSON.stringify(slot))
+      } catch { /* blocked */ }
+    }, { design: OLDER, parkedAt: Date.now() - 9 * HOUR })
+    await go(page, AWAY)
+    await pressBrandKit(page)
+    const fresh = chooser(page).getByRole('button', { name: /^Start a new brand kit/ })
+    await expect(fresh, 'it says the kit already there stays').toContainText('beside the unsaved brand kit from')
+    await fresh.click()
+    await expect(chooser(page)).toHaveCount(0)
+    await expect.poll(async () => (await readJson(page, PARKED))?.design?.palette?.colors).toEqual(WORK.palette.colors)
+    expect((await readJson(page, SHELF)).map((x) => x.design.palette.colors), 'the older kit waits behind it').toEqual([OLDER.palette.colors])
+
+    await go(page, '/projects')
+    const row = page.locator('.uh-parked')
+    await expect(row).toContainText('1 more waiting behind it')
+
+    // Discard the newest: the older one takes the row. Undo puts the newest back in front.
+    await row.getByRole('button', { name: 'Discard' }).click()
+    await expect(row).toBeVisible()
+    await expect(row).not.toContainText('more waiting')
+    expect((await readJson(page, PARKED))?.design?.palette?.colors).toEqual(OLDER.palette.colors)
+    await toast(page).getByRole('button', { name: 'Undo' }).click()
+    await expect(row).toContainText('1 more waiting behind it')
+    expect((await readJson(page, PARKED))?.design?.palette?.colors).toEqual(WORK.palette.colors)
+    expect((await readJson(page, SHELF)).map((x) => x.design.palette.colors)).toEqual([OLDER.palette.colors])
   })
 
   test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {

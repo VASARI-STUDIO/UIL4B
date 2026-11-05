@@ -14,7 +14,7 @@ import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
 import { projectSnapshot } from '../utils/designPatch'
-import { PARKED_KEY, parkIfAtRisk, readParked, takeParked } from '../utils/parkedDesign'
+import { PARKED_KEY, PARKED_SHELF_KEY, dropParked, parkIfAtRisk, putBack, readParked, readShelf, takeParked } from '../utils/parkedDesign'
 import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
 import { editKey } from '../utils/brandKitChooser'
 import { addSavedColour } from '../utils/savedColours'
@@ -244,22 +244,28 @@ export function ProjectProvider({ children }) {
   // Open the Create tool on screen again on the working design, as it is now.
   const remountTool = useCallback(() => setRestoredCount((n) => n + 1), [])
   // The slot that holds work put aside, mirrored here so a screen can show it.
-  const [parked, setParked] = useState(() => { try { return readParked(localStorage) } catch { return null } })
-  useEffect(() => onAccountApplied([PARKED_KEY], () => { try { setParked(readParked(localStorage)) } catch { setParked(null) } }), [])
+  const [parked, setParkedSlot] = useState(() => { try { return readParked(localStorage) } catch { return null } })
+  // How many more kits wait behind the one shown (see parkedDesign's shelf).
+  const [parkedMore, setParkedMore] = useState(() => { try { return readShelf(localStorage).length } catch { return 0 } })
+  const setParked = useCallback((slot) => {
+    setParkedSlot(slot)
+    try { setParkedMore(readShelf(localStorage).length) } catch { setParkedMore(0) }
+  }, [])
+  useEffect(() => onAccountApplied([PARKED_KEY, PARKED_SHELF_KEY], () => { try { setParked(readParked(localStorage)) } catch { setParked(null) } }), [setParked])
   const restoreParked = useCallback((slot, onRestore) => {
     let restored = null
     try { restored = takeParked(slot, localStorage) } catch { /* storage blocked */ }
     if (!restored) return
     designRef.current = restored
     setDesign(restored)
-    setParked(null)
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
     stampEdited()
     onRestore?.(restored)
     setRestoredCount((n) => n + 1)
-  }, [])
+  }, [setParked])
 
   // Before the working design is replaced: if it holds work nobody has saved,
-  // put it in the one parking slot and say so, with a button that brings it back.
+  // put it in the parking slot and say so, with a button that brings it back.
   // `message` and `label` word the toast. Returns true when it was parked now.
   // Parking never creates a project, so it never meets the project cap.
   const parkWorkingDesign = useCallback(({ message = PUT_ASIDE, label = 'Undo', onRestore } = {}, list) => {
@@ -271,14 +277,18 @@ export function ProjectProvider({ children }) {
         storage: localStorage,
       })
     } catch { /* storage blocked: nothing can be parked, the replace goes ahead as before */ }
-    if (!parked.slot || !parked.fresh) return false
+    if (!parked.slot || !parked.fresh) {
+      // A write that failed part way may still have moved a kit; show storage as it is.
+      try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
+      return false
+    }
     const { slot } = parked
     setParked(slot)
     window.dispatchEvent(new CustomEvent('uil4b:toast', {
       detail: { message, type: 'info', action: { label, onAction: () => restoreParked(slot, onRestore) } },
     }))
     return true
-  }, [allProjects, userKey, restoreParked])
+  }, [allProjects, userKey, restoreParked, setParked])
 
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
@@ -488,28 +498,29 @@ export function ProjectProvider({ children }) {
   const continueParked = useCallback(() => {
     const slot = readParked(localStorage)
     if (!slot) return null
-    try { localStorage.removeItem(PARKED_KEY) } catch { /* storage blocked */ }
-    let kept = { slot: null }
-    try { kept = parkIfAtRisk({ design: designRef.current, projects: allProjects[userKey] || [], storage: localStorage }) } catch { /* storage blocked */ }
-    setParked(kept.slot)
+    try { dropParked(localStorage) } catch { /* storage blocked */ }
+    try { parkIfAtRisk({ design: designRef.current, projects: allProjects[userKey] || [], storage: localStorage }) } catch { /* storage blocked */ }
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
     designRef.current = slot.design
     setDesign(slot.design)
     stampEdited()
     markSession(SESSION_ON)
     remountTool()
     return slot.design
-  }, [allProjects, userKey, remountTool])
+  }, [allProjects, userKey, remountTool, setParked])
+  // A kit waiting behind it moves into the slot. putBackParked (the Undo) puts
+  // the kit back beside anything parked since, never over it.
   const discardParked = useCallback(() => {
     const slot = readParked(localStorage)
-    try { localStorage.removeItem(PARKED_KEY) } catch { /* storage blocked */ }
-    setParked(null)
+    try { dropParked(localStorage) } catch { /* storage blocked or full: shown as it is below */ }
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
     return slot
-  }, [])
+  }, [setParked])
   const putBackParked = useCallback((slot) => {
     if (!slot) return
-    try { localStorage.setItem(PARKED_KEY, JSON.stringify(slot)) } catch { return }
-    setParked(slot)
-  }, [])
+    try { putBack(slot, localStorage) } catch { /* storage blocked */ }
+    try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
+  }, [setParked])
 
   const archiveProject = useCallback((id) => {
     if (!userKey) return
@@ -749,6 +760,7 @@ export function ProjectProvider({ children }) {
     restoredCount,
     remountTool,
     parked,
+    parkedMore,
     continueParked,
     discardParked,
     putBackParked,
