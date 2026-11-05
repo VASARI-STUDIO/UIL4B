@@ -93,10 +93,15 @@ for (const { width, height, where } of WIDTHS) {
     const listRow = await toolbar(page).locator('.pl-tb-search').boundingBox()
     expect(listRow.height, 'the search row grew a second line in the list').toBeLessThanOrEqual(52)
     if (width <= 640) {
-      const filters = await toolbar(page).locator('.pl-filters-btn').boundingBox()
-      const bl = await button.boundingBox()
-      expect(Math.abs(bl.y - filters.y), 'Filters and the button are on one row').toBeLessThanOrEqual(8)
-      expect(bl.x, 'the button does not overlap Filters').toBeGreaterThanOrEqual(filters.x + filters.width - 1)
+      // Read together, in one frame: the list move scrolls the page, and two separate
+      // reads can straddle that scroll.
+      const gap = await toolbar(page).evaluate((bar) => {
+        const f = bar.querySelector('.pl-filters-btn').getBoundingClientRect()
+        const b = bar.querySelector('.pl-win-btn').getBoundingClientRect()
+        return { dy: Math.abs(b.top - f.top), overlap: f.right - 1 - b.left }
+      })
+      expect(gap.dy, 'Filters and the button are on one row').toBeLessThanOrEqual(8)
+      expect(gap.overlap, 'the button does not overlap Filters').toBeLessThanOrEqual(0)
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
@@ -165,7 +170,6 @@ for (const { width, height } of WIDTHS) {
     await go(page, ROUTE)
     await expect(page.locator('.pl-overview')).toBeVisible()
     await expect(page.locator('.pnav'), 'the normal page has its nav').toHaveCount(1)
-    await expect(page.locator('.app-footer'), 'the normal page has its footer').toHaveCount(1)
     const shelvesNormal = await page.locator('[id^="pl-shelf-"]').evaluateAll((els) => els.map((e) => e.id))
     expect(shelvesNormal.length, 'the control page has shelves to compare').toBeGreaterThan(3)
     const normalPad = await page.locator('main#main').evaluate((el) => parseFloat(getComputedStyle(el).paddingTop))
@@ -257,7 +261,7 @@ for (const { width, height } of WIDTHS.filter((w) => w.width !== 768)) {
 
     await back.click()
     await expect(page.locator('.pnav'), 'the nav is back').toHaveCount(1)
-    await expect(page.locator('.app-footer'), 'the footer is back').toHaveCount(1)
+    // The discover pages close without the app footer (footerRoutes.js), so only the nav comes back.
     await expect(page.locator('#pl-results-h'), 'the same list is still open').toHaveText('Website')
     expect(urlOf(page).search, 'the normal address carries no flag').toBe('')
     expect(urlOf(page).pathname + urlOf(page).hash).toBe(`${ROUTE}#website`)
@@ -299,6 +303,5 @@ test.describe('the gate', () => {
     watch(page, 'an admin adding ?view=full to the palette library')
     await go(page, '/discover/palettes?view=full')
     await expect(page.locator('.pnav'), 'another page lost its nav to the flag').toHaveCount(1)
-    await expect(page.locator('.app-footer')).toHaveCount(1)
   })
 })
