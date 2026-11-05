@@ -250,7 +250,7 @@
 }
 .tt .tt-tip-mark { grid-area: mark; align-self: center; display: grid; place-items: center; color: var(--tl-dim); }
 .tt .tt-tip-who { grid-area: who; color: var(--tl-ink); }
-.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--font); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .tt .tt-tip-grade { grid-area: grade; font-size: 12px; color: var(--tl-dim); }
 .tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok-strong); }
 .tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }

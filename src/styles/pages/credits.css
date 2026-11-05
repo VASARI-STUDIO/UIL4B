@@ -54,11 +54,12 @@
 }
 .crd-tally li { display: flex; align-items: baseline; gap: 6px; }
 .crd-tally b {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--t0);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 /* ── The search ──

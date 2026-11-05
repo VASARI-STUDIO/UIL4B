@@ -57,14 +57,14 @@
 .adm-bar-row{display:flex;align-items:center;gap:10px}
 .adm-bar-track{flex:1;height:8px;border-radius:4px;background:var(--bg-2);overflow:hidden}
 .adm-bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width var(--dur-4) var(--ease-standard)}
-.adm-bar-value{font-size:11px;font-weight:700;color:var(--t2);width:40px;text-align:right;flex-shrink:0;font-family:var(--mono)}
+.adm-bar-value{font-size:11px;font-weight:700;color:var(--t2);width:40px;text-align:right;flex-shrink:0;font-family:var(--font);letter-spacing:0}
 
 /* Donut chart */
 .adm-donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .adm-donut-legend{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
 .adm-donut-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t1)}
 .adm-donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.adm-donut-count{margin-left:auto;font-weight:700;font-family:var(--mono);color:var(--t0)}
+.adm-donut-count{margin-left:auto;font-weight:700;font-family:var(--font);letter-spacing:0;color:var(--t0)}
 
 /* Data list */
 .adm-list{display:flex;flex-direction:column}
@@ -146,7 +146,7 @@
 .adm-stripe-input span{font-size:11px;color:var(--t3);min-width:24px}
 .adm-stripe-input input{width:90px;font-size:12px;font-family:var(--mono)}
 /* A currency this plan has no approved amount in. */
-.adm-stripe-na{font-size:12px;color:var(--t3);font-family:var(--mono);padding-left:4px}
+.adm-stripe-na{font-size:12px;color:var(--t3);font-family:var(--font);letter-spacing:0;padding-left:4px}
 .adm-stripe-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 .adm-stripe-env{font-size:12px;font-family:var(--mono);line-height:2.2;color:var(--t1)}
 .adm-stripe-env span{color:var(--t3)}
@@ -166,7 +166,7 @@
 .adm-eye-btn:hover{color:var(--t0);background:var(--bg-2)}
 .adm-user-sub{font-size:11px;color:var(--t3);margin-top:3px}
 .adm-flag{font-size:15px;line-height:1}
-.adm-flag-cell{display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:var(--mono);font-size:11px}
+.adm-flag-cell{display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:var(--font);letter-spacing:0;font-size:11px}
 .adm-th-arrow{font-size:10px;opacity:.75}
 .adm-country-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .adm-users-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -269,7 +269,7 @@
 .adm-user-view.warn .adm-user-view-n{color:var(--warn-strong)}
 .adm-user-view.warn.active{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--card-grad))}
 
-.adm-user-count{font-size:11px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
+.adm-user-count{font-size:11px;color:var(--t3);font-family:var(--font);letter-spacing:0;white-space:nowrap}
 .adm-roster-line{margin-bottom:12px;line-height:1.7}
 
 /* ── Plan and access ────────────────────────────────────────────────────── */
@@ -279,7 +279,7 @@
 .adm-plan--err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err-strong)}
 .adm-plan--pending{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
 .adm-plan--neutral{background:var(--bg-2);color:var(--t2)}
-.adm-plan-interval{margin-left:6px;font-size:var(--fs-caption);color:var(--t3);font-family:var(--mono)}
+.adm-plan-interval{margin-left:6px;font-size:var(--fs-caption);color:var(--t3);font-family:var(--font);letter-spacing:0}
 
 /* "User" is the ordinary case and gets no badge — a chip on every row for the
  * state most rows are in is noise that hides the two rows that are not. */
@@ -421,14 +421,13 @@
  *
  * ── THE FOUR THINGS SPECTRUM ACTUALLY CHANGES HERE ────────────────────────
  *
- * 1. MONO CARRIES EVERY VALUE. Geist Mono with tabular figures on anything a
- *    person reads off the screen or copies — counts, dates, ids, statuses,
- *    amounts, ratios — and Geist for prose. In the design source this is the
- *    loudest signal that a surface belongs to the product: the palette panel
- *    sets `#6A95F1`, `AA 5.8`, `LOW 2.5` in mono against a sans heading, and
- *    the export panel does the same with `0.2 KB` and `11 lines`. Tabular
- *    figures matter more here than on the sales page, because this is the one
- *    surface where numbers are stacked in columns and compared down the column.
+ * 1. MONO CARRIES CODE; FIGURES TAKE TABULAR NUMERALS. (Revised 2026-11: the
+ *    mono voice is retired from figures; see tests/unit/mono-voice-allowlist.)
+ *    Geist Mono stays on ids and tokens a person copies. Counts, dates, bar
+ *    values and amounts set in the UI face with tabular figures and
+ *    letter-spacing 0. Tabular figures matter more here than on the sales page,
+ *    because this is the one surface where numbers are stacked in columns and
+ *    compared down the column.
  *
  * 2. THE MICRO-LABELS ARE SANS. Card titles, column headers and
  *    detail-section headings read as normal-case text at the label size.
@@ -481,18 +480,25 @@
 }
 
 /* The figures. Every one of these is a number a person reads off the page, so
-   every one is mono with tabular figures — in a column of counts, proportional
-   digits make the ones and the sevens fail to line up, which is the one thing
-   a column of counts exists to do. */
+   every one gets tabular figures — in a column of counts, proportional digits
+   make the ones and the sevens fail to line up, which is the one thing a column
+   of counts exists to do. They are plain figures, not code, so they set in the
+   UI face at letter-spacing 0. Mono stays only on
+   the tab badge (debt) and the env var names, which are tokens. */
 .adm-stat-value,
 .adm-user-view-n,
 .adm-bar-value,
 .adm-donut-count,
 .adm-user-count,
-.adm-tab-badge,
 .adm-plan-interval,
 .adm-flag-cell,
-.adm-stripe-na,
+.adm-stripe-na {
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.adm-tab-badge,
 .adm-stripe-env {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
@@ -503,22 +509,20 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The headline figures. Geist Mono's axis stops at 600 — asking for more is a
-   clamp the renderer performs silently, so the weight is stated inside it and
-   the size and tracking carry the rest of the emphasis. */
+/* The headline figures. Weight 600, size and line-height carry the emphasis;
+   tracking stays 0 like every other figure. */
 .adm-stat-value {
   font-size: 26px;
   font-weight: 600;
-  letter-spacing: -.02em;
+  letter-spacing: 0;
   line-height: 1.05;
   color: var(--t0);
 }
 
 .adm-user-view-n {
-  font-family: var(--mono);
   font-size: 21px;
   font-weight: 600;
-  letter-spacing: -.02em;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 
@@ -528,8 +532,9 @@
    already relies on, so no second source of truth about which column is which. */
 .adm-users-table td[data-label="Joined"],
 .adm-users-table td[data-label="Last seen"] {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   font-size: 11.5px;
   color: var(--t1);
 }
@@ -803,10 +808,10 @@
   background: var(--accent-wash);
 }
 
-/* The count that rides inside a chip is a value, so it is mono and it is
-   quieter than the label it qualifies. */
+/* The count that rides inside a chip sets in the UI face with tabular figures
+   and is quieter than the label it qualifies. */
 .adm-country-chip > span:last-child {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-variant-numeric: tabular-nums;
   font-size: 9.5px;
   color: var(--t3);
@@ -883,7 +888,7 @@
 
 .adm-plan-interval {
   font-size: var(--fs-caption);
-  letter-spacing: normal;
+  letter-spacing: 0;
   text-transform: none;
 }
 

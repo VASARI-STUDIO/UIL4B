@@ -225,7 +225,7 @@
 
 .alt-page .alt-row-facts { grid-column: 1; display: flex; align-items: center; gap: var(--s-2); }
 
-.alt-page .alt-row-size { font-family: var(--mono); font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.alt-page .alt-row-size { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 
 .alt-page .alt-row-remove { grid-column: 2; grid-row: 1 / span 2; }
 

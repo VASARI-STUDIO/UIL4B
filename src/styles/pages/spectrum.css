@@ -1271,7 +1271,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-ex-filebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-ex-filebar > .sp-ph { font-size: 15px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
 .sp-ex-filebar b { flex: 1; min-width: 0; font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ex-filebar small { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
+.sp-ex-filebar small { font-family: var(--font); font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sp-ex-actions { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-ex-fmts { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .05); }
 .sp-ex-fmt { padding: 6px 12px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 0; text-transform: none; cursor: pointer; }

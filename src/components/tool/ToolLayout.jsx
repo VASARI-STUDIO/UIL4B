@@ -568,7 +568,7 @@ export function ToolSection({ label, labelId, heading = false, aside, className,
 // ── ToolPills ─────────────────────────────────────────────────────────────
 // The drawn chip group (Linear/Radial/Conic, OKLCH/sRGB, 9/11/13 steps).
 // Buttons with aria-pressed; the group is named by `label` or `labelledBy`.
-// mono:  the 10.5px Geist Mono variant, for pills whose text is a code value only. No caller uses it now ("Step 500" and CSS/Tailwind are words).
+// mono:  the 10.5px Geist Mono variant (.tl-pill--mono), for pills whose text is a code value only. Nothing in this file passes it, but the Type Scale weight pills (TypeScale.jsx, 300..700) still carry the class by hand. The class is tagged debt in tests/unit/mono-voice-allowlist.test.js until that page drops it.
 // shape: 'pill' (999px, default) | 'block' (r12, stretched — Text/Background).
 // Options may carry `ariaLabel` (the button's accessible name) and `title`
 // (hover text); `describedBy` points the group at a visible description.

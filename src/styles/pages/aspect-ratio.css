@@ -268,9 +268,10 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--t0) 4.5%, transparent);
   color: var(--tl-ink);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .arc-page input[type="number"]:focus { border-color: var(--tl-line-on); }
 /* The tool's outline is the one focus ring; drop the global input halo under it. */
