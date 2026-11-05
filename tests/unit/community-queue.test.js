@@ -231,7 +231,7 @@ test('the gradient tool has no browser-held submission path left', () => {
 test('the gallery reads the account only, and withdraws from the account', () => {
   const src = read('src/pages/GradientGallery.jsx')
   assert.match(src, /listMySubmissions\(uid, 'gradient'\)/)
-  assert.match(src, /deleteSubmission\(s\.docId\)/)
+  assert.match(src, /deleteSubmission\(s\.docId(?:, \{ kind: 'gradient' \})?\)/)
   assert.ok(!/mergeSubmissions\(/.test(src), 'no merge with a browser-held list')
   assert.ok(src.includes("from this browser {legacyCount === 1 ? 'is' : 'are'} waiting."))
   assert.ok(src.includes("Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account."))
