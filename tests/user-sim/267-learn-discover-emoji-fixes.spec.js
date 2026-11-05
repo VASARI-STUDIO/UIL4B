@@ -29,6 +29,18 @@ const DESKTOP = { width: 1440, height: 900 }
 const PHONE = { width: 390, height: 844 }
 const RAIL_FROM = 1080
 
+// The smooth scroll keeps moving after the marker first changes; a key pressed
+// before it stops can be absorbed by the tween still running.
+async function settled(page) {
+  let last = null
+  await expect.poll(async () => {
+    const y = await page.evaluate(() => Math.round(window.scrollY))
+    const still = y === last
+    last = y
+    return still
+  }, { message: 'the scroll comes to rest', timeout: 10_000, intervals: [200] }).toBe(true)
+}
+
 const litIds = (page) => page.evaluate(() => [...document.querySelectorAll('.lart-toc a[data-active]')]
   .map((a) => a.getAttribute('href').slice(1)))
 
@@ -43,6 +55,7 @@ test.describe('the contents marker', () => {
       // On a loaded runner the smooth scroll can take several seconds to land.
       await page.keyboard.press('End')
       await expect.poll(() => litIds(page), { message: 'after End', timeout: 10_000 }).toEqual([ids.at(-1)])
+      await settled(page)
       await page.keyboard.press('Home')
       await expect.poll(() => litIds(page), { message: 'after Home', timeout: 10_000 }).toEqual([ids[0]])
     })
