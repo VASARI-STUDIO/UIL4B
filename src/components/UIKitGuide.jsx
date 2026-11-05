@@ -171,9 +171,8 @@ export default function UIKitGuide({ step, linked = false }) {
   })
   // How this page was reached, read once on mount; the navigation state that says
   // so is cleared below so a reload cannot repeat it.
-  const [mountDecision] = useState(() => readDecision(
-    classifyArrival({ state: location.state, navType, key: location.key, linked }),
-  ))
+  const [mountArrival] = useState(() => classifyArrival({ state: location.state, navType, key: location.key, linked }))
+  const [mountDecision] = useState(() => readDecision(mountArrival))
   const [showChooser, setShowChooser] = useState(mountDecision.show)
   const [chooserEditedAt, setChooserEditedAt] = useState(readEditedAt)
   const [chooserOpenOther, setChooserOpenOther] = useState(false)
@@ -182,17 +181,12 @@ export default function UIKitGuide({ step, linked = false }) {
   // it mounts, and that is not an edit.
   const paletteKey = JSON.stringify(design?.palette?.colors ?? null)
   const [chooserPalette, setChooserPalette] = useState(paletteKey)
-  if (showChooser && chooserPalette !== paletteKey) {
-    setChooserPalette(paletteKey)
-    setShowChooser(false)
-    setChooserOpenOther(false)
-    setShowIntro(false)
-  }
-  // A kit that is not asked about is the answer for this tab: the next arrival
-  // carries on without asking. A kit just finished stays unanswered until asked.
+  // A kit that is not asked about on a press is the answer for this tab: the next
+  // arrival carries on without asking. Opening the page by address answers
+  // nothing, and a kit just finished stays unanswered until asked.
   useEffect(() => {
-    if (mountDecision.eligible && !mountDecision.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
-  }, [mountDecision])
+    if (mountArrival !== 'direct' && mountDecision.eligible && !mountDecision.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
+  }, [mountArrival, mountDecision])
   // The steps Next was pressed on. A new project arrives on step one with none.
   const [accepted, setAccepted] = useState(() => (newProject && firstStep ? [] : acceptedSteps()))
   useEffect(() => {
@@ -208,6 +202,13 @@ export default function UIKitGuide({ step, linked = false }) {
     () => !mountDecision.show && !linked && isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
+  // The edit check sits below the panels' state because it closes them.
+  if (showChooser && chooserPalette !== paletteKey) {
+    setChooserPalette(paletteKey)
+    setShowChooser(false)
+    setChooserOpenOther(false)
+    setShowIntro(false)
+  }
   // The orientation panel opens short, on arrival; "What's this?" opens it with
   // the list of all four steps.
   const [introFull, setIntroFull] = useState(false)

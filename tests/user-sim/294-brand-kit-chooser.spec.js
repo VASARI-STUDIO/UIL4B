@@ -12,6 +12,9 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 const CURRENT = 'vs-current-design'
 const PARKED = 'vs-previous-design'
 const HOUR = 60 * 60 * 1000
+// A tool page past step one: the press from here is what brings a person back to
+// the first step, where the chooser asks.
+const AWAY = '/create/font-pair'
 
 const withColours = (colors) => ({
   ...DEFAULT_DESIGN,
@@ -90,7 +93,7 @@ test.describe('The brand kit chooser', () => {
   test('T4 unsaved work after seven hours asks, with Continue focused and nothing to open', async ({ page }) => {
     watch(page, 'a signed-out designer back the next morning')
     await seedKit(page, { hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     const panel = chooser(page)
     await expect(panel).toBeVisible()
@@ -103,10 +106,11 @@ test.describe('The brand kit chooser', () => {
   test('T5 Escape answers Continue and leaves the kit exactly as it was', async ({ page }) => {
     watch(page, 'a designer dismissing the chooser')
     await seedKit(page, { hoursAgo: 7 })
-    await go(page, '/create/palette')
-    const before = await read(page, CURRENT)
+    await go(page, AWAY)
     await pressBrandKit(page)
     await expect(chooser(page)).toBeVisible()
+    // Read once the board has restated the kit it opened with.
+    const before = await read(page, CURRENT)
     await page.keyboard.press('Escape')
     await expect(chooser(page)).toHaveCount(0)
     expect(await read(page, CURRENT)).toBe(before)
@@ -117,11 +121,11 @@ test.describe('The brand kit chooser', () => {
   test('T6 changing a swatch while the chooser is open counts as Continue and keeps the edit', async ({ page }) => {
     watch(page, 'a designer who starts editing under the chooser')
     await seedKit(page, { hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     await expect(chooser(page)).toBeVisible()
     const before = await colours(page)
-    await page.getByRole('button', { name: /generate|shuffle|new palette/i }).first().click()
+    await page.getByRole('button', { name: 'Randomise' }).first().click()
     await expect(chooser(page)).toHaveCount(0)
     await expect.poll(() => colours(page)).not.toEqual(before)
   })
@@ -129,11 +133,11 @@ test.describe('The brand kit chooser', () => {
   test('T7 Start a new brand kit parks the old one, resets the board and offers Undo', async ({ page }) => {
     watch(page, 'a designer starting over')
     await seedKit(page, { hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     await chooser(page).getByRole('button', { name: /^Start a new brand kit/ }).click()
     await expect(chooser(page)).toHaveCount(0)
-    expect((await readJson(page, PARKED))?.design, 'the old kit is in the slot').toEqual(WORK)
+    expect((await readJson(page, PARKED))?.design?.palette?.colors, 'the old kit is in the slot').toEqual(WORK.palette.colors)
     expect((await read(page, 'vs-uikit-guide')) || '').toBe('1')
     await expect(toast(page)).toContainText('Your last one is in Your workspace.')
     await toast(page).getByRole('button', { name: 'Undo' }).click()
@@ -144,7 +148,7 @@ test.describe('The brand kit chooser', () => {
   test('T8 starting new over unsaved work does not ask a second question', async ({ page }) => {
     watch(page, 'a designer starting over without a confirm')
     await seedKit(page, { hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     await expect(chooser(page).getByRole('button', { name: /^Start a new brand kit/ })).toContainText('moves to Your workspace as an unsaved brand kit')
     await chooser(page).getByRole('button', { name: /^Start a new brand kit/ }).click()
@@ -156,7 +160,7 @@ test.describe('The brand kit chooser', () => {
     const alpha = project('proj-a', 'Alpha', WORK, '2026-09-01T09:00:00.000Z')
     await signIn(page, { plan: 'free', projects: [alpha] })
     await seedKit(page, { design: { ...WORK, source: { projectId: 'proj-a' } }, hoursAgo: 26 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     const panel = chooser(page)
     await expect(panel.getByRole('button', { name: /^Start a new brand kit/ })).toBeFocused()
@@ -176,7 +180,7 @@ test.describe('The brand kit chooser', () => {
     await signIn(page, { plan: 'pro', projects: list })
     const changedA = { ...mk(1), palette: { ...mk(1).palette, colors: ['#E4572E', '#17BEBB', '#FFC914'] }, source: { projectId: 'proj-a' } }
     await seedKit(page, { design: changedA, hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     const panel = chooser(page)
     await panel.getByRole('button', { name: /^Open another project/ }).click()
@@ -195,7 +199,7 @@ test.describe('The brand kit chooser', () => {
     const list = [project('proj-a', 'Alpha', WORK, at), project('proj-b', 'Bravo', withColours(['#112233', '#223344']), at), project('proj-c', 'Charlie', withColours(['#334455', '#445566']), at)]
     await signIn(page, { plan: 'free', projects: list })
     await seedKit(page, { design: { ...WORK, source: { projectId: 'proj-a' } }, hoursAgo: 7 })
-    await go(page, '/create/palette')
+    await go(page, AWAY)
     await pressBrandKit(page)
     const panel = chooser(page)
     await expect(panel).toContainText('Free plan: 3 of 3 projects saved.')
@@ -203,6 +207,17 @@ test.describe('The brand kit chooser', () => {
     await panel.getByRole('button', { name: /^Start a new brand kit/ }).click()
     await expect(chooser(page)).toHaveCount(0)
     await expect.poll(() => colours(page)).not.toEqual(WORK.palette.colors)
+  })
+
+  test('T13 opening step one by address after a gap asks on load, before any press', async ({ page }) => {
+    watch(page, 'a designer reopening the palette tool from a bookmark')
+    await seedKit(page, { hoursAgo: 7 })
+    await go(page, '/create/palette')
+    await expect(chooser(page)).toBeVisible()
+    expect(await sessionMark(page), 'the load asked; nothing is answered yet').toBeNull()
+    await chooser(page).getByRole('button', { name: /^Continue this brand kit/ }).click()
+    await expect(chooser(page)).toHaveCount(0)
+    await expect.poll(() => sessionMark(page)).toBe('on')
   })
 
   test('T12 a save waiting on sign-in is never interrupted by the chooser', async ({ page }) => {

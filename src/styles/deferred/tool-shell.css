@@ -547,9 +547,9 @@
 .bkit-choose-sub{padding-inline-start:var(--s-4)}
 .bkit-choose-sub li + li{border-top:1px solid var(--border)}
 .bkit-choose-row--project{min-height:52px}
-.bkit-choose-all,.bkit-choose-link{color:var(--link);font-weight:560;text-decoration:underline;text-underline-offset:3px}
+.bkit-choose-all,.bkit-choose-link{color:var(--link);font-weight:560;text-decoration:underline;text-underline-offset:3px;border-radius:2px}
 .bkit-choose-all{display:flex;align-items:center;box-sizing:border-box;min-height:44px;font-size:15px}
-.bkit-choose-all:focus-visible,.bkit-choose-link:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px;border-radius:2px}
+.bkit-choose-all:focus-visible,.bkit-choose-link:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
 /* The Free plan's allowance, under Start a new brand kit. Starting is never blocked. */
 .bkit-choose-cap{margin:0;padding:0 0 var(--s-3);font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
 @media(hover:hover){
