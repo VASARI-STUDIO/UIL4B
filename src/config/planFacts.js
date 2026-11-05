@@ -144,7 +144,7 @@ export const PRO_POINTS = Object.freeze([
   `${AI.pro.daily} AI generations a day, ${AI.pro.monthly} a month`,
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
   'Every palette, gradient, prompt and brand palette',
-  `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, at any size`,
+  `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
   `${PRO_EXPORT_NAMES}, with no UIL4B line on anything`,
 ])

@@ -14,7 +14,7 @@ import '../../styles/pages/spectrum-chrome.css'
 //
 /// The design's composition, reproduced: the display handoff "Save time, and
 // save your mind." over the ink "Open the toolkit" pill, then link columns
-// headed in uppercase mono (TOOLS / PROJECT / LEGAL), all in one auto-fit grid
+// headed in the UI sans (Tools / Project / Legal; the mono voice is retired), all in one auto-fit grid
 // of 220px floors, and a mono baseline under a hairline carrying the copyright
 // line, "© 2026 UI L4B. Spectrum." (the year is computed).
 //

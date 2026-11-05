@@ -59,6 +59,8 @@ const CASES = [
   // The sales page's bench header and the sales footer's link rows.
   { route: '/', sels: ['.sp-shuffle'] },
   { route: '/plans', sels: ['.sp-footer .sp-footer-col a'] },
+  // The footer's small print on a tool page: the icon sets' links, the author credit and the about note.
+  { route: '/create/icons', sels: ['.sp-footer .sp-footer-notice-list a', '.sp-footer .sp-footer-legal a.sp-footer-attrib', '.sp-footer .app-footer-note'] },
 ]
 
 for (const c of CASES) {
