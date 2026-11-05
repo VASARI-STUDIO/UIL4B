@@ -20,7 +20,7 @@ import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
 const REFUSED = 'visitor whose icon catalogue is refused'
 
-test('the group chips are All icons, Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
+test('the group chips are All icons, Coloured, Brand logos and Flags, with no Emoji chip, and no emoji set in the pack menu', async ({ page }) => {
   watch(page, 'a designer looking for the icon group chips')
   await page.setViewportSize({ width: 1440, height: 900 })
   await signIn(page, { plan: 'pro' })
@@ -37,11 +37,12 @@ test('the group chips are All icons, Coloured, Brand logos and Flags, with no Em
   await expect(tray.getByRole('button', { name: /^Emoji/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
 
-  // The sets are not gone: they are still in the pack menu.
+  // Emoji is not an icon category: the Emoji tab owns the sets, so none is in the pack menu.
   await page.getByRole('button', { name: 'Icon pack' }).click()
   const list = page.locator('.menu-select-list[role="listbox"]')
-  for (const pack of ['twemoji', 'noto', 'openmoji']) {
-    await expect(list.locator(`[role="option"][data-value="${pack}"]`), `${pack} is in the pack menu`).toHaveCount(1)
+  await expect(list.locator('[role="option"][data-value="lucide"]'), 'POSITIVE CONTROL: the menu is open').toHaveCount(1)
+  for (const pack of ['twemoji', 'noto', 'openmoji', 'fluent-emoji']) {
+    await expect(list.locator(`[role="option"][data-value="${pack}"]`), `${pack} is not in the pack menu`).toHaveCount(0)
   }
 })
 

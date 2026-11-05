@@ -48,6 +48,7 @@ import {
 } from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
+import { cleanCustomIcons, customSymbolKey, customSymbolRef, registerCustomSymbols } from '../utils/customIcons'
 import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
@@ -138,16 +139,15 @@ const GROUP_ORDER = ['coloured', 'brands', 'flags']
 // The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
 const ALL_ICONS_ID = 'all'
 const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
-// Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
-// ride in the default "All packs" listing and stay in the pack menu.
-const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
+// Emoji is not an icon category: the Emoji tab owns the four emoji sets (see
+// utils/emojiStyleNames.js), so they are in neither this list nor the pack menu.
 const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
-const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -1050,7 +1050,14 @@ function SpriteGlyph({ href, symKey, className }) {
 // its own markup lands.
 function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    // A saved icon is a symbol in the sprite like a pack glyph (customSymbolRef is
+    // '' when it could not go in, or was let go: then it is drawn as an image).
+    const ref = customSymbolRef(icon)
+    if (!icon.colored) {
+      return ref
+        ? <SpriteGlyph href={ref} symKey={customSymbolKey(icon)} className="ig-sym ig-inv" />
+        : <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    }
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) return <LogoDevGlyph icon={icon} />
@@ -2984,8 +2991,8 @@ const PACK_MENU = [
     packs: [['circle-flags', 'Circle Flags'], ['flag', 'Flag Icons'], ['flagpack', 'Flagpack'], ['cif', 'Currency Flags']],
   },
   {
-    label: 'Flat & emoji',
-    packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
+    label: 'Flat',
+    packs: [['flat-color-icons', 'Flat Color Icons']],
   },
   {
     label: 'Animated',
@@ -2993,7 +3000,9 @@ const PACK_MENU = [
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
-const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
+// The emoji sets are not in the menu or in All packs, but an unscoped Pro search can still return a
+// glyph from one, and that cell has to be named.
+const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons', twemoji: 'Twemoji', noto: 'Noto Emoji', 'fluent-emoji': 'Fluent Emoji', openmoji: 'OpenMoji' }
 const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
@@ -3141,7 +3150,7 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
    the network said no. This is an accent band with a padlock and a plan word
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
-function IconGateWall({ heading, body, action, onAction, kind }) {
+function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
     <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
       <div className="lockt-cta-copy">
@@ -3155,6 +3164,10 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
         <p className="lockt-cta-body">{body}</p>
       </div>
       <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
+      {/* A second way on, for a wall whose primary button cannot open it by itself:
+          a signed-out visitor on a Pro pack logs in with the button and reads the
+          plans here. Same link the end band uses (`ig-end-link`). */}
+      {secondary && <Link to="/plans" className="ig-end-link" onClick={onSecondary}>{secondary}</Link>}
     </div>
   )
 }
@@ -3711,7 +3724,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
     setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
-    const list = readCustomIcons()
+    // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
+    // before the list is set, so the first render of a cell already finds its `#id`.
+    const list = cleanCustomIcons(readCustomIcons())
+    registerCustomSymbols(list)
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
     setLoading(false)
@@ -4586,7 +4602,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   })
   const teaseNeed = searchTeaseNeed(searchTease)
   const teaseWhere = searchTeaseWhere(searchTease)
-  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
+  // A signed-out visitor on a Pro scope gets a log-in wall that says it is Pro (the
+  // plans are the second link); a signed-in free viewer gets the Pro wall.
+  const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? ICON_GATE_COPY.lockedProAnon : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
@@ -5222,7 +5241,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 heading={gateCopy.heading(gated.label)}
                 body={gateCopy.body}
                 action={gateCopy.action}
-                onAction={() => openGate(gated.need)}
+                onAction={() => (anonOnPro ? requireLogin('open this icon pack') : openGate(gated.need))}
+                secondary={anonOnPro ? gateCopy.secondary : undefined}
+                onSecondary={() => reportUpgradeGate('icon-pack-tier')}
               />
             )}
 

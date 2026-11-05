@@ -62,7 +62,10 @@ test.describe('a 429 from Iconify', () => {
   test.skip(isLiveIconify(), 'the live API decides what it serves; this spec pins the refused shape')
   test.setTimeout(90_000)
 
-  test('a refused pack list does not stop the glyph files of the packs the site lists', async ({ page }) => {
+  // FIXME (fix/icon-locked-signin): this drove the one live pack list through the pack menu's
+  // fluent-emoji option, which is gone (emoji is not an icon category). It needs another pack with no
+  // committed list, and there is none today (see tests/unit/iconify-stub.test.js).
+  test.fixme('a refused pack list does not stop the glyph files of the packs the site lists', async ({ page }) => {
     // Pro picks fluent-emoji, the one pack with no list on the site, so its
     // /collection is the one live pack-list request of the visit. Refuse it.
     // The default listing names its packs from the committed heads and never

@@ -31,13 +31,21 @@ export const SPRITE_TRIM_TO = 3000
 const ROOT_RE = /^<svg((?: [A-Za-z:-]+="[^"]*")*)>([\s\S]+)<\/svg>$/
 const VIEWBOX_RE = / viewBox="([^"]*)"/
 const ID_RE = /^ics(\d+)$/
+const ATTR_RE = / ([A-Za-z:-]+)="([^"]*)"/g
+// What a saved icon's root may hand down to its body: presentation only. Size,
+// viewBox and namespace stay with the symbol or are dropped.
+const ROOT_LOOK = new Set([
+  'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit',
+  'stroke-dasharray', 'stroke-dashoffset', 'fill-opacity', 'stroke-opacity', 'opacity',
+  'fill-rule', 'clip-rule', 'color', 'vector-effect',
+])
 
 /**
  * `<symbol>` markup for one standalone icon SVG, or null when it should stay an
  * image. `id` is also the sanitiser's idPrefix, so ids inside the icon
  * (gradients, clip paths) become `<id>.<name>` and cannot meet another icon's.
  */
-export function symbolMarkup(svgText, id) {
+export function symbolMarkup(svgText, id, { root = false } = {}) {
   const clean = sanitiseSvgInline(svgText, { idPrefix: id })
   // CSS converted into attributes is still a rewrite, so that icon stays an image.
   if (!clean || !clean.ok || clean.css) return null
@@ -45,7 +53,15 @@ export function symbolMarkup(svgText, id) {
   if (!m) return null
   const box = VIEWBOX_RE.exec(m[1])
   if (!box) return null
-  return `<symbol id="${id}" viewBox="${box[1]}">${m[2]}</symbol>`
+  // A saved icon carries its look on the root (fill="none" stroke="currentColor"
+  // stroke-width, cap, colour). A symbol keeps only the root's viewBox, so those
+  // go on a group around the body; without it a line icon would draw filled.
+  let body = m[2]
+  if (root) {
+    const look = [...m[1].matchAll(ATTR_RE)].filter((a) => ROOT_LOOK.has(a[1])).map((a) => ` ${a[1]}="${a[2]}"`).join('')
+    if (look) body = `<g${look}>${body}</g>`
+  }
+  return `<symbol id="${id}" viewBox="${box[1]}">${body}</symbol>`
 }
 
 /**
@@ -101,10 +117,10 @@ export function createSprite({ acquire, max = SPRITE_MAX, trimTo = SPRITE_TRIM_T
   // Sanitise and write one run of items in a single append.
   function add(h, items) {
     let html = ''
-    for (const { key, text } of items) {
+    for (const { key, text, root } of items) {
       if (symbols.has(key) || !text) continue
       const id = `ics${nextId++}`
-      const markup = symbolMarkup(text, id)
+      const markup = symbolMarkup(text, id, { root })
       symbols.set(key, markup ? id : false)
       if (markup) html += markup
     }
@@ -114,7 +130,8 @@ export function createSprite({ acquire, max = SPRITE_MAX, trimTo = SPRITE_TRIM_T
   return {
     /**
      * Add the symbols for a batch of icons in one DOM write. `items` is
-     * `[{ key, text }]`, `text` being the standalone SVG. Icons already known are
+     * `[{ key, text, root? }]`, `text` being the standalone SVG and `root` keeping
+     * its root's look (see symbolMarkup). Icons already known are
      * skipped, so calling this twice for the same batch costs nothing.
      */
     register(items) {
