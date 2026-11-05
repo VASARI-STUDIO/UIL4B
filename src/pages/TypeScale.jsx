@@ -774,6 +774,27 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     </MenuSelect>
   )
 
+  // Declared before pageView, which shows them as the Code half at 1440.
+  const formatPills = (
+    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
+      {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
+          aria-pressed={format === id}
+          onClick={() => setFormat(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </SlidePills>
+  )
+  const exportPre = (
+    <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
+  )
+
+
   const pageView = (
     <div className="tsc-page-view">
       <div className="tsc-page-bar">
@@ -823,25 +844,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       </div>
       </>}
     </div>
-  )
-
-  const formatPills = (
-    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
-      {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
-          aria-pressed={format === id}
-          onClick={() => setFormat(id)}
-        >
-          {label}
-        </button>
-      ))}
-    </SlidePills>
-  )
-  const exportPre = (
-    <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
   )
 
   return layout(

@@ -31,6 +31,14 @@ const TOUCH_MIN = 43.5
 const box = (locator) => locator.boundingBox()
 
 /** The offline notice: the page's own way to show the catalogue notice on demand. */
+// The catalogue falls back to the bundled list when both of its sources fail (as
+// spec 192 does it). Going offline also raises the app's own offline banner over
+// every page, which is not this page's notice, so the first-screen check uses this.
+async function failCatalogue(page) {
+  await page.route('**/data/font-catalogue.json', (route) => route.abort())
+  await page.route('**/api/fonts', (route) => route.abort())
+}
+
 async function showCatalogueNotice(page) {
   await page.context().setOffline(true)
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))
@@ -203,8 +211,11 @@ test.describe('Type Scale · the ladder starts on the first screen of a phone', 
         const loaded = await box(first)
         expect(loaded.y, `${width}px: the first step starts ${Math.round(loaded.y)}px down`).toBeLessThanOrEqual(340)
 
-        await showCatalogueNotice(page)
+        await failCatalogue(page)
+        await go(page, ROUTE)
+        await expect(page.locator('.typ-notice').first(), 'the catalogue did not fall back').toBeAttached()
         await expect(first).toBeVisible()
+        expect(await page.evaluate(() => window.scrollY)).toBe(0)
         const degraded = await box(first)
         expect(degraded.y, `${width}px: with the catalogue notice up the first step starts ${Math.round(degraded.y)}px down`).toBeLessThanOrEqual(340)
       })
