@@ -26,7 +26,9 @@ import { waitUntil } from '@vercel/functions'
 // 'report' is a content report from a community item (src/utils/contentReport.js).
 // A report is only ever read by a person: nothing here acts on it automatically.
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
-const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+// 'auto' marks a report no person typed (a crash report, src/utils/errorReport.js),
+// so Admin can list it apart from what people wrote.
+const VALID_SOURCES = ['feedback-form', 'inline', 'email', 'auto']
 
 // The routing choices the feedback dialog offers, by the type they file under
 // ('feedback' in the dialog is stored as 'general'). A value outside the list for
@@ -103,7 +105,9 @@ export function validateSupportBody(body, now = new Date()) {
       ...(safeSeverity ? { severity: safeSeverity } : {}),
       subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
-      email: (email || '').trim().slice(0, EMAIL_MAX),
+      // An automatic report has no one to reply to. The label is the caller's to send,
+      // so an address on it is dropped rather than shown as if the site had filed it.
+      email: safeSource === 'auto' ? '' : (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
       status: 'new',
       adminNotes: '',
