@@ -395,12 +395,14 @@ export function ProjectProvider({ children }) {
 
   // Open a saved project as the working design. Unsaved work already on the
   // board is parked first. Returns true when it was parked (so a caller with a
-  // toast of its own can leave it to this one).
+  // toast of its own can leave it to this one), false when nothing was, and null
+  // when there is no such project to open (signed out, deleted, or not yet pulled
+  // to this device).
   const loadProject = useCallback((id) => {
-    if (!userKey) return false
+    if (!userKey) return null
     const list = allProjects[userKey] || []
     const project = list.find(p => p.id === id)
-    if (!project) return false
+    if (!project) return null
     const parked = parkWorkingDesign({ message: `Opened ${project.name}. ${PUT_ASIDE_OPENED}` }, list)
     const next = { ...DEFAULT_DESIGN, ...project.design, source: { projectId: id } }
     designRef.current = next
