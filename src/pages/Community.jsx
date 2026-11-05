@@ -84,7 +84,7 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design" tabIndex={-1} ref={submitDialogRef}>
+      <div className="ui-modal ui-modal--form" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design" tabIndex={-1} ref={submitDialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit a design</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">
@@ -191,7 +191,7 @@ function IconSubmitModal({ onClose, onSubmit, authorName }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal ui-modal--wide" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit an icon" tabIndex={-1} ref={dialogRef}>
+      <div className="ui-modal ui-modal--wide ui-modal--form" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit an icon" tabIndex={-1} ref={dialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit an icon</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">
