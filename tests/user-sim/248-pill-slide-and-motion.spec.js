@@ -120,8 +120,8 @@ async function openFileConverterVideo(page) {
 // Every case opens its page, prepares the group and returns its locator.
 const CASES = [
   {
-    id: 'type-scale-weights', name: 'Type Scale: weights', widths: [1440],
-    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-weights').first() },
+    id: 'type-scale-weights', name: 'Type Scale: Page and Code switch', widths: [1440],
+    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-half-switch, .tsc-fmt').first() },
   },
   {
     id: 'type-scale-view', name: 'Type Scale: output view', widths: [390],

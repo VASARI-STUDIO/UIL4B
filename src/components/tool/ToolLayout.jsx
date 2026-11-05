@@ -154,8 +154,24 @@ export function ToolLayout({
     root.classList.add('has-tool-dock')
     return () => root.classList.remove('has-tool-dock')
   }, [dockShown])
+  // While the keyboard is up, its height is published as --tl-kb-inset on the
+  // root, so a sheet can ride on the keyboard instead of sitting behind it.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!keyboard || !vv) return undefined
+    const root = document.documentElement
+    const set = () => root.style.setProperty('--tl-kb-inset', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`)
+    set()
+    vv.addEventListener('resize', set)
+    vv.addEventListener('scroll', set)
+    return () => {
+      vv.removeEventListener('resize', set)
+      vv.removeEventListener('scroll', set)
+      root.style.removeProperty('--tl-kb-inset')
+    }
+  }, [keyboard])
   return (
-    <div className={cx('tl', dockShown && 'tl--docked', className)} {...rest}>
+    <div className={cx('tl', dockShown && 'tl--docked', keyboard && 'tl--kb', className)} {...rest}>
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}

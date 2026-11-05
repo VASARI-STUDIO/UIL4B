@@ -15,6 +15,7 @@ const GLYPHS = {
   'arrow-counter-clockwise': (<><path d="M7.5 9.75H3v-4.5" /><path d="M6.17 17.83a8.25 8.25 0 1 0 0-11.66L3 9.75" /></>),
   'arrow-clockwise': (<><path d="M16.5 9.75H21v-4.5" /><path d="M17.83 17.83a8.25 8.25 0 1 1 0-11.66L21 9.75" /></>),
   'arrows-down-up': (<><path d="m10.5 16.5-3 3-3-3" /><path d="M7.5 4.5v15" /><path d="m13.5 7.5 3-3 3 3" /><path d="M16.5 19.5v-15" /></>),
+  'arrow-right': (<><path d="M3.75 12h16.5" /><path d="m13.5 5.25 6.75 6.75-6.75 6.75" /></>),
   'bookmark-simple': (<path d="M18 21 12 17.25 6 21V4.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 .75.75Z" />),
   'caret-down': (<path d="m19.5 8.25-7.5 7.5-7.5-7.5" />),
   'caret-right': (<path d="m9 4.5 7.5 7.5L9 19.5" />),

@@ -38,9 +38,9 @@ export async function settleTypeScaleView(page) {
 export async function showTypeScaleCode(page) {
   const layout = await settleTypeScaleView(page)
   if (layout === 'split') {
-    const drawer = page.locator('#tsc-code-drawer')
-    if (await drawer.isHidden()) await page.locator('.tsc-code-btn').click()
-    await expect(drawer).toBeVisible()
+    const half = page.getByRole('button', { name: 'Code', exact: true })
+    if ((await half.getAttribute('aria-pressed')) !== 'true') await half.click()
+    await expect(page.locator('#tsc-export')).toBeVisible()
     return layout
   }
   await page.getByRole('tab', { name: 'Code' }).click()

@@ -168,7 +168,7 @@ test.describe('activation fires from the export, not from its neighbours', () =>
       (await usage(page))['activation:type-scale:export'],
       'opening the code drawer is not a finished piece of work',
     ).toBe(undefined)
-    await page.locator('.tsc-drawer-copy').click()
+    await page.getByRole('button', { name: /^Copy CSS$/ }).click()
     await clipboard(page).toMatch(/font-size|--/)
 
     await counter(page, 'activation:type-scale:export').toBe(1)

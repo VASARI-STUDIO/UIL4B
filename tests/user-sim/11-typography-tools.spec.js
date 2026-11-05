@@ -133,7 +133,6 @@ test.describe('Type Scale Generator', () => {
     await expect(code).toContainText('--leading: 1.5;')
     await expect(code).toContainText('--font-heading:')
     await expect(page.getByRole('button', { name: /^Copy CSS$/ })).toBeVisible()
-    await expect(page.locator('.tsc-drawer-copy')).toBeVisible()
 
     await page.getByRole('button', { name: 'Tailwind v3' }).click()
     await expect(code).toContainText('fontSize: {')
@@ -150,7 +149,7 @@ test.describe('Type Scale Generator', () => {
     // The drawer is not modal: the panel beside it stays usable with the code
     // open, so a change there is read straight from the drawer.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    await expect(page.locator('#tsc-code-drawer')).toBeVisible()
+    await expect(page.locator('#tsc-export')).toBeVisible()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
     await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')

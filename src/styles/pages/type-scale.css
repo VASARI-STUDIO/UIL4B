@@ -22,32 +22,6 @@
  * on a phone). */
 
 .tsc-page { --tsc-top: calc(var(--chrome-h) + 56px); }
-/* The page scrolls the document, so the dock's height is declared on the root
-   too: a focused row or control scrolls clear of the docked bar, not under it. */
-html:has(.tsc-page),
-.tsc-page { --tsc-dock-h: 64px; }
-/* From 768 the bar exists only in the split, where it holds Code; below the
-   split there is no bar and nothing to clear. With a mouse the bar is one 36px
-   row between two 10px pads and a hairline. */
-@media (min-width: 768px) {
-  html:has(.tsc-page),
-  .tsc-page { --tsc-dock-h: 0px; }
-  html:has(.tsc-page .tsc-dock),
-  .tsc-page:has(.tsc-dock) { --tsc-dock-h: 64px; }
-}
-@media (min-width: 768px) and (pointer: fine) {
-  html:has(.tsc-page .tsc-dock),
-  .tsc-page:has(.tsc-dock) { --tsc-dock-h: 57px; }
-}
-html:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + 8px); }
-html.has-tabbar:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 8px); }
-/* Under the walkthrough the dock holds the screen edge and the kit bar sits on it
-   (--bkit-toolbar-h is the dock's height), so both are counted once. From 1024px
-   the dock sits above the floating pill instead. */
-html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + var(--bkit-toolbar-h, 0px) + 8px); }
-@media (min-width: 1024px) {
-  html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve) + 8px); }
-}
 .tsc-page .tsc-output { gap: var(--tl-gap); container-type: inline-size; container-name: tsc-work; }
 
 /* Labels are Geist, sentence case: the shared section label is uppercase mono. */
@@ -66,16 +40,25 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + 
 
 /* ── Views switch ───────────────────────────────────────────────────────── */
 .tsc-page .tsc-view-switch { flex-wrap: nowrap; }
-/* The switch with the Preview width menu: one row from 768, the menu on its own
-   44px row under the switch on a phone. */
-.tsc-page .tsc-view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
-.tsc-page .tsc-view-bar .tsc-width-select { flex: 0 1 220px; width: auto; min-width: 176px; }
+/* The switch and the Preview width menu share one row at every width; the bar
+   sticks under the toolbar from 768. */
+.tsc-page .tsc-view-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tsc-page .tsc-view-switch { flex: 0 0 auto; }
+.tsc-page .tsc-view-bar .tsc-width-select { flex: 1 1 0; width: auto; min-width: 0; max-width: 220px; margin-left: auto; }
 @media (pointer: coarse) {
   .tsc-page .tsc-view-bar .tsc-width-select { min-height: 44px; }
 }
-@media (max-width: 767px) {
-  .tsc-page .tsc-view-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .tsc-page .tsc-view-bar .tsc-width-select { flex: 0 0 auto; width: 100%; min-height: 44px; }
+@media (min-width: 768px) {
+  .tsc-page .tsc-view-bar {
+    position: sticky;
+    top: calc(var(--chrome-h) + var(--tl-bar-h));
+    z-index: 5;
+    margin-inline: calc(-1 * clamp(12px, 2vw, 20px));
+    padding: 8px clamp(12px, 2vw, 20px);
+    background: var(--tl-page);
+    border-bottom: 1px solid var(--tl-hair);
+  }
+  .tsc-page .tsc-view-bar .tsc-width-select { min-width: 176px; }
 }
 
 /* ── The ladder ─────────────────────────────────────────────────────────── */
@@ -90,12 +73,13 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + 
 }
 .tsc-page .tsc-row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto);
   align-items: baseline;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
-  padding: 14px 0;
+  padding: 12px 0;
+  scroll-margin-top: calc(var(--chrome-h) + var(--tl-bar-h) + 60px);
   border: 0;
   background: transparent;
   color: var(--tl-ink);
@@ -108,11 +92,11 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + 
 .tsc-page .tsc-row:active { background: var(--tl-wash-2); }
 /* The longest token, --text-base, is about 80px at 12px mono. */
 @media (min-width: 768px) {
-  .tsc-page .tsc-row { grid-template-columns: 92px minmax(0, 1fr) auto; }
+  .tsc-page .tsc-row { grid-template-columns: 92px minmax(0, 1fr) auto; gap: 16px; }
 }
 /* Literal values only are mono: the token and the px. */
 .tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-row-num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tsc-page .tsc-row-text {
   min-width: 0;
   overflow-wrap: break-word;
@@ -163,13 +147,13 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + 
   .tsc-page .tsc-view[data-view="split"] .tsc-page-view {
     position: sticky;
     top: calc(var(--tsc-top) + 8px);
-    max-height: calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - 16px);
+    max-height: calc(100dvh - var(--tsc-top) - 16px);
     overflow: auto;
     overscroll-behavior: contain;
   }
   /* With the walkthrough's bar over the foot, the page half ends above it too. */
   html.bkit-on .tsc-page .tsc-view[data-view="split"] .tsc-page-view {
-    max-height: calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - var(--bkit-reserve) - 16px);
+    max-height: calc(100dvh - var(--tsc-top) - var(--bkit-reserve) - 16px);
   }
 }
 /* The page is never scaled: the column is as wide as the chosen width, or the
@@ -214,105 +198,25 @@ html.bkit-on:has(.tsc-page) { scroll-padding-bottom: calc(var(--bkit-reserve) + 
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
 .tsc-page .tsc-export { max-height: 420px; overflow: auto; font-size: 12px; }
 
-/* ── The docked bar ──────────────────────────────────────────────────────────
-   Sticky to the foot of the viewport from 768px (fixed on a phone, below). While
-   the brand kit walkthrough shows, it keeps the screen's bottom edge below 1024px
-   and the kit bar sits directly on it; from 1024px it sits above the floating
-   pill. 768 and wider: Save to a
-   project. 390: Save and Copy CSS. */
-.tsc-page .tsc-dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  margin: 16px calc(-1 * clamp(12px, 2vw, 20px)) calc(-1 * clamp(12px, 2vw, 20px));
-  padding: 10px max(clamp(12px, 2vw, 20px), env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(clamp(12px, 2vw, 20px), env(safe-area-inset-left, 0px));
-  border-top: 1px solid var(--tl-hair);
-  background: var(--bg-0);
-}
-.tsc-page .tsc-dock .tsc-save { white-space: nowrap; }
-/* The split puts Code at the foot of the work column, under the drawer it opens. */
-.tsc-page .tsc-dock:has(.tsc-code-btn) { justify-content: space-between; }
-/* While the drawer is open the Code pill reads as on. */
-.tsc-page .tsc-code-btn[aria-expanded="true"] { background: var(--tl-wash-2); color: var(--tl-ink); }
+/* ── Code beside the scale ───────────────────────────────────────────────────
+   In the split the right half switches between the page and the code. The code
+   fills the half; the format pills sit above it. */
+.tsc-page .tsc-half-switch { flex-wrap: nowrap; }
+.tsc-page .tsc-view[data-view="split"] .tsc-developer-view .tsc-export { max-height: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 120px); }
 
-/* ── The Code drawer ─────────────────────────────────────────────────────────
-   Up to 60% of the viewport, over the work column and above the docked bar.
-   Its left edge and width are the column's measured box (--tsc-work-left,
-   --tsc-work-w), because a fixed box can't be placed by the size container. */
-.tsc-page .tsc-drawer {
-  position: fixed;
-  left: var(--tsc-work-left, 20px);
-  bottom: var(--tsc-dock-h);
-  z-index: 30;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  width: var(--tsc-work-w, 60vw);
-  max-height: min(60dvh, calc(100dvh - var(--tsc-top) - var(--tsc-dock-h) - 16px));
-  border: 1px solid var(--tl-line-2);
-  border-bottom: 0;
-  border-radius: 16px 16px 0 0;
-  background: var(--tl-card);
-  box-shadow: 0 -8px 32px rgb(0 0 0 / .18);
-  overscroll-behavior: contain;
-  animation: tsc-drawer-in var(--dur-2, 200ms) var(--ease-entrance, ease-out) both;
-}
-.tsc-page .tsc-drawer[hidden] { display: none; }
-html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve)); }
-.tsc-page .tsc-drawer:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
-.tsc-page .tsc-drawer-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  padding: 10px 12px 10px 16px;
-  border-bottom: 1px solid var(--tl-hair);
-}
-.tsc-page .tsc-drawer-head .tsc-fmt { margin-right: auto; }
-.tsc-page .tsc-drawer .tsc-export {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
-  overflow: auto;
-  overscroll-behavior: contain;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.tsc-page .tsc-drawer .tsc-export:focus-visible { outline-offset: -2px; }
-@keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-/* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save
-   from 768, and upward from the docked bar on a phone, at the right where Save
-   is. Below 561px the menu is already a bottom sheet (global.css .svt-menu). */
+/* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save from
+   768. On a phone it is mounted at the page root, outside the toolbar (whose
+   backdrop-filter would pin a fixed child to the bar), as a bottom sheet over the
+   tab bar. Below 561px global.css .svt-menu is already that sheet. */
 .tsc-page .tsc-save-wrap { position: relative; display: inline-flex; }
-/* Save and Copy CSS are one group at the end of the toolbar; the gap is the
-   toolbar's own, so no other button can sit between them. */
 .tsc-page .tsc-primary-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.tsc-page .tl-toolbar .svt-pop {
-  display: block;
-  position: absolute;
-  top: calc(100% + 8px);
-  bottom: auto;
-  right: 0;
-  z-index: 60;
-}
+.tsc-page .tl-toolbar .svt-pop { display: block; position: absolute; top: calc(100% + 8px); bottom: auto; right: 0; z-index: 60; }
 .tsc-page .tl-toolbar .svt-pop .svt-menu { position: static; }
 .tsc-page .svt-pop { display: contents; }
-@media (min-width: 561px) {
-  .tsc-page .svt-pop {
-    display: block;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    right: clamp(12px, 2vw, 20px);
-    z-index: 60;
-  }
-  .tsc-page .svt-pop .svt-menu { position: static; }
+@media (max-width: 767px) {
+  .tsc-page .svt-pop .svt-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 16px 16px 0 0; z-index: 70; }
+  html.has-tabbar .tsc-page .svt-pop .svt-menu { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── The panel ──────────────────────────────────────────────────────────── */
@@ -410,18 +314,8 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 .tsc-page .tsc-sample-input::placeholder { color: var(--tl-faint); }
 .tsc-page .tsc-sample-input:focus,
 .tsc-page .tsc-select:focus { border-color: var(--tl-line-on); }
-.tsc-page .tsc-weights { gap: 4px; margin-top: -6px; margin-bottom: 10px; }
-/* The weight numbers sit beside 13px sans labels, so they take the UI face, not
-   the mono chip. Tabular figures keep 100-900 the same width. */
-.tsc-page .tsc-weights .tsc-weight {
-  min-height: 36px;
-  padding-block: 0;
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: normal;
-  text-transform: none;
-}
+/* Weight: one menu under each family, listing only the weights it has. */
+.tsc-page .tsc-weight-select { width: 100%; min-width: 132px; margin-bottom: 10px; }
 
 /* Heading and body families stack in a narrow panel and sit side by side once
    the panel itself is wide enough. The container is the wrapper, not the
@@ -488,13 +382,12 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .tsc-page .tl-body { padding-bottom: calc(var(--tsc-dock-h) + 12px); }
   /* The panel dissolves: its first section is the Base and Ratio strip above
      the ladder, its row opens the sheet, and the sheet floats. They come
      before the ladder in the source, so nothing is reordered. */
   .tsc-page .tsc-config { display: contents; }
   .tsc-page .tsc-sec-scale { padding: 0; border: 0; }
-  .tsc-page .tsc-scale-bar { grid-template-columns: 128px minmax(0, 1fr); gap: 8px; align-items: end; }
+  .tsc-page .tsc-scale-bar { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: end; }
   .tsc-page .tsc-scale-term--base .tsc-range input[type="range"] { display: none; }
   .tsc-page .tsc-scale-term--base .snapv-value,
   .tsc-page .tsc-scale-term--base .snapv-input { order: 0; flex: 1; }
@@ -515,15 +408,11 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
     text-align: left;
     cursor: pointer;
   }
-  .tsc-page .tsc-row { grid-template-columns: 1fr auto; grid-template-areas: "name num" "text text"; gap: 4px 12px; padding: 12px 0; }
-  .tsc-page .tsc-row-name { grid-area: name; }
-  .tsc-page .tsc-row-num { grid-area: num; text-align: right; }
-  .tsc-page .tsc-row-text { grid-area: text; }
   .tsc-page .tsc-row-prefix,
   .tsc-page .tsc-row-rem { display: none; }
 
   .tsc-page .tsc-sheet {
-    --tsc-sheet-bottom: calc(var(--tsc-dock-h) + env(safe-area-inset-bottom, 0px));
+    --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom) + env(safe-area-inset-bottom, 0px));
     display: none;
     position: fixed;
     inset-inline: 0;
@@ -539,49 +428,18 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
     background: var(--tl-card);
     box-shadow: 0 -8px 40px rgb(0 0 0 / .22);
   }
-  html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom)); }
   .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
   .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
   .tsc-page .tsc-sheet-title { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
   .tsc-page .tsc-sheet-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: max(0px, env(safe-area-inset-left, 0px)); }
 
-  .tsc-page .tsc-dock {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: 41;
-    justify-content: space-between;
-    margin: 0;
-    height: var(--tsc-dock-h);
-    box-sizing: border-box;
-    padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-    background: var(--bg-0);
-    border-top: 1px solid var(--tl-hair);
-  }
-  html.has-tabbar .tsc-page .tsc-dock { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 10px; }
-  html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
   /* The walkthrough's bar stacks on the dock (the tab bar is hidden then), so the
      sheet sits above both. */
-  html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tsc-dock-h) + var(--bkit-reserve)); }
+  html.bkit-on .tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--bkit-reserve); }
   /* The spacer under the page already clears the dock and the kit bar. */
   html.bkit-on .tsc-page .tl-body { padding-bottom: 12px; }
   .tsc-page .tsc-page-bar { flex-wrap: wrap; }
-}
-/* The walkthrough's bar stacks on the dock, never under it: the dock is pinned to
-   the screen edge below 1024px (UIKitGuide publishes its height as
-   --bkit-toolbar-h; the bar and its spacer read it). From 1024px the pill floats
-   and the dock sits above it. */
-@media (max-width: 1023px) {
-  html.bkit-on .tsc-page .tsc-dock {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    margin: 0;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  }
-}
-@media (min-width: 1024px) {
-  html.bkit-on .tsc-page .tsc-dock { bottom: var(--bkit-reserve); }
 }
 /* iOS zooms a focused field under 16px. */
 @media (max-width: 640px) {
@@ -592,7 +450,6 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 @media (pointer: coarse) {
   /* 8px between neighbouring targets, and every control 44px on a finger. */
   .tsc-page .tl-pills { gap: 8px; }
-  .tsc-page .tsc-weights .tsc-weight { min-height: 44px; }
   .tsc-page .snapv input[type="range"] { height: 44px; }
   .tsc-page .tsc-range .snapv-value,
   .tsc-page .tsc-range .snapv-input,
@@ -604,11 +461,42 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
 }
 html[data-reduced-motion="true"] .tsc-page .tsc-row,
 html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none; }
-/* The drawer keeps its opacity fade and drops the rise. */
-html[data-reduced-motion="true"] .tsc-page .tsc-drawer { animation-name: tsc-drawer-fade; }
-@keyframes tsc-drawer-fade { from { opacity: 0; } to { opacity: 1; } }
+/* The page keeps no drawer: Code is a view beside the scale. */
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .tsc-page .tsc-row,
   html:not([data-reduced-motion="false"]) .tsc-page .tsc-tuning-caret { transition: none; }
-  html:not([data-reduced-motion="false"]) .tsc-page .tsc-drawer { animation-name: tsc-drawer-fade; }
+}
+
+/* ── Fonts section: the catalogue notice is a quiet line, not a card ──────────── */
+.tsc-page .tsc-fonts .typ-notice {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--tl-hair);
+  border-radius: 0;
+  background: transparent;
+  font-size: max(var(--fs-caption), 13px);
+  color: var(--tl-dim);
+}
+.tsc-page .tsc-fonts .typ-notice strong { font-size: max(var(--fs-caption), 13px); font-weight: 400; color: var(--tl-soft); }
+.tsc-page .tsc-fonts .typ-notice span { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
+.tsc-page .tsc-fonts .typ-notice > svg { display: none; }
+.tsc-page .tsc-fonts .typ-notice-retry { align-self: flex-start; }
+
+/* Preview text and the fine-tuning disclosure share a row on a tablet. */
+.tsc-page .tsc-words-row { display: grid; gap: 10px; min-width: 0; }
+.tsc-page .tsc-words-field { display: grid; gap: 6px; min-width: 0; }
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tsc-page .tsc-words-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+  .tsc-page .tsc-words-row .tsc-tuning-toggle { width: auto; }
+}
+
+/* Phone: Save is a 44px icon button on the toolbar row; the settings row shows the families. */
+@media (max-width: 767px) {
+  .tsc-page .tl-toolbar .tsc-save--icon { width: 44px; padding: 0; }
+  .tsc-page .tsc-sheet-row-value { margin-left: auto; min-width: 0; max-width: 55%; overflow: hidden; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
+  .tsc-page .tsc-sheet-row-label { flex: 0 0 auto; }
+  .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
 }

@@ -45,12 +45,11 @@ const TOOLS = [
   { route: '/create/aspect-ratio', title: 'Aspect & Resolution', primary: /^Copy size/, field: (page) => page.getByRole('spinbutton', { name: 'Known width in pixels' }) },
   { route: '/create/alt-text', title: 'Alt Text Generator', primary: /^Add images/, field: (page) => page.locator('.alt-field').first() },
   { route: '/create/semantic-color', title: 'Semantic Colour', primary: /^Copy /, field: null },
+  { route: '/create/type-scale', title: 'Type Scale', primary: /^Copy CSS/, field: (page) => page.getByLabel('Base size') },
 ]
 
 const NO_PRIMARY_ON_A_PHONE = [
   { route: '/create/font-pair', title: 'Font Pair' },
-  // Type Scale keeps its own docked bar (.tsc-dock) and its own room for it.
-  { route: '/create/type-scale', title: 'Type Scale', ownBar: true },
   { route: '/create/file-converter', title: 'File Converter' },
 ]
 
