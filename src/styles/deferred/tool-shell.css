@@ -830,7 +830,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-evidence dl{display:grid;gap:5px}
 .uis-evidence dl>div{display:flex;justify-content:space-between;gap:var(--s-3);font-size:11px}
 .uis-evidence dt{color:var(--t2)}
-.uis-evidence dd{font-family:var(--mono);font-weight:650;color:var(--t0)}
+.uis-evidence dd{font-family:var(--font);font-weight:650;color:var(--t0); font-variant-numeric: tabular-nums; letter-spacing: 0;}
 .uis-pass-list{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .uis-pass{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:650}
 .uis-pass>span{display:grid;place-items:center;width:16px;height:16px;border:1px solid currentColor;border-radius:50%}

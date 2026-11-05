@@ -273,7 +273,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 }
 .fg-page .fg-size-k { font-size:max(var(--fs-caption),12.5px); color: var(--tl-dim); }
 .fg-page .fg-size input[type="range"] { width: 96px; min-width: 0; margin: 0; accent-color: var(--t0); }
-.fg-page .fg-size-v { min-width: 44px; font-family: var(--mono); font-size: max(var(--fs-caption), 11px); color: var(--tl-ink); text-align: right; }
+.fg-page .fg-size-v { min-width: 44px; font-family: var(--font); font-size: max(var(--fs-caption), 11px); color: var(--tl-ink); text-align: right; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .tl-sheet-layer .fg-size,
 .fg-page .tl-pop .fg-size,
 .tl-sheet-layer .fg-preview-field,

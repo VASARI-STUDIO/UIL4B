@@ -429,6 +429,7 @@
 }
 :is(.tl, .tl-sheet-layer) .tl-pill:active { transform: scale(.97); }
 :is(.tl, .tl-sheet-layer) .tl-pill.is-on { border-color: var(--tl-line-on); background: var(--tl-wash-on); color: var(--tl-ink); }
+/* Only the Type Scale weight pills (TypeScale.jsx) still use this; debt in tests/unit/mono-voice-allowlist.test.js. */
 :is(.tl, .tl-sheet-layer) .tl-pill--mono { padding: 7px 12px; font-family: var(--mono); font-size: 10.5px; }
 :is(.tl, .tl-sheet-layer) .tl-pill[disabled] { cursor: not-allowed; opacity: .5; }
 :is(.tl, .tl-sheet-layer) .tl-pills--block { flex-wrap: nowrap; }
@@ -474,10 +475,11 @@
 :is(.tl, .tl-sheet-layer) .tl-slider { display: flex; align-items: center; gap: 12px; min-width: 0; }
 :is(.tl, .tl-sheet-layer) .tl-slider-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-k { width: 56px; flex: 0 0 auto; }
-:is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-v { width: 42px; text-align: right; flex: 0 0 auto; }
-/* On a phone or a touch screen the small mono labels (slider values, the
-   OKLCH/Step pills) are 12px, the floor for text read at arm's length. */
+/* On a phone or a touch screen the small labels (slider values, and the
+   mono weight pills on Type Scale) are 12px, the floor for text read at arm's
+   length. */
 @media (max-width: 767px), (pointer: coarse) {
   :is(.tl, .tl-sheet-layer) .tl-slider-v,
   :is(.tl, .tl-sheet-layer) .tl-pill--mono { font-size: 12px; }

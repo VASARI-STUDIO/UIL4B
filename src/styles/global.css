@@ -27,10 +27,16 @@
    300–700, Geist Mono 300–600.
 
    ── SPECTRUM, 2026-09-18: Manrope and JetBrains Mono are retired ────────────
-   The "UIL4B - Spectrum" design system sets the whole product in GEIST, with Geist Mono for every value a user
-   copies and Caveat for the one handwritten annotation the homepage has always
-   carried. Adopting it half-way — new layout on the old faces — is exactly the
+   The "UIL4B - Spectrum" design system sets the whole product in one UI face
+   (var(--font)), with Geist Mono for text a user reads or copies as code and
+   Caveat for the one handwritten annotation the homepage has always carried.
+   Adopting it half-way — new layout on the old faces — is exactly the
    disjointedness the 2026-09-16 audit measured, so the faces move with it.
+
+   The mono rule: Geist Mono is for code, hex, tokens, IDs, keyboard keys and
+   CSS-value columns (px and rem) only. Figures, sizes, ratios and dates are
+   UI-face text with tabular-nums and letter-spacing 0. The guard is
+   tests/unit/mono-voice-allowlist.test.js.
 
    Caveat is a THIRD family and the note above used to argue against one. The
    argument was about a serif for body text, which would be a first-paint cost
@@ -115,7 +121,7 @@
 :root{
   /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
      TWO families ship and there is no serif role. --display is an alias of
-     --font: the same Manrope face, named for the job it does (hero type,
+     --font: the same UI face, named for the job it does (hero type,
      section heads, wordmarks) rather than for a face we do not have.
 
      IT WAS CALLED --serif UNTIL 2026-09-04 and resolved to Manrope the whole
@@ -127,8 +133,8 @@
      families and a third is a first-paint cost, not a token edit — see the
      @font-face note at the top of this file. If you ever DO want serif/sans
      contrast, that is a type-system decision, not a token rename.
-     Contrast in this system comes from Manrope vs JetBrains Mono, plus
-     weight and scale. Fallback stacks are unchanged from the Outfit era. */
+     Contrast in this system comes from the UI face vs Geist Mono (code, hex,
+     tokens, IDs, keys and CSS-value columns only), plus weight and scale. */
   /* Display tracking scale. Switzer's word space is narrow, so heavy negative
      tracking closes the gaps between words at large sizes. By size: 28-42px
      headings -.015em, 43px and up -.02em, the .dgh-hero headline -.025em at most.
@@ -1847,7 +1853,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-cap-name{flex-shrink:0;font-size:12px;font-weight:560;color:var(--t1)}
 /* The value is the evidence. It gets the mono face because it is a literal —
    the exact string that will appear in the report, not a paraphrase of it. */
-.fb-cap-value{flex:1;min-width:0;font-family:var(--mono);font-size:11px;color:var(--t2);text-align:right;overflow-wrap:anywhere}
+.fb-cap-value{flex:1;min-width:0;font-family:var(--font);font-size:11px;color:var(--t2);text-align:right;overflow-wrap:anywhere; font-variant-numeric: tabular-nums; letter-spacing: 0;}
 /* Struck through rather than hidden, so an unticked row still shows WHAT was
    declined. Removing the row on untick would make the list shrink under the
    pointer and lose the record of the choice. */
@@ -3498,10 +3504,10 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .icust-row{display:flex;align-items:center;gap:12px;min-height:32px}
 .icust-row>label{flex:0 0 56px;color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
 .icust-row input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
-.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:700;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
-.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
+.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-pill);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
 .icust-seg button:hover{color:var(--t0)}
@@ -3582,9 +3588,10 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
 .cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-/* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
-   characters) so switching never reflows the row under the pointer. */
-.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+/* The notation select. Sized to its widest option (HEX/RGB/HSL) so switching
+   never reflows the row under the pointer. It is a UI-face button, not a code
+   value; the width comes from the option labels, not equal-width glyphs. */
+.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-micro);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
 .cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* Each swatch group is headed. An unheaded second grid is indistinguishable
    from the first — to the eye, and to a screen reader, which is why the label
@@ -3634,7 +3641,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 @media(pointer:coarse){
   .cpk-dropper{width:44px;height:44px}
   .cpk-hex{height:44px;font-size:16px}
-  .cpk-format{height:44px;padding:0 8px;font-size:12px}
+  .cpk-format{height:44px;padding:0 8px;font-size:var(--fs-caption)}
   /* Swatches (presets and Recent alike) are tap targets too. Five 44px columns
      and four 4px gaps are 236px, so the panel widens from 244px to hold them
      with its 12px padding; the swatches no longer shrink to fit. */
@@ -3845,7 +3852,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 .hcmd-bar:focus-within{border-color:var(--accent)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
    (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
-.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
+.hcmd-prompt{font-family:var(--font);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
 /* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
    reason: this MUST outrank the global input[type="text"] reset at the top of
    the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.

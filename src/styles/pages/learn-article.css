@@ -211,7 +211,7 @@
    border, and a bordered chip in a bordered box reads as a card in a card. */
 .lart .lart-table code{border:0}
 .lart .lart-table td{color:var(--t1)}
-.lart .lart-table [data-num]{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lart .lart-table [data-num]{text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap}
 /* A prose cell that must stay on one line. The tables live in an overflow-x
    container, so this buys uniform row height at the cost of scroll distance —
    which is the right trade for a column the reader scans downwards. */

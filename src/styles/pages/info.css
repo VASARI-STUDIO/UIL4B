@@ -309,16 +309,16 @@
  * inherited at 16px). One token for both sizes is the version that cannot
  * fail: --accent-text measures 5.76:1 on this wash in light, 9.2:1 in dark. */
 .ic-stat-num {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 26px;
   font-weight: 600;
   color: var(--accent-text);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  letter-spacing: -.02em;
+  letter-spacing: -.01em;
 }
 .ic-stat-num span { font-size: 13px; color: var(--cpg-faint); font-weight: 400; margin-left: 3px; letter-spacing: 0; }
-.ic-stat-sm { font-size: 16px; }
+.ic-stat-sm { font-size: 16px; letter-spacing: 0; }
 .ic-stat-lbl {
   font-family: var(--font);
   font-size: var(--fs-caption);
@@ -383,7 +383,7 @@
 /* 9.5px is the smallest type in the product and --cpg-quiet cannot carry it:
  * measures 4.05:1 in light (#66665F on #DAD8CF) and 4.29:1 in dark, so LIGHT
  * is the worse of the two. --cpg-faint clears both. */
-.ic-bp-tick-px { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 9.5px; color: var(--cpg-faint); }
+.ic-bp-tick-px { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--font); font-size: 9.5px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--cpg-faint); }
 
 /* ── Narrow ─────────────────────────────────────────────────────────────── */
 

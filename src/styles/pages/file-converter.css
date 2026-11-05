@@ -269,8 +269,9 @@
 .fc .fc-field:disabled { opacity: .55; cursor: not-allowed; }
 
 .fc .fc-field--num {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 /* ── Segmented choices (Video tab) ────────────────────────────────────────────
@@ -736,10 +737,11 @@
 /* The byte count beside the engine-download sentence: tabular so it does not
    jitter as it climbs. */
 .fc .fc-status-bytes {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-variant-numeric: tabular-nums;
   color: var(--t1);
   white-space: nowrap;
+  letter-spacing: 0;
 }
 
 .fc .fc-spinner {

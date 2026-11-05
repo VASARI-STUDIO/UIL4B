@@ -205,7 +205,7 @@
   border-radius: 8px;
   background: rgba(10, 11, 13, .9);
   color: #fff;
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
   line-height: 1;
   white-space: nowrap;
@@ -213,6 +213,7 @@
   visibility: hidden;
   pointer-events: none;
   transition: opacity var(--dur-1) var(--ease-standard), visibility 0s linear var(--dur-1);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
 }
 .grd .grd-handle.is-dragging .grd-handle-val,
 .grd .grd-handle:focus-visible .grd-handle-val { opacity: 1; visibility: visible; transition-delay: 0s; }
@@ -410,7 +411,7 @@
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
-.grd .grd-stop-pos { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
+.grd .grd-stop-pos { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: right; color: var(--tl-dim); }
 /* Room for the role name on a fine pointer. The side card keeps one 15px scrollbar
    gutter and the window another, so "Secondary 500" had 64px of a 96px column once
    both were drawn. The window bleeds 8px into the section's padding each side (the
@@ -687,12 +688,13 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--t0) 4.5%, transparent);
   color: var(--tl-ink);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
   appearance: textfield;
+  letter-spacing: 0;
 }
 .grd .grd-angle-input::-webkit-outer-spin-button,
 .grd .grd-angle-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1144,8 +1146,9 @@
   position: absolute; right: 12px; bottom: 12px;
   padding: 4px 8px; border-radius: 8px;
   background: rgba(10, 11, 13, .9); color: #fff;
-  font-family: var(--mono); font-size: 12px; line-height: 1.2; white-space: nowrap;
+  font-family: var(--font); font-size: 12px; line-height: 1.2; white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .grd .grd-ctx-ratio.is-low { color: var(--warn, #F5B942); }
 /* The ground is the one bordered surface; the card on it is told apart by its colour alone. */
