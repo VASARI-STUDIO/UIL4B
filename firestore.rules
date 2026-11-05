@@ -124,8 +124,7 @@ service cloud.firestore {
     // Community submissions — the shared review queue for gradients, designs
     // and palettes (utils/communityQueue.js). The owner may withdraw their own
     // submission. Pending, rejected and withdrawn items are readable only by
-    // their author and reviewers; approved items by any signed-in user, and
-    // approved designs by anyone.
+    // their author and reviewers; approved items by any signed-in user.
     match /community-submissions/{submissionId} {
       function isSignedIn() { return request.auth != null; }
       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
@@ -197,19 +196,9 @@ service cloud.firestore {
 
       // Rules are not filters: listMySubmissions filters on authorUid and the
       // reviewers' queue on status, which is what lets those lists through.
-      //
-      // An approved design is readable by anyone, signed out included: it is
-      // what /community shows every visitor, through a list query on
-      // status == 'approved' and kind == 'design'. Every other approved kind
-      // stays behind sign-in, and nothing that is not approved is open to
-      // anyone but its author and reviewers. A rule cannot hide fields, so the
-      // whole document is public once approved. A queued document carries no
-      // email (the create rule pins its keys); the reviewer's write adds only
-      // reviewedAt and reviewedBy, a reviewer uid.
       allow read: if isReviewer()
         || isOwner()
-        || (resource.data.status == 'approved'
-            && (isSignedIn() || resource.data.kind == 'design'));
+        || (isSignedIn() && resource.data.status == 'approved');
 
       // Reviewers may update; the owner may only set status to 'withdrawn',
       // and no other field may change in the same write.
@@ -218,6 +207,57 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
 
       allow delete: if isReviewer() || isOwner();
+    }
+
+    // Approved community designs, in a form anyone may read. One document per
+    // design, at the id of the community-submissions document it was copied
+    // from (utils/communityQueue.js, buildPublicDesign). It holds a name, the
+    // credit the submitter typed, a category, an http(s) link and two colours,
+    // and no uid, email, account name or reviewer, so the whole collection can
+    // be public. The keys are pinned below to keep it that way.
+    //
+    // Rules are not filters: a list must carry a limit, and 25 is the most it
+    // may ask for (the page size plus one).
+    match /community-public/{id} {
+      function pubShapeOk() {
+        return request.resource.data.keys().hasOnly([
+                 'name', 'credit', 'category', 'url', 'c1', 'c2', 'approvedAt', 'kind'])
+          && request.resource.data.keys().hasAll([
+                 'name', 'credit', 'category', 'c1', 'c2', 'approvedAt', 'kind'])
+          && request.resource.data.kind == 'design'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.credit is string
+          && request.resource.data.credit.size() > 0
+          && request.resource.data.credit.size() <= 60
+          && request.resource.data.category is string
+          && request.resource.data.category.size() <= 40
+          && (!('url' in request.resource.data)
+              || (request.resource.data.url is string
+                  && request.resource.data.url.size() <= 2048
+                  && request.resource.data.url.matches('^https?://.*$')))
+          && request.resource.data.c1 is string
+          && request.resource.data.c1.matches('^#[0-9a-fA-F]{6}$')
+          && request.resource.data.c2 is string
+          && request.resource.data.c2.matches('^#[0-9a-fA-F]{6}$')
+          && request.resource.data.approvedAt is timestamp;
+      }
+
+      allow get: if true;
+      allow list: if request.query.limit <= 25;
+
+      // Only a reviewer publishes. A public copy is never edited by a member.
+      allow create, update: if isReviewer() && pubShapeOk();
+
+      // A reviewer removes any copy. A member removes the copy at the id of
+      // their own submission: the id matches, and the submission it points at
+      // names them. `get` reads the submission as it stands before the write,
+      // so withdrawing a design (one batch deleting both) is allowed.
+      allow delete: if isReviewer()
+        || (request.auth != null
+            && get(/databases/$(database)/documents/community-submissions/$(id)).data.authorUid
+               == request.auth.uid);
     }
 
     // Aggregate usage analytics — per-day counter documents ({YYYY-MM-DD}).
