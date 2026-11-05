@@ -7,6 +7,7 @@
 
 import { SEMANTIC_LABELS, SEMANTIC_ROLES, SEMANTIC_STEPS, semanticShades } from '../data/semanticPresets.js'
 import { normalizeHex } from './colorFormats.js'
+import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 
 export const PALETTE_GROUP_LABEL = 'Your palette'
 export const SEMANTIC_GROUP_LABEL = 'Semantic'
@@ -19,15 +20,24 @@ const SEMANTIC_STEP_INDEX = SEMANTIC_STEPS.indexOf('500')
  * `{ id, label, items: [{ hex, label }] }` groups, empty groups left out.
  *
  * - `palette`: the design's palette colours (`design.palette.colors`).
- * - `states`: the design's saved semantic selections (`design.states`). Absent
- *   or not an object means the project holds none, so there is no group.
+ * - `states`: the design's saved semantic selections (`design.states`). Absent,
+ *   not an object, or still the defaults every new design starts with means the
+ *   person has not chosen any, so there is no group: four colours nobody picked
+ *   would only repeat the stock swatches.
  * - `exclude`: colours the picker already shows another way. They are dropped
  *   so a swatch never appears twice.
  *
  * `hex` is lowercase `#rrggbb`, the form the picker emits. `label` is the
  * swatch's accessible name, which spells the hex in capitals.
- * A colour is listed once: the palette keeps it ahead of the semantic group.
+ * A colour is listed once across these groups: the palette keeps it ahead of
+ * the semantic group. Recent is not excluded on purpose: choosing a palette
+ * colour must not make it vanish from "Your palette" while the picker is open.
  */
+const sameStates = (a, b) => {
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})])
+  return [...keys].every((k) => a?.[k] === b?.[k])
+}
+
 export function buildPickerPresets({ palette, states, exclude = [] } = {}) {
   const seen = new Set((exclude || []).map(normalizeHex).filter(Boolean))
   const take = (raw) => {
@@ -44,7 +54,7 @@ export function buildPickerPresets({ palette, states, exclude = [] } = {}) {
   }
 
   const semanticItems = []
-  if (states && typeof states === 'object' && !Array.isArray(states)) {
+  if (states && typeof states === 'object' && !Array.isArray(states) && !sameStates(states, DEFAULT_DESIGN.states)) {
     const shades = semanticShades(states)
     for (const role of SEMANTIC_ROLES) {
       const hex = take(shades[role][SEMANTIC_STEP_INDEX])

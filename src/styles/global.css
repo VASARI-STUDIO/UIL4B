@@ -3653,6 +3653,8 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   html.has-tabbar .pop.cpk-pop[data-pop-fixed="true"]{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:var(--s-3)}
   .cpk-pop[data-pop-fixed="true"]::before{content:"";flex:0 0 auto;display:block;width:36px;height:4px;margin:0 auto;border-radius:var(--radius-pill);background:var(--border)}
   .cpk-pop[data-pop-fixed="true"] .cpk-swatches{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  /* The sheet scrolls as a whole; its header (name and Close) stays in reach. */
+  .cpk-pop[data-pop-fixed="true"] .cpk-head{position:sticky;top:calc(-1 * var(--s-3));z-index:1;margin-top:calc(-1 * var(--s-3));padding-top:var(--s-3);background:var(--bg-1)}
   /* The scrim is the notation sheet's (.menu-select-scrim, dimmed at this width);
      it only needs the picker's own layer number, one under the panel. */
   .menu-select-scrim.cpk-scrim{z-index:calc(var(--cpk-layer,130) - 1)}

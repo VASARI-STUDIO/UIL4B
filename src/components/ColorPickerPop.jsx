@@ -140,9 +140,10 @@ const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
-// The shortest a phone sheet is made to keep its trigger in view: the pad and
-// the hex field still fit, and the rest scrolls.
-const SHEET_MIN_H = 280
+// The shortest a phone sheet is made to keep its trigger in view: the header,
+// the pad, the hue strip and the hex row still fit (about 313px), and the rest
+// scrolls under the pinned header.
+const SHEET_MIN_H = 320
 
 // On a phone the portalled panel is a bottom sheet (global.css, the same width
 // the notation sheet switches at) rather than a popover hung off its trigger.

@@ -23,7 +23,8 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const PALETTE = ['#e4572e', '#17bebb', '#ffc914']
-const STATES = { success: 1, warning: 0, error: 0, info: 0 }
+// A Success the person chose; the untouched defaults show no Semantic group.
+const STATES = { success: 0, warning: 0, error: 0, info: 0 }
 const design = (over = {}) => ({
   palette: { base: PALETTE[0], harmony: 'auto', extraColors: [], activeIdx: 0, colors: PALETTE },
   states: STATES,
@@ -84,7 +85,7 @@ for (const tool of TOOLS) {
         await expect(panel.getByText('Semantic', { exact: true })).toBeVisible()
         const semantic = panel.getByRole('group', { name: 'Semantic' })
         await expect(semantic.getByRole('button')).toHaveCount(4)
-        for (const name of ['Use Success, #22C55E', 'Use Warning, #F59E0B', 'Use Error, #EF4444', 'Use Information, #3B82F6']) {
+        for (const name of ['Use Success, #10B981', 'Use Warning, #F59E0B', 'Use Error, #EF4444', 'Use Information, #3B82F6']) {
           await expect(semantic.getByRole('button', { name, exact: true })).toBeVisible()
         }
       })
@@ -92,7 +93,7 @@ for (const tool of TOOLS) {
       test('pressing a preset applies the colour and marks only that one pressed', async ({ page }) => {
         const { trigger, panel } = await open(page, tool, width, height, design())
         const mine = panel.getByRole('button', { name: 'Use #17BEBB from your palette', exact: true })
-        const success = panel.getByRole('button', { name: 'Use Success, #22C55E', exact: true })
+        const success = panel.getByRole('button', { name: 'Use Success, #10B981', exact: true })
 
         await expect(mine).toHaveAttribute('aria-pressed', 'false')
         await mine.click()
@@ -103,8 +104,8 @@ for (const tool of TOOLS) {
         await success.click()
         await expect(success).toHaveAttribute('aria-pressed', 'true')
         await expect(mine).toHaveAttribute('aria-pressed', 'false')
-        await expect(panel.locator('.cpk-hex')).toHaveValue('#22c55e')
-        await expect.poll(() => shownColour(trigger)).toBe('rgb(34, 197, 94)')
+        await expect(panel.locator('.cpk-hex')).toHaveValue('#10b981')
+        await expect.poll(() => shownColour(trigger)).toBe('rgb(16, 185, 129)')
       })
 
       test('an empty palette shows no "Your palette" group', async ({ page }) => {
