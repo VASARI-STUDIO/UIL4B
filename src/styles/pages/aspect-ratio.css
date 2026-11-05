@@ -51,12 +51,22 @@
   width: var(--arc-w, 0);
   height: var(--arc-h, 0);
   max-width: 100%;
-  border: 1.5px solid var(--accent);
-  border-radius: 6px;
-  background: var(--accent-wash);
 }
-.arc-page .rc-vis-diag { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.arc-page .rc-vis-diag line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
+/* The shape, drawn at the box's real size so the stroke and corners are exact
+   at rest. A new ratio eases by FLIP (RatioCalculator starts it scaled to the
+   old shape) on transform alone; width and height are never animated. */
+.arc-page .rc-vis-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transition: transform var(--dur-3) var(--ease-entrance);
+}
+.arc-page .rc-vis-frame rect { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 1.5; }
+.arc-page .rc-vis-frame line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
 .arc-page .rc-vis-ratio { position: relative; font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent-text); }
 .arc-page .rc-vis-dims { position: relative; font-family: var(--mono); font-size: 10.5px; color: var(--accent-text); }
 .arc-page .rc-vis-empty { font-size: 13px; color: var(--tl-dim); }
@@ -283,6 +293,12 @@
   :where(html:not([data-reduced-motion="false"])) .arc-page .arc-ratio-card:active { transform: none; }
 }
 
+/* ── Shape preview ──────────────────────────────────────────────────────── */
+:where(html[data-reduced-motion="true"]) .arc-page .rc-vis-frame { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .arc-page .rc-vis-frame { transition: none; }
+}
+
 /* ── Focus ──────────────────────────────────────────────────────────────── */
 .arc-page .arc-opt:focus-visible,
 .arc-page .arc-stat:focus-visible { outline-offset: -2px; }
@@ -306,4 +322,5 @@
 }
 @media (forced-colors: active) {
   .arc-page .arc-ratio-card.on { border: 2px solid Highlight; }
+  .arc-page .rc-vis-frame rect { fill: none; stroke: CanvasText; }
 }

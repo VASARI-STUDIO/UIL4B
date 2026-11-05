@@ -3,6 +3,7 @@ import ToolFoot from './ToolFoot'
 import PhIcon from './PhIcon'
 import { prefersReducedMotion } from './reducedMotion'
 import { route } from './spectrumFacts'
+import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { navigatesThisTab } from '../../utils/handoffSlot'
 import { setImageHandoff } from '../../utils/imageHandoff'
 import {
@@ -82,8 +83,11 @@ export default function BenchConverter({ onResult }) {
   const root = useRef(null)
   const stageRef = useRef(null)
   const tabRefs = useRef([])
+  const modesRef = useRef(null)
   const near = useInView(root)
   const [mode, setMode] = useState('compress')
+  // The selected tab's underline slides between tabs (useSlideIndicator; spectrum.css).
+  useSlideIndicator(modesRef, mode)
   const [modelOpened, setModelOpened] = useState(false)
   const [fmt, setFmt] = useState(0)
   const [outFmt, setOutFmt] = useState(0)
@@ -256,7 +260,7 @@ export default function BenchConverter({ onResult }) {
   return (
     <>
     <div className="sp-panel-body sp-panel-body--pad sp-cv" ref={root}>
-      <div className="sp-modes" role="tablist" aria-label="Mode">
+      <div className="sp-modes" role="tablist" aria-label="Mode" ref={modesRef}>
         {IMG_MODES.map(([id, label, , short], i) => (
           <button
             key={id}
