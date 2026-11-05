@@ -168,6 +168,8 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-icon-ground': { scope: 'device', why: 'Background behind the icon preview, a viewing preference' },
   'vs-uikit-guide': { scope: 'device', why: 'Mid-walkthrough position on this screen' },
   'vs-uikit-guide-at': { scope: 'device', why: 'When the walkthrough was last used on this screen' },
+  'vs-current-design-at': { scope: 'device', why: 'When the working design last changed on this browser, so the brand kit chooser can tell a return after a gap' },
+  'vs-kit-session': { scope: 'session', why: 'Whether the brand kit chooser was already answered in this tab' },
   'vs-first-win-started': { scope: 'device', why: 'Time-to-value timer for local analytics' },
   'vs-analytics': { scope: 'device', why: 'In-browser usage counters' },
   'vs-sessions': { scope: 'device', why: 'In-browser session history' },

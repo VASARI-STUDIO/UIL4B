@@ -375,7 +375,7 @@ test.describe('Brand kit walkthrough', () => {
   })
 
   test('you can leave the flow mid-way and be resumed at the gap, not restarted', async ({ page }) => {
-    watch(page, 'designer coming back to a half-built system on another day')
+    watch(page, 'designer coming back to a half-built system after a short break')
     await fresh(page)
     // A palette already built, nothing else — the state of someone who did step
     // one, closed the tab, and came back. The flag is localStorage now, so it
@@ -384,6 +384,14 @@ test.describe('Brand kit walkthrough', () => {
       palette: { base: '#0051FF', harmony: 'auto', colors: ['#123456', '#654321', '#ABCDEF'], activeIdx: 0, extraColors: [] },
     })
     await page.addInitScript((k) => { try { localStorage.setItem(k, '1') } catch { /* ignore */ } }, GUIDE_KEY)
+    // Back within the hour in a tab that already answered the brand kit question,
+    // so nothing asks first (the chooser after a gap is spec 294).
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('vs-current-design-at', String(Date.now() - 60 * 60 * 1000))
+        sessionStorage.setItem('vs-kit-session', 'on')
+      } catch { /* ignore */ }
+    })
 
     await go(page, MENU_ROUTE)
     const label = await pressBrandKit(page)
