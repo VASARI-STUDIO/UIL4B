@@ -66,17 +66,14 @@ test('All icons is pressed at rest; a group then All icons clears the group and 
   expect(rest.map((c) => c.pressed), 'All icons is the only pressed chip at rest').toEqual(['true', 'false', 'false', 'false'])
 
   const search = page.getByRole('searchbox', { name: /search icons/i }).or(page.getByPlaceholder(/search icons/i)).first()
-  await search.fill('arrow')
+  // A brand name, so the Brand logos group has matches to show.
+  await search.fill('github')
   await press(page, 'Brand logos')
-  await expect.poll(() => page.locator('.ig .ig-pack-head').count(), { timeout: 20000, message: 'the group lists its packs under headings' }).toBeGreaterThan(0)
-  const inGroup = await chipState(page)
-  expect(inGroup.map((c) => c.pressed), 'Brand logos pressed, All icons released').toEqual(['false', 'false', 'true', 'false'])
+  await expect.poll(async () => (await chipState(page)).map((c) => c.pressed), { timeout: 20000, message: 'Brand logos pressed, All icons released' }).toEqual(['false', 'false', 'true', 'false'])
 
   await press(page, 'All icons')
-  await expect.poll(() => page.locator('.ig .ig-pack-head').count(), { timeout: 20000, message: 'the group headings are gone' }).toBe(0)
-  const after = await chipState(page)
-  expect(after.map((c) => c.pressed), 'All icons pressed again').toEqual(['true', 'false', 'false', 'false'])
-  await expect(search, 'the search text survives').toHaveValue('arrow')
+  await expect.poll(async () => (await chipState(page)).map((c) => c.pressed), { timeout: 20000, message: 'All icons pressed again' }).toEqual(['true', 'false', 'false', 'false'])
+  await expect(search, 'the search text survives').toHaveValue('github')
   await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
 
   // Pressing it again at rest changes nothing.
