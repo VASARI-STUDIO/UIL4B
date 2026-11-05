@@ -441,12 +441,16 @@ export default function RatioCalculator({ onCopy }) {
     setSide(s)
   }
 
-  // Visualiser box — constrained so extreme ratios still fit the panel.
+  // Visualiser box — constrained so extreme ratios still fit the panel. The
+  // shape is drawn on a fixed 240px frame and sized by scale (sx, sy), so a new
+  // ratio eases between shapes on transform alone.
   const vis = useMemo(() => {
-    if (!validRatio) return { w: 0, h: 0 }
+    if (!validRatio) return { w: 0, h: 0, sx: 0, sy: 0 }
     const MAX = 240
     const a = ratioW / ratioH
-    return a >= 1 ? { w: MAX, h: Math.round(MAX / a) } : { w: Math.round(MAX * a), h: MAX }
+    const w = a >= 1 ? MAX : Math.round(MAX * a)
+    const h = a >= 1 ? Math.round(MAX / a) : MAX
+    return { w, h, sx: w / MAX, sy: h / MAX }
   }, [ratioW, ratioH, validRatio])
 
   // Pixel presets (device/screen/social) seed ratio + known + PPI in one click;
@@ -602,8 +606,11 @@ export default function RatioCalculator({ onCopy }) {
             <div className="rc-vis-stage">
               {validRatio
                 ? (
-                  <div className="rc-vis-box" ref={(el) => { if (el) { el.style.setProperty('--arc-w', `${vis.w}px`); el.style.setProperty('--arc-h', `${vis.h}px`) } }}>
-                    <svg className="rc-vis-diag" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <div className="rc-vis-box" ref={(el) => { if (el) { el.style.setProperty('--arc-w', `${vis.w}px`); el.style.setProperty('--arc-h', `${vis.h}px`); el.style.setProperty('--arc-sx', vis.sx); el.style.setProperty('--arc-sy', vis.sy) } }}>
+                    {/* The outline, wash and diagonal, drawn once at 240px and scaled to the shape. The stroke
+                        and the corner radius are set against the scale, so they keep their size on a long side. */}
+                    <svg className="rc-vis-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <rect x="0" y="0" width="100" height="100" rx={2.5 / vis.sx} ry={2.5 / vis.sy} vectorEffect="non-scaling-stroke" />
                       <line x1="0" y1="0" x2="100" y2="100" vectorEffect="non-scaling-stroke" />
                     </svg>
                     <span className="rc-vis-ratio">{simplified}</span>

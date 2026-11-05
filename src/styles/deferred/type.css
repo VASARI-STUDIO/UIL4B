@@ -150,7 +150,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 /* The name is the specimen — it is set in the family it names, which is the
    same contract the tiles keep. */
 .fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
-.fdx-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fdx-tabs{position:relative;display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
 .fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .fdx-tab:hover{color:var(--t0)}
 .fdx-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -158,6 +158,16 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 /* Sits ON the 1px border rather than above it, so the pair reads as one edge
    and not as a rule with a second rule stacked on it. */
 .fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--t0);border-radius:2px 2px 0 0}
+/* The underline slides. useSlideIndicator measures the selected tab and the strip's
+   ::after is the bar: one pixel wide, stretched to the tab (less its 10px insets) by
+   scaleX, so it moves on transform alone. While [data-slide] is on the tab's own bar
+   is off; without it (server render, a hidden strip) the tab keeps its own. "placed"
+   draws the bar with no transition, "ready" animates its moves. */
+.fdx-tabs[data-slide]::after{content:"";position:absolute;left:0;top:0;width:1px;height:2px;background:var(--t0);transform-origin:0 0;transform:translate(calc(var(--si-x) + 10px),calc(var(--si-y) + var(--si-h) - 1px)) scaleX(calc(var(--si-n) - 20));pointer-events:none}
+.fdx-tabs[data-slide="ready"]::after{transition:transform var(--dur-2) var(--ease-entrance)}
+.fdx-tabs[data-slide] .fdx-tab--on::after{content:none}
+html[data-reduced-motion="true"] .fdx-tabs[data-slide]::after{transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .fdx-tabs[data-slide]::after{transition:none}}
 .fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:560;color:var(--accent-ink);background:var(--accent-fill);border:1px solid var(--accent-fill);border-radius:var(--btn-radius);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}

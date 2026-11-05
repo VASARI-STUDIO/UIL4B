@@ -654,6 +654,26 @@
 .sp-modes .sp-utab { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 0; margin-right: 18px; flex: 0 0 auto; font-size: 13px; letter-spacing: 0; }
 .sp-modes .sp-utab[aria-selected="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); font-weight: 560; }
 .sp-modes .sp-ph { font-size: 14px; }
+/* The selected tab's underline slides. useSlideIndicator measures the tab; the
+   bar is the row's ::after, one pixel wide and stretched to the tab by scaleX,
+   so it moves on transform alone. While [data-slide] is on, the selected tab's
+   own underline is clear; without it (server render, a hidden row) the tab
+   paints its own. "placed" draws the bar with no transition, "ready" animates. */
+.sp-modes { position: relative; }
+.sp-modes[data-slide]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--sp-ink);
+  transform-origin: 0 0;
+  transform: translate(var(--si-x), calc(var(--si-y) + var(--si-h) - 2px)) scaleX(var(--si-n));
+  pointer-events: none;
+}
+.sp-modes[data-slide="ready"]::after { transition: transform var(--sp-t-ui) var(--sp-ease); }
+.sp-modes[data-slide] .sp-utab[aria-selected="true"] { border-bottom-color: transparent; }
 /* The row clips its overflow and each tab fills its height, so the ring is
    drawn inside the tab rather than outside it. */
 .spectrum .sp-modes .sp-utab:focus-visible { outline-offset: -2px; }
@@ -1796,7 +1816,10 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 /* The hero's arrival, the windows' depth and switch, the tab pill and the library fade: the content is already in place, so these only lose their movement. */
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
+/* The converter's tab underline: it lands on the chosen tab at once. */
+:where(html[data-reduced-motion="true"]) .spectrum .sp-modes::after { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-modes::after { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-hero.is-arriving :is(.sp-hero-sub, .tim-anchor, .sp-hero-cta), .sp-ramp--arrive .sp-ramp-bar, .sp-panel, .sp-disc-grid) { animation: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-rail-ind, .sp-rail-row) { transition: none !important; }
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
@@ -1819,6 +1842,9 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
   .spectrum .sp-pick-btn[aria-checked="true"],
   .spectrum .sp-ico[aria-pressed="true"],
   .spectrum .sp-rail-row.is-on { border: 2px solid Highlight; }
+  /* The bar is a background, which this mode removes: the tab paints its own underline. */
+  .spectrum .sp-modes[data-slide]::after { content: none; }
+  .spectrum .sp-modes[data-slide] .sp-utab[aria-selected="true"] { border-bottom-color: Highlight; }
   .spectrum .sp-seed[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
   .spectrum .sp-ramp, .spectrum .sp-roles { forced-color-adjust: none; }
   /* The card edge is a shadow ring, which this mode removes. */
