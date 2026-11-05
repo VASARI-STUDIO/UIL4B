@@ -59,6 +59,13 @@ const open = async (page, tool, width, height, value) => {
   return { trigger, panel }
 }
 
+// The colour a trigger shows: the picker's own chip, or the chip a tool passes
+// in (the Gradient stop swatch), else the trigger's own fill.
+const shownColour = (trigger) => trigger.evaluate((el) => {
+  const chip = el.querySelector('.cpk-trigger-chip, .grd-stop-chip')
+  return getComputedStyle(chip || el).backgroundColor
+})
+
 for (const tool of TOOLS) {
   for (const [width, height] of WIDTHS) {
     test.describe(`${tool.name} picker at ${width}px`, () => {
@@ -91,13 +98,13 @@ for (const tool of TOOLS) {
         await mine.click()
         await expect(mine).toHaveAttribute('aria-pressed', 'true')
         await expect(panel.locator('.cpk-hex')).toHaveValue('#17bebb')
-        await expect(trigger.locator('.cpk-trigger-chip')).toHaveCSS('background-color', 'rgb(23, 190, 187)')
+        await expect.poll(() => shownColour(trigger)).toBe('rgb(23, 190, 187)')
 
         await success.click()
         await expect(success).toHaveAttribute('aria-pressed', 'true')
         await expect(mine).toHaveAttribute('aria-pressed', 'false')
         await expect(panel.locator('.cpk-hex')).toHaveValue('#22c55e')
-        await expect(trigger.locator('.cpk-trigger-chip')).toHaveCSS('background-color', 'rgb(34, 197, 94)')
+        await expect.poll(() => shownColour(trigger)).toBe('rgb(34, 197, 94)')
       })
 
       test('an empty palette shows no "Your palette" group', async ({ page }) => {

@@ -140,6 +140,10 @@ const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
+// The shortest a phone sheet is made to keep its trigger in view: the pad and
+// the hex field still fit, and the rest scrolls.
+const SHEET_MIN_H = 280
+
 // On a phone the portalled panel is a bottom sheet (global.css, the same width
 // the notation sheet switches at) rather than a popover hung off its trigger.
 const SHEET_QUERY = '(max-width: 767px)'
@@ -266,24 +270,34 @@ export default function ColorPickerPop({
   // The sheet is pinned to the bottom edge, and a trigger that happens to sit in
   // the lower half of the page would be under it. Lift the page by just enough to
   // bring the trigger into the clear space above the sheet — never past the
-  // fixed chrome at the top, and not at all when it already clears.
+  // fixed chrome at the top, and not at all when it already clears. Where the
+  // page cannot lift that far (a trigger near the top of a short page), the
+  // sheet is made shorter instead, down to SHEET_MIN_H, and scrolls inside.
   useLayoutEffect(() => {
     const panel = popRef.current
     const trigger = triggerRef.current
     if (!open || !sheet || !panel || !trigger) return undefined
+    panel.style.maxHeight = ''
+    let second = 0
+    const bottomOf = () => Number.parseFloat(getComputedStyle(panel).bottom) || 0
     const frame = requestAnimationFrame(() => {
       // Worked out from the CSS position, not getBoundingClientRect: the sheet is
       // still mid-way through its entry transform on the first frame.
-      const sheetTop = window.innerHeight - (Number.parseFloat(getComputedStyle(panel).bottom) || 0) - panel.offsetHeight
+      const sheetTop = window.innerHeight - bottomOf() - panel.offsetHeight
       const box = trigger.getBoundingClientRect()
       const lift = Math.min(box.bottom + 12 - sheetTop, box.top - topObstruction() - 8)
-      if (lift <= 0) return
-      const lenis = getLenis()
-      // `force`: the sheet has locked the page, which stops Lenis.
-      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
-      else window.scrollBy({ top: lift, behavior: 'instant' })
+      if (lift > 0) {
+        const lenis = getLenis()
+        // `force`: the sheet has locked the page, which stops Lenis.
+        if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
+        else window.scrollBy({ top: lift, behavior: 'instant' })
+      }
+      second = requestAnimationFrame(() => {
+        const room = window.innerHeight - bottomOf() - (trigger.getBoundingClientRect().bottom + 12)
+        if (room < panel.offsetHeight) panel.style.maxHeight = `${Math.max(SHEET_MIN_H, Math.floor(room))}px`
+      })
     })
-    return () => cancelAnimationFrame(frame)
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(second); panel.style.maxHeight = '' }
   }, [open, sheet, popRef, triggerRef, recents.length, projectGroups.length])
 
   const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
