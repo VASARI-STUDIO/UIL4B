@@ -52,21 +52,17 @@
   height: var(--arc-h, 0);
   max-width: 100%;
 }
-/* The shape: a fixed 240px frame centred on the box and scaled to the ratio
-   (--arc-sx / --arc-sy, set by RatioCalculator), so a new ratio eases between
-   shapes on transform alone; width and height are never animated. The box keeps
-   the shape's real size for the text and the layout. The outline is drawn with a
-   non-scaling stroke so scaling does not thin it on the short side. */
+/* The shape, drawn at the box's real size so the stroke and corners are exact
+   at rest. A new ratio eases by FLIP (RatioCalculator starts it scaled to the
+   old shape) on transform alone; width and height are never animated. */
 .arc-page .rc-vis-frame {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 240px;
-  height: 240px;
-  margin: -120px 0 0 -120px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   pointer-events: none;
-  transform: scale(var(--arc-sx, 0), var(--arc-sy, 0));
+  transform-origin: 50% 50%;
   transition: transform var(--dur-3) var(--ease-entrance);
 }
 .arc-page .rc-vis-frame rect { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 1.5; }

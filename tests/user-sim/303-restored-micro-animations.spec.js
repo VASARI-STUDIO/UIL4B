@@ -7,8 +7,8 @@
 //                              (.sp-modes) and the font dossier tabs in the
 //                              Font Pair font browser (.fdx-tabs)
 //   - Font Pair chevron        the "Prepare the handoff" caret turns on open
-//   - aspect-ratio preview     the shape eases between ratios by scale on a
-//                              fixed frame, never by width or height
+//   - aspect-ratio preview     the shape eases between ratios by a FLIP scale,
+//                              never by width or height, and rests unscaled
 //
 // A motion "works" when it moves on transform alone, the value passes through
 // positions between the old and new, it ends where it should, and the same move
@@ -33,8 +33,10 @@
 //                                                   -> "the caret turns"
 //   - give .rc-vis-frame a width/height transition, or drop its transform transition
 //     (aspect-ratio.css)                            -> "the shape eases"
-//   - size .rc-vis-frame by --arc-w/--arc-h again instead of scale
-//                                                   -> "the shape eases" (frame is not a fixed 240px)
+//   - drop the FLIP layout effect in RatioCalculator.jsx
+//                                                   -> "the shape eases" (it jumps)
+//   - drop the 2px floor on vis.w / vis.h
+//                                                   -> "a very thin ratio still draws a sliver"
 //   - delete the reduced-motion rule for .rc-vis-frame
 //                                                   -> "reduced motion" for the preview
 import { test, expect } from './base.js'
@@ -59,6 +61,24 @@ async function traceAround(locator, pseudo, action, ms = 700) {
     }
     tick()
   }), [pseudo, ms])
+  await action()
+  return sampler
+}
+
+// The drawn box of an element each frame (transforms included) while an action runs.
+async function rectTrace(locator, action, ms = 700) {
+  const handle = await locator.elementHandle()
+  const sampler = handle.evaluate((el, span) => new Promise((resolve) => {
+    const seen = []
+    const t0 = performance.now()
+    const tick = () => {
+      const b = el.getBoundingClientRect()
+      seen.push({ w: b.width, h: b.height })
+      if (performance.now() - t0 < span) requestAnimationFrame(tick)
+      else resolve(seen)
+    }
+    tick()
+  }), ms)
   await action()
   return sampler
 }
@@ -263,39 +283,43 @@ test.describe('Aspect & Resolution: the preview shape eases between ratios', () 
   const squareUp = (page) => page.getByLabel('Ratio height').fill('1920')
 
   for (const width of WIDTHS) {
-    test(`the shape eases by scale on a fixed frame at ${width}px`, async ({ page }) => {
+    test(`the shape eases by scale and rests unscaled at ${width}px`, async ({ page }) => {
       watch(page, 'someone changing the ratio')
       const frame = await openPage(page, width)
-      const rest = await style(frame, null, ['transitionProperty', 'transitionDuration', 'width', 'height'])
+      const rest = await style(frame, null, ['transitionProperty', 'transitionDuration', 'transform'])
       expect(rest.transitionProperty, 'the shape must ease on transform alone, never width or height').toBe('transform')
       expect(parseFloat(rest.transitionDuration)).toBeGreaterThanOrEqual(0.2)
       expect(parseFloat(rest.transitionDuration)).toBeLessThanOrEqual(0.3)
-      expect([rest.width, rest.height], 'the frame is not a fixed box').toEqual(['240px', '240px'])
+      expect(rest.transform, 'at rest the outline is drawn at its real size, not scaled').toBe('none')
 
-      const seen = await traceAround(frame, null, () => squareUp(page), 800)
-      const first = seen[0]
-      const last = seen.at(-1)
-      // The shape is read as height over width of the scale, since the stage may fit it
-      // smaller than 240: 16:9 is 0.5625, 1:1 is 1.
-      const r = (p) => p.d / p.a
-      expect(near(r(first), 0.5625, 0.01), `the shape did not start as 16:9 (${first.a}, ${first.d})`).toBe(true)
-      expect(near(r(last), 1, 0.01), `the shape did not end square (${last.a}, ${last.d})`).toBe(true)
+      const seen = await rectTrace(frame, () => squareUp(page), 800)
+      const r = (p) => p.h / p.w
+      expect(near(r(seen[0]), 0.5625, 0.01), `the shape did not start as 16:9 (${seen[0].w}, ${seen[0].h})`).toBe(true)
+      expect(near(r(seen.at(-1)), 1, 0.01), `the shape did not end square (${seen.at(-1).w}, ${seen.at(-1).h})`).toBe(true)
       expect(seen.filter((p) => r(p) > 0.58 && r(p) < 0.98).length, 'the shape jumped instead of easing').toBeGreaterThan(0)
-      // Through the whole move the frame's own size never changed.
-      const after = await style(frame, null, ['width', 'height'])
-      expect([after.width, after.height]).toEqual(['240px', '240px'])
-      // The numbers under it are right: the readout says 1:1.
+      // Once it lands the outline is unscaled again, so its stroke and corners are exact.
+      await expect.poll(async () => (await style(frame, null, ['transform'])).transform).toBe('none')
       await expect(page.locator('.rc-vis-ratio')).toHaveText(/^1\s*:\s*1$/)
     })
   }
+
+  test('a very thin ratio still draws a sliver with a valid corner', async ({ page }) => {
+    watch(page, 'someone typing an extreme ratio')
+    const frame = await openPage(page, 390)
+    await page.getByLabel('Ratio height').fill('2000000')
+    await expect(page.locator('.rc-vis-ratio')).toBeVisible()
+    await expect.poll(async () => (await frame.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(1.9)
+    const rx = await frame.locator('rect').getAttribute('rx')
+    expect(Number.isFinite(Number(rx)), `the corner radius is ${rx}`).toBe(true)
+  })
 
   test('reduced motion (OS setting): the shape changes at once', async ({ page }) => {
     watch(page, 'someone whose system asks for reduced motion')
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const frame = await openPage(page, 1440)
-    const seen = await traceAround(frame, null, () => squareUp(page), 800)
-    expect(near(seen.at(-1).d / seen.at(-1).a, 1, 0.01), 'the shape never changed').toBe(true)
-    expect(seen.filter((p) => p.d / p.a > 0.58 && p.d / p.a < 0.98).length, 'the shape still eases').toBe(0)
+    const seen = await rectTrace(frame, () => squareUp(page), 800)
+    expect(near(seen.at(-1).h / seen.at(-1).w, 1, 0.01), 'the shape never changed').toBe(true)
+    expect(seen.filter((p) => p.h / p.w > 0.58 && p.h / p.w < 0.98).length, 'the shape still eases').toBe(0)
     expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 
@@ -303,9 +327,9 @@ test.describe('Aspect & Resolution: the preview shape eases between ratios', () 
     watch(page, 'someone who turned reduced motion on inside the app')
     const frame = await openPage(page, 1440)
     await reduceInApp(page)
-    const seen = await traceAround(frame, null, () => squareUp(page), 800)
-    expect(near(seen.at(-1).d / seen.at(-1).a, 1, 0.01), 'the shape never changed').toBe(true)
-    expect(seen.filter((p) => p.d / p.a > 0.58 && p.d / p.a < 0.98).length, 'the shape still eases').toBe(0)
+    const seen = await rectTrace(frame, () => squareUp(page), 800)
+    expect(near(seen.at(-1).h / seen.at(-1).w, 1, 0.01), 'the shape never changed').toBe(true)
+    expect(seen.filter((p) => p.h / p.w > 0.58 && p.h / p.w < 0.98).length, 'the shape still eases').toBe(0)
     expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 })

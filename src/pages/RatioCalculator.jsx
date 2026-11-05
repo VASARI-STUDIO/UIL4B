@@ -441,17 +441,34 @@ export default function RatioCalculator({ onCopy }) {
     setSide(s)
   }
 
-  // Visualiser box — constrained so extreme ratios still fit the panel. The
-  // shape is drawn on a fixed 240px frame and sized by scale (sx, sy), so a new
-  // ratio eases between shapes on transform alone.
+  // Visualiser box — constrained so extreme ratios still fit the panel. A
+  // floor of 2px keeps a sliver drawn at ratios past about 1:120.
   const vis = useMemo(() => {
-    if (!validRatio) return { w: 0, h: 0, sx: 0, sy: 0 }
+    if (!validRatio) return { w: 0, h: 0 }
     const MAX = 240
     const a = ratioW / ratioH
-    const w = a >= 1 ? MAX : Math.round(MAX * a)
-    const h = a >= 1 ? Math.round(MAX / a) : MAX
-    return { w, h, sx: w / MAX, sy: h / MAX }
+    const w = a >= 1 ? MAX : Math.max(2, Math.round(MAX * a))
+    const h = a >= 1 ? Math.max(2, Math.round(MAX / a)) : MAX
+    return { w, h }
   }, [ratioW, ratioH, validRatio])
+
+  // The shape is drawn at its real size, so the stroke and corners are exact at
+  // rest, and eases to a new ratio by FLIP: it starts scaled to the old shape and
+  // the transform transition takes it to none. Under reduced motion the
+  // transition is off and it lands at once.
+  const frameRef = useRef(null)
+  const lastVis = useRef(null)
+  useLayoutEffect(() => {
+    const el = frameRef.current
+    const prev = lastVis.current
+    lastVis.current = vis.w && vis.h ? vis : null
+    if (!el || !prev || !vis.w || !vis.h || (prev.w === vis.w && prev.h === vis.h)) return
+    el.style.transition = 'none'
+    el.style.transform = `scale(${prev.w / vis.w}, ${prev.h / vis.h})`
+    void el.getBoundingClientRect()
+    el.style.transition = ''
+    el.style.transform = ''
+  }, [vis])
 
   // Pixel presets (device/screen/social) seed ratio + known + PPI in one click;
   // ratio presets only lock the shape and leave the user's numbers alone.
@@ -606,12 +623,11 @@ export default function RatioCalculator({ onCopy }) {
             <div className="rc-vis-stage">
               {validRatio
                 ? (
-                  <div className="rc-vis-box" ref={(el) => { if (el) { el.style.setProperty('--arc-w', `${vis.w}px`); el.style.setProperty('--arc-h', `${vis.h}px`); el.style.setProperty('--arc-sx', vis.sx); el.style.setProperty('--arc-sy', vis.sy) } }}>
-                    {/* The outline, wash and diagonal, drawn once at 240px and scaled to the shape. The stroke
-                        and the corner radius are set against the scale, so they keep their size on a long side. */}
-                    <svg className="rc-vis-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                      <rect x="0" y="0" width="100" height="100" rx={2.5 / vis.sx} ry={2.5 / vis.sy} vectorEffect="non-scaling-stroke" />
-                      <line x1="0" y1="0" x2="100" y2="100" vectorEffect="non-scaling-stroke" />
+                  <div className="rc-vis-box" ref={(el) => { if (el) { el.style.setProperty('--arc-w', `${vis.w}px`); el.style.setProperty('--arc-h', `${vis.h}px`) } }}>
+                    {/* The outline, wash and diagonal, drawn at the shape's real size. */}
+                    <svg className="rc-vis-frame" ref={frameRef} aria-hidden="true">
+                      <rect x="0" y="0" width="100%" height="100%" rx={Math.min(6, vis.w / 2, vis.h / 2)} />
+                      <line x1="0" y1="0" x2="100%" y2="100%" />
                     </svg>
                     <span className="rc-vis-ratio">{simplified}</span>
                     {out && <span className="rc-vis-dims">{out.width} × {out.height}</span>}
