@@ -45,18 +45,19 @@ async function serveSample(page) {
       .catch(() => { /* page closed mid-flight */ }))
 }
 
-// On a phone the pack control lives in the Filters sheet; wider, it is on the toolbar row.
+// Up to tablet width the pack control sits behind Filters: a sheet on a phone, a panel at 768. Wider, it
+// is on the toolbar row.
 async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const inSheet = await filters.isVisible()
-  if (inSheet) {
+  const behindFilters = await filters.isVisible()
+  if (behindFilters) {
     await filters.click()
-    await expect(sheet).toBeVisible()
+    await expect(filters).toHaveAttribute('aria-expanded', 'true')
   }
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
-  if (inSheet) {
-    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+  if (behindFilters) {
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
   }
   await expect(page.locator('.ig .ic:not(.ig-skel)').first()).toBeVisible({ timeout: 20_000 })
@@ -79,7 +80,22 @@ async function openPopup(browser, { width, height, plan = null, pack = null }) {
   // The rail draws the icon's own markup, so wait for it rather than for the frame.
   await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.icust-stroke-note, .icust-colour-help').first()).toBeVisible({ timeout: 20_000 })
+  await settle(page)
   return { ctx, page }
+}
+
+// The popup slides in and the phone overlay scrolls a few px as it opens: wait until every animation
+// has finished and nothing is scrolling, so a box read now is where the person sees it.
+async function settle(page) {
+  // Finite ones only: a loading shimmer elsewhere on the page runs forever.
+  await page.evaluate(() => Promise.all(document.getAnimations()
+    .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
+    .map((a) => a.finished.catch(() => {}))))
+  await expect.poll(() => page.evaluate(() => new Promise((done) => {
+    const at = () => [...document.querySelectorAll('.icust-overlay, .icust-stage')].map((el) => `${el.scrollTop}:${el.getBoundingClientRect().y}`).join()
+    const first = at()
+    requestAnimationFrame(() => requestAnimationFrame(() => done(first === at())))
+  }))).toBe(true)
 }
 
 const colourChips = (page) => page.getByRole('radiogroup', { name: 'Colour', exact: true }).getByRole('radio')
@@ -129,6 +145,7 @@ test.describe('the "hard to see" note', () => {
       await colourChips(page).filter({ hasText: 'Black' }).click()
       const note = page.locator('.icust-stage .icust-stage-cap--note')
       await expect(note, 'the note shows inside the stage, in the caption slot').toBeVisible()
+      await settle(page)
       await expect(note).toContainText('Hard to see on this background.')
       await expect(note.getByRole('button', { name: 'Show on Light', exact: true })).toBeVisible()
       await expect(page.locator('.icust-stage-cap:not(.icust-stage-cap--note)'), 'the note replaces the caption').toHaveCount(0)
@@ -146,7 +163,11 @@ test.describe('the "hard to see" note', () => {
       await note.getByRole('button', { name: 'Show on Light', exact: true }).click()
       await expect(page.locator('.icust-stage-cap--note')).toHaveCount(0)
       await expect(page.locator('.icust-stage-cap')).toContainText('Exports at 24px')
-      expect((await box(rail)).y, 'taking the offer moved the size rail').toBeCloseTo(before.rail.y, 0)
+      await settle(page)
+      // Read against the stage: tapping the button may scroll the overlay, which moves both together.
+      const back = { stage: await box(stage), rail: await box(rail) }
+      expect(back.rail.y - back.stage.y, 'taking the offer moved the size rail').toBeCloseTo(before.rail.y - before.stage.y, 0)
+      expect(back.stage.height, 'taking the offer changed the stage height').toBeCloseTo(before.stage.height, 0)
       await ctx.close()
     })
 
@@ -164,6 +185,7 @@ test.describe('the "hard to see" note', () => {
       expect(rest).toBeGreaterThanOrEqual(8)
       await colourChips(page).filter({ hasText: 'Black' }).click()
       await expect(page.locator('.icust-stage-cap--note')).toBeVisible()
+      await settle(page)
       const withNote = await gap()
       expect(withNote, `a ${withNote}px band with the note showing`).toBeLessThanOrEqual(16)
       expect(withNote, 'the gap changed when the note arrived').toBeCloseTo(rest, 0)
