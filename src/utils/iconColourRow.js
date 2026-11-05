@@ -19,12 +19,14 @@ import { contrastRatio } from './colors.js'
 //
 // One-colour near-black art is the page's ink in the grid, so it stays a mono icon here.
 // `inkDarkMax` is the luminance below which the grid reads art as near-black; passing
-// the grid's own limit keeps the two from disagreeing about a logo.
+// the grid's own limit keeps the two from disagreeing about a logo. Left out, it is the
+// grid's limit as it stands (INK_DARK_MAX in IconLibrary.jsx), so a caller that omits it
+// still reads art as the grid does.
 //
 // Once a colour is chosen (`colourChosen`) a brand logo is recoloured like a mono icon,
 // so it is no longer drawn in its own colours (`coloured` false); the row stays 'brand'
 // so "Original" is still there to go back to.
-export function colourRowState({ inColouredPack, svg, failed = false, inkDarkMax, colourChosen = false }) {
+export function colourRowState({ inColouredPack, svg, failed = false, inkDarkMax = 0.05, colourChosen = false }) {
   if (!inColouredPack) return { coloured: false, row: 'choose' }
   if (!svg) return { coloured: true, row: failed ? 'original' : 'wait' }
   if (isMulticolourSvg(svg)) return { coloured: true, row: 'original' }

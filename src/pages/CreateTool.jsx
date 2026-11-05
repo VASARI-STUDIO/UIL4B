@@ -152,8 +152,8 @@ export default function CreateTool({ toast }) {
   // screen; the tool reads it as it opens, so it opens again.
   const { restoredCount } = useProject()
   // Live tools that copy values (ColorStudio) call onCopy(value) to WRITE the
-  // clipboard + toast; the icon/emoji libraries write the clipboard themselves
-  // and use onCopy purely as a notification (harmless idempotent re-write here).
+  // clipboard + toast. The icon library's Copy SVG leaves the write to onCopy, so that
+  // press writes once; a library that writes the clipboard itself would double it.
   const copy = useClipboard(toast)
 
   // P-001 ACTIVATION, export half, for the three workbenches that finish a
