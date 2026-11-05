@@ -64,7 +64,7 @@ const TOOLS = [
   // primary; /seo's three tools are tabs under the toolbar, so its row is the
   // back button and the name.
   { route: '/create/file-converter', title: 'File Converter', actions: ['Open the 3D Model Converter'] },
-  { route: '/create/alt-text', title: 'Alt Text Generator', actions: ['Add images'], primary: /^Generate/, phoneDock: true },
+  { route: '/create/alt-text', title: 'Alt Text Generator', actions: [], primary: /^Add images/, phoneDock: true },
   { route: '/create/auto-builder', title: 'Brand Starter', actions: [] },
   { route: '/create/3d-converter', title: '3D Model Converter', actions: ['For Blender', 'Open a file'] },
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
