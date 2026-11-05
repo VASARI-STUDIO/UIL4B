@@ -88,9 +88,12 @@
  * `color-mix` of the same idea. */
 .ic-intro {
   display: flex;
-  align-items: flex-start;
+  /* Centred on the row, so the text and the X share a midline and the box is as
+     tall as its content: the 44px close target plus 8px above and below, not a
+     text block pinned to the top of a taller box. */
+  align-items: center;
   gap: var(--s-4);
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-5);
   min-width: 0;
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-xl);
@@ -105,8 +108,8 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: var(--btn-radius);
@@ -116,12 +119,9 @@
   transition: background var(--dur-1) ease, color var(--dur-1) ease;
 }
 .ic-intro-close:hover { background: var(--cpg-wash-2); color: var(--cpg-ink); }
-/* 44px on a coarse pointer. 32 clears WCAG 2.5.8's 24px floor on every
- * pointer, but a dismiss button is a one-shot action with no undo and a
- * fingertip is not a cursor. */
-@media (pointer: coarse) {
-  .ic-intro-close { width: 44px; height: 44px; }
-}
+/* 44px on every pointer, not only a coarse one: it measured 32, a dismiss
+ * button is a one-shot action with no undo, and a 44px box is what lets the
+ * banner be sized by its content instead of by padding around a small X. */
 
 /* ── The index ── */
 
@@ -396,6 +396,28 @@
     padding: 12px 16px;
     font-size: 15px;
   }
+  /* The jump control is part of the page head, not a second bordered box above
+     the accordion. No fill, no box and no radius: one hairline underneath, the
+     same rule the accordion rows use, so "Jump to section" reads as the head of
+     the list it navigates. Three classes to win over the base trigger and any
+     page-level pill radius. */
+  .ic-wrap .ic-jump.menu-select-trigger {
+    padding-inline: 0;
+    border: 0;
+    border-bottom: 1px solid var(--cpg-line);
+    border-radius: 0;
+    background: transparent;
+    font-weight: 540;
+    color: var(--cpg-ink);
+  }
+  .ic-wrap .ic-jump.menu-select-trigger .menu-select-caret { color: var(--cpg-faint); transition: color var(--dur-1) var(--ease-standard); }
+  /* It is a menu, not an accordion row: it answers the pointer and shows open. */
+  .ic-wrap .ic-jump.menu-select-trigger[aria-expanded="true"] { border-bottom-color: var(--cpg-ink); }
+  .ic-wrap .ic-jump.menu-select-trigger[aria-expanded="true"] .menu-select-caret { color: var(--cpg-ink); }
+  @media (hover: hover) {
+    .ic-wrap .ic-jump.menu-select-trigger:hover { border-bottom-color: var(--cpg-ink); }
+    .ic-wrap .ic-jump.menu-select-trigger:hover .menu-select-caret { color: var(--cpg-ink); }
+  }
   .ic-main { max-width: none; gap: clamp(36px, 6vw, 56px); }
 }
 
@@ -409,7 +431,7 @@
   .ic-wrap .ic-acc-head { padding-inline: 0; gap: 12px; }
   .ic-wrap .ic-acc-body.is-open .ic-acc-body-inner { padding-inline: 0; }
   .ic-stats { border-radius: var(--radius-xl); padding: var(--s-5); }
-  .ic-intro { padding: var(--s-4); }
+  .ic-intro { padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4); }
 }
 
 /* ── REDUCED MOTION ──────────────────────────────────────────────────────────
