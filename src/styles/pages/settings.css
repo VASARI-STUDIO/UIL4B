@@ -230,10 +230,6 @@
 .stg .toggle-switch.on { background: var(--accent-fill); }
 /* The words beside the switch are its <label>, so they act like it. */
 .stg label.toggle-row-info { cursor: pointer; }
-/* Reduced motion: the 44x24 track stays as drawn, and an invisible box around
-   it brings the target to 44 high and 56 wide on every pointer, not only a
-   coarse one (it measured 43x23 with no larger target). */
-.stg .toggle-switch::before { content: ""; position: absolute; inset: -10px -6px; }
 
 /* ── Language ─────────────────────────────────────────────────────────────── */
 .stg .lang-tile { min-height: 48px; border-color: var(--stg-hair); border-radius: var(--radius); background: transparent; box-shadow: none; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
@@ -416,6 +412,7 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
    touch block at the top. */
 @media (pointer: coarse) {
   .stg .settings-nav-item { min-height: 44px; }
+  .stg .toggle-switch::before { content: ""; position: absolute; inset: -10px -6px; }
   /* Reduced motion: the words beside the switch (its label) take the rest of the
      row, so the whole row is the tap target on touch. */
   .stg label.toggle-row-info { flex: 1 1 0; min-width: 0; align-self: stretch; justify-content: center; padding: 4px 0; }

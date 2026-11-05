@@ -1,4 +1,4 @@
-// /learn/principles, /info and /settings (signed out): the three routes the 5 Nov
+// /learn/principles, /info and /settings (signed out): the three routes a route
 // sweep scored 7/10 at 768. Every assertion is read off computed styles and
 // boxes, because each defect was a shape on screen, not a missing element:
 //
@@ -13,9 +13,9 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
-async function open(browser, width, route) {
+async function open(browser, width, route, touch = false) {
   const height = width < 700 ? 844 : width < 1000 ? 1024 : 900
-  const ctx = await browser.newContext({ viewport: { width, height } })
+  const ctx = await browser.newContext({ viewport: { width, height }, ...(touch ? { hasTouch: true, isMobile: true } : {}) })
   const page = await ctx.newPage()
   watch(page, `${route} at ${width}px`)
   await go(page, route)
@@ -152,8 +152,8 @@ test.describe('/settings (signed out)', () => {
     })
   }
 
-  test('the Reduced motion switch has a 44px target on any pointer, and the row flips it', async ({ browser }) => {
-    const { ctx, page } = await open(browser, 768, '/settings')
+  test('the Reduced motion switch has a 44px target on a touch tablet, and the row flips it', async ({ browser }) => {
+    const { ctx, page } = await open(browser, 768, '/settings', true)
     const sw = page.locator('#set-reduced-motion')
     await expect(sw).toBeVisible()
     const target = await sw.evaluate((el) => {
@@ -164,12 +164,12 @@ test.describe('/settings (signed out)', () => {
       const hit = (dy) => document.elementFromPoint(cx, cy + dy) === el
       return { w: parseFloat(s.width), h: parseFloat(s.height), up: hit(-21), down: hit(21), mid: hit(0) }
     })
-    // MUTATION: delete `.stg .toggle-switch::before` in settings.css (or leave it inside
-    // `@media (pointer: coarse)`, which a mouse never matches).
+    // MUTATION: delete `.stg .toggle-switch::before` from the coarse-pointer block in settings.css.
+    // (A mouse keeps the drawn track on purpose: spec 174.)
     expect(target.h, 'target height').toBeGreaterThanOrEqual(44)
     expect(target.w, 'target width').toBeGreaterThanOrEqual(44)
     expect(target.mid && target.up && target.down, 'the 44px box answers the pointer, not only the track').toBe(true)
-    await page.locator('label[for="set-reduced-motion"]').click()
+    await page.locator('label[for="set-reduced-motion"]').tap()
     await expect(sw).toHaveAttribute('aria-checked', 'true')
     await ctx.close()
   })
