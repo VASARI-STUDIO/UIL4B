@@ -109,6 +109,8 @@ for (const width of [390, 1440]) {
       await expect(picker.getByText(hex, { exact: true })).toBeVisible()
       const rows = picker.locator('.plb-sc-list').getByRole('button')
       await expect(rows, 'newest first').toHaveText([/^Orchard/, /^Quarry/, /^Harbour/])
+      // Measured once the dialog has finished its entry scale, which shrinks it a little.
+      await picker.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
       for (const row of await rows.all()) {
         const box = await row.boundingBox()
         expect(box.height, 'each row is a 44px target').toBeGreaterThanOrEqual(44)
