@@ -178,6 +178,59 @@ test('Undo twice puts the kit back once', () => {
   assert.equal(s.has(PARKED_SHELF_KEY), false)
 })
 
+// A store that refuses writes past a size, the way a full localStorage does.
+function fullAfter(limit, seed = {}) {
+  const s = store(seed)
+  const size = () => ['vs-previous-design', 'vs-previous-designs'].reduce((n, k) => n + (s.getItem(k) || '').length, 0)
+  const set = s.setItem
+  s.setItem = (k, v) => {
+    const was = s.getItem(k)
+    set(k, v)
+    if (size() > limit) { if (was == null) s.removeItem(k); else set(k, was); throw new Error('quota') }
+  }
+  return s
+}
+
+test('Undo into a full store never loses the kit parked since', () => {
+  const since = { design: clone(OTHER), parkedAt: 2 }
+  const discarded = { design: clone(WORK), parkedAt: 3 }
+  const s = fullAfter(JSON.stringify(since).length + 10, { [PARKED_KEY]: JSON.stringify(since) })
+  putBack(discarded, s)
+  assert.deepEqual(readParked(s), since, 'the kit in the slot is still there when there is no room to shelve it')
+})
+
+test('a discard that cannot bring the next kit forward leaves the slot as it was', () => {
+  const older = { design: clone(WORK), parkedAt: 1 }
+  const newer = { design: clone(OTHER), parkedAt: 2 }
+  const s = store({ [PARKED_KEY]: JSON.stringify(newer), [PARKED_SHELF_KEY]: JSON.stringify([older]) })
+  const set = s.setItem
+  s.setItem = (k, v) => { if (k === PARKED_KEY) throw new Error('quota'); set(k, v) }
+  assert.throws(() => dropParked(s))
+  assert.deepEqual(readParked(s), newer, 'not emptied')
+  assert.deepEqual(readShelf(s), [older])
+  assert.equal(takeParked(newer, s), null, 'and Undo from a toast gives nothing back rather than losing it')
+  assert.deepEqual(readParked(s), newer)
+})
+
+test('a shelf copy of the kit being dropped is not brought back', () => {
+  const kit = { design: clone(WORK), parkedAt: 2 }
+  const s = store({ [PARKED_KEY]: JSON.stringify(kit), [PARKED_SHELF_KEY]: JSON.stringify([{ ...kit, parkedAt: 1 }]) })
+  assert.equal(dropParked(s), null)
+  assert.equal(s.has(PARKED_KEY), false)
+  assert.equal(s.has(PARKED_SHELF_KEY), false)
+})
+
+test('parking a kit already on a full shelf does not push an unrelated one off', () => {
+  const s = store()
+  const designs = Array.from({ length: SHELF_LIMIT + 1 }, (_, i) => withColours([`#1100${String(i).padStart(2, '0')}`, '#ffffff']))
+  designs.forEach((d, i) => parkIfAtRisk({ design: d, projects: [], storage: s, now: i + 1 }))
+  // The slot holds the last; the shelf is full. Park the oldest shelved one again.
+  assert.equal(readShelf(s).length, SHELF_LIMIT)
+  parkIfAtRisk({ design: designs[0], projects: [], storage: s, now: 100 })
+  const kept = [readParked(s), ...readShelf(s)].map((x) => x.design.palette.colors[0])
+  assert.deepEqual(kept.sort(), designs.map((d) => d.palette.colors[0]).sort(), 'every kit is still somewhere')
+})
+
 test('a damaged shelf reads as empty', () => {
   assert.deepEqual(readShelf(store({ [PARKED_SHELF_KEY]: '{not json' })), [])
   assert.deepEqual(readShelf(store({ [PARKED_SHELF_KEY]: JSON.stringify([{ parkedAt: 1 }, 'x']) })), [])

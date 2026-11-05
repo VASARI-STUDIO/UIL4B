@@ -276,7 +276,11 @@ export function ProjectProvider({ children }) {
         storage: localStorage,
       })
     } catch { /* storage blocked: nothing can be parked, the replace goes ahead as before */ }
-    if (!parked.slot || !parked.fresh) return false
+    if (!parked.slot || !parked.fresh) {
+      // A write that failed part way may still have moved a kit; show storage as it is.
+      try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
+      return false
+    }
     const { slot } = parked
     setParked(slot)
     window.dispatchEvent(new CustomEvent('uil4b:toast', {
@@ -479,16 +483,14 @@ export function ProjectProvider({ children }) {
   // the kit back beside anything parked since, never over it.
   const discardParked = useCallback(() => {
     const slot = readParked(localStorage)
-    let next = null
-    try { next = dropParked(localStorage) } catch { /* storage blocked */ }
-    setParked(next)
+    try { dropParked(localStorage) } catch { /* storage blocked or full: shown as it is below */ }
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
     return slot
   }, [setParked])
   const putBackParked = useCallback((slot) => {
     if (!slot) return
-    let now = null
-    try { now = putBack(slot, localStorage) } catch { /* storage blocked */ }
-    if (now) setParked(now)
+    try { putBack(slot, localStorage) } catch { /* storage blocked */ }
+    try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
   }, [setParked])
 
   const archiveProject = useCallback((id) => {

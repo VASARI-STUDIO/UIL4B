@@ -8,7 +8,7 @@ import { reportSyncFailure, reportSyncOk } from '../utils/syncStatus'
 import {
   SYNC_DOCS, ACCOUNT_KEY_NAMES, LEGACY_STAMP_KEY, keySpec,
   readMeta, writeMeta, readLocal, detectLocalChanges, pendingKeys,
-  reconcile, buildDoc, docsForKeys, applyToStorage, releaseCache, clearMirrors,
+  reconcile, buildDoc, docsForKeys, applyToStorage, releaseCache, clearMirrors, ACCOUNT_MIRROR_KEYS,
   sameValue, repairAfterSettle,
 } from '../utils/accountSync'
 import { announceApplied, RESET_EVENT } from '../utils/accountEvents'
@@ -168,7 +168,9 @@ export function useFirestoreSync(uid) {
       }
       writeMeta(ls, meta)
       if (written.length) announceApplied(written)
-      if (result.mode === 'switch') announceApplied(['vs-onboarded'])
+      // Every mirror was cleared, so every screen showing one reads it again (the
+      // put-aside kits on Your workspace among them).
+      if (result.mode === 'switch') announceApplied([...ACCOUNT_MIRROR_KEYS])
       if (result.push) pushRef.current?.()
       // The prompt library and its saved ids merge separately; once the data
       // document has been applied, add any copy a saved id is missing.

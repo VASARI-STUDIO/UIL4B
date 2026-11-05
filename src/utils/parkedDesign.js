@@ -94,9 +94,11 @@ function writeShelf(list, storage) {
   else storage.removeItem(PARKED_SHELF_KEY)
 }
 
-// Put a slot on the shelf: one copy of each design, newest first, capped.
-function shelve(slot, storage) {
-  const rest = readShelf(storage).filter((s) => !deepEqual(s.design, slot.design))
+// Put a slot on the shelf: one copy of each design, newest first, capped. Designs
+// in `without` (the one taking the slot) leave the shelf first, so they never
+// push an unrelated kit past the cap.
+function shelve(slot, storage, without = null) {
+  const rest = readShelf(storage).filter((s) => !deepEqual(s.design, slot.design) && !(without && deepEqual(s.design, without)))
   const list = [slot, ...rest].sort((a, b) => (b.parkedAt || 0) - (a.parkedAt || 0)).slice(0, SHELF_LIMIT)
   writeShelf(list, storage)
 }
@@ -104,11 +106,21 @@ function shelve(slot, storage) {
 /**
  * Empty the slot and bring the newest shelved kit into it. Returns the slot as
  * it now is (the kit brought forward, or null). Throws when storage does.
+ *
+ * The kit coming forward is written over the old one rather than after it is
+ * removed, so a write that fails leaves the slot as it was, not empty. A shelf
+ * copy of the kit being dropped (left by a write that failed part way) is
+ * dropped with it rather than brought back.
  */
 export function dropParked(storage) {
-  storage.removeItem(PARKED_KEY)
-  const [next, ...rest] = readShelf(storage)
-  if (!next) return null
+  const held = readParked(storage)
+  const shelf = readShelf(storage).filter((s) => !(held && deepEqual(s.design, held.design)))
+  const [next, ...rest] = shelf
+  if (!next) {
+    storage.removeItem(PARKED_KEY)
+    writeShelf([], storage)
+    return null
+  }
   storage.setItem(PARKED_KEY, JSON.stringify(next))
   writeShelf(rest, storage)
   return next
@@ -126,8 +138,9 @@ export function putBack(slot, storage) {
     const held = readParked(storage)
     if (held && sameSlot(held, slot)) return held
     if (!held || (slot.parkedAt || 0) >= (held.parkedAt || 0)) {
+      // Shelved first, so a write that fails part way leaves a copy, not a gap.
+      if (held) shelve(held, storage, slot.design)
       storage.setItem(PARKED_KEY, JSON.stringify(slot))
-      if (held) shelve(held, storage)
       return slot
     }
     shelve(slot, storage)
@@ -151,8 +164,8 @@ export function parkIfAtRisk({ design, projects, storage, now = Date.now() }) {
   const slot = { design: JSON.parse(JSON.stringify(design)), parkedAt: now }
   try {
     // Shelved first, so a write that fails part way leaves a copy, not a gap.
-    if (held) shelve(held, storage)
-    writeShelf(readShelf(storage).filter((s) => !deepEqual(s.design, slot.design)), storage)
+    if (held) shelve(held, storage, slot.design)
+    else writeShelf(readShelf(storage).filter((s) => !deepEqual(s.design, slot.design)), storage)
     storage.setItem(PARKED_KEY, JSON.stringify(slot))
   } catch {
     return { slot: null, fresh: false }
