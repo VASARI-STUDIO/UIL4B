@@ -4,7 +4,9 @@ import { useEffect, useRef } from 'react'
 // src/utils/firebaseAccess.js.
 import { loadFirestore } from '../utils/firebaseAccess'
 import { classifyError, syncFailureMessage, payloadBytes, DOC_BYTE_BUDGET } from '../utils/projectSync'
-import { reportSyncFailure, reportSyncOk } from '../utils/syncStatus'
+import { reportSyncFailure, reportSyncOk, getSyncState } from '../utils/syncStatus'
+import { clearAtSignOut, takeDiscardRequest } from '../utils/signOutClear'
+import { registerUnsentCheck, anyUnsent, forgetOrphanedUnsent } from '../utils/unsentTracker'
 import {
   SYNC_DOCS, ACCOUNT_KEY_NAMES, LEGACY_STAMP_KEY, keySpec,
   readMeta, writeMeta, readLocal, detectLocalChanges, pendingKeys,
@@ -44,10 +46,31 @@ function storage() {
   try { return typeof localStorage !== 'undefined' ? localStorage : null } catch { return null }
 }
 
+function sessionStore() {
+  try { return typeof sessionStorage !== 'undefined' ? sessionStorage : null } catch { return null }
+}
+
 // The one live pusher, so a sign-out button can send what is pending BEFORE it
 // signs out (after, the rules refuse the write). Module scope because the hook
 // is mounted once, in App.
 let activeFlush = null
+
+// Other holders of account data that sync on their own (the saved projects)
+// register a sender here, so the same flush covers them. Sign-out clears the
+// saved projects from this browser once nothing is reported unsent, so they
+// have to be sent first.
+const extraFlushes = new Set()
+
+// Holders of account data that sync on their own also say whether they still
+// hold something the account has not received (the saved projects: an edit
+// waiting for its delayed push, or a push that has not been answered).
+export { registerUnsentCheck, anyUnsent }
+
+/** Add a sender to flushAccountSync(). Returns the function that removes it. */
+export function registerAccountFlush(send) {
+  extraFlushes.add(send)
+  return () => { extraFlushes.delete(send) }
+}
 
 /**
  * Send every pending account change now. Resolves when the write settles, or
@@ -58,7 +81,8 @@ let activeFlush = null
  * header's account switcher and sign-out rows do.
  */
 export function flushAccountSync() {
-  return activeFlush ? activeFlush().catch(() => {}) : Promise.resolve()
+  const senders = [activeFlush, ...extraFlushes].filter(Boolean)
+  return Promise.all(senders.map((send) => Promise.resolve().then(send).catch(() => {}))).then(() => {})
 }
 
 /** Kept for any caller of the old API: a local change, announced. */
@@ -132,13 +156,33 @@ export function useFirestoreSync(uid) {
       // nothing.
       if (prev && ls) {
         const meta = readMeta(ls)
-        const out = releaseCache(ls, meta)
+        // The person's own answer to "changes haven't reached your account":
+        // discard them (see utils/signOutClear.js).
+        const discard = takeDiscardRequest()
+        // Read once, before anything is cleared. Registered holders keep their
+        // answer after the account is gone; one that unmounted left it behind.
+        const holdersUnsent = anyUnsent()
+        forgetOrphanedUnsent()
+        const out = releaseCache(ls, meta, { discard })
         writeMeta(ls, meta)
         if (out.released) announceApplied(out.keys)
         else console.warn('[sync] kept this device\'s copy at sign-out: changes had not reached the account', pendingKeys(meta))
+        // The rest of what the person left here: cached profile, remembered
+        // accounts, saved projects and per-visit keys. Saved work goes only
+        // when the account holds it (or they chose to discard); a standing
+        // sync failure, or a project edit not yet sent, means something may
+        // not have reached the account.
+        const cleared = clearAtSignOut({
+          local: ls,
+          session: sessionStore(),
+          uid: prev,
+          workIsSafeToLose: discard || (out.released && !holdersUnsent && getSyncState().errors.length === 0),
+        })
+        announceApplied(cleared)
       }
       return undefined
     }
+    forgetOrphanedUnsent()
     if (!ls) return undefined
 
     let cancelled = false

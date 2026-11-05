@@ -33,6 +33,7 @@ import { ADMIN_RANGES, DEFAULT_RANGE_ID, parseRangeId, rangeWindow, inWindow } f
 import { isAdminEmail } from '../utils/constants'
 import { accountProviderIds } from '../utils/authSwitch'
 import { stashPriceDraft, takePriceDraft, overlayDraft } from '../utils/priceDraftStash'
+import { flushBeforeSignOut } from '../utils/signOutFlush'
 // No internal planning data is imported by this page, statically or
 // dynamically, and there is no code path from it to any such module.
 import { firstWinById } from '../utils/firstWin'
@@ -772,6 +773,11 @@ function StripeSetupPanel({ toast }) {
         }
       }
       if (draft) stashPriceDraft(window.sessionStorage, user?.uid, draft)
+      // Send this account's pending changes first (a limited wait). The person
+      // is signing straight back in, so there is no prompt here: whatever could
+      // not be sent stays saved on this device, because sign-out only clears
+      // the saved work once the account holds it.
+      await flushBeforeSignOut()
       await logout()
     } finally {
       setSigningIn(false)

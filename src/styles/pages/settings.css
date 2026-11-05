@@ -432,12 +432,17 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
 .stg .danger-confirm-link:disabled { color: var(--t2); cursor: default; }
 .stg .settings-sync-alert-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; flex-shrink: 0; }
 .stg .settings-sync-alert-actions button { margin-left: 0; }
+/* Narrow: the alert already wraps, so the buttons get the line to themselves
+   and may wrap within it instead of running past the alert's edge. */
+@media (max-width: 480px) { .stg .settings-sync-alert-actions { flex-shrink: 1; min-width: 0; } }
 .stg .settings-sync-alert button:disabled { color: var(--t2); cursor: default; }
 .stg .settings-clear-warn { color: var(--t0); font-weight: 500; }
+.stg .toggle-row--long .toggle-row-info { flex: 1; min-width: 0; padding-right: 16px; }
 .stg .settings-export-gap { color: var(--warn-strong); }
 .stg .sub-checking .settings-row-value { color: var(--t1); }
 .stg .settings-avatar-btn[data-busy] .settings-avatar-edit { opacity: 1; }
 .stg .settings-avatar-btn:disabled { cursor: progress; }
 @media (pointer: coarse) {
   .stg .danger-confirm-ack { min-height: 44px; align-items: center; }
+  .stg .settings-sync-alert button { min-height: 44px; }
 }
