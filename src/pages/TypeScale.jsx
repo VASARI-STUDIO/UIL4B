@@ -83,6 +83,9 @@ const ROUNDING = [
 // desktop size, so the control implied a per-breakpoint scale the tool did not
 // have. Now the ladder resolves each step at this width, so what you see is
 // what the exported clamp() actually computes there.
+const WEIGHT_NAMES = { 100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Extra bold', 900: 'Black' }
+const weightLabel = w => (WEIGHT_NAMES[w] ? `${w} ${WEIGHT_NAMES[w]}` : String(w))
+
 const WIDTHS = [
   { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
   { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
@@ -240,13 +243,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   if (work.width >= SPLIT_MIN) splitRef.current = true
   else if (work.width < SPLIT_LEAVE) splitRef.current = false
   const split = splitRef.current
-  // The Code drawer belongs to the split; below it Code is the third view.
-  const [codeOpen, setCodeOpen] = useState(false)
-  const drawerOpen = split && codeOpen
-  // Leaving the split closes the drawer, so widening back doesn't reopen it.
-  if (!split && codeOpen) setCodeOpen(false)
-  const codeBtnRef = useRef(null)
-  const drawerRef = useRef(null)
+  // Beside the ladder, the right half shows the page or the code.
+  const [half, setHalf] = useState('page')
   const [format, setFormat] = useState('css')
   // THE WORDS IN THE PREVIEW. Empty means the pangram below.
   //
@@ -515,7 +513,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
   const currentExport = format === 'tailwind' ? tailwindExport : format === 'tailwind4' ? tailwind4Export : format === 'scss' ? scssExport : cssExport
-  // Both Copy buttons (the dock's and the Code drawer's) export through here.
+  // Copy CSS exports through here.
   const exportCode = () => onExport?.(currentExport)
 
   const openInFontPair = () => {
@@ -548,11 +546,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // chosen width doesn't fit and lines wrap sooner.
   useEffect(() => {
     const el = pageColRef.current
-    if ((view !== 'page' && !split) || !el || typeof ResizeObserver === 'undefined') return undefined
+    if ((view !== 'page' && !split) || (split && half === 'code') || !el || typeof ResizeObserver === 'undefined') return undefined
     const ro = new ResizeObserver(() => setColW(el.clientWidth))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view, split])
+  }, [view, split, half])
 
   // Measure the work column before it paints, then follow it as it resizes.
   useLayoutEffect(() => {
@@ -570,40 +568,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     return () => { ro.disconnect(); window.removeEventListener('resize', read) }
   }, [workEl])
 
-  // Closing returns focus to the Code pill that opened the drawer.
-  const closeCode = () => {
-    setCodeOpen(false)
-    codeBtnRef.current?.focus({ preventScroll: true })
-  }
-  // The drawer takes focus when it opens and closes on Escape or a press outside
-  // it. It is non-modal: Tab leaves it, and a press in the settings panel beside
-  // it is left alone so the code can be watched as the controls change. The page
-  // behind is not scroll-locked: the drawer covers only the work column, and
-  // locking would drop the scrollbar and shift the ladder under it.
-  useEffect(() => {
-    if (!drawerOpen) return undefined
-    const drawer = drawerRef.current
-    drawer?.focus({ preventScroll: true })
-    // The panel, and the popups its controls open (a list, a typed value), count as inside.
-    const beside = '.tsc-config, [role="listbox"], .snapv-input'
-    const onKey = event => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
-      if (event.target instanceof Element && event.target.closest('[role="listbox"], .snapv-input')) return
-      setCodeOpen(false)
-      codeBtnRef.current?.focus({ preventScroll: true })
-    }
-    const onPress = event => {
-      const t = event.target
-      if (!(t instanceof Element) || drawer?.contains(t) || codeBtnRef.current?.contains(t) || t.closest(beside)) return
-      setCodeOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    document.addEventListener('pointerdown', onPress)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.removeEventListener('pointerdown', onPress)
-    }
-  }, [drawerOpen])
 
   // The settings sheet is non-modal. Opening it brings the ladder up under the
   // toolbar, so the steps stay in view above it.
@@ -635,8 +599,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // Keeping the scale in a project is the one step here that asks for an
   // account; everything else on the page works signed out. The trigger sits in
-  // the sticky toolbar from 768 and in the fixed docked bar on a phone, so it
-  // stays on screen while the page scrolls.
+  // the sticky toolbar at every width, so it stays on screen while the page scrolls.
   const save = useSaveTypeSystemToolbar({
     gate: 'type-save-type-scale',
     label: 'this type scale',
@@ -646,10 +609,30 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The toolbar's actions exist in every state so the row keeps its shape
   // while the catalogue loads.
+  const saveItem = {
+    id: 'save',
+    priority: 4,
+    render: () => (
+      <ToolButton
+        ref={save.triggerRef}
+        icon="bookmark-simple"
+        collapse
+        className="tsc-save tsc-save--icon"
+        aria-label="Save to a project"
+        aria-expanded={save.open}
+        aria-haspopup="dialog"
+        onClick={save.trigger}
+      >
+        Save to a project
+      </ToolButton>
+    ),
+    menu: { label: 'Save to a project', icon: 'bookmark-simple', onSelect: save.trigger },
+  }
   const items = [
+    ...(phone ? [saveItem] : []),
     {
       id: 'reset',
-      priority: 1,
+      priority: 3,
       render: () => (
         <ToolButton icon="arrow-counter-clockwise" collapse className="tsc-reset" onClick={reset}>Reset scale</ToolButton>
       ),
@@ -659,11 +642,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       id: 'pair',
       priority: 0,
       render: () => (
-        <ToolButton icon="caret-right" className="tsc-handoff" onClick={openInFontPair} aria-label="Find a pairing for these families">
+        <ToolButton icon="arrow-right" className="tsc-handoff" onClick={openInFontPair} aria-label="Find a pairing for these families">
           Find a pairing
         </ToolButton>
       ),
-      menu: { label: 'Find a pairing for these families', icon: 'caret-right', onSelect: openInFontPair },
+      menu: { label: 'Find a pairing for these families', icon: 'arrow-right', onSelect: openInFontPair },
     },
     {
       id: 'import',
@@ -683,7 +666,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // From 768 Save to a project sits right against Copy CSS, as one group at the
   // end of the row, so the More button always lands to the left of both. The
   // group never leaves the row, and the save menu is drawn with it. On a phone
-  // Save stays in the docked bar.
+  // Save is a 44px icon button on the row and Copy CSS is the shell's dock.
   const toolbarPrimary = (
     <div className="tsc-primary-group">
       <div className="tsc-save-wrap">
@@ -697,13 +680,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         >
           Save to a project
         </ToolButton>
-        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+        {!phone && <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />}
       </div>
       {primary}
     </div>
   )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : toolbarPrimary}>
+    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? primary : toolbarPrimary}>
       {body}
     </ToolLayout>
   )
@@ -727,20 +710,18 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const activeWidth = WIDTHS.find(w => w.id === width) || WIDTHS[0]
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
 
-  const weightButtons = (font, value, onPick, label) => (
-    <SlidePills className="tsc-weights tl-pills" role="group" aria-label={label} value={`${font.variants.join(',')}:${value}`}>
-      {font.variants.map(w => (
-        <button
-          key={w}
-          type="button"
-          className={value === w ? 'tsc-weight tl-pill tl-pill--mono is-on' : 'tsc-weight tl-pill tl-pill--mono'}
-          aria-pressed={value === w}
-          onClick={() => onPick(w)}
-        >
-          {w}
-        </button>
-      ))}
-    </SlidePills>
+  // One menu per family. Only the weights the family has are listed.
+  const weightSelect = (font, value, onPick, label) => (
+    <MenuSelect
+      label={label}
+      id={label === 'Heading weight' ? 'tsc-hweight' : 'tsc-bweight'}
+      className="tsc-select tsc-weight-select"
+      value={value}
+      onChange={next => onPick(Number(next))}
+      triggerLabel={`Weight ${weightLabel(value)}`}
+    >
+      {font.variants.map(w => <option key={w} value={w}>{weightLabel(w)}</option>)}
+    </MenuSelect>
   )
 
   // The three pieces of the work column. The split shows the ladder and the
@@ -793,12 +774,55 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     </MenuSelect>
   )
 
+  // Declared before pageView, which shows them as the Code half at 1440.
+  const formatPills = (
+    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
+      {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
+          aria-pressed={format === id}
+          onClick={() => setFormat(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </SlidePills>
+  )
+  const exportPre = (
+    <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
+  )
+  // The Code view's own copy, named for the format it copies (the tool bar's says CSS).
+  const exportCopy = (
+    <ToolButton className="tsc-export-copy" onClick={exportCode}>
+      <ToolIcon name="copy" size={15} />
+      Copy as {{ css: 'CSS', tailwind: 'Tailwind v3', tailwind4: 'Tailwind v4', scss: 'SCSS' }[format] || 'CSS'}
+    </ToolButton>
+  )
+
+
   const pageView = (
     <div className="tsc-page-view">
       <div className="tsc-page-bar">
-        <p className="tsc-page-label">Page set on this scale</p>
-        {split && widthMenu}
+        {split ? (
+          <SlidePills className="tsc-half-switch tl-pills" role="group" aria-label="Show beside the scale" value={half}>
+            {[['page', 'Page'], ['code', 'Code']].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={half === id ? 'tsc-half-btn tl-pill is-on' : 'tsc-half-btn tl-pill'}
+                aria-pressed={half === id}
+                onClick={() => setHalf(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </SlidePills>
+        ) : <p className="tsc-page-label">Page set on this scale</p>}
+        {split && half === 'page' && widthMenu}
       </div>
+      {split && half === 'code' ? <div className="tsc-developer-view"><div className="tsc-developer-bar">{formatPills}{exportCopy}</div>{exportPre}</div> : <>
       {colW > 0 && colW < activeWidth.px - 1 && (
         <p className="tsc-width-note" role="status">
           Sizes as on a {activeWidth.px}px screen. Lines wrap sooner here.
@@ -825,38 +849,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           </p>
         </article>
       </div>
+      </>}
     </div>
-  )
-
-  const formatPills = (
-    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
-      {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          className={format === id ? 'tsc-fmt-btn tl-pill is-on' : 'tsc-fmt-btn tl-pill'}
-          aria-pressed={format === id}
-          onClick={() => setFormat(id)}
-        >
-          {label}
-        </button>
-      ))}
-    </SlidePills>
-  )
-  const exportPre = (
-    <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
   )
 
   return layout(
     <>
-      <FontCatalogNotice
-        online={online}
-        degraded={degraded}
-        onRetry={retry}
-        retrying={retrying}
-        count={catalog.length}
-      />
-
       <ToolGrid className="tsc-grid">
         {/* The panel is first in the source, so reading order, Tab order and
             what's on screen agree below 1024: Base and Ratio, then the
@@ -936,7 +934,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             aria-controls="tsc-sheet"
             onClick={() => (sheetOpen ? closeSheet() : openSheet())}
           >
-            Families, preview text and fine tuning
+            <span className="tsc-sheet-row-label">Families, preview text and fine tuning</span>
+            <span className="tsc-sheet-row-value">{degraded ? `${catalog.length} bundled families` : headingName === bodyName ? headingName : `${headingName} · ${bodyName}`}</span>
             <ToolIcon name="caret-right" size={13} />
           </button>
 
@@ -945,8 +944,17 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
               <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
-            <div className="tsc-sheet-body">
-              <ToolSection>
+            {/* A field that takes focus while the keyboard is up scrolls into the room above it. */}
+            <div className="tsc-sheet-body" onFocus={(e) => { if (e.target.matches?.('input, textarea')) e.target.scrollIntoView?.({ block: 'nearest' }) }}>
+              <ToolSection className="tsc-fonts">
+                <FontCatalogNotice
+                  online={online}
+                  degraded={degraded}
+                  onRetry={retry}
+                  retrying={retrying}
+                  count={catalog.length}
+                  compact
+                />
                 <div className="tsc-fams">
                   <div className="tsc-fams-grid">
                     <div className="tsc-fam">
@@ -956,7 +964,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                         value={headingFont}
                         onChange={chooseHeading}
                       />
-                      {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                      {headingFont && weightSelect(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
                     </div>
                     <div className="tsc-fam">
                       <FontPicker
@@ -965,13 +973,15 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                         value={bodyFont}
                         onChange={chooseBody}
                       />
-                      {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                      {bodyFont && weightSelect(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
                     </div>
                   </div>
                 </div>
               </ToolSection>
 
-              <ToolSection>
+          <ToolSection className="tsc-tuning-sec">
+            <div className="tsc-words-row">
+              <div className="tsc-words-field">
                 <label className="tsc-k" htmlFor="tsc-sample">Preview text</label>
                 <input
                   id="tsc-sample"
@@ -981,11 +991,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   maxLength={60}
                   placeholder={defaultSpecimen}
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
+                  enterKeyHint="done"
                   onChange={e => setSample(e.target.value)}
                 />
-              </ToolSection>
-
-          <ToolSection className="tsc-tuning-sec">
+              </div>
             {/* `hidden` rather than conditional rendering, so aria-controls
                 always names a node that exists. */}
             <button
@@ -998,6 +1009,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               {tuning ? 'Hide fine tuning' : 'Fine tuning'}
               <ToolIcon name="caret-right" size={13} className="tsc-tuning-caret" />
             </button>
+            </div>
             <div id="tsc-tuning" className="tsc-tuning" hidden={!tuning}>
               <fieldset className="tsc-bp">
                 <legend className="tl-sec-label">How far the scale runs</legend>
@@ -1183,7 +1195,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
         {/* The work column. It is a size container (see type-scale.css) and is
             measured as one: from SPLIT_MIN the ladder and the page sit side by
-            side and Code is a drawer from the docked bar; below it the
+            side and Code is a view beside the scale; below it the
             Scale / Page / Code switch shows one view at a time. */}
         <ToolMain className="tsc-output" ref={setWorkEl}>
           {!split && (
@@ -1231,67 +1243,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         </ToolMain>
       </ToolGrid>
 
-      {/* The Code drawer, split only. It sits outside the work column (a size
-          container is the containing block for fixed children) and is placed
-          over it from the column's measured box. It stays mounted so the
-          Code pill's aria-controls always names a node. */}
-      {split && (
-        <div
-          id="tsc-code-drawer"
-          ref={el => { drawerRef.current = el; varsRef({ '--tsc-work-left': `${work.left}px`, '--tsc-work-w': `${work.width}px` })(el) }}
-          className="tsc-drawer"
-          role="dialog"
-          aria-modal="false"
-          aria-label="Code"
-          tabIndex={-1}
-          hidden={!drawerOpen}
-          data-lenis-prevent=""
-        >
-          <div className="tsc-drawer-head">
-            {formatPills}
-            <ToolButton icon="copy" className="tsc-drawer-copy" onClick={exportCode}>Copy</ToolButton>
-            <ToolButton variant="quiet" icon="x" className="tl-btn--square tsc-drawer-close" aria-label="Close code" onClick={closeCode} />
-          </div>
-          {exportPre}
-        </div>
-      )}
-
-      {/* The docked bar. Split: Code alone (Save to a project is in the
-          toolbar). Phone: Save and Copy CSS, above the tab bar, and the save
-          menu opens from it. Between the two there is no bar. */}
-      {(phone || split) && (
-      <div className="tsc-dock" role="group" aria-label={phone ? 'Save and copy' : 'Code'}>
-        {split && !phone && (
-          <ToolButton
-            ref={codeBtnRef}
-            icon="code"
-            className="tsc-code-btn"
-            aria-expanded={drawerOpen}
-            aria-controls="tsc-code-drawer"
-            aria-haspopup="dialog"
-            onClick={() => (drawerOpen ? closeCode() : setCodeOpen(true))}
-          >
-            Code
-          </ToolButton>
-        )}
-        {phone && (
-          <>
-            <ToolButton
-              ref={save.triggerRef}
-              icon="bookmark-simple"
-              className="tsc-save"
-              aria-expanded={save.open}
-              aria-haspopup="dialog"
-              onClick={save.trigger}
-            >
-              Save
-            </ToolButton>
-            <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
-            {primary}
-          </>
-        )}
-      </div>
-      )}
+      {phone && <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />}
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />

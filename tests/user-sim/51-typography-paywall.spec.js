@@ -197,13 +197,13 @@ test.describe('Typography: browsing stays free under every view', () => {
     expect(await page.locator(LOCKED).count(), 'Font Pair rendered a locked placeholder').toBe(0)
 
     await go(page, SCALE)
-    // At 1440 the export is in the Code drawer; below the split it is the Code
+    // At 1440 the export is the Code half of the Page | Code switch; below the split it is the Code
     // view of the Scale / Page / Code switch.
     expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
     const scaleExport = await page.locator('#tsc-export').innerText()
     expect(scaleExport.length, 'Type Scale produced no tokens signed out').toBeGreaterThan(120)
     await expect(page.getByRole('button', { name: /^Copy (CSS|config|SCSS)$/i })).toBeEnabled()
-    await expect(page.locator('.tsc-drawer-copy'), 'the drawer carries its own copy button').toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Code', exact: true }), 'Code is a view beside the scale').toBeVisible()
     expect(await page.locator(LOCKED).count(), 'Type Scale rendered a locked placeholder').toBe(0)
   })
 })
