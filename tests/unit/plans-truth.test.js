@@ -406,7 +406,7 @@ test('every paid icon pack has a group the plan lines name', () => {
   const paid = Object.entries(ICON_PACK_TIERS).filter(([, t]) => t.tier === 'paid')
   assert.ok(paid.length > 0)
   for (const [prefix, t] of paid) assert.ok(PAID_PACK_GROUPS.includes(t.group), `${prefix} has no paid-pack group`)
-  const line = PRO_POINTS.find((l) => /icons, at any size/.test(l))
+  const line = PRO_POINTS.find((l) => /icons, in any size and line style/.test(l))
   assert.ok(line, 'the icon tick is gone')
   for (const g of PAID_PACK_GROUPS) assert.ok(paid.some(([, t]) => t.group === g), `no paid pack in the "${g}" group`)
 })
