@@ -11,7 +11,7 @@ import path from 'node:path'
 import {
   ACCOUNT_KEYS, ACCOUNT_KEY_NAMES, STORAGE_INVENTORY, ACCOUNT_MIRROR_KEYS,
   emptyMeta, readLocal, detectLocalChanges, pendingKeys, reconcile, buildDoc,
-  applyToStorage, releaseCache, remoteStamp, unionList, fingerprint, sameValue,
+  applyToStorage, releaseCache, clearMirrors, remoteStamp, unionList, fingerprint, sameValue,
 } from '../../src/utils/accountSync.js'
 import { KEY_PURPOSES } from '../../src/utils/dataExport.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -244,6 +244,17 @@ test('sign-out clears the account keys and the onboarding mirror once everything
   assert.equal(s.has('vs-onboarded'), false, 'the next account is not told it has onboarded')
   assert.equal(s.has('vs-accounts'), true, 'the switcher\'s device list stays')
   assert.equal(meta.owner, null)
+})
+
+test('sign-out and a switch clear work put aside on this browser', () => {
+  const parked = JSON.stringify({ design: { palette: { colors: ['#123456'] } }, parkedAt: 1 })
+  const s = store({ 'vs-previous-design': parked })
+  const meta = { ...emptyMeta(), owner: 'A', stamps: {}, pushed: {} }
+  assert.equal(releaseCache(s, meta).released, true)
+  assert.equal(s.has('vs-previous-design'), false, 'the next person never sees the work the last one put aside')
+  const t = store({ 'vs-previous-design': parked })
+  clearMirrors(t)
+  assert.equal(t.has('vs-previous-design'), false, 'an account switch drops it too')
 })
 
 test('sign-out keeps the cache while a change has not reached the account', () => {

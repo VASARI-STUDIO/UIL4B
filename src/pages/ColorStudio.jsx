@@ -942,7 +942,12 @@ export default function ColorStudio({ onCopy, toast }) {
               <div className="stc-save-sub">Load</div>
               {projects.slice(-5).map(p => (
                 <button key={`load-${p.id}`} type="button" className="stc-save-item"
-                  onClick={() => { loadProject(p.id); closeSaveMenu(); toast?.('Loaded: ' + p.name) }}
+                  onClick={() => {
+                    // Unsaved work that was put aside has its own toast (with Undo); it names this project.
+                    const putAside = loadProject(p.id)
+                    closeSaveMenu()
+                    if (!putAside) toast?.('Loaded: ' + p.name)
+                  }}
                 >{p.name}</button>
               ))}
             </>

@@ -85,6 +85,7 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-accounts': { purpose: 'Email, name and photo for accounts used on this device (up to five)', pii: 'yes' },
   'vs-google-returning': { purpose: 'Whether you have signed in with Google before', pii: 'no' },
   'vs-onboarded': { purpose: 'Whether you completed onboarding', pii: 'no' },
+  'vs-previous-design': { purpose: 'Unsaved work put aside so Undo can bring it back; cleared at sign-out', pii: 'local' },
   'vs-resume-after-onboarding': { purpose: 'Where to send you after onboarding', pii: 'no' },
   'vs-sessions': { purpose: 'Local session history used for your own usage stats', pii: 'local' },
   'vs-analytics': { purpose: 'Local, in-browser usage counters', pii: 'local' },

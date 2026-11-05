@@ -798,7 +798,7 @@ const SUBMIT_SURFACE = 'palette'
 // share link stays on `onCopy` and is not an activation — see
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
-  const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
+  const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects, parkWorkingDesign } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
@@ -889,6 +889,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Age of the hand-off that won, captured during the same render that read it
   // — after the mount effect consumes the slot there is nothing left to ask.
   const [handoffAge] = useState(boardDraftAge)
+  // A shared link or a hand-off writes its palette over the working design a
+  // moment after mount (the persist effect below). If that design holds unsaved
+  // work it is put aside first. Going back drops the link's colours from the
+  // address, so the board opens again on the restored design and not the link.
+  useEffect(() => {
+    if (initial.source !== 'query' && initial.source !== 'handoff') return
+    parkWorkingDesign({
+      label: 'Go back to it',
+      onRestore: () => navigate({ pathname: window.location.pathname, search: '' }, { replace: true }),
+    })
+  // Mount-only: `initial` is a frozen first-render read.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   useEffect(() => {
     consumeBoardDraft()
     // One line, once per mount, saying WHY this board looks the way it does.
