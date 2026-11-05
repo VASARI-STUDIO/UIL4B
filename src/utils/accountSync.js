@@ -49,6 +49,9 @@
 //  · 'local'   — the working design only. What is on screen at the moment of
 //                sign-in is what the person was just working on — signing in is
 //                exactly what the export gate asks for — so it wins and goes up.
+//                With `setAside`, a different account value it replaces (a design
+//                worked on another device) is returned in `setAside` so the caller
+//                can put it aside rather than lose it unseen.
 //  · 'union'   — collections (prompts, likes, saves, custom icons, recents,
 //                exports). Both sides are kept, de-duplicated by identity; the
 //                recency lists keep local first and are capped.
@@ -90,7 +93,7 @@ export const ACCOUNT_KEYS = Object.freeze([
   { key: 'vs-uikit-guide-seen', doc: 'data', firstBind: 'account' },
   { key: 'vs-palette-coach', doc: 'data', firstBind: 'account' },
   // The working design
-  { key: 'vs-current-design', doc: 'data', firstBind: 'local' },
+  { key: 'vs-current-design', doc: 'data', firstBind: 'local', setAside: true },
   // Saved items and history
   { key: 'vs-prompts', doc: 'data', firstBind: 'union' },
   { key: 'vs-saved-prompt-ids', doc: 'data', firstBind: 'union', merge: 'stamped' },
@@ -438,6 +441,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
   const mode = meta.owner === uid ? 'sync' : meta.owner ? 'switch' : 'bind'
   const apply = {}
   const stamps = { ...meta.stamps }
+  const setAside = []
   let push = false
 
   for (const spec of ACCOUNT_KEYS) {
@@ -478,7 +482,11 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
       if (rAbsent) { stamps[key] = ls || now; push = true; continue }
       if (lUntouched) { apply[key] = r; stamps[key] = rs; continue }
       if (spec.firstBind === 'account') { apply[key] = r; stamps[key] = rs; continue }
-      if (spec.firstBind === 'local') { stamps[key] = now; push = true; continue }
+      if (spec.firstBind === 'local') {
+        // The account held different work of its own: hand it back to be put aside.
+        if (spec.setAside && !isUntouched(key, r)) setAside.push({ key, value: r })
+        stamps[key] = now; push = true; continue
+      }
       // union
       const merged = spec.recency ? unionList(l, r, spec.cap) : unionList(r, l, spec.cap)
       if (!sameValue(merged, l)) apply[key] = merged
@@ -498,7 +506,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
     }
   }
 
-  return { mode, apply, stamps, owner: uid, push }
+  return { mode, apply, stamps, owner: uid, push, setAside }
 }
 
 /**

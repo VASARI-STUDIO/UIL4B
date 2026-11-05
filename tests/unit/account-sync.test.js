@@ -136,6 +136,45 @@ test('BIND: work done signed out wins and goes up (the export-gate sign-in)', ()
   assert.equal(r.push, true)
 })
 
+test('BIND: a draft that wins over different account work hands that work back to be put aside', () => {
+  const draft = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const accountDesign = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
+  const r = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': accountDesign, _updatedAt: 10 }, library: null },
+  })
+  assert.equal(r.apply['vs-current-design'], undefined, 'the draft on screen stays')
+  assert.deepEqual(r.setAside, [{ key: 'vs-current-design', value: accountDesign }], 'and the work the account held is handed back')
+})
+
+test('BIND: nothing is set aside when the account held only the default, or the same work', () => {
+  const draft = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const blank = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': DEFAULT_DESIGN, _updatedAt: 10 }, library: null },
+  })
+  assert.deepEqual(blank.setAside, [])
+  const same = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': draft, _updatedAt: 10 }, library: null },
+  })
+  assert.deepEqual(same.setAside, [])
+})
+
+test('SYNC: newer-wins on an account already bound sets nothing aside', () => {
+  const a = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const b = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
+  const r = reconcile({
+    uid: 'A', meta: { ...emptyMeta(), owner: 'A', stamps: { 'vs-current-design': 50 } }, now: 100,
+    local: { 'vs-current-design': a },
+    remote: { data: { 'vs-current-design': b, _updatedAt: 10, _stamps: { 'vs-current-design': 10 } }, library: null },
+  })
+  assert.deepEqual(r.setAside, [])
+})
+
 test('BIND: an untouched default design never overwrites the account (second device)', () => {
   const accountDesign = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
   const r = reconcile({

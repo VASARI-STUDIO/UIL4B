@@ -12,6 +12,7 @@ import {
   sameValue, repairAfterSettle,
 } from '../utils/accountSync'
 import { announceApplied, RESET_EVENT } from '../utils/accountEvents'
+import { PARKED_KEY, PARKED_SHELF_KEY, parkIfAtRisk } from '../utils/parkedDesign'
 
 /* ═════════════════════════════════════════════════════════════════════════════
    ACCOUNT-BOUND DATA — the wiring. The rules are in src/utils/accountSync.js;
@@ -168,6 +169,21 @@ export function useFirestoreSync(uid) {
       }
       writeMeta(ls, meta)
       if (written.length) announceApplied(written)
+      // First sign-in with a draft on screen: the draft stays, and the account's own
+      // different design (from another device) is put aside in Your workspace, said
+      // out loud, rather than overwritten unseen.
+      let setAside = false
+      for (const item of result.setAside || []) {
+        try { setAside = parkIfAtRisk({ design: item.value, projects: [], storage: ls }).fresh || setAside } catch { /* storage blocked */ }
+      }
+      if (setAside) {
+        announceApplied([PARKED_KEY, PARKED_SHELF_KEY])
+        try {
+          window.dispatchEvent(new CustomEvent('uil4b:toast', {
+            detail: { message: 'Signed in. The brand kit your account had from another device is in Your workspace.', type: 'info' },
+          }))
+        } catch { /* no window */ }
+      }
       // Every mirror was cleared, so every screen showing one reads it again (the
       // put-aside kits on Your workspace among them).
       if (result.mode === 'switch') announceApplied([...ACCOUNT_MIRROR_KEYS])
