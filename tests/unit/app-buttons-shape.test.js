@@ -44,7 +44,7 @@ const KEEP = {
   // colour chip with its role name under it, in one 10px-cornered target)
   swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
   // rows in a menu, list or popover
-  row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
+  row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's

@@ -17,6 +17,7 @@ import { projectSnapshot } from '../utils/designPatch'
 import { PARKED_KEY, parkIfAtRisk, readParked, takeParked } from '../utils/parkedDesign'
 import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
 import { editKey } from '../utils/brandKitChooser'
+import { addSavedColour } from '../utils/savedColours'
 
 const ProjectContext = createContext()
 
@@ -345,6 +346,7 @@ export function ProjectProvider({ children }) {
       id: newId(),
       name: `${source.name} copy`,
       design: JSON.parse(JSON.stringify(source.design)),
+      ...(source.savedColors ? { savedColors: JSON.parse(JSON.stringify(source.savedColors)) } : null),
       createdAt: now,
       updatedAt: now,
     }
@@ -372,6 +374,33 @@ export function ProjectProvider({ children }) {
       return updated
     })
   }, [userKey])
+
+  // Keep one colour on an existing project (see utils/savedColours.js). It adds
+  // to a project that is already there, so it never takes a project slot and
+  // does not meet the cap. A colour already on the project changes nothing.
+  // Returns { added, hex }.
+  const saveColourToProject = useCallback((id, hex, name) => {
+    if (!userKey) throw new Error('Sign in to save projects')
+    const project = (allProjects[userKey] || []).find((p) => p.id === id)
+    if (!project) throw new Error('That project no longer exists')
+    const at = new Date().toISOString()
+    const result = addSavedColour(project.savedColors, hex, { name, at })
+    if (!result.added) return { added: false, hex: result.hex }
+    setAllProjects(prev => {
+      const next = {
+        ...prev,
+        [userKey]: (prev[userKey] || []).map(p => p.id === id
+          // `colorsAt`, not `updatedAt`: a saved colour is not an edit to the design, so it must not
+          // outrank another device's design edit in the newest-wins merge (projectSync unions the
+          // colours by hex instead).
+          ? { ...p, savedColors: addSavedColour(p.savedColors, hex, { name, at }).list, colorsAt: at }
+          : p),
+      }
+      saveAllProjects(next)
+      return next
+    })
+    return { added: true, hex: result.hex }
+  }, [userKey, allProjects])
 
   const renameProject = useCallback((id, name) => {
     updateProject(id, { name: name.trim() })
@@ -710,6 +739,7 @@ export function ProjectProvider({ children }) {
     // it. An icon write passes { touch: false } and stamps `iconAt` instead of `updatedAt`, so
     // choosing an icon never changes when a project was last edited.
     updateProject,
+    saveColourToProject,
     renameProject,
     loadProject,
     deleteProject,

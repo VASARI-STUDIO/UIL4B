@@ -827,3 +827,30 @@ test('a remote document with no timestamp cannot overwrite a device that has one
   // …but on a device with no clock, it is still the only copy there is.
   assert.equal(shouldApplyRemote(undefined, 0).apply, true)
 })
+
+/* A saved single colour does not move updatedAt either (it is not a design edit), so it carries
+ * colorsAt, and the merge keeps every device's colours whichever copy wins. */
+
+test('saved colours from both copies are kept, each hex once, and the later colorsAt is kept', () => {
+  const c = (hex, at) => ({ hex, at })
+  const local = [project('a', T.mid, { savedColors: [c('#E4572E', T.early), c('#17BEBB', T.early)], colorsAt: T.early })]
+  const remote = [project('a', T.late, { design: { palette: { colors: ['#fff'] } }, savedColors: [c('#17bebb', T.mid), c('#FFC914', T.mid)], colorsAt: T.mid })]
+  const merged = mergeProjects(local, remote).list[0]
+  assert.deepEqual(merged.design, remote[0].design, 'the newer design edit still wins')
+  assert.deepEqual(merged.savedColors.map((s) => s.hex.toUpperCase()), ['#E4572E', '#17BEBB', '#FFC914'])
+  assert.equal(merged.colorsAt, T.mid)
+})
+
+test('a colour saved on a stale copy does not outrank a newer design edit', () => {
+  const stale = [project('a', T.early, { savedColors: [{ hex: '#E4572E', at: T.late }], colorsAt: T.late })]
+  const edited = [project('a', T.mid, { design: { palette: { colors: ['#123456'] } } })]
+  const merged = mergeProjects(stale, edited).list[0]
+  assert.deepEqual(merged.design, edited[0].design)
+  assert.deepEqual(merged.savedColors.map((s) => s.hex), ['#E4572E'], 'and the colour survives')
+})
+
+test('lists that differ only in saved colours are not equal, so the merge is saved', () => {
+  const a = [project('a', T.mid)]
+  const b = [project('a', T.mid, { savedColors: [{ hex: '#E4572E', at: T.late }], colorsAt: T.late })]
+  assert.equal(projectListsEqual(a, b), false)
+})
