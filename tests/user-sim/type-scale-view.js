@@ -2,8 +2,9 @@
 //
 // The page measures the work column (.tsc-output), not the viewport. From
 // SPLIT_MIN (1024px of column) the ladder and the page sit side by side and Code
-// is a drawer opened from the docked bar; below it one of Scale / Page / Code
-// shows at a time behind a tablist. A 1440 window gives a column of about 1046px,
+// is a view of the right half, chosen with the Page | Code switch
+// (.tsc-half-switch); below it one of Scale / Page / Code shows at a time
+// behind a tablist. A 1440 window gives a column of about 1046px,
 // so it is the split; 1024 and 768 windows keep the tablist.
 //
 // The column is measured after mount, so the first paint is the narrow layout
@@ -31,16 +32,16 @@ export async function settleTypeScaleView(page) {
 }
 
 /**
- * Show the exported code the way a visitor does at the current width: open the
- * drawer from the docked bar in the split, press the Code tab otherwise. Safe to
- * call when the code is already showing.
+ * Show the exported code the way a visitor does at the current width: press Code
+ * in the split's Page | Code switch, press the Code tab otherwise. Safe to call
+ * when the code is already showing.
  */
 export async function showTypeScaleCode(page) {
   const layout = await settleTypeScaleView(page)
   if (layout === 'split') {
-    const drawer = page.locator('#tsc-code-drawer')
-    if (await drawer.isHidden()) await page.locator('.tsc-code-btn').click()
-    await expect(drawer).toBeVisible()
+    const half = page.locator('.tsc-half-switch').getByRole('button', { name: 'Code', exact: true })
+    if ((await half.getAttribute('aria-pressed')) !== 'true') await half.click()
+    await expect(page.locator('#tsc-export')).toBeVisible()
     return layout
   }
   await page.getByRole('tab', { name: 'Code' }).click()
@@ -48,10 +49,19 @@ export async function showTypeScaleCode(page) {
   return layout
 }
 
-/** Show the page preview: it is already beside the ladder in the split. */
+/**
+ * Show the page preview: in the split press Page in the right half's switch (the
+ * half may be showing Code), below it press the Page tab. Safe to call when the
+ * page is already showing.
+ */
 export async function showTypeScalePage(page) {
   const layout = await settleTypeScaleView(page)
-  if (layout === 'switch') await page.getByRole('tab', { name: 'Page' }).click()
+  if (layout === 'split') {
+    const half = page.locator('.tsc-half-switch').getByRole('button', { name: 'Page', exact: true })
+    if ((await half.getAttribute('aria-pressed')) !== 'true') await half.click()
+  } else {
+    await page.getByRole('tab', { name: 'Page' }).click()
+  }
   await expect(page.locator('.tsc-article')).toBeVisible()
   return layout
 }

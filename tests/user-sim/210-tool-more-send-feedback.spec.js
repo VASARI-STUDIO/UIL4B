@@ -265,9 +265,10 @@ for (const width of [768, 1440]) {
   })
 }
 
-// The dock tools: the primary lives in the dock, More stays on the row.
-const DOCK_TOOLS = TOOLS.filter((t) => ['palette', 'gradient', 'tint'].includes(t.id))
-const NO_DOCK_TOOLS = TOOLS.filter((t) => ['converter', 'type scale'].includes(t.id))
+// The dock tools: the primary lives in the dock, More stays on the row. Type Scale
+// joined them when Copy CSS moved to the shell dock on a phone.
+const DOCK_TOOLS = TOOLS.filter((t) => ['palette', 'gradient', 'tint', 'type scale'].includes(t.id))
+const NO_DOCK_TOOLS = TOOLS.filter((t) => ['converter'].includes(t.id))
 
 for (const tool of DOCK_TOOLS) {
   test(`${tool.id}: with the primary in the dock, More still ends in Send feedback; the dialog covers the dock and closing it brings the dock back`, async ({ browser }) => {

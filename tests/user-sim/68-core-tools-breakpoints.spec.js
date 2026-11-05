@@ -282,9 +282,9 @@ for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair'
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
     if (route === '/create/type-scale') {
-      // Type Scale keeps its save in the docked bar above the tab bar ("Save"
+      // Type Scale keeps its save in the toolbar (an icon
       // at 390); the menu it opens is the same bottom sheet.
-      await page.locator('.tsc-dock .tsc-save').click()
+      await page.locator('[data-tool-toolbar] .tsc-save').click()
     } else {
       const trigger = page.getByRole('button', { name: 'Save to a project' })
       // The fault depends on where the button sits when it is pressed: the menu

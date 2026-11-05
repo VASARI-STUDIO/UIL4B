@@ -2,7 +2,7 @@
 // two library entrance animations (the icon glyph fade and the card rise).
 //
 // Groups covered (each at 1440 and 390 where the group is on screen at that
-// width): Type Scale (weights, fine-tuning join mode, output view), Aspect
+// width): Type Scale (Page / Code half switch at 1440, fine-tuning join mode, output view at 390), Aspect
 // Ratio (preset list, "I know the"), Alt Text (length), Gradient (the random
 // filters), Palette Explore tabs, the File Converter's segmented choices, and
 // the library's tab switch.
@@ -120,8 +120,8 @@ async function openFileConverterVideo(page) {
 // Every case opens its page, prepares the group and returns its locator.
 const CASES = [
   {
-    id: 'type-scale-weights', name: 'Type Scale: weights', widths: [1440],
-    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-weights').first() },
+    id: 'type-scale-half', name: 'Type Scale: Page and Code switch', widths: [1440],
+    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-half-switch') },
   },
   {
     id: 'type-scale-view', name: 'Type Scale: output view', widths: [390],

@@ -88,7 +88,7 @@ const TOOLS = [
   {
     route: '/create/type-scale',
     // From 768 Save to a project sits right against Copy CSS at the end of the
-    // toolbar; under 768 both are in the docked bar.
+    // toolbar; under 768 Save is a 44px icon on the row and Copy CSS is the shell dock.
     actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,
@@ -180,10 +180,10 @@ for (const tool of TOOLS) {
         // layout's own dock under 768 (`phoneDock`, a bar fixed to the foot of the
         // screen), or Type Scale's on a phone.
         if (tool.primary && width >= (tool.primaryFrom || 0)) {
-          const layoutDock = Boolean(tool.phoneDock) && width < 768
+          const layoutDock = (Boolean(tool.phoneDock) || tool.route === '/create/type-scale') && width < 768
           const docked = layoutDock || width < (tool.primaryDockedBelow || 0)
           await expect(docked
-            ? page.locator(layoutDock ? '[data-tl-dock]' : '.tsc-dock').getByRole('button', { name: tool.primary })
+            ? page.locator('[data-tl-dock]').getByRole('button', { name: tool.primary })
             : bar.getByRole('button', { name: tool.primary })).toBeVisible()
           if (docked) await expect(bar.getByRole('button', { name: tool.primary }), `${width}px: the primary is in the dock, not also on the row`).toHaveCount(0)
           if (!layoutDock) await expect(page.locator('[data-tl-dock]'), `${width}px: a dock for a primary that is on the row`).toHaveCount(0)
