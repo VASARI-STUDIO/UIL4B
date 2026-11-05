@@ -217,7 +217,7 @@
 }
 .v3d .v3d-formats[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
 .v3d .v3d-formats summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.v3d .v3d-formats-list { margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--t2); }
+.v3d .v3d-formats-list { margin: 0; font-family: var(--font); font-size: 12px; line-height: 1.7; color: var(--t2); }
 .v3d .v3d-empty { overflow-y: auto; }
 
 /* Loading: the file's name, the stage, the bytes, a meter when a total is known. */

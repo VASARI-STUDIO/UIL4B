@@ -2043,7 +2043,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     type="button"
                     role="tab"
                     aria-selected={effFmt === f.id}
-                    className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                    className={`tl-pill grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
                     onClick={() => { setFmt(f.id); clearTimeout(copiedTimer.current); setCopied(false) }}
                   >{f.label}</button>
                 ))}

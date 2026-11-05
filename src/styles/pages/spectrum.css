@@ -1274,7 +1274,7 @@ ol.sp-rail .sp-rail-label { font-size: 15px; font-weight: 500; }
 .sp-ex-filebar small { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
 .sp-ex-actions { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
 .sp-ex-fmts { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .05); }
-.sp-ex-fmt { padding: 6px 12px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--mono); font-size: 11px; letter-spacing: 0; cursor: pointer; }
+.sp-ex-fmt { padding: 6px 12px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: var(--fs-micro); font-weight: 500; letter-spacing: 0; text-transform: none; cursor: pointer; }
 .sp-ex-fmt[aria-pressed="true"] { background: rgba(var(--sp-ink-rgb), .1); border-color: rgba(var(--sp-ink-rgb), .2); color: var(--sp-ink); }
 .sp-ex-copy { margin-left: auto; gap: 9px; padding: 9px 16px; min-height: 36px; }
 .sp-ex-copy .sp-ph { font-size: 13px; }

@@ -239,7 +239,7 @@
    reads as a field's bottom edge, not an underlined word or a link. */
 .prn-cx-sample[data-boundary="true"] { font-weight: 500; inline-size: auto; justify-self: stretch; }
 .prn-cx-read { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.prn-cx-ratio { font-family: var(--mono); font-size: 17px; font-weight: 500; color: var(--cpg-ink); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.prn-cx-ratio { font-family: var(--font); font-size: 17px; font-weight: 500; color: var(--cpg-ink); line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .prn-cx-verdict { font-size: 12.5px; line-height: 1.5; color: var(--cpg-faint); }
 .prn-cx-role {
   grid-column: 1 / -1;

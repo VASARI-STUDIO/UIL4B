@@ -330,7 +330,8 @@ html.bkit-on .tsc-page .tsc-drawer { bottom: calc(var(--tsc-dock-h) + var(--bkit
   padding: 0 12px;
   border: 1px solid var(--tl-line-2);
   border-radius: 12px;
-  font-family: var(--mono);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 400;
   text-align: left;

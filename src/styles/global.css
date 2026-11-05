@@ -3498,10 +3498,10 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .icust-row{display:flex;align-items:center;gap:12px;min-height:32px}
 .icust-row>label{flex:0 0 56px;color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
 .icust-row input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
-.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:700;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
-.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
+.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
 .icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-pill);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
 .icust-seg button:hover{color:var(--t0)}
@@ -3584,7 +3584,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
 /* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
    characters) so switching never reflows the row under the pointer. */
-.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-micro);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
 .cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* Each swatch group is headed. An unheaded second grid is indistinguishable
    from the first — to the eye, and to a screen reader, which is why the label
@@ -3634,7 +3634,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 @media(pointer:coarse){
   .cpk-dropper{width:44px;height:44px}
   .cpk-hex{height:44px;font-size:16px}
-  .cpk-format{height:44px;padding:0 8px;font-size:12px}
+  .cpk-format{height:44px;padding:0 8px;font-size:var(--fs-caption)}
   /* Swatches (presets and Recent alike) are tap targets too. Five 44px columns
      and four 4px gaps are 236px, so the panel widens from 244px to hold them
      with its 12px padding; the swatches no longer shrink to fit. */
@@ -3845,7 +3845,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 .hcmd-bar:focus-within{border-color:var(--accent)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
    (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
-.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
+.hcmd-prompt{font-family:var(--font);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
 /* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
    reason: this MUST outrank the global input[type="text"] reset at the top of
    the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.

@@ -724,7 +724,6 @@ export default function ColorStudio({ onCopy, toast }) {
               <span className="stc-label" id="stc-base-label">Base step</span>
               <ToolPills
                 labelledBy="stc-base-label"
-                mono
                 options={BASE_STEPS}
                 value={baseStep}
                 onChange={(v) => { setBaseStep(v); setSemCopied(false) }}

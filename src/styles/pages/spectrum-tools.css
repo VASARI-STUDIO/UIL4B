@@ -126,7 +126,8 @@ html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
 .spt .spt-sun { fill: var(--hue-strong); }
 .spt .spt-lab { font: 500 13px/1.25 var(--font); color: var(--sp-dim); white-space: nowrap; }
 .spt .spt-ink { color: var(--sp-ink); }
-.spt .spt-art .v { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.spt .spt-art .v { font-family: var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.spt .spt-art .spt-alt-l, .spt .spt-art .spt-alt-s { font-family: var(--mono); }
 .spt .spt-big { font: 600 56px/1 var(--display); letter-spacing: -.03em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
 
 /* Icon Library: the grid and the pick are one cluster, centred, so there is no hole

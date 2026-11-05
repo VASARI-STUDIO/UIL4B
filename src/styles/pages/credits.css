@@ -238,10 +238,11 @@ a.crd-row-link .crd-row-name {
 }
 
 /* The font notice is the licence text verbatim, so it is set as quoted text:
- * mono, one measure, and a rule down the side to say it is not our sentence. */
+ * in the UI face (it is prose, not code), one measure, and a rule down the side
+ * to say it is not our sentence. */
 .crd-row--font { display: block; padding-block: var(--s-3); }
 .crd-copy {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: max(12px, .75rem);
   line-height: 1.6;
   color: var(--t1);

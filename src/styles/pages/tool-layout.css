@@ -474,7 +474,7 @@
 :is(.tl, .tl-sheet-layer) .tl-slider { display: flex; align-items: center; gap: 12px; min-width: 0; }
 :is(.tl, .tl-sheet-layer) .tl-slider-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-k { width: 56px; flex: 0 0 auto; }
-:is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--mono); font-size: 11px; color: var(--tl-ink); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-slider-v { font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-slider--wide .tl-slider-v { width: 42px; text-align: right; flex: 0 0 auto; }
 /* On a phone or a touch screen the small mono labels (slider values, the
    OKLCH/Step pills) are 12px, the floor for text read at arm's length. */
