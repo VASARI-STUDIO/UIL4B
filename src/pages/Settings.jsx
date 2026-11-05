@@ -1447,10 +1447,10 @@ export default function Settings({ toast }) {
 
   return (
     <div className="sec stg" data-phone-view={isPhone ? phoneView : undefined}>
-      {/* THE APP'S PAGE HEAD, NOT A DISPLAY TITLE. The design's App file has no big page
-          title: a surface is named by a 15px / 560 label in its bar, and this page follows the same pattern. The 40px "Make it
-          yours." and its lede went with it. On a phone, inside a section, the
-          bar carries the way back to the list. */}
+      {/* THE APP'S PAGE HEAD: a bar over a hairline, with the title at --fs-h2 so it
+          stays the largest heading on the page (at 15px it sat under the
+          section h2). The 40px "Make it yours." and its lede stay gone. On a
+          phone, inside a section, the bar carries the way back to the list. */}
       <div className="stg-bar">
         {isPhone && phoneView === 'section' && (
           <button type="button" className="stg-back" onClick={closeSection}>

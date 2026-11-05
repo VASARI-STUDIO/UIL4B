@@ -44,7 +44,8 @@
  * rather than styling, and tests/user-sim/57-help-and-principles.spec.js reads
  * every one of them back out of the computed style:
  *
- *   .prn-cx-sample   background / color / border-color   (the two blues)
+ *   .prn-cx-sample   color / border-color                (the two blues)
+ *   .prn-cx          background and --cpg-* inks         (the fixed light ground)
  *   .prn-th-panel    background                          (a fixed theme ground)
  *   .prn-th-*        color                               (that theme's ink)
  *   .prn-ty-spec     font-size                           (stepPx(), 5 rows)
@@ -108,8 +109,8 @@
 
 /* The lead row: one column, proof first at full width, the rule beneath it. */
 .prn-item[data-lead="true"] { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); }
-.prn-item[data-lead="true"] .prn-rule { font-size: clamp(30px, 4vw, 52px); max-width: 17ch; }
-.prn-item[data-lead="true"] .prn-say { max-width: 64ch; }
+.prn-item[data-lead="true"] .prn-rule { font-size: clamp(30px, 4vw, 52px); max-width: 24ch; }
+.prn-item[data-lead="true"] .prn-say { max-width: none; }
 /* The lead proof is the page's largest object, but "large" is not the same as
  * "stretched": across the full 1370px column its two rows read as thin bands
  * with the measurement stranded from the sample it measures. */
@@ -216,12 +217,15 @@
 .prn-cx-sample {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 56px;
-  padding: 0 var(--s-4);
-  border: 2px solid transparent;
-  border-radius: var(--radius);
-  font-size: 15px;
+  /* A specimen, not a tile: no fill, no box. The boundary one carries a single
+     2px rule under its word (the way a text field's boundary is drawn); the
+     text one carries nothing. Both reserve the rule's height so the two
+     words share a baseline row to row. */
+  padding: 0 0 var(--s-1);
+  border: 0 solid transparent;
+  border-bottom-width: 2px;
+  font-size: var(--fs-h3);
+  line-height: 1.2;
   font-weight: 600;
   white-space: nowrap;
   /* A sample, not a control: as wide as its words at every width, left-aligned
