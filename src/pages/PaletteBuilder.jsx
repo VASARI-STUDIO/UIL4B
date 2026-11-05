@@ -79,6 +79,7 @@ import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBo
 // Image → palette: the clustering, ranking and sampling live in a pure module.
 import { appendPicks, averageHex, clusterImage, colourShares, isCutShort, MIN_VISIBLE_SHARE, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters, sampleRadius, visibleShare } from '../utils/imagePalette'
 import FromImageDialog from '../components/palette/FromImageDialog'
+import SaveColourDialog from '../components/palette/SaveColourDialog'
 
 // The preview dialog, as its own chunk. The Preview button warms it on hover and
 // focus, so a click usually finds it already loaded.
@@ -798,7 +799,7 @@ const SUBMIT_SURFACE = 'palette'
 // share link stays on `onCopy` and is not an activation — see
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
-  const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects, parkWorkingDesign } = useProject()
+  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, canSaveProjects, parkWorkingDesign } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
@@ -1803,6 +1804,39 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
   const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
+  // "Save to project" on a swatch: the project picker for that one colour.
+  // Signed out, the sign-in prompt comes first; the menu closes behind it. The
+  // prompt hands focus back to its opener a frame after it closes, so a
+  // dismissed prompt returns to the swatch a frame later still.
+  const [colourSaveIdx, setColourSaveIdx] = useState(null)
+  const returnToSwatch = (i) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      columnRefs.current[i]?.querySelector('.plb-tool--more')?.focus({ preventScroll: true })
+    }))
+  }
+  const openSaveColour = async (i) => {
+    if (canSaveProjects) { setCtxMenu(null); setColourSaveIdx(i); return }
+    const asking = requireLogin('save this colour', { free: true, signup: true })
+    setCtxMenu(null)
+    const signedIn = await asking
+    if (!mountedRef.current) return
+    if (signedIn) setColourSaveIdx(i); else returnToSwatch(i)
+  }
+  const closeSaveColour = () => {
+    ctxReturnRef.current = colourSaveIdx
+    setColourSaveIdx(null)
+  }
+  const chooseColourProject = (project) => {
+    const hex = String(adjusted[colourSaveIdx] || '').toUpperCase()
+    try {
+      const { added } = saveColourToProject(project.id, hex, columnNames[colourSaveIdx])
+      toast?.(added ? `Saved ${hex} to ${project.name}.` : `${hex} is already in ${project.name}.`, added ? 'success' : 'info')
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save that colour', 'error')
+    }
+    closeSaveColour()
+  }
 
   // Opening a column's tints or colour values from the "..." menu: the menu
   // closes without sending focus back to "..." (closeCtxMenu would), and focus
@@ -3831,6 +3865,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
           }}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openSaveColour(ctxMenu.i)}><ToolIcon name="bookmark-simple" size={14} /> Save to project</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
@@ -3853,6 +3888,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={(e) => { removeCol(ctxMenu.i, e); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
         </div>
+      )}
+
+      {colourSaveIdx != null && adjusted[colourSaveIdx] && (
+        <SaveColourDialog
+          hex={adjusted[colourSaveIdx].toUpperCase()}
+          name={columnNames[colourSaveIdx]}
+          projects={projects}
+          loading={projectsLoading}
+          currentId={design?.source?.projectId}
+          onChoose={chooseColourProject}
+          onClose={closeSaveColour}
+        />
       )}
 
       {histOpen && (
