@@ -321,7 +321,7 @@ for (const size of [LAPTOP, DESKTOP]) {
         expect(r.cut, `"${r.text}" is clipped`).toBe(false)
       }
       for (const article of LEARN_ARTICLES) {
-        await expect(page.locator(`#pnav-mega a[href="/learn/${article.slug}"]`), `${article.slug} is listed more than once`).toHaveCount(1)
+        await expect(page.locator(`#pnav-mega a.pnav-tool[href="/learn/${article.slug}"]`), `${article.slug} is listed more than once`).toHaveCount(1)
       }
       await expect(page.locator('#pnav-mega .pnav-menu-foot-link')).toHaveText(/See all guides/)
       await shot(page, `learn-menu-${size.tag}-${theme}`)

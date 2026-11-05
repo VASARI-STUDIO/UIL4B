@@ -608,7 +608,7 @@ const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
 // Which NavIcon glyph a Learn article row shows. Presentation, so it lives here
 // beside MENU_ICONS rather than in learnIndex.js — that file has to stay
 // parseable by the Node build scripts and has no business knowing about icons.
-const LEARN_ARTICLE_ICONS = {
+export const LEARN_ARTICLE_ICONS = {
   'colour-contrast': 'guide-contrast',
   'type-scales': 'guide-scale',
   'typeface-metrics': 'guide-metrics',

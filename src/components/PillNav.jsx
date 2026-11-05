@@ -52,6 +52,7 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 const DiscoverRecommended = lazy(() => import('./nav/DiscoverRecommended'))
+const LearnRecommended = lazy(() => import('./nav/LearnRecommended'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
@@ -1045,6 +1046,11 @@ function AppHeader() {
                     <DiscoverRecommended path={path} onPick={closeAll} />
                   </Suspense>
                 )}
+                {section.id === 'learn' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <LearnRecommended path={path} onPick={closeAll} />
+                  </Suspense>
+                )}
                 {section.id === 'create' ? (
                   <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
                     {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
@@ -1341,6 +1347,13 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                 </Suspense>
                 <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
                   <DiscoverRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
+            )}
+            {section.id === 'learn' && (
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <LearnRecommended path={path} onPick={onPick} />
                 </Suspense>
               </div>
             )}
