@@ -65,6 +65,12 @@
   .hlr-job:hover { color: var(--cpg-ink); }
   .hlr-job:hover .hlr-tick { opacity: 1; }
 }
+/* The accordion (under 960px, the JS `wide` line) has no hover on touch, so a closed row
+   shows its arrow too, and the arrow turns down once the row is open. */
+@media (max-width: 959px) {
+  .hlr-tick { opacity: 1; color: var(--cpg-faint); transition: transform 150ms var(--cpg-ease); }
+  .hlr-job[aria-expanded="true"] .hlr-tick { color: var(--cpg-ink); transform: rotate(90deg); }
+}
 
 /* ── An answer ── */
 .hlr-ans[hidden] { display: none; }

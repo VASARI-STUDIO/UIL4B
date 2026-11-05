@@ -170,6 +170,8 @@
 .crd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
 .crd-row {
   display: grid;
+  /* A row stretched to a taller neighbour keeps its lines together at the top. */
+  align-content: start;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   min-width: 0;
@@ -205,6 +207,9 @@ a.crd-row-link .crd-row-name {
 .crd-row-side {
   display: inline-flex;
   align-items: center;
+  /* A long licence name wraps rather than squeezing the author column. */
+  max-width: 11rem;
+  text-align: right;
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
@@ -336,3 +341,13 @@ a.crd-row-link .crd-row-name {
   .crd-list--pkgs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .crd-group-body > .crd-list > .crd-row:nth-child(3) { border-top: 0; }
 }
+
+/* The full-width firebase row breaks the first-row-of-each-column resets above, so the
+   rows beside and after it get their top rule back. */
+@media (min-width: 640px) {
+  .crd-group-body > .crd-list--pkgs > .crd-row--pkg:has(.crd-more),
+  .crd-group-body > .crd-list--pkgs > .crd-row--pkg:has(.crd-more) + .crd-row--pkg { border-top: 1px solid var(--border); }
+}
+
+/* The lede stays body size on a short wide screen, where .sec-h p shrinks to 13px. */
+.crd .sec-h p { font-size: var(--fs-body); line-height: 1.65; }
