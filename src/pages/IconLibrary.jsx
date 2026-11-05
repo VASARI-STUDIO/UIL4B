@@ -52,6 +52,9 @@ import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
+import {
+  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+} from '../utils/iconSearchTease'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
@@ -87,6 +90,13 @@ import '../styles/deferred/tool-shell.css'
 // rule that takes a credit off the screen with it.
 
 const API_LIMIT = 999
+
+// What a search found in sets the viewer cannot open, remembered per
+// (tier, chip, weight, query) so retyping a query costs no second request.
+// Counts and pack labels only (see utils/iconSearchTease.js). Held for the
+// session and trimmed oldest-first so it cannot grow without end.
+const SEARCH_TEASE_CACHE = new Map()
+const SEARCH_TEASE_CACHE_MAX = 60
 
 // ONE HOST, BECAUSE THE OTHER TWO WERE NEVER A FALLBACK.
 // `api.simplesvg.com` and `api.unisvg.com` are Iconify's documented mirrors and
@@ -3139,18 +3149,23 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
    text link. It is one surface with no card and no hairline. The text and both
    controls are always on screen; nothing here depends on hover.
 
-   `kind` is 'anon' or 'free' (see endBandKind). `to` makes the primary control
-   a link to /plans; without it the primary control is a button that calls
-   `onAction`. `tease` is a slot above the copy: the signed-out band fills it
-   with IconEndTease, the free band leaves it empty. A blurred row for free
-   viewers would be passed here, as long as it holds no markup of a pack that
-   viewer may not load (see src/utils/lockedPreview.js). */
+   `kind` is 'anon' or 'free' (see endBandKind), or 'search' for the band a
+   search raises for matches above the viewer's tier (see searchTeaseBand); that
+   one speaks as a status, since it can stand in for the empty message. `to`
+   makes the primary control a link to /plans; without it the primary control is
+   a button that calls `onAction`. `tease` is a slot above the copy: the
+   signed-out band and the search band fill it with IconEndTease, the free band
+   leaves it empty. A blurred row for free viewers is passed here, as long as it
+   holds no markup of a pack that viewer may not load (see
+   src/utils/lockedPreview.js). */
 function IconEndBand({ kind, heading, body, names, action, onAction, to, secondary, tease }) {
   return (
     <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
       {tease}
       <div className="ig-end-band">
-        <div className="ig-end-copy">
+        {/* A search band announces its heading too: the count and the term are
+            in it, and the body alone ("They are in …") says nothing. */}
+        <div className="ig-end-copy" role={kind === 'search' ? 'status' : undefined}>
           <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
           <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
           {names && <p className="ig-end-sets">{names}</p>}
@@ -3286,6 +3301,16 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const [gated, setGated] = useState(null)
   // How many icons of the open pack are held back for Pro: { pack, n }. Drives the quiet notice under the pack menu.
   const [proHeld, setProHeld] = useState({ pack: '', n: 0 })
+  /* What the search on screen matched in sets this viewer cannot open:
+     `{ free, paid, total, capped, labels, query }` (summariseLockedMatches plus
+     the query it answers), or null.
+     Counts and names only, never a glyph. Cleared as a new search starts and
+     set only for a viewer below Pro; the band that reads it is chosen by
+     searchTeaseBand further down. */
+  const [searchTease, setSearchTease] = useState(null)
+  // A count still on its way: the empty message waits for it rather than
+  // showing "No icons match" a moment before the band takes its place.
+  const [teasePending, setTeasePending] = useState(false)
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -3678,10 +3703,58 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     setLoading(false)
   }, [])
 
+  /* ── THE MATCHES THIS VIEWER CANNOT OPEN YET ─────────────────────────────
+     Called once the viewer's own search has answered. A viewer below Pro gets
+     ONE more /search, scoped to the packs they may not browse, and only its
+     COUNT is used: the ids are reduced to a summary (counts and pack labels)
+     and dropped. Nothing here fetches a glyph for those packs, so the rule in
+     src/utils/lockedPreview.js (a locked thing's payload never reaches the
+     browser) holds; the band that reads the summary draws built-in glyphs only.
+
+     No request for Pro, for a single pack filter, or once the icon service has
+     failed. It is guarded by `reqId` like the search itself, so an answer for a
+     query the viewer has left never lands. A failed probe is silent: the
+     search stands as it is and no band is drawn. `mainIds` are the ids the
+     viewer's own search returned, for the Pro-only names of packs they CAN
+     browse (Carbon's logo-*) that the grid dropped. */
+  const probeLockedMatches = useCallback((q, packFilter, groupKey, mainIds, rid) => {
+    if (tier === 'paid' || packFilter || cdnOk.current === false) return
+    const weight = groupKey ? 'regular' : weightRef.current
+    const key = searchTeaseKey({ tier, group: groupKey, weight, query: q })
+    // The summary carries the query it answers, so the band never names a newer one.
+    const land = (summary) => setSearchTease(summary && { ...summary, query: q })
+    if (SEARCH_TEASE_CACHE.has(key)) { land(SEARCH_TEASE_CACHE.get(key)); return }
+    const probed = lockedSearchPacks({
+      packs: ALL_PACKS, tier, packFilter, groupPacks: groupKey ? ICON_GROUPS[groupKey].packs : null,
+    })
+    const finish = (probeIds) => {
+      const summary = summariseLockedMatches({
+        probeIds, probed, mainIds, tier, limit: API_LIMIT, labelOf: packLabel,
+        accept: (p, n) => matchesWeight(p, n, weight),
+      })
+      if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
+      SEARCH_TEASE_CACHE.set(key, summary)
+      if (rid === reqId.current) { land(summary); setTeasePending(false) }
+    }
+    if (!probed.length) { finish([]); return }
+    setTeasePending(true)
+    const params = new URLSearchParams()
+    params.set('prefixes', probed.join(','))
+    params.set('query', q)
+    params.set('limit', String(API_LIMIT))
+    fetchWithFallback(`/search?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.icons)) finish(d.icons); else if (rid === reqId.current) setTeasePending(false) })
+      // A missing count is no band, never an error.
+      .catch(() => { if (rid === reqId.current) setTeasePending(false) })
+  }, [tier])
+
   const doSearch = useCallback((q, scope = {}, manualRetry = false) => {
     q = (q || '').trim()
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
+    setSearchTease(null)
+    setTeasePending(false)
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -3759,6 +3832,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
+        probeLockedMatches(q, packFilter, groupKey, d.icons, rid)
         if (!d.icons || !d.icons.length) {
           renderLocal(q, packFilter)
           return
@@ -3793,7 +3867,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, probeLockedMatches, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -4459,7 +4533,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // entitled to; printing it over a gate would be the page blaming the
   // catalogue for a decision the product made. A gated scope has its own panel,
   // which says what it is and how to open it.
-  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
+  const searchEmpty = !isMyIcons && !gated && !loading && !(teasePending && source === 'search') && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
   // A word the catalogues name differently ("home" for "house"): offered as a
   // button on the empty state, so no second search runs unless it is pressed.
@@ -4477,6 +4551,23 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const endKind = endBandKind({
     tier, authLoading, planLoading: !planKnown, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
   })
+  /* A SEARCH THAT MATCHES MORE THAN THE VIEWER MAY OPEN SAYS SO, IN PLACE.
+     `searchTease` counts the matches in sets above this viewer's tier. Where it
+     is shown follows the page rather than adding a state of its own: instead of
+     "No icons match" when the viewer's own sets hold nothing, under the grid once
+     the results have run out (a free viewer's band is swapped for this more
+     specific one), or inside the signed-out band that is already there. The
+     summary is only read while the search is what is on screen, and `searchEmpty`
+     is held back until auth and plan have settled, as endBandKind does, so a Pro
+     viewer never sees the empty-state swap for a beat. */
+  const teaseBand = searchTeaseBand({
+    summary: source === 'search' ? searchTease : null,
+    tier,
+    endKind,
+    searchEmpty: searchEmpty && !authLoading && planKnown,
+  })
+  const teaseNeed = searchTeaseNeed(searchTease)
+  const teaseWhere = searchTeaseWhere(searchTease)
   const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
@@ -4535,10 +4626,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      value differs, so the observer firing after the cut changes the grid's
      height (the same columns, more rows) re-renders nothing. The columns come
      from the grid's width, never from how many cells it holds, so the cut
-     cannot feed back into the count it was cut by. */
+     cannot feed back into the count it was cut by.
+
+     It is read for every tier, not only the capped one: a signed-in viewer's
+     search can also end in blurred rows (see searchTeaseBand), and an empty
+     grid still resolves its columns, so the rows line up there too. */
   const [gridCellH, setGridCellH] = useState(null)
   useLayoutEffect(() => {
-    if (!capped || gated || isMyIcons) return
+    if (gated || isMyIcons) return
     const grid = gridRef.current
     if (!grid) return
     const read = () => {
@@ -4552,20 +4647,25 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const observer = new ResizeObserver(read)
     observer.observe(grid)
     return () => observer.disconnect()
-  }, [capped, gated, isMyIcons])
+  }, [gated, isMyIcons])
   const teaseCols = gridCols
     || teaseColsFallback(typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches)
   // Built-in icons only, from packs this viewer may browse, and not repeating
   // anything already on screen. No network involved.
+  const wantsTease = endKind === 'anon' || teaseBand === 'empty' || teaseBand === 'end'
   const teaseCells = useMemo(() => {
-    if (endKind !== 'anon') return []
+    if (!wantsTease) return []
     return pickTeaseIcons({
       icons: window.icons || [],
       shownNames: icons.slice(0, visible).map((i) => i.name),
-      count: teaseCellCount(teaseCols),
+      // A search band draws no more stand-ins than the matches it counts, so
+      // "3 icons match" sits over three faded shapes, not two full rows.
+      count: teaseBand === 'empty' || teaseBand === 'end'
+        ? Math.min(teaseCellCount(teaseCols), searchTease?.total || 0)
+        : teaseCellCount(teaseCols),
       canSee,
     })
-  }, [endKind, icons, visible, teaseCols, canSee])
+  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
@@ -5165,7 +5265,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 keystroke, not an error to interrupt for. No new sentence — the
                 two below are the ones already on screen. The icon is decorated
                 and now says so; the emoji copy of this block already did. */}
-            {searchEmpty && (
+            {/* Quiet while the count of matches in other sets is on its way, so
+                "No icons match" is never shown a moment before the band. */}
+            {teasePending && source === 'search' && !loading && icons.length === 0 && (
+              <p className="pl-empty" role="status">Checking the other sets…</p>
+            )}
+            {searchEmpty && teaseBand !== 'empty' && (
               <div className="pl-empty" role="status" aria-live="polite">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -5185,11 +5290,35 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               </div>
             )}
 
+            {/* A search with matches in sets above this viewer's tier: the same
+                blurred rows and band the signed-out grid ends in, in place of the
+                empty message ('empty') or of the generic upgrade band ('end').
+                The signed-out band is not repeated; it carries the count itself,
+                below. The way in is Pro whenever any match needs it. */}
+            {(teaseBand === 'empty' || teaseBand === 'end') && (
+              <IconEndBand
+                kind="search"
+                heading={SEARCH_TEASE_COPY.heading(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, teaseBand === 'end')}
+                body={SEARCH_TEASE_COPY.body(searchTease.labels, teaseBand === 'empty')}
+                action={SEARCH_TEASE_COPY.action[teaseNeed]}
+                to={teaseNeed === 'paid' ? '/plans' : undefined}
+                onAction={() => (teaseNeed === 'paid' ? reportUpgradeGate('icon-search-pro') : openGate('free'))}
+                tease={teaseCells.length > 0 && (
+                  <IconEndTease
+                    cells={teaseCells}
+                    cols={teaseCols}
+                    cellH={gridCellH}
+                  />
+                )}
+              />
+            )}
             {endKind === 'anon' && (
               <IconEndBand
                 kind="anon"
                 heading={ICON_GATE_COPY.end.anon.heading(freeIconCount)}
-                body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
+                body={teaseBand === 'anon'
+                  ? `${ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)} ${SEARCH_TEASE_COPY.sentence(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, searchTease.labels)}`
+                  : ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
                 names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
@@ -5203,7 +5332,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 )}
               />
             )}
-            {endKind === 'free' && (
+            {endKind === 'free' && teaseBand !== 'end' && (
               <IconEndBand
                 kind="free"
                 heading={ICON_GATE_COPY.end.free.heading}

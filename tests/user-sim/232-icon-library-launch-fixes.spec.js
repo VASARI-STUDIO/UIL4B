@@ -50,9 +50,13 @@ test('Try again after a failed search sends exactly one /search request', async 
   watch(page, REFUSED)
   const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE, 'access-control-allow-origin': '*' }
   const isSearch = (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/search'
+  // The count of matches in locked sets is a second /search that names only
+  // those sets; it is not the visitor's search and is not counted here.
+  const isCountProbe = (u) => !(u.searchParams.get('prefixes') || '').split(',').includes('lucide')
   let searches = 0
   let refusing = true
   await page.route(isSearch, (route) => {
+    if (isCountProbe(new URL(route.request().url()))) return route.fallback()
     searches += 1
     if (!refusing) return route.fallback()
     return route.fulfill({ status: 503, contentType: 'text/plain', headers, body: 'Service Unavailable' })

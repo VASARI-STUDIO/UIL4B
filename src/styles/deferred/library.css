@@ -1730,9 +1730,9 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 .ig-end .ig-end-h{
   margin:0;
   font-family:var(--display);font-size:clamp(28px,2.2vw + 18px,40px);font-weight:560;line-height:1.1;letter-spacing:-.03em;
-  color:var(--t0);text-wrap:balance;
+  color:var(--t0);text-wrap:balance;overflow-wrap:anywhere;
 }
-.ig-end .ig-end-p{margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.55;color:var(--t1);text-wrap:pretty}
+.ig-end .ig-end-p{margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.55;color:var(--t1);text-wrap:pretty;overflow-wrap:anywhere}
 .ig-end .ig-end-sets{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--t2)}
 .ig-end-cta{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
 @media(max-width:767px){.ig-end-cta{flex-direction:column;align-items:stretch;gap:8px;align-self:stretch}.ig-end-pill{justify-content:center}.ig-end-link{justify-content:center}}
