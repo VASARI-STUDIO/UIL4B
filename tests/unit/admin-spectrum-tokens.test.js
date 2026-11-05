@@ -129,7 +129,7 @@ test('every weight the surface asks for is inside Geist\'s 300..700 axis', () =>
     + 'so the page ships a weight nobody chose — remap it rather than leaving it.')
 })
 
-test('admin figures set in the UI face with tabular figures; only ids and the tab badge stay mono', () => {
+test('admin figures set in the UI face with tabular figures; only ids stay mono', () => {
   // The mono voice is retired from figures (design 2026-10-29, mono-retire;
   // tests/unit/mono-voice-allowlist.test.js holds the list). A count, a bar
   // value or a plan cadence is read down a column, so it needs tabular figures
@@ -145,6 +145,7 @@ test('admin figures set in the UI face with tabular figures; only ids and the ta
     '.adm-donut-count',
     '.adm-user-count',
     '.adm-plan-interval',
+    '.adm-tab-badge',
   ]
   const wrong = FIGURES.filter((sel) => {
     const bodies = bodiesOf(sel).join('\n')
@@ -158,9 +159,9 @@ test('admin figures set in the UI face with tabular figures; only ids and the ta
   assert.deepEqual(wrong, [],
     'these figures must be var(--font) with tabular-nums and letter-spacing 0:\n  ' + wrong.join('\n  '))
 
-  const STILL_MONO = ['.adm-copy-value', '.adm-tab-badge']
+  const STILL_MONO = ['.adm-copy-value']
   const lost = STILL_MONO.filter((sel) => !bodiesOf(sel).some((body) => /font-family:\s*var\(--mono\)/.test(body)))
-  assert.deepEqual(lost, [], 'these carry an id or a badge and should stay in var(--mono):\n  ' + lost.join('\n  '))
+  assert.deepEqual(lost, [], 'these carry an id and should stay in var(--mono):\n  ' + lost.join('\n  '))
 
   // AND THE OTHER HALF: the mono rule must not have been applied to the whole
   // surface, which would satisfy the list above and destroy the contrast it
