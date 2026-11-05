@@ -1,11 +1,11 @@
 // Spec 303: the micro animations that were lost and are back (cards 479a9d4310
 // and feaa875f01; the list is handover/specs/lost-micro-animations-2026-11-05.md).
 //
-// What is covered, each from what the browser computes and draws:
+// What is covered, each from what the browser computes and draws (the toast success
+// pop is not back: it was removed on purpose, as decoration this product does not use):
 //   - sliding tab underline    the File Converter tabs on the Spectrum homepage
 //                              (.sp-modes) and the font dossier tabs in the
 //                              Font Pair font browser (.fdx-tabs)
-//   - toast success icon pop   the tile scales in from .5 on a success toast
 //   - Font Pair chevron        the "Prepare the handoff" caret turns on open
 //   - aspect-ratio preview     the shape eases between ratios by scale on a
 //                              fixed frame, never by width or height
@@ -29,11 +29,6 @@
 //                                                   -> "the underline slides" for that bar
 //   - delete the reduced-motion `transition: none` rules for .sp-modes::after / .fdx-tabs ::after
 //                                                   -> "reduced motion" for that bar
-//   - remove `animation: toast-pop` from global.css -> "the success tile pops"
-//   - change the toast-pop keyframes to animate opacity, or start at scale(1)
-//                                                   -> "the success tile pops"
-//   - delete the `.toast-success.show .toast-ico{animation:none}` reduced-motion rules
-//                                                   -> "the pop is off under reduced motion"
 //   - remove `transition: transform` from .fpr-delivery > summary::after (font-pair.css)
 //                                                   -> "the caret turns"
 //   - give .rc-vis-frame a width/height transition, or drop its transform transition
@@ -173,7 +168,7 @@ for (const c of BARS) {
       const last = seen.at(-1)
       expect(Math.abs(last.x - first.x), 'the bar did not move').toBeGreaterThan(8)
       expect(seen.filter((p) => !near(p.x, first.x, 1) && !near(p.x, last.x, 1)).length, 'the bar still slides under reduced motion').toBe(0)
-      expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBe(0)
+      expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBeLessThanOrEqual(0.00001)
     })
 
     test('reduced motion (in-app switch): the bar lands at once with the OS saying nothing', async ({ page }) => {
@@ -189,92 +184,10 @@ for (const c of BARS) {
       const last = seen.at(-1)
       expect(Math.abs(last.x - first.x), 'the bar did not move').toBeGreaterThan(8)
       expect(seen.filter((p) => !near(p.x, first.x, 1) && !near(p.x, last.x, 1)).length, 'the bar still slides under reduced motion').toBe(0)
-      expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBe(0)
+      expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBeLessThanOrEqual(0.00001)
     })
   })
 }
-
-/* ── Toast success icon pop ───────────────────────────────────────────────── */
-
-// "Copy size" on the Aspect & Resolution page is a success toast with no sign-in
-// and no network.
-async function successToast(page, width) {
-  await page.setViewportSize({ width, height: heightFor(width) })
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
-  await go(page, '/create/aspect-ratio')
-  // Record every animation that starts, so a pop that has finished by the time
-  // we look is still seen.
-  await page.evaluate(() => {
-    window.__popped = []
-    document.addEventListener('animationstart', (e) => window.__popped.push(e.animationName), true)
-  })
-  await page.getByRole('button', { name: /^Copy size/ }).first().click()
-  const ico = page.locator('.toast.toast-success.show .toast-ico')
-  await expect(ico, 'no success toast appeared').toBeVisible()
-  return ico
-}
-
-test.describe('Toast: the success tile pops in', () => {
-  for (const width of WIDTHS) {
-    test(`the success tile pops from half size once, on transform alone, at ${width}px`, async ({ page }) => {
-      watch(page, 'someone copying a size')
-      const ico = await successToast(page, width)
-      const cs = await style(ico, null, ['animationName', 'animationDuration', 'animationTimingFunction', 'animationFillMode', 'animationIterationCount'])
-      expect(cs.animationName, 'the success tile has no pop').toContain('toast-pop')
-      expect(parseFloat(cs.animationDuration), 'the pop is over 300ms').toBeLessThanOrEqual(0.3)
-      expect(parseFloat(cs.animationDuration)).toBeGreaterThan(0.1)
-      expect(cs.animationIterationCount, 'the pop repeats').toBe('1')
-      expect(cs.animationTimingFunction, 'the pop has no ease').not.toBe('linear')
-      expect(cs.animationFillMode, 'the pop leaves a transform on the tile when it is over').not.toMatch(/forwards|both/)
-      // It really ran (the event is recorded from before the click).
-      expect(await page.evaluate(() => window.__popped), 'toast-pop never started').toContain('toast-pop')
-      // The keyframes: transform only, starting at scale(.5) and ending at 1.
-      const frames = await page.evaluate(() => {
-        for (const sheet of document.styleSheets) {
-          let rules
-          try { rules = sheet.cssRules } catch { continue }
-          for (const r of rules) {
-            if (r.type === CSSRule.KEYFRAMES_RULE && r.name === 'toast-pop') {
-              return [...r.cssRules].map((k) => ({ key: k.keyText, props: [...k.style].sort(), transform: k.style.transform }))
-            }
-          }
-        }
-        return null
-      })
-      expect(frames, 'the toast-pop keyframes are gone').not.toBeNull()
-      expect([...new Set(frames.flatMap((f) => f.props))], 'only transform may move').toEqual(['transform'])
-      expect(frames.find((f) => f.key === 'from').transform.replace(/\s/g, '')).toBe('scale(0.5)')
-      expect(frames.find((f) => f.key === 'to').transform.replace(/\s/g, '')).toBe('scale(1)')
-      // When it is over the tile rests with no transform.
-      await expect.poll(() => style(ico, null, ['transform']).then((s) => s.transform), { timeout: 3000 }).toBe('none')
-    })
-  }
-
-  test('the pop is off under reduced motion (OS setting)', async ({ page }) => {
-    watch(page, 'someone whose system asks for reduced motion')
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    const ico = await successToast(page, 1440)
-    expect((await style(ico, null, ['animationName'])).animationName, 'the tile still pops').toBe('none')
-    expect(await page.evaluate(() => window.__popped), 'toast-pop started').not.toContain('toast-pop')
-  })
-
-  test('the pop is off under reduced motion (in-app switch, the OS saying nothing)', async ({ page }) => {
-    watch(page, 'someone who turned reduced motion on inside the app')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
-    await go(page, '/create/aspect-ratio')
-    await reduceInApp(page)
-    await page.evaluate(() => {
-      window.__popped = []
-      document.addEventListener('animationstart', (e) => window.__popped.push(e.animationName), true)
-    })
-    await page.getByRole('button', { name: /^Copy size/ }).first().click()
-    const ico = page.locator('.toast.toast-success.show .toast-ico')
-    await expect(ico).toBeVisible()
-    expect((await style(ico, null, ['animationName'])).animationName, 'the tile still pops').toBe('none')
-    expect(await page.evaluate(() => window.__popped), 'toast-pop started').not.toContain('toast-pop')
-  })
-})
 
 /* ── Font Pair: the disclosure caret turns ────────────────────────────────── */
 
@@ -322,7 +235,7 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
     const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
     expect(near(seen.at(-1).b, 1, 0.01), 'the caret never turned').toBe(true)
     expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length, 'the caret still turns slowly').toBe(0)
-    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration)).toBe(0)
+    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 
   test('reduced motion (in-app switch): the caret turns at once with the OS saying nothing', async ({ page }) => {
@@ -332,7 +245,7 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
     const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
     expect(near(seen.at(-1).b, 1, 0.01), 'the caret never turned').toBe(true)
     expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length, 'the caret still turns slowly').toBe(0)
-    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration)).toBe(0)
+    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 })
 
@@ -362,10 +275,12 @@ test.describe('Aspect & Resolution: the preview shape eases between ratios', () 
       const seen = await traceAround(frame, null, () => squareUp(page), 800)
       const first = seen[0]
       const last = seen.at(-1)
-      // 16:9 is 240 wide by 135 tall: scale 1 by 0.5625. 1:1 is 1 by 1.
-      expect(near(first.a, 1, 0.01) && near(first.d, 0.5625, 0.01), `the shape did not start as 16:9 (${first.a}, ${first.d})`).toBe(true)
-      expect(near(last.a, 1, 0.01) && near(last.d, 1, 0.01), `the shape did not end square (${last.a}, ${last.d})`).toBe(true)
-      expect(seen.filter((p) => p.d > 0.58 && p.d < 0.98).length, 'the shape jumped instead of easing').toBeGreaterThan(0)
+      // The shape is read as height over width of the scale, since the stage may fit it
+      // smaller than 240: 16:9 is 0.5625, 1:1 is 1.
+      const r = (p) => p.d / p.a
+      expect(near(r(first), 0.5625, 0.01), `the shape did not start as 16:9 (${first.a}, ${first.d})`).toBe(true)
+      expect(near(r(last), 1, 0.01), `the shape did not end square (${last.a}, ${last.d})`).toBe(true)
+      expect(seen.filter((p) => r(p) > 0.58 && r(p) < 0.98).length, 'the shape jumped instead of easing').toBeGreaterThan(0)
       // Through the whole move the frame's own size never changed.
       const after = await style(frame, null, ['width', 'height'])
       expect([after.width, after.height]).toEqual(['240px', '240px'])
@@ -379,9 +294,9 @@ test.describe('Aspect & Resolution: the preview shape eases between ratios', () 
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const frame = await openPage(page, 1440)
     const seen = await traceAround(frame, null, () => squareUp(page), 800)
-    expect(near(seen.at(-1).d, 1, 0.01), 'the shape never changed').toBe(true)
-    expect(seen.filter((p) => p.d > 0.58 && p.d < 0.98).length, 'the shape still eases').toBe(0)
-    expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration)).toBe(0)
+    expect(near(seen.at(-1).d / seen.at(-1).a, 1, 0.01), 'the shape never changed').toBe(true)
+    expect(seen.filter((p) => p.d / p.a > 0.58 && p.d / p.a < 0.98).length, 'the shape still eases').toBe(0)
+    expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 
   test('reduced motion (in-app switch): the shape changes at once with the OS saying nothing', async ({ page }) => {
@@ -389,8 +304,8 @@ test.describe('Aspect & Resolution: the preview shape eases between ratios', () 
     const frame = await openPage(page, 1440)
     await reduceInApp(page)
     const seen = await traceAround(frame, null, () => squareUp(page), 800)
-    expect(near(seen.at(-1).d, 1, 0.01), 'the shape never changed').toBe(true)
-    expect(seen.filter((p) => p.d > 0.58 && p.d < 0.98).length, 'the shape still eases').toBe(0)
-    expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration)).toBe(0)
+    expect(near(seen.at(-1).d / seen.at(-1).a, 1, 0.01), 'the shape never changed').toBe(true)
+    expect(seen.filter((p) => p.d / p.a > 0.58 && p.d / p.a < 0.98).length, 'the shape still eases').toBe(0)
+    expect(parseFloat((await style(frame, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 })
