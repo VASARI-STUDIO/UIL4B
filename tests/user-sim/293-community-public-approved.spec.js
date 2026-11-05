@@ -1,16 +1,16 @@
 // APPROVED DESIGNS ARE PUBLIC ON THE COMMUNITY HUB.
 //
-// A design a reviewer approved shows in the grid to every visitor, signed out
-// included, ahead of the starter cards. A design that is pending, rejected or
-// withdrawn shows to nobody but its author, and the author's own entries keep
-// their status tag.
+// A design a reviewer approved has a public copy in `community-public`, and the
+// grid shows those to every visitor, signed out included, ahead of the starter
+// cards. A design that is pending, rejected or withdrawn has no copy and shows
+// to nobody but its author, and the author's own entries keep their status tag.
 //
-// Seeded as 290-community-status-withdraw.spec.js seeds it: documents in
-// `community-submissions` handed to the session double through `signIn`.
-// `lateSignIn` leaves the page signed out, so the same store answers a visitor.
+// Seeded as 290-community-status-withdraw.spec.js seeds it: documents handed to
+// the session double through `signIn`. `lateSignIn` leaves the page signed out,
+// so the same store answers a visitor.
 //
 // The double does not enforce firestore.rules: what it can prove is that the
-// page ASKS for approved designs only, and draws what comes back safely. The
+// page reads the public copies only, and draws what comes back safely. The
 // rules half is tests/rules/community-public-approved.test.js.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -28,8 +28,21 @@ const designDoc = (over = {}) => ({
   ...over,
 })
 
+// The public copy: the only fields a visitor can read. No uid, email or name.
+const publicDoc = (over = {}) => ({
+  name: 'Harbour Dashboard',
+  credit: 'Sam Stranger',
+  category: 'Dashboard',
+  url: 'https://example.com/harbour',
+  c1: '#3B82F6',
+  c2: '#8B5CF6',
+  approvedAt: '2026-10-21T09:00:00.000Z',
+  kind: 'design',
+  ...over,
+})
+
 const strangers = () => ({
-  'community-submissions/s-approved': designDoc({ name: 'Approved Stranger Design' }),
+  'community-public/s-approved': publicDoc({ name: 'Approved Stranger Design' }),
   'community-submissions/s-pending': designDoc({ name: 'Pending Stranger Design', status: 'pending', reviewedAt: null }),
   'community-submissions/s-rejected': designDoc({ name: 'Rejected Stranger Design', status: 'rejected' }),
   'community-submissions/s-withdrawn': designDoc({ name: 'Withdrawn Stranger Design', status: 'withdrawn' }),
@@ -79,15 +92,17 @@ test.describe('community · approved designs are public', () => {
       lateSignIn: true,
       returning: false,
       docs: {
-        'community-submissions/good': designDoc({ name: 'Good Link Design' }),
-        'community-submissions/noauthor': designDoc({
+        'community-public/good': publicDoc({ name: 'Good Link Design' }),
+        'community-public/nocredit': publicDoc({
           name: 'Unsigned Design',
-          authorName: 'Account Name',
-          payload: { category: 'Landing', url: 'https://example.com/u', c1: '#3B82F6', c2: '#8B5CF6' },
+          credit: 'Community member',
+          url: 'https://example.com/u',
         }),
-        'community-submissions/bad': designDoc({
+        'community-public/bad': publicDoc({
           name: 'Script Link Design',
-          payload: { author: 'Sam Stranger', category: 'Landing', url: 'javascript:alert(1)', c1: 'nope', c2: '#8B5CF6' },
+          category: 'Landing',
+          url: 'javascript:alert(1)',
+          c1: 'nope',
         }),
       },
     })
@@ -99,8 +114,8 @@ test.describe('community · approved designs are public', () => {
     await expect(link).toHaveAttribute('target', '_blank')
     await expect(link, 'an outbound link must not pass authority or opener').toHaveAttribute('rel', 'noopener noreferrer nofollow')
 
-    await expect(gridCard(page, 'Unsigned Design'), 'with no typed author the account name is the credit')
-      .toContainText('Account Name')
+    await expect(gridCard(page, 'Unsigned Design'), 'with no typed credit the card says Community member')
+      .toContainText('Community member')
 
     const bad = gridCard(page, 'Script Link Design')
     await expect(bad, 'the card with a script link still shows').toHaveCount(1)
@@ -115,7 +130,10 @@ test.describe('community · approved designs are public', () => {
       plan: 'free',
       docs: {
         ...strangers(),
+        // The viewer's approved design is in their own list and has a public
+        // copy at the same id: it must come out once, with its status tag.
         'community-submissions/o-approved': own({ name: 'My Approved Design' }),
+        'community-public/o-approved': publicDoc({ name: 'My Approved Design', credit: 'Freya Free' }),
         'community-submissions/o-pending': own({ name: 'My Pending Design', status: 'pending', reviewedAt: null }),
         'community-submissions/o-rejected': own({ name: 'My Rejected Design', status: 'rejected' }),
       },
@@ -137,9 +155,9 @@ test.describe('community · approved designs are public', () => {
     const docs = {}
     for (let i = 1; i <= 26; i++) {
       const n = String(i).padStart(2, '0')
-      docs[`community-submissions/m-${n}`] = designDoc({
+      docs[`community-public/m-${n}`] = publicDoc({
         name: `Member design ${n}`,
-        reviewedAt: `2026-10-${String(30 - i).padStart(2, '0')}T09:00:00.000Z`,
+        approvedAt: `2026-10-${String(30 - i).padStart(2, '0')}T09:00:00.000Z`,
       })
     }
     await signIn(page, { lateSignIn: true, returning: false, docs })
@@ -161,7 +179,7 @@ test.describe('community · approved designs are public', () => {
       lateSignIn: true,
       returning: false,
       docs: strangers(),
-      deny: [{ path: 'community-submissions', ops: ['list'] }],
+      deny: [{ path: 'community-public', ops: ['list'] }],
     })
     await go(page, '/community')
     await expect(page.locator('.ch-grid article.ch-card').first()).toBeVisible()

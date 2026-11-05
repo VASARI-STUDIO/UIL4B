@@ -30,7 +30,7 @@
  * returned the fake and every reference in the page is a fake reference. There
  * is no page on which the two disagree.
  *
- * COVERAGE IS EXACT. This implements the seventeen `firebase/firestore` exports
+ * COVERAGE IS EXACT. This implements the nineteen `firebase/firestore` exports
  * src/ imports and no more. Anything else stays the real function via the star
  * re-export — which for a fake reference would throw the SDK's own type error,
  * loudly, at the call site. A double that answered plausibly to a call it does
@@ -52,6 +52,8 @@ import {
   orderBy as realOrderBy,
   limit as realLimit,
   startAfter as realStartAfter,
+  writeBatch as realWriteBatch,
+  serverTimestamp as realServerTimestamp,
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
@@ -159,6 +161,37 @@ export function deleteDoc(reference) {
   if (!isFakeRef(reference)) return realDeleteDoc(reference)
   reference.store.remove(reference.path)
   return Promise.resolve()
+}
+
+/* A batch applies all of its writes or none. A refusal is checked for every
+ * write before the first lands, as the real commit refuses the batch whole. */
+export function writeBatch(db) {
+  if (!isFakeDb(db)) return realWriteBatch(db)
+  const ops = []
+  const batch = {
+    set(reference, data, options) { ops.push({ type: 'set', reference, data, merge: !!options?.merge }); return batch },
+    update(reference, data) { ops.push({ type: 'update', reference, data }); return batch },
+    delete(reference) { ops.push({ type: 'delete', reference }); return batch },
+    commit() {
+      for (const op of ops) {
+        const denied = deniedFor(op.reference.path, 'set')
+        if (denied) return Promise.reject(denied)
+      }
+      for (const op of ops) {
+        if (op.type === 'delete') op.reference.store.remove(op.reference.path)
+        else op.reference.store.set(op.reference.path, op.data, op.type === 'update' || op.merge)
+      }
+      return Promise.resolve()
+    },
+  }
+  return batch
+}
+
+/* The server's clock is the browser's here: an ISO string, which sorts the way
+ * the stored timestamps do. */
+export function serverTimestamp() {
+  if (!fakeDb) return realServerTimestamp()
+  return new Date().toISOString()
 }
 
 export function addDoc(collectionRef, data) {
