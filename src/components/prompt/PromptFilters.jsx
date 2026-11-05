@@ -5,6 +5,8 @@ import { useId, useRef, useState } from 'react'
 //
 // Presentational. The page owns the state and hands in:
 //   search   { value, onChange, label }   always shown
+//   windowAction  optional node, last in the search row: the page's "Open in
+//            new window" button, or the way back from that view
 //   filters  null (overview, My Prompts) or
 //            { categories: [{ slug, label, count }], allCount, activeSlug,
 //              onCategory(slug | null), sort, onSort(id), access, onAccess(id),
@@ -45,7 +47,7 @@ function Count({ n }) {
   return <span className="pl-opt-n">{n}<span className="sr-only"> prompts</span></span>
 }
 
-export default function PromptFilters({ search, filters }) {
+export default function PromptFilters({ search, filters, windowAction }) {
   const uid = useId().replace(/:/g, '')
   const [open, setOpen] = useState(false)
   const buttonRef = useRef(null)
@@ -93,6 +95,7 @@ export default function PromptFilters({ search, filters }) {
             {f.activeCount > 0 && <span className="pl-filters-n">{f.activeCount}<span className="sr-only"> active</span></span>}
           </button>
         )}
+        {windowAction}
       </div>
 
       {f && (

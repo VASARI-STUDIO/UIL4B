@@ -3720,6 +3720,12 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    need to. */
 .app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:calc(var(--chrome-h) + clamp(14px,2.6vw,32px)) max(clamp(12px,3vw,36px),env(safe-area-inset-right,0px)) clamp(44px,6vw,80px) max(clamp(12px,3vw,36px),env(safe-area-inset-left,0px))}
 .app-page>*{min-width:0}
+/* The full-screen view of a library (?view=full, utils/libraryView.js): the shell
+   renders no PillNav and no AppFooter, so the nav's height leaves the offsets that
+   clear it (the notice strip, the page's top padding, scroll-margin) and the page
+   fills the window instead of the 1240px column. */
+html[data-view="full"]{--nav-h:0px}
+.app-page--full{max-width:none}
 
 /* ══ Tool-page shell (rail-) ══ */
 /* The in-tool left rail is retired — navigation lives entirely in the PillNav
