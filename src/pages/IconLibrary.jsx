@@ -130,10 +130,14 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
+  // Logo.dev stays out of this chip: it is not an Iconify set (no prefix to list or search, and the group browse path only speaks Iconify), its logos are hotlinked per query at our cost, and it carries a required credit. It is reached from the pack menu.
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
 }
 const GROUP_ORDER = ['coloured', 'brands', 'flags']
+// The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
+const ALL_ICONS_ID = 'all'
+const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
 // Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
 // ride in the default "All packs" listing and stay in the pack menu.
 const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
@@ -3292,7 +3296,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      it never touches `loadError` or `cdnOk`, so the other packs and the next
      search carry on as normal. Cleared wherever a new listing starts. */
   const [animatedNotice, setAnimatedNotice] = useState(null)
-  const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
   // The weight is read through a ref by the browse functions, so choosing one
   // can re-run the current scope in the same tick (see handleWeight).
@@ -3374,7 +3377,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const pc = pm[packFilter] || ''
     q = (q || '').toLowerCase()
     const filtered = capList(localIcons.filter(i =>
-      (activeCat === 'all' || i.c === activeCat) &&
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
       (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
@@ -3391,7 +3393,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // Reached when the icon SERVICE refused (a 429 was measured), not when the
     // browser is offline; the notice above the grid says what happened.
     setLoading(false)
-  }, [activeCat, canSee, capList])
+  }, [canSee, capList])
 
   /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
 
@@ -4128,15 +4130,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Toggle a cross-pack collection chip. Keeps the active search text AND the
   // selected pack — the chip narrows style within whatever scope is set.
+  // "All icons" means what it says: it clears the group and the pack, keeping the search.
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
+    const allIcons = key === ALL_ICONS_ID
+    // "All icons" with no group or pack chosen is already the view on screen: no refetch, no flicker.
+    if (allIcons && !group && (!pack || pack === 'custom')) return
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
     // Logo.dev is not an Iconify set and belongs to no collection, so with it
     // picked a chip would light and change nothing. Choosing a collection leaves
     // the pack for "All packs", whose scope the chip then narrows.
-    const scopePack = nextGroup && pack === 'logodev' ? '' : pack
+    const scopePack = allIcons ? '' : nextGroup && pack === 'logodev' ? '' : pack
     if (scopePack !== pack) setPack(scopePack)
     // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
@@ -4273,12 +4279,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      rule is the pack menu's: a group is marked only when EVERY pack in it is
      out of reach, and the word is the cheapest tier that opens one of them —
      the same answer `needFor` gives the wall. */
-  const groupOptions = useMemo(() => GROUP_ORDER.map((key) => {
+  const groupOptions = useMemo(() => [ALL_ICONS_OPTION, ...GROUP_ORDER.map((key) => {
     const { label, packs } = ICON_GROUPS[key]
     const locked = packs.every((p) => !canSeePack(p, tier))
     if (!locked) return { id: key, label }
     return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
-  }), [tier])
+  })], [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -5088,7 +5094,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"
-            value={group}
+            value={group || ALL_ICONS_ID}
             onChange={handleGroupToggle}
             options={groupOptions}
           />

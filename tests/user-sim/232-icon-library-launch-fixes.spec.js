@@ -20,7 +20,7 @@ import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
 const REFUSED = 'visitor whose icon catalogue is refused'
 
-test('the group chips are Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
+test('the group chips are All icons, Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
   watch(page, 'a designer looking for the icon group chips')
   await page.setViewportSize({ width: 1440, height: 900 })
   await signIn(page, { plan: 'pro' })
@@ -31,8 +31,8 @@ test('the group chips are Coloured, Brand logos and Flags, with no Emoji chip, a
   const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
   await expect(tray).toBeVisible({ timeout: 20_000 })
   const names = await tray.locator('.lbry-filter').allTextContents()
-  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: the three chips are there').toEqual([
-    expect.stringMatching(/^Coloured/), expect.stringMatching(/^Brand logos/), expect.stringMatching(/^Flags/),
+  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: All icons first, then the three group chips').toEqual([
+    expect.stringMatching(/^All icons/), expect.stringMatching(/^Coloured/), expect.stringMatching(/^Brand logos/), expect.stringMatching(/^Flags/),
   ])
   await expect(tray.getByRole('button', { name: /^Emoji/ })).toHaveCount(0)
   await page.keyboard.press('Escape')

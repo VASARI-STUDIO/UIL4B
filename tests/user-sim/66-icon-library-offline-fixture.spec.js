@@ -633,7 +633,7 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered: Coloured, Brand logos and Flags, with no Emoji chip').toBe(3)
+  expect(anon.chips.length, 'the group tray rendered: All icons, Coloured, Brand logos and Flags, with no Emoji chip').toBe(4)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
