@@ -3,6 +3,7 @@
 // Per pack: [icons it lists, icons of those that only Pro opens].
 
 export const ICON_PACK_COUNTS = Object.freeze({
+  "bi": [2078, 0],
   "bxs": [665, 0],
   "carbon": [2638, 49],
   "cif": [199, 0],
@@ -12,6 +13,7 @@ export const ICON_PACK_COUNTS = Object.freeze({
   "flag": [542, 0],
   "flagpack": [254, 0],
   "flat-color-icons": [329, 0],
+  "fluent": [19945, 0],
   "heroicons": [1288, 0],
   "iconoir": [1671, 0],
   "logos": [1988, 0],
@@ -22,6 +24,8 @@ export const ICON_PACK_COUNTS = Object.freeze({
   "noto": [3729, 0],
   "openmoji": [4544, 0],
   "ph": [9072, 0],
+  "pixelarticons": [1036, 0],
+  "radix-icons": [332, 0],
   "simple-icons": [3466, 0],
   "skill-icons": [400, 0],
   "solar": [8706, 0],

@@ -47,8 +47,8 @@ export default function ColourSpaces() {
           gap.
         </p>
         <p>
-          The spaces that came later, CIELAB and Oklab in 2020, work the other way
-          round. They are built from measurements of what people report seeing.
+          The spaces that came later, CIELAB in 1976 and Oklab in 2020, work the
+          other way round. They are fitted to models of what people see.
           That is the whole difference. It is why a lightness in one is not a
           lightness in the other.
         </p>
@@ -100,8 +100,8 @@ export default function ColourSpaces() {
           Björn Ottosson published Oklab in December 2020. It is now in CSS Color
           4. <code>oklch()</code> is its polar form. It has an L for perceptual
           lightness, a C for chroma and an H for hue in degrees. The difference
-          from HSL is not the notation. L is fitted to how light a colour is
-          reported to look. Two colours at the same L look about equally light.
+          from HSL is not the notation. L is fitted to a model of how light a
+          colour looks. Two colours at the same L look about equally light.
           Moving L by a fixed amount changes the look by about the same amount,
           wherever you are on the wheel.
         </p>
@@ -180,10 +180,12 @@ H = 29.23   hue in degrees`}</Formula>
           {hexToOklch('#0000FF')[0].toFixed(1)}% lightness and pure green{' '}
           {hexToOklch('#00FF00')[1].toFixed(3)} at{' '}
           {hexToOklch('#00FF00')[0].toFixed(1)}%. Each hue peaks at its own
-          lightness, so the ceiling differs everywhere else. As a rule of thumb,
-          a colour below about 0.15 chroma sits inside the gamut at any hue. This
-          is a guide, not a computed limit. Above that, the only reliable check is
-          to paint the colour and read it back.
+          lightness, so the ceiling differs everywhere else. No chroma is safe at
+          every hue and every lightness, because the gamut narrows towards black
+          and white. At about 75% lightness, where it is widest, every hue fits up
+          to about 0.13 chroma. At 50% the shared limit is about 0.085. Above
+          those, the only reliable check is to convert the colour and see whether
+          it lands inside sRGB.
         </p>
       </section>
 

@@ -1,6 +1,6 @@
 // The Prompt Library (/discover/prompts) is parked: admins can open it, nobody
-// else can, and nothing public points at it. The Discover Inspiration row is
-// parked in the second block at the foot of this file.
+// else can, and nothing public points at it. The Community row, which is open,
+// is held in the second block at the foot of this file.
 //
 // Three things are held here, each from the visitor's side:
 //   1. a signed-out visitor who types or follows the URL ends on the homepage;
@@ -61,18 +61,15 @@ test.describe('the parked Prompt Library', () => {
   })
 })
 
-// The Discover "Inspiration" row is parked the same way, with one difference: it
-// has no page of its own. It linked to /community, which stays public, so there
-// is no route to gate and no noindex header to add. The row is flagged `soon` in
-// toolTree.js, which hides it from every public list and leaves it to admins
-// with a Soon badge. Held here from the visitor's side:
-//   1. the Discover menu names neither the row nor the Community column it sat
-//      alone in;
-//   2. /sitemap does not list it;
-//   3. /community is still a public page and still in sitemap.xml;
-//   4. an admin still sees the row, marked Soon.
-test.describe('the parked Inspiration row', () => {
-  test('the Discover menu has no Inspiration row and no empty Community column', async ({ page }) => {
+// The Discover Community row is the opposite case: it points at /community, a
+// public page, and the row is open. Held here so the Prompt Library's parking
+// above is shown not to have swept it up with it:
+//   1. the Discover menu lists Community under its Inspiration column;
+//   2. /sitemap lists it;
+//   3. /community is a public page and is in sitemap.xml;
+//   4. an admin sees the row too, with no Soon badge.
+test.describe('the open Community row', () => {
+  test('the Discover menu lists Community, with no Soon badge', async ({ page }) => {
     watch(page, 'a visitor opening the Discover menu')
     await go(page, '/discover')
     await page.getByRole('button', { name: 'Discover', exact: true }).click()
@@ -81,18 +78,19 @@ test.describe('the parked Inspiration row', () => {
     // POSITIVE CONTROL: the menu still has its other column and links.
     await expect(menu.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
     await expect(menu.locator('.pnav-col-label', { hasText: 'Browse' })).toHaveCount(1)
-    await expect(menu.getByRole('link', { name: /Inspiration/ })).toHaveCount(0)
-    await expect(menu.locator('[data-row-id="inspiration"]')).toHaveCount(0)
-    await expect(menu.locator('.pnav-col-label', { hasText: 'Community' })).toHaveCount(0)
+    const row = menu.locator('[data-row-id="inspiration"]')
+    await expect(row).toHaveCount(1)
+    await expect(row).toHaveAttribute('href', '/community')
+    await expect(row.locator('.soon-badge')).toHaveCount(0)
   })
 
-  test('/sitemap does not list Inspiration', async ({ page }) => {
+  test('/sitemap lists Community in the Discover column', async ({ page }) => {
     watch(page, 'a visitor on the visual sitemap')
     await go(page, '/sitemap')
     const discover = page.locator('[data-sitemap-section="discover"]')
     // POSITIVE CONTROL: the Discover column rendered with a live row in it.
     await expect(discover.locator('a:not(.pnav-reco-link)', { hasText: 'Palette Library' })).toBeVisible()
-    await expect(discover.getByText('Inspiration')).toHaveCount(0)
+    await expect(discover.locator('[data-route="/community"]')).toHaveCount(1)
   })
 
   test('/community stays public and in sitemap.xml', async ({ page, request }) => {
@@ -104,7 +102,7 @@ test.describe('the parked Inspiration row', () => {
     expect(await res.text()).toContain('/community')
   })
 
-  test('an admin still sees the row, marked Soon', async ({ page }) => {
+  test('an admin sees the row with no Soon badge', async ({ page }) => {
     watch(page, 'the site owner opening the Discover menu')
     await signIn(page, { admin: true })
     await go(page, '/discover')
@@ -112,6 +110,6 @@ test.describe('the parked Inspiration row', () => {
     const menu = page.getByRole('region', { name: 'Discover menu' })
     const row = menu.locator('[data-row-id="inspiration"]')
     await expect(row).toHaveCount(1)
-    await expect(row.locator('.soon-badge')).toHaveCount(1)
+    await expect(row.locator('.soon-badge')).toHaveCount(0)
   })
 })

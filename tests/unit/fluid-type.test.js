@@ -18,11 +18,15 @@ const parseClamp = (css) => {
   return { lo: +m[1], intercept: +m[2], slopeVw: +m[3], hi: +m[4] }
 }
 
-/** What a browser would compute for this clamp at a given viewport width. */
+/**
+ * What a browser would compute for this clamp at a given viewport width, in rem
+ * at the default 16px root. `Nvw` is N% of the viewport in px, so it is divided
+ * by 16 to add to the rem intercept.
+ */
 const resolve = (css, vw) => {
   const p = parseClamp(css)
   if (!p) return null
-  const preferred = p.intercept + (p.slopeVw / 100) * vw
+  const preferred = p.intercept + ((p.slopeVw / 100) * vw) / 16
   return Math.min(p.hi, Math.max(p.lo, preferred))
 }
 
@@ -37,6 +41,13 @@ test('THE CONTRACT: the clamp resolves to exactly the sizes claimed at each end'
     assert.ok(Math.abs(atMin - minPx) < 0.02, `${minPx}→${maxPx}: got ${atMin.toFixed(3)}px at the small end`)
     assert.ok(Math.abs(atMax - maxPx) < 0.02, `${minPx}→${maxPx}: got ${atMax.toFixed(3)}px at the large end`)
   }
+})
+
+test('the vw coefficient is worked out in px: 24px at 375 to 40px at 1440', () => {
+  // Hand-checked: 16px over 1065px of viewport is 0.015023px per px, and 1vw is
+  // 1% of the viewport, so the coefficient is 1.5023. The intercept is
+  // 24 - 0.015023 * 375 = 18.366px, or 1.1479rem.
+  assert.equal(fluidClamp(24, 40).css, 'clamp(1.5rem, 1.1479rem + 1.5023vw, 2.5rem)')
 })
 
 test('it is monotonic between the breakpoints — text never shrinks as the screen grows', () => {

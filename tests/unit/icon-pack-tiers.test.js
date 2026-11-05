@@ -127,6 +127,18 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   assert.equal(canSeePack('some-unlisted-set', 'paid'), true)
 })
 
+test('Fluent UI, Pixelarticons, Radix Icons and Bootstrap Icons are free-tier: an account opens them, a signed-out visitor does not', () => {
+  for (const pack of ['fluent', 'pixelarticons', 'radix-icons', 'bi']) {
+    assert.equal(tierOf(pack), 'free', `${pack} has a free official browser`)
+    assert.equal(canSeePack(pack, 'anon'), false, `${pack} needs an account`)
+    assert.equal(canSeePack(pack, 'free'), true)
+    assert.equal(canSeePack(pack, 'paid'), true)
+    assert.equal(ICON_PACK_TIERS[pack].group, undefined, `${pack} is an interface pack, not a brand, flag, emoji or colour set`)
+  }
+  // The signed-out sample is still the five, so adding free packs does not widen it.
+  assert.equal(Object.keys(ICON_PACK_TIERS).filter((p) => tierOf(p) === 'anon').length, 5)
+})
+
 test('viewerTier fails closed — only an explicit Pro is Pro, and an unresolved session is signed out', () => {
   assert.equal(viewerTier({ user: null, isPro: false }), 'anon')
   assert.equal(viewerTier({}), 'anon')

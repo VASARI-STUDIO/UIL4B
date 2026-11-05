@@ -71,6 +71,25 @@ export function buildQueueRecord({ kind, payload, user, name }) {
 }
 
 
+// What a submission says about where it stands. 'approved' and 'rejected' are a
+// reviewer's words; anything unknown reads as pending.
+export const QUEUE_STATUS_LABEL = Object.freeze({
+  pending: 'Pending review',
+  approved: 'Approved',
+  rejected: 'Not approved',
+})
+
+/**
+ * The tag for one of a person's own submissions. An entry the account does not
+ * hold (`synced` false) is one cache clear from gone, so it never claims a
+ * reviewer status it has not earned: it reads "Not sent", or "Sending…" while a
+ * publish is in flight.
+ */
+export function submissionStatusLabel({ status, synced = true, sending = false } = {}) {
+  if (!synced) return sending ? 'Sending…' : 'Not sent'
+  return Object.hasOwn(QUEUE_STATUS_LABEL, status) ? QUEUE_STATUS_LABEL[status] : QUEUE_STATUS_LABEL.pending
+}
+
 /**
  * Merge the server's copy of someone's submissions with this browser's local
  * queue, so the list is complete whichever side an entry came from.
