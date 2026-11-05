@@ -50,12 +50,17 @@ async function serveSample(page) {
 async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
+  const packMenu = page.getByRole('button', { name: 'Icon pack' })
   const behindFilters = await filters.isVisible()
+  // On a slow runner the sheet can take a while to draw its pack control: open Filters
+  // until the control is really there, rather than trusting aria-expanded alone.
   if (behindFilters) {
-    await filters.click()
-    await expect(filters).toHaveAttribute('aria-expanded', 'true')
+    await expect(async () => {
+      if (await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
+      await expect(packMenu).toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 20_000 })
   }
-  await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
+  await chooseMenuOption(page, packMenu, pack)
   if (behindFilters) {
     if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
