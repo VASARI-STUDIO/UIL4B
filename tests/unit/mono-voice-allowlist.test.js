@@ -50,7 +50,7 @@ const STYLES = path.join(SRC, 'styles')
 const REASONS = new Set(['hex', 'code', 'kbd', 'token', 'value', 'glyph', 'kit', 'ask', 'debt'])
 
 // The ceiling for 'debt' entries. Lower it when you delete one; never raise it.
-const DEBT_MAX = 14
+const DEBT_MAX = 13
 
 // Keyed by stylesheet path under src/styles, then selector.
 const ALLOWED = {
@@ -254,8 +254,6 @@ const ALLOWED = {
   'pages/tool-layout.css': {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
     ':is(.tl, .tl-sheet-layer) .tl-kbd': 'kbd',
-    // debt: TypeScale.jsx (the weight pills, ~line 736) still sets tl-pill--mono; that page is in another PR.
-    ':is(.tl, .tl-sheet-layer) .tl-pill--mono': 'debt',
   },
   'pages/type-scale.css': {
     '.tsc-page .tsc-row-name': 'token',
