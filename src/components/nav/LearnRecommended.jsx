@@ -6,7 +6,8 @@ import { recommendGuide } from './learnRecommendation'
 
 // The Learn pane's suggested guide: the same flat row as the Discover pane's
 // suggested gallery (it shares the pnav-reco classes), with the guide's glyph,
-// its short name and a line saying why it was picked. The pick follows the
+// its full title (the same name the list gives that guide) and a line saying why
+// it was picked. The pick follows the
 // visitor's recent tools (see learnRecommendation.js), so it changes as they work.
 
 export default function LearnRecommended({ path, onPick }) {
@@ -16,10 +17,10 @@ export default function LearnRecommended({ path, onPick }) {
   const { guide, fromTool } = pick
   return (
     <div className="pnav-reco" data-guide={guide.slug}>
-      <p className="pnav-reco-eyebrow">{fromTool ? `Since you used ${fromTool.label}` : 'A guide to start with'}</p>
+      <p className="pnav-reco-eyebrow">Since you used {fromTool.label}</p>
       <Link className="pnav-reco-link" to={guide.route} onClick={onPick} data-pnav-menuitem>
         <span className="pnav-reco-prev pnav-reco-prev--glyph" aria-hidden="true"><NavIcon id={LEARN_ARTICLE_ICONS[guide.slug] || 'principles'} /></span>
-        <span className="pnav-reco-name">{guide.navLabel}</span>
+        <span className="pnav-reco-name">{guide.title}</span>
         <svg className="pnav-reco-arrow" viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M2.5 6h7M6.5 3l3 3-3 3" />
         </svg>

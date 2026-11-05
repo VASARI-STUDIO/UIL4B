@@ -2,8 +2,9 @@
 // 262-mega-menu-polish.spec.js (same recent-tools storage key, same markup).
 //
 // What this pins:
-//   · 1440: with no activity the Learn pane suggests the default guide, "A guide
-//     to start with". The row is flat (no border) and sits once in the pane.
+//   · 1440: with no activity the Learn pane suggests nothing (every guide is in the
+//     list beside it). With activity the row is flat (no border), sits once in the
+//     pane, and names the guide by the same title the list uses.
 //   · 1440: the suggestion follows the recent tools in storage: its eyebrow, name
 //     and href change with colour, type and image histories.
 //   · 768: the target is at least 44px tall and the pane adds no sideways scroll.
@@ -15,8 +16,8 @@
 //   here fails (no .pnav-reco in the Learn menu).
 // MUTATION: change a slug in GUIDE_FOR_TOOL (learnRecommendation.js): the matching
 //   "follows recent tools" case fails on href.
-// MUTATION: change 'A guide to start with' in LearnRecommended.jsx: "no activity"
-//   fails.
+// MUTATION: give recommendGuide a default guide for an empty history: "no
+//   activity" fails.
 // MUTATION: set `.pnav-reco-link` min-height to 36px in global.css: "44px target"
 //   and the phone case fail.
 // MUTATION: remove the Learn branch from the phone sheet panel in PillNav.jsx: the
@@ -74,15 +75,20 @@ async function openLearn(page, size) {
 
 test.describe('Learn suggested guide', () => {
   for (const theme of THEMES) {
-    test(`with no activity it suggests the default guide, ${theme}`, async ({ browser }) => {
-      const { ctx, page } = await openPage(browser, DESKTOP, theme, '/discover')
+    test(`with no activity it suggests nothing; with activity it is one flat row, ${theme}`, async ({ browser }) => {
+      const quiet = await openPage(browser, DESKTOP, theme, '/discover')
+      await openLearn(quiet.page, DESKTOP)
+      await expect(quiet.page.locator('#pnav-mega .pnav-reco-link')).toHaveCount(0)
+      await quiet.ctx.close()
+      const { ctx, page } = await openPage(browser, DESKTOP, theme, '/discover', ['contrast'])
       await openLearn(page, DESKTOP)
       const reco = page.locator('#pnav-mega .pnav-reco')
       await expect(reco).toHaveCount(1)
       const link = reco.locator('a.pnav-reco-link')
       await expect(link).toHaveAttribute('href', '/learn/colour-contrast')
-      await expect(link).toContainText(guide('colour-contrast').navLabel)
-      await expect(reco.locator('.pnav-reco-eyebrow')).toHaveText('A guide to start with')
+      // One route, one name: the suggestion uses the title the list row shows.
+      await expect(link.locator('.pnav-reco-name')).toHaveText(guide('colour-contrast').title)
+      await expect(page.locator('#pnav-mega a.pnav-tool[href="/learn/colour-contrast"]')).toContainText(guide('colour-contrast').title)
       // A flat row on the pane: no border or fill of its own around the link.
       const border = await link.evaluate((el) => getComputedStyle(el).borderTopWidth)
       expect(border, 'the link row is not a bordered card').toBe('0px')
@@ -96,7 +102,7 @@ test.describe('Learn suggested guide', () => {
     { recent: ['alt-text', 'contrast'], slug: 'colour-contrast', since: 'Alt Text' },
     { recent: ['font-gallery', 'palette'], slug: 'typeface-metrics', since: 'Font Gallery' },
     { recent: ['type-scale'], slug: 'type-scales', since: 'Type Scale' },
-    { recent: ['file-converter', 'font-pair'], slug: 'colour-spaces', since: 'File Converter' },
+    { recent: ['ratio', 'file-converter', 'font-pair'], slug: 'font-loading', since: 'Font Pair' },
   ]
   for (const c of FOLLOWS) {
     test(`the suggestion follows recent tools: ${c.recent.join(', ')}`, async ({ browser }) => {
@@ -106,14 +112,14 @@ test.describe('Learn suggested guide', () => {
       await expect(reco.locator('.pnav-reco-eyebrow')).toHaveText(`Since you used ${c.since}`)
       const link = reco.locator('a.pnav-reco-link')
       await expect(link).toHaveAttribute('href', `/learn/${c.slug}`)
-      await expect(link.locator('.pnav-reco-name')).toHaveText(guide(c.slug).navLabel)
+      await expect(link.locator('.pnav-reco-name')).toHaveText(guide(c.slug).title)
       await shot(page, `learn-reco-${c.slug}-1440-light`)
       await ctx.close()
     })
   }
 
   test('its target is at least 44px and the pane adds no sideways scroll, 768', async ({ browser }) => {
-    const { ctx, page } = await openPage(browser, TABLET, 'light', '/discover')
+    const { ctx, page } = await openPage(browser, TABLET, 'light', '/discover', ['palette'])
     await openLearn(page, TABLET)
     const box = await page.locator('#pnav-mega a.pnav-reco-link').boundingBox()
     expect(box.height).toBeGreaterThanOrEqual(44)
@@ -134,16 +140,16 @@ test.describe('Learn suggested guide', () => {
   })
 
   test('the guide being read is not suggested again', async ({ browser }) => {
-    const { ctx, page } = await openPage(browser, DESKTOP, 'light', '/learn/brand-colour', ['palette'])
+    const { ctx, page } = await openPage(browser, DESKTOP, 'light', '/learn/brand-colour', ['palette', 'type-scale'])
     await openLearn(page, DESKTOP)
     const link = page.locator('#pnav-mega a.pnav-reco-link')
     await expect(link).toHaveCount(1)
-    expect(await link.getAttribute('href')).not.toBe('/learn/brand-colour')
+    await expect(link).toHaveAttribute('href', '/learn/type-scales')
     await ctx.close()
   })
 
   test('the keyboard reaches it before the Open Learn button', async ({ browser }) => {
-    const { ctx, page } = await openPage(browser, DESKTOP, 'light', '/discover')
+    const { ctx, page } = await openPage(browser, DESKTOP, 'light', '/discover', ['palette'])
     await openLearn(page, DESKTOP)
     const order = await page.evaluate(() => {
       const items = [...document.querySelectorAll('#pnav-mega [data-pnav-menuitem]')]
