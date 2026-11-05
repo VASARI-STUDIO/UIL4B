@@ -83,6 +83,25 @@ async function rectTrace(locator, action, ms = 700) {
   return sampler
 }
 
+// Fonts in and two frames painted, so a late font swap cannot move a bar mid-trace.
+const settle = (page) => page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))))
+
+// Whether the action started a transform transition on the element (or its pseudo).
+// The browser fires transitionrun whatever the frame rate, so a slow machine that
+// paints too few frames to sample still reports the transition.
+async function ranTransition(locator, pseudo, action) {
+  const handle = await locator.elementHandle()
+  await handle.evaluate((el, ps) => {
+    el.__ran = false
+    el.addEventListener('transitionrun', (e) => {
+      if (e.propertyName === 'transform' && (e.pseudoElement || '') === (ps || '')) el.__ran = true
+    })
+  }, pseudo)
+  await action()
+  await locator.page().waitForTimeout(400)
+  return handle.evaluate((el) => el.__ran)
+}
+
 const style = (locator, pseudo, props) => locator.evaluate((el, [ps, names]) => {
   const cs = getComputedStyle(el, ps || null)
   return Object.fromEntries(names.map((n) => [n, cs[n]]))
@@ -153,7 +172,12 @@ for (const c of BARS) {
         expect(parseFloat(rest.transitionDuration)).toBeGreaterThanOrEqual(0.15)
         expect(parseFloat(rest.transitionDuration)).toBeLessThanOrEqual(0.25)
 
-        const seen = await traceAround(bar, '::after', () => target.click())
+        await settle(page)
+        let ran = false
+        let seen = []
+        await ranTransition(bar, '::after', async () => {
+          seen = await traceAround(bar, '::after', () => target.click())
+        }).then((r) => { ran = r })
         await expect(target).toHaveAttribute('aria-selected', 'true')
         const end = c.expect(await tabBox(target))
         const first = seen[0]
@@ -163,7 +187,8 @@ for (const c of BARS) {
         expect(near(last.y, end.y), `the bar sits at y ${last.y}, not on the tab's foot (${end.y})`).toBe(true)
         expect(Math.abs(end.x - first.x), 'the bar did not move').toBeGreaterThan(8)
         const between = seen.filter((p) => !near(p.x, first.x, 1) && !near(p.x, last.x, 1))
-        expect(between.length, 'the bar jumped instead of sliding').toBeGreaterThan(0)
+        // A frame between the tabs, or (on a machine too slow to paint one) the transition itself.
+        expect(between.length > 0 || ran, 'the bar jumped instead of sliding').toBe(true)
         // The tab's own underline is clear while the bar is drawn, so the two are never both on.
         const own = await style(target, null, ['borderBottomColor'])
         if (c.id === 'converter-tabs') expect(own.borderBottomColor, 'the tab paints a second underline under the bar').toBe('rgba(0, 0, 0, 0)')
@@ -182,6 +207,7 @@ for (const c of BARS) {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       const { bar, target } = await c.open(page, width)
       await expect(bar).toHaveAttribute('data-slide', 'ready')
+      await settle(page)
       const seen = await traceAround(bar, '::after', () => target.click())
       await expect(target).toHaveAttribute('aria-selected', 'true')
       const first = seen[0]
@@ -198,6 +224,7 @@ for (const c of BARS) {
       const { bar, target } = await c.open(page, width)
       await expect(bar).toHaveAttribute('data-slide', 'ready')
       await reduceInApp(page)
+      await settle(page)
       const seen = await traceAround(bar, '::after', () => target.click())
       await expect(target).toHaveAttribute('aria-selected', 'true')
       const first = seen[0]
@@ -234,12 +261,15 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
       expect(parseFloat(rest.transitionDuration)).toBeGreaterThanOrEqual(0.1)
       expect(parseFloat(rest.transitionDuration)).toBeLessThanOrEqual(0.25)
 
-      const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
+      let seen = []
+      const ran = await ranTransition(summary, '::after', async () => {
+        seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
+      })
       await expect(page.locator('.fpr-delivery')).toHaveAttribute('open', '')
       const last = seen.at(-1)
       // rotate(90deg): a = 0, b = 1.
       expect(near(last.a, 0, 0.01) && near(last.b, 1, 0.01), `the open caret is not a quarter turn (a ${last.a}, b ${last.b})`).toBe(true)
-      expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length, 'the caret jumped instead of turning').toBeGreaterThan(0)
+      expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length > 0 || ran, 'the caret jumped instead of turning').toBe(true)
 
       // And back.
       await toggle(page, summary)
