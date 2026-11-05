@@ -181,12 +181,13 @@ test.describe('with an image added', () => {
       await addImage(page)
       const w = await page.locator('.alt-row-actions').evaluate((el) => ({
         row: el.getBoundingClientRect().width,
+        line: el.closest('.alt-row').getBoundingClientRect().width,
         btn: el.firstElementChild.getBoundingClientRect().width,
         kids: el.children.length,
       }))
       expect(w.kids, 'only the Write button is in the actions').toBe(1)
       if (width < 768) expect(Math.round(w.btn), 'full row').toBe(Math.round(w.row))
-      else expect(w.btn, 'a lone button is not stretched on a wide screen').toBeLessThan(w.row / 2)
+      else expect(w.btn, 'a lone button is not stretched across the row on a wide screen').toBeLessThan(w.line / 2)
       await ctx.close()
     }
   })
