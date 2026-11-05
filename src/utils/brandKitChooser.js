@@ -139,7 +139,7 @@ export function continueCopy({ status, name, done, when, signedIn }) {
 export function startNewMeta({ status, name, slotWhen = null }) {
   if (!atRisk(status)) return status === 'saved' ? `${name} stays in your projects.` : ''
   return slotWhen
-    ? `This one replaces the unsaved brand kit from ${slotWhen} in Your workspace.`
+    ? `This one moves to Your workspace too, beside the unsaved brand kit from ${slotWhen}.`
     : 'This one moves to Your workspace as an unsaved brand kit.'
 }
 

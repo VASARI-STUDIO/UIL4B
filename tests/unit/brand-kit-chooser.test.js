@@ -90,7 +90,7 @@ test('copy: whole strings for each row', () => {
   assert.match(continueCopy({ status: 'changed', name: 'Acme', done: 4, when }).meta, /^Changed since you last saved/)
   assert.equal(startNewMeta({ status: 'saved', name: 'A' }), 'A stays in your projects.')
   assert.equal(startNewMeta({ status: 'unsaved' }), 'This one moves to Your workspace as an unsaved brand kit.')
-  assert.match(startNewMeta({ status: 'unsaved', slotWhen: '4 Nov' }), /replaces the unsaved brand kit from 4 Nov/)
+  assert.match(startNewMeta({ status: 'unsaved', slotWhen: '4 Nov' }), /beside the unsaved brand kit from 4 Nov/)
 })
 
 test('editKey: the board restating a kit it opened is not an edit', () => {

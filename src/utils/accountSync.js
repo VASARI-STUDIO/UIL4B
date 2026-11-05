@@ -113,7 +113,7 @@ export const ACCOUNT_KEY_NAMES = Object.freeze(ACCOUNT_KEYS.map((k) => k.key))
  * must not outlive the person they describe. Never pushed by this module;
  * cleared when the cache changes hands.
  */
-export const ACCOUNT_MIRROR_KEYS = Object.freeze(['vs-onboarded', 'vs-previous-design'])
+export const ACCOUNT_MIRROR_KEYS = Object.freeze(['vs-onboarded', 'vs-previous-design', 'vs-previous-designs'])
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE INVENTORY — every storage key in src/, and where it belongs.
@@ -157,6 +157,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-profile-cache': { scope: 'account-other', why: 'Cache of users/{uid}, which AuthContext owns; keyed by uid' },
   'vs-onboarded': { scope: 'account-mirror', why: 'Mirror of profile.onboarding.completedAt' },
   'vs-previous-design': { scope: 'account-mirror', why: 'Unsaved work put aside on this browser; cleared at sign-out and switch so the next person never sees it' },
+  'vs-previous-designs': { scope: 'account-mirror', why: 'Older unsaved work waiting behind the one put aside; cleared at sign-out and switch with it' },
   'vs-accounts': { scope: 'device', why: 'Accounts remembered on THIS device for the switcher' },
   'vs-google-returning': { scope: 'device', why: 'Has this browser used Google sign-in (One Tap hint)' },
   'vs-session': { scope: 'device', why: 'Synchronous "was signed in" hint for first paint' },
