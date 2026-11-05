@@ -73,8 +73,10 @@ for (const width of [390, 1440]) {
       await expect(link).toHaveAttribute('href', '/plans')
       expect((await link.boundingBox()).height, 'a 44px target').toBeGreaterThanOrEqual(44)
 
-      const cols = await page.locator('.ig').evaluate((g) => getComputedStyle(g).gridTemplateColumns.split(' ').length)
-      await expect(b.locator('.ig-end-cell')).toHaveCount(cols * 2)
+      // As many stand-ins as the matches counted, never two full rows for three.
+      await expect(b.locator('.ig-end-cell')).toHaveCount(3)
+      // The whole band is announced, count and term included.
+      await expect(b.getByRole('status')).toContainText('3 icons match “apple” in Pro sets')
       await page.screenshot({ path: `.claude/scratch/conv1/search-pro-only-${width}.png` })
 
       expectNoGlyphFor(urls, PRO_PACKS)

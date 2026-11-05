@@ -203,11 +203,11 @@ test('a count that hit the limit says "More than"', () => {
 })
 
 test('the body names up to three sets and counts the rest', () => {
-  assert.equal(body(['Phosphor'], false), 'In Phosphor.')
-  assert.equal(body(['Phosphor', 'Fluent'], false), 'In Phosphor and Fluent.')
-  assert.equal(body(['Phosphor', 'Fluent', 'Material Symbols'], false), 'In Phosphor, Fluent and Material Symbols.')
-  assert.equal(body(['A', 'B', 'C', 'D'], false), 'In A, B, C and 1 more set.')
-  assert.equal(body(['A', 'B', 'C', 'D', 'E'], false), 'In A, B, C and 2 more sets.')
+  assert.equal(body(['Phosphor'], false), 'They are in Phosphor.')
+  assert.equal(body(['Phosphor', 'Fluent'], false), 'They are in Phosphor and Fluent.')
+  assert.equal(body(['Phosphor', 'Fluent', 'Material Symbols'], false), 'They are in Phosphor, Fluent and Material Symbols.')
+  assert.equal(body(['A', 'B', 'C', 'D'], false), 'They are in A, B, C and 1 more set.')
+  assert.equal(body(['A', 'B', 'C', 'D', 'E'], false), 'They are in A, B, C and 2 more sets.')
 })
 
 test('with nothing in the viewer\'s own sets the body says so', () => {
@@ -215,7 +215,7 @@ test('with nothing in the viewer\'s own sets the body says so', () => {
 })
 
 test('the signed-out band takes the count as two whole sentences', () => {
-  assert.equal(sentence(3, false, 'arrow', 'paid', ['A', 'B']), '3 more icons match “arrow” in Pro sets. In A and B.')
+  assert.equal(sentence(3, false, 'arrow', 'paid', ['A', 'B']), '3 more icons match “arrow” in Pro sets. They are in A and B.')
 })
 
 test('the action is the one way in: Pro, or a login', () => {

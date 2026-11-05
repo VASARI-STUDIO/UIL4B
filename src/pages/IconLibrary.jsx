@@ -3153,9 +3153,11 @@ function IconEndBand({ kind, heading, body, names, action, onAction, to, seconda
     <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
       {tease}
       <div className="ig-end-band">
-        <div className="ig-end-copy">
+        {/* A search band announces its heading too: the count and the term are
+            in it, and the body alone ("They are in …") says nothing. */}
+        <div className="ig-end-copy" role={kind === 'search' ? 'status' : undefined}>
           <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
-          <p className="ig-end-p" role={kind === 'anon' || kind === 'search' ? 'status' : undefined}>{body}</p>
+          <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
           {names && <p className="ig-end-sets">{names}</p>}
         </div>
         <div className="ig-end-cta">
@@ -4646,10 +4648,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     return pickTeaseIcons({
       icons: window.icons || [],
       shownNames: icons.slice(0, visible).map((i) => i.name),
-      count: teaseCellCount(teaseCols),
+      // A search band draws no more stand-ins than the matches it counts, so
+      // "3 icons match" sits over three faded shapes, not two full rows.
+      count: teaseBand === 'empty' || teaseBand === 'end'
+        ? Math.min(teaseCellCount(teaseCols), searchTease?.total || 0)
+        : teaseCellCount(teaseCols),
       canSee,
     })
-  }, [wantsTease, icons, visible, teaseCols, canSee])
+  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
@@ -5249,6 +5255,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 keystroke, not an error to interrupt for. No new sentence — the
                 two below are the ones already on screen. The icon is decorated
                 and now says so; the emoji copy of this block already did. */}
+            {/* Quiet while the count of matches in other sets is on its way, so
+                "No icons match" is never shown a moment before the band. */}
+            {teasePending && source === 'search' && !loading && icons.length === 0 && (
+              <p className="pl-empty" role="status">Checking the other sets…</p>
+            )}
             {searchEmpty && teaseBand !== 'empty' && (
               <div className="pl-empty" role="status" aria-live="polite">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

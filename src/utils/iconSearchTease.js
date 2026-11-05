@@ -180,7 +180,7 @@ export const SEARCH_TEASE_COPY = {
       : named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}` : named[0]
     return empty
       ? `Nothing matches in the sets you can open. The matches are in ${list}.`
-      : `In ${list}.`
+      : `They are in ${list}.`
   },
   // The same two sentences as one, for the signed-out band that is already on screen.
   sentence: (count, capped, query, where, labels) => (
