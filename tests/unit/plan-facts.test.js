@@ -63,14 +63,15 @@ test('the lines are derived from what the product enforces', () => {
   assert.equal(FREE_EXCLUSION, 'Small mark on exported files')
 })
 
-test('Pro has six ticks, in the order the card prints them, and the checkout reads the same array', () => {
-  assert.equal(PRO_POINTS.length, 6)
+test('Pro has seven ticks, in the order the card prints them, and the checkout reads the same array', () => {
+  assert.equal(PRO_POINTS.length, 7)
   assert.match(PRO_POINTS[0], new RegExp(`^${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month$`))
-  assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing$/)
+  assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing, contrast checks and every preview scene$/)
   assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
-  assert.match(PRO_POINTS[3], /icons, at any size$/)
+  assert.match(PRO_POINTS[3], /icons, in any size and line style$/)
   assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
-  assert.match(PRO_POINTS[5], /, with no UIL4B line on anything$/)
+  assert.equal(PRO_POINTS[5], 'Gradient tints and guided Random, button quick edits and UI system editing')
+  assert.match(PRO_POINTS[6], /, with no UIL4B line on anything$/)
   // Checkout builds its feature list straight from PRO_POINTS, so the card, the
   // modal, Settings and the checkout summary cannot differ.
   assert.match(code(SURFACES.checkout), /const FEATURES = PRO_POINTS\b/)
