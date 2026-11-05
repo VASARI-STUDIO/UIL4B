@@ -13,7 +13,10 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useExportDesign from '../hooks/useExportDesign'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { BRAND_KIT_STEPS, guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { chooserDecision, workingStatus } from '../utils/brandKitChooser'
+import { SESSION_DONE, SESSION_ON, markSession, readEditedAt, readSession } from '../utils/kitSession'
+import { hasPendingSave } from '../utils/pendingSave'
 import { getRecentIcons } from '../utils/recentIcons'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -334,8 +337,28 @@ function AppHeader() {
   })
   const launchBrandKit = () => {
     closeAll()
+    // Coming back to a kit after a gap asks first (the chooser on step one), even
+    // when the walkthrough is already running and would resume.
+    const chooser = chooserDecision({
+      status: workingStatus(design, projects),
+      arrival: 'brand-kit',
+      flagActive: isGuideActive(),
+      editedAt: readEditedAt(),
+      session: readSession(),
+      pendingSave: hasPendingSave(),
+    })
+    // A kit that is not asked about this time is the answer for this tab.
+    if (chooser.eligible && !chooser.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
     startGuide()
-    navigate(brandKitEntry.path, { state: brandKitEntry.resume ? null : { openBrandKitCard: true } })
+    const toFirstStep = chooser.show || !brandKitEntry.resume
+    const target = chooser.show ? BRAND_KIT_STEPS[0].path : brandKitEntry.path
+    // Only the first step reads the arrival marker.
+    const arrives = target === BRAND_KIT_STEPS[0].path
+    navigate(target, {
+      state: toFirstStep || arrives
+        ? { ...(arrives ? { brandKitArrival: true } : null), ...(toFirstStep ? { openBrandKitCard: true } : null) }
+        : null,
+    })
   }
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
