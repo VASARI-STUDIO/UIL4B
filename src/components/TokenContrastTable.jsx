@@ -93,7 +93,7 @@ export default function TokenContrastTable() {
                 <th scope="row">{r.label}</th>
                 <td data-label="Colours">
                   <span className="lart-swatch" style={{ background: r.bg, color: r.fg }} aria-hidden="true">Ag</span>
-                  <span className="lart-hex">{r.fg.toUpperCase()} on {r.bg.toUpperCase()}</span>
+                  <span className="lart-pair"><span className="lart-hex">{r.fg.toUpperCase()}</span> on <span className="lart-hex">{r.bg.toUpperCase()}</span></span>
                 </td>
                 <td data-label="Ratio" data-num="true">{r.ratio.toFixed(2)}:1</td>
                 <td data-label="AA">{verdict(r.ratio, 4.5)}</td>

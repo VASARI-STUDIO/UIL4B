@@ -302,7 +302,6 @@ a.crd-row-link .crd-row-name {
   display: flex;
   justify-content: space-between;
   gap: var(--s-3);
-  font-family: var(--mono);
   font-size: max(12px, .75rem);
   color: var(--t2);
   min-width: 0;

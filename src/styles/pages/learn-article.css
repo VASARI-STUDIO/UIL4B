@@ -269,6 +269,8 @@
 .lart .lart-swatch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:var(--radius-xs);border:1px solid var(--border);font-size:12px;font-weight:600;margin-right:10px;vertical-align:middle}
 .lart .lart-swatch--wide{width:56px}
 .lart .lart-hex{font-family:var(--mono);font-size:12px;color:var(--t2);white-space:nowrap}
+/* A row label or a "hex on hex" pair: words in the UI face, each hex inside stays a value. */
+.lart .lart-rowname,.lart .lart-pair{font-size:12px;color:var(--t2);white-space:nowrap}
 /* A rendered specimen standing in the row label, beside the numbers measured
    from it — the Readymag font picker's specimen-then-name row, where the "Ag"
    is what you compare and the family name only tells you what you compared.

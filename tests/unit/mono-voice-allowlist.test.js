@@ -135,7 +135,6 @@ const ALLOWED = {
     '.crd-foot code': 'code',
     '.crd-more summary code': 'code',
     '.crd-row--pkg .crd-row-name': 'token',
-    '.crd-scope li': 'token',
   },
   'pages/export-dialog.css': {
     '.xd-man-n': 'token',
@@ -249,7 +248,7 @@ const ALLOWED = {
   'pages/tint.css': {
     '.tt .tt-hex-input': 'hex',
     '.tt .tt-note-hex': 'hex',
-    '.tt .tt-tip-head': 'hex',
+    '.tt .tt-tip-hex': 'hex',
   },
   'pages/tool-layout.css': {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
