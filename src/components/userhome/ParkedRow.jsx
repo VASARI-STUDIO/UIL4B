@@ -36,7 +36,10 @@ export default function ParkedRow() {
   // account's own plan has arrived, so the cap is checked against the right plan.
   const pendingRef = useRef(false)
 
-  const name = parked?.design?.identity?.name?.trim() || ''
+  // The kit may have come straight from the account (a first sign-in), so its shape is
+  // not taken on trust: a name that is not text and colours that are not a list read as none.
+  const rawName = parked?.design?.identity?.name
+  const name = typeof rawName === 'string' ? rawName.trim() : ''
 
   const saveParked = useCallback(() => {
     if (!parked) { setSaving(false); return }
@@ -60,7 +63,9 @@ export default function ParkedRow() {
   if (!parked?.design) return null
 
   const design = parked.design
-  const colours = partsPresent(withDefaults(design)).palette ? design.palette?.colors || [] : []
+  const colours = Array.isArray(design.palette?.colors) && partsPresent(withDefaults(design)).palette
+    ? design.palette.colors.filter((c) => typeof c === 'string')
+    : []
 
   const onContinue = () => {
     const kept = continueParked()

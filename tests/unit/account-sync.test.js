@@ -145,7 +145,7 @@ test('BIND: a draft that wins over different account work hands that work back t
     remote: { data: { 'vs-current-design': accountDesign, _updatedAt: 10 }, library: null },
   })
   assert.equal(r.apply['vs-current-design'], undefined, 'the draft on screen stays')
-  assert.deepEqual(r.setAside, [{ key: 'vs-current-design', value: accountDesign }], 'and the work the account held is handed back')
+  assert.deepEqual(r.setAside, [{ key: 'vs-current-design', value: accountDesign, stamp: 10 }], 'and the work the account held is handed back')
 })
 
 test('BIND: nothing is set aside when the account held only the default, or the same work', () => {
@@ -295,6 +295,16 @@ test('sign-out and a switch clear work put aside on this browser', () => {
   clearMirrors(t)
   assert.equal(t.has('vs-previous-design'), false, 'an account switch drops it too')
   assert.equal(t.has('vs-previous-designs'), false, 'and the kits waiting behind it')
+})
+
+test('a refused sign-out still clears work put aside on this browser, which no account is owed', () => {
+  const parked = JSON.stringify({ design: { palette: { colors: ['#123456'] } }, parkedAt: 1 })
+  const s = store({ 'vs-t': 'dark', 'vs-previous-design': parked, 'vs-previous-designs': `[${parked}]`, 'vs-onboarded': '1' })
+  const meta = { ...emptyMeta(), owner: 'A', stamps: { 'vs-t': 9 }, pushed: { 'vs-t': 5 } }
+  assert.equal(releaseCache(s, meta).released, false)
+  assert.equal(s.has('vs-t'), true, 'the unsent change stays for the same account')
+  assert.equal(s.has('vs-previous-design'), false, 'the next person never sees the put-aside kit')
+  assert.equal(s.has('vs-previous-designs'), false)
 })
 
 test('sign-out keeps the cache while a change has not reached the account', () => {

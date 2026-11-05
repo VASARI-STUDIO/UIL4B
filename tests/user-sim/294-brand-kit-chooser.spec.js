@@ -369,6 +369,19 @@ test.describe('The brand kit chooser', () => {
     await expect(page.locator('.uh-parked')).toContainText('Unsaved brand kit')
   })
 
+  test('T24 a parked kit of the wrong shape (from an account document) still shows a row that can be discarded', async ({ page }) => {
+    watch(page, 'a designer whose put-aside kit came from an old client')
+    await signIn(page, { plan: 'free', projects: 0 })
+    await page.addInitScript((slot) => {
+      try { if (!sessionStorage.getItem('__t24')) { sessionStorage.setItem('__t24', '1'); localStorage.setItem('vs-previous-design', JSON.stringify(slot)) } } catch { /* blocked */ }
+    }, { design: { identity: { name: 5 }, palette: { colors: 'abc' } }, parkedAt: Date.now() - HOUR })
+    await go(page, '/projects')
+    const row = page.locator('.uh-parked')
+    await expect(row).toContainText('Unsaved brand kit')
+    await row.getByRole('button', { name: 'Discard' }).click()
+    await expect(row).toHaveCount(0)
+  })
+
   test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {
     watch(page, 'a designer finding their put-aside kit on the workspace')
     await signIn(page, { plan: 'free', projects: 0 })

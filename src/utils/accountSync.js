@@ -484,7 +484,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
       if (spec.firstBind === 'account') { apply[key] = r; stamps[key] = rs; continue }
       if (spec.firstBind === 'local') {
         // The account held different work of its own: hand it back to be put aside.
-        if (spec.setAside && !isUntouched(key, r)) setAside.push({ key, value: r })
+        if (spec.setAside && !isUntouched(key, r)) setAside.push({ key, value: r, stamp: rs })
         stamps[key] = now; push = true; continue
       }
       // union
@@ -563,13 +563,21 @@ export function applyToStorage(storage, meta, apply) {
  * from defaults and their own sign-in migrates THEIR work, not the last
  * person's.
  *
- * Refused — returns false and changes nothing — while any key has a change the
- * account has not received. After sign-out it can no longer be sent (the rules
+ * Refused — returns false and keeps the account's keys — while any key has a
+ * change the account has not received (the put-aside work still goes, see below). After sign-out it can no longer be sent (the rules
  * need the owner's token), so deleting it would lose it; kept, it goes up the
  * next time that same account signs in here.
  */
 export function releaseCache(storage, meta) {
-  if (pendingKeys(meta).length) return { released: false, keys: [] }
+  if (pendingKeys(meta).length) {
+    // Work put aside on this browser is never synced, so it is owed to no account;
+    // it goes even when the rest has to stay, so the next person never sees it.
+    for (const key of ACCOUNT_MIRROR_KEYS) {
+      if (key === 'vs-onboarded') continue
+      try { storage?.removeItem(key) } catch { /* nothing to do */ }
+    }
+    return { released: false, keys: [] }
+  }
   const keys = [...ACCOUNT_KEY_NAMES, ...ACCOUNT_MIRROR_KEYS]
   for (const key of keys) {
     try { storage?.removeItem(key) } catch { /* nothing to do */ }
