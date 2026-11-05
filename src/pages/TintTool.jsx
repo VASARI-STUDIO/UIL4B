@@ -125,7 +125,7 @@ function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, s
           <span className="tt-tip-top">
             {/* The tint's own chip, so a card parked away from its note is still tied to it. */}
             <span className="tt-tip-sw" style={{ '--tt-c': step.hex }} aria-hidden="true" />
-            <span className="tt-tip-head">{step.label} · {step.hex}</span>
+            <span className="tt-tip-head">{step.label} · <span className="tt-tip-hex">{step.hex}</span></span>
           </span>
           {notes.map((n) => (
             <span key={n.key} className="tt-tip-row" data-pass={n.pass ? 'true' : 'false'} data-grade={n.grade}>

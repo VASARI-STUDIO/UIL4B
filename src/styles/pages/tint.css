@@ -239,7 +239,8 @@
 .tt .tt-tip-top { display: flex; align-items: center; gap: 8px; }
 /* The tint's own chip: the note's swatch, same size and radius. */
 .tt .tt-tip-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
-.tt .tt-tip-head { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.tt .tt-tip-head { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-ink); }
+.tt .tt-tip-hex { font-family: var(--mono); }
 .tt .tt-tip-row {
   display: grid;
   grid-template-columns: 14px auto 1fr;

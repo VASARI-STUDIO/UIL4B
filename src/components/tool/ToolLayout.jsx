@@ -584,12 +584,11 @@ export function ToolSection({ label, labelId, heading = false, aside, className,
 // ── ToolPills ─────────────────────────────────────────────────────────────
 // The drawn chip group (Linear/Radial/Conic, OKLCH/sRGB, 9/11/13 steps).
 // Buttons with aria-pressed; the group is named by `label` or `labelledBy`.
-// mono:  the 10.5px Geist Mono variant (.tl-pill--mono), for pills whose text is a code value only. Nothing in this file passes it, but the Type Scale weight pills (TypeScale.jsx, 300..700) still carry the class by hand. The class is tagged debt in tests/unit/mono-voice-allowlist.test.js until that page drops it.
 // shape: 'pill' (999px, default) | 'block' (r12, stretched — Text/Background).
 // Options may carry `ariaLabel` (the button's accessible name) and `title`
 // (hover text); `describedBy` points the group at a visible description.
 // The selected pill slides to the one chosen (useSlideIndicator; tool-layout.css).
-export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, mono = false, shape = 'pill', className, disabledValues }) {
+export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, shape = 'pill', className, disabledValues }) {
   const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
   const ref = useRef(null)
   useSlideIndicator(ref, value)
@@ -606,7 +605,7 @@ export function ToolPills({ options, value, onChange, label, labelledBy, describ
         <button
           key={String(o.value)}
           type="button"
-          className={cx('tl-pill', mono && 'tl-pill--mono', o.value === value && 'is-on')}
+          className={cx('tl-pill', o.value === value && 'is-on')}
           aria-pressed={o.value === value}
           aria-label={o.ariaLabel}
           title={o.title}

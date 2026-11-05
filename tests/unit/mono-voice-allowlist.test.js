@@ -50,7 +50,7 @@ const STYLES = path.join(SRC, 'styles')
 const REASONS = new Set(['hex', 'code', 'kbd', 'token', 'value', 'glyph', 'kit', 'ask', 'debt'])
 
 // The ceiling for 'debt' entries. Lower it when you delete one; never raise it.
-const DEBT_MAX = 26
+const DEBT_MAX = 13
 
 // Keyed by stylesheet path under src/styles, then selector.
 const ALLOWED = {
@@ -60,7 +60,6 @@ const ALLOWED = {
     '.adm-lock .mono': 'code',
     '.adm-stripe-env': 'token',
     '.adm-stripe-input input': 'code',
-    '.adm-tab-badge': 'debt',
   },
   'deferred/colour.css': {
     '.plb-picker-hex': 'hex',
@@ -95,7 +94,6 @@ const ALLOWED = {
     '.cpk-hex': 'hex',
     '.fnote-todo-where code': 'code',
     '.hcmd-kbd kbd': 'kbd',
-    '.ic span:not(:where(.ig-chip))': 'debt',
     '.pgal-hex': 'hex',
     '.pl-card-preview-text': 'ask',
     '.pnav-prev-chip': 'kit',
@@ -115,8 +113,7 @@ const ALLOWED = {
   },
   'pages/auth-page.css': {
     '.aw-code': 'code',
-    '.aw-meta': 'debt',
-    '.aw-step': 'debt',
+    '.aw-step': 'hex',
   },
   'pages/brand-starter.css': {
     '.bs-page .bs-ladder-px': 'value',
@@ -138,7 +135,6 @@ const ALLOWED = {
     '.crd-foot code': 'code',
     '.crd-more summary code': 'code',
     '.crd-row--pkg .crd-row-name': 'token',
-    '.crd-scope li': 'debt',
   },
   'pages/export-dialog.css': {
     '.xd-man-n': 'token',
@@ -158,10 +154,8 @@ const ALLOWED = {
     '.grd .grd-hex': 'hex',
     '.grd .grd-stop-hex': 'hex',
     '.grd-tintmenu-hex': 'hex',
-    '.grd-tintmenu-label': 'debt',
   },
   'pages/help-router.css': {
-    '.hlr-ladder span': 'debt',
     '.hlr-seed-hex': 'hex',
   },
   'pages/help.css': {
@@ -182,7 +176,6 @@ const ALLOWED = {
     '.lart .lart-face-role code': 'code',
     '.lart .lart-formula code': 'code',
     '.lart .lart-hex': 'hex',
-    '.lart .lart-ladder-name': 'debt',
     '.lart .lart-ladder-nums': 'value',
     '.lart .lart-prose code': 'code',
     '.lart .lart-table-cap code': 'code',
@@ -212,7 +205,6 @@ const ALLOWED = {
     '.prn-ty-px': 'value',
   },
   'pages/projects.css': {
-    '.uh .uh-export-type': 'debt',
   },
   'pages/semantic-color.css': {
     '.stc .stc-fam-token': 'token',
@@ -220,7 +212,6 @@ const ALLOWED = {
     '.stc .stc-lead code': 'code',
   },
   'pages/seo-inspector.css': {
-    '.seo-page .seo-social-img span': 'debt',
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
   },
@@ -247,7 +238,7 @@ const ALLOWED = {
   },
   'pages/spectrum.css': {
     '.sp-ex-filebar b': 'token',
-    '.sp-ico-peek': 'debt',
+    '.sp-ico-peek': 'code',
     '.sp-search .hcmd-kbd kbd': 'kbd',
     '.sp-search .hcmd-prompt::after': 'glyph',
   },
@@ -257,13 +248,11 @@ const ALLOWED = {
   'pages/tint.css': {
     '.tt .tt-hex-input': 'hex',
     '.tt .tt-note-hex': 'hex',
-    '.tt .tt-tip-head': 'debt',
+    '.tt .tt-tip-hex': 'hex',
   },
   'pages/tool-layout.css': {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
     ':is(.tl, .tl-sheet-layer) .tl-kbd': 'kbd',
-    // debt: TypeScale.jsx (the weight pills, ~line 736) still sets tl-pill--mono; that page is in another PR.
-    ':is(.tl, .tl-sheet-layer) .tl-pill--mono': 'debt',
   },
   'pages/type-scale.css': {
     '.tsc-page .tsc-row-name': 'token',

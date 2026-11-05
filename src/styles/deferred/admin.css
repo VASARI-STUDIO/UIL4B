@@ -498,7 +498,6 @@
   letter-spacing: 0;
 }
 
-.adm-tab-badge,
 .adm-stripe-env {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
@@ -852,6 +851,8 @@
    accent because it is the one place on the bar that is genuinely saying
    "there is work here", which is a different statement from "you are here". */
 .adm-tab-badge {
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
   font-size: var(--fs-caption);
   font-weight: 600;
   padding: 1px 6px;
