@@ -2330,7 +2330,19 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </>
               )}
               <div className="icust-stage-foot">
-                <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
+                {/* A contrast note takes the caption's place, so it holds no room of its own. */}
+                {contrastNote ? (
+                  <p className="icust-stage-cap icust-stage-cap--note">
+                    Hard to see on this background.
+                    {contrastNote.suggest && (
+                      <button type="button" className="icust-ground-fix" onClick={() => fixGround(contrastNote.suggest)}>
+                        Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                      </button>
+                    )}
+                  </p>
+                ) : (
+                  <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
+                )}
                 <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
                   {GROUND_OPTS.map(g => (
                     <button
@@ -2348,18 +2360,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               </div>
             </div>
-            {/* Always in the DOM so a note that arrives is announced. */}
+            {/* Always in the DOM so a note that arrives is announced. Visually hidden: the note people
+                see is in the stage's caption slot, and this carries the full sentence for a screen reader. */}
             <div className="icust-ground-note" aria-live="polite">
-              {contrastNote && (
-                <p>
-                  {choiceName} is hard to see on this background.
-                  {contrastNote.suggest && (
-                    <button type="button" className="icust-ground-fix" onClick={() => fixGround(contrastNote.suggest)}>
-                      Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
-                    </button>
-                  )}
-                </p>
-              )}
+              {contrastNote && <p>{choiceName} is hard to see on this background.</p>}
             </div>
 
               <div className="icust-size" ref={railRef}>

@@ -97,10 +97,15 @@ test('the Page swatch is half ink and half the page ground, in flat colour', () 
   for (const rule of css.match(/\.icust-ground-sw--page[^{]*\{[^}]*\}/g)) assert.doesNotMatch(rule, /gradient\(/)
 })
 
-test('the note and the help line hold their lines, so a choice never moves the controls', () => {
+test('the note takes the stage caption slot and holds no room, and the help line holds its lines, so a choice never moves the controls', () => {
   const css = flatCss(ICON_CSS)
-  assert.match(css.match(/\.iel-page \.icust-ground-note ?\{[^}]*\}/)[0], /min-height: ?calc\(8px \+ 1em \* 1\.4\)/)
-  assert.match(css, /@media ?\(max-width: ?560px\) ?\{ ?\.iel-page \.icust-ground-note ?\{[^}]*min-height: ?calc\(8px \+ 2em \* 1\.4\)/)
+  const jsx = stripJs(read('src/pages/IconLibrary.jsx'))
+  // The visible note replaces the caption inside the stage; the live region left in the column is out of flow.
+  assert.match(jsx, /<p className="icust-stage-cap icust-stage-cap--note">/)
+  assert.match(jsx, /<div className="icust-ground-note" aria-live="polite">/)
+  assert.match(css.match(/\.iel-page \.icust-left \.icust-ground-note ?\{[^}]*\}/)[0], /position: ?absolute/)
+  for (const rule of css.match(/[^}]*\.icust-ground-note[^{]*\{[^}]*\}/g)) assert.doesNotMatch(rule, /min-height/, 'the note reserves room again')
+  assert.doesNotMatch(css, /--note-lines|--stage-rest/, 'a held note band is back')
   // two lines held by default (a phone), one from 561px up where both sentences fit one line
   assert.match(css.match(/\.iel-page \.icust-colour-help ?\{[^}]*\}/)[0], /min-height: ?calc\(2em \* 1\.4\)/)
   assert.match(css, /@media ?\(min-width: ?561px\) ?\{ ?\.iel-page \.icust-right \.icust-colour-help ?\{[^}]*min-height: ?calc\(1em \* 1\.4\)/)

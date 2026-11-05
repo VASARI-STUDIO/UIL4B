@@ -119,13 +119,13 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
   .iel-page .icust-mode button{min-height:44px}
 }
 .iel-page .icust-stroke{display:flex;flex-direction:column;gap:4px}
-/* Align with the slider: 56px label + 12px row gap. Reserve one caption line,
+/* Flush left like every other help line, at every width. Reserve one caption line,
    two on phones where the off caption wraps. */
-.iel-page .icust-stroke-note{margin:0;padding-left:68px;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
+.iel-page .icust-stroke-note{margin:0;padding-left:0;min-height:calc(1em * 1.4);font-size:var(--fs-caption);line-height:1.4;color:var(--t2)}
 .iel-page .icust-stroke-note{text-wrap:pretty}
 .iel-page .icust-stroke-note b{font-weight:560;color:var(--t0);font-variant-numeric:tabular-nums}
 @media(max-width:560px){
-  .iel-page .icust-stroke-note{padding-left:0;min-height:calc(2em * 1.4)}
+  .iel-page .icust-stroke-note{min-height:calc(2em * 1.4)}
 }
 /* The "Full" word on a project in the save picker. It rides the nav's `.pnav-pop-tag`
    class, which is a 999px accent pill painted in `--accent-strong`. Here it
@@ -404,6 +404,15 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-chip[aria-checked="true"]{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--t0);color:var(--t0)}
 .iel-page .icust-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(pointer:coarse){.iel-page .icust-chip,.iel-page .icust-chip.cpk-trigger{min-height:44px}.iel-page .icust-chips{gap:8px}}
+/* On a phone the four chips are a 2 by 2 grid, not a row that spills "Custom" alone onto a second
+   line. Two rows of one chip height plus the gap: the same height the wrapped row was. */
+@media(max-width:560px){
+  .iel-page .icust-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .iel-page .icust-chips>*{min-width:0}
+  .iel-page .icust-chips .cpk-wrap{display:flex}
+  .iel-page .icust-chips .icust-chip,
+  .iel-page .icust-chips .icust-chip.cpk-trigger{width:100%;justify-content:flex-start}
+}
 .iel-page .icust-chip-sw{flex:0 0 auto;width:18px;height:18px;border:1px solid var(--bh);border-radius:50%;box-sizing:border-box}
 /* Text colour: half the page ink, half the page ground, so it reads as "whatever
    the text is". Two flat halves, no gradient. */
@@ -419,20 +428,18 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-colour-help{text-wrap:pretty}
 @media(min-width:561px){.iel-page .icust-right .icust-colour-help{min-height:calc(1em * 1.4)}}
 
-/* Low contrast between the icon and the ground: one line under the stage and a
-   text button. Never an automatic switch. The wrapper holds the note's space (8px
-   above plus one line, two on a phone) whether or not a note is showing, so the
-   rows below, and the chips under the pointer, never move when one arrives. */
-.iel-page .icust-ground-note{margin:0 24px;padding-top:8px;min-height:calc(8px + 1em * 1.4);font-family:var(--font);font-size:var(--fs-caption);line-height:1.4;color:var(--t1)}
-.iel-page .icust-ground-note p{margin:0}
+/* Low contrast between the icon and the ground: the stage's caption slot says so and offers a text
+   button. Never an automatic switch. The note takes the caption's place (the stage's bottom strip,
+   which already has room for two lines), so it holds no room of its own and nothing moves when it
+   arrives. `.icust-ground-note` is the always-mounted, visually hidden live region that announces it. */
+.iel-page .icust-stage-cap--note .icust-ground-fix{margin-left:4px;color:inherit}
 .iel-page .icust-ground-fix{
   position:relative;margin-left:8px;padding:0;border:0;background:none;
   font:inherit;font-weight:560;color:var(--t0);
   text-decoration:underline;text-underline-offset:2px;cursor:pointer;
 }
 .iel-page .icust-ground-fix:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media(pointer:coarse){.iel-page .icust-ground-fix::after{content:"";position:absolute;inset:-14px -8px}}
-@media(max-width:560px){.iel-page .icust-ground-note{margin:0 16px;min-height:calc(8px + 2em * 1.4)}}
+@media(pointer:coarse){.iel-page .icust-ground-fix::after{content:"";position:absolute;inset:-14px -4px}}
 
 
 /* ── The customizer on a phone: the actions stay on screen ─────────────────
@@ -519,7 +526,10 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-size-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
 .iel-page .icust-size-title{font-family:var(--font);font-size:13px;font-weight:560;color:var(--t1)}
 .iel-page .icust-size-sub{font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
-.iel-page .icust-size-hint{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--accent-mid)}
+.iel-page .icust-size-hint{margin-left:auto;font-family:var(--font);font-size:12px;color:var(--accent-mid);white-space:nowrap}
+/* The 288px left column cannot hold the title, "shown at real pixels" and the Pro hint on one line,
+   and the rail's drawings already say it, so from 801px the sub goes and the hint stays beside the title. */
+@media(min-width:801px){.iel-page .icust-size-sub{display:none}}
 .iel-page .icust-mono{font-family:var(--mono)}
 .iel-page .icust-size-rail{display:flex;gap:4px;min-width:0}
 .iel-page .icust-size-cell{
@@ -585,6 +595,10 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-stage-cap{flex:1 1 150px;min-width:0;margin:0;font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
 .icust-stage--light .icust-stage-cap,.icust-stage--checker .icust-stage-cap{color:rgba(10,10,11,.6)}
 .icust-stage--dark .icust-stage-cap{color:rgba(244,244,245,.65)}
+/* The contrast note takes this slot and is a step stronger than the caption it replaces. */
+.iel-page .icust-stage-cap--note{color:var(--t1)}
+.icust-stage--light .icust-stage-cap--note,.icust-stage--checker .icust-stage-cap--note{color:rgba(10,10,11,.78)}
+.icust-stage--dark .icust-stage-cap--note{color:rgba(244,244,245,.85)}
 /* On a phone the strip can stack to three rows' height (two caption lines over a switch), so the
    stage keeps that room clear of the icon. */
 @media(max-width:560px){
@@ -611,26 +625,10 @@ html[data-reduced-motion="true"] .iel-page .icust-preview.is-on{animation:none}
 .iel-page .icust-left{display:flex;flex-direction:column;gap:12px;min-width:0;padding:4px 24px 0}
 .iel-page .icust-right{min-width:0;padding:16px 24px 8px}
 .iel-page .icust-left .icust-stage{margin:0;flex:1 1 auto;min-height:216px}
-/* The size rail under the note never moves when a note arrives. Where the room for a note comes
-   from depends on the width. Above 800px the stage is the flexible part of a column of fixed
-   height, so an empty note takes no room and the stage gives up what a note needs. From 641 to
-   800px the column is as tall as its content, so the held lines move into the stage instead: with
-   no note the stage is that much taller, and when one arrives the stage gives the room back. On a
-   phone sheet (640px and below) the stage stays at its 168px and the note's lines are held in the
-   note's own box under it, so nothing below the stage moves and the stage never grows to fill them. */
-.iel-page .icust-left .icust-ground-note{margin:0;padding-top:0;min-height:0}
-.iel-page .icust-left .icust-ground-note:empty{margin-top:-12px}
-@media(min-width:641px) and (max-width:800px){
-  .iel-page .icust-left{--stage-rest:216px;--note-lines:1}
-  .iel-page .icust-left .icust-ground-note:has(p){min-height:calc(var(--note-lines) * 1.4em)}
-  .iel-page .icust-left:not(:has(.icust-ground-note p)) .icust-stage{min-height:calc(var(--stage-rest) + 12px + var(--note-lines) * 1.4 * var(--fs-caption))}
-}
-@media(max-width:640px){
-  .iel-page .icust-left{--note-lines:1}
-  .iel-page .icust-left .icust-ground-note,
-  .iel-page .icust-left .icust-ground-note:empty{min-height:calc(var(--note-lines) * 1.4em);margin-top:0}
-}
-@media(max-width:560px){.iel-page .icust-left{--note-lines:2}}
+/* The contrast note lives inside the stage (in the caption slot), so it takes no room in this
+   column and the stage and the size rail never move when one arrives. The live region that
+   announces it is visually hidden and out of flow. */
+.iel-page .icust-left .icust-ground-note{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .iel-page .icust-controls{gap:10px;padding:0}
 .iel-page .icust-line-tile{padding-block:8px}
 .iel-page .icust-line{gap:6px}
@@ -733,11 +731,10 @@ html[data-reduced-motion="true"] :is(.iel-page .icust-panel,.iel-page .icust-lin
 
 /* ── Desktop fit: the right column holds a stroke icon without scrolling at 1440 by 900 ───────────
    The column is 397px wide. The Colour chips tighten so all four sit on one row (370px of chips and
-   18px of gaps), and the Stroke note takes the full width instead of the slider's indent, so it
+   18px of gaps), and the Stroke note takes the full width, so it
    stays on one line. */
 @media(min-width:801px){
   .iel-page .icust-chip,.iel-page .icust-chip.cpk-trigger{gap:6px;padding:0 12px 0 8px}
-  .iel-page .icust-right .icust-stroke-note{padding-left:0}
 }
 @media(min-width:801px) and (pointer:fine){
   .iel-page .icust-chips{gap:6px}
