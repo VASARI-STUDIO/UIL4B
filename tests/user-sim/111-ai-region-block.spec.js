@@ -88,14 +88,14 @@ for (const width of [390, 768, 1440]) {
     // no Generate button, no line saying the image goes to Gemini.
     await expect(page.locator('.alt-dropzone')).toHaveCount(0)
     await expect(page.locator('input[type="file"]')).toHaveCount(0)
-    await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })).toHaveCount(0)
+    await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^(Add images|Write alt text)/ })).toHaveCount(0)
     await expect(page.locator('#alt-ai-consent')).toHaveCount(0)
 
     // The guide on writing it by hand is still there. There is no side panel
     // while blocked (nothing in it can be used), so the "every other tool works"
     // line lives inside the card, with the way out.
-    await expect(page.getByRole('heading', { name: 'What good alt text looks like' })).toBeVisible()
-    await expect(page.locator('.alt-panel')).toHaveCount(0)
+    await expect(page.locator('summary', { hasText: 'How to write good alt text' })).toBeVisible()
+    await expect(page.locator('.alt-brief')).toHaveCount(0)
     await expect(card.getByText('Every other UIL4B tool works as normal where you are.')).toBeVisible()
     await expect(card.getByRole('link', { name: 'Browse other tools' })).toHaveAttribute('href', '/create')
 
@@ -129,12 +129,14 @@ for (const [what, answer] of OPEN_ANSWERS) {
     await expect(page.locator('.alt-dropzone')).toBeVisible()
     await expect(page.locator('input[type="file"]')).toHaveCount(1)
     await expect(page.getByTestId('ai-region-blocked')).toHaveCount(0)
-    await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })).toBeVisible()
+    await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Add images/ })).toBeVisible()
     await expect(page.locator('#alt-ai-consent')).toBeVisible()
     // The side panel is there when open, so its absence while blocked is a
     // statement about the block and not about a panel that never renders.
-    await expect(page.locator('.alt-panel')).toBeVisible()
-    await expect(page.locator('.alt-examples').getByText('Add page context')).toBeVisible()
+    await expect(page.locator('.alt-brief')).toBeVisible()
+    // The guide is a closed disclosure until opened; open it to read the tips.
+    await page.locator('.alt-guide summary').click()
+    await expect(page.locator('.alt-guide').getByText('Add what the page is about')).toBeVisible()
 
     if (what === 'the server says blocked:false') await shot(page, 'alt-text-open-1440.png')
   })
@@ -175,14 +177,14 @@ test('1440px · Alt Text: a signed-in visitor the server refuses with 451 is sho
     { name: 'one.png', mimeType: 'image/png', buffer: png },
     { name: 'two.png', mimeType: 'image/png', buffer: png },
   ])
-  await expect(page.locator('.alt-card-ready')).toHaveCount(2, { timeout: 10000 })
-  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ }).click()
+  await expect(page.locator('.alt-row-ready')).toHaveCount(2, { timeout: 10000 })
+  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Write alt text/ }).click()
 
   const card = page.getByTestId('ai-region-blocked')
   await expect(card).toBeVisible()
   await expect(card.getByRole('heading', { name: 'Not available in your region' })).toBeVisible()
   await expect(page.locator('.alt-dropzone')).toHaveCount(0)
-  await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ })).toHaveCount(0)
+  await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: /^(Add images|Write alt text)/ })).toHaveCount(0)
 
   // One request, not two. generateAll waits 4.5 s between images, so a second
   // request would arrive after that; wait past it. The sleep is the thing
@@ -210,8 +212,8 @@ async function refusedWith451(page) {
     { name: 'one.png', mimeType: 'image/png', buffer: png },
     { name: 'two.png', mimeType: 'image/png', buffer: png },
   ])
-  await expect(page.locator('.alt-card-ready')).toHaveCount(2, { timeout: 10000 })
-  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Generate/ }).click()
+  await expect(page.locator('.alt-row-ready')).toHaveCount(2, { timeout: 10000 })
+  await page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Write alt text/ }).click()
   await expect(page.getByTestId('ai-region-blocked')).toBeVisible()
 }
 
@@ -242,13 +244,13 @@ test('1440px · Alt Text: a block known on first load does not steal focus', asy
 test('1440px · Alt Text: after a 451 with images added, the guide is shown and the page-context tip is not', async ({ page }) => {
   watch(page, 'a signed-in visitor with two images queued whose Generate is refused with 451')
   await refusedWith451(page)
-  const guide = page.locator('.alt-examples')
+  const guide = page.locator('.alt-guide')
   await expect(guide).toBeVisible()
-  await expect(guide.getByRole('heading', { name: 'What good alt text looks like' })).toBeVisible()
-  await expect(guide.getByText('Add page context')).toHaveCount(0)
+  await expect(guide.locator('summary', { hasText: 'How to write good alt text' })).toBeVisible()
+  await expect(guide.getByText('Add what the page is about')).toHaveCount(0)
   // The queued cards are gone with the rest of the tool.
-  await expect(page.locator('.alt-card')).toHaveCount(0)
-  await expect(page.locator('.alt-panel')).toHaveCount(0)
+  await expect(page.locator('.alt-row')).toHaveCount(0)
+  await expect(page.locator('.alt-brief')).toHaveCount(0)
 })
 
 test('390px · Alt Text: the Browse other tools link goes to /create and is a 44px target', async ({ page }) => {
