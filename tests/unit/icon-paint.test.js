@@ -102,3 +102,32 @@ test('a dark wordmark beside a coloured mark is not single-colour near-black', (
   // One explicit colour beside an unpainted (black) shape is two colours.
   assert.equal(isNearBlackMono('<svg><path d="M0 0h8v8z"/><path fill="#d97757"/></svg>', NEAR_BLACK), false)
 })
+
+test('luminance reads rgb(), hsl() and hex with alpha like the plain hex', () => {
+  assert.equal(paintLuminance('rgb(0, 0, 0)'), 0)
+  assert.equal(paintLuminance('rgba(0 0 0 / 50%)'), 0)
+  assert.equal(paintLuminance('#000000ff'), 0)
+  assert.equal(paintLuminance('#000f'), 0)
+  assert.equal(paintLuminance('hsl(0 0% 0%)'), 0)
+  assert.ok(Math.abs(paintLuminance('rgb(255,255,255)') - 1) < 1e-9)
+  assert.ok(Math.abs(paintLuminance('hsl(0, 0%, 100%)') - 1) < 1e-9)
+  assert.ok(Math.abs(paintLuminance('#ffffff80') - 1) < 1e-9)
+  assert.ok(Math.abs(paintLuminance('#fffa') - 1) < 1e-9)
+  assert.equal(paintLuminance('rgb(64, 64, 64)'), paintLuminance('#404040'))
+  assert.equal(paintLuminance('hsl(0, 0%, 25.1%)'), paintLuminance('#404040'))
+})
+
+test('luminance of an unreadable paint stays null', () => {
+  for (const paint of ['currentcolor', 'none', 'url(#a)', 'rgb(1, 2)', 'rgb(256, 0, 0)', 'rgb(a, b, c)', '#12', '#12345', '#1234567', '161614', '']) {
+    assert.equal(paintLuminance(paint), null, paint)
+  }
+})
+
+test('near-black art written as rgb(), hsl() or hex with alpha is near-black mono', () => {
+  for (const paint of ['rgb(22, 22, 20)', 'hsl(0 0% 10%)', '#161614ff', '#000f']) {
+    assert.equal(isNearBlackMono(mono(paint), NEAR_BLACK), true, paint)
+  }
+  for (const paint of ['rgb(64, 64, 64)', 'hsl(0 0% 100%)', '#ffffffff']) {
+    assert.equal(isNearBlackMono(mono(paint), NEAR_BLACK), false, paint)
+  }
+})

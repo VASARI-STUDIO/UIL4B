@@ -115,3 +115,34 @@ test('the "Original colours" text is a plain value, never a Default pill', () =>
   assert.doesNotMatch(jsx, /icust-seg-static/)
   assert.doesNotMatch(jsx, /icust-note/)
 })
+
+test('a caller that leaves the limit out reads art as the grid does', () => {
+  // The limit itself is pinned to IconLibrary.jsx by the glyph-ink test. Near-black stays ink
+  // and brand colours stay brand colours with no limit passed.
+  assert.equal(colourRowState({ inColouredPack: true, svg: SINGLE }).row, 'choose')
+  assert.equal(colourRowState({ inColouredPack: true, svg: '<svg><path fill="#3f3f3f"/></svg>' }).row, 'choose')
+  assert.deepEqual(colourRowState({ inColouredPack: true, svg: BRAND }), { coloured: true, row: 'brand', paint: '#e60012' })
+  assert.equal(colourRowState({ inColouredPack: true, svg: '<svg><path fill="#404040"/></svg>' }).row, 'brand')
+})
+
+test('near-black written as rgb(), hsl() or a hex with alpha is ink, like the plain hex', () => {
+  for (const paint of ['rgb(22, 22, 20)', 'rgb(22 22 20)', 'rgba(0,0,0,0.5)', 'hsl(0, 0%, 10%)', 'hsl(0 0% 0%)',
+    '#161614ff', '#16161480', '#000f', '#000a']) {
+    assert.equal(rowOf(`<svg><path fill="${paint}"/></svg>`).row, 'choose', paint)
+  }
+  assert.equal(rowOf('<svg><path style="fill:rgb(0, 0, 0)"/></svg>').row, 'choose')
+})
+
+test('a brand colour written as rgb(), hsl() or a hex with alpha is still a brand row', () => {
+  for (const paint of ['rgb(230, 0, 18)', 'hsl(355, 100%, 45%)', '#e60012ff', '#e00f', 'rgb(255 255 255)']) {
+    assert.equal(rowOf(`<svg><path fill="${paint}"/></svg>`).row, 'brand', paint)
+  }
+})
+
+test('a paint that cannot be read keeps its treatment', () => {
+  assert.equal(rowOf('<svg><path fill="url(#a)"/></svg>').row, 'original')
+  assert.equal(rowOf('<svg fill="currentColor"><path/></svg>').row, 'choose')
+  // A name or an out-of-range value is not read, so it counts as a brand colour as before.
+  assert.equal(rowOf('<svg><path fill="none" stroke="rebeccapurple"/></svg>').row, 'brand')
+  assert.equal(rowOf('<svg><path fill="rgb(300, 0, 0)"/></svg>').row, 'brand')
+})

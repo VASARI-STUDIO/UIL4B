@@ -1653,6 +1653,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom,
     inkDarkMax: INK_DARK_MAX, colourChosen: !!color,
   })
+  // Whether the icon's own art is in colour, whatever is chosen now. `isColoredPack` drops to
+  // false once a colour is chosen on a brand logo; the header line and the Similar tiles describe
+  // the icon, not the choice, so they follow this and stay put across Original / colour.
+  const ownColours = isColoredPack || colourRow === 'brand'
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -1916,13 +1920,17 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const handleCopySvg = async () => {
     if (!baseSvgText || previewing) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
-    const ok = await writeClipboard(serializedOutput)
+    // Written here, with the textarea fallback for a browser without the Clipboard API, and
+    // the app's `onCopy` told it is written so it only raises the toast: one write per press.
+    // When this write fails, `onCopy` gets its own try, and says why if that fails too.
+    let ok = await writeClipboard(serializedOutput)
+    if (ok) onCopy?.(serializedOutput, { written: true })
+    else if (onCopy) ok = (await onCopy(serializedOutput)) === true
     if (!ok) return
     if (!isPro) bumpCopyCount()
     trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')
     setCopied('svg')
     setTimeout(() => setCopied(''), 2000)
-    if (onCopy) onCopy(serializedOutput)
     addRecentIcon(recentPayload(activeIcon), 'copy')
   }
 
@@ -2211,7 +2219,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const packName = activeIcon
     ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
     : ''
-  const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
+  const headSub = !activeIcon ? '' : [packName, ownColours ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
   const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
 
   // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
@@ -2663,7 +2671,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <SimilarSection
                 key={currentId}
                 list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
+                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: ownColours ? undefined : themeInk })}
                 onPick={onPick}
               />
             )}
