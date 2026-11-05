@@ -173,13 +173,13 @@ for (const width of [390, 768, 1280]) {
       await expect(allowance).toContainText('left today')
       expect(await allowance.evaluate((el) => getComputedStyle(el).fontSize), 'the allowance is one caption line').toBe('13px')
 
-      // The Gemini line is above the drop zone, read before anything is uploaded, outside it, at 12.5px.
+      // The Gemini line is above the drop zone, read before anything is uploaded, outside it, at 13px.
       const zone = page.locator('.alt-dropzone')
       await expect(zone.locator('.ai-image-consent')).toHaveCount(0)
       const consent = page.locator('.ai-image-consent')
       const [z, c] = [await zone.boundingBox(), await consent.boundingBox()]
       expect(c.y + c.height, 'the Gemini line sits above the drop zone').toBeLessThanOrEqual(z.y + 1)
-      expect(await consent.evaluate((el) => getComputedStyle(el).fontSize)).toBe('12.5px')
+      expect(await consent.evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px')
 
       await expectOneRow(page, `${width}px, empty`)
       await noSidewaysScroll(page, `${width}px, empty`)

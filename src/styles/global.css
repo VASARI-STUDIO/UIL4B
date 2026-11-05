@@ -1490,7 +1490,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 @media(hover:hover){.error-boundary-report:hover{text-decoration-thickness:2px}}
 
 /* ─── Alt Text Generator ─── */
-.alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
+.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
+@media(hover:hover){.alt-dropzone:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}}
 /* flex-start, not flex-end: each field now carries a help line beneath it, so
    the two columns differ in height and bottom-aligning them staggered the
    labels. */
