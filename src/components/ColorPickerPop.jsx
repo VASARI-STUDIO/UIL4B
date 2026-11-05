@@ -5,7 +5,9 @@ import usePopover, { topObstruction } from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
+import { buildPickerPresets } from '../utils/pickerPresets'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
+import { useProject } from '../contexts/ProjectContext'
 import { lockScroll } from '../utils/scrollLock'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
@@ -138,6 +140,11 @@ const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
+// The shortest a phone sheet is made to keep its trigger in view: the header,
+// the pad, the hue strip and the hex row still fit (about 313px), and the rest
+// scrolls under the pinned header.
+const SHEET_MIN_H = 320
+
 // On a phone the portalled panel is a bottom sheet (global.css, the same width
 // the notation sheet switches at) rather than a popover hung off its trigger.
 const SHEET_QUERY = '(max-width: 767px)'
@@ -173,6 +180,18 @@ export default function ColorPickerPop({
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState('hex')
   const [recents, setRecents] = useState(getRecentColors)
+  // The working design's palette and semantic colours, offered as presets. The
+  // picker can sit outside a project provider, where there is nothing to offer.
+  const design = useProject()?.design
+  const designColours = design?.palette?.colors
+  const designStates = design?.states
+  // A caller that brings its own preset list has already named its colours, so
+  // those are not repeated; the stock list is generic and does not count.
+  const shown = swatches === DEFAULT_SWATCHES ? undefined : swatches
+  const projectGroups = useMemo(
+    () => buildPickerPresets({ palette: designColours, states: designStates, exclude: shown }),
+    [designColours, designStates, shown],
+  )
   // useId, not a counter: two pickers can be open at once (a gradient has a
   // stop picker per stop) and a duplicated id would point every label at the
   // first list.
@@ -247,30 +266,40 @@ export default function ColorPickerPop({
       panel.removeEventListener('scroll', update)
       observer?.disconnect()
     }
-  }, [open, popRef, recents.length, sheet])
+  }, [open, popRef, recents.length, projectGroups.length, sheet])
 
   // The sheet is pinned to the bottom edge, and a trigger that happens to sit in
   // the lower half of the page would be under it. Lift the page by just enough to
   // bring the trigger into the clear space above the sheet — never past the
-  // fixed chrome at the top, and not at all when it already clears.
+  // fixed chrome at the top, and not at all when it already clears. Where the
+  // page cannot lift that far (a trigger near the top of a short page), the
+  // sheet is made shorter instead, down to SHEET_MIN_H, and scrolls inside.
   useLayoutEffect(() => {
     const panel = popRef.current
     const trigger = triggerRef.current
     if (!open || !sheet || !panel || !trigger) return undefined
+    panel.style.maxHeight = ''
+    let second = 0
+    const bottomOf = () => Number.parseFloat(getComputedStyle(panel).bottom) || 0
     const frame = requestAnimationFrame(() => {
       // Worked out from the CSS position, not getBoundingClientRect: the sheet is
       // still mid-way through its entry transform on the first frame.
-      const sheetTop = window.innerHeight - (Number.parseFloat(getComputedStyle(panel).bottom) || 0) - panel.offsetHeight
+      const sheetTop = window.innerHeight - bottomOf() - panel.offsetHeight
       const box = trigger.getBoundingClientRect()
       const lift = Math.min(box.bottom + 12 - sheetTop, box.top - topObstruction() - 8)
-      if (lift <= 0) return
-      const lenis = getLenis()
-      // `force`: the sheet has locked the page, which stops Lenis.
-      if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
-      else window.scrollBy({ top: lift, behavior: 'instant' })
+      if (lift > 0) {
+        const lenis = getLenis()
+        // `force`: the sheet has locked the page, which stops Lenis.
+        if (lenis) lenis.scrollTo(lenis.scroll + lift, { immediate: true, force: true })
+        else window.scrollBy({ top: lift, behavior: 'instant' })
+      }
+      second = requestAnimationFrame(() => {
+        const room = window.innerHeight - bottomOf() - (trigger.getBoundingClientRect().bottom + 12)
+        if (room < panel.offsetHeight) panel.style.maxHeight = `${Math.max(SHEET_MIN_H, Math.floor(room))}px`
+      })
     })
-    return () => cancelAnimationFrame(frame)
-  }, [open, sheet, popRef, triggerRef, recents.length])
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(second); panel.style.maxHeight = '' }
+  }, [open, sheet, popRef, triggerRef, recents.length, projectGroups.length])
 
   const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
 
@@ -380,6 +409,30 @@ export default function ColorPickerPop({
           onClick={() => selectColor(sw)}
         />
       ))}
+    </div>
+  )
+
+  // The project's own colours. Plain "use this colour" buttons that report their
+  // state with aria-pressed, each named for where the colour came from, rather
+  // than options of the listbox above.
+  const presetGroup = (group) => (
+    <div className="cpk-section" key={group.id}>
+      <p className="cpk-section-label" id={`${ids}-${group.id}`}>{group.label}</p>
+      <div className="cpk-presets" role="group" aria-labelledby={`${ids}-${group.id}`}>
+        {group.items.map((item) => (
+          <button
+            key={item.hex}
+            type="button"
+            className="cpk-preset"
+            aria-pressed={item.hex === liveHex}
+            aria-label={item.label}
+            title={item.label}
+            onClick={() => selectColor(item.hex)}
+          >
+            <span className="cpk-preset-chip" style={{ background: item.hex }} aria-hidden="true" />
+          </button>
+        ))}
+      </div>
     </div>
   )
 
@@ -586,6 +639,8 @@ export default function ColorPickerPop({
               {swatchGrid(recents, `${ids}-recent`)}
             </div>
           )}
+
+          {projectGroups.map(presetGroup)}
 
           {swatches.length > 0 && (
             <div className="cpk-section">

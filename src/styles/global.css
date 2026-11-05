@@ -3607,6 +3607,20 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    the white light panel and better on the dark one, which clears the 3:1 that
    WCAG 1.4.11 asks of a non-text boundary. */
 .cpk-swatch{border-color:color-mix(in srgb,var(--t0) 50%,transparent)}
+/* The project's own colours (palette, semantic). The button is the hit area and
+   the chip inside is the sample, so the sample can stay small while the target
+   grows to 44px on touch and on phone widths. The row wraps inside the panel and
+   never sets its width. */
+.cpk-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));gap:var(--s-1)}
+.cpk-preset{display:grid;place-items:center;min-width:0;height:28px;padding:0;border:0;border-radius:var(--radius-xs);background:none;cursor:pointer}
+.cpk-preset-chip{width:22px;height:22px;border-radius:var(--radius-xs);border:1px solid color-mix(in srgb,var(--t0) 50%,transparent);transition:box-shadow var(--dur-1) var(--ease-out)}
+.cpk-preset:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.cpk-preset[aria-pressed="true"] .cpk-preset-chip{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
+@media(pointer:coarse),(max-width:767px){
+  .cpk-presets{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  .cpk-preset{height:44px}
+  .cpk-preset-chip{width:28px;height:28px}
+}
 /* Content continues below the fold: a fade on the bottom edge, drawn only while
    ColorPickerPop's `data-more` is set. It is the scroll cue — a flat
    cut-off row reads as the end of the list. Sticky so it stays on the panel's
@@ -3639,6 +3653,8 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   html.has-tabbar .pop.cpk-pop[data-pop-fixed="true"]{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:var(--s-3)}
   .cpk-pop[data-pop-fixed="true"]::before{content:"";flex:0 0 auto;display:block;width:36px;height:4px;margin:0 auto;border-radius:var(--radius-pill);background:var(--border)}
   .cpk-pop[data-pop-fixed="true"] .cpk-swatches{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  /* The sheet scrolls as a whole; its header (name and Close) stays in reach. */
+  .cpk-pop[data-pop-fixed="true"] .cpk-head{position:sticky;top:calc(-1 * var(--s-3));z-index:1;margin-top:calc(-1 * var(--s-3));padding-top:var(--s-3);background:var(--bg-1)}
   /* The scrim is the notation sheet's (.menu-select-scrim, dimmed at this width);
      it only needs the picker's own layer number, one under the panel. */
   .menu-select-scrim.cpk-scrim{z-index:calc(var(--cpk-layer,130) - 1)}
