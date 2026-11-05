@@ -1,4 +1,4 @@
-// The Alt Text Generator's design round (the 5 Nov review, D1 to D11), asserted
+// The Alt Text Generator's design round (a design review, D1 to D11), asserted
 // from computed styles and boxes on /create/alt-text.
 //
 // /api/ai is stubbed, so no model is called. A phone is a touch context
