@@ -176,14 +176,15 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
 
 // ── Where Save to a project lives ─────────────────────────────────────────────
 // From 768 it is a button in the sticky toolbar, directly left of Copy CSS, and
-// its menu opens downward from it. The foot of the screen carries a bar only
-// where it has something to hold: Save and Copy CSS on a phone, and Code where
-// the ladder and the page sit side by side. Between the two (768 up to the
-// split) there is no bar at all. The viewport is short on purpose, so the page
-// is taller than the screen and a bar that is meant to stick has to.
+// its menu opens downward from it. There is no bar of the page's own at the foot at
+// any width: a phone has the shell dock (Copy CSS only, spec 306) and Save is an
+// icon on the toolbar row; 768 and up have no bar at all. The viewport is short on
+// purpose, so the page is taller than the screen and a toolbar that is meant to
+// stick has to.
 //
-// MUTATION: render a .tsc-dock back in TypeScale.jsx, or drop the Save toolbar item, and the 306 spec goes red; these pin 768 and up:
-// the `.tsc-dock` position rule, and these go red.
+// MUTATION: render a .tsc-dock back in TypeScale.jsx and the `.tsc-dock` count
+// check goes red; drop the Save toolbar item or its sticky position and the
+// "stays on screen" check goes red. Spec 306 pins the phone half.
 const DOCK_SIZES = [[390, 700], [768, 700], [1024, 700], [1200, 700]]
 
 /** The visible buttons of the sticky toolbar, left to right, by their text. The More menu is the overflow, not a tool, so it is left out. */
@@ -362,17 +363,17 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
   }
 })
 
-// ── The split and the Code drawer ─────────────────────────────────────────────
+// ── The split and its Page | Code switch ─────────────────────────────────────────────
 // The work column is measured, not the viewport. From 1024px of column (a 1440
 // window) the ladder and the page sit side by side with no Scale / Page / Code
-// switch, and Code is a drawer opened from the docked bar. Below that the switch
+// switch, and Code is a view of the right half (.tsc-half-switch). Below that the switch
 // stays. The 1024 test is the other half of every claim here: it is what makes
 // "no switch at 1440" a statement about the width and not about the page.
 //
 // MUTATION: raise SPLIT_MIN in TypeScale.jsx past any column and the 1440 tests
-// go red while the 1024 one stays green; drop `hidden={!drawerOpen}` or the Escape
-// branch and the drawer tests go red.
-test.describe('Type Scale · the split and the Code drawer', () => {
+// go red while the 1024 one stays green; spec 306 pins the Code view at 1440.
+//
+test.describe('Type Scale · the split and its Page | Code switch', () => {
   test('at 1440 the ladder and the page sit side by side and there is no tablist', async ({ page }) => {
     watch(page, 'designer on a wide screen')
     await page.setViewportSize({ width: 1440, height: 900 })

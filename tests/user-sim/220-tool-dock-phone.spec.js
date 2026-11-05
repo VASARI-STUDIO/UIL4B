@@ -35,7 +35,8 @@ const PHONES = [
   { width: 360, height: 780 },
 ]
 
-// `field` is a text field to focus for the keyboard (none on Semantic Colour);
+// `field` is a text field to focus for the keyboard (none on Semantic Colour); `open`
+// is a tap that makes it appear first (Type Scale shows Base as a value you tap to type);
 // `sheet` opens the tool's own sheet where it has one.
 const TOOLS = [
   { route: '/create/palette', title: 'Palette Generator', primary: /^Save or share/, sheet: 'Extra tools' },
@@ -45,7 +46,7 @@ const TOOLS = [
   { route: '/create/aspect-ratio', title: 'Aspect & Resolution', primary: /^Copy size/, field: (page) => page.getByRole('spinbutton', { name: 'Known width in pixels' }) },
   { route: '/create/alt-text', title: 'Alt Text Generator', primary: /^Add images/, field: (page) => page.locator('.alt-field').first() },
   { route: '/create/semantic-color', title: 'Semantic Colour', primary: /^Copy /, field: null },
-  { route: '/create/type-scale', title: 'Type Scale', primary: /^Copy CSS/, field: (page) => page.getByLabel('Base size') },
+  { route: '/create/type-scale', title: 'Type Scale', primary: /^Copy CSS/, open: (page) => page.locator('.tsc-scale-term--base .snapv-value').tap(), field: (page) => page.getByRole('spinbutton', { name: 'Base font size in pixels — custom value', exact: true }) },
 ]
 
 const NO_PRIMARY_ON_A_PHONE = [
@@ -215,6 +216,7 @@ for (const phone of PHONES) {
 
       if (tool.field) {
         test('the dock steps aside while the keyboard is up, and comes back', async ({ page }) => {
+          if (tool.open) await tool.open(page)
           const field = tool.field(page)
           await field.scrollIntoViewIfNeeded()
           await field.tap()

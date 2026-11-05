@@ -143,8 +143,8 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
 
-    // Copy CSS sits in the toolbar in every layout; the Code drawer (the Code
-    // view, below the split) is where the text being copied can be read.
+    // Copy CSS is in the toolbar from 768 and in the shell dock on a phone; the Code view (the Code
+    // tab below the split, the half-switch Code at 1440) is where the text being copied can be read.
     await showTypeScaleCode(page)
     const copy = page.locator('.tsc-copy-primary')
     await expect(copy, 'the export control is on the page').toBeVisible()
@@ -154,8 +154,8 @@ test.describe('activation fires from the export, not from its neighbours', () =>
     await counter(page, 'activation:type-scale:export').toBe(1)
   })
 
-  test('the type scale counts the Code drawer\'s own Copy button as its export', async ({ page }) => {
-    watch(page, 'developer copying from the code drawer')
+  test('the type scale counts Copy CSS pressed with the Code view showing as its export', async ({ page }) => {
+    watch(page, 'developer copying from the code view')
     await allowClipboard(page)
     await go(page, '/create/type-scale')
     await ready(page, '/create/type-scale')
@@ -163,10 +163,10 @@ test.describe('activation fires from the export, not from its neighbours', () =>
     expect((await usage(page))['activation:type-scale:export'], 'nothing recorded yet').toBe(undefined)
 
     expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
-    // Opening the drawer is reading, not exporting: the counter must stay unset.
+    // Opening the Code view is reading, not exporting: the counter must stay unset.
     expect(
       (await usage(page))['activation:type-scale:export'],
-      'opening the code drawer is not a finished piece of work',
+      'opening the Code view is not a finished piece of work',
     ).toBe(undefined)
     await page.getByRole('button', { name: /^Copy CSS$/ }).click()
     await clipboard(page).toMatch(/font-size|--/)

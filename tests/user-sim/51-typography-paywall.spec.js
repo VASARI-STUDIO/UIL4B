@@ -197,7 +197,7 @@ test.describe('Typography: browsing stays free under every view', () => {
     expect(await page.locator(LOCKED).count(), 'Font Pair rendered a locked placeholder').toBe(0)
 
     await go(page, SCALE)
-    // At 1440 the export is in the Code drawer; below the split it is the Code
+    // At 1440 the export is the Code half of the Page | Code switch; below the split it is the Code
     // view of the Scale / Page / Code switch.
     expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
     const scaleExport = await page.locator('#tsc-export').innerText()

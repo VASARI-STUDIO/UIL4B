@@ -118,7 +118,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    // At 1440 the code is in the drawer opened from the docked bar.
+    // At 1440 the code is the Code half of the Page | Code switch.
     expect(await showTypeScaleCode(page)).toBe('split')
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
