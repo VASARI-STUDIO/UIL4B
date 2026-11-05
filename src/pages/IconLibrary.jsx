@@ -48,6 +48,7 @@ import {
 } from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
+import { cleanCustomIcons, customSymbolKey, customSymbolRef, registerCustomSymbols } from '../utils/customIcons'
 import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
@@ -1050,7 +1051,14 @@ function SpriteGlyph({ href, symKey, className }) {
 // its own markup lands.
 function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    // A saved icon is a symbol in the sprite like a pack glyph (customSymbolRef is
+    // '' when it could not go in, or was let go: then it is drawn as an image).
+    const ref = customSymbolRef(icon)
+    if (!icon.colored) {
+      return ref
+        ? <SpriteGlyph href={ref} symKey={customSymbolKey(icon)} className="ig-sym ig-inv" />
+        : <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    }
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) return <LogoDevGlyph icon={icon} />
@@ -3141,7 +3149,17 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
    the network said no. This is an accent band with a padlock and a plan word
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
-function IconGateWall({ heading, body, action, onAction, kind }) {
+// The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
+// not open a Pro pack, so the copy says so before the button does. Kept here rather than in
+// data/iconPackTiers.js, which the entry chunk imports and which sits at the bulk-data budget.
+const GATE_COPY_PRO_ANON = {
+  heading: (label) => `${label} is a Pro pack`,
+  body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
+  action: 'Log in',
+  secondary: 'See Pro plans',
+}
+
+function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
     <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
       <div className="lockt-cta-copy">
@@ -3155,6 +3173,10 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
         <p className="lockt-cta-body">{body}</p>
       </div>
       <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
+      {/* A second way on, for a wall whose primary button cannot open it by itself:
+          a signed-out visitor on a Pro pack logs in with the button and reads the
+          plans here. Same link the end band uses (`ig-end-link`). */}
+      {secondary && <Link to="/plans" className="ig-end-link" onClick={onSecondary}>{secondary}</Link>}
     </div>
   )
 }
@@ -3711,7 +3733,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
     setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
-    const list = readCustomIcons()
+    // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
+    // before the list is set, so the first render of a cell already finds its `#id`.
+    const list = cleanCustomIcons(readCustomIcons())
+    registerCustomSymbols(list)
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
     setLoading(false)
@@ -4586,7 +4611,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   })
   const teaseNeed = searchTeaseNeed(searchTease)
   const teaseWhere = searchTeaseWhere(searchTease)
-  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
+  // A signed-out visitor on a Pro scope gets a log-in wall that says it is Pro (the
+  // plans are the second link); a signed-in free viewer gets the Pro wall.
+  const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? GATE_COPY_PRO_ANON : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
@@ -5222,7 +5250,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 heading={gateCopy.heading(gated.label)}
                 body={gateCopy.body}
                 action={gateCopy.action}
-                onAction={() => openGate(gated.need)}
+                onAction={() => (anonOnPro ? requireLogin('open this icon pack') : openGate(gated.need))}
+                secondary={anonOnPro ? gateCopy.secondary : undefined}
+                onSecondary={() => reportUpgradeGate('icon-pack-tier')}
               />
             )}
 
