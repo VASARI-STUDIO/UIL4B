@@ -298,6 +298,16 @@ test.describe('the gate', () => {
     }
   })
 
+  test('signed out, the full-screen address is turned away like the normal one, with the nav', async ({ page }) => {
+    watch(page, 'a signed-out visitor opening the full-screen prompt library address')
+    for (const url of [ROUTE, FULL]) {
+      await go(page, url)
+      await expect(page.locator('.plib-page'), `${url} showed the library signed out`).toHaveCount(0)
+      await expect(page.locator('.pnav'), `${url} left a signed-out visitor with no nav`).toHaveCount(1)
+      await expect(page.locator('html'), 'the full view never took the page').not.toHaveAttribute('data-view', 'full')
+    }
+  })
+
   test('the flag does nothing on any other page', async ({ page }) => {
     await signIn(page, { admin: true })
     watch(page, 'an admin adding ?view=full to the palette library')
