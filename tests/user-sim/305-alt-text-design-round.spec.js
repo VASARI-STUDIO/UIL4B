@@ -206,6 +206,17 @@ test.describe('with an image added', () => {
       const edge = await text.evaluate((el) => getComputedStyle(el).borderTopColor)
       if (touch) expect(edge, 'touch: a faint edge from the start').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
       else expect(edge, 'mouse: no edge until hover').toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+      if (touch) {
+        // The edge is a box around the column: clear of the screen edge, even on both sides.
+        const g = await text.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const col = el.closest('.alt-row-body').getBoundingClientRect()
+          return { left: r.left, right: r.right, cl: col.left, cr: col.right, vw: innerWidth }
+        })
+        expect(g.left, 'clear of the left screen edge').toBeGreaterThanOrEqual(2)
+        expect(g.right, 'clear of the right screen edge').toBeLessThanOrEqual(g.vw - 2)
+        expect(Math.abs((g.cl - g.left) - (g.right - g.cr)), 'the same reach past the column on each side').toBeLessThanOrEqual(1)
+      }
 
       const head = await page.locator('.alt-sheet-head').evaluate((el) => {
         const sum = getComputedStyle(el.querySelector('.alt-sheet-sum'))

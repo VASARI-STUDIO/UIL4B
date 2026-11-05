@@ -253,9 +253,11 @@
 
 .alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Touch has no hover, so the written text carries its edge from the start. */
+/* Touch has no hover, so the written text carries its edge from the start. The
+   box reaches 8px past the column on each side (4px clear of a phone's edge) and
+   the padding keeps the words on the column's line. */
 @media (hover: none) {
-  .alt-page .alt-row-text { border-color: var(--border); }
+  .alt-page .alt-row-text { margin-inline: -8px; width: calc(100% + 16px); max-width: none; padding-inline: 7px; border-color: var(--tl-line-on); }
 }
 
 @keyframes alt-fade-in { from { opacity: 0; } to { opacity: 1; } }
