@@ -59,3 +59,26 @@ test('the prefixes this test checks really are private to the runtime', () => {
 test('robots.txt still points at the sitemap', () => {
   assert.match(robots, /^Sitemap:\s*https:\/\/uil4b\.com\/sitemap\.xml$/m)
 })
+
+// Crawlers that only gather training data are refused by name; search and
+// answer bots are never named, so they fall through to the `*` group and keep
+// its private-route rules. A named group replaces `*` for that crawler, so a
+// search bot listed here would lose the private disallows as well.
+const groups = robots.split(/\r?\n\s*\r?\n/).map((g) => g.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
+const agentsOf = (g) => g.filter((l) => /^user-agent:/i.test(l)).map((l) => l.slice('user-agent:'.length).trim().toLowerCase())
+const TRAINING = ['gptbot', 'claudebot', 'ccbot', 'google-extended', 'applebot-extended', 'bytespider']
+const ANSWER = ['oai-searchbot', 'chatgpt-user', 'claude-searchbot', 'claude-user', 'perplexitybot', 'perplexity-user']
+
+test('training-only crawlers are refused the whole site', () => {
+  for (const bot of TRAINING) {
+    const g = groups.find((x) => agentsOf(x).includes(bot))
+    assert.ok(g, `${bot} has no group of its own`)
+    assert.ok(g.some((l) => /^disallow:\s*\/\s*$/i.test(l)), `${bot} is not refused the whole site`)
+  }
+})
+
+test('search and answer bots are not named, so they keep the shared rules', () => {
+  const named = groups.flatMap(agentsOf)
+  for (const bot of ANSWER) assert.equal(named.includes(bot), false, `${bot} has its own group and would skip the private routes`)
+  assert.ok(named.includes('*'), 'the shared group is gone')
+})
