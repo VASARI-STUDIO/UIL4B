@@ -2671,7 +2671,7 @@ export default function Admin({ toast }) {
             </div>
           ) : (
             <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
-              <span className="mono">{serverFeedbackCount}</span> from the server · <span className="mono">{Math.max(0, feedback.length - serverFeedbackCount)}</span> from this browser
+              <span className="mono">{serverFeedbackCount}</span> from the server · <span className="mono">{Math.max(0, feedback.length - serverFeedbackCount)}</span> from this browser{autoFeedback.length > 0 && <> · <span className="mono">{autoFeedback.length}</span> of them in Generated</>}
             </div>
           )}
 
