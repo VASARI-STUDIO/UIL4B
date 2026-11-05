@@ -10,11 +10,14 @@ import { hasSavedColour, projectChoices } from '../../utils/savedColours'
 //   loading    true until the account's projects have been read once
 //   currentId  the project the working design came from, offered first
 //   onChoose   (project) => void. Does the save and closes the dialog.
+//   onSavePalette  () => void. With no project to choose, the way on: save the
+//              whole palette as a project (the page's own Save), which the colour
+//              can then be added to.
 //   onClose    called on Escape, the close button or an outside press
 //
 // The caller asks for the account first (requireLogin) and only mounts this
 // for someone who can save.
-export default function SaveColourDialog({ hex, name, projects, loading = false, currentId, onChoose, onClose }) {
+export default function SaveColourDialog({ hex, name, projects, loading = false, currentId, onChoose, onSavePalette, onClose }) {
   const titleId = useId()
   const dialogRef = useModalDialog(onClose)
   const choices = useMemo(() => projectChoices(projects, currentId), [projects, currentId])
@@ -37,7 +40,16 @@ export default function SaveColourDialog({ hex, name, projects, loading = false,
           {choices.length === 0 && loading ? (
             <p className="plb-sc-empty" role="status">Loading your projects.</p>
           ) : choices.length === 0 ? (
-            <p className="plb-sc-empty">You have no projects yet. Save this palette as a project first, then add single colours to it.</p>
+            <>
+              <p className="plb-sc-empty">
+                {(projects || []).length > 0
+                  ? 'Your projects are all archived. Save this palette as a new project, then add single colours to it.'
+                  : 'You have no projects yet. Save this palette as a project first, then add single colours to it.'}
+              </p>
+              {onSavePalette && (
+                <button type="button" className="btn btn-primary plb-sc-new" onClick={onSavePalette}>Save this palette as a project</button>
+              )}
+            </>
           ) : (
             <ul className="plb-sc-list">
               {choices.map((p) => {

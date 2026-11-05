@@ -1709,7 +1709,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       })
     }
   }, [coachBeat])
-  // Save palette: the Save menu opens with a name already in the field.
+  // Save palette: the Save menu opens with a name already in the field, and its
+  // field focused. The Save to project dialog uses it too when there is no project.
   const coachSave = useCallback(() => {
     closeAllMenus()
     setSaveName((n) => (n.trim() ? n : FIRST_PALETTE_NAME))
@@ -3898,6 +3899,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           loading={projectsLoading}
           currentId={design?.source?.projectId}
           onChoose={chooseColourProject}
+          onSavePalette={() => { setColourSaveIdx(null); coachSave() }}
           onClose={closeSaveColour}
         />
       )}

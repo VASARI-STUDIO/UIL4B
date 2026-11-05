@@ -19,6 +19,7 @@
 //   the toast text gains an exclamation mark                      -> "appears on the project page"
 //   the signed-out branch skips requireLogin                      -> "signed out"
 //   closeSaveColour does not set ctxReturnRef                     -> "focus returns to the swatch"
+//   the empty state's button is left out, or saves without the menu -> "every project archived"
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -192,6 +193,34 @@ for (const width of [390, 1440]) {
       await expect(swatches).toHaveCount(2)
       await swatches.nth(1).click()
       await expect(toastText(page)).toHaveText(`Copied ${PALETTE[1]}`)
+    })
+
+    test(`with every project archived, the picker offers to save the palette instead`, async ({ page }) => {
+      watch(page, `palette designer with only archived projects at ${width}px`)
+      const archived = PROJECTS.map((p) => ({ ...p, archived: true }))
+      await signIn(page, { plan: 'pro', projects: archived })
+      await seedBoard(page)
+      await go(page, '/create/palette')
+      await expect(page.locator('.plb-col')).toHaveCount(PALETTE.length)
+
+      const { menu } = await openActions(page, touch)
+      await menu.getByRole('menuitem', { name: 'Save to project', exact: true }).click()
+      const picker = pickerFor(page)
+      await expect(picker.getByText('Your projects are all archived.', { exact: false })).toBeVisible()
+      await expect(picker.locator('.plb-sc-list')).toHaveCount(0)
+      const way = picker.getByRole('button', { name: 'Save this palette as a project', exact: true })
+      await picker.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+      expect((await way.boundingBox()).height, 'a 44px target').toBeGreaterThanOrEqual(44)
+
+      // It opens the page's own Save menu, named and ready, not a save with no name.
+      await way.click()
+      await expect(picker).toHaveCount(0)
+      const save = page.getByRole('dialog', { name: 'Save, share and export this palette', exact: true })
+      await expect(save).toBeVisible()
+      const field = save.getByRole('textbox', { name: 'Project name', exact: true })
+      // Focus moves in: to the field, or on a touch screen to the menu, so no keyboard opens uninvited.
+      await expect(touch ? save : field).toBeFocused()
+      await expect(field).not.toHaveValue('')
     })
 
     test(`signed out, it opens the sign-in prompt and saves nothing`, async ({ page }) => {

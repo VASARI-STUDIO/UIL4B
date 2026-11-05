@@ -390,7 +390,10 @@ export function ProjectProvider({ children }) {
       const next = {
         ...prev,
         [userKey]: (prev[userKey] || []).map(p => p.id === id
-          ? { ...p, savedColors: addSavedColour(p.savedColors, hex, { name, at }).list, updatedAt: at }
+          // `colorsAt`, not `updatedAt`: a saved colour is not an edit to the design, so it must not
+          // outrank another device's design edit in the newest-wins merge (projectSync unions the
+          // colours by hex instead).
+          ? { ...p, savedColors: addSavedColour(p.savedColors, hex, { name, at }).list, colorsAt: at }
           : p),
       }
       saveAllProjects(next)
