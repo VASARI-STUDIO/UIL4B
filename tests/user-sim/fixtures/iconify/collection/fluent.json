@@ -1,0 +1,27 @@
+{
+  "prefix": "fluent",
+  "total": 20,
+  "title": "Fluent UI System Icons",
+  "uncategorized": [
+    "home-24-regular",
+    "home-24-filled",
+    "search-24-regular",
+    "search-24-filled",
+    "settings-24-regular",
+    "settings-24-filled",
+    "person-24-regular",
+    "person-24-filled",
+    "heart-24-regular",
+    "heart-24-filled",
+    "star-24-regular",
+    "star-24-filled",
+    "alert-24-regular",
+    "alert-24-filled",
+    "mail-24-regular",
+    "mail-24-filled",
+    "home-16-regular",
+    "home-20-filled",
+    "home-48-regular",
+    "home-32-light"
+  ]
+}

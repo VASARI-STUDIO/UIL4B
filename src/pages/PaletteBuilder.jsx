@@ -3582,7 +3582,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         {/* Suggest / Explore: one docked panel beside the board (a bottom dock below
             1024, a sheet on a phone). It pushes the board and never covers it.
             `.plb-menuwrap` keeps the page's dismiss layer from closing it on a press
-            inside it. Design: memory/designs/design-2026-10-31-suggest-explore.md. */}
+            inside it. */}
         {galleryOpen && (() => {
           const mineColors = trialSnapRef.current?.mine || adjusted
           const q = exQuery.trim().toLowerCase()

@@ -174,10 +174,10 @@ test.describe('the gate names what is on screen', () => {
       watch(page, SIGNED_OUT)
       const cells = await open(page, width)
       const gate = page.locator('.ig-end[data-gate="anon"]')
-      // 12 = the five sets a signed-out viewer sees plus the seven a free account adds.
+      // 16 = the five sets a signed-out viewer sees plus the eleven a free account adds.
       await expect(gate.getByRole('heading', { level: 2 })).toHaveText(/^Log in to access [\d,]+ icons$/)
       const body = (await gate.locator('.ig-end-p').textContent()).trim()
-      const m = body.match(/^You're seeing ([\d,]+) icons from 5 sets\. A free account opens every icon across 12 sets\. Copying needs no account\.$/)
+      const m = body.match(/^You're seeing ([\d,]+) icons from 5 sets\. A free account opens every icon across 16 sets\. Copying needs no account\.$/)
       expect(m, `the gate body is not the expected sentence: "${body}"`).not.toBeNull()
       expect(Number(m[1].replace(/,/g, '')), 'the gate quotes the number of icons actually drawn').toBe(cells)
       // The five set names are the five sets the grid draws from, so "5 sets" points at something real.

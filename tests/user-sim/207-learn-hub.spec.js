@@ -1,4 +1,4 @@
-// The Learn hub, slice 1 of the soft redesign (handover/specs/learn-soft-redesign-2026-10-31.md).
+// The Learn hub, slice 1 of the soft redesign.
 //
 // What a reader who arrives at /learn can now do, and what the page stopped
 // saying. 67-learn-index-search-card.spec.js owns the search, the grouping of

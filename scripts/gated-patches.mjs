@@ -5,9 +5,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Reviewed, tested changes cannot be committed from an agent branch.
 // `firestore.rules`, `api/verify-admin.js` and `src/contexts/AuthContext.jsx`
-// are refused by the Claude Code auto-mode classifier — a guardrail inside the
-// tool, separate from and stricter than docs/reference/human-validation-zones.md,
-// which refuses AFTER the owner has said yes. So each change ships as a diff
+// may not be staged by an automated commit, even after the owner has said yes
+// (stricter than docs/reference/human-validation-zones.md). So each change ships as a diff
 // that is committed, tested and unapplied, and somebody has to type it in.
 //
 // Hand-applied diffs across several files are as many chances to paste one into

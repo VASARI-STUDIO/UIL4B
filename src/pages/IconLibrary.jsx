@@ -75,6 +75,7 @@ import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCr
 import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
+import { iconSynonymFor } from '../data/iconSynonyms'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -131,7 +132,7 @@ const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
@@ -315,6 +316,9 @@ const CUSTOMISER_DEFAULTS = Object.freeze({
 //   Heroicons              outline, -solid                   — Fill
 //   Tabler                 outline, -filled (a subset)       — Fill
 //   Iconoir                outline, -solid  (a subset)       — Fill
+//   Fluent UI              -24-regular, -24-filled           — Fill
+//   Bootstrap Icons        outline, -fill   (a subset)       — Fill
+//   Pixelarticons          outline, -solid  (a subset)       — Fill
 //
 // Lucide draws one weight and so offers Regular only. A segment the current
 // scope cannot honour is DISABLED with the reason (which packs do draw it),
@@ -336,10 +340,13 @@ const WEIGHT_RULES = {
     heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
     tabler: n => /-filled$/.test(n),
     iconoir: n => /-solid$/.test(n),
+    fluent: n => /-24-filled$/.test(n),
+    bi: n => /-fill$/.test(n),
+    pixelarticons: n => /-solid$/.test(n),
   },
   duo: { ph: n => /-duotone$/.test(n) },
 }
-const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
 // `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
@@ -2930,7 +2937,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons']],
   },
   {
     label: 'Brand logos',
@@ -3950,6 +3957,15 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     debounceSearch(next, { pack, group })
   }
 
+  // The "Search “house” instead" button of the empty state. Runs the other word
+  // at once, in the scope already chosen, with no debounce: it is a press, not
+  // typing.
+  const handleTrySynonym = (word) => {
+    clearTimeout(timer.current)
+    setQuery(word)
+    doSearch(word, { pack, group })
+  }
+
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
@@ -4435,6 +4451,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // which says what it is and how to open it.
   const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
+  // A word the catalogues name differently ("home" for "house"): offered as a
+  // button on the empty state, so no second search runs unless it is pressed.
+  const synonym = searchEmpty ? iconSynonymFor(query) : ''
 
   /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
@@ -5141,9 +5160,18 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <p>{query.trim()
-                  ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
-                  : 'No icons to show — try another pack or search.'}</p>
+                {synonym ? (
+                  <>
+                    <p>{`No icons match “${query.trim()}”. Try “${synonym}”.`}</p>
+                    <button type="button" className="btn pl-empty-try" onClick={() => handleTrySynonym(synonym)}>
+                      {`Search “${synonym}” instead`}
+                    </button>
+                  </>
+                ) : (
+                  <p>{query.trim()
+                    ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                    : 'No icons to show — try another pack or search.'}</p>
+                )}
               </div>
             )}
 

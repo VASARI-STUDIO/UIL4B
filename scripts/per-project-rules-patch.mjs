@@ -5,8 +5,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // `firestore.rules` is approval-gated (docs/reference/human-validation-zones.md).
 // The per-project sync shape needs one rule added to it, and that rule cannot be
-// staged from an agent branch — the auto-mode classifier refuses the file
-// whether or not a permission has been granted. #390 hit the same wall.
+// staged from an automated branch, whether or not a permission has been
+// granted. #390 hit the same wall.
 //
 // So the rule lives as a committed, UNAPPLIED diff
 // (docs/design/per-project-sync-rules.patch), and everything that has to reason

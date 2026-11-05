@@ -1,0 +1,27 @@
+{
+  "prefix": "pixelarticons",
+  "total": 20,
+  "title": "Pixelarticons",
+  "uncategorized": [
+    "home",
+    "heart",
+    "search",
+    "user",
+    "mail",
+    "bell",
+    "calendar",
+    "cloud",
+    "download",
+    "upload",
+    "folder",
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "arrow-down",
+    "close",
+    "check",
+    "plus",
+    "minus",
+    "sliders"
+  ]
+}

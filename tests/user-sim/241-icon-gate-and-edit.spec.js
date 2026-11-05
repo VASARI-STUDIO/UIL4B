@@ -19,8 +19,8 @@ import { go, watch } from './helpers.js'
 import { gridColumns } from './icon-grid-rows.js'
 
 const WIDTHS = [390, 768, 1440]
-// Packs a free account opens: the five signed-out sets plus the seven behind login.
-const FREE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+// Packs a free account opens: the five signed-out sets plus the eleven behind login.
+const FREE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 
 /** What the heading should quote: every name in those snapshots, less Carbon's Pro-only logo-* marks. */
 function expectedFreeTotal() {
@@ -53,7 +53,7 @@ test.describe('the signed-out gate', () => {
       expect(m, `the gate heading: "${heading}"`).not.toBeNull()
       const quoted = Number(m[1].replace(/,/g, ''))
       expect(quoted, 'the gate quotes the real total').toBeGreaterThanOrEqual(expectedFreeTotal())
-      await expect(gate.locator('.ig-end-p'), 'the sets count stays as secondary text').toContainText('across 12 sets')
+      await expect(gate.locator('.ig-end-p'), 'the sets count stays as secondary text').toContainText('across 16 sets')
 
       const cols = await gridColumns(page)
       const tease = page.locator('.ig-end-tease')

@@ -7,8 +7,7 @@ import { reportUpgradeGate } from '../../contexts/ProModalContext'
 // The rows of the Palette Builder's Suggest and Explore panels. One component
 // for variations, palettes and brands: a name line over a strip of equal chips,
 // so chip n of every row sits under chip n of "Your palette" and a variation
-// reads as a column-by-column diff of the user's own colours. Design:
-// memory/designs/design-2026-10-31-suggest-explore.md, sections 3, 4 and 7.
+// reads as a column-by-column diff of the user's own colours.
 
 const Svg = ({ size = 14, children }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{children}</svg>
