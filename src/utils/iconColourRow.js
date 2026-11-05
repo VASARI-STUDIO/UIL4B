@@ -1,22 +1,36 @@
-import { isMulticolourSvg } from './iconPaint.js'
+import { isMulticolourSvg, isNearBlackMono, singlePaint } from './iconPaint.js'
 import { contrastRatio } from './colors.js'
 
 // What the customiser's Colour row shows for an icon.
 //
 //   choose    the Default / Black / White choice and the picker
 //   original  plain text: the art keeps its own colours, so there is nothing to choose
+//   brand     one-colour art that is not near-black (a brand's red or blue): it is drawn
+//             in that colour until another is chosen, so the row offers the colour
+//             (`paint`) as "Original" beside the usual choices
 //   wait      the art's markup has not arrived, so whether it has colours is unknown;
 //             the row holds its height and shows nothing
 //
 // `coloured` is whether the art is drawn in its own colours. While the markup is
 // unknown a coloured-pack icon counts as coloured (the stage sits on the theme
 // ground until the art says otherwise), but the row stays neutral: a one-colour
-// logo must never flash "Original colours" before it settles on Black / White.
+// near-black logo must never flash "Original colours" before it settles on Black / White.
 // A failed load will never settle, so it reads as coloured rather than waiting.
-export function colourRowState({ inColouredPack, svg, failed = false }) {
+//
+// One-colour near-black art is the page's ink in the grid, so it stays a mono icon here.
+// `inkDarkMax` is the luminance below which the grid reads art as near-black; passing
+// the grid's own limit keeps the two from disagreeing about a logo.
+//
+// Once a colour is chosen (`colourChosen`) a brand logo is recoloured like a mono icon,
+// so it is no longer drawn in its own colours (`coloured` false); the row stays 'brand'
+// so "Original" is still there to go back to.
+export function colourRowState({ inColouredPack, svg, failed = false, inkDarkMax, colourChosen = false }) {
   if (!inColouredPack) return { coloured: false, row: 'choose' }
   if (!svg) return { coloured: true, row: failed ? 'original' : 'wait' }
-  return isMulticolourSvg(svg) ? { coloured: true, row: 'original' } : { coloured: false, row: 'choose' }
+  if (isMulticolourSvg(svg)) return { coloured: true, row: 'original' }
+  const paint = singlePaint(svg)
+  if (paint && !isNearBlackMono(svg, inkDarkMax)) return { coloured: !colourChosen, row: 'brand', paint }
+  return { coloured: false, row: 'choose' }
 }
 
 // Which of the four colour choices a colour value is. The value is '' for "Text

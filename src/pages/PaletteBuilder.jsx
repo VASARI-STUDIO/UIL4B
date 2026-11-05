@@ -896,6 +896,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   useEffect(() => {
     if (initial.source !== 'query' && initial.source !== 'handoff') return
     parkWorkingDesign({
+      message: 'Opened the shared palette. Your brand kit is in Your workspace.',
       label: 'Go back to it',
       onRestore: () => navigate({ pathname: window.location.pathname, search: '' }, { replace: true }),
     })
@@ -4172,7 +4173,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the
           visitor is in the flow. */}
-      <UIKitGuide step="color" />
+      <UIKitGuide step="color" linked={initial.source === 'query' || initial.source === 'handoff'} />
 
       {coachOn && (
         <PaletteCoach

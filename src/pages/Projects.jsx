@@ -17,6 +17,7 @@ import ContinueCard from '../components/userhome/ContinueCard'
 import StarterCard from '../components/userhome/StarterCard'
 import FirstPaletteCard from '../components/userhome/FirstPaletteCard'
 import ProjectRows from '../components/userhome/ProjectRows'
+import ParkedRow from '../components/userhome/ParkedRow'
 import StartSomething from '../components/userhome/StartSomething'
 import DiscoverPicks from '../components/userhome/DiscoverPicks'
 import ProPanel from '../components/userhome/ProPanel'
@@ -259,6 +260,7 @@ export default function Projects() {
   )
   const main = (
     <div className="uh-dash-main">
+      <ParkedRow />
       {body}
       {!signedOut && newProject('foot')}
     </div>

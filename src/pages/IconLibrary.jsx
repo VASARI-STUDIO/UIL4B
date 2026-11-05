@@ -1647,7 +1647,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [activeIcon, strokeFromMarkup])
   const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
   // A saved icon carries its own markup and nothing fetches it, so it never waits.
-  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom })
+  // A one-colour brand logo is drawn in its own colour until a colour is chosen; choosing one
+  // recolours it as it would a mono icon, and "Original" (no colour) puts the art's paint back.
+  const { coloured: isColoredPack, row: colourRow, paint: brandPaint } = colourRowState({
+    inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom,
+    inkDarkMax: INK_DARK_MAX, colourChosen: !!color,
+  })
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -2420,7 +2425,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
             <div className="icust-right">
             <div className="icust-controls">
-              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
+              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' || colourRow === 'brand' ? ' icust-row--colour' : ''}`}>
                 <label id="icust-colour-label">Colour</label>
                 {colourRow === 'original' ? (
                   <span className="icust-value">Original colours</span>
@@ -2428,9 +2433,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   <span className="icust-value">&nbsp;</span>
                 ) : (
                   <>
-                    <span className="icust-colour-value">{choice === 'text' ? 'currentColor' : color.toUpperCase()}</span>
+                    <span className="icust-colour-value">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
                     {/* Four choices, exactly one selected. Text colour is the file's
-                        currentColor (no colour written); the rest write a hex. */}
+                        currentColor (no colour written); the rest write a hex. A brand
+                        logo's first choice is Original: no colour written, the art's own paint kept. */}
                     <div className="icust-chips" role="radiogroup" aria-labelledby="icust-colour-label" onKeyDown={steerRadios}>
                       <button
                         type="button"
@@ -2440,8 +2446,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         className="icust-chip"
                         onClick={() => { setColor(''); markDirty() }}
                       >
-                        <span className="icust-chip-sw icust-chip-sw--text" aria-hidden="true" />
-                        {isDuotone ? 'Original' : 'Text colour'}
+                        {brandPaint
+                          ? <span className="icust-chip-sw" style={{ background: brandPaint }} aria-hidden="true" />
+                          : <span className="icust-chip-sw icust-chip-sw--text" aria-hidden="true" />}
+                        {isDuotone || brandPaint ? 'Original' : 'Text colour'}
                       </button>
                       {[['black', 'Black', '#000000'], ['white', 'White', '#ffffff']].map(([id, label, hex]) => (
                         <button
@@ -2461,7 +2469,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           inline panel hung off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
                         portal
-                        value={color || themeInk}
+                        value={color || (brandPaint?.[0] === '#' ? brandPaint : themeInk)}
                         onChange={(v) => { setColor(v); markDirty() }}
                         triggerClassName="icust-chip"
                         triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, 'aria-haspopup': undefined, 'data-opens-popup': '', tabIndex: choice === 'custom' ? 0 : -1 }}
@@ -2474,7 +2482,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       />
                     </div>
                     <p className="icust-colour-help">
-                      {choice === 'text'
+                      {choice === 'text' && brandPaint
+                        ? 'The file keeps the logo\'s own colour. Pick another to recolour it.'
+                        : choice === 'text'
                         ? <>The file uses <code>currentColor</code>, so it follows the surrounding text.</>
                         : 'The file keeps this colour wherever you use it.'}
                     </p>
