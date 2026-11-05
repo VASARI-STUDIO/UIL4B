@@ -384,6 +384,20 @@ export function acceptStep(id, storage) {
   return next
 }
 
+/**
+ * Put back a set of steps moved past, in flow order, while the flow runs. Undo
+ * after starting a new kit uses it, so the kit it brings back has its ticks too.
+ * Unknown ids are dropped. Returns the steps now recorded.
+ */
+export function restoreAcceptedSteps(ids, storage) {
+  const flag = readFlag(storage)
+  if (!flag.active) return flag.accepted
+  const keep = new Set(Array.isArray(ids) ? ids : [])
+  const next = BRAND_KIT_STEPS.map((s) => s.id).filter((id) => keep.has(id))
+  writeFlag(next, storage)
+  return next
+}
+
 /** Forget the steps moved past, keeping the flow running. A new project starts here. */
 export function clearAcceptedSteps(storage) {
   if (readFlag(storage).active) writeFlag([], storage)

@@ -16,6 +16,7 @@ import {
   acceptStep,
   acceptedSteps,
   clearAcceptedSteps,
+  restoreAcceptedSteps,
   endGuide,
   firstIncompleteStep,
   guideProgress,
@@ -348,7 +349,9 @@ export default function UIKitGuide({ step, linked = false }) {
   }
   // The working design is put aside by resetDesign when it holds unsaved work.
   const startNewKit = () => {
-    resetDesign()
+    // Starting over clears the steps moved past; Undo brings them back with the kit.
+    const before = acceptedSteps()
+    resetDesign({ onRestore: () => setAccepted(restoreAcceptedSteps(before)) })
     remountTool()
     endGuide()
     startGuide()
