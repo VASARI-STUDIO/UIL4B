@@ -20,7 +20,7 @@
 /* The Gemini notice sits above the dropzone and describes it. */
 .alt-page .ai-image-consent {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--tl-dim);
 }
@@ -50,7 +50,12 @@
   transition: border-color var(--dur-1) ease, background-color var(--dur-1) ease;
 }
 
-.alt-page .alt-dropzone:hover { border-color: var(--t2); }
+/* Hover is for a mouse: on touch it would stay lit after a tap. */
+@media (hover: hover) {
+  .alt-page .alt-dropzone:hover { border-color: var(--t2); }
+  .alt-page .alt-field:hover { border-color: var(--tl-line-on); }
+  .alt-page .alt-row-text:hover { border-color: var(--tl-line); }
+}
 
 .alt-page .alt-dropzone.dragging { border-color: var(--accent); background: var(--accent-wash); }
 
@@ -78,9 +83,9 @@
 
 .alt-page .alt-brief-col { display: grid; gap: var(--s-2); align-content: start; min-width: 0; }
 
-.alt-page .alt-brief-label { font-size: var(--fs-caption); line-height: 1.3; color: var(--tl-dim); }
+.alt-page .alt-brief-label { font-size: 14px; font-weight: 540; line-height: 1.3; color: var(--tl-ink); }
 
-.alt-page .alt-brief-opt { color: var(--tl-faint); }
+.alt-page .alt-brief-opt { font-weight: 400; color: var(--tl-faint); }
 
 .alt-page .alt-field {
   width: 100%;
@@ -96,11 +101,9 @@
   transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
 }
 
-.alt-page .alt-field:hover { border-color: var(--tl-line-on); }
-
 .alt-page .alt-field:focus-visible { border-color: var(--tl-line); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.alt-page .alt-field-help { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); }
+.alt-page .alt-field-help { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); text-wrap: pretty; }
 
 .alt-page .alt-field-help strong { font-weight: 560; color: var(--tl-ink); }
 
@@ -120,7 +123,17 @@
 .alt-page .alt-example { display: grid; gap: var(--s-1); margin: 0; padding-block: var(--s-3); border-block-start: 1px solid var(--tl-hair); }
 .alt-page .alt-example-label { font-size: var(--fs-caption); color: var(--tl-dim); }
 .alt-page .alt-example-words { margin: 0; font-size: 16px; line-height: 1.5; color: var(--tl-ink); }
-@media (min-width: 768px) { .alt-page .alt-example-words { font-size: 17px; } }
+/* The count is a row-foot item elsewhere (`grid-area: count`); the example has no areas. */
+.alt-page .alt-example .alt-row-count { grid-area: auto; }
+@media (min-width: 768px) {
+  .alt-page .alt-example-words { font-size: 17px; }
+  /* The same two columns as a written row, so the words land where a result's will. */
+  .alt-page .alt-example { grid-template-columns: 160px minmax(0, 1fr); column-gap: var(--s-5); }
+  .alt-page .alt-example-label { grid-row: 1 / span 2; padding-top: 3px; }
+  .alt-page .alt-example-words,
+  .alt-page .alt-example .alt-row-count { grid-column: 2; }
+}
+@media (min-width: 1024px) { .alt-page .alt-example { grid-template-columns: 200px minmax(0, 1fr); } }
 
 .alt-page .alt-guide { padding-block: var(--s-2); border-block: 1px solid var(--tl-hair); }
 
@@ -152,9 +165,9 @@
 
 .alt-page .alt-tips { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: var(--s-2) 0 var(--s-3) 18px; max-width: 72ch; }
 
-.alt-page .alt-tips li { font-size: 13px; line-height: 1.55; color: var(--t1); }
+.alt-page .alt-tips li { font-size: var(--fs-caption); line-height: 1.55; color: var(--t1); }
 
-.alt-page .alt-tips code { padding: 1px 5px; font-family: var(--mono); font-size: 11.5px; background: var(--bg-2); border-radius: var(--radius-xs); }
+.alt-page .alt-tips code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; background: var(--bg-2); border-radius: var(--radius-xs); }
 
 .alt-page .alt-tips a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
@@ -171,9 +184,14 @@
   border-bottom: 1px solid var(--tl-hair);
 }
 
-.alt-page .alt-sheet-head h2 { margin: 0; font-size: 15px; font-weight: 560; color: var(--tl-ink); }
+.alt-page .alt-sheet-head h2 { flex: none; margin: 0; font-size: 14px; font-weight: 560; color: var(--tl-ink); white-space: nowrap; }
 
-.alt-page .alt-sheet-sum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin: 0; font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.alt-page .alt-sheet-sum { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s-3); min-width: 0; margin: 0; font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The summary is the part that gives way: it ellipsises before the header wraps. */
+.alt-page .alt-sheet-sum > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.alt-page .alt-retry-failed { flex: none; }
 
 .alt-page .alt-row {
   display: grid;
@@ -233,9 +251,12 @@
   animation: alt-fade-in 200ms var(--alt-ease) both;
 }
 
-.alt-page .alt-row-text:hover { border-color: var(--tl-line); }
-
 .alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Touch has no hover, so the written text carries its edge from the start. */
+@media (hover: none) {
+  .alt-page .alt-row-text { border-color: var(--border); }
+}
 
 @keyframes alt-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
@@ -285,6 +306,11 @@
 .alt-page .alt-row-actions { grid-area: actions; display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
 
 .alt-page .alt-row-actions:empty { display: none; }
+
+/* A lone button (Write, Try again) takes the whole row on a phone, not half. */
+@media (max-width: 767px) {
+  .alt-page .alt-row-actions > :only-child { grid-column: 1 / -1; }
+}
 
 .alt-page .alt-row-actions .tl-btn { width: 100%; height: 44px; min-height: 44px; }
 
@@ -356,7 +382,8 @@
   border-radius: var(--radius-2xl);
 }
 
-/* Its own tile, so a dropzone restyle can't change this card. */
+/* Its own icon holder, so a dropzone restyle can't change this card. No tile of
+   its own: the card is the only box. */
 .alt-page .alt-region-ico {
   grid-row: 1 / span 4;
   display: inline-grid;
@@ -364,9 +391,6 @@
   width: 40px;
   height: 40px;
   color: var(--t1);
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .alt-page .alt-region-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; color: var(--t0); border-radius: var(--radius-xs); }
@@ -375,7 +399,7 @@
 
 .alt-page .alt-region-body { margin: 0; max-width: 72ch; font-size: 13px; line-height: 1.55; color: var(--t1); }
 
-.alt-page .alt-region-note { margin: 2px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.alt-page .alt-region-note { margin: 2px 0 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--t2); }
 
 /* An anchor wearing the pill: no underline, hugs its text, sits under the note. */
 .alt-page .alt-region-link { justify-self: start; margin-top: 10px; text-decoration: none; }

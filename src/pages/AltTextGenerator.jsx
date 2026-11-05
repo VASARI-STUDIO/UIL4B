@@ -428,7 +428,6 @@ export default function AltTextGenerator({ toast }) {
     setItems(prev => prev.map(p => p.id === id ? { ...p, decorative: on } : p))
   }
 
-  const preparingCount = items.filter(it => it.status === 'pending').length
   const readyCount = items.filter(it => !it.decorative && (it.status === 'ready' || it.status === 'error')).length
   const writtenCount = items.filter(it => it.altText && !it.decorative).length
   const failedIds = items.filter(it => it.status === 'error' && !it.altText && !it.decorative).map(it => it.id)
@@ -455,18 +454,13 @@ export default function AltTextGenerator({ toast }) {
 
   // The toolbar's actions, in row order. Each id carries what it acts on, so a
   // change in the queue re-measures the row. Empty when the region gate applies.
+  // The image count is the sheet's, beside its rows; the bar only reports a run.
   const tbItems = []
-  if (!regionBlocked && items.length > 0) {
+  if (!regionBlocked && items.length > 0 && run) {
     tbItems.push({
-      id: `count-${items.length}-${writtenCount}-${run ? run.at : 0}`,
+      id: `count-${run.at}-${run.total}`,
       menu: false,
-      render: () => (
-        <span className="tl-meta alt-count">
-          {run
-            ? `Writing ${run.at} of ${run.total}`
-            : `${items.length} image${items.length === 1 ? '' : 's'}${writtenCount > 0 ? ` · ${writtenCount} written` : ''}`}
-        </span>
-      ),
+      render: () => <span className="tl-meta alt-count">{`Writing ${run.at} of ${run.total}`}</span>,
     })
   }
   if (!regionBlocked && primaryKind !== 'add') tbItems.push({
@@ -613,7 +607,7 @@ export default function AltTextGenerator({ toast }) {
                     keyword-stuffing tool would abuse, and the server prompt
                     refuses to use it that way. */}
                 <p className="alt-field-help" id="alt-context-help">
-                  Optional. Helps pick which details matter. It&rsquo;s never added as keywords.
+                  Helps pick which details matter. It&rsquo;s never added as keywords.
                 </p>
               </div>
               {quota.message ? (
@@ -643,7 +637,6 @@ export default function AltTextGenerator({ toast }) {
                 <div className="alt-sheet-head">
                   <h2 id="alt-sheet-title">{items.length} image{items.length === 1 ? '' : 's'}</h2>
                   <p className="alt-sheet-sum">
-                    {preparingCount > 0 && <span>Preparing {preparingCount} image{preparingCount === 1 ? '' : 's'}…</span>}
                     <span>{writtenCount} written{failedIds.length > 0 ? ` · ${failedIds.length} failed` : ''}</span>
                     {failedIds.length > 0 && !quota.blocked && (
                       <ToolButton className="alt-retry-failed" disabled={busy} onClick={() => generateAll(failedIds)}>Retry failed</ToolButton>
