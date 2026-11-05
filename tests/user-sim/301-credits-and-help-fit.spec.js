@@ -8,6 +8,7 @@
 //   .crd-row loses align-content: start     -> "keep their lines together"
 //   .crd-row-side loses its max-width        -> "keep their lines together"
 //   .hlr-tick stays at opacity 0 under 960px -> "closed rows show their arrow"
+//   .hlr-grid is not capped at 768             -> "the arrow stays near its label"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -46,3 +47,15 @@ for (const [width, touch] of [[390, true], [768, false]]) {
     })
   })
 }
+
+test.describe('help at 768', () => {
+  test.use({ viewport: { width: 768, height: 1024 } })
+
+  test('the arrow stays near its label', async ({ page }) => {
+    watch(page, 'someone looking for help on a tablet')
+    await go(page, '/learn/help')
+    const grid = page.locator('.hlr-grid').first()
+    await expect(grid).toBeVisible()
+    expect((await grid.boundingBox()).width).toBeLessThanOrEqual(640)
+  })
+})

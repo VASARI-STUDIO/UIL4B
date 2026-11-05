@@ -71,6 +71,11 @@
   .hlr-tick { opacity: 1; color: var(--cpg-faint); transition: transform 150ms var(--cpg-ease); }
   .hlr-job[aria-expanded="true"] .hlr-tick { color: var(--cpg-ink); transform: rotate(90deg); }
 }
+/* A tablet's accordion is capped, so a row's arrow stays near its label; the 11-stop
+   strip still gives every stop about 54px at 640. */
+@media (min-width: 600px) and (max-width: 959px) {
+  .hlr-grid { max-width: 640px; }
+}
 
 /* ── An answer ── */
 .hlr-ans[hidden] { display: none; }
