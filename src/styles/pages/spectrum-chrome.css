@@ -419,7 +419,8 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none
   .sp-footer .sp-footer-legal{row-gap:0}
   .sp-footer .app-footer-note,
   .sp-footer .sp-footer-legal a.sp-footer-attrib{display:inline-flex;align-items:center;min-height:44px}
-  /* The licence row keeps its prose rhythm: each link reaches 44px with an invisible
-     box (22px lines, so the boxes of two lines meet and do not overlap). */
-  .sp-footer .sp-footer-notice-list a::after{content:"";position:absolute;inset:-11px -4px;min-width:44px}
+  /* Each link in the licence row is its own 44px box, so the row runs on a 44px
+     line on touch: an invisible hit box on a 22px line would overlap the link on the
+     next line and steal its taps. */
+  .sp-footer .sp-footer-notice-list a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding-block:0}
 }
