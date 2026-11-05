@@ -15,6 +15,7 @@ import QuotaMeter from '../components/QuotaMeter'
 import {
   AI_IMAGE_SENT, AI_TERMS_PATH, AI_REGION_TITLE, AI_REGION_ALT_BODY, AI_REGION_PANEL,
 } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 import useAiRegion, { regionBlockedNow } from '../hooks/useAiRegion'
 import { isRegionRefusal } from '../utils/aiRegion'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -550,7 +551,7 @@ export default function AltTextGenerator({ toast }) {
                 provider may do with an image is in the Terms, linked rather
                 than repeated. */}
             <p id="alt-ai-consent" className="ai-image-consent">
-              {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link>
+              {AI_IMAGE_SENT} <Link to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>How providers may use them</Link>
             </p>
             <div
               aria-describedby="alt-ai-consent"

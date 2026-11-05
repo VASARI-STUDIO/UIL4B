@@ -13,6 +13,7 @@ import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
 import { loadFirestore } from '../utils/firebaseAccess'
 import { AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -1938,7 +1939,7 @@ export default function Settings({ toast }) {
                     'No ad networks and no third-party cookies.',
                     'Sign-in is handled by Firebase Authentication (Google).',
                     'Signed in, your settings and projects sync to your account so they follow you to other devices. Signed out, they stay in this browser only.',
-                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
+                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>Read the Terms</NavLink>.</>,
                     'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
                     <li key={i}>{line}</li>

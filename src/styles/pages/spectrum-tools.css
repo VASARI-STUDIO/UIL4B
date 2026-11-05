@@ -64,6 +64,20 @@
 .spt .spt-more { margin: 40px 0 0; font-size: 14px; color: var(--sp-dim); }
 .spt .spt-more + .spt-more { margin-top: 8px; }
 .spt .spt-more a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+/* The links in the "In beta" sentence stay the size of their words. To a finger
+   each is 44px tall: an invisible strip centred on the link. Only the tool
+   names are links, with plain text between them, so the strips never meet. */
+@media (pointer: coarse), (max-width: 767px) {
+  .spt .spt-more a { position: relative; }
+  .spt .spt-more a::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
 .spt .sp-close { padding-top: clamp(72px, 10vw, 140px); }
 
 @media (max-width: 860px) {

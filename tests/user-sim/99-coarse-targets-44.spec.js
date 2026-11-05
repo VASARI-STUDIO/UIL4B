@@ -76,7 +76,10 @@ for (const c of CASES) {
       await expect(loc, `${sel} is not on ${c.route}`).toBeAttached({ timeout: 15000 })
       await loc.scrollIntoViewIfNeeded()
       // Settle on the animation layer: a dialog measured mid-entrance is scaled.
+      // Only time-based animations finish; a scroll-driven one (the rail edge
+      // fade) follows the scroll position and never resolves `finished`.
       await page.evaluate(() => Promise.all(document.getAnimations()
+        .filter((a) => a.timeline === document.timeline)
         .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
         .map((a) => a.finished.catch(() => {}))))
       const m = await hitArea(page, sel)

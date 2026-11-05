@@ -33,7 +33,7 @@ test('both image tools render their notice, and before their dropzone', () => {
     else assert.ok(at < src.indexOf(dropzone), `${file} shows the notice after the dropzone`)
   }
   const alt = stripComments(read('src/pages/AltTextGenerator.jsx'))
-  assert.match(alt, /<Link to=\{AI_TERMS_PATH\}>/, 'the Alt Text notice does not link to the Terms')
+  assert.match(alt, /<Link to=\{AI_TERMS_PATH\}[\s>]/, 'the Alt Text notice does not link to the Terms')
 })
 
 test('api/ai.js still sends images only to Gemini, which is what the notices say', () => {

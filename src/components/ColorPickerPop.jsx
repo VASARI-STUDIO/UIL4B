@@ -182,6 +182,10 @@ export default function ColorPickerPop({
   // the colour passes through black/white (where hue is lost in hex round-trips).
   const [hsv, setHsv] = useState(() => hexToHsv(current))
   const [hexText, setHexText] = useState(current)
+  // True after a typed value could not be read. The field has already snapped
+  // back to the last good colour; this keeps the reason on screen until the next
+  // value that does parse.
+  const [hexError, setHexError] = useState(false)
   const padRef = useRef(null)
   const draggingRef = useRef(false)
 
@@ -190,7 +194,7 @@ export default function ColorPickerPop({
   // `input`). ColorStudio's "+ Add" card needs exactly that signal to know one
   // pick has ended and the next should append a new swatch rather than keep
   // rewriting the last one.
-  const close = useCallback(() => { setOpen(false); onClose?.() }, [onClose])
+  const close = useCallback(() => { setOpen(false); setHexError(false); onClose?.() }, [onClose])
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
@@ -298,6 +302,7 @@ export default function ColorPickerPop({
     setHsv(next)
     const hex = hsvToHex(next)
     setHexText(formatColor(hex, format))
+    setHexError(false)
     onChange?.(hex)
   }
 
@@ -313,6 +318,7 @@ export default function ColorPickerPop({
   const selectColor = (hex) => {
     setHsv(hexToHsv(hex))
     setHexText(formatColor(hex, format))
+    setHexError(false)
     onChange?.(hex)
     remember(hex)
   }
@@ -351,7 +357,7 @@ export default function ColorPickerPop({
   // the colour that was already chosen.
   const applyTypedColor = () => {
     const parsed = parseColor(hexText)
-    if (!parsed) { setHexText(formatColor(liveHex, format)); return }
+    if (!parsed) { setHexText(formatColor(liveHex, format)); setHexError(true); return }
     // `parsed.alpha` is deliberately discarded. Pasting `#ff000080` or
     // `rgb(255 0 0 / .5)` sets the COLOUR and drops the transparency, because
     // nothing downstream can store one — see the note at the top. Silently
@@ -505,6 +511,7 @@ export default function ColorPickerPop({
             />
           </div>
 
+          <div className="cpk-value">
           <div className="cpk-row">
             {canSampleScreen && (
               <button
@@ -527,11 +534,16 @@ export default function ColorPickerPop({
               type="text"
               value={hexText}
               spellCheck={false}
+              aria-invalid={hexError}
+              aria-describedby={hexError ? `${ids}-hexhint` : undefined}
               /* Not "Hex colour" any more: the field takes rgb() and hsl() too,
                  and a label that names one notation tells a screen-reader user
                  the other two will be rejected. */
               aria-label="Colour value"
-              onChange={(e) => setHexText(e.target.value)}
+              onChange={(e) => {
+                setHexText(e.target.value)
+                if (hexError && parseColor(e.target.value)) setHexError(false)
+              }}
               onBlur={applyTypedColor}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyTypedColor() } }}
             />
@@ -552,6 +564,12 @@ export default function ColorPickerPop({
                 <option key={f} value={f}>{f.toUpperCase()}</option>
               ))}
             </MenuSelect>
+          </div>
+          {/* Empty until a typed value is refused, so it takes no room. The field
+              has already gone back to the last good colour. */}
+          <p id={`${ids}-hexhint`} className="cpk-hint" aria-live="polite">
+            {hexError && 'Use a hex like #1A2B3C'}
+          </p>
           </div>
 
           {/* Two labelled sections rather than two bare grids. Canva, Adobe

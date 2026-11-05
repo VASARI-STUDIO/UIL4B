@@ -210,6 +210,22 @@
   text-underline-offset: 3px;
 }
 .ic-acc-body-inner a:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+/* A link inside a sentence stays the size of its words, so the line it sits in
+ * does not change. To a finger it is 44px tall: an invisible strip centred on
+ * the link, the same device the header controls use. The link is the only one
+ * in its paragraph, so no neighbour shares the strip. It stays on one line: a
+ * link split across two lines would leave the strip on neither. */
+@media (pointer: coarse), (max-width: 767px) {
+  .ic-acc-body-inner a.ic-hit { position: relative; white-space: nowrap; }
+  .ic-acc-body-inner a.ic-hit::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
 /* SC 2.5.8, AND THE INLINE EXCEPTION DOES NOT COVER THESE.
  * The "Documentation & Resources" section renders LEARN_ARTICLES as a list of
  * seven links, one per `<li>`, each the only thing in its row. That is a list

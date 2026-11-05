@@ -836,7 +836,7 @@ export default function Community({ toast }) {
             is simply also announced. `type="button"` for the same class of
             reason: neither is inside a form today, and neither should become a
             submit if one ever wraps them. */}
-        <div className="ch-filters">
+        <div className="ch-filters rail-overflow">
           {COMMUNITY_CATEGORIES.map(c => (
             <button
               key={c}

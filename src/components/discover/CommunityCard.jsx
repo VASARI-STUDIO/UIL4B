@@ -51,7 +51,11 @@ function HeartIcon({ filled }) {
 // withdrawal is in flight; `ready` false holds Retry until the account's own
 // list has been read. A curated card passes nothing and renders as before.
 export default function CommunityCard({ item, saved, count, onToggle, offline = false, own = null }) {
-  const href = safeHttpUrl(item.url)
+  // A starter card is an example of the format, named for the kind of design
+  // it stands for. Its url is only the platform's front page, which is not the
+  // design the card names, so it gets no outbound link. A member's submission
+  // links to what they submitted.
+  const href = item.curated ? null : safeHttpUrl(item.url)
   const mono = monoInk(item.c1, item.c2)
   // THE STOPS AND THE INK ARE SET TOGETHER OR NOT AT ALL.
   //
@@ -107,7 +111,7 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
           {thumbContent}
         </a>
       ) : (
-        <div {...thumbProps} aria-label={`${item.name} preview — external link unavailable`}>
+        <div {...thumbProps} aria-label={item.curated ? `${item.name} example` : `${item.name} preview — external link unavailable`}>
           {thumbContent}
         </div>
       )}
