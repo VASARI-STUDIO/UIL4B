@@ -63,7 +63,7 @@
   font-size: clamp(15.5px, 1.3vw, 17px);
   line-height: 1.6;
   color: var(--cpg-dim);
-  text-wrap: pretty;
+  text-wrap: balance;
 }
 .hlp-hero-cta { margin-top: var(--s-2); }
 /* Counted, not typed — the tool tallies. A plain label under the call to
