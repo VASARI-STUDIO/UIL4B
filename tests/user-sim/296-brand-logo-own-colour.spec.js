@@ -288,8 +288,14 @@ test('a saved, never-recoloured brand logo comes back in its own colour', async 
 
 test('on a phone the Original chip is a 44px target and the page does not scroll sideways', async ({ browser }) => {
   const { ctx, page } = await openLogo(browser, 'stripe', { width: 390, touch: true })
+  // Measured once the customiser has finished opening: mid-animation the chip is a
+  // fraction of a pixel short (43.99997px), which is the scale, not the target.
+  // Looping animations (a loader) never finish, so only the finite ones are waited on.
+  await page.evaluate(() => Promise.all(document.getAnimations()
+    .filter((a) => Number.isFinite(a.effect?.getComputedTiming?.().endTime))
+    .map((a) => a.finished.catch(() => {}))))
   const box = await chip(page, 'Original').boundingBox()
-  expect(box.height).toBeGreaterThanOrEqual(44)
+  expect(Math.round(box.height * 100) / 100).toBeGreaterThanOrEqual(44)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 'the page scrolls sideways').toBeLessThanOrEqual(0)
   await ctx.close()
 })
