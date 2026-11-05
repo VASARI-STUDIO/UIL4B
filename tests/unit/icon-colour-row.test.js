@@ -7,9 +7,67 @@ import { stripCss, stripJs } from '../helpers/strip-comments.js'
 const MULTI = '<svg><path fill="#123456"/><path fill="#abcdef"/></svg>'
 const GRADIENT = '<svg><defs><linearGradient id="a"/></defs><path fill="url(#a)"/></svg>'
 const SINGLE = '<svg><path fill="#161614"/></svg>'
+const BRAND = '<svg><path fill="#E60012"/><path fill="#E60012"/></svg>'
+// The grid's near-black limit (INK_DARK_MAX in IconLibrary.jsx, pinned by the glyph-ink test).
+const INK_DARK_MAX = 0.05
+const rowOf = (svg, extra) => colourRowState({ inColouredPack: true, svg, inkDarkMax: INK_DARK_MAX, ...extra })
+
+test('a one-colour brand logo keeps its colour and offers it as the original', () => {
+  assert.deepEqual(rowOf(BRAND), { coloured: true, row: 'brand', paint: '#e60012' })
+  assert.deepEqual(rowOf('<svg><path stroke="#1da1f2"/></svg>'), { coloured: true, row: 'brand', paint: '#1da1f2' })
+})
+
+test('choosing a colour recolours a brand logo but keeps the Original choice in the row', () => {
+  assert.deepEqual(rowOf(BRAND, { colourChosen: true }), { coloured: false, row: 'brand', paint: '#e60012' })
+  assert.deepEqual(rowOf(BRAND, { colourChosen: false }), { coloured: true, row: 'brand', paint: '#e60012' })
+})
+
+test('a chosen colour does not change what other art reads as', () => {
+  assert.deepEqual(rowOf(MULTI, { colourChosen: true }), { coloured: true, row: 'original' })
+  assert.deepEqual(rowOf(SINGLE, { colourChosen: true }), { coloured: false, row: 'choose' })
+  assert.deepEqual(rowOf(null, { colourChosen: true }), { coloured: true, row: 'wait' })
+})
+
+test('a white one-colour logo is a brand colour, not theme ink', () => {
+  assert.deepEqual(rowOf('<svg><path fill="#fff"/></svg>'), { coloured: true, row: 'brand', paint: '#ffffff' })
+})
+
+test('the brand rule stops at the grid\'s near-black limit', () => {
+  assert.equal(rowOf('<svg><path fill="#3f3f3f"/></svg>').row, 'choose')
+  assert.equal(rowOf('<svg><path fill="#404040"/></svg>').row, 'brand')
+  // Shapes that set no paint are black, so they are near-black art.
+  assert.equal(rowOf('<svg><path d="M0 0h8v8z"/></svg>').row, 'choose')
+})
+
+test('the limit comes from the caller, so the row and the grid cannot disagree', () => {
+  assert.equal(colourRowState({ inColouredPack: true, svg: '<svg><path fill="#404040"/></svg>', inkDarkMax: 0.1 }).row, 'choose')
+})
+
+test('a brand colour beside another paint is multi-colour art, not a brand row', () => {
+  assert.deepEqual(rowOf('<svg><path fill="#e60012"/><path fill="#161614"/></svg>'), { coloured: true, row: 'original' })
+})
+
+test('art whose colour cannot be read from its attributes is not a brand row', () => {
+  assert.equal(rowOf('<svg><style>path{fill:#e60012}</style><path/></svg>').row, 'choose')
+  assert.equal(rowOf('<svg fill="currentColor"><path/></svg>').row, 'choose')
+})
+
+test('only a coloured pack gets a brand row', () => {
+  assert.deepEqual(colourRowState({ inColouredPack: false, svg: BRAND, inkDarkMax: INK_DARK_MAX }), { coloured: false, row: 'choose' })
+})
+
+test('a brand logo goes from waiting straight to the brand row, never through "original"', () => {
+  assert.deepEqual([null, BRAND].map((svg) => rowOf(svg).row), ['wait', 'brand'])
+})
+
+test('the customiser hands the row the grid\'s limit and draws the Original chip with the brand swatch', () => {
+  const jsx = stripJs(readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8'))
+  assert.match(jsx, /colourRowState\(\{[^}]*inkDarkMax: INK_DARK_MAX/)
+  assert.match(jsx, /style=\{\{ background: brandPaint \}\}/)
+})
 
 test('a one-colour logo in a coloured pack gets the colour choice', () => {
-  assert.deepEqual(colourRowState({ inColouredPack: true, svg: SINGLE }), { coloured: false, row: 'choose' })
+  assert.deepEqual(colourRowState({ inColouredPack: true, svg: SINGLE, inkDarkMax: INK_DARK_MAX }), { coloured: false, row: 'choose' })
 })
 
 test('multi-colour and gradient art read "Original colours"', () => {
@@ -31,7 +89,7 @@ test('before the markup arrives the row waits: no Default, no "Original colours"
 })
 
 test('a one-colour logo goes from waiting straight to the choice, never through "original"', () => {
-  const rows = [null, SINGLE].map((svg) => colourRowState({ inColouredPack: true, svg }).row)
+  const rows = [null, SINGLE].map((svg) => colourRowState({ inColouredPack: true, svg, inkDarkMax: INK_DARK_MAX }).row)
   assert.deepEqual(rows, ['wait', 'choose'])
 })
 
