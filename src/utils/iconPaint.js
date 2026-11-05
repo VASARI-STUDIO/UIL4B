@@ -1,6 +1,6 @@
 import { parseColor } from './colorFormats.js'
 
-const IGNORED_PAINTS =new Set(['none', 'currentcolor', 'transparent', 'inherit'])
+const IGNORED_PAINTS = new Set(['none', 'currentcolor', 'transparent', 'inherit'])
 
 function normalizePaint(value) {
   const paint = value.replace(/\s*!important\s*$/i, '').trim().toLowerCase()
@@ -102,7 +102,8 @@ export function paintLuminance(paint) {
   const text = String(paint || '').trim()
   if (!COLOUR_PAINT.test(text)) return null
   // A 4-digit #rgba is not one parseColor knows; it widens like #rgb does, alpha last.
-  const parsed = parseColor(text.replace(/^#([\da-f])([\da-f])([\da-f])([\da-f])$/i, '#$1$1$2$2$3$3$4$4'))
+  const wide = /^#[\da-f]{4}$/i.test(text) ? '#' + [...text.slice(1)].map((c) => c + c).join('') : text
+  const parsed = parseColor(wide)
   if (!parsed) return null
   const [r, g, b] = [1, 3, 5].map(i => toLinear(parseInt(parsed.hex.slice(i, i + 2), 16)))
   return 0.2126 * r + 0.7152 * g + 0.0722 * b

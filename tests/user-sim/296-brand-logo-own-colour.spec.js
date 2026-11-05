@@ -13,6 +13,9 @@
 //   Original sets a hex instead of ''                              -> "Original restores the art's own paint"
 //   the row's near-black limit is dropped                          -> "near-black art still follows the ink"
 //   a saved icon's own paint is ignored when it reopens            -> "a saved, never-recoloured brand logo"
+//   the header line follows the chosen colour, not the art          -> "recolouring changes nothing else"
+//   the Similar tiles' URL carries the colour choice                -> "recolouring changes nothing else"
+//   Copy SVG writes the clipboard here and again in onCopy          -> "recolouring changes nothing else"
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
@@ -23,6 +26,8 @@ const BRAND_RGB = 'rgb(99, 91, 255)'
 const DIAMONDS = `<path fill="${BRAND}" d="M12 2l4 6-4 6-4-6z"/><path fill="${BRAND}" d="M7 10l4 6-4 6-4-6z"/><path fill="${BRAND}" d="M17 10l4 6-4 6-4-6z"/>`
 const BODIES = {
   stripe: DIAMONDS,
+  // A sibling by name, so the customiser has a Similar tile to show for stripe.
+  'stripe-icon': DIAMONDS,
   'github-icon': '<path fill="#181717" d="M3 3h18v18H3z"/>',
   gitlab: '<path fill="#fc6d26" d="M3 3h18v18H3z"/><path fill="#e24329" d="M8 8h8v8H8z"/>',
 }
@@ -44,7 +49,7 @@ const choosePack = async (page, pack) => {
   }
 }
 
-/** Serve three logos by name: a one-colour brand, a near-black one and a two-colour one. */
+/** Serve logos by name: a one-colour brand (and its sibling), a near-black one and a two-colour one. */
 const serveLogos = async (page) => {
   await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && (u.pathname === '/logos.json' || u.pathname.startsWith('/logos/')), route => {
     const url = new URL(route.request().url())
@@ -58,9 +63,14 @@ const serveLogos = async (page) => {
     const icons = Object.fromEntries((url.searchParams.get('icons') || '').split(',').filter(Boolean).map(n => [n, { body: BODIES[n] || BODIES.gitlab }]))
     return route.fulfill({ contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'logos', width: 24, height: 24, icons }) })
   })
+  // The pack's name list ships with the app; this one lists only the logos above.
+  await page.route(u => u.pathname === '/iconify/collections/logos.json', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: Object.keys(BODIES).length, uncategorized: Object.keys(BODIES) }),
+  }))
   await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({
     contentType: 'application/json', headers: { [ICONIFY_STUB_HEADER]: '1', 'access-control-allow-origin': '*' },
-    body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: 3, uncategorized: Object.keys(BODIES) }),
+    body: JSON.stringify({ prefix: 'logos', title: 'SVG Logos', total: Object.keys(BODIES).length, uncategorized: Object.keys(BODIES) }),
   }))
 }
 
@@ -107,7 +117,7 @@ const computedFills = (page, markup) => page.evaluate((m) => {
 const copyOnce = async (page) => {
   const before = await page.evaluate(() => window.__copied.length)
   await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
-  // The clipboard may be written more than once per press (text and rich types); the last write is the file.
+  // One press writes once; the last write is the file.
   await expect.poll(() => page.evaluate(() => window.__copied.length)).toBeGreaterThan(before)
   return page.evaluate(() => window.__copied.at(-1))
 }
@@ -176,6 +186,35 @@ test('Black recolours a brand logo and Original restores the art\'s own paint', 
   await expect.poll(() => stageMarkup(page)).toContain(BRAND)
   expect(await computedFills(page, await stageMarkup(page))).toEqual([BRAND_RGB, BRAND_RGB, BRAND_RGB])
   expect(await copyOnce(page), 'Original did not put the art back byte for byte').toBe(original)
+  await ctx.close()
+})
+
+test('recolouring a brand logo changes nothing else: the header line, the Similar tiles, one clipboard write', async ({ browser }) => {
+  const { ctx, page } = await openLogo(browser, 'stripe')
+  const tiles = []
+  page.on('request', (r) => {
+    const u = new URL(r.url())
+    if (ICONIFY_HOSTS.includes(u.hostname) && u.pathname.startsWith('/logos/') && u.searchParams.get('height') === '24') tiles.push(r.url())
+  })
+  const sub = page.locator('.icust-sub')
+  await expect(sub).toHaveText('Logos (colour)')
+  const tileImgs = page.locator('.icust-similar-btn img')
+  await expect(tileImgs).toHaveCount(1)
+  const srcs = await tileImgs.evaluateAll((els) => els.map((e) => e.getAttribute('src')))
+  const fetched = tiles.length
+
+  for (const name of ['Black', 'Original', 'White', 'Original']) {
+    await chip(page, name).click()
+    await expect(chip(page, name)).toBeChecked()
+    await expect(sub, `the header line stays put on ${name}`).toHaveText('Logos (colour)')
+    expect(await tileImgs.evaluateAll((els) => els.map((e) => e.getAttribute('src'))), `the tiles keep their source on ${name}`).toEqual(srcs)
+  }
+  expect(tiles.length, 'no Similar tile is fetched again').toBe(fetched)
+
+  const before = await page.evaluate(() => window.__copied.length)
+  await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+  await expect(page.locator('.toast.show')).toContainText('Copied')
+  expect(await page.evaluate(() => window.__copied.length) - before, 'one press, one write').toBe(1)
   await ctx.close()
 })
 
