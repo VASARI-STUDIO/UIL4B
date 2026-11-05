@@ -177,6 +177,8 @@ export default function UIKitGuide({ step, linked = false }) {
   const [showChooser, setShowChooser] = useState(mountDecision.show)
   const [chooserEditedAt, setChooserEditedAt] = useState(readEditedAt)
   const [chooserOpenOther, setChooserOpenOther] = useState(false)
+  // Set when a project picked under Open another could not be opened.
+  const [chooserOpenError, setChooserOpenError] = useState('')
   // An edit to a swatch while the chooser is open answers it as "carry on". Only
   // the colours are compared, in one spelling: the board restates the same
   // palette a moment after it mounts, and that is not an edit.
@@ -354,7 +356,12 @@ export default function UIKitGuide({ step, linked = false }) {
   }
   const openKit = (project) => {
     const target = firstIncompleteStep(project.design, { iconsTouched, accepted: [] }) || BRAND_KIT_STEPS[0]
-    loadProject(project.id)
+    // A project that is no longer there leaves the question open and says why.
+    if (loadProject(project.id) === null) {
+      setChooserOpenError(`Couldn't open ${project.name}. It may have been deleted on another device.`)
+      return
+    }
+    setChooserOpenError('')
     remountTool()
     startGuide()
     clearAcceptedSteps()
@@ -412,6 +419,11 @@ export default function UIKitGuide({ step, linked = false }) {
     setActive(false)
     setShowIntro(false)
     setShowName(false)
+    // Leaving answers an open chooser as "carry on", and nothing of it stays on to
+    // be closed by a later edit or brought back by the next start.
+    setShowChooser(false)
+    setChooserOpenOther(false)
+    setChooserOpenError('')
   }, [])
 
   // The X unmounts with the bar, so focus would fall to <body>. It goes to the
@@ -815,6 +827,7 @@ export default function UIKitGuide({ step, linked = false }) {
         </button>
         {chooserOpenOther && (
           <ul className="bkit-choose-sub" id={`${chooserId}-other`}>
+            {chooserOpenError && <li><p className="bkit-name-error" role="alert">{chooserOpenError}</p></li>}
             {others.map((p) => {
               const parts = Object.values(partsPresent(withDefaults(p.design))).filter(Boolean).length
               return (

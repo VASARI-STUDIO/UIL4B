@@ -288,6 +288,21 @@ test.describe('The brand kit chooser', () => {
     expect(Date.now() - at, 'the last-edited time is still seven hours ago').toBeGreaterThan(6 * HOUR)
   })
 
+  test('T20 leaving the walkthrough while the chooser asks answers it, and nothing comes back', async ({ page }) => {
+    watch(page, 'a designer who closes the walkthrough instead of answering')
+    await seedKit(page, { hoursAgo: 7 })
+    await go(page, AWAY)
+    await pressBrandKit(page)
+    await expect(chooser(page)).toBeVisible()
+    await page.getByRole('button', { name: 'Leave the walkthrough' }).click()
+    await expect(chooser(page)).toHaveCount(0)
+    await expect.poll(() => sessionMark(page), { message: 'leaving answers it as carry on' }).toBe('on')
+    // The next press carries on, with no stale question.
+    await pressBrandKit(page)
+    await expect(page.getByRole('region', { name: 'Brand kit walkthrough' })).toBeVisible()
+    await expect(chooser(page)).toHaveCount(0)
+  })
+
   test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {
     watch(page, 'a designer finding their put-aside kit on the workspace')
     await signIn(page, { plan: 'free', projects: 0 })

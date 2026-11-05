@@ -946,7 +946,8 @@ export default function ColorStudio({ onCopy, toast }) {
                     // Unsaved work that was put aside has its own toast (with Undo); it names this project.
                     const putAside = loadProject(p.id)
                     closeSaveMenu()
-                    if (!putAside) toast?.('Loaded: ' + p.name)
+                    if (putAside === null) toast?.(`Couldn't open ${p.name}. It may have been deleted on another device.`)
+                    else if (!putAside) toast?.('Loaded: ' + p.name)
                   }}
                 >{p.name}</button>
               ))}
