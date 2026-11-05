@@ -27,7 +27,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { FIXTURE_DIR, ICONIFY_HOSTS, ICONIFY_STUB_HEADER, isLiveIconify } from './iconify-stub.js'
 
 test.skip(isLiveIconify(), 'the artwork is served from the fixture so the sizes are known')
@@ -52,15 +52,16 @@ async function choosePack(page, pack) {
   const sheet = page.getByRole('dialog', { name: 'Filters' })
   const packMenu = page.getByRole('button', { name: 'Icon pack' })
   const behindFilters = await filters.isVisible()
-  // On a slow runner the sheet can take a while to draw its pack control: open Filters
-  // until the control is really there, rather than trusting aria-expanded alone.
-  if (behindFilters) {
-    await expect(async () => {
-      if (await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
-      await expect(packMenu).toBeVisible({ timeout: 3_000 })
-    }).toPass({ timeout: 20_000 })
-  }
-  await chooseMenuOption(page, packMenu, pack)
+  // On a slow runner the Filters sheet can close again while the page settles after
+  // sign-in (CI at 390 saw the pack control appear, then vanish before the click). So the
+  // whole open-and-choose is retried with short steps until the chosen pack is applied.
+  const list = page.locator('.menu-select-list[role="listbox"]')
+  await expect(async () => {
+    if (behindFilters && await filters.getAttribute('aria-expanded') !== 'true') await filters.click({ timeout: 3_000 })
+    if (!(await list.isVisible())) await packMenu.click({ timeout: 3_000 })
+    await list.locator(`[role="option"][data-value="${pack}"]`).click({ timeout: 3_000 })
+    await expect(packMenu).not.toHaveText(/All packs/, { timeout: 3_000 })
+  }).toPass({ timeout: 40_000 })
   if (behindFilters) {
     if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
     await expect(sheet).toBeHidden()
@@ -200,6 +201,8 @@ test.describe('the "hard to see" note', () => {
 })
 
 test.describe('the Stroke caption', () => {
+  // Signing in as Pro and choosing a pack on a slow runner needs more than the default 30s.
+  test.describe.configure({ timeout: 60_000 })
   for (const size of SIZES) {
     // MUTATION: `.icust-stroke-note{padding-left:68px}` from 641 to 800px -> red at 768.
     test(`the Stroke note starts at the left edge of the other help lines, ${size.width}`, async ({ browser }) => {
