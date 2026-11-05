@@ -742,13 +742,19 @@ test.describe('saved icons', () => {
         await expect(flagChip, `${flagName} got a halo`).not.toHaveClass(/halo/)
       }
 
-      // A saved one-colour logo opens in the customiser as plain ink: colour
-      // controls, no "Original colours" default, and no halo on the stage.
+      // A saved one-colour near-black logo opens in the customiser as plain ink: colour
+      // controls, no "Original colours" default, and no halo on the stage. A saved white
+      // one keeps its own colour (an Original choice), edged for the light page like the grid.
       const pick = scheme === 'dark' ? 'Custom (github 1)' : 'Custom (apple 1)'
       await page.locator('.ig .ic', { hasText: pick }).click()
       await expect(page.getByRole('radio', { name: 'Black', exact: true })).toBeVisible({ timeout: 20000 })
       await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
-      await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo/)
+      if (scheme === 'dark') {
+        await expect(page.locator('.icust-stage')).not.toHaveClass(/icust-stage--halo/)
+      } else {
+        await expect(page.getByRole('radio', { name: 'Original', exact: true })).toBeChecked()
+        await expect(page.locator('.icust-stage')).toHaveClass(/icust-stage--halo-dark/)
+      }
       await page.keyboard.press('Escape')
       await choosePack(page, 'logodev')
       const logo = page.locator('.ig .ic .ig-chip').first()
