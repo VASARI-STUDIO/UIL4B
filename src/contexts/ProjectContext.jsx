@@ -14,12 +14,14 @@ import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
 import { projectSnapshot } from '../utils/designPatch'
-import { parkIfAtRisk, takeParked } from '../utils/parkedDesign'
+import { PARKED_KEY, parkIfAtRisk, readParked, takeParked } from '../utils/parkedDesign'
+import { SESSION_AUTH, SESSION_ON, markSession, stampEdited } from '../utils/kitSession'
 
 const ProjectContext = createContext()
 
 // What the toast says when unsaved work has been moved out of the way.
-const PUT_ASIDE = 'Your unsaved work is put aside.'
+const PUT_ASIDE = 'Started a new brand kit. Your last one is in Your workspace.'
+const PUT_ASIDE_OPENED = 'Your unsaved brand kit is in Your workspace.'
 
 const CURRENT_KEY = 'vs-current-design'
 const PROJECTS_KEY = 'vs-projects'
@@ -122,7 +124,7 @@ function conflictMessage(replaced, removed) {
 }
 
 export function ProjectProvider({ children }) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { plan } = useSubscription()
   const userKey = user?.email?.toLowerCase() || null
 
@@ -156,10 +158,27 @@ export function ProjectProvider({ children }) {
   const designRef = useRef(design)
 
   // Auto-persist current design
+  // "Last edited" is stamped when the design's text changes, never on the first
+  // run: opening the app is not an edit.
+  const persistedRef = useRef(null)
   useEffect(() => {
     designRef.current = design
+    const text = JSON.stringify(design)
+    if (persistedRef.current !== null && persistedRef.current !== text) stampEdited()
+    persistedRef.current = text
     saveCurrent(design)
   }, [design])
+
+  // A sign-in or sign-out in this tab reopens the brand kit question. The first
+  // settled answer from the auth provider is the session being restored, not a
+  // change, so only a later change of account counts.
+  const settledAuthRef = useRef({ seen: false, key: null })
+  useEffect(() => {
+    if (authLoading) return
+    const settled = settledAuthRef.current
+    if (!settled.seen) { settledAuthRef.current = { seen: true, key: userKey }; return }
+    if (settled.key !== userKey) { settled.key = userKey; markSession(SESSION_AUTH) }
+  }, [authLoading, userKey])
 
   // The working design follows the account: when the
   // account's copy is written into storage — at sign-in on a second device, or
@@ -220,12 +239,19 @@ export function ProjectProvider({ children }) {
   // `onRestore(design)` is for a screen that needs to tidy up after that (the
   // palette board drops the shared link's colours from the address).
   const [restoredCount, setRestoredCount] = useState(0)
+  // Open the Create tool on screen again on the working design, as it is now.
+  const remountTool = useCallback(() => setRestoredCount((n) => n + 1), [])
+  // The slot that holds work put aside, mirrored here so a screen can show it.
+  const [parked, setParked] = useState(() => { try { return readParked(localStorage) } catch { return null } })
+  useEffect(() => onAccountApplied([PARKED_KEY], () => { try { setParked(readParked(localStorage)) } catch { setParked(null) } }), [])
   const restoreParked = useCallback((slot, onRestore) => {
     let restored = null
     try { restored = takeParked(slot, localStorage) } catch { /* storage blocked */ }
     if (!restored) return
     designRef.current = restored
     setDesign(restored)
+    setParked(null)
+    stampEdited()
     onRestore?.(restored)
     setRestoredCount((n) => n + 1)
   }, [])
@@ -245,6 +271,7 @@ export function ProjectProvider({ children }) {
     } catch { /* storage blocked: nothing can be parked, the replace goes ahead as before */ }
     if (!parked.slot || !parked.fresh) return false
     const { slot } = parked
+    setParked(slot)
     window.dispatchEvent(new CustomEvent('uil4b:toast', {
       detail: { message, type: 'info', action: { label, onAction: () => restoreParked(slot, onRestore) } },
     }))
@@ -260,7 +287,7 @@ export function ProjectProvider({ children }) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
     }
     const id = newId()
-    const base = opts.blank ? DEFAULT_DESIGN : design
+    const base = opts.blank ? DEFAULT_DESIGN : (opts.from || design)
     // `identityName` and `patch` fold a caller's same-event changes into the
     // saved copy (see utils/designPatch.js).
     const snapshot = projectSnapshot(base, opts)
@@ -285,7 +312,7 @@ export function ProjectProvider({ children }) {
       try { trackActivation('project', 'save') } catch { /* never break a save */ }
       // The working design now IS this project: it carries the same changes the
       // saved copy was given, and remembers where it came from.
-      setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
+      if (!opts.from) setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
     }
     return id
   }, [design, userKey, allProjects, projectLimit])
@@ -373,10 +400,14 @@ export function ProjectProvider({ children }) {
     const list = allProjects[userKey] || []
     const project = list.find(p => p.id === id)
     if (!project) return false
-    const parked = parkWorkingDesign({ message: `Opened ${project.name}. ${PUT_ASIDE}` }, list)
+    const parked = parkWorkingDesign({ message: `Opened ${project.name}. ${PUT_ASIDE_OPENED}` }, list)
     const next = { ...DEFAULT_DESIGN, ...project.design, source: { projectId: id } }
     designRef.current = next
     setDesign(next)
+    // Opening a project answers the brand kit question, and counts as an edit
+    // now so the screen it opens on does not read the design as old.
+    stampEdited()
+    markSession(SESSION_ON)
     return parked
   }, [allProjects, userKey, parkWorkingDesign])
 
@@ -410,11 +441,42 @@ export function ProjectProvider({ children }) {
     })
   }, [userKey])
 
-  const resetDesign = useCallback(() => {
-    parkWorkingDesign()
+  const resetDesign = useCallback((toast) => {
+    parkWorkingDesign(toast)
     designRef.current = DEFAULT_DESIGN
     setDesign(DEFAULT_DESIGN)
+    stampEdited()
+    markSession(SESSION_ON)
   }, [parkWorkingDesign])
+
+  // The parked brand kit, from Your workspace. Continue takes it back as the
+  // working design (the board's own work goes into the slot if it is at risk),
+  // Discard empties the slot and hands it back so the caller can offer Undo.
+  const continueParked = useCallback(() => {
+    const slot = readParked(localStorage)
+    if (!slot) return null
+    try { localStorage.removeItem(PARKED_KEY) } catch { /* storage blocked */ }
+    let kept = { slot: null }
+    try { kept = parkIfAtRisk({ design: designRef.current, projects: allProjects[userKey] || [], storage: localStorage }) } catch { /* storage blocked */ }
+    setParked(kept.slot)
+    designRef.current = slot.design
+    setDesign(slot.design)
+    stampEdited()
+    markSession(SESSION_ON)
+    remountTool()
+    return slot.design
+  }, [allProjects, userKey, remountTool])
+  const discardParked = useCallback(() => {
+    const slot = readParked(localStorage)
+    try { localStorage.removeItem(PARKED_KEY) } catch { /* storage blocked */ }
+    setParked(null)
+    return slot
+  }, [])
+  const putBackParked = useCallback((slot) => {
+    if (!slot) return
+    try { localStorage.setItem(PARKED_KEY, JSON.stringify(slot)) } catch { return }
+    setParked(slot)
+  }, [])
 
   const archiveProject = useCallback((id) => {
     if (!userKey) return
@@ -651,6 +713,11 @@ export function ProjectProvider({ children }) {
     resetDesign,
     parkWorkingDesign,
     restoredCount,
+    remountTool,
+    parked,
+    continueParked,
+    discardParked,
+    putBackParked,
   }
 
   return (

@@ -896,6 +896,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   useEffect(() => {
     if (initial.source !== 'query' && initial.source !== 'handoff') return
     parkWorkingDesign({
+      message: 'Opened the shared palette. Your brand kit is in Your workspace.',
       label: 'Go back to it',
       onRestore: () => navigate({ pathname: window.location.pathname, search: '' }, { replace: true }),
     })

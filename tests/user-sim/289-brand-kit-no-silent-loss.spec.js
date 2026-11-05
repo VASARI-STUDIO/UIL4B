@@ -72,7 +72,7 @@ test.describe('Unsaved work is put aside, not lost', () => {
     const slot = await readJson(page, PARKED)
     expect(slot?.design, 'the parked design is the unsaved one').toEqual(WORK)
     expect(typeof slot.parkedAt).toBe('number')
-    await expect(toast(page)).toContainText('Your unsaved work is put aside.')
+    await expect(toast(page)).toContainText('Your last one is in Your workspace.')
     await expect(toast(page).getByRole('button', { name: 'Undo' })).toBeVisible()
 
     // Undo gives back exactly what was there, and empties the slot.
@@ -97,7 +97,7 @@ test.describe('Unsaved work is put aside, not lost', () => {
 
     expect((await readJson(page, PARKED))?.design, 'A\'s changes are in the slot').toEqual(changedA)
     expect((await readJson(page, CURRENT))?.source).toEqual({ projectId: 'proj-b' })
-    await expect(toast(page)).toContainText('Opened Bravo. Your unsaved work is put aside.')
+    await expect(toast(page)).toContainText('Opened Bravo. Your unsaved brand kit is in Your workspace.')
 
     expect(await pressActionAndReadWorking(page)).toBe(before)
     expect(await read(page, PARKED)).toBeNull()
@@ -113,7 +113,7 @@ test.describe('Unsaved work is put aside, not lost', () => {
     // The link's palette is on the board and in the working design; the old one is in the slot.
     await expect.poll(async () => (await readJson(page, CURRENT))?.palette?.colors?.[0]?.toUpperCase()).toBe('#4338E0')
     expect((await readJson(page, PARKED))?.design, 'the parked design is the unsaved one').toEqual(WORK)
-    await expect(toast(page)).toContainText('Your unsaved work is put aside.')
+    await expect(toast(page)).toContainText('Your last one is in Your workspace.')
     await expect(toast(page).getByRole('button', { name: 'Go back to it' })).toBeVisible()
 
     expect(await pressActionAndReadWorking(page)).toBe(JSON.stringify(WORK))

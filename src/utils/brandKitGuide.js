@@ -207,7 +207,7 @@ export function stepArtefacts(design) {
  * `partsPresent` reads, and a shallow spread would leave `{ palette: null }`
  * as null.
  */
-function withDefaults(design) {
+export function withDefaults(design) {
   const d = design && typeof design === 'object' ? design : {}
   const out = { ...DEFAULT_DESIGN, ...d }
   for (const key of ['palette', 'fonts', 'typeScale', 'tints']) {
