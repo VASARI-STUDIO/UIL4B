@@ -156,6 +156,7 @@
   color: var(--accent-text);
   text-decoration: none;
 }
+@media (pointer: coarse) { .prn-go { min-height: 44px; } }
 .prn-go:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
 .prn-go span { transition: transform var(--dur-2) var(--cpg-ease); }
 .prn-go:hover span, .prn-go:focus-visible span { transform: translateX(3px); }
@@ -234,7 +235,9 @@
   justify-self: start;
   cursor: default;
 }
-.prn-cx-sample[data-boundary="true"] { font-weight: 500; }
+/* The boundary sample's rule runs the full width of the sample column, so it
+   reads as a field's bottom edge, not an underlined word or a link. */
+.prn-cx-sample[data-boundary="true"] { font-weight: 500; inline-size: auto; justify-self: stretch; }
 .prn-cx-read { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .prn-cx-ratio { font-family: var(--mono); font-size: 17px; font-weight: 500; color: var(--cpg-ink); line-height: 1.2; font-variant-numeric: tabular-nums; }
 .prn-cx-verdict { font-size: 12.5px; line-height: 1.5; color: var(--cpg-faint); }

@@ -313,6 +313,7 @@
    discoverable without hover. */
 .stg .stg-credit { margin-top: var(--s-7); padding: var(--s-4) 0 var(--s-3); border-top: 1px solid var(--stg-hair); font-family: var(--font); font-size: 12.5px; text-align: start; color: var(--t2); }
 .stg .stg-credit a { display: inline-flex; align-items: center; min-height: 24px; color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+@media (pointer: coarse) { .stg .stg-credit a { min-height: 44px; } }
 
 .stg :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 

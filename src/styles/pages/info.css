@@ -410,7 +410,14 @@
     font-weight: 540;
     color: var(--cpg-ink);
   }
-  .ic-wrap .ic-jump.menu-select-trigger .menu-select-caret { color: var(--cpg-faint); }
+  .ic-wrap .ic-jump.menu-select-trigger .menu-select-caret { color: var(--cpg-faint); transition: color var(--dur-1) var(--ease-standard); }
+  /* It is a menu, not an accordion row: it answers the pointer and shows open. */
+  .ic-wrap .ic-jump.menu-select-trigger[aria-expanded="true"] { border-bottom-color: var(--cpg-ink); }
+  .ic-wrap .ic-jump.menu-select-trigger[aria-expanded="true"] .menu-select-caret { color: var(--cpg-ink); }
+  @media (hover: hover) {
+    .ic-wrap .ic-jump.menu-select-trigger:hover { border-bottom-color: var(--cpg-ink); }
+    .ic-wrap .ic-jump.menu-select-trigger:hover .menu-select-caret { color: var(--cpg-ink); }
+  }
   .ic-main { max-width: none; gap: clamp(36px, 6vw, 56px); }
 }
 
