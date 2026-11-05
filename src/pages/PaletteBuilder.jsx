@@ -4167,7 +4167,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the
           visitor is in the flow. */}
-      <UIKitGuide step="color" />
+      <UIKitGuide step="color" linked={initial.source === 'query' || initial.source === 'handoff'} />
 
       {coachOn && (
         <PaletteCoach
