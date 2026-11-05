@@ -105,7 +105,9 @@ export function validateSupportBody(body, now = new Date()) {
       ...(safeSeverity ? { severity: safeSeverity } : {}),
       subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
-      email: (email || '').trim().slice(0, EMAIL_MAX),
+      // An automatic report has no one to reply to. The label is the caller's to send,
+      // so an address on it is dropped rather than shown as if the site had filed it.
+      email: safeSource === 'auto' ? '' : (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
       status: 'new',
       adminNotes: '',

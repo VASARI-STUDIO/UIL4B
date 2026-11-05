@@ -251,3 +251,10 @@ test('verifiedReporterEmail: a token that fails to verify logs one fixed line an
   assert.equal(out, null)
   assert.deepEqual(warn.mock.calls.map((c) => c.arguments), [['support: report token could not be verified']])
 })
+
+test('an automatic report keeps no reply address, since anyone can send the label', () => {
+  const auto = validateSupportBody({ message: 'boom', source: 'auto', email: 'someone@example.com' }, NOW).entry
+  assert.equal(auto.email, '')
+  const typed = validateSupportBody({ message: 'hi', source: 'inline', email: 'someone@example.com' }, NOW).entry
+  assert.equal(typed.email, 'someone@example.com', 'a typed report keeps its address')
+})

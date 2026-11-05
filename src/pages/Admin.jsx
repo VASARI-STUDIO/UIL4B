@@ -2768,7 +2768,7 @@ export default function Admin({ toast }) {
             </div>
           </div>
           <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
-            Crash reports the site filed by itself. Nobody typed these, and they have no reply address.
+            Reports filed as automatic: the site's own crash reports. Anyone can send that label, so read the content as unverified. They carry no reply address.
           </div>
 
           {feedbackError && (
