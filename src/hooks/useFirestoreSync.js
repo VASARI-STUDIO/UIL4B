@@ -12,6 +12,7 @@ import {
   sameValue, repairAfterSettle,
 } from '../utils/accountSync'
 import { announceApplied, RESET_EVENT } from '../utils/accountEvents'
+import { PARKED_KEY, PARKED_SHELF_KEY, parkIfAtRisk } from '../utils/parkedDesign'
 
 /* ═════════════════════════════════════════════════════════════════════════════
    ACCOUNT-BOUND DATA — the wiring. The rules are in src/utils/accountSync.js;
@@ -168,6 +169,33 @@ export function useFirestoreSync(uid) {
       }
       writeMeta(ls, meta)
       if (written.length) announceApplied(written)
+      // First sign-in with a draft on screen: the draft stays, and the account's own
+      // different design (from another device) is put aside in Your workspace, said
+      // out loud, rather than overwritten unseen.
+      // When it cannot be kept here (storage full or blocked), the account's copy wins
+      // instead, since other devices rely on it, and the draft is put aside if it can be.
+      const say = (message) => {
+        try { window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type: 'info' } })) } catch { /* no window */ }
+      }
+      for (const item of result.setAside || []) {
+        let kept = null
+        try { kept = parkIfAtRisk({ design: item.value, projects: [], storage: ls }) } catch { kept = null }
+        if (kept?.slot) {
+          announceApplied([PARKED_KEY, PARKED_SHELF_KEY])
+          if (kept.fresh) say('Signed in. The brand kit your account had from another device is in Your workspace.')
+          continue
+        }
+        let draftKept = false
+        try { draftKept = !!parkIfAtRisk({ design: before[item.key], projects: [], storage: ls }).slot } catch { draftKept = false }
+        const back = applyToStorage(ls, meta, { [item.key]: item.value })
+        meta.stamps[item.key] = item.stamp || meta.stamps[item.key]
+        meta.pushed[item.key] = meta.stamps[item.key] || 0
+        writeMeta(ls, meta)
+        announceApplied([...back, PARKED_KEY, PARKED_SHELF_KEY])
+        say(draftKept
+          ? 'Signed in. Your account’s brand kit is back on screen, and the one you had open is in Your workspace.'
+          : 'Signed in. Your account’s brand kit is back on screen. This browser has no room to keep the one you had open.')
+      }
       // Every mirror was cleared, so every screen showing one reads it again (the
       // put-aside kits on Your workspace among them).
       if (result.mode === 'switch') announceApplied([...ACCOUNT_MIRROR_KEYS])

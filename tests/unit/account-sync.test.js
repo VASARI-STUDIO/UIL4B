@@ -136,6 +136,45 @@ test('BIND: work done signed out wins and goes up (the export-gate sign-in)', ()
   assert.equal(r.push, true)
 })
 
+test('BIND: a draft that wins over different account work hands that work back to be put aside', () => {
+  const draft = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const accountDesign = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
+  const r = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': accountDesign, _updatedAt: 10 }, library: null },
+  })
+  assert.equal(r.apply['vs-current-design'], undefined, 'the draft on screen stays')
+  assert.deepEqual(r.setAside, [{ key: 'vs-current-design', value: accountDesign, stamp: 10 }], 'and the work the account held is handed back')
+})
+
+test('BIND: nothing is set aside when the account held only the default, or the same work', () => {
+  const draft = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const blank = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': DEFAULT_DESIGN, _updatedAt: 10 }, library: null },
+  })
+  assert.deepEqual(blank.setAside, [])
+  const same = reconcile({
+    uid: 'A', meta: emptyMeta(), now: 100,
+    local: { 'vs-current-design': draft },
+    remote: { data: { 'vs-current-design': draft, _updatedAt: 10 }, library: null },
+  })
+  assert.deepEqual(same.setAside, [])
+})
+
+test('SYNC: newer-wins on an account already bound sets nothing aside', () => {
+  const a = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#123456'] } }
+  const b = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
+  const r = reconcile({
+    uid: 'A', meta: { ...emptyMeta(), owner: 'A', stamps: { 'vs-current-design': 50 } }, now: 100,
+    local: { 'vs-current-design': a },
+    remote: { data: { 'vs-current-design': b, _updatedAt: 10, _stamps: { 'vs-current-design': 10 } }, library: null },
+  })
+  assert.deepEqual(r.setAside, [])
+})
+
 test('BIND: an untouched default design never overwrites the account (second device)', () => {
   const accountDesign = { ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, colors: ['#abcdef'] } }
   const r = reconcile({
@@ -256,6 +295,16 @@ test('sign-out and a switch clear work put aside on this browser', () => {
   clearMirrors(t)
   assert.equal(t.has('vs-previous-design'), false, 'an account switch drops it too')
   assert.equal(t.has('vs-previous-designs'), false, 'and the kits waiting behind it')
+})
+
+test('a refused sign-out still clears work put aside on this browser, which no account is owed', () => {
+  const parked = JSON.stringify({ design: { palette: { colors: ['#123456'] } }, parkedAt: 1 })
+  const s = store({ 'vs-t': 'dark', 'vs-previous-design': parked, 'vs-previous-designs': `[${parked}]`, 'vs-onboarded': '1' })
+  const meta = { ...emptyMeta(), owner: 'A', stamps: { 'vs-t': 9 }, pushed: { 'vs-t': 5 } }
+  assert.equal(releaseCache(s, meta).released, false)
+  assert.equal(s.has('vs-t'), true, 'the unsent change stays for the same account')
+  assert.equal(s.has('vs-previous-design'), false, 'the next person never sees the put-aside kit')
+  assert.equal(s.has('vs-previous-designs'), false)
 })
 
 test('sign-out keeps the cache while a change has not reached the account', () => {

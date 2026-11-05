@@ -49,6 +49,9 @@
 //  · 'local'   — the working design only. What is on screen at the moment of
 //                sign-in is what the person was just working on — signing in is
 //                exactly what the export gate asks for — so it wins and goes up.
+//                With `setAside`, a different account value it replaces (a design
+//                worked on another device) is returned in `setAside` so the caller
+//                can put it aside rather than lose it unseen.
 //  · 'union'   — collections (prompts, likes, saves, custom icons, recents,
 //                exports). Both sides are kept, de-duplicated by identity; the
 //                recency lists keep local first and are capped.
@@ -90,7 +93,7 @@ export const ACCOUNT_KEYS = Object.freeze([
   { key: 'vs-uikit-guide-seen', doc: 'data', firstBind: 'account' },
   { key: 'vs-palette-coach', doc: 'data', firstBind: 'account' },
   // The working design
-  { key: 'vs-current-design', doc: 'data', firstBind: 'local' },
+  { key: 'vs-current-design', doc: 'data', firstBind: 'local', setAside: true },
   // Saved items and history
   { key: 'vs-prompts', doc: 'data', firstBind: 'union' },
   { key: 'vs-saved-prompt-ids', doc: 'data', firstBind: 'union', merge: 'stamped' },
@@ -438,6 +441,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
   const mode = meta.owner === uid ? 'sync' : meta.owner ? 'switch' : 'bind'
   const apply = {}
   const stamps = { ...meta.stamps }
+  const setAside = []
   let push = false
 
   for (const spec of ACCOUNT_KEYS) {
@@ -478,7 +482,11 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
       if (rAbsent) { stamps[key] = ls || now; push = true; continue }
       if (lUntouched) { apply[key] = r; stamps[key] = rs; continue }
       if (spec.firstBind === 'account') { apply[key] = r; stamps[key] = rs; continue }
-      if (spec.firstBind === 'local') { stamps[key] = now; push = true; continue }
+      if (spec.firstBind === 'local') {
+        // The account held different work of its own: hand it back to be put aside.
+        if (spec.setAside && !isUntouched(key, r)) setAside.push({ key, value: r, stamp: rs })
+        stamps[key] = now; push = true; continue
+      }
       // union
       const merged = spec.recency ? unionList(l, r, spec.cap) : unionList(r, l, spec.cap)
       if (!sameValue(merged, l)) apply[key] = merged
@@ -498,7 +506,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
     }
   }
 
-  return { mode, apply, stamps, owner: uid, push }
+  return { mode, apply, stamps, owner: uid, push, setAside }
 }
 
 /**
@@ -555,13 +563,21 @@ export function applyToStorage(storage, meta, apply) {
  * from defaults and their own sign-in migrates THEIR work, not the last
  * person's.
  *
- * Refused — returns false and changes nothing — while any key has a change the
- * account has not received. After sign-out it can no longer be sent (the rules
+ * Refused — returns false and keeps the account's keys — while any key has a
+ * change the account has not received (the put-aside work still goes, see below). After sign-out it can no longer be sent (the rules
  * need the owner's token), so deleting it would lose it; kept, it goes up the
  * next time that same account signs in here.
  */
 export function releaseCache(storage, meta) {
-  if (pendingKeys(meta).length) return { released: false, keys: [] }
+  if (pendingKeys(meta).length) {
+    // Work put aside on this browser is never synced, so it is owed to no account;
+    // it goes even when the rest has to stay, so the next person never sees it.
+    for (const key of ACCOUNT_MIRROR_KEYS) {
+      if (key === 'vs-onboarded') continue
+      try { storage?.removeItem(key) } catch { /* nothing to do */ }
+    }
+    return { released: false, keys: [] }
+  }
   const keys = [...ACCOUNT_KEY_NAMES, ...ACCOUNT_MIRROR_KEYS]
   for (const key of keys) {
     try { storage?.removeItem(key) } catch { /* nothing to do */ }
