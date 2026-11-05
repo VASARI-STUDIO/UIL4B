@@ -1920,9 +1920,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const handleCopySvg = async () => {
     if (!baseSvgText || previewing) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
-    // The app's `onCopy` writes the clipboard and raises the toast, so with one there is a
-    // single write; writing here as well put the SVG on the clipboard twice per press.
-    const ok = onCopy ? (await onCopy(serializedOutput)) === true : await writeClipboard(serializedOutput)
+    // Written here, with the textarea fallback for a browser without the Clipboard API, and
+    // the app's `onCopy` told it is written so it only raises the toast: one write per press.
+    // When this write fails, `onCopy` gets its own try, and says why if that fails too.
+    let ok = await writeClipboard(serializedOutput)
+    if (ok) onCopy?.(serializedOutput, { written: true })
+    else if (onCopy) ok = (await onCopy(serializedOutput)) === true
     if (!ok) return
     if (!isPro) bumpCopyCount()
     trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')

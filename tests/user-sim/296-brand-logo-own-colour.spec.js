@@ -16,6 +16,7 @@
 //   the header line follows the chosen colour, not the art          -> "recolouring changes nothing else"
 //   the Similar tiles' URL carries the colour choice                -> "recolouring changes nothing else"
 //   Copy SVG writes the clipboard here and again in onCopy          -> "recolouring changes nothing else"
+//   Copy SVG leaves the write to onCopy (no textarea fallback)      -> "with no Clipboard API"
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER } from './iconify-stub.js'
@@ -74,15 +75,25 @@ const serveLogos = async (page) => {
   }))
 }
 
-const openLogo = async (browser, name, { width = 1440, touch = false } = {}) => {
+const openLogo = async (browser, name, { width = 1440, touch = false, noClipboardApi = false } = {}) => {
   const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width, height: 900 }, hasTouch: touch, isMobile: touch })
   const page = await ctx.newPage()
   watch(page, 'someone customising a brand logo')
   await signIn(page, { plan: 'pro' })
-  await page.addInitScript(() => {
+  await page.addInitScript((noApi) => {
     window.__copied = []
+    if (noApi) {
+      // A browser without the Clipboard API: only the textarea and execCommand('copy') work.
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+      document.execCommand = (cmd) => {
+        if (cmd !== 'copy') return false
+        window.__copied.push(document.activeElement?.value ?? '')
+        return true
+      }
+      return
+    }
     navigator.clipboard.writeText = (text) => { window.__copied.push(text); return Promise.resolve() }
-  })
+  }, noClipboardApi)
   await serveLogos(page)
   await go(page, '/create/icons')
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
@@ -215,6 +226,17 @@ test('recolouring a brand logo changes nothing else: the header line, the Simila
   await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
   await expect(page.locator('.toast.show')).toContainText('Copied')
   expect(await page.evaluate(() => window.__copied.length) - before, 'one press, one write').toBe(1)
+  await ctx.close()
+})
+
+test('with no Clipboard API, Copy SVG still copies, through the textarea, once', async ({ browser }) => {
+  const { ctx, page } = await openLogo(browser, 'stripe', { noClipboardApi: true })
+  await page.getByRole('button', { name: 'Copy SVG', exact: true }).click()
+  await expect(page.locator('.toast.show')).toContainText('Copied')
+  await expect(page.getByText('Clipboard is not available in this browser')).toHaveCount(0)
+  const copied = await page.evaluate(() => window.__copied)
+  expect(copied).toHaveLength(1)
+  expect(copied[0]).toContain(`fill="${BRAND}"`)
   await ctx.close()
 })
 
