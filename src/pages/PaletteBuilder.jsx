@@ -803,7 +803,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
   const { theme: siteTheme } = useTheme()
-  const { openProModal } = useProModal()
+  const { openProModal: raiseProModal } = useProModal()
   // The gallery popup's two library tabs. The bundle holds the free brands and
   // the free curated palettes in full and a name-only stub for every Pro brand;
   // a Pro account's full set comes from the server (src/utils/proLibrary.js),
@@ -1354,6 +1354,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // simply has no business being presented as the palette's colour when it is
   // not a colour the palette contains.
   const shownSeed = normaliseHex(adjusted[0]) || seed
+  // Every wall on this page raises the Pro modal with the colour the toolbar
+  // shows. Left out, the modal's colour preview reads the saved palette
+  // history, whose newest entry can lag the board after a randomise, undo or redo.
+  const openProModal = (opts) => raiseProModal({ seed: shownSeed, ...opts })
 
   // The coach's first beat waits for the edit: the first colour changing (by hand, by
   // Randomise, by any route) moves it on to Save.
@@ -3688,7 +3692,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                       <ProBlock
                         heading={`${variations.length - freeVarIds.size} more ${variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro`}
                         body="Free covers the three best-balanced variations for your palette."
-                        onOpen={openVariationGate}
+                        gate="palette-variation-apply"
+                        onNavigate={() => setGalleryOpen(false)}
                       />
                     )}
                   </>

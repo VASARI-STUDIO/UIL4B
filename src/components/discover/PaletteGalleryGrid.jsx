@@ -45,17 +45,6 @@ function EyeGlyph() {
   )
 }
 
-function BuilderGlyph() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="13" r="2.5" />
-      <circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="14" r="2.5" />
-      <path d="M12 22a10 10 0 1 1 0-20 8 8 0 0 1 0 16h-1.5a1.5 1.5 0 0 0 0 3 1.5 1.5 0 0 1 0 1z" />
-    </svg>
-  )
-}
-
 function ProjectGlyph() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -275,16 +264,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
           // reader never meets a control that appears only under a mouse. Pro
           // brand systems are excluded — the builder owns that gate, and
           // handing the colours over here would route around it.
+          //
+          // No "open in the builder" action here: the "Open" link in the foot is
+          // that link and is always visible, so a second one would be an extra
+          // tab stop to the same place.
           actions={!onPick && !p.pro ? (
             <>
-              <Link
-                className="pgal-act"
-                to={paletteBuilderUrl(p.colors)}
-                title="Open in the Palette Builder"
-                aria-label={`Open ${p.name} in the Palette Builder`}
-              >
-                <BuilderGlyph /><span>Builder</span>
-              </Link>
               <button
                 type="button"
                 className="pgal-act"

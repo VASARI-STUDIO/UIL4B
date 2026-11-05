@@ -466,6 +466,10 @@ export default function PaletteGallery({ toast }) {
 
         {visible.length ? (
           <>
+            {/* Every card is about a dozen tab stops, so a keyboard user gets a
+                way past the lot. It reuses the site's skip link: out of view
+                until focused, then shown at the top of the screen. */}
+            <a className="skip-link" href="#pgl-after-grid">Skip past the palettes</a>
             {browsing ? (
               <>
                 {grouped.map((section) => (
@@ -487,6 +491,7 @@ export default function PaletteGallery({ toast }) {
                     />
                   </div>
                 ))}
+                <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
                 {/* AFTER the sections, not inside the last one. It used to hang
                     off the Brand systems group, because the only locked rows
                     were brands and that group was always rendered. Under the
@@ -505,6 +510,7 @@ export default function PaletteGallery({ toast }) {
                   </p>
                 )}
                 <PaletteGalleryGrid toast={toast} palettes={visible} metaOf={cardMeta} hexChips />
+                <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
                 {/* `mood === 'all'` is now written out. It used to be implied — one
                     tray meant picking Dark cleared Brand — and with two trays
                     the rule two comments above ("under a search or a mood filter

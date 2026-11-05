@@ -3,7 +3,7 @@
 // is held in the second block at the foot of this file.
 //
 // Three things are held here, each from the visitor's side:
-//   1. a signed-out visitor who types or follows the URL ends on the homepage;
+//   1. a signed-out visitor who types or follows the URL sees the not-found page;
 //   2. the Discover menu does not list the library;
 //   3. the sitemap does not advertise it.
 // An admin still gets the page, so the gate is shown to be a gate and not a
@@ -14,10 +14,11 @@ import { go, watch, signIn } from './helpers.js'
 const ROUTE = '/discover/prompts'
 
 test.describe('the parked Prompt Library', () => {
-  test('a signed-out visitor to /discover/prompts ends on the homepage', async ({ page }) => {
+  test('a signed-out visitor to /discover/prompts sees the not-found page at that address', async ({ page }) => {
     watch(page, 'a signed-out visitor following an old Prompt Library link')
     await go(page, ROUTE)
-    await expect(page).toHaveURL((url) => url.pathname === '/')
+    await expect(page).toHaveURL((url) => url.pathname === ROUTE)
+    await expect(page).toHaveTitle('UI L4B | Page not found')
     await expect(page.locator('.pl-toolbar, .pl-gallery, .pl-search')).toHaveCount(0)
   })
 

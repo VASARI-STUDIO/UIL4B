@@ -4393,9 +4393,17 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
 .lbry-search input::-webkit-search-cancel-button{display:none}
-/* The field shows focus with a border colour and a box-shadow ring, and the inner
-   input paints no outline of its own. Forced colours drops the shadow and
-   flattens the border, so the wrapper takes a real outline there. */
+/* The inner input paints no outline of its own, so the wrapper is the focus
+   ring: a 2px outline while the input has keyboard focus, on top of the border
+   colour each surface sets. (Not :focus-within, so the clear button, which has
+   its own ring, does not get a second one around the field.) Forced colours
+   swaps the colour for a system one below. */
+.lbry-search:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+@media (forced-colors:active){
+  .lbry-search:has(input:focus-visible){outline-color:Highlight}
+}
+/* Forced colours drops any shadow and flattens the border, so the wrapper takes
+   a real outline there. */
 @media (forced-colors:active){
   .lbry-search:focus-within{outline:2px solid Highlight;outline-offset:2px}
 }
