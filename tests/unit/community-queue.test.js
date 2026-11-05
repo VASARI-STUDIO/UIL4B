@@ -19,7 +19,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  buildQueueRecord, mergeSubmissions, publicDesignFromDoc, publicDesignsForViewer,
+  buildPublicDesign, buildQueueRecord, mergeSubmissions, publicDesignFromDoc, publicDesignsForViewer,
   QUEUE_KINDS, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS,
 } from '../../src/utils/communityQueue.js'
 import { fileTextThrough } from '../../scripts/gated-patches.mjs'
@@ -347,43 +347,153 @@ test('the listing can ask for a bigger page than the 100 the gallery shows', () 
 
 // ── Approved designs in the public grid ─────────────────────────────────────
 
-const approvedDoc = (over = {}) => ({
-  id: 'doc1',
+const submission = (over = {}) => ({
   kind: 'design',
   status: 'approved',
   name: 'Harbour',
   authorUid: 'u-other',
   authorName: 'Account Name',
+  authorEmail: 'someone@example.com',
+  reviewedBy: 'u-reviewer',
   payload: { author: 'Typed Name', category: 'Landing', url: 'https://example.com/h', c1: '#3B82F6', c2: '#8B5CF6' },
   ...over,
 })
 
-test('publicDesignFromDoc draws only an approved design, field by field', () => {
-  const card = publicDesignFromDoc(approvedDoc())
+const PUBLIC_FIELDS = ['c1', 'c2', 'category', 'credit', 'kind', 'name', 'url']
+
+test('buildPublicDesign copies a design into exactly the public fields', () => {
+  assert.deepEqual(buildPublicDesign(submission()), {
+    name: 'Harbour',
+    credit: 'Typed Name',
+    category: 'Landing',
+    url: 'https://example.com/h',
+    c1: '#3B82F6',
+    c2: '#8B5CF6',
+    kind: 'design',
+  })
+})
+
+test('buildPublicDesign never carries a uid, an email, an account name or a reviewer', () => {
+  const copy = buildPublicDesign(submission())
+  assert.deepEqual(Object.keys(copy).sort(), PUBLIC_FIELDS)
+  const json = JSON.stringify(copy)
+  for (const secret of ['u-other', 'Account Name', 'someone@example.com', 'u-reviewer']) {
+    assert.ok(!json.includes(secret), `${secret} reached the public copy`)
+  }
+  // Even when the payload tries to carry them in.
+  const sneaky = buildPublicDesign(submission({
+    payload: { author: 'Typed', category: 'Landing', url: 'https://example.com', c1: '#3B82F6', c2: '#8B5CF6', authorUid: 'u-x', email: 'e@x.co', authorName: 'Real Name' },
+  }))
+  assert.deepEqual(Object.keys(sneaky).sort(), PUBLIC_FIELDS)
+  assert.ok(!JSON.stringify(sneaky).includes('Real Name'))
+})
+
+test('buildPublicDesign credits the typed author, and "Community member" when there is none', () => {
+  for (const author of [undefined, '', '   ', 'You']) {
+    assert.equal(buildPublicDesign(submission({ payload: { author } })).credit, 'Community member', JSON.stringify(author))
+  }
+  // The account's name is never the fallback.
+  assert.equal(buildPublicDesign(submission({ payload: {}, authorName: 'Real Name' })).credit, 'Community member')
+})
+
+test('buildPublicDesign keeps a link only when it is http(s), and falls back on bad colours', () => {
+  assert.equal('url' in buildPublicDesign(submission({ payload: { url: 'javascript:alert(1)' } })), false)
+  assert.equal('url' in buildPublicDesign(submission({ payload: { url: '#' } })), false)
+  assert.equal('url' in buildPublicDesign(submission({ payload: {} })), false)
+  const bad = buildPublicDesign(submission({ payload: { c1: 'nope', c2: 'url(x)' } }))
+  assert.equal(bad.c1, '#3B82F6')
+  assert.equal(bad.c2, '#8B5CF6')
+})
+
+test('buildPublicDesign clips to the sizes the rules allow', () => {
+  const copy = buildPublicDesign(submission({
+    name: 'n'.repeat(120), payload: { author: 'a'.repeat(120), category: 'c'.repeat(120) },
+  }))
+  assert.equal(copy.name.length, 80)
+  assert.equal(copy.credit.length, 60)
+  assert.equal(copy.category.length, 40)
+})
+
+test('buildPublicDesign makes nothing for anything but a design with a name', () => {
+  for (const over of [{ kind: 'icon' }, { kind: 'palette' }, { kind: 'gradient' }, { name: '  ' }, { name: undefined }]) {
+    assert.equal(buildPublicDesign(submission(over)), null, JSON.stringify(over))
+  }
+  assert.equal(buildPublicDesign(null), null)
+  assert.equal(buildPublicDesign(undefined), null)
+})
+
+const publicDoc = (over = {}) => ({
+  id: 'doc1',
+  kind: 'design',
+  name: 'Harbour',
+  credit: 'Typed Name',
+  category: 'Landing',
+  url: 'https://example.com/h',
+  c1: '#3B82F6',
+  c2: '#8B5CF6',
+  ...over,
+})
+
+test('publicDesignFromDoc draws a public copy as a card, field by field', () => {
+  const card = publicDesignFromDoc(publicDoc())
   assert.equal(card.id, 'pub-doc1')
+  assert.equal(card.docId, 'doc1')
   assert.equal(card.author, 'Typed Name')
   assert.equal(card.url, 'https://example.com/h')
   assert.equal(card.ownerId, undefined, 'no stored value may claim the site-owner treatment')
-  for (const over of [{ status: 'pending' }, { status: 'rejected' }, { status: 'withdrawn' }, { kind: 'icon' }, { kind: 'palette' }, { name: '  ' }, { id: '' }]) {
-    assert.equal(publicDesignFromDoc(approvedDoc(over)), null, JSON.stringify(over))
+  assert.equal('authorUid' in card, false)
+  for (const over of [{ kind: 'icon' }, { kind: 'palette' }, { name: '  ' }, { id: '' }]) {
+    assert.equal(publicDesignFromDoc(publicDoc(over)), null, JSON.stringify(over))
   }
   assert.equal(publicDesignFromDoc(null), null)
 })
 
-test('publicDesignFromDoc credits the account name when no author was typed, and cleans links and colours', () => {
-  assert.equal(publicDesignFromDoc(approvedDoc({ payload: { url: 'https://example.com' } })).author, 'Account Name')
-  assert.equal(publicDesignFromDoc(approvedDoc({ payload: {}, authorName: '' })).author, 'Community member')
-  const bad = publicDesignFromDoc(approvedDoc({ payload: { url: 'javascript:alert(1)', c1: 'nope', c2: 'url(x)' } }))
+test('publicDesignFromDoc cleans links and colours, and credits "Community member" without a credit', () => {
+  assert.equal(publicDesignFromDoc(publicDoc({ credit: '' })).author, 'Community member')
+  const bad = publicDesignFromDoc(publicDoc({ url: 'javascript:alert(1)', c1: 'nope', c2: 'url(x)' }))
   assert.equal(bad.url, '')
   assert.equal(bad.c1, '#3B82F6')
   assert.equal(bad.c2, '#8B5CF6')
 })
 
-test('publicDesignsForViewer drops the viewer\'s own designs, by author and by document', () => {
-  const a = publicDesignFromDoc(approvedDoc({ id: 'a', authorUid: 'me' }))
-  const b = publicDesignFromDoc(approvedDoc({ id: 'b', authorUid: 'them' }))
-  const c = publicDesignFromDoc(approvedDoc({ id: 'c', authorUid: 'them' }))
-  assert.deepEqual(publicDesignsForViewer([a, b, c], { uid: 'me', own: [] }).map(i => i.docId), ['b', 'c'])
-  assert.deepEqual(publicDesignsForViewer([a, b, c], { uid: null, own: [{ docId: 'c' }] }).map(i => i.docId), ['a', 'b'])
-  assert.deepEqual(publicDesignsForViewer([a, b], { uid: null }).map(i => i.docId), ['a', 'b'])
+test('publicDesignsForViewer drops the viewer\'s own designs by document id', () => {
+  const a = publicDesignFromDoc(publicDoc({ id: 'a' }))
+  const b = publicDesignFromDoc(publicDoc({ id: 'b' }))
+  const c = publicDesignFromDoc(publicDoc({ id: 'c' }))
+  assert.deepEqual(publicDesignsForViewer([a, b, c], { own: [{ docId: 'c' }] }).map(i => i.docId), ['a', 'b'])
+  assert.deepEqual(publicDesignsForViewer([a, b, c], { own: [{ docId: 'a' }, { id: 'b' }] }).map(i => i.docId), ['c'])
+  assert.deepEqual(publicDesignsForViewer([a, b], {}).map(i => i.docId), ['a', 'b'])
+})
+
+test('the queue API writes the public copy in the same batch as each decision', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  const decide = src.slice(src.indexOf('export async function decideSubmission'), src.indexOf('export async function reopenSubmission'))
+  assert.match(decide, /buildPublicDesign\(/)
+  assert.match(decide, /batch\.set\(publicRef, \{ \.\.\.copy, approvedAt: serverTimestamp\(\) \}\)/)
+  assert.match(decide, /batch\.delete\(publicRef\)/, 'a decision that is not an approval removes the copy')
+  assert.match(decide, /batch\.commit\(\)/)
+  const reopen = src.slice(src.indexOf('export async function reopenSubmission'), src.indexOf('export async function deleteSubmission'))
+  assert.match(reopen, /batch\.delete\(doc\(db, PUBLIC_COLLECTION, id\)\)/)
+  const remove = src.slice(src.indexOf('export async function deleteSubmission'))
+  assert.match(remove, /batch\.delete\(doc\(db, PUBLIC_COLLECTION, id\)\)/)
+})
+
+test('the public grid reads community-public, newest approval first, never community-submissions', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  const body = src.slice(src.indexOf('export async function listApprovedDesigns'), src.indexOf('/** Everything awaiting review'))
+  assert.match(body, /collection\(db, PUBLIC_COLLECTION\)/)
+  assert.match(body, /orderBy\('approvedAt', 'desc'\)/)
+  assert.match(body, /limit\(pageSize \+ 1\)/)
+  assert.ok(!/QUEUE_COLLECTION/.test(body), 'the public read must not touch the submissions')
+})
+
+test('the rules keep community-submissions closed to signed-out reads and pin the public copy\'s keys', () => {
+  const rules = read('firestore.rules')
+  const subs = rules.slice(rules.indexOf('match /community-submissions/'), rules.indexOf('match /community-public/'))
+  assert.match(subs, /allow read: if isReviewer\(\)\s*\|\| isOwner\(\)\s*\|\| \(isSignedIn\(\) && resource\.data\.status == 'approved'\);/)
+  const pub = rules.slice(rules.indexOf('match /community-public/'), rules.indexOf('match /analytics-daily/'))
+  assert.match(pub, /allow get: if true;/)
+  assert.match(pub, /allow list: if request\.query\.limit <= 25;/)
+  assert.match(pub, /hasOnly\(\[\s*'name', 'credit', 'category', 'url', 'c1', 'c2', 'approvedAt', 'kind'\]\)/)
+  assert.ok(!/authorName|reviewedBy|email/.test(pub.replace(/\/\/.*$/gm, '')), 'the public rules must not name an identity field')
 })

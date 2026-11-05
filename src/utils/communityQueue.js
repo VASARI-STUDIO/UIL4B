@@ -95,35 +95,71 @@ export function submissionStatusLabel({ status, synced = true, sending = false }
 const HEX = /^#[0-9a-fA-F]{6}$/
 const clip = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
 
+/** Where an approved design's public copy lives: one document per design, at the submission's own id. */
+export const PUBLIC_COLLECTION = 'community-public'
+
+// The word the submit form stores when its author field is left blank. It
+// labels the member's own list and says nothing about who made the design.
+const BLANK_AUTHOR = 'You'
+const NO_CREDIT = 'Community member'
+
 /**
- * One approved design from the public query, as a card. Anything that is not an
- * approved design with a name is dropped, so a document the query should never
- * have returned cannot reach the grid.
+ * The public copy of an approved design: what any visitor may read, and
+ * nothing else. Built field by field from the submission. The credit is the
+ * author the submitter typed, or "Community member" when that is empty; the
+ * account's name, uid, email and the reviewer are never read, so none of them
+ * can reach the copy. A link is kept only when it is http(s). The caller adds
+ * `approvedAt`.
  *
- * Built field by field from the payload rather than spread over it: the card
- * takes only what it draws, the link passes the http(s) check, and a colour the
- * thumbnail cannot parse falls back to the default pair. The credit is the
- * author the submitter typed, else the account's display name. `ownerId` is
- * never set, so no stored value can claim the site-owner treatment.
+ * Returns null for anything that is not a design with a name, so a gradient, a
+ * palette or an icon never gets a public copy.
  *
- * `authorUid` and `docId` are kept for de-duplication against the viewer's own
- * entries (see publicDesignsForViewer); the card does not draw them.
+ * @param {object} submission a community-submissions document
+ * @returns {{ name: string, credit: string, category: string, url?: string, c1: string, c2: string, kind: 'design' }|null}
+ */
+export function buildPublicDesign(submission) {
+  if (!submission || submission.kind !== 'design') return null
+  const name = clip(submission.name, 80)
+  if (!name) return null
+  const payload = submission.payload && typeof submission.payload === 'object' ? submission.payload : {}
+  const typed = clip(payload.author, 60)
+  const url = safeHttpUrl(payload.url)
+  return {
+    name,
+    credit: typed && typed !== BLANK_AUTHOR ? typed : NO_CREDIT,
+    category: clip(payload.category, 40),
+    ...(url && url.length <= 2048 ? { url } : {}),
+    c1: HEX.test(payload.c1 || '') ? payload.c1 : '#3B82F6',
+    c2: HEX.test(payload.c2 || '') ? payload.c2 : '#8B5CF6',
+    kind: 'design',
+  }
+}
+
+/**
+ * One document from the public collection, as a card. Anything that is not a
+ * design with a name and an id is dropped.
+ *
+ * Built field by field rather than spread over the document: the card takes
+ * only what it draws, the link passes the http(s) check again, and a colour the
+ * thumbnail cannot parse falls back to the default pair. `ownerId` is never
+ * set, so no stored value can claim the site-owner treatment.
+ *
+ * `docId` is the public document's id, which is the submission's id; it is what
+ * publicDesignsForViewer compares against the viewer's own list.
  */
 export function publicDesignFromDoc(doc) {
-  if (!doc || doc.kind !== 'design' || doc.status !== 'approved') return null
+  if (!doc || doc.kind !== 'design') return null
   const name = clip(doc.name, 80)
   if (!name || typeof doc.id !== 'string' || !doc.id) return null
-  const payload = doc.payload && typeof doc.payload === 'object' ? doc.payload : {}
   return {
     id: `pub-${doc.id}`,
     docId: doc.id,
-    authorUid: typeof doc.authorUid === 'string' ? doc.authorUid : '',
     name,
-    author: clip(payload.author, 60) || clip(doc.authorName, 60) || 'Community member',
-    category: clip(payload.category, 40),
-    url: safeHttpUrl(payload.url),
-    c1: HEX.test(payload.c1 || '') ? payload.c1 : '#3B82F6',
-    c2: HEX.test(payload.c2 || '') ? payload.c2 : '#8B5CF6',
+    author: clip(doc.credit, 60) || NO_CREDIT,
+    category: clip(doc.category, 40),
+    url: safeHttpUrl(doc.url),
+    c1: HEX.test(doc.c1 || '') ? doc.c1 : '#3B82F6',
+    c2: HEX.test(doc.c2 || '') ? doc.c2 : '#8B5CF6',
     saves: 0,
   }
 }
@@ -131,19 +167,20 @@ export function publicDesignFromDoc(doc) {
 /**
  * The public designs a viewer should see in the grid. Their own designs are
  * left out: those render from their own list with a status tag, so an approved
- * design of theirs would otherwise appear twice, once without the tag.
+ * design of theirs would otherwise appear twice, once without the tag. A public
+ * document has the same id as the submission it was copied from, so the match
+ * is on that id.
  *
  * @param {object[]} items cards from publicDesignFromDoc
- * @param {{ uid?: string|null, own?: object[] }} viewer `own` is their merged
- *   list; a design counts as theirs when its document id matches any entry
+ * @param {{ own?: object[] }} viewer `own` is their merged list
  */
-export function publicDesignsForViewer(items, { uid = null, own = [] } = {}) {
+export function publicDesignsForViewer(items, { own = [] } = {}) {
   const ownDocs = new Set()
   for (const o of own || []) {
     if (o?.docId) ownDocs.add(o.docId)
     if (o?.id) ownDocs.add(o.id)
   }
-  return (items || []).filter(i => i && !(uid && i.authorUid === uid) && !ownDocs.has(i.docId))
+  return (items || []).filter(i => i && !ownDocs.has(i.docId))
 }
 
 /**

@@ -496,8 +496,8 @@ export default function Community({ toast }) {
   // approved designs are left out of the public list, as they are already in
   // their own with a status tag.
   const strangers = useMemo(
-    () => publicDesignsForViewer(publicDesigns, { uid, own: mine }),
-    [publicDesigns, uid, mine],
+    () => publicDesignsForViewer(publicDesigns, { own: mine }),
+    [publicDesigns, mine],
   )
   const all = useMemo(
     () => [...mine.filter(s => s.status !== 'rejected' && !hiddenIds.has(s.id)), ...strangers, ...COMMUNITY_DESIGNS],
@@ -690,7 +690,7 @@ export default function Community({ toast }) {
     window.dispatchEvent(new CustomEvent('uil4b:toast-dismiss', { detail: { onAction: undo } }))
     setBusy(item.id, true)
     try {
-      if (item.docId) await deleteSubmission(item.docId)
+      if (item.docId) await deleteSubmission(item.docId, { kind })
       if (kind === 'icon') {
         setIconLocal(removeIconSubmission(item.id))
         setServerIcons(prev => prev.filter(s => s.id !== item.id))
