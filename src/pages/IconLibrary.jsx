@@ -139,15 +139,16 @@ const GROUP_ORDER = ['coloured', 'brands', 'flags']
 // The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
 const ALL_ICONS_ID = 'all'
 const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
+// Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
+// ride in the default "All packs" listing and stay in the pack menu.
+const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-// Emoji is not an icon category: the Emoji tab owns the four emoji sets (see
-// utils/emojiStyleNames.js), so they are in neither this list nor the pack menu.
 const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
-const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -2991,8 +2992,8 @@ const PACK_MENU = [
     packs: [['circle-flags', 'Circle Flags'], ['flag', 'Flag Icons'], ['flagpack', 'Flagpack'], ['cif', 'Currency Flags']],
   },
   {
-    label: 'Flat',
-    packs: [['flat-color-icons', 'Flat Color Icons']],
+    label: 'Flat & emoji',
+    packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
   },
   {
     label: 'Animated',
@@ -3000,9 +3001,7 @@ const PACK_MENU = [
   },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
-// The emoji sets are not in the menu or in All packs, but an unscoped Pro search can still return a
-// glyph from one, and that cell has to be named.
-const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons', twemoji: 'Twemoji', noto: 'Noto Emoji', 'fluent-emoji': 'Fluent Emoji', openmoji: 'OpenMoji' }
+const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
 const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
@@ -3150,6 +3149,16 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
    the network said no. This is an accent band with a padlock and a plan word
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
+// The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
+// not open a Pro pack, so the copy says so before the button does. Kept here rather than in
+// data/iconPackTiers.js, which the entry chunk imports and which sits at the bulk-data budget.
+const GATE_COPY_PRO_ANON = {
+  heading: (label) => `${label} is a Pro pack`,
+  body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
+  action: 'Log in',
+  secondary: 'See Pro plans',
+}
+
 function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
     <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
@@ -4605,7 +4614,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // A signed-out visitor on a Pro scope gets a log-in wall that says it is Pro (the
   // plans are the second link); a signed-in free viewer gets the Pro wall.
   const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
-  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? ICON_GATE_COPY.lockedProAnon : ICON_GATE_COPY.lockedPro) : null
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? GATE_COPY_PRO_ANON : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])

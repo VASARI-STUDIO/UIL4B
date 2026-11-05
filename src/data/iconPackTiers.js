@@ -291,15 +291,7 @@ export const ICON_GATE_COPY = {
   // When any viewer picks a pack or group that is Pro.
   lockedPro: {
     heading: (label) => `${label} is Pro`,
-    body: 'Brand marks, flags and the coloured sets.',
+    body: 'Brand marks, flags, emoji and the coloured sets.',
     action: 'See what Pro includes',
-  },
-  // The same wall for a SIGNED-OUT visitor. Logging in is the way in, but it
-  // does not open a Pro pack, so the copy says so before the button does.
-  lockedProAnon: {
-    heading: (label) => `${label} is a Pro pack`,
-    body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
-    action: 'Log in',
-    secondary: 'See Pro plans',
   },
 }

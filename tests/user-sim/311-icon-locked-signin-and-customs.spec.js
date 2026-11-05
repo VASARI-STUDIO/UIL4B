@@ -1,19 +1,17 @@
-// A SIGNED-OUT VISITOR ON A PRO PACK LOGS IN FIRST, EMOJI IS NOT AN ICON PACK, AND
+// A SIGNED-OUT VISITOR ON A PRO PACK LOGS IN FIRST, AND
 // SAVED CUSTOM ICONS ARE CLEANED ON LOAD AND DRAWN FROM THE SPRITE.
 //
 // Cards 6457cc18d9 and 578fced35e (src/pages/IconLibrary.jsx, src/utils/customIcons.js).
 //
 //   (a) Signed out, choosing a Pro pack shows the gate wall with a "Log in"
 //       primary button (it opens the sign-in dialog) and a "See Pro plans" link
-//       to /plans. Its copy says the pack is Pro. The pack menu holds no emoji set.
+//       to /plans. Its copy says the pack is Pro.
 //   (b) A hostile record in localStorage `vs-custom-icons` runs nothing when My
 //       icons opens, nothing hostile reaches the page, and a clean record draws as
 //       <svg><use></svg> inside the grid.
 //
 // MUTATION: in IconLibrary.jsx make `anonOnPro` always false -> (a) fails on the
 //   primary button being "See what Pro includes" and on the missing secondary link.
-// MUTATION: in IconLibrary.jsx put ['twemoji', 'Twemoji'] back into PACK_MENU's 'Flat' group
-//   -> (a) fails on the twemoji option count.
 // MUTATION: in browseCustom replace `cleanCustomIcons(readCustomIcons())` with
 //   `readCustomIcons()` -> (b) fails on the script text / on* attribute being in the DOM.
 // MUTATION: in cellGlyph make `customSymbolRef(icon)` return '' -> (b) fails: the clean
@@ -37,20 +35,11 @@ const HOSTILE = [
 ]
 
 test.describe('(a) a Pro pack for a signed-out visitor', () => {
-  test('the wall logs in first, offers the plans second, and the pack menu has no emoji set', async ({ page }) => {
+  test('the wall logs in first and offers the plans second', async ({ page }) => {
     watch(page, 'a signed-out visitor meeting a Pro pack')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, ROUTE)
     await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
-
-    // Emoji is not an icon category: no emoji set in the menu. POSITIVE CONTROL: the menu is open and has packs.
-    await page.getByRole('button', { name: 'Icon pack' }).click()
-    const list = page.locator('.menu-select-list[role="listbox"]')
-    await expect(list.locator('[role="option"][data-value="simple-icons"]'), 'POSITIVE CONTROL: the menu is open').toHaveCount(1)
-    for (const pack of ['twemoji', 'noto', 'openmoji', 'fluent-emoji']) {
-      await expect(list.locator(`[role="option"][data-value="${pack}"]`), `${pack} is not in the pack menu`).toHaveCount(0)
-    }
-    await page.keyboard.press('Escape')
 
     // A Pro pack: the wall says it is Pro, its primary button is Log in, its second link is the plans.
     await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
