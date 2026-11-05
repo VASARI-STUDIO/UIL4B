@@ -102,6 +102,24 @@ async function ranTransition(locator, pseudo, action) {
   return handle.evaluate((el) => el.__ran)
 }
 
+// Transform transitions longer than 1ms that run on the element (or its pseudo) in
+// the 400ms after now: what reduced motion must leave none of.
+async function slowTransitions(locator, pseudo) {
+  return locator.evaluate((el, ps) => new Promise((resolve) => {
+    const found = new Set()
+    const t0 = performance.now()
+    const tick = () => {
+      for (const a of document.getAnimations()) {
+        const fx = a.effect
+        if (fx?.target === el && (fx.pseudoElement || '') === (ps || '') && a.transitionProperty === 'transform' && fx.getTiming().duration > 1) found.add(`${fx.getTiming().duration}ms`)
+      }
+      if (performance.now() - t0 < 400) requestAnimationFrame(tick)
+      else resolve([...found])
+    }
+    tick()
+  }), pseudo)
+}
+
 const style = (locator, pseudo, props) => locator.evaluate((el, [ps, names]) => {
   const cs = getComputedStyle(el, ps || null)
   return Object.fromEntries(names.map((n) => [n, cs[n]]))
@@ -208,12 +226,16 @@ for (const c of BARS) {
       const { bar, target } = await c.open(page, width)
       await expect(bar).toHaveAttribute('data-slide', 'ready')
       await settle(page)
-      const seen = await traceAround(bar, '::after', () => target.click())
+      let slow = []
+      const seen = await traceAround(bar, '::after', async () => { await target.click(); slow = await slowTransitions(bar, '::after') })
       await expect(target).toHaveAttribute('aria-selected', 'true')
       const first = seen[0]
       const last = seen.at(-1)
       expect(Math.abs(last.x - first.x), 'the bar did not move').toBeGreaterThan(8)
-      expect(seen.filter((p) => !near(p.x, first.x, 1) && !near(p.x, last.x, 1)).length, 'the bar still slides under reduced motion').toBe(0)
+      // A slide is a running transition; reduced motion leaves only the global 0.01ms clamp.
+      // (Counting frames between the tabs also caught a one-off re-measure as the chosen
+      // tab's label settled, which is a jump, not a slide.)
+      expect(slow, 'the bar still slides under reduced motion').toEqual([])
       expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBeLessThanOrEqual(0.00001)
     })
 
@@ -225,12 +247,16 @@ for (const c of BARS) {
       await expect(bar).toHaveAttribute('data-slide', 'ready')
       await reduceInApp(page)
       await settle(page)
-      const seen = await traceAround(bar, '::after', () => target.click())
+      let slow = []
+      const seen = await traceAround(bar, '::after', async () => { await target.click(); slow = await slowTransitions(bar, '::after') })
       await expect(target).toHaveAttribute('aria-selected', 'true')
       const first = seen[0]
       const last = seen.at(-1)
       expect(Math.abs(last.x - first.x), 'the bar did not move').toBeGreaterThan(8)
-      expect(seen.filter((p) => !near(p.x, first.x, 1) && !near(p.x, last.x, 1)).length, 'the bar still slides under reduced motion').toBe(0)
+      // A slide is a running transition; reduced motion leaves only the global 0.01ms clamp.
+      // (Counting frames between the tabs also caught a one-off re-measure as the chosen
+      // tab's label settled, which is a jump, not a slide.)
+      expect(slow, 'the bar still slides under reduced motion').toEqual([])
       expect(parseFloat((await style(bar, '::after', ['transitionDuration'])).transitionDuration), 'a transition is still set').toBeLessThanOrEqual(0.00001)
     })
   })

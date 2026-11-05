@@ -89,7 +89,10 @@ test.describe('size rail (desktop)', () => {
   test('each preset cell draws its icon in a box of exactly its size', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
     for (const n of PRESETS) {
-      const box = await page.locator(`.icust-size-cell[data-s="${n}"] svg`).boundingBox()
+      const drawing = page.locator(`.icust-size-cell[data-s="${n}"] svg`)
+      // The cell's drawing arrives with the icon; measure it once it is drawn.
+      await expect(drawing, `${n} cell: no drawing`).toBeVisible({ timeout: 15_000 })
+      const box = await drawing.boundingBox()
       expect(box.width, `${n} cell: drawing width`).toBeCloseTo(n, 2)
       expect(box.height, `${n} cell: drawing height`).toBeCloseTo(n, 2)
       await expect(radio(page, `${n} pixels`).locator('.icust-size-num')).toHaveText(String(n))
