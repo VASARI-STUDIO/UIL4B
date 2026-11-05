@@ -101,6 +101,15 @@ test('unknown type and source fall back rather than being stored verbatim', () =
   assert.equal(entry.subject, '[general] Submission', 'a missing subject is labelled by type')
 })
 
+test('the auto source is kept, so a crash report can be told from a typed one', () => {
+  for (const source of ['auto', 'inline', 'email', 'feedback-form']) {
+    const { entry } = validateSupportBody({ message: 'hi', type: 'bug', source }, NOW)
+    assert.equal(entry.source, source, `${source} is stored as sent`)
+  }
+  // 'automatic' is not on the list: a near miss still falls back, it is not stored verbatim.
+  assert.equal(validateSupportBody({ message: 'hi', source: 'automatic' }, NOW).entry.source, 'feedback-form')
+})
+
 test('an empty email is allowed — the form does not require one', () => {
   assert.equal(validateSupportBody({ message: 'hi', email: '' }, NOW).entry.email, '')
   assert.equal(validateSupportBody({ message: 'hi', email: null }, NOW).entry.email, '')

@@ -26,7 +26,9 @@ import { waitUntil } from '@vercel/functions'
 // 'report' is a content report from a community item (src/utils/contentReport.js).
 // A report is only ever read by a person: nothing here acts on it automatically.
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
-const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+// 'auto' marks a report no person typed (a crash report, src/utils/errorReport.js),
+// so Admin can list it apart from what people wrote.
+const VALID_SOURCES = ['feedback-form', 'inline', 'email', 'auto']
 
 // The routing choices the feedback dialog offers, by the type they file under
 // ('feedback' in the dialog is stored as 'general'). A value outside the list for
