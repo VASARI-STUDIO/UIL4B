@@ -1,7 +1,7 @@
 // A SEARCH THAT MATCHES MORE THAN THE VIEWER MAY OPEN SAYS SO, WITHOUT FETCHING THE MATCHES.
 //
-// The rules live in src/utils/iconSearchTease.js and the words in
-// ICON_GATE_COPY.searchPro, and are asserted here without rendering anything:
+// The rules and the words live in src/utils/iconSearchTease.js (SEARCH_TEASE_COPY),
+// and are asserted here without rendering anything:
 //
 //   lockedSearchPacks     which packs the one count request asks about
 //   searchTeaseKey        what a remembered answer is keyed on
@@ -15,9 +15,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { ICON_GATE_COPY, ICON_PACK_TIERS, canSeePack, tierOf } from '../../src/data/iconPackTiers.js'
+import { ICON_PACK_TIERS, canSeePack, tierOf } from '../../src/data/iconPackTiers.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 import {
+  SEARCH_TEASE_COPY,
   lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
 } from '../../src/utils/iconSearchTease.js'
 
@@ -187,7 +188,7 @@ test('no band while results are still arriving, for Pro, or with nothing locked'
 
 // ── the words ───────────────────────────────────────────────────────────────
 
-const { heading, body, sentence, action } = ICON_GATE_COPY.searchPro
+const { heading, body, sentence, action } = SEARCH_TEASE_COPY
 
 test('the heading gives the exact count and where the matches are', () => {
   assert.equal(heading(12, false, 'arrow', 'paid', true), '12 more icons match “arrow” in Pro sets')

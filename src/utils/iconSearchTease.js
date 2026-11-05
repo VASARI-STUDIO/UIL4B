@@ -151,3 +151,40 @@ export function searchTeaseBand({ summary, tier, endKind, searchEmpty } = {}) {
   if (endKind === 'free') return 'end'
   return null
 }
+
+// What a search says about its matches in sets the viewer cannot open yet
+// (counted above). Whole sentences, one function each,
+// so no call site joins fragments. `query` is the trimmed search, `count` the
+// matches, `capped` that the count is a floor, `where` is 'paid', 'free' or
+// 'both' (searchTeaseWhere), `more` that results are already on screen, and
+// `labels` the pack names, the busiest first.
+export const SEARCH_TEASE_COPY = {
+  heading: (count, capped, query, where, more) => {
+    const n = count.toLocaleString('en-AU')
+    const lead = capped
+      ? `More than ${n} icons match`
+      : `${n}${more ? ' more' : ''} ${count === 1 ? 'icon matches' : 'icons match'}`
+    const place = where === 'free' ? 'in sets a free account opens'
+      : where === 'both' ? 'in sets that need an account or Pro'
+        : 'in Pro sets'
+    return `${lead} “${query}” ${place}`
+  },
+  // Up to three sets by name; the rest are counted. `empty` is a search that
+  // found nothing in the sets the viewer can open, which the band must say
+  // because it takes the place of the "No icons match" message.
+  body: (labels, empty) => {
+    const named = labels.slice(0, 3)
+    const rest = labels.length - named.length
+    const list = rest > 0
+      ? `${named.join(', ')} and ${rest.toLocaleString('en-AU')} more ${rest === 1 ? 'set' : 'sets'}`
+      : named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}` : named[0]
+    return empty
+      ? `Nothing matches in the sets you can open. The matches are in ${list}.`
+      : `In ${list}.`
+  },
+  // The same two sentences as one, for the signed-out band that is already on screen.
+  sentence: (count, capped, query, where, labels) => (
+    `${SEARCH_TEASE_COPY.heading(count, capped, query, where, true)}. ${SEARCH_TEASE_COPY.body(labels, false)}`
+  ),
+  action: { paid: 'See Pro', free: 'Log in' },
+}

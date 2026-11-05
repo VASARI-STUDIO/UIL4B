@@ -53,7 +53,7 @@ import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
 import {
-  lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
 } from '../utils/iconSearchTease'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
@@ -3296,6 +3296,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      set only for a viewer below Pro; the band that reads it is chosen by
      searchTeaseBand further down. */
   const [searchTease, setSearchTease] = useState(null)
+  // A count still on its way: the empty message waits for it rather than
+  // showing "No icons match" a moment before the band takes its place.
+  const [teasePending, setTeasePending] = useState(false)
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -3719,17 +3722,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       })
       if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
       SEARCH_TEASE_CACHE.set(key, summary)
-      if (rid === reqId.current) land(summary)
+      if (rid === reqId.current) { land(summary); setTeasePending(false) }
     }
     if (!probed.length) { finish([]); return }
+    setTeasePending(true)
     const params = new URLSearchParams()
     params.set('prefixes', probed.join(','))
     params.set('query', q)
     params.set('limit', String(API_LIMIT))
     fetchWithFallback(`/search?${params.toString()}`)
       .then(r => r.json())
-      .then(d => { if (Array.isArray(d?.icons)) finish(d.icons) })
-      .catch(() => { /* a missing count is no band, never an error */ })
+      .then(d => { if (Array.isArray(d?.icons)) finish(d.icons); else if (rid === reqId.current) setTeasePending(false) })
+      // A missing count is no band, never an error.
+      .catch(() => { if (rid === reqId.current) setTeasePending(false) })
   }, [tier])
 
   const doSearch = useCallback((q, scope = {}, manualRetry = false) => {
@@ -3737,6 +3742,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
     setSearchTease(null)
+    setTeasePending(false)
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -4515,7 +4521,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // entitled to; printing it over a gate would be the page blaming the
   // catalogue for a decision the product made. A gated scope has its own panel,
   // which says what it is and how to open it.
-  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
+  const searchEmpty = !isMyIcons && !gated && !loading && !(teasePending && source === 'search') && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
   // A word the catalogues name differently ("home" for "house"): offered as a
   // button on the empty state, so no second search runs unless it is pressed.
@@ -5271,9 +5277,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             {(teaseBand === 'empty' || teaseBand === 'end') && (
               <IconEndBand
                 kind="search"
-                heading={ICON_GATE_COPY.searchPro.heading(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, teaseBand === 'end')}
-                body={ICON_GATE_COPY.searchPro.body(searchTease.labels, teaseBand === 'empty')}
-                action={ICON_GATE_COPY.searchPro.action[teaseNeed]}
+                heading={SEARCH_TEASE_COPY.heading(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, teaseBand === 'end')}
+                body={SEARCH_TEASE_COPY.body(searchTease.labels, teaseBand === 'empty')}
+                action={SEARCH_TEASE_COPY.action[teaseNeed]}
                 to={teaseNeed === 'paid' ? '/plans' : undefined}
                 onAction={() => (teaseNeed === 'paid' ? reportUpgradeGate('icon-search-pro') : openGate('free'))}
                 tease={teaseCells.length > 0 && (
@@ -5290,7 +5296,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 kind="anon"
                 heading={ICON_GATE_COPY.end.anon.heading(freeIconCount)}
                 body={teaseBand === 'anon'
-                  ? `${ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)} ${ICON_GATE_COPY.searchPro.sentence(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, searchTease.labels)}`
+                  ? `${ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)} ${SEARCH_TEASE_COPY.sentence(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, searchTease.labels)}`
                   : ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
                 names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}
