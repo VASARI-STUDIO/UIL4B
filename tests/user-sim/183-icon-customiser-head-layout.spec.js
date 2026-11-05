@@ -68,6 +68,12 @@ async function openCustomiser(browser, { width = 1440, height = 900, touch = fal
   await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.icust-stage-host svg')).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.icust-copy')).toBeEnabled({ timeout: 20_000 })
+  // The sheet slides up as it opens: let every finite animation finish so a box read now is
+  // where it rests (CI read the bottom edge at 639 of 640 mid-slide). A loading shimmer
+  // elsewhere runs forever, so only finite ones are awaited.
+  await page.evaluate(() => Promise.all(document.getAnimations()
+    .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
+    .map((a) => a.finished.catch(() => {}))))
   return { ctx, page }
 }
 
