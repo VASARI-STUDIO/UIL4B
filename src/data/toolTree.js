@@ -361,12 +361,11 @@ const DISCOVER_SPEC = [
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
   { id: 'icon-library', icon: 'icon-library', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
-  // Parked: this row stays Soon until the Inspiration page is designed. It points
-  // at /community, which stays a public page (footer, sitemap); only the row is
-  // hidden. `soon: true` is the switch every public list already honours (the
-  // mega menu, the mobile sheet, /sitemap, the live count), and admins still see
-  // the row with its Soon badge. Set it back to `soon: false` to open it up.
-  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: true },
+  // A place to take part rather than a library to copy from, so it carries
+  // `library: false`: the counts and sentences that say "libraries" skip it
+  // (DISCOVER_LIBRARIES below). The id stays `inspiration` because the menu
+  // glyph and its hover moment are keyed on it.
+  { id: 'inspiration', label: 'Community', desc: 'Browse design inspiration, save your favourites and submit your own.', route: '/community', soon: false, library: false },
   // The Prompt Library (/discover/prompts) is parked behind the admin gate, so
   // no public list names it. Add its row back here when it opens up.
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
@@ -378,6 +377,9 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
   const tool = requireTool(id, 'DISCOVER_SPEC')
   return { ...rest, route: tool.route, soon: tool.soon }
 })
+
+/** The live Discover rows that are libraries: what a "libraries open" count means. */
+export const DISCOVER_LIBRARIES = DISCOVER_GROUPS.filter((row) => !row.soon && row.library !== false)
 
 // The live Learn articles. LEARN_GROUPS below is the TOPIC roadmap — areas the
 // section will cover — and an article is a page that exists. Keeping them apart
@@ -599,7 +601,7 @@ function groupsToMenu(groups, spec) {
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
   { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library', 'button-library'] },
-  { label: 'Community', ids: ['inspiration'] },
+  { label: 'Inspiration', ids: ['inspiration'] },
   { label: 'Your library', ids: ['collections'] },
 ])
 
@@ -658,7 +660,7 @@ const LEARN_MENU = [
 // it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
 /** Live Discover libraries, menu order, with the category noun trimmed off. */
 function liveDiscoverGroups() {
-  return DISCOVER_GROUPS.filter((group) => !group.soon)
+  return DISCOVER_LIBRARIES
 }
 
 /** "Palettes, gradients, fonts, icons and buttons" — assembled, never typed. */
@@ -699,9 +701,8 @@ export const NAV_SECTIONS = [
       // DERIVED, BECAUSE THE TYPED VERSION WAS FALSE.
       //
       // It read 'Inspiration worth the tab' over 'Community UI systems, font
-      // pairings and prompts — curated, never scraped.' Inspiration and
-      // Collections are the two DISCOVER_GROUPS carrying `soon: true`, so the
-      // heading led on an unbuilt surface and the blurb opened by promising
+      // pairings and prompts — curated, never scraped.' The heading led on a
+      // surface that was not built and the blurb opened by promising
       // community UI systems that do not exist. "curated, never scraped" is
       // also the "not an X" defensive negation that was rejected on
       // the export heading and on /discover's own h1.
@@ -710,9 +711,9 @@ export const NAV_SECTIONS = [
       // the fix the 404 suggestions and the /plans delta took before it: a
       // claim that is computed cannot go stale, and a library that ships later
       // appears here on the next build with nobody remembering to edit a
-      // sentence. Inspiration is simply not mentioned — it carries its own
-      // Soon badge in the column beside this card, which is where that fact
-      // belongs. Counted from DISCOVER_GROUPS only: importing the palette and
+      // sentence. Only the library rows are named (DISCOVER_LIBRARIES), so the
+      // Community row, which is not one, is left to its own row in the
+      // column beside this card. Counted from the groups only: importing the palette and
       // gradient arrays to print their lengths would pull 137 records into
       // every bundle that loads the nav, which is every page.
       //

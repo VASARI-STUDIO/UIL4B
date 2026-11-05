@@ -128,7 +128,7 @@ const ADDED_SELECTORS = {
   '/create/gradient': ['.tl-dock'],
   '/create/tint': ['.tl-dock'],
   '/create/contrast': ['.tl-dock'],
-  '/create/alt-text': ['.tl-dock'],
+  '/create/alt-text': ['.tl-dock', '.alt-dropzone', '.ai-image-consent', '.alt-brief', '.alt-guide'],
   '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
     '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the

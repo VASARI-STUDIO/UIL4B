@@ -34,6 +34,7 @@
 .pl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 20px;text-align:center;color:var(--t2)}
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
+@media(pointer:coarse){.pl-empty-try{min-height:44px}}
 
 /* FOTD type held behind the reserved box until the real face is confirmed */
 @media(min-width:981px) and (max-height:900px){
@@ -723,6 +724,28 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .ui-modal-note{margin:0;font-size:11.5px;line-height:1.5;color:var(--t3)}
 .ui-modal-err{font-size:12px;font-weight:500;color:var(--err-strong)}
 .ui-modal-actions--row{flex-direction:row;justify-content:flex-end}
+
+/* The Community submit dialogs (design, icon). Their labels, note and buttons
+   sat at 11.5-12px, too small to read on a phone, the close control was a 32px
+   target, and in landscape the dialog scrolled with Submit below the fold.
+   Scoped by .ui-modal--form so the other dialogs on this shell are untouched. */
+.ui-modal--form{--mf-x:22px;--mf-b:22px}
+.ui-modal--form .ui-field>span,
+.ui-modal--form .ui-modal-note,
+.ui-modal--form .ui-modal-err{font-size:13px}
+.ui-modal--form .btn{font-size:13px}
+/* The action row stays pinned to the bottom of the dialog's scroll area, so
+   Submit and Cancel are in reach however much of the form is scrolled. It runs
+   edge to edge over the body padding and takes a hairline, not a shadow. */
+.ui-modal--form .ui-modal-actions{position:sticky;bottom:0;z-index:1;margin:var(--s-4) calc(var(--mf-x) * -1) calc(var(--mf-b) * -1);padding:var(--s-3) var(--mf-x) var(--mf-b);background:var(--card);border-top:1px solid var(--border)}
+@media(max-width:640px),(pointer:coarse){
+  .ui-modal--form .ui-modal-x{width:44px;height:44px;margin:-6px -8px 0 0}
+  .ui-modal--form .btn{min-height:44px}
+}
+@media(max-height:460px){
+  .ui-modal--form{--mf-x:18px;--mf-b:16px}
+  .ui-modal--form .ui-modal-actions{margin-top:var(--s-3);padding-top:var(--s-2)}
+}
 
 /* --- User identity: name + owner crown + flair tag (UserName component) --- */
 .uname{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}

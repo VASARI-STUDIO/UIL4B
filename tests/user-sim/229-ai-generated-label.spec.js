@@ -60,21 +60,21 @@ for (const width of [390, 1440]) {
 
     await page.locator('.alt-dropzone input[type="file"]')
       .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
-    const card = page.locator('.alt-card')
-    await expect(page.locator('.alt-card-ready')).toHaveCount(1, { timeout: 10000 })
+    const card = page.locator('.alt-row')
+    await expect(page.locator('.alt-row-ready')).toHaveCount(1, { timeout: 10000 })
     // Before anything is generated there is nothing to label.
     await expect(card.getByTestId('ai-label')).toHaveCount(0)
 
     const home = width < 768 ? '[data-tl-dock]' : '[data-tool-toolbar]'
-    await page.locator(home).getByRole('button', { name: /^Generate/ }).click()
+    await page.locator(home).getByRole('button', { name: /^Write alt text/ }).click()
 
     const label = card.getByTestId('ai-label')
     await expect(label).toBeVisible({ timeout: 10000 })
     await expect(label).toContainText(AI_GENERATED_LABEL)
-    await expect(card.locator('textarea.alt-card-text')).toHaveValue(ALT)
+    await expect(card.locator('textarea.alt-row-text')).toHaveValue(ALT)
 
     // The label heads the text: above the box, inside the card.
-    const [l, t] = [await label.boundingBox(), await card.locator('textarea.alt-card-text').boundingBox()]
+    const [l, t] = [await label.boundingBox(), await card.locator('textarea.alt-row-text').boundingBox()]
     expect(l.y + l.height, 'the label sits above the alt text').toBeLessThanOrEqual(t.y + 1)
 
     // No horizontal overflow from the new row at this width.

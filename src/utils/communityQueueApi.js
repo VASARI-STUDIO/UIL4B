@@ -152,6 +152,20 @@ export async function decideSubmission(id, status, reviewerUid) {
   })
 }
 
+/**
+ * Take a decision back: the submission returns to the awaiting-review list.
+ * firestore.rules lets a reviewer write any status, so this needs no rules
+ * change; it is separate from decideSubmission because that refuses 'pending'
+ * on purpose, as a decision a reviewer makes.
+ */
+export async function reopenSubmission(id) {
+  await updateDoc(doc(db, QUEUE_COLLECTION, id), {
+    status: CLIENT_WRITABLE_STATUS,
+    reviewedAt: null,
+    reviewedBy: null,
+  })
+}
+
 export async function deleteSubmission(id) {
   await deleteDoc(doc(db, QUEUE_COLLECTION, id))
 }

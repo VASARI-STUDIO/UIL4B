@@ -280,8 +280,11 @@ test('the local copy is written FIRST, as it is for designs and palettes', () =>
   // Local-first is why submitting works offline and the list updates without
   // waiting on a round trip. Publishing before the local write would make a
   // dropped connection lose the submission outright.
-  const localAt = COMMUNITY.indexOf('setIconLocal(appendIconSubmission(item))')
-  const publishAt = COMMUNITY.indexOf('await publishIcon(item)')
+  // Read inside the submit handler: the publish itself lives in a helper the
+  // handler calls, so the order that matters is the handler's.
+  const handler = COMMUNITY.slice(COMMUNITY.indexOf('const handleIconSubmit'))
+  const localAt = handler.indexOf('setIconLocal(appendIconSubmission(item))')
+  const publishAt = handler.indexOf('await sendIcon(item)')
   assert.ok(localAt > -1, 'the icon flow keeps no local copy')
   assert.ok(publishAt > -1, 'the icon flow never publishes')
   assert.ok(localAt < publishAt, 'the icon flow publishes before it writes locally')
@@ -292,7 +295,7 @@ test('an unsent submission can still be sent — the hole the other three flows 
   // fails and then offer no route to the account at all, which re-enters the
   // exact bug the queue was built to end.
   assert.match(COMMUNITY, /retryIcon/, 'the retry is gone')
-  assert.match(COMMUNITY, /s\.synced \? 'Pending review' : 'Not sent'/,
+  assert.match(COMMUNITY, /submissionStatusLabel\(\{ status: s\.status, synced: s\.synced/,
     'the row no longer distinguishes what reached the account from what did not')
 })
 

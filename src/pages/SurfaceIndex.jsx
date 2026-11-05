@@ -4,7 +4,7 @@ import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
 import { useIsAdmin } from '../hooks/useIsAdmin'
-import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
+import { DISCOVER_GROUPS, DISCOVER_LIBRARIES, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
@@ -161,8 +161,8 @@ const PREVIEWS = {
 // after the grid. https://mobbin.com/sites/sections/0b61affd-faef-4b8c-b6fd-983b94de9a77
 
 // Count live and upcoming libraries from the same groups as the cards.
-const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
-const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
+const DISCOVER_LIVE = DISCOVER_LIBRARIES.length
+const DISCOVER_SOON = DISCOVER_GROUPS.filter((g) => g.soon).length
 
 const SURFACES = {
   // ── Discover ───────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ const SURFACES = {
     hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
     // What everyone but an admin sees: unfinished libraries are not mentioned.
     liveHint: `${DISCOVER_LIVE} libraries open`,
-    gridTitle: 'Every library, and what is in it.',
+    gridTitle: 'Every library, and the community page.',
   },
   learn: {
     title: 'Learn',

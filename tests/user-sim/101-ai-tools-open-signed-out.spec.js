@@ -57,14 +57,14 @@ for (const width of [390, 1440]) {
     await expect(zone).toBeVisible()
     await page.locator('.alt-dropzone input[type="file"]')
       .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
-    await expect(page.locator('.alt-card-ready')).toHaveCount(1, { timeout: 10000 })
+    await expect(page.locator('.alt-row-ready')).toHaveCount(1, { timeout: 10000 })
     // The settings are usable signed out too.
     await page.getByRole('button', { name: 'Detailed', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Detailed', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
     // Below 768 a tool's primary action lives in the bottom dock, not the toolbar.
     const generateHome = width < 768 ? '[data-tl-dock]' : '[data-tool-toolbar]'
-    const generate = page.locator(generateHome).getByRole('button', { name: /^Generate/ })
+    const generate = page.locator(generateHome).getByRole('button', { name: /^Write alt text/ })
     await expect(generate).toBeEnabled()
     await generate.click()
     await expect(page.locator('.ui-login'), 'Generate did not ask for an account').toBeVisible()
@@ -73,7 +73,7 @@ for (const width of [390, 1440]) {
     // Dismissing the dialog leaves the work where it was.
     await page.locator('.ui-login-x').click()
     await expect(page.locator('.ui-login')).toHaveCount(0)
-    await expect(page.locator('.alt-card')).toHaveCount(1)
+    await expect(page.locator('.alt-row')).toHaveCount(1)
     expect(calls).toEqual([])
   })
 

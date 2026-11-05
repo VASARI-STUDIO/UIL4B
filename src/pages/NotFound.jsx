@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
+import { CREATE_GROUPS, DISCOVER_LIBRARIES, createTools } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -52,7 +52,7 @@ const suggestTool = (id) => {
   if (!tool) throw new Error(`NotFound suggests "${id}", which is not a live tool in CREATE_GROUPS`)
   return { to: tool.route, label: tool.label, desc: GROUP_LABEL[tool.group] }
 }
-const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
+const DISCOVER_LIVE = DISCOVER_LIBRARIES.length
 const SUGGESTIONS = [
   suggestTool('palette'),
   suggestTool('font-pair'),

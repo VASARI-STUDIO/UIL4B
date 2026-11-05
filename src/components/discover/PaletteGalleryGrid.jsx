@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
@@ -119,7 +119,7 @@ function CheckGlyph() {
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
-  const { setPalette, canSaveProjects } = useProject()
+  const { saveProject, canSaveProjects } = useProject()
   const { requireLogin } = useLoginPrompt()
 
   // Likes belong to an account: signed out, a press asks to sign in first and
@@ -166,20 +166,45 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
     }
   }, [navigate, toast])
 
-  // Write into the shared design the way the Palette Builder does, then send
-  // the user to Projects to name and keep it. Deliberately NOT a silent save:
-  // saveProject needs a name, and inventing one on the user's behalf is how a
-  // projects list fills up with things nobody chose.
-  const saveToProject = useCallback((palette) => {
-    if (!canSaveProjects) {
-      toast?.('Sign in to save palettes to a project')
-      navigate('/login')
+  // Save the palette as a new project, named after it, without leaving the
+  // gallery (so the search and scroll position survive). The palette goes in
+  // as a patch to the saved copy only: the working design is left alone. The
+  // toast offers a link to open the new project. A full free plan, or any other
+  // refusal from saveProject, shows as the message saveProject already words.
+  const saveNow = useCallback((palette) => {
+    try {
+      const id = saveProject(palette.name, {
+        patch: { palette: { colors: palette.colors, baseColors: palette.colors, base: palette.colors[0] } },
+      })
+      toast?.(`Saved ${palette.name} to a new project`, 'success', {
+        action: { label: 'Open', onAction: () => navigate(`/projects/${id}`) },
+      })
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save the palette — try again', 'error')
+    }
+  }, [saveProject, navigate, toast])
+
+  // Signed out, ask to sign in with the same popup Like uses. The save runs
+  // once the account is live: saveNow above still holds the signed-out project
+  // store at that point, so the palette waits in a ref and the effect saves it
+  // on the render where saving is allowed.
+  const pendingSaveRef = useRef(null)
+  useEffect(() => {
+    if (!canSaveProjects || !pendingSaveRef.current) return
+    const palette = pendingSaveRef.current
+    pendingSaveRef.current = null
+    saveNow(palette)
+  }, [canSaveProjects, saveNow])
+
+  const saveToProject = useCallback(async (palette) => {
+    if (canSaveProjects) {
+      saveNow(palette)
       return
     }
-    setPalette({ colors: palette.colors, baseColors: palette.colors, base: palette.colors[0] })
-    toast?.(`${palette.name} loaded — name it to save`)
-    navigate('/projects')
-  }, [canSaveProjects, navigate, setPalette, toast])
+    pendingSaveRef.current = palette
+    const user = await requireLogin('save palettes to a project', { free: true, signup: true })
+    if (!user) pendingSaveRef.current = null
+  }, [canSaveProjects, saveNow, requireLogin])
 
   return (
     <LibraryGrid className="pgal-grid" labelledBy={labelledBy}>
