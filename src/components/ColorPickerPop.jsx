@@ -5,7 +5,9 @@ import usePopover, { topObstruction } from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
+import { buildPickerPresets } from '../utils/pickerPresets'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
+import { useProject } from '../contexts/ProjectContext'
 import { lockScroll } from '../utils/scrollLock'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
@@ -173,6 +175,18 @@ export default function ColorPickerPop({
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState('hex')
   const [recents, setRecents] = useState(getRecentColors)
+  // The working design's palette and semantic colours, offered as presets. The
+  // picker can sit outside a project provider, where there is nothing to offer.
+  const design = useProject()?.design
+  const designColours = design?.palette?.colors
+  const designStates = design?.states
+  // A caller that brings its own preset list has already named its colours, so
+  // those are not repeated; the stock list is generic and does not count.
+  const shown = swatches === DEFAULT_SWATCHES ? undefined : swatches
+  const projectGroups = useMemo(
+    () => buildPickerPresets({ palette: designColours, states: designStates, exclude: shown }),
+    [designColours, designStates, shown],
+  )
   // useId, not a counter: two pickers can be open at once (a gradient has a
   // stop picker per stop) and a duplicated id would point every label at the
   // first list.
@@ -247,7 +261,7 @@ export default function ColorPickerPop({
       panel.removeEventListener('scroll', update)
       observer?.disconnect()
     }
-  }, [open, popRef, recents.length, sheet])
+  }, [open, popRef, recents.length, projectGroups.length, sheet])
 
   // The sheet is pinned to the bottom edge, and a trigger that happens to sit in
   // the lower half of the page would be under it. Lift the page by just enough to
@@ -270,7 +284,7 @@ export default function ColorPickerPop({
       else window.scrollBy({ top: lift, behavior: 'instant' })
     })
     return () => cancelAnimationFrame(frame)
-  }, [open, sheet, popRef, triggerRef, recents.length])
+  }, [open, sheet, popRef, triggerRef, recents.length, projectGroups.length])
 
   const renderPopover = panel => portal ? createPortal(panel, document.body) : panel
 
@@ -380,6 +394,30 @@ export default function ColorPickerPop({
           onClick={() => selectColor(sw)}
         />
       ))}
+    </div>
+  )
+
+  // The project's own colours. Plain "use this colour" buttons that report their
+  // state with aria-pressed, each named for where the colour came from, rather
+  // than options of the listbox above.
+  const presetGroup = (group) => (
+    <div className="cpk-section" key={group.id}>
+      <p className="cpk-section-label" id={`${ids}-${group.id}`}>{group.label}</p>
+      <div className="cpk-presets" role="group" aria-labelledby={`${ids}-${group.id}`}>
+        {group.items.map((item) => (
+          <button
+            key={item.hex}
+            type="button"
+            className="cpk-preset"
+            aria-pressed={item.hex === liveHex}
+            aria-label={item.label}
+            title={item.label}
+            onClick={() => selectColor(item.hex)}
+          >
+            <span className="cpk-preset-chip" style={{ background: item.hex }} aria-hidden="true" />
+          </button>
+        ))}
+      </div>
     </div>
   )
 
@@ -586,6 +624,8 @@ export default function ColorPickerPop({
               {swatchGrid(recents, `${ids}-recent`)}
             </div>
           )}
+
+          {projectGroups.map(presetGroup)}
 
           {swatches.length > 0 && (
             <div className="cpk-section">
