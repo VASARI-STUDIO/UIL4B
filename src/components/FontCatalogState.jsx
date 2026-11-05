@@ -30,18 +30,20 @@ export function FontCatalogLoading({ label = 'Loading the Google Fonts catalogue
   )
 }
 
-export function FontCatalogNotice({ online, degraded, onRetry, retrying, count }) {
+// `compact`: the headline and Retry only, for a tool that keeps the notice inside a
+// tight settings section (Type Scale). The other tools keep the full explanation.
+export function FontCatalogNotice({ online, degraded, onRetry, retrying, count, compact = false }) {
   if (online === false) {
     return (
       <div className="typ-notice" role="status" aria-live="polite">
         <WarnIcon />
         <div>
           <strong>You&rsquo;re offline — previews will use system fonts.</strong>
-          <span>
+          {!compact && <span>
             Everything else keeps working: the {count ? `${count.toLocaleString()} ` : ''}families
             already loaded stay browsable, and your settings and exports are unaffected. The full
             catalogue reloads by itself when you reconnect.
-          </span>
+          </span>}
         </div>
       </div>
     )
@@ -58,10 +60,10 @@ export function FontCatalogNotice({ online, degraded, onRetry, retrying, count }
             separate hosts, so specimens keep rendering; the copy says what
             happened and does not guess at a cause (the console warning carries
             the measured one). */}
-        <span>
+        {!compact && <span>
           The full list of families didn&rsquo;t load, so these tools are using a built-in set
           of popular ones. Fonts still render as normal and everything keeps working.
-        </span>
+        </span>}
         <button type="button" className="typ-notice-retry" onClick={onRetry} disabled={retrying}>
           {retrying ? 'Retrying…' : 'Try the full catalogue again'}
         </button>

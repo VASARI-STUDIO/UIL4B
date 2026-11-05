@@ -202,7 +202,10 @@
    In the split the right half switches between the page and the code. The code
    fills the half; the format pills sit above it. */
 .tsc-page .tsc-half-switch { flex-wrap: nowrap; }
-.tsc-page .tsc-view[data-view="split"] .tsc-developer-view .tsc-export { max-height: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 120px); }
+.tsc-page .tsc-view[data-view="split"] .tsc-developer-view .tsc-export { max-height: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 120px); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tsc-page .tsc-developer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: nowrap; min-width: 0; }
+.tsc-page .tsc-developer-bar .tsc-fmt { min-width: 0; overflow-x: auto; }
+.tsc-page .tsc-export-copy { flex: none; }
 
 
 /* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save from
@@ -499,4 +502,6 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-sheet-row-value { margin-left: auto; min-width: 0; max-width: 55%; overflow: hidden; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
   .tsc-page .tsc-sheet-row-label { flex: 0 0 auto; }
   .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
+  /* The tab bar's rule is more specific; with the keyboard up the sheet sits on the keyboard, not on the dock. */
+  html.has-tabbar .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); }
 }

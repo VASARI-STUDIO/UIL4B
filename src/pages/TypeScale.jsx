@@ -793,6 +793,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const exportPre = (
     <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
   )
+  // The Code view's own copy, named for the format it copies (the tool bar's says CSS).
+  const exportCopy = (
+    <ToolButton className="tsc-export-copy" onClick={exportCode}>
+      <ToolIcon name="copy" size={15} />
+      Copy as {{ css: 'CSS', tailwind: 'Tailwind v3', tailwind4: 'Tailwind v4', scss: 'SCSS' }[format] || 'CSS'}
+    </ToolButton>
+  )
 
 
   const pageView = (
@@ -815,7 +822,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         ) : <p className="tsc-page-label">Page set on this scale</p>}
         {split && half === 'page' && widthMenu}
       </div>
-      {split && half === 'code' ? <div className="tsc-developer-view">{formatPills}{exportPre}</div> : <>
+      {split && half === 'code' ? <div className="tsc-developer-view"><div className="tsc-developer-bar">{formatPills}{exportCopy}</div>{exportPre}</div> : <>
       {colW > 0 && colW < activeWidth.px - 1 && (
         <p className="tsc-width-note" role="status">
           Sizes as on a {activeWidth.px}px screen. Lines wrap sooner here.
@@ -937,7 +944,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
               <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
-            <div className="tsc-sheet-body">
+            {/* A field that takes focus while the keyboard is up scrolls into the room above it. */}
+            <div className="tsc-sheet-body" onFocus={(e) => { if (e.target.matches?.('input, textarea')) e.target.scrollIntoView?.({ block: 'nearest' }) }}>
               <ToolSection className="tsc-fonts">
                 <FontCatalogNotice
                   online={online}
@@ -945,6 +953,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   onRetry={retry}
                   retrying={retrying}
                   count={catalog.length}
+                  compact
                 />
                 <div className="tsc-fams">
                   <div className="tsc-fams-grid">
@@ -983,6 +992,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   placeholder={defaultSpecimen}
                   autoComplete="off"
                   autoCorrect="off"
+                  autoCapitalize="sentences"
                   enterKeyHint="done"
                   onChange={e => setSample(e.target.value)}
                 />
