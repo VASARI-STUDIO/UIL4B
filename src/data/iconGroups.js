@@ -217,14 +217,14 @@ export const PREMADE_ICON_GROUPS = Object.freeze([
     'tabler:brand-trello', 'tabler:brand-supabase', 'iconoir:google', 'iconoir:discord',
     'iconoir:telegram',
   ]),
-  group('payment-brands', 'Payment brands', 'pro', [
+  group('payment-brands', 'Payments & crypto', 'pro', [
     'tabler:brand-stripe', 'tabler:brand-paypal', 'tabler:brand-visa', 'tabler:brand-mastercard',
     'tabler:brand-alipay', 'tabler:brand-cashapp', 'tabler:brand-revolut', 'tabler:brand-paypay',
     'tabler:brand-samsungpass', 'tabler:brand-binance', 'tabler:brand-coinbase', 'tabler:brand-tether',
     'tabler:brand-stellar', 'tabler:brand-gumroad', 'tabler:brand-patreon', 'tabler:brand-kickstarter',
     'iconoir:bitcoin-circle', 'iconoir:ethereum-circle', 'iconoir:litecoin-circle', 'iconoir:dogecoin-circle',
   ]),
-  group('developer-tools', 'Developer tools', 'pro', [
+  group('developer-tools', 'Languages & frameworks', 'pro', [
     'tabler:brand-git', 'tabler:brand-github-copilot', 'tabler:brand-docker', 'tabler:brand-npm',
     'tabler:brand-nodejs', 'tabler:brand-python', 'tabler:brand-javascript', 'tabler:brand-typescript',
     'tabler:brand-react', 'tabler:brand-vue', 'tabler:brand-angular', 'tabler:brand-svelte',

@@ -4,7 +4,7 @@
 //      clears the group, keeps the search text and shows the mixed packs again.
 //   2. The row has four chips (All icons, Coloured, Brand logos, Flags) in whichever form the toolbar
 //      gives them, and the toolbar row never wraps at 390, 768 or 1440.
-//   3. The premade groups added (Tech brands, Payment brands and the rest) are listed on the Groups tab:
+//   3. The premade groups added (Tech brands, Payments & crypto and the rest) are listed on the Groups tab:
 //      locked cards signed out, open with every glyph painted on Pro.
 //
 // Artwork is served from the Iconify fixture (tests/user-sim/iconify-stub.js).
@@ -16,10 +16,10 @@
 //   - clear the query in handleGroupToggle -> the "keeps the search text" check in test 1.
 //   - delete the 'tech-brands' group from src/data/iconGroups.js -> test 3.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { PREMADE_ICON_GROUPS } from '../../src/data/iconGroups.js'
 
-const ADDED = ['Dashboard & analytics', 'App navigation', 'Code & terminal', 'Portfolio & creative', 'Events & tickets', 'Tech brands', 'Payment brands', 'Developer tools']
+const ADDED = ['Dashboard & analytics', 'App navigation', 'Code & terminal', 'Portfolio & creative', 'Events & tickets', 'Tech brands', 'Payments & crypto', 'Languages & frameworks']
 const CHIPS = ['All icons', 'Coloured', 'Brand logos', 'Flags']
 const REAL_CELL = '.ig .ic:not(.ig-skel)'
 
@@ -81,6 +81,21 @@ test('All icons is pressed at rest; a group then All icons clears the group and 
   expect((await chipState(page)).map((c) => c.pressed)).toEqual(['true', 'false', 'false', 'false'])
 })
 
+// MUTATION: drop `allIcons ? '' :` from scopePack in handleGroupToggle -> the pack stays on Tabler.
+test('All icons also clears a chosen pack, so the grid is every pack again', async ({ page }) => {
+  watch(page, 'a designer who narrowed to one pack and wants everything back')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await signIn(page, { plan: 'pro' })
+  await go(page, '/create/icons')
+  await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+  const packMenu = page.getByRole('button', { name: 'Icon pack' })
+  await chooseMenuOption(page, packMenu, 'tabler')
+  await expect(packMenu).not.toHaveText(/All packs/)
+  await press(page, 'All icons')
+  await expect(packMenu, 'the pack menu is back on All packs').toHaveText(/All packs/)
+  await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
+})
+
 for (const width of [390, 768, 1440]) {
   test(`${width}: four group chips, and the toolbar row does not wrap`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, ...(width === 390 ? { hasTouch: true, isMobile: true } : {}) })
@@ -130,7 +145,7 @@ test('a Pro viewer opens Tech brands and every glyph paints', async ({ page }) =
   const tech = PREMADE_ICON_GROUPS.find((g) => g.id === 'tech-brands')
   await go(page, '/create/icons/groups')
   await expect(page.locator('.igp-cards a.igp-card')).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
-  await expect(page.locator('.igp-cards a.igp-card').filter({ hasText: 'Payment brands' })).toHaveCount(1)
+  await expect(page.locator('.igp-cards a.igp-card').filter({ hasText: 'Payments & crypto' })).toHaveCount(1)
   await go(page, `/create/icons/groups?group=${tech.id}`)
   await expect(page.getByRole('heading', { level: 2, name: 'Tech brands' })).toBeVisible()
   await expect(page.locator('.igp-grid .ic img')).toHaveCount(tech.icons.length, { timeout: 15000 })

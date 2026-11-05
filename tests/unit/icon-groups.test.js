@@ -77,8 +77,8 @@ const ADDED_GROUPS = {
   portfolio: 'Portfolio & creative',
   events: 'Events & tickets',
   'tech-brands': 'Tech brands',
-  'payment-brands': 'Payment brands',
-  'developer-tools': 'Developer tools',
+  'payment-brands': 'Payments & crypto',
+  'developer-tools': 'Languages & frameworks',
 }
 const BRAND_GROUPS = ['tech-brands', 'payment-brands', 'developer-tools']
 

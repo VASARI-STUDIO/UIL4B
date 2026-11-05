@@ -4130,17 +4130,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Toggle a cross-pack collection chip. Keeps the active search text AND the
   // selected pack — the chip narrows style within whatever scope is set.
+  // "All icons" means what it says: it clears the group and the pack, keeping the search.
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
-    // "All icons" with no group chosen is already the view on screen: no refetch, no flicker.
-    if (key === ALL_ICONS_ID && !group) return
+    const allIcons = key === ALL_ICONS_ID
+    // "All icons" with no group or pack chosen is already the view on screen: no refetch, no flicker.
+    if (allIcons && !group && (!pack || pack === 'custom')) return
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
     // Logo.dev is not an Iconify set and belongs to no collection, so with it
     // picked a chip would light and change nothing. Choosing a collection leaves
     // the pack for "All packs", whose scope the chip then narrows.
-    const scopePack = nextGroup && pack === 'logodev' ? '' : pack
+    const scopePack = allIcons ? '' : nextGroup && pack === 'logodev' ? '' : pack
     if (scopePack !== pack) setPack(scopePack)
     // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
