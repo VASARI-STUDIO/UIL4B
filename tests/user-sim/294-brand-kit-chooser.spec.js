@@ -303,6 +303,21 @@ test.describe('The brand kit chooser', () => {
     await expect(chooser(page)).toHaveCount(0)
   })
 
+  test('T21 Undo after Start new brings back the steps moved past as well as the kit', async ({ page }) => {
+    watch(page, 'a designer who starts over by mistake, two steps in')
+    await seedKit(page, { hoursAgo: 7 })
+    await page.addInitScript(() => {
+      try { if (!sessionStorage.getItem('__t21')) { sessionStorage.setItem('__t21', '1'); localStorage.setItem('vs-uikit-guide', '1:color,fonts') } } catch { /* blocked */ }
+    })
+    await go(page, AWAY)
+    await pressBrandKit(page)
+    await chooser(page).getByRole('button', { name: /^Start a new brand kit/ }).click()
+    await expect.poll(() => read(page, 'vs-uikit-guide')).toBe('1')
+    await toast(page).getByRole('button', { name: 'Undo' }).click()
+    await expect.poll(() => colours(page)).toEqual(WORK.palette.colors)
+    await expect.poll(() => read(page, 'vs-uikit-guide'), { message: 'the ticks come back with the kit' }).toBe('1:color,fonts')
+  })
+
   test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {
     watch(page, 'a designer finding their put-aside kit on the workspace')
     await signIn(page, { plan: 'free', projects: 0 })
