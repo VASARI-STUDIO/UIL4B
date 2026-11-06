@@ -76,9 +76,10 @@ const PRO_THEME_NAMES = joinNames(proThemes())
 const EXPORTS_PER_THEME = EXPORT_THEME_EXPORTS.length
 // ships with the export themes
 // The Free line about the UI kit. Without the themes it is the UI kit alone.
-const FREE_UI_KIT_LINE = EXPORT_THEMES_LIVE
+// `live` is the themes switch; the tests pass it both ways.
+export const freeUiKitLine = (live = EXPORT_THEMES_LIVE) => (live
   ? `The UI kit in ${freeThemes().length} export themes: ${FREE_THEME_NAMES}`
-  : 'The UI kit'
+  : 'The UI kit')
 // ships with the export themes
 // The Pro-only exports of a theme, in the order the plan row names them.
 const PRO_THEME_DOCS = ['guidelines', 'brand-book', 'brand-kit']
@@ -90,7 +91,7 @@ const PRO_THEME_DOCS_TITLE = capitalise(joinAnd(PRO_THEME_DOCS.map((e) => e.shor
 export const FREE_POINTS = Object.freeze([
   `All ${numberWord(TOOL_COUNT)} tools`,
   `${AI.free.daily} AI generations a day, ${AI.free.monthly} a month`,
-  `${FREE_UI_KIT_LINE}, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`,
+  `${freeUiKitLine()}, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`,
   `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,
 ])
 
@@ -166,9 +167,9 @@ export const PRO_VALUE = Object.freeze([
 
 // ships with the export themes
 // The export clause of the Pro line: the themes' documents, or the panel's own Pro documents.
-const PRO_DOCUMENTS_LINE = EXPORT_THEMES_LIVE
+export const proDocumentsLine = (live = EXPORT_THEMES_LIVE) => (live
   ? `${PRO_THEME_DOCS_TITLE} in all ${THEME_COUNT} export themes`
-  : PRO_EXPORT_NAMES
+  : PRO_EXPORT_NAMES)
 
 /** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
 export const PRO_POINTS = Object.freeze([
@@ -177,7 +178,7 @@ export const PRO_POINTS = Object.freeze([
   'Every palette, gradient, prompt and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
-  `${PRO_DOCUMENTS_LINE}, with no UIL4B line on anything`,
+  `${proDocumentsLine()}, with no UIL4B line on anything`,
 ])
 
 // ── The long-form lists ──────────────────────────────────────────────────────
@@ -197,16 +198,17 @@ const FREE_SYSTEMS_LINE = `${capitalise(joinAnd(FREE_SYSTEM_LABELS))} colour sys
 const FREE_ICON_SIZES_LINE = `Outline and solid icon packs, at ${numberWord(ICON_SIZE_PRESETS.length)} set sizes`
 
 /** What Free includes, one line each, in the order a full-width Free card prints them. */
-export const FREE_LINES = Object.freeze([
+export const freeLines = (live = EXPORT_THEMES_LIVE) => Object.freeze([
   FREE_POINTS[0],
   FREE_POINTS[1],
-  FREE_UI_KIT_LINE,
+  freeUiKitLine(live),
   `Style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`,
   `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`,
   FREE_SYSTEMS_LINE,
   `The first ${LIBRARY_CAP} of each library`,
   FREE_ICON_SIZES_LINE,
 ])
+export const FREE_LINES = freeLines()
 
 // ships with the export themes
 const THEMES_ROW_SUB = `${capitalise(numberWord(proThemes().length))} more than Free: ${PRO_THEME_NAMES}. Each has all ${numberWord(EXPORTS_PER_THEME)} exports.`
@@ -223,12 +225,12 @@ const GUIDELINES_GROUP = EXPORT_GROUPS.find((g) => g.id === 'guidelines')
 // hold the theme rows when the themes are live and the panel's two Pro documents when not.
 const proRow = (id, icon, title, sub, phoneSub = sub) => Object.freeze({ id, icon, title, sub, phoneSub })
 
-const PRO_ROW_BY_ID = Object.freeze(Object.fromEntries([
+const proRowsById = (live) => Object.freeze(Object.fromEntries([
   proRow('white-label', 'shield-check', 'White-label exports', 'No “Made with UIL4B” line on any file you hand over.'),
-  EXPORT_THEMES_LIVE
+  live
     ? proRow('export-themes', 'layers', `All ${THEME_COUNT} export themes`, THEMES_ROW_SUB, THEMES_ROW_SUB_PHONE)
     : proRow('export-themes', 'layers', BOOK_GROUP.name, BOOK_GROUP.desc),
-  EXPORT_THEMES_LIVE
+  live
     ? proRow('export-documents', 'book', PRO_THEME_DOCS_TITLE, DOCUMENTS_ROW_SUB)
     : proRow('export-documents', 'book', GUIDELINES_GROUP.name, GUIDELINES_GROUP.desc),
   proRow('icon-packs', 'star', 'Premium icon packs', `${capitalise(joinAnd(PAID_PACK_WORDS))} packs, beside the free outline and solid sets.`),
@@ -244,31 +246,40 @@ const PRO_ROW_BY_ID = Object.freeze(Object.fromEntries([
   proRow('saves', 'infinity', 'Unlimited saves', 'Projects and custom icons, kept in your account with no cap.'),
 ].map((row) => [row.id, row])))
 
-const rowsInOrder = (ids) => Object.freeze(ids.map((id) => PRO_ROW_BY_ID[id]))
-
-/**
- * What Pro adds, one row each ({ id, icon, title, sub, phoneSub }), in the order
- * a full-width Pro card prints them. `icon` is a key, not a drawing. `phoneSub`
- * is the shorter sub-line for a phone and equals `sub` where there is no shorter one.
- */
-export const PRO_ROWS = rowsInOrder([
+const PRO_ROW_ORDER = Object.freeze([
   'white-label', 'export-themes', 'export-documents', 'icon-packs', 'icon-tools',
   'ai', 'colour-systems', 'library', 'prompts', 'saves',
 ])
-
-/** The same rows in the phone's order: the AI row is lifted into the rows shown before the toggle. */
-export const PRO_ROWS_PHONE = rowsInOrder([
+// The AI row is lifted into the rows shown before the phone's "Show all".
+const PRO_ROW_ORDER_PHONE = Object.freeze([
   'white-label', 'export-themes', 'export-documents', 'ai', 'icon-tools',
   'icon-packs', 'colour-systems', 'library', 'prompts', 'saves',
 ])
+
+/**
+ * What Pro adds, one row each ({ id, icon, title, sub, phoneSub }). `icon` is a
+ * key, not a drawing. `phoneSub` is the shorter sub-line for a phone and equals
+ * `sub` where there is no shorter one. `live` is the themes switch.
+ */
+export const proRows = (live = EXPORT_THEMES_LIVE, { phone = false } = {}) => {
+  const byId = proRowsById(live)
+  return Object.freeze((phone ? PRO_ROW_ORDER_PHONE : PRO_ROW_ORDER).map((id) => byId[id]))
+}
+
+/** The rows in the order a full-width Pro card prints them. */
+export const PRO_ROWS = proRows()
+
+/** The rows in the phone's order. */
+export const PRO_ROWS_PHONE = proRows(EXPORT_THEMES_LIVE, { phone: true })
 
 /** How many PRO_ROWS_PHONE rows show before "Show all". */
 export const PRO_PHONE_COLLAPSED_ROWS = 4
 
 /** The line under the plans heading. */
-export const PLANS_LEAD = `Every tool, the UI kit and the style guides stay free, with no time limit. Pro is the full studio: ${
-  EXPORT_THEMES_LIVE ? `all ${numberWord(THEME_COUNT)} export themes, brand guidelines` : 'client-ready books and decks'
+export const plansLead = (live = EXPORT_THEMES_LIVE) => `Every tool, the UI kit and the style guides stay free, with no time limit. Pro is the full studio: ${
+  live ? `all ${numberWord(THEME_COUNT)} export themes, brand guidelines` : 'client-ready books and decks'
 }, white-label exports, ${Number.isInteger(AI_MULTIPLE) ? `${numberWord(AI_MULTIPLE)} times the` : 'more'} AI and the whole library.`
+export const PLANS_LEAD = plansLead()
 
 // ships with the export themes
 /**

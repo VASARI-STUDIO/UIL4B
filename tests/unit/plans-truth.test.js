@@ -419,3 +419,37 @@ test('the "Made with UIL4B" line is claimed only for the free files that carry o
     assert.equal(text.includes('Made with UIL4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
   }
 })
+
+// ── Export themes: no plan line sells them until they export ─────────────────
+import { EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS, EXPORT_THEMES, freeThemes, themeExports } from '../../src/config/exportFormats.js'
+import { FREE_POINTS, FREE_LINES, PRO_ROWS, PLANS_LEAD, THEME_FACTS } from '../../src/config/planFacts.js'
+
+test('while the themes are off, no plan line mentions them; the Pro export lines are the panel\'s own', () => {
+  const lines = [...FREE_POINTS, ...PRO_POINTS, ...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD].join(' | ')
+  if (EXPORT_THEMES_LIVE) {
+    assert.match(lines, /export themes/, 'the themes are on but no plan line names them')
+    return
+  }
+  for (const word of [/export themes?/i, /Presentation, Ticket/, /brand book/i, /Standards and Specification/]) {
+    assert.ok(!word.test(lines), `a plan line sells the export themes before they export: ${word}`)
+  }
+  for (const f of proOnlyFormats().filter((x) => x.group === 'book' || x.group === 'guidelines')) {
+    assert.ok(PRO_POINTS.at(-1).includes(f.name), `Pro no longer names ${f.name}`)
+  }
+})
+
+test('what the theme lines promise is what the theme data gates', () => {
+  // "UI kit free in N themes" and "Guidelines, brand book and kit" are Pro everywhere.
+  assert.equal(freeThemes().length, THEME_FACTS.freeCount)
+  for (const t of EXPORT_THEMES) {
+    const exportsOf = themeExports(t.id)
+    assert.equal(exportsOf.find((e) => e.id === 'ui-kit').pro, t.tier !== 'free', `${t.id}: the UI kit gate disagrees with the tier`)
+    for (const e of exportsOf.filter((x) => x.id !== 'ui-kit')) assert.equal(e.pro, true, `${t.id}/${e.id} is not Pro`)
+  }
+  assert.equal(EXPORT_THEME_EXPORTS.filter((e) => !e.proOnly).length, 1, 'more than the UI kit can be free')
+})
+
+test('the themes are not sold as formats: no theme export is a Pro format in the table', () => {
+  const formatNames = new Set(EXPORT_FORMATS.map((f) => f.name))
+  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(!formatNames.has(e.name), `${e.name} is in the format table without being built`)
+})

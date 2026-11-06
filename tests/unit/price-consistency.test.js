@@ -500,3 +500,11 @@ test('no allowlist entry outlives the thing it excuses', () => {
     'these NOT_A_PLAN_PRICE entries no longer excuse anything. Delete them — an '
     + 'allowlist entry with nothing behind it is a hole waiting for a future price.')
 })
+
+// ── The plan lists carry no money ────────────────────────────────────────────
+import { FREE_LINES, PRO_ROWS, PLANS_LEAD, FREE_POINTS as FACT_FREE, PRO_POINTS as FACT_PRO } from '../../src/config/planFacts.js'
+
+test('the plan lists and rows hold no price: amounts come from the ladder at render time', () => {
+  const all = [...FACT_FREE, ...FACT_PRO, ...FREE_LINES, PLANS_LEAD, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub])]
+  for (const line of all) assert.ok(!/[$€£]\s?\d|\b\d+(\.\d+)?\s?(USD|AUD|dollars)\b|\d+%/i.test(line), `a plan line types a price or a saving: ${line}`)
+})
