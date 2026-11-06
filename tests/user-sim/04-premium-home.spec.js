@@ -260,7 +260,7 @@ test.describe('premium homepage', () => {
     await expect(cta).toBeVisible()
     await expect(cta).toHaveAttribute('href', '/projects')
     // Every live tool is a link in the bookmarks section on a phone as well.
-    await expect(page.locator('#bookmarks .bm-narrow a')).toHaveCount(TOOL_COUNT)
+    await expect(page.locator('#bookmarks .bmp-tools a')).toHaveCount(TOOL_COUNT)
     // The command bar is the hero's primary control and must be usable here.
     await expect(page.locator('.hcmd-input')).toBeVisible()
     const overflow = await page.evaluate(

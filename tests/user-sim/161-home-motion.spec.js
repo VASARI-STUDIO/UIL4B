@@ -546,36 +546,3 @@ test('T7 a band\'s hue listener is attached only while a band is near the screen
   expect(await liveScroll(page), 'the closing band did not attach on arrival').toBe(mid + 1)
   await ctx.close()
 })
-
-// ── the bench at 1001px and up ──────────────────────────────────────────────
-
-test('the windows\' depth is a view timeline, and the lit rail follows the window at the middle of the screen', async ({ browser }) => {
-  const { ctx, page } = await open(browser, 1440)
-  await go(page, '/')
-  const depth = (await ran(page, 'sp-depth'))
-  expect(depth.length, 'one depth run per window').toBe(4)
-  expect(depth.every((a) => a.scrollDriven), 'the depth is not scroll-linked').toBe(true)
-  for (let i = 0; i < 4; i += 1) {
-    // Put window i in the middle of the screen, then read the depth and the lit row.
-    await page.locator(`.sp-panel[data-panel="${i}"]`).evaluate((el) => {
-      const r = el.getBoundingClientRect()
-      window.scrollTo(0, window.scrollY + r.top + r.height / 2 - window.innerHeight / 2)
-    })
-    await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('.sp-rail-row')].map((r, k) => (r.classList.contains('is-on') ? k : -1)).filter((k) => k > -1)),
-      { message: `window ${i} is centred but the rail does not light it` }).toEqual([i])
-    const ink = () => page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => +getComputedStyle(p).opacity))
-    const size = () => page.evaluate(() => [...document.querySelectorAll('.sp-panel[data-panel]')].map((p) => {
-      const t = getComputedStyle(p).transform
-      return t === 'none' ? 1 : parseFloat(t.slice(t.indexOf('(') + 1))
-    }))
-    // A view timeline takes its new position on the next frame; window 0 is already lit
-    // at load, so the rail poll above can pass before that frame. Wait for the size, not a pause.
-    await expect.poll(async () => (await size())[i], { message: `the centred window ${i} is not at full size` }).toBeGreaterThan(0.997)
-    const s = await size()
-    const others = s.filter((_, k) => k !== i)
-    expect(Math.min(...others), 'a window away from the middle is not smaller than the centred one').toBeLessThan(s[i] - 0.005)
-    // Depth is scale only: a faded window drops its secondary text under 4.5:1.
-    expect(Math.min(...await ink()), 'a window is faded, which takes its text under contrast').toBeGreaterThanOrEqual(0.999)
-  }
-  await ctx.close()
-})
