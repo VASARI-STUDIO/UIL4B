@@ -10,6 +10,7 @@ import SpectrumSearch from '../components/spectrum/SpectrumSearch'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import PhIcon from '../components/spectrum/PhIcon'
 import SpectrumProof from '../components/spectrum/SpectrumProof'
+import HomePlans from '../components/home/HomePlans'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../components/spectrum/spectrumHero'
@@ -137,9 +138,7 @@ export default function Spectrum() {
         <SpectrumProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
-        <section id="plans" aria-labelledby="plans-h" data-slot="plans">
-          <h2 id="plans-h" className="sr-only" tabIndex={-1}>Plans</h2>
-        </section>
+        <HomePlans />
 
         {/* ── Final call: last child of main, in the layer the footer's glow
             will share ─────────────────────────────────────────────────────── */}
