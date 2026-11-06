@@ -114,6 +114,20 @@ function buttonClasses() {
   return found
 }
 
+/** Splits a selector list on commas that sit outside any parentheses. */
+function topLevelSplit(sel) {
+  const out = []
+  let depth = 0
+  let from = 0
+  for (let i = 0; i < sel.length; i++) {
+    if (sel[i] === '(') depth++
+    else if (sel[i] === ')') depth--
+    else if (sel[i] === ',' && depth === 0) { out.push(sel.slice(from, i)); from = i + 1 }
+  }
+  out.push(sel.slice(from))
+  return out
+}
+
 function nonPillButtonRules(classes) {
   const res = [...classes].map((c) => [c, new RegExp(`\\.${c.replace(/[-]/g, '\\-')}(?![\\w-])`)])
   const out = []
@@ -125,6 +139,9 @@ function nonPillButtonRules(classes) {
       if (sel.startsWith('@')) continue
       const r = /border-radius\s*:\s*([^;}]+)/.exec(m[2])
       if (!r || PILL.test(r[1].trim())) continue
+      // A ring or overlay drawn on ::before / ::after takes its host's corners with `inherit`; the host
+      // is swept through its own rule, so the overlay is a pill exactly when the button is.
+      if (r[1].trim() === 'inherit' && topLevelSplit(sel).every((one) => /::(before|after)\s*$/.test(one.trim()))) continue
       for (const one of sel.split(',')) {
         if (KEEP_CONTEXT.some((c) => one.includes(c))) continue
         const parts = one.replace(/::?[\w-]+(\([^)]*\))?/g, '').trim().split(/\s*[\s>+~]\s*/)
