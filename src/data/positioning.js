@@ -93,11 +93,11 @@ export function line(id) {
 // card (scripts/og-cards.mjs). The marked run is the one the page paints in the
 // accent and the share card highlights; og-cards throws if there is none.
 export const HERO_HEADLINE = Object.freeze({
-  lead: 'Build and export UI and brand kits from',
-  mark: 'one place',
+  lead: 'Your UI and brand kit, from',
+  mark: 'one app',
   tail: '.',
   /** Where the sentence comes from, so a test can check the trace. */
-  source: 'UIL4B - Spectrum.dc.html (hero h1)',
+  source: 'HeroNewNav.dc.html (hero h1)',
   /** Positioning lines it was spliced from — none: it is the design's sentence whole. */
   cutFrom: Object.freeze([]),
 })
