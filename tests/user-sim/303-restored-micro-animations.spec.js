@@ -278,29 +278,30 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
   const toggle = async (page, summary) => { await summary.focus(); await page.keyboard.press('Enter') }
 
   for (const width of WIDTHS) {
-    test(`the caret turns a quarter on transform alone at ${width}px`, async ({ page }) => {
+    test(`the caret turns a half turn on transform alone at ${width}px`, async ({ page }) => {
       watch(page, 'someone opening the handoff row')
       const summary = await openPage(page, width)
-      const rest = await style(summary, '::after', ['transitionProperty', 'transitionDuration', 'transform'])
+      const chevron = summary.locator('.fpr-chev')
+      const rest = await style(chevron, null, ['transitionProperty', 'transitionDuration', 'transform'])
       expect(rest.transform, 'the caret starts turned').toBe('none')
       expect(rest.transitionProperty, 'the caret must turn on transform alone').toBe('transform')
       expect(parseFloat(rest.transitionDuration)).toBeGreaterThanOrEqual(0.1)
       expect(parseFloat(rest.transitionDuration)).toBeLessThanOrEqual(0.25)
 
       let seen = []
-      const ran = await ranTransition(summary, '::after', async () => {
-        seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
+      const ran = await ranTransition(chevron, null, async () => {
+        seen = await traceAround(chevron, null, () => toggle(page, summary), 600)
       })
       await expect(page.locator('.fpr-delivery')).toHaveAttribute('open', '')
       const last = seen.at(-1)
-      // rotate(90deg): a = 0, b = 1.
-      expect(near(last.a, 0, 0.01) && near(last.b, 1, 0.01), `the open caret is not a quarter turn (a ${last.a}, b ${last.b})`).toBe(true)
-      expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length > 0 || ran, 'the caret jumped instead of turning').toBe(true)
+      // rotate(180deg): a = -1, b = 0.
+      expect(near(last.a, -1, 0.01) && near(last.b, 0, 0.01), `the open caret is not a half turn (a ${last.a}, b ${last.b})`).toBe(true)
+      expect(seen.filter((p) => p.a > -0.95 && p.a < 0.95).length > 0 || ran, 'the caret jumped instead of turning').toBe(true)
 
       // And back.
       await toggle(page, summary)
       await expect(page.locator('.fpr-delivery')).not.toHaveAttribute('open', '')
-      await expect.poll(async () => (await style(summary, '::after', ['transform'])).transform, { timeout: 2000 }).toBe('none')
+      await expect.poll(async () => (await style(chevron, null, ['transform'])).transform, { timeout: 2000 }).toBe('none')
     })
   }
 
@@ -308,20 +309,22 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
     watch(page, 'someone whose system asks for reduced motion')
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const summary = await openPage(page, 1440)
-    const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
-    expect(near(seen.at(-1).b, 1, 0.01), 'the caret never turned').toBe(true)
-    expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length, 'the caret still turns slowly').toBe(0)
-    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
+    const chevron = summary.locator('.fpr-chev')
+    const seen = await traceAround(chevron, null, () => toggle(page, summary), 600)
+    expect(near(seen.at(-1).a, -1, 0.01), 'the caret never turned').toBe(true)
+    expect(seen.filter((p) => p.a > -0.95 && p.a < 0.95).length, 'the caret still turns slowly').toBe(0)
+    expect(parseFloat((await style(chevron, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 
   test('reduced motion (in-app switch): the caret turns at once with the OS saying nothing', async ({ page }) => {
     watch(page, 'someone who turned reduced motion on inside the app')
     const summary = await openPage(page, 1440)
+    const chevron = summary.locator('.fpr-chev')
     await reduceInApp(page)
-    const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
-    expect(near(seen.at(-1).b, 1, 0.01), 'the caret never turned').toBe(true)
-    expect(seen.filter((p) => p.b > 0.05 && p.b < 0.95).length, 'the caret still turns slowly').toBe(0)
-    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
+    const seen = await traceAround(chevron, null, () => toggle(page, summary), 600)
+    expect(near(seen.at(-1).a, -1, 0.01), 'the caret never turned').toBe(true)
+    expect(seen.filter((p) => p.a > -0.95 && p.a < 0.95).length, 'the caret still turns slowly').toBe(0)
+    expect(parseFloat((await style(chevron, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 })
 

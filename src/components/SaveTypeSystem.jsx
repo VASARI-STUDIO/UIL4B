@@ -253,7 +253,7 @@ export default function SaveTypeSystem(props) {
         aria-haspopup="dialog"
         onClick={trigger}
       >
-        <BookmarkIcon /> Save to a project
+        <BookmarkIcon /> <span className="svt-trigger-label">Save to a project</span>
       </button>
 
       {open && <SaveTypeSystemMenu {...menuProps} />}

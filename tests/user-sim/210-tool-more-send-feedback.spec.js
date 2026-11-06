@@ -1,12 +1,13 @@
 // SENDING FEEDBACK FROM INSIDE A TOOL.
 //
-// Every tool toolbar's More menu ends with "Send feedback". It opens the app's
-// one feedback dialog, filled in with the page and tool the person is on, and
+// Every tool toolbar's More menu ends with "Send feedback" (Type Scale's holds
+// only its own actions; see its section below). The row opens the app's one
+// feedback dialog, filled in with the page and tool the person is on, and
 // closing it gives focus back to the More button. A signed-out sender can leave
 // an optional reply address; a signed-in sender cannot (the account's address is
 // used). The browser's own copy of what was sent never holds an address.
 //
-// Checked on five tools, on a touch phone at 390 (bottom sheet) and on a desktop
+// Checked on four tools, on a touch phone at 390 (bottom sheet) and on a desktop
 // at 1440 (popover):
 //   - the menu ends with the feedback row, and choosing it opens the dialog on
 //     "Feedback" with this page and tool in the attached context;
@@ -25,7 +26,8 @@
 //   - below 768px the primary action is in the bottom dock, `[data-tl-dock]`
 //     (spec 220), and More still ends in Send feedback: the open dialog covers
 //     the dock, and closing it brings the dock back. Tools without a dock
-//     (File Converter, Type Scale) and the 1440 desktop have none;
+//     (File Converter) and the 1440 desktop have none. Type Scale's dock is its
+//     own and has no Send feedback to cover;
 //   - the dialog's right-click tip (`.fb-cap-tip`) is absent on a coarse pointer
 //     and present with a mouse, at the same 390px width;
 //   - the Icon and Emoji libraries have no More menu, so a `.lib-feedback` text
@@ -58,8 +60,12 @@ const TOOLS = [
   { id: 'gradient', route: '/create/gradient', label: 'Gradient' },
   { id: 'tint', route: '/create/tint', label: 'Tint' },
   { id: 'converter', route: '/create/file-converter', label: 'File Converter' },
-  { id: 'type scale', route: '/create/type-scale', label: 'Type Scale' },
 ]
+
+// Type Scale's toolbar is the type tools' shared bar: its More holds the project
+// chip (when it has to fold), Reset scale, Copy font import and, from 768, the
+// specimen ground. It has no Send feedback row, so it stays out of TOOLS.
+const TYPE_SCALE = { id: 'type scale', route: '/create/type-scale', label: 'Type Scale' }
 
 const OLD_ENTRY = { id: 'old-1', type: 'bug', subject: 'Older', message: 'Written by an older build.', email: 'older.sender@example.com', status: 'new' }
 
@@ -234,7 +240,9 @@ const SQUARE = [
 ]
 
 for (const sq of SQUARE) {
-  for (const tool of TOOLS) {
+  // Type Scale joins on a touch screen. With a mouse at 600 and 767 its two
+  // folding actions fit on the row, so it has no More to measure.
+  for (const tool of sq.context.hasTouch ? [...TOOLS, TYPE_SCALE] : TOOLS) {
     test(`${tool.id}: More is a ${sq.side}px square at ${sq.name}`, async ({ browser }) => {
       const ctx = await browser.newContext(sq.context)
       const page = await ctx.newPage()
@@ -265,9 +273,9 @@ for (const width of [768, 1440]) {
   })
 }
 
-// The dock tools: the primary lives in the dock, More stays on the row. Type Scale
-// joined them when Copy CSS moved to the shell dock on a phone.
-const DOCK_TOOLS = TOOLS.filter((t) => ['palette', 'gradient', 'tint', 'type scale'].includes(t.id))
+// The dock tools: the primary lives in the dock, More stays on the row. (Type Scale
+// has a dock too, but its More has no feedback row; spec 220 covers its dock.)
+const DOCK_TOOLS = TOOLS.filter((t) => ['palette', 'gradient', 'tint'].includes(t.id))
 const NO_DOCK_TOOLS = TOOLS.filter((t) => ['converter'].includes(t.id))
 
 for (const tool of DOCK_TOOLS) {
@@ -321,6 +329,49 @@ for (const tool of TOOLS) {
     await ctx.close()
   })
 }
+
+// ── Type Scale's More has no Send feedback ──────────────────────────────────
+// Its More holds Reset scale and Copy font import (and the specimen ground from
+// 768) and stops there. At 1440 both fit on the row, so there is no More at all.
+// Reset scale is the positive control: the menu is open and has its rows, so the
+// missing feedback row is a fact about the menu and not a menu that never opened.
+
+const TYPE_SCALE_MORE = [
+  { name: '390 touch', phone: true, context: TOUCH(390) },
+  { name: '768 mouse', phone: false, context: MOUSE(768) },
+]
+
+for (const c of TYPE_SCALE_MORE) {
+  test(`type scale at ${c.name}: More holds Reset scale and Copy font import, with no Send feedback`, async ({ browser }) => {
+    const { ctx, page } = await newPage(browser, c, 'someone on the type scale tool looking in More')
+    await go(page, TYPE_SCALE.route)
+    await press(c, page.locator('.tl-more-btn').first())
+
+    const reset = page.locator('[data-tl-menu-item="reset"]')
+    await expect(reset).toContainText('Reset scale')
+    await expect(page.locator('[data-tl-menu-item="import"]')).toContainText('Copy font import')
+    await expect(page.locator('[data-tl-menu-item="feedback"]'), 'a Send feedback row').toHaveCount(0)
+    await expect(page.locator('.tl-menu-list')).not.toContainText('Send feedback')
+    if (c.phone) {
+      for (const item of ['reset', 'import']) {
+        const box = await page.locator(`[data-tl-menu-item="${item}"]`).boundingBox()
+        expect(box.height, `${item} is a touch target of at least 44px`).toBeGreaterThanOrEqual(44)
+      }
+    }
+    await ctx.close()
+  })
+}
+
+test('type scale at 1440: Reset scale and Copy font import sit on the row, with no More button', async ({ browser }) => {
+  const view = VIEWS[1]
+  const { ctx, page } = await newPage(browser, view, 'someone on the type scale tool on a desktop')
+  await go(page, TYPE_SCALE.route)
+  const bar = page.locator('[data-tool-toolbar]')
+  await expect(bar.getByRole('button', { name: 'Reset scale' })).toBeVisible()
+  await expect(bar.getByRole('button', { name: 'Copy font import' })).toBeVisible()
+  await expect(page.locator('.tl-more-btn'), 'nothing folds, so there is no More').toHaveCount(0)
+  await ctx.close()
+})
 
 // ── The right-click tip is for a mouse ──────────────────────────────────────
 // The dialog's "right-click ..." tip (.fb-cap-tip) names a gesture a touch screen
