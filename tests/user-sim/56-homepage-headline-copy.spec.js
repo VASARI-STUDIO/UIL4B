@@ -127,6 +127,8 @@ test.describe('homepage copy the founder has already ruled out', () => {
   test('no headline the founder rejected by name is back on the page', async ({ page }) => {
     watch(page, 'the founder re-reading his own homepage')
     await go(page, '/')
+    // The sections below the first screen carry their headings only once they have mounted.
+    await homeSectionsLoaded(page)
 
     // POSITIVE CONTROL 1 — the route rendered its own content and is not the
     // ErrorBoundary card. Without this, every absence below is free.

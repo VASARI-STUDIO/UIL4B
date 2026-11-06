@@ -111,6 +111,8 @@ const waitAllShow = (page, kind) => expect.poll(
 async function openSection(browser, opts) {
   const { ctx, page } = await open(browser, opts)
   await go(page, '/')
+  // The section sits below the first screen: it mounts on the first input, or as the viewport nears it.
+  await homeSectionsLoaded(page)
   await expect(tabs(page)).toHaveCount(KINDS.length)
   await page.locator('#examples').scrollIntoViewIfNeeded()
   return { ctx, page }
@@ -257,6 +259,7 @@ test.describe('a slow page', () => {
       await route.continue()
     })
     await go(page, '/')
+    await homeSectionsLoaded(page)
     await expect(tabs(page)).toHaveCount(KINDS.length)
     await page.locator('#examples').scrollIntoViewIfNeeded()
     await waitAllShow(page, 'Colour')

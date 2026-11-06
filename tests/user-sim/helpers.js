@@ -590,12 +590,13 @@ export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'p
 /**
  * Wait until every homepage section below the first screen has arrived.
  *
- * Those sections load after the page is idle, or on the first scroll, press or
- * tap, and until each arrives its id sits on an empty stand-in of about its
- * final height. A test that measures or scrolls before then reads the stand-in.
- * A wheel nudge opens the gate at once instead of waiting out the idle timer,
- * and each section is waited for by its own heading, which only the real
- * section renders.
+ * Each of those sections mounts when its stand-in is within 600px of the
+ * viewport, or all of them together on a hash, a click, or the first scroll,
+ * wheel, touchstart, keydown or pointerdown. Until a section arrives its id sits
+ * on an empty stand-in of about its final height, and a test that measures or
+ * scrolls before then reads the stand-in. A wheel nudge opens every section at
+ * once instead of waiting for the viewport to come near them, and each section
+ * is waited for by its own heading, which only the real section renders.
  */
 export async function homeSectionsLoaded(page) {
   await page.mouse.wheel(0, 1)

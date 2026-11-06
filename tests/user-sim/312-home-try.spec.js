@@ -159,3 +159,27 @@ test.describe('home Try the tools on a phone', () => {
     await expect(conv.locator('.ht-ctl').getByRole('radio', { name: '25' })).toBeDisabled()
   })
 })
+
+test.describe('home Try the tools range sliders', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('each of the four Palette sliders draws a 2px solid #EFEEEA outline when keyboard focus lands on it', async ({ page }) => {
+    watch(page, 'visitor')
+    await go(page, '/')
+    await openTool(page, 0)
+    const sliders = page.locator('#ht-s-0 .ht-adj .ht-rng')
+    await expect(sliders, 'POSITIVE CONTROL: the Adjust group has four sliders').toHaveCount(4)
+    for (let i = 0; i < 4; i++) {
+      const slider = sliders.nth(i)
+      // A key press first, so the focus that follows counts as a keyboard focus (:focus-visible).
+      await page.keyboard.press('Shift')
+      await slider.focus()
+      await expect(slider).toBeFocused()
+      const look = await slider.evaluate((el) => {
+        const cs = getComputedStyle(el)
+        return { width: cs.outlineWidth, style: cs.outlineStyle, color: cs.outlineColor, shadow: cs.boxShadow }
+      })
+      expect(look, `slider ${i}: outline`).toEqual({ width: '2px', style: 'solid', color: 'rgb(239, 238, 234)', shadow: 'none' })
+    }
+  })
+})

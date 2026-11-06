@@ -9,10 +9,12 @@
 // call to action and no note in it; "Open the toolkit" lives in the hero.
 //
 // WHAT IT GUARDS.
-//   · The bar hides on the way down, returns on the way up, and does NOT return
-//     on the way up while the top of the viewport is inside a `[data-pins]` box
-//     (the pinned tools and exports stages). It still returns at once for
-//     keyboard focus.
+//   · The bar hides on the way down and returns on the way up, except inside a
+//     `[data-pins]` box (the pinned tools and exports stages). Entering one
+//     from below hides a bar that is showing, and it stays off screen for as
+//     long as the top of the viewport is inside the box, under reduced motion
+//     too, where it leaves with no transition. Keyboard focus in the bar shows
+//     it at once, and it comes back when the viewport top leaves the box.
 //   · The menu behaves like a dialog: focus in, focus trapped, scroll locked,
 //     Escape out and back to the burger.
 //   · "/" opens the nav's tool search. Control or Command K focuses the hero's
@@ -160,6 +162,93 @@ test.describe('the marketing bar', () => {
     await ctx.close()
   })
 })
+
+// The pinned stages, each as the selector for its `[data-pins]` root.
+const PIN_BOXES = [
+  { name: 'the tools stage', selector: '#try [data-pins]', below: false },
+  { name: 'the exports stack', selector: '#exports[data-pins]', below: true },
+]
+const PIN_VIEWS = [
+  { width: 1440, height: 900 },
+  { width: 390, height: 844 },
+]
+const MOTIONS = ['no-preference', 'reduce']
+
+const scrollPage = (page, y) => page.evaluate((to) => window.scrollTo(0, to), y)
+const scrollNow = (page) => page.evaluate(() => Math.round(window.scrollY))
+/** Where the box sits on the page right now: its top and height in document coordinates. */
+const boxSpan = (page, selector) => page.locator(selector).first().evaluate((el) => {
+  const r = el.getBoundingClientRect()
+  return { top: Math.round(r.top + window.scrollY), height: Math.round(r.height) }
+})
+/** The bottom edge of the bar on screen: 0 or less means all of it is above the viewport. */
+const barBottom = (page) => page.locator('.spnav').evaluate((el) => Math.round(el.getBoundingClientRect().bottom))
+
+/**
+ * Down to the end of the page, then back up. With `below` set, it stops just under
+ * the box, where the bar has returned and is plainly on screen. The tools stage has
+ * the exports stack directly under it, so for that box the way up passes through
+ * the exports stack instead and the bar is already away. Returns the box's span.
+ */
+async function bottomUpToBelow(page, selector, below) {
+  await homeSectionsLoaded(page)
+  const nav = page.locator('.spnav')
+  const box = await boxSpan(page, selector)
+  expect(box.height, 'POSITIVE CONTROL: the box is taller than a screen, so the viewport top can sit inside it').toBeGreaterThan(page.viewportSize().height)
+  await scrollPage(page, await page.evaluate(() => document.documentElement.scrollHeight))
+  await expect(nav, 'the bar did not hide on the way to the page bottom').toHaveAttribute('data-nav-hidden', '1')
+  if (below) {
+    await scrollPage(page, box.top + box.height + 150)
+    await expect(nav, 'the bar did not return on the way up below the box').toHaveAttribute('data-nav-hidden', '0')
+    await expect.poll(() => barBottom(page), { message: 'the bar is not on screen below the box' }).toBeGreaterThan(0)
+  }
+  return boxSpan(page, selector)
+}
+
+for (const motion of MOTIONS) {
+  for (const view of PIN_VIEWS) {
+    for (const { name, selector, below } of PIN_BOXES) {
+      test.describe(`the bar inside ${name} at ${view.width}px, motion ${motion}`, () => {
+        test.use({ viewport: view, reducedMotion: motion })
+        test.beforeEach(async ({ page }) => { watch(page, 'a visitor scrolling back up the sales page') })
+
+        test('scrolling up into the box hides the bar and it stays off screen all the way up, then returns at the box top', async ({ page }) => {
+          await go(page, '/')
+          const nav = page.locator('.spnav')
+          const box = await bottomUpToBelow(page, selector, below)
+          for (const share of [0.85, 0.5, 0.15]) {
+            const y = box.top + Math.round(box.height * share)
+            await scrollPage(page, y)
+            expect(await scrollNow(page), 'precondition: the viewport top is inside the box').toBeGreaterThan(box.top)
+            await expect(nav, `the bar showed at ${share} of the way down ${name}`).toHaveAttribute('data-nav-hidden', '1')
+            await expect.poll(() => barBottom(page), { message: `the bar is still on screen at ${share} of the way down ${name}` }).toBeLessThanOrEqual(0)
+            // Longer than the bar's 140ms return delay: a late return would show by now.
+            await page.waitForTimeout(400)
+            expect(await barBottom(page), `the bar came back at ${share} of the way down ${name}`).toBeLessThanOrEqual(0)
+          }
+          // Past the tools stage's top edge the bar is the page's again. (Above the exports stack is the tools stage.)
+          if (!below) {
+            await scrollPage(page, box.top - 200)
+            await expect(nav, 'the bar did not return after the box was left').toHaveAttribute('data-nav-hidden', '0')
+            await expect.poll(() => barBottom(page), { message: 'the bar is not on screen above the box' }).toBeGreaterThan(0)
+          }
+        })
+
+        test('keyboard focus in the bar shows it inside the box', async ({ page }) => {
+          await go(page, '/')
+          const nav = page.locator('.spnav')
+          const box = await bottomUpToBelow(page, selector, below)
+          await scrollPage(page, box.top + Math.round(box.height * 0.5))
+          await expect.poll(() => barBottom(page), { message: 'precondition: the bar is off screen inside the box' }).toBeLessThanOrEqual(0)
+          await shiftTabIntoBar(page)
+          await expect(nav).toHaveAttribute('data-nav-hidden', '0')
+          await expect.poll(() => barBottom(page), { message: 'the focused bar is still off screen' }).toBeGreaterThan(0)
+          expect(await scrollNow(page), 'precondition: the viewport top is still inside the box').toBeGreaterThan(box.top)
+        })
+      })
+    }
+  }
+}
 
 test.describe('the keyboard shortcuts', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a visitor looking for a tool from the sales page') })

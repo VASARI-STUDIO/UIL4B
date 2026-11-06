@@ -61,6 +61,8 @@ for (const theme of ['light', 'dark']) {
     test(`the footer does not move: it scrolls with the page and nothing covers it (${theme}, ${width}x${height})`, async ({ browser }) => {
       const { ctx, page } = await open(browser, { width, height, theme })
       await go(page, '/')
+      // The page only has its final height once every section has replaced its stand-in.
+      await homeSectionsLoaded(page)
       const footer = page.locator('footer.sp-footer')
       await expect(footer, 'the footer has a curtain again').not.toHaveAttribute('data-curtain', /.*/)
       expect(await footer.evaluate((el) => getComputedStyle(el).position), 'the footer is pinned instead of in normal flow').toBe('relative')
@@ -130,6 +132,7 @@ test('pressing a footer control that is already in view does not move the page',
   // would land on whatever moved under the pointer and the click would be lost.
   const { ctx, page } = await open(browser, { width: 1440, height: 900 })
   await go(page, '/')
+  await homeSectionsLoaded(page)
   const footer = page.locator('footer.sp-footer')
   await expect(footer, 'the footer has a curtain again').not.toHaveAttribute('data-curtain', /.*/)
   const footerH = await footer.evaluate((el) => el.offsetHeight)
@@ -260,6 +263,7 @@ for (const [label, opts] of [
   test(`the footer stays put while the About panel locks the page, half of it on screen (${label})`, async ({ browser }) => {
     const { ctx, page } = await open(browser, opts)
     await go(page, '/')
+    await homeSectionsLoaded(page)
     const footer = page.locator('footer.sp-footer')
     await expect(footer, 'the footer has a curtain again').not.toHaveAttribute('data-curtain', /.*/)
     const footerH = await footer.evaluate((el) => el.offsetHeight)

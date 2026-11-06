@@ -148,7 +148,8 @@ async function landChromelessCrash(page, variant) {
 async function landHomeCrash(page, variant) {
   await crashChunk(page, COMMAND_PALETTE_CHUNK)
   await go(page, '/')
-  await expectTheme(page, variant)
+  // The homepage is dark under both colour schemes.
+  await expectTheme(page, { scheme: 'dark' })
   await spendReload(page)
   await page.keyboard.press('/')
   const card = page.locator('.error-boundary')
