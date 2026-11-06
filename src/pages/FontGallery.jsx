@@ -11,6 +11,8 @@ import FiltersSheet, { ViewToggle } from '../components/FontGalleryFilters'
 import FontDetailDialog from '../components/FontDetailDialog'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { trackFontCopy } from '../utils/analytics'
 import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
@@ -18,7 +20,9 @@ import {
 } from '../utils/googleFonts'
 import { categoryWord, filterGalleryTypefaces, ladderWeights } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
-import { backdropFor, backdropReady, loadBackdrop } from '../utils/galleryBackdrop'
+import {
+  backdropFor, backdropKind, backdropReady, backdropUrls, loadBackdrop, loadBackdropsInTurn,
+} from '../utils/galleryBackdrop'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -305,6 +309,20 @@ function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
 // app, so it became the shared one rather than being copied a second time.
 const useModal = useModalDialog
 
+const NEED_MORE = 'Pick 1 or 2 more to compare'
+
+// The Go arrow on an ink button: the arrow turns inside its round tint while
+// the button is hovered or focused.
+function GoArrow() {
+  return (
+    <span className="mi-go mi-go--ink" aria-hidden="true">
+      <svg className="mi-a" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M7 17L17 7M8 7h9v9" />
+      </svg>
+    </span>
+  )
+}
+
 function CloseIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -484,10 +502,11 @@ function GalleryCard({
         aria-pressed={inCompare}
         aria-label={inCompare ? `Remove ${font.family} from comparison` : `Add ${font.family} to comparison`}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          {inCompare
-            ? <polyline points="20 6 9 17 4 12" />
-            : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
+        <svg className="fg-ico-plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <svg className="fg-ico-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12" />
         </svg>
       </button>
     </article>
@@ -624,7 +643,8 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
 export default function FontGallery({ onCopy, toast }) {
   const navigate = useNavigate()
   const mode = useLayoutName()
-  const { setFonts } = useProject()
+  const { setFonts, design } = useProject()
+  const { setTheme } = useTheme()
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // Arriving via /create/font-gallery?font=Family (e.g. a deep link) seeds the search
@@ -755,10 +775,33 @@ export default function FontGallery({ onCopy, toast }) {
 
   const ready = status !== 'loading'
 
+  // Once the page is idle the rest of the ground's strips come in one at a
+  // time, the first band's kind first, so a hover never meets a blank band and
+  // a phone on a slow link never has several in flight. Switching ground
+  // restarts it with the other set.
+  const firstCategory = paged[0]?.category
+  useEffect(() => {
+    if (!ready) return undefined
+    const dark = ground === 'light' ? 'light' : 'dark'
+    const urls = [...new Set([
+      ...(firstCategory ? backdropUrls(dark, backdropKind(firstCategory)) : []),
+      ...backdropUrls(dark),
+    ])]
+    let stopped = false
+    const start = () => { loadBackdropsInTurn(urls, () => stopped) }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(start)
+      return () => { stopped = true; window.cancelIdleCallback(id) }
+    }
+    const id = setTimeout(start, 1200)
+    return () => { stopped = true; clearTimeout(id) }
+  }, [ready, ground, firstCategory])
+
   // The tray is a bar fixed to the foot of the screen (on the tab bar at 390).
   // Toasts and the feedback button read this class to ride above it. A phone and
   // a tablet only show it once there is something to compare.
-  const trayShown = compare.length > 0 && !showCompare && (mode === 'wide' || compare.length >= 2)
+  const trayShown = compare.length > 0 && !showCompare
+  const pickedLine = `${compare.length} of ${MAX_COMPARE} picked`
   useEffect(() => {
     if (!trayShown) return undefined
     const root = document.documentElement
@@ -862,24 +905,42 @@ export default function FontGallery({ onCopy, toast }) {
       Filters
     </ToolButton>
   )
+  // The onward link is the first thing to fold into More.
   const pairItem = {
     id: 'pair',
-    priority: 9,
+    priority: 0,
     render: () => pairLink,
     menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
   }
   const categoryItem = { id: 'category', priority: 5, render: () => categoryPills, menu: () => categoryPills }
 
+  // The shared type-tools bar leads every layout; the ground control is its
+  // Dark/Light pair and drives the app theme, which is what the bands follow.
+  const bar = typeToolsBarItems({
+    current: 'gallery',
+    heading: design?.fonts?.heading || null,
+    body: design?.fonts?.body || null,
+    scale: design?.typeScale?.ratio || 1.618,
+    headingStack: design?.fonts?.heading ? fontStack(design.fonts.heading) : 'var(--font)',
+    bodyStack: design?.fonts?.body ? fontStack(design.fonts.body) : 'var(--font)',
+    projectName: '',
+    ground: ground === 'light' ? 'l' : 'd',
+    onGround: g => setTheme(g === 'l' ? 'light' : 'dark'),
+  })
+  const groundItem = bar.find(it => it.id === 'ttb-ground')
+  const barLead = bar.filter(it => it !== groundItem)
+
   // One item set per layout. The row never wraps: whatever does not fit goes
-  // into the Filters overflow, lowest priority first.
+  // into the overflow menu, lowest priority first.
   //   wide    every control on the row
-  //   tablet  category pills and Filters on the row; search, the view toggle and
-  //           the pair link sit on a second row
-  //   phone   the pair link on the row; search and Filters on a second row; the
-  //           rest is in the Filters sheet
+  //   tablet  category pills and Filters on the row; search and the view toggle
+  //           sit on a second row
+  //   phone   search and Filters on a second row; the rest is in the Filters
+  //           sheet
   let items
   if (mode === 'wide') {
     items = [
+      ...barLead,
       categoryItem,
       { id: 'search', priority: 4, render: () => searchField, menu: () => searchField },
       { id: 'preview', priority: 1, render: () => previewField(false), menu: () => previewField(true) },
@@ -887,12 +948,13 @@ export default function FontGallery({ onCopy, toast }) {
       { id: 'sort', priority: 3, render: () => sortSelect, menu: () => sortSelect },
       { id: 'size', priority: 2, render: () => sizeSelect, menu: () => sizeSelect },
       { id: 'view', priority: 2, render: () => viewToggle, menu: () => viewToggle },
+      groundItem,
       pairItem,
     ]
   } else if (mode === 'tablet') {
-    items = [categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }]
+    items = [...barLead, categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }, { ...groundItem, align: 'end' }]
   } else {
-    items = [pairItem]
+    items = [...bar, pairItem]
   }
 
   // The second toolbar row, below the sticky bar, for the layouts that cannot
@@ -911,7 +973,7 @@ export default function FontGallery({ onCopy, toast }) {
   // filters never run over an empty list.
   if (!ready) {
     return (
-      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
+      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
         {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows vars={bandVars} />
@@ -926,7 +988,7 @@ export default function FontGallery({ onCopy, toast }) {
     + `${sort === 'popularity' ? ', most popular first' : ''}`
 
   return (
-    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" items={items} overflowLabel={mode === 'wide' ? 'More filters' : 'More'} overflowIcon="sliders-horizontal">
+    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
       <FontCatalogNotice
         online={online}
         degraded={degraded}
@@ -987,48 +1049,52 @@ export default function FontGallery({ onCopy, toast }) {
       </section>
 
       {trayShown && (
-        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Fonts to compare" aria-live="polite">
+        <div className={mode === 'wide' ? 'fg-compare-tray' : 'fg-compare-tray fg-compare-tray--names'} role="region" aria-label="Comparison" aria-live="polite">
           {mode === 'wide' ? (
             <>
-              <span className="fg-compare-tray-label">Comparing</span>
               <div className="fg-compare-tray-chips">
                 {compare.map(f => (
-                  <button
-                    key={f.family}
-                    type="button"
-                    className="fg-compare-chip"
-                    onClick={() => toggleCompare(f)}
-                    aria-label={`Remove ${f.family} from the comparison`}
-                    ref={varsRef({ '--fg-ff': fontStack(f) })}
-                  >
+                  <span key={f.family} className="fg-compare-chip" ref={varsRef({ '--fg-ff': fontStack(f) })}>
                     <span className="fg-compare-chip-name">{f.family}</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
+                    <button
+                      type="button"
+                      className="fg-compare-chip-x"
+                      onClick={() => toggleCompare(f)}
+                      aria-label={`Remove ${f.family} from comparison`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </span>
                 ))}
               </div>
+              <span className="fg-compare-tray-status">{compare.length < 2 ? NEED_MORE : pickedLine}</span>
             </>
           ) : (
-            <p className="fg-compare-tray-names">
-              {compare.map((f, i) => (
-                <span key={f.family}>
-                  {i > 0 && (i === compare.length - 1 ? ' and ' : ', ')}
-                  <span className="fg-compare-tray-name" ref={varsRef({ '--fg-ff': fontStack(f) })}>{f.family}</span>
+            <>
+              <p className="fg-compare-tray-names" aria-label={`Comparing ${compare.map(f => f.family).join(', ')}`}>
+                <span className="fg-compare-tray-nm">
+                  {compare.map((f, i) => (
+                    <span key={f.family}>
+                      <span className="fg-compare-tray-name" ref={varsRef({ '--fg-ff': fontStack(f) })}>{f.family}</span>
+                      {i < compare.length - 1 && <i>, </i>}
+                    </span>
+                  ))}
                 </span>
-              ))}
-            </p>
+                <span className="fg-compare-tray-ct">{pickedLine}</span>
+              </p>
+              {compare.length < 2 && <p className="fg-compare-tray-hint">{NEED_MORE}</p>}
+            </>
           )}
           <div className="fg-compare-tray-actions">
-            {mode === 'wide' && <button type="button" className="fg-more-btn" onClick={() => setCompare([])}>Clear</button>}
-            <button
-              type="button"
-              className="fg-more-btn fg-more-btn--primary"
-              onClick={() => setShowCompare(true)}
-              disabled={compare.length < 2}
-            >
-              Compare {compare.length}
-            </button>
+            <button type="button" className="fg-more-btn fg-dock-ghost" onClick={() => setCompare([])}>Clear</button>
+            {compare.length >= 2 && (
+              <button type="button" className="fg-more-btn fg-dock-ink" onClick={() => setShowCompare(true)}>
+                Compare {compare.length}
+                <GoArrow />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1079,6 +1145,7 @@ export default function FontGallery({ onCopy, toast }) {
           previewText={previewText}
           categoryLabel={sentence(catWord(selected.category))}
           layout={mode}
+          backdrop={mode === 'phone' ? backdropFor(selected.family, selected.category, ground) : null}
           onClose={() => setSelected(null)}
           onCopy={onCopy}
           onCompare={compareFromDetail}

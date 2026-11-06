@@ -167,7 +167,7 @@ function MoreMenu({ iconOnly, items, family }) {
 
 export default function FontDetailDialog({
   font, previewText, categoryLabel, layout, onClose, onCopy, onCompare, inCompare,
-  onSendToPair, onSendToScale,
+  onSendToPair, onSendToScale, backdrop,
 }) {
   const ref = useModalDialog(onClose)
   // The result is recorded against the font it describes, so a font this dialog
@@ -355,7 +355,10 @@ export default function FontDetailDialog({
           </button>
 
           <div className="fgd-scroll">
-            <header className="fgd-hero" ref={heroRef}>
+            <header className={backdrop ? 'fgd-hero fgd-hero--bg' : 'fgd-hero'} ref={heroRef}>
+              {backdrop && (
+                <span className="fgd-hero-bg" aria-hidden="true" ref={varsRef({ '--fgd-bgimg': `url(${backdrop})` })} />
+              )}
               <h2
                 className="fgd-name"
                 id="fgd-title"

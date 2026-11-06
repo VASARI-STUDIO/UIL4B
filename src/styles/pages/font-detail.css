@@ -186,6 +186,28 @@
   padding: var(--s-6) 56px var(--s-4) 0;
 }
 
+/* On a phone the hero carries its family's strip behind the name, edge to edge:
+   a decorative layer that fades in once over 320ms and holds. */
+.fgd-hero--bg {
+  position: relative;
+  isolation: isolate;
+  margin-inline: calc(-1 * var(--fgd-pad));
+  padding-inline: var(--fgd-pad) calc(var(--fgd-pad) + 56px);
+}
+.fgd-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--fgd-bgimg, none) center / cover no-repeat;
+  animation: fgd-bg-in 320ms cubic-bezier(.23, 1, .32, 1) both;
+}
+@keyframes fgd-bg-in { from { opacity: 0; } to { opacity: 1; } }
+html[data-reduced-motion="true"] .fgd-hero-bg { animation-duration: 120ms; animation-timing-function: linear; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fgd-hero-bg { animation-duration: 120ms; animation-timing-function: linear; }
+}
+
 .fgd-name {
   margin: 0;
   color: var(--t0);
