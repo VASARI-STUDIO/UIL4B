@@ -1,6 +1,7 @@
-// The Font Gallery family pop-up (src/components/FontDetailDialog.jsx): one
+// The Font Gallery family pop-up (src/components/FontDetailDialog.jsx): from 768 one
 // scroll of sections under a plain hero, the actions pinned in one row at the
-// foot, and a licence block that ends the About section.
+// foot, and a licence block that ends the About section; on a phone a sheet with
+// Specimen, About, Examples and In use tabs and a foot of Open in Font Pair and Compare.
 //
 // MUTATIONS (each should turn exactly one test red):
 //   licence text   in LICENCES['OFL-1.1'] (src/utils/fontDossier.js) change the
@@ -12,9 +13,9 @@
 //                  the Licence row back into fontFacts
 //   bar, one row   `flex-wrap: wrap` on `.fgd-bar-row` with `min-width: 40%` on
 //                  `.fgd-bar-row > *`; or render View on Google Fonts on the
-//                  bar at 768 and 390 as well
-//   More menu      empty `moreItems` in FontDetailDialog.jsx, or drop the
-//                  'Build a type scale' entry from the phone list
+//                  bar at 768 as well, or put a third button on the phone bar
+//   More menu      empty `moreItems` in FontDetailDialog.jsx (768), or render
+//                  a More button on the phone bar
 //   close + focus  remove the `useModalDialog` focus restore (pass no `onClose`
 //                  focus target), or make the More menu's Escape handler also
 //                  close the dialog
@@ -151,7 +152,7 @@ test.describe('Font Gallery pop-up: the action bar', () => {
           names: kids.map((k) => k.getAttribute('aria-label') || k.textContent.replace(/\s+/g, ' ').trim()),
         }
       })
-      expect(report.count, `${width}px: the bar has no actions, so the check proves nothing`).toBeGreaterThanOrEqual(3)
+      expect(report.count, `${width}px: the bar has no actions, so the check proves nothing`).toBeGreaterThanOrEqual(width === 390 ? 2 : 3)
       expect(report.spread, `${width}px: the bar wraps onto a second row (${report.names})`).toBeLessThanOrEqual(2)
       expect(report.scrollX, `${width}px: the bar scrolls sideways`).toBeLessThanOrEqual(0)
       expect(report.scrollY, `${width}px: the bar is taller than one row`).toBeLessThanOrEqual(1)
@@ -199,21 +200,34 @@ test.describe('Font Gallery pop-up: the action bar', () => {
     await expect(items.nth(1)).toHaveAttribute('target', '_blank')
   })
 
-  test('at 390 the bar keeps Find a pairing and the compare toggle, and More holds the rest', async ({ page }) => {
+  test('at 390 the bar is Open in Font Pair and Compare, with no More; the Specimen tab holds the rest', async ({ page }) => {
     watch(page, 'designer on a phone')
     const { dialog } = await openPopup(page, 390)
     const bar = barOf(dialog)
-    await expect(bar.getByRole('button', { name: 'Find a pairing' })).toBeVisible()
-    await expect(bar.getByRole('button', { name: 'Compare Inter', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(bar.getByRole('button', { name: 'Open in Font Pair' })).toBeVisible()
+    await expect(bar.getByRole('button', { name: 'Compare', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(bar.getByRole('button', { name: 'Find a pairing' })).toHaveCount(0)
     await expect(bar.getByRole('button', { name: 'Build a type scale' })).toHaveCount(0)
-    await expect(bar.getByRole('button', { name: 'Copy import URL' })).toHaveCount(0)
-    await expect(bar.locator('a, button')).toHaveCount(3)
+    await expect(bar.getByRole('button', { name: /^More/ })).toHaveCount(0)
+    await expect(bar.locator('a, button')).toHaveCount(2)
 
-    const more = bar.getByRole('button', { name: 'More actions for Inter' })
-    await more.click()
-    await expect(page.getByRole('menuitem')).toHaveText([
-      /^Build a type scale$/, /^Copy import URL$/, /^View on Google Fonts/,
-    ])
+    // What the tablet's bar and More hold lives in the Specimen tab.
+    await expect(dialog.getByRole('button', { name: 'Copy font import' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Use as body in Font Pair' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Open in Type Scale' })).toBeVisible()
+  })
+
+  test('at 390 the pop-up has four tabs, Specimen first, and a tab changes the panel under it', async ({ page }) => {
+    watch(page, 'designer on a phone reading about a family')
+    const { dialog } = await openPopup(page, 390)
+    const tabs = dialog.getByRole('tablist', { name: 'About Inter' })
+    await expect(tabs.getByRole('tab')).toHaveText(['Specimen', 'About', 'Examples', 'In use'])
+    await expect(tabs.getByRole('tab', { name: 'Specimen' })).toHaveAttribute('aria-selected', 'true')
+    await expect(dialog.getByRole('heading', { name: 'Every weight, in your words' })).toBeVisible()
+    await tabs.getByRole('tab', { name: 'About' }).click()
+    await expect(tabs.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true')
+    await expect(dialog.getByRole('heading', { name: 'Every weight, in your words' })).toHaveCount(0)
+    await expect(dialog.locator('section.fdx-licence')).toBeVisible()
   })
 
   test('the compare toggle adds Inter to the tray, and reopening shows it pressed', async ({ page }) => {
@@ -323,19 +337,34 @@ test.describe('Font Gallery pop-up: closing', () => {
   })
 })
 
-test.describe('Font Gallery pop-up: the phone More sheet', () => {
-  test('More opens a sheet over a scrim; a press on the scrim closes it and returns focus to More', async ({ page }) => {
-    watch(page, 'phone visitor opening More')
+test.describe('Font Gallery pop-up: the phone Specimen tab', () => {
+  test('Use as body in Font Pair says so with an Undo, and Undo takes the message away', async ({ page }) => {
+    watch(page, 'phone visitor sending a family to Font Pair as the body')
     const { dialog } = await openPopup(page, 390)
-    const more = dialog.getByRole('button', { name: 'More actions for Inter' })
-    await more.click()
-    await expect(page.getByRole('menuitem')).toHaveCount(3)
-    const scrim = page.locator('.fgd-menu-scrim')
-    await expect(scrim).toBeVisible()
-    await scrim.click({ position: { x: 20, y: 20 } })
-    await expect(page.getByRole('menuitem')).toHaveCount(0)
-    await expect(dialog, 'the press went through to the pop-up').toBeVisible()
-    await expect(more).toBeFocused()
+    await dialog.getByRole('button', { name: 'Use as body in Font Pair' }).click()
+    const note = dialog.getByRole('status').filter({ hasText: 'is now the body in Font Pair' })
+    await expect(note).toHaveText(/Inter is now the body in Font Pair\./)
+    await note.getByRole('button', { name: 'Undo' }).click()
+    await expect(dialog.getByText('is now the body in Font Pair')).toHaveCount(0)
+    await expect(dialog, 'Undo closed the pop-up').toBeVisible()
+  })
+
+  test('a weight pill toggles whether the CSS carries it, and the last one cannot be switched off', async ({ page }) => {
+    watch(page, 'phone visitor choosing weights')
+    const { dialog } = await openPopup(page, 390)
+    const pill = (w) => dialog.getByRole('group', { name: 'Weights in the CSS' }).getByRole('button', { name: String(w), exact: true })
+    await expect(pill(400)).toHaveAttribute('aria-pressed', 'true')
+    await expect(pill(500)).toHaveAttribute('aria-pressed', 'false')
+    await pill(500).click()
+    await expect(pill(500)).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.locator('.fgd-code')).toContainText('500')
+    await pill(500).click()
+    await expect(dialog.locator('.fgd-code')).not.toContainText('500')
+    await pill(700).click()
+    await expect(pill(400)).toHaveAttribute('aria-disabled', 'true')
+    // Playwright will not click an aria-disabled control, so the press is forced.
+    await pill(400).click({ force: true })
+    await expect(pill(400), 'the last weight was switched off, leaving the CSS with none').toHaveAttribute('aria-pressed', 'true')
   })
 })
 

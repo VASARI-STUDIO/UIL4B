@@ -2,7 +2,7 @@
 // two library entrance animations (the icon glyph fade and the card rise).
 //
 // Groups covered (each at 1440 and 390 where the group is on screen at that
-// width): Type Scale (Page / Code half switch at 1440, fine-tuning join mode, output view at 390), Aspect
+// width): Type Scale (preview width, the Scale / Page switch at 1024, the Code drawer's export format at 1440, the settings sheet tabs and fine-tuning join mode), Aspect
 // Ratio (preset list, "I know the"), Alt Text (length), Gradient (the random
 // filters), Palette Explore tabs, the File Converter's segmented choices, and
 // the library's tab switch.
@@ -30,6 +30,7 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
+import { showTypeScaleCode } from './type-scale-view.js'
 
 const SHOTS = '.claude/scratch/polish3'
 const WIDTHS = [1440, 390]
@@ -120,8 +121,20 @@ async function openFileConverterVideo(page) {
 // Every case opens its page, prepares the group and returns its locator.
 const CASES = [
   {
-    id: 'type-scale-half', name: 'Type Scale: Page and Code switch', widths: [1440],
-    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-half-switch') },
+    id: 'type-scale-width', name: 'Type Scale: preview width', widths: WIDTHS,
+    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('#tsc-width') },
+  },
+  {
+    id: 'type-scale-view', name: 'Type Scale: Scale and Page switch', widths: [1024],
+    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-view-switch') },
+  },
+  {
+    id: 'type-scale-format', name: 'Type Scale: export format in the Code drawer', widths: [1440],
+    open: async (page) => {
+      await go(page, '/create/type-scale')
+      await showTypeScaleCode(page)
+      return page.locator('#tsc-code-drawer .tsc-fmt')
+    },
   },
   {
     id: 'type-scale-sheet', name: 'Type Scale: sheet Settings and Code', widths: [390],

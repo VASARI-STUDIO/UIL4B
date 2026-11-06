@@ -1,12 +1,11 @@
 // Type Scale: the scale owns the first screen (card 28ac352e47).
 //
-// The page used to open on a 150px catalogue notice, a settings card of weight
-// pills, and its own foot bar (.tsc-dock) holding Save and Copy CSS, with the
-// first step of the ladder below the fold. The build moves the work up and hands
-// the foot of the screen to the shell:
+// The first screen is the work: the scale, with no notice card above it and the
+// settings out of the way, and the foot of the screen kept small:
 //
-//   - the page's own dock and Code drawer are gone; on a phone the shell dock holds the scale trigger, Save (an icon) and Copy CSS,
-//     and from 768 Save and Copy CSS sit on the toolbar;
+//   - on a phone the shell dock holds the scale trigger, Save (an icon) and Copy
+//     CSS; from 768 the page's own docked bar holds Code and Save to a project,
+//     Copy CSS sits on the toolbar, and Code opens a drawer over the foot of the page;
 //   - the toolbar stays one row at 320, 390 and 768;
 //   - on a phone (767 and under) the width, the Kerbside screen and the ladder are
 //     one scroll with no page-level tabs; the ladder follows the screen, and every
@@ -17,7 +16,7 @@
 //     screen, and a tap brings the page back;
 //   - from 768 the view switch and the width menu are one bar;
 //   - weights are one menu per family, not rows of pills;
-//   - at 1440 the right half has a Page | Code switch and Code is a view there;
+//   - at 1440 the Code drawer is full width, 384px tall, and sits on the docked bar;
 //   - the catalogue notice sits inside the Fonts section, not above the work.
 //
 // Each check names the change that turns it red under MUTATION. The spec was seen
@@ -81,7 +80,7 @@ const horizontalOverflow = (page) => page.evaluate(() => ({
 }))
 
 // ── The foot of the screen ────────────────────────────────────────────────────
-test.describe('Type Scale · the foot of the screen belongs to the shell', () => {
+test.describe('Type Scale · the foot of the screen', () => {
   test.describe('390 touch', () => {
     test.use({ viewport: { width: 390, height: 844 }, ...TOUCH })
 
@@ -106,13 +105,15 @@ test.describe('Type Scale · the foot of the screen belongs to the shell', () =>
   })
 
   for (const [width, height] of [[768, 1024], [1440, 900]]) {
-    test(`at ${width} there is no page dock and no shell dock`, async ({ page }) => {
+    test(`at ${width} there is no shell dock, and the page's docked bar holds Code and Save with Copy CSS on the toolbar`, async ({ page }) => {
       watch(page, `someone on a ${width}px screen`)
       await page.setViewportSize({ width, height })
       await go(page, ROUTE)
       await expect(page.locator('.tsc-row').first()).toBeVisible()
-      await expect(page.locator('.tsc-dock')).toHaveCount(0)
-      await expect(page.locator('[data-tl-dock]')).toHaveCount(0)
+      await expect(page.locator('[data-tl-dock]'), 'the phone shell dock is not drawn').toHaveCount(0)
+      const dock = page.locator('.tsc-dock')
+      await expect(dock).toHaveCount(1)
+      await expect(dock.getByRole('button').filter({ hasText: /\S/ }), 'Code and Save, nothing else').toHaveText(['Code', 'Save to a project'])
       await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Copy CSS', exact: true }), 'Copy CSS is on the toolbar from 768').toBeVisible()
     })
   }
@@ -444,25 +445,26 @@ test.describe('Type Scale · weight is a menu', () => {
 })
 
 // ── Code at 1440 ──────────────────────────────────────────────────────────────
-test.describe('Type Scale · at 1440 Code is a view beside the scale', () => {
+test.describe('Type Scale · at 1440 Code is a drawer over the foot of the page', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  // MUTATION: remove the `.tsc-half-switch`, render the code only in a drawer, or
-  // read `formatPills` / `exportPre` before they are declared (the page throws
-  // when Code is pressed: ErrorBoundary).
-  test('the Page | Code switch shows the export beside the ladder, and Copy CSS copies it', async ({ page }) => {
+  // MUTATION: render the export in the page instead of the drawer, size the drawer
+  // other than 384px or let it float off the docked bar, or read `formatPills` /
+  // `exportPre` before they are declared (the page throws when Code is pressed:
+  // ErrorBoundary).
+  test('Code opens a full-width 384px drawer on the docked bar with the export, Copy CSS copies it, and Close code gives focus back', async ({ page }) => {
     watch(page, 'developer taking the scale into code at 1440')
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await go(page, ROUTE)
     expect(await settleTypeScaleView(page)).toBe('split')
 
-    const half = page.locator('.tsc-half-switch')
-    await expect(half.getByRole('button', { name: 'Page', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await expect(half.getByRole('button', { name: 'Code', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.locator('#tsc-export'), 'the export is not up until Code is pressed').toHaveCount(0)
+    const codeBtn = page.locator('.tsc-dock .tsc-code-btn')
+    await expect(codeBtn).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.locator('#tsc-code-drawer'), 'the drawer is shut until Code is pressed').toBeHidden()
+    await expect(page.locator('#tsc-export')).toBeHidden()
 
     await showTypeScaleCode(page)
-    await expect(half.getByRole('button', { name: 'Code', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(codeBtn).toHaveAttribute('aria-expanded', 'true')
     await expect(page.locator('.tsc-error, [data-error-boundary]'), 'the page did not fall over').toHaveCount(0)
     const exportBox = page.locator('#tsc-export')
     // The defaults hold one base for both ends of the range, so the base step is a
@@ -472,21 +474,32 @@ test.describe('Type Scale · at 1440 Code is a view beside the scale', () => {
     await expect(exportBox).toContainText('--leading: 1.5;')
     await expect(page.locator('.tsc-fmt'), 'the four formats come with it').toBeVisible()
     await expect(page.locator('.tsc-fmt').getByRole('button')).toHaveText(['CSS variables', 'Tailwind v4', 'Tailwind v3', 'SCSS'])
-    // Code is a view beside the scale, not instead of it.
-    const ladder = await box(page.locator('.tsc-ladder'))
-    const code = await box(exportBox)
-    expect(ladder.x + ladder.width, 'the ladder is still the left half').toBeLessThanOrEqual(code.x + 1)
-    await expect(page.locator('.tsc-row').first()).toBeVisible()
-    await expect(page.locator('[data-tl-dock], .tsc-dock, #tsc-code-drawer'), 'no bar or drawer at the foot').toHaveCount(0)
+
+    // The drawer is the full width, 384px high, standing on the 64px docked bar.
+    // The drawer slides in over 200ms, so its place is read once it has settled.
+    await expect.poll(async () => {
+      const d = await box(page.locator('#tsc-code-drawer'))
+      const k = await box(page.locator('.tsc-dock'))
+      return Math.abs(d.y + d.height - k.y)
+    }, { message: 'the drawer stands on the docked bar' }).toBeLessThanOrEqual(1.5)
+    const drawer = await box(page.locator('#tsc-code-drawer'))
+    const dock = await box(page.locator('.tsc-dock'))
+    expect(drawer.x, 'the drawer starts at the left edge').toBeLessThanOrEqual(0.5)
+    expect(drawer.width, 'the drawer spans the screen').toBeGreaterThanOrEqual(1439)
+    expect(Math.round(drawer.height), 'the drawer is 384px tall').toBe(384)
+    expect(Math.round(dock.height), 'the docked bar is 64px').toBe(64)
 
     await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Copy CSS', exact: true }).click()
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('--text-3xl: clamp(')
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('--leading: 1.5;')
 
-    // Back to the page: the article returns and the export goes.
-    await half.getByRole('button', { name: 'Page', exact: true }).click()
+    // Close code: the drawer goes, the page is whole again and focus is back on Code.
+    await page.getByRole('button', { name: 'Close code' }).click()
+    await expect(page.locator('#tsc-code-drawer')).toBeHidden()
+    await expect(codeBtn).toHaveAttribute('aria-expanded', 'false')
+    await expect(codeBtn, 'focus did not return to the Code button').toBeFocused()
     await expect(page.locator('.tsk')).toBeVisible()
-    await expect(exportBox).toHaveCount(0)
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 })
 
@@ -564,8 +577,8 @@ test.describe('Type Scale · the free-cap wall points at the plans', () => {
         // The free plan saves up to 3 projects (spec 72 reads the same number from the app).
         await signIn(page, { plan: 'free', projects: 3 })
         await go(page, ROUTE)
-        // On a phone Save is in the dock; from 768 it is on the toolbar.
-        const save = page.locator(touch ? '.tl-dock' : '[data-tool-toolbar]').getByRole('button', { name: 'Save to a project' })
+        // On a phone Save is in the shell dock; from 768 it is in the page's docked bar.
+        const save = page.locator(touch ? '.tl-dock' : '.tsc-dock').getByRole('button', { name: 'Save to a project' })
         if (touch) await save.tap(); else await save.click()
         const wall = page.getByTestId('type-save-wall')
         await expect(wall, 'the cap wall is shown').toBeVisible()

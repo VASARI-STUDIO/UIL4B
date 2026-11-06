@@ -6,7 +6,7 @@
 //   2  at 390 the specimen sits above two family rows, the panel is gone, and each
 //      row (and its dock pill) opens a sheet holding that family's controls
 //   3  Shuffle (in the heading card) keeps a locked side, never makes a pair of one
-//      family; Swap and Undo stay on the toolbar
+//      family; Swap and Undo are items of the toolbar's More, and a pick or shuffle also offers Undo on its toast
 //   4  typed text fills the headline, lede and sub-heading, and the body repeats it twice
 //   5  the export asks for the regular, 600 and bold weights and the italic
 //
@@ -55,6 +55,13 @@ const body = (page) => page.locator('.fpr-pair span').last()
 const toolbar = (page) => page.locator('.fpr-page .tl-toolbar')
 // The heading's own action: Shuffle lives on the heading family card, not the toolbar.
 const shuffleBtn = (page) => page.locator('.fpr-fam').first().getByRole('button', { name: /^Shuffle/ })
+// Swap and Undo sit in the toolbar's More (a popover from 768, a sheet on a phone).
+const moreItem = async (page, name) => {
+  await toolbar(page).getByRole('button', { name: 'More', exact: true }).click()
+  const menu = page.getByRole('dialog', { name: 'More' })
+  await expect(menu).toBeVisible()
+  return menu.getByRole('button', { name })
+}
 const htmlOverflow = (page) => page.evaluate(() => getComputedStyle(document.documentElement).overflow)
 
 test.describe('Font Pair · suggestions are rows', () => {
@@ -245,18 +252,19 @@ test.describe('Font Pair · lock, shuffle, swap, undo', () => {
 
   test('swap exchanges the two families and undo puts them back', async ({ page }) => {
     await open(page)
-    const undo = toolbar(page).getByRole('button', { name: /^Undo/ })
-    await expect(undo, 'nothing to undo on a fresh page').toBeDisabled()
+    await expect(await moreItem(page, /^Undo/), 'nothing to undo on a fresh page').toBeDisabled()
+    await page.keyboard.press('Escape')
     const h = (await heading(page).innerText()).trim()
     const b = (await body(page).innerText()).trim()
-    await toolbar(page).getByRole('button', { name: /^Swap/ }).click()
+    await (await moreItem(page, /^Swap/)).click()
     await expect(heading(page)).toHaveText(b)
     await expect(body(page)).toHaveText(h)
+    const undo = await moreItem(page, /^Undo/)
     await expect(undo).toBeEnabled()
     await undo.click()
     await expect(heading(page)).toHaveText(h)
     await expect(body(page)).toHaveText(b)
-    await expect(undo).toBeDisabled()
+    await expect(await moreItem(page, /^Undo/)).toBeDisabled()
   })
 
   test('undo steps back through two changes', async ({ page }) => {
@@ -264,17 +272,30 @@ test.describe('Font Pair · lock, shuffle, swap, undo', () => {
     const first = [(await heading(page).innerText()).trim(), (await body(page).innerText()).trim()]
     await shuffleBtn(page).click()
     const second = [(await heading(page).innerText()).trim(), (await body(page).innerText()).trim()]
-    await toolbar(page).getByRole('button', { name: /^Swap/ }).click()
-    const undo = toolbar(page).getByRole('button', { name: /^Undo/ })
-    await undo.click()
+    await (await moreItem(page, /^Swap/)).click()
+    await (await moreItem(page, /^Undo/)).click()
     await expect(heading(page)).toHaveText(second[0])
     await expect(body(page)).toHaveText(second[1])
-    await undo.click()
+    await (await moreItem(page, /^Undo/)).click()
     await expect(heading(page)).toHaveText(first[0])
     await expect(body(page)).toHaveText(first[1])
   })
 
-  test('at 390 Swap and Undo are reachable (on the row or in More) and the toolbar stays one row', async ({ page }) => {
+  test('the toast that confirms a shuffle has an Undo that restores the previous pair', async ({ page }) => {
+    await open(page)
+    const before = [(await heading(page).innerText()).trim(), (await body(page).innerText()).trim()]
+    await shuffleBtn(page).click()
+    const toast = page.locator('.toast.show')
+    await expect(toast).toBeVisible()
+    await expect(toast.getByRole('button', { name: 'Undo' })).toBeVisible()
+    const after = [(await heading(page).innerText()).trim(), (await body(page).innerText()).trim()]
+    expect(after, 'the shuffle changed nothing, so Undo would prove nothing').not.toEqual(before)
+    await toast.getByRole('button', { name: 'Undo' }).click()
+    await expect(heading(page)).toHaveText(before[0])
+    await expect(body(page)).toHaveText(before[1])
+  })
+
+  test('at 390 Swap and Undo are in the More sheet, not on the toolbar row, and the toolbar stays one row', async ({ page }) => {
     await open(page, 390)
     const bar = toolbar(page)
     await expect(bar, 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
@@ -284,11 +305,9 @@ test.describe('Font Pair · lock, shuffle, swap, undo', () => {
       .map((e) => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2) }))
     expect(centres.length, 'the toolbar rendered its controls').toBeGreaterThanOrEqual(2)
     expect(Math.max(...centres) - Math.min(...centres), 'the toolbar wrapped').toBeLessThanOrEqual(2)
-    const swapOnRow = await bar.getByRole('button', { name: /^Swap/ }).count()
-    if (!swapOnRow) {
-      await bar.getByRole('button', { name: /More/ }).click()
-      await expect(page.getByRole('menuitem', { name: /Swap heading and body/ }).or(page.getByRole('button', { name: /Swap heading and body/ }))).toBeVisible()
-    }
+    await expect(bar.getByRole('button', { name: /^Swap/ })).toHaveCount(0)
+    await expect(await moreItem(page, /^Swap heading and body/)).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: /^Undo/ })).toBeDisabled()
   })
 })
 
