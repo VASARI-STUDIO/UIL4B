@@ -215,6 +215,9 @@ const ALLOWED = {
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
   },
+  'pages/spectrum-chrome.css': {
+    '.spnav-search kbd': 'kbd',
+  },
   'pages/spectrum-mobile.css': {
     '.spm .spm-ic-fmt': 'debt',
     '.spm .spm-pb-add': 'debt',
