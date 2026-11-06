@@ -844,20 +844,10 @@ test.describe('Font Gallery', () => {
     expect(shot.width, 'the band button fills the band').toBeGreaterThanOrEqual(rowBox.width - 2)
     expect(shot.height, 'the band button fills the band height').toBeGreaterThanOrEqual(rowBox.height - 2)
 
-    // THE WEIGHTS wait in the wake: one name per cut, each set in the cut it names.
-    const steps = page.locator('.fg-card-weights').first().locator('.fg-card-step')
-    await expect(steps).toHaveCount(5)
-    await expect(steps.first()).toHaveText('Thin')
-    await expect(steps.last()).toHaveText('Black')
-    const stepWeights = await steps.evaluateAll(
-      (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
-    )
-    expect(stepWeights, 'each weight name is rendered at the weight it names')
-      .toEqual(['Thin:100', 'Light:300', 'Medium:500', 'Bold:700', 'Black:900'])
-    await expect(page.locator('.fg-card-weights').nth(1).locator('.fg-card-step')).toHaveCount(2)
-
-    // The pangram is the full running-text sample, and the meta line names the family's facts.
-    await expect(page.locator('.fg-card-pangram').first()).toHaveText('The quick brown fox jumps over the lazy dog')
+    // The band holds the name and one meta line: no pangram or weight ladder
+    // waits in it, and the meta line names the family's facts.
+    await expect(page.locator('.fg-card-name').first()).toHaveText('Lora')
+    await expect(page.locator('.fg-card-pangram, .fg-card-weights, .fg-card-reveal')).toHaveCount(0)
     await expect(page.locator('.fg-card-meta').first()).toHaveText('01 · Serif · 6 weights')
   })
 
@@ -970,47 +960,31 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.typ-notice')).toHaveCount(0)
   })
 
-  // THE PANGRAM IS THE PAYLOAD, AND THE TABLET BAND WAS EATING IT.
-  // 721-959px is the one band where the specimen line is set `nowrap` in a box
-  // too narrow to hold it. Measured across the 77 families the catalogue serves,
-  // at 834px: 48 of them clipped, from 4px to 113px, with the WIDEST faces
-  // losing the most - so the specimen was least complete for exactly the most
-  // distinctive families. It now wraps to a reserved two-line box, as the phone
-  // layout already did.
-  //
-  // Two assertions, because either alone can pass for the wrong reason. The
-  // reserved-height one holds whether or not a webfont ever paints, so it fails
-  // the moment the rule is removed; the clipping one is the thing the reader
-  // actually loses, and only means something because the line really is long.
-  test('the specimen line is not sliced in the tablet band', async ({ page }) => {
+  // The tablet band is the narrowest layout that still sets the meta line on one
+  // row beside the name. The line is `nowrap`, so it either fits whole or is cut at
+  // the band's edge; it must fit whole, and every band must hold the same height.
+  test('the meta line is whole in the tablet band', async ({ page }) => {
     watch(page, 'a designer judging typefaces on an iPad')
     await page.setViewportSize({ width: 834, height: 1112 })
     await go(page, '/create/font-gallery')
-    await expect(page.locator('.fg-card-pangram').first()).toBeVisible()
+    await expect(page.locator('.fg-card-meta').first()).toBeVisible()
     await page.evaluate(() => document.fonts.ready).catch(() => {})
 
     const report = await page.evaluate(() => {
-      const els = [...document.querySelectorAll('.fg-card-pangram')]
+      const cards = [...document.querySelectorAll('.fg-card')]
+      const metas = [...document.querySelectorAll('.fg-card-meta')]
       return {
-        count: els.length,
-        sample: els[0].textContent.trim(),
-        nowrap: getComputedStyle(els[0]).whiteSpace === 'nowrap',
-        // One reserved box for every row, and it holds two lines, not one.
-        heights: [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().height)))],
-        lineHeight: Math.round(parseFloat(getComputedStyle(els[0]).lineHeight)),
-        clipped: els
-          .map((e) => ({
-            family: getComputedStyle(e).fontFamily.split(',')[0].replace(/["']/g, ''),
-            lost: e.scrollWidth - e.clientWidth,
-          }))
-          .filter((e) => e.lost > 0),
+        count: metas.length,
+        sample: metas[0].textContent.trim(),
+        heights: [...new Set(cards.map((c) => Math.round(c.getBoundingClientRect().height)))],
+        clipped: metas.map((m) => ({ text: m.textContent, lost: m.scrollWidth - m.clientWidth })).filter((m) => m.lost > 0),
       }
     })
 
-    expect(report.count, 'the gallery should have specimens to measure').toBeGreaterThan(0)
-    expect(report.sample, 'the wake holds the whole pangram').toBe('The quick brown fox jumps over the lazy dog')
-    expect(report.heights, 'every row must reserve the same specimen box').toHaveLength(1)
-    expect(report.clipped, 'specimen lines sliced at the box edge').toEqual([])
+    expect(report.count, 'the gallery should have bands to measure').toBeGreaterThan(0)
+    expect(report.sample, 'the meta line holds rank, category and weights').toMatch(/^\d\d · .+ · \d+ weights?$/)
+    expect(report.heights, 'every band must be the same height').toHaveLength(1)
+    expect(report.clipped, 'meta lines cut at the band edge').toEqual([])
   })
 })
 
@@ -1389,7 +1363,9 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   // The phone tray stands on the tab bar once two fonts are picked.
   await page.locator('.fg-card-compare').nth(0).click()
   await page.locator('.fg-card-compare').nth(1).click()
-  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery compare')
+  // The tray's first button is Clear; Compare N follows once two are picked.
+  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery tray Clear')
+  await expectTarget(page.locator('.fg-compare-tray .fg-dock-ink'), 'Font Gallery tray Compare')
 
   await go(page, '/create/font-pair')
   await expect(page.locator('.fpr-card').first()).toBeVisible()

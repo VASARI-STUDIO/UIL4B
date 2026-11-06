@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useModalDialog from '../hooks/useModalDialog'
 import { fontStack, loadFont, bodyWeight } from '../utils/googleFonts'
 
@@ -63,6 +63,10 @@ export default function FiltersSheet({
 }) {
   const ref = useModalDialog(onClose)
   const drag = useRef(null)
+  // While the Preview field has focus on a phone the sheet shrinks to that
+  // field and the foot, and the scrim thins, so the bands show in the typed words.
+  const [typing, setTyping] = useState(false)
+  const shrunk = typing && previewFirst
 
   // The drag is a phone gesture: from 768px the sheet is a centred dialog.
   const onDragStart = (e) => {
@@ -105,7 +109,9 @@ export default function FiltersSheet({
         enterKeyHint="done"
         placeholder="Type your own words"
         onChange={e => onPreviewText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+        onFocus={() => setTyping(true)}
+        onBlur={() => setTyping(false)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onClose() } }}
       />
     </div>
   )
@@ -115,7 +121,7 @@ export default function FiltersSheet({
   }, [faces])
 
   return (
-    <div className="fg-sheet-layer">
+    <div className="fg-sheet-layer" data-typing={shrunk ? '1' : undefined}>
       <div className="fg-sheet-scrim" aria-hidden="true" onClick={onClose} />
       <div className="fg-sheet" role="dialog" aria-modal="true" aria-label="Filters" tabIndex={-1} ref={ref}>
         <div
@@ -210,7 +216,9 @@ export default function FiltersSheet({
           {!previewFirst && previewGroup}
         </div>
 
-        <div className="fg-sheet-foot">
+        {/* A press on the foot keeps the field's focus, so the keyboard closing
+            does not move the buttons out from under the finger. */}
+        <div className="fg-sheet-foot" onMouseDown={e => { if (shrunk) e.preventDefault() }}>
           <button type="button" className="fg-sheet-btn" onClick={onClear} disabled={!canClear}>Clear filters</button>
           <button type="button" className="fg-sheet-btn fg-sheet-btn--primary" onClick={onClose}>
             Show {count.toLocaleString()} {count === 1 ? 'family' : 'families'}
