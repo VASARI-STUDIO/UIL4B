@@ -33,6 +33,7 @@ import '../../styles/pages/type-tools-nav.css'
 
 const SAMPLE_PROJECT = 'Kerbside'
 
+// eslint-disable-next-line react-refresh/only-export-components
 function GroundSegment({ ground, onGround, className }) {
   return (
     <div className={className ? `ttb-seg ${className}` : 'ttb-seg'} role="group" aria-label="Specimen ground">
@@ -46,7 +47,6 @@ function GroundSegment({ ground, onGround, className }) {
   )
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function typeToolsBarItems({
   current, heading, body, scale, headingStack, bodyStack, projectName, ground, onGround,
 }) {

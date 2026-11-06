@@ -112,7 +112,7 @@ function useMedia(query) {
 // `headAction` is the body family's Best match button, drawn on the label line
 // so it never reads as one of the weights. Weights are a pill row (a menu pill
 // on a phone) and never hold anything but weights.
-function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, phone, headAction, locked, onToggleLock }) {
+function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, headAction, locked, onToggleLock }) {
   const uid = useId()
   const [browsing, setBrowsing] = useState(false)
   const slot = label.split(' ')[0]
@@ -604,7 +604,6 @@ export default function FontMatcher({ onCopy, toast }) {
           fonts={catalog}
           font={headingFont}
           weight={headingW}
-          phone={phone}
           locked={locks.heading}
           onToggleLock={() => toggleLock('heading')}
           onPickFont={chooseHeading}
@@ -618,7 +617,6 @@ export default function FontMatcher({ onCopy, toast }) {
           fonts={catalog}
           font={bodyFont}
           weight={bodyW}
-          phone={phone}
           locked={locks.body}
           onToggleLock={() => toggleLock('body')}
           onPickFont={chooseBody}
