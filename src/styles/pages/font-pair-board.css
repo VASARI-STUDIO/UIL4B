@@ -1,0 +1,109 @@
+/* font-pair-board.css — Font Pair's surface language, loaded after font-pair.css.
+ *
+ * A control is a fill, never an outline. The specimen ground (Dark/Light)
+ * flips the specimen only; the page chrome keeps the app's theme. Sample-brand
+ * colours live on the specimen only, never on the page chrome. */
+
+.fpr-page {
+  --fpr-fill: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+  --fpr-fill-2: color-mix(in srgb, var(--t0) 8%, var(--bg-0));
+  --fpr-sel: color-mix(in srgb, var(--t0) 14%, var(--bg-0));
+  --fpr-rule: color-mix(in srgb, var(--t0) 8%, transparent);
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.fpr-page .tl-btn, .fpr-page .tl-pill, .fpr-page .svt-trigger, .fpr-page .typ-picker-clear, .fpr-page .fpr-input {
+  border: 0;
+  background: var(--fpr-fill);
+}
+.fpr-page .tl-pill[aria-pressed="true"], .fpr-page .tl-pill[aria-selected="true"], .fpr-page .fpr-lock[aria-pressed="true"] { background: var(--fpr-sel); color: var(--t0); }
+.fpr-page .fpr-panel .tl-btn, .fpr-page .fpr-panel .fpr-input, .fpr-page .fpr-dock .svt-trigger { background: var(--fpr-fill-2); }
+.fpr-page .fpr-fam-head .fpr-wand { background: transparent; }
+.fpr-page .fpr-wmenu { flex: none; font-variant-numeric: tabular-nums; }
+/* The one ink pill: Copy CSS. */
+.fpr-page .fpr-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
+.fpr-page .fpr-copy-primary:disabled { opacity: .5; }
+
+/* ── Panel: one surface, one hairline between its sections ───────────────── */
+.fpr-page .fpr-fam, .fpr-page .fpr-text, .fpr-page .fpr-delivery { border: 0; }
+.fpr-page .fpr-fam + .fpr-fam, .fpr-page .fpr-text, .fpr-page .fpr-panel .fpr-suggest { border-top: 1px solid var(--fpr-rule); }
+.fpr-page .fpr-fam + .fpr-fam { border-left: 0; }
+@media (min-width: 1024px) { .fpr-page .fpr-config { overscroll-behavior: auto; } }
+
+/* Suggestions sit inside the panel as rows, no card and no rule between them. */
+.fpr-page .fpr-panel .fpr-suggest { margin: 0; padding: 16px 0 8px; gap: 8px; }
+.fpr-page .fpr-panel .fpr-section-head h2 { font-size: 13px; font-weight: 500; }
+.fpr-page .fpr-panel .fpr-suggest-grid { display: grid; gap: 2px; margin: 0 -8px; border: 0; }
+.fpr-page .fpr-panel .fpr-card { border: 0; }
+.fpr-page .fpr-panel .fpr-card-apply { padding: 12px; border-radius: 8px; }
+.fpr-page .fpr-panel .fpr-card-head { font-size: 20px; }
+.fpr-page .fpr-panel .fpr-card-cta { font-size: 14px; font-weight: 500; }
+.fpr-page .fpr-panel .fpr-card-apply[aria-pressed="true"] { background: var(--fpr-sel); }
+
+/* ── Dock: the status line, then the save pill ───────────────────────────── */
+.fpr-page .fpr-dock-note { font-size: 12px; line-height: 16px; }
+
+/* ── The specimen surface and its ground ─────────────────────────────────── */
+.fpr-page .fpr-specimen {
+  --fpr-sbg: #0F1012; --fpr-sfg: #EFEEEA; --fpr-s72: rgba(239, 238, 234, .72); --fpr-s62: rgba(239, 238, 234, .62);
+  min-height: 0;
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--fpr-sbg);
+  color: var(--fpr-sfg);
+  overflow: hidden;
+}
+.fpr-page .fpr-specimen[data-ground="l"] { --fpr-sbg: #EFEEEA; --fpr-sfg: #0B0C0E; --fpr-s72: rgba(11, 12, 14, .72); --fpr-s62: rgba(11, 12, 14, .66); }
+.fpr-page .fpr-specimen .fpr-h1, .fpr-page .fpr-specimen .fpr-h2, .fpr-page .fpr-specimen .fpr-glyphs { color: var(--fpr-sfg); }
+.fpr-page .fpr-specimen .fpr-lede, .fpr-page .fpr-specimen .fpr-body { color: var(--fpr-s72); }
+.fpr-page .fpr-specimen--street { padding: 0; background: #E6E4DE; }
+.fpr-page .fpr-specimen--street[data-ground="l"] .fpr-street-page { background: #FFFFFF; }
+.fpr-page .fpr-street-photo picture { display: contents; }
+@media (min-width: 768px) { .fpr-page .fpr-specimen { padding: 40px; } .fpr-page .fpr-specimen--street { padding: 0; } }
+
+/* ── The Kerbside page (Article): drawn, nothing on it is a control ──────── */
+.fpr-page .fpr-page-sample {
+  --pg-fg: #1A1A1A; --pg-soft: #3A3936; --pg-quiet: #6B6A66; --pg-rule: #E6E4DE;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #FFFFFF;
+  color: var(--pg-fg);
+  cursor: default;
+}
+.fpr-page .fpr-specimen[data-ground="d"] .fpr-page-sample { --pg-fg: #FFFFFF; --pg-soft: #D4D2CC; --pg-quiet: #A8A6A0; --pg-rule: rgba(255, 255, 255, .16); background: #262628; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); }
+.fpr-page .fpr-page-sample .fpr-h1, .fpr-page .fpr-page-sample .fpr-h2 { color: var(--pg-fg); }
+.fpr-page .fpr-page-sample .fpr-lede, .fpr-page .fpr-page-sample .fpr-body { color: var(--pg-soft); }
+.fpr-page .fpr-pg-masthead { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 56px; padding: 0 20px; border-bottom: 1px solid var(--pg-rule); font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 14px; line-height: 20px; color: var(--pg-soft); }
+.fpr-page .fpr-pg-word { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; line-height: 24px; font-weight: clamp(500, calc(var(--fpr-b-fw) + 200), 700); letter-spacing: -.01em; color: var(--pg-fg); }
+.fpr-page .fpr-pg-nav { display: none; gap: 28px; white-space: nowrap; color: var(--pg-quiet); user-select: none; pointer-events: none; }
+.fpr-page .fpr-plate--page { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 4px 8px; font-size: 12px; line-height: 16px; white-space: nowrap; pointer-events: none; user-select: none; }
+.fpr-page .fpr-pg-body { padding: 32px 20px 28px; }
+.fpr-page .fpr-page-sample .fpr-h1 { max-width: 9em; margin: 0; line-height: .95; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.fpr-page .fpr-hs { display: block; }
+.fpr-page .fpr-page-sample .fpr-lede { max-width: 34em; margin: 20px 0 0; font-size: 16px; line-height: 24px; }
+.fpr-page .fpr-pg-cta { display: flex; margin: 24px 0 0; pointer-events: none; user-select: none; }
+.fpr-page .fpr-pg-cta span { display: inline-flex; align-items: center; height: 48px; padding: 0 24px; border-radius: 4px; background: #FF5A1F; color: #1A1A1A; font-family: var(--fpr-b-ff); font-size: 16px; font-weight: var(--fpr-b-btn, 600); line-height: 1; }
+.fpr-page .fpr-pg-section { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--pg-rule); }
+.fpr-page .fpr-pg-section .fpr-h2 { margin: 0; }
+.fpr-page .fpr-pg-section .fpr-body { max-width: 36em; margin-top: 12px; }
+@media (min-width: 768px) {
+  .fpr-page .fpr-pg-masthead { min-height: 64px; padding: 0 40px; }
+  .fpr-page .fpr-pg-nav { display: flex; }
+  .fpr-page .fpr-pg-body { padding: 56px 40px 48px; }
+  .fpr-page .fpr-page-sample .fpr-lede { font-size: 20px; line-height: 30px; }
+}
+
+/* ── Product page: the track-a-rider screen. Sample prices stay as drawn ─── */
+.fpr-page .fpr-product { padding: 8px 0; }
+.fpr-page .fpr-pp-label { margin: 0; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 13px; line-height: 18px; color: var(--fpr-s62); }
+.fpr-page .fpr-pp-status { display: inline-flex; align-items: center; height: 28px; margin-top: 16px; padding: 0 12px; border-radius: 999px; background: #FF5A1F; color: #1A1A1A; font-family: var(--fpr-b-ff); font-size: 13px; font-weight: 600; line-height: 1; }
+.fpr-page .fpr-product .fpr-h1 { margin-top: 20px; }
+.fpr-page .fpr-product .fpr-lede { margin-top: 0; }
+.fpr-page .fpr-pp-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 32px 0 0; }
+.fpr-page .fpr-pp-stats dt { font-family: var(--fpr-h-ff); font-weight: var(--fpr-h-fw); font-size: clamp(22px, 5vw, 32px); line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--fpr-sfg); }
+.fpr-page .fpr-pp-stats dd { margin: 4px 0 0; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 15px; line-height: 22px; color: var(--fpr-s72); }
+.fpr-page .fpr-product-actions { pointer-events: none; user-select: none; }
+.fpr-page .fpr-product-actions span { border-radius: 4px; }
+.fpr-page .fpr-product-primary { background: #FF5A1F; color: #1A1A1A; }
+.fpr-page .fpr-product-secondary { border: 0; box-shadow: inset 0 0 0 1.5px var(--fpr-sfg); color: var(--fpr-sfg); }

@@ -46,6 +46,7 @@ function GroundSegment({ ground, onGround, className }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function typeToolsBarItems({
   current, heading, body, scale, headingStack, bodyStack, projectName, ground, onGround,
 }) {
