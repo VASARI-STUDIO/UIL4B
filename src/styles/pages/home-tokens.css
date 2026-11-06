@@ -39,10 +39,27 @@
   }
 }
 
-/* No scroll-padding-top on the page scroller. A jump lands a target at its
-   scroll-margin-top PLUS the scroller's scroll-padding-top, and
-   `.spectrum [id]` (spectrum.css) already sets the 104px that clears the nav.
-   A second 104px here put every section link 208px down. */
+/* The 104px that clears the sticky nav lives on the page scroller, so it holds
+   for an anchor jump, a Lenis glide and keyboard focus alike (focus is kept
+   clear of the nav, WCAG 2.4.11). A jump lands a target at its scroll-margin-top
+   PLUS the scroller's scroll-padding-top, so the `.spectrum [id]` margin
+   (spectrum.css, still right for the other sales pages) is zeroed here;
+   leaving both put every section link 208px down. */
+html:has(.spectrum-home) { scroll-padding-top: 104px; }
+.spectrum.spectrum-home [id] { scroll-margin-top: 0; }
+
+/* The page's focus ring: 2px #EFEEEA on every control. The page-wide
+   `.spectrum :focus-visible` ring is blue, and the global `.hcmd-kbd` and nav
+   rules win it on source order in some bundles, so this sits a class above all
+   of them. Width, style and colour only: each section's own offset (and the
+   swatch controls' own ink, which are one class deeper) stands. No radius in
+   a focus rule. */
+.spectrum.spectrum-home :focus-visible {
+  outline-style: solid;
+  outline-width: 2px;
+  outline-color: #EFEEEA;
+}
+html:has(.spectrum-home) .skip-link:focus { outline-color: #EFEEEA; }
 
 /* The page's two hairlines: the proof bar's top edge and the plans section's
    top edge. */

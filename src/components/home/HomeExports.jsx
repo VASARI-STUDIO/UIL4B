@@ -84,7 +84,7 @@ function RampView({ ramp }) {
           <span className="hx-aa" aria-hidden="true">Aa</span>
           <span className="hx-mono hx-step">{r.step}</span>
           <span className="hx-hexcell">
-            <span className="hx-mono hx-hex">{r.hex}</span>
+            <span className="hx-mono hx-hex">{r.hex.toUpperCase()}</span>
             {r.primary && <span className="hx-role">primary</span>}
           </span>
           <span className="hx-mono hx-grade">

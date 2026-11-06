@@ -1,3 +1,5 @@
+import { useLayoutEffect } from 'react'
+import { useTheme } from '../contexts/ThemeContext'
 import PillNav from '../components/PillNav'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
@@ -44,8 +46,17 @@ export default function Spectrum() {
   usePageAnchors()
   const below = useBelowFoldReady()
 
+  // The page is drawn dark in both colour schemes: the page ground and the nav
+  // read the theme tokens, so the theme itself is held at dark while it shows.
+  const setPageTheme = useTheme()?.setPageTheme
+  useLayoutEffect(() => {
+    if (!setPageTheme) return undefined
+    setPageTheme('dark')
+    return () => setPageTheme(null)
+  }, [setPageTheme])
+
   return (
-    <div className="spectrum">
+    <div className="spectrum spectrum-home">
       <header className="sp-banner">
         <PillNav variant="spectrum" />
       </header>

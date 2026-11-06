@@ -47,6 +47,9 @@
   line-height: 1.02;
   letter-spacing: -.04em;
 }
+/* Fill each line before breaking. The page-wide `.spectrum h2` balance would
+   split the phone's two-line heading evenly instead of after "Design". */
+.hx .hx-h2 { text-wrap: wrap; }
 .hx-lead {
   margin: 24px auto 0;
   max-width: 52ch;

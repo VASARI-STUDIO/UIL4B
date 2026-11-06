@@ -189,7 +189,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
+  min-height: 50px;
   padding: 0 6px 0 22px;
   border: 1px solid var(--hsc-line-cta);
   border-radius: 999px;
@@ -266,7 +266,7 @@
   .hsc-cap2 { font-size: 12px; white-space: nowrap; }
   .hsc-foot { display: block; margin-top: 40px; padding-top: 20px; }
   .hsc-footnote { max-width: none; font-size: 13px; }
-  .hsc .hsc-cta { display: flex; justify-content: space-between; height: 52px; margin-top: 20px; }
+  .hsc .hsc-cta { display: flex; justify-content: space-between; height: 54px; margin-top: 20px; }
   .hsc .hsc-cta .mi-go { width: 40px; height: 40px; }
 }
 @media (max-width: 374px) {

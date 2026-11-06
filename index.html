@@ -191,7 +191,7 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // is an unthemed page rather than a light one. Same reasoning AppearanceContext
 // records for its own hardened read: a visitor who cannot persist a choice must
 // still get the resolved one.
-(function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
+(function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}var l=window.location,p=l?(l.pathname.replace(/\/+$/,'')||'/'):'';if((p==='/'||p==='/home')&&g('vs-session')!=='1')t='dark';r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
 </script>
 <script>
 // THE GATE ON THE PRE-PAINTED HEADLINE.
