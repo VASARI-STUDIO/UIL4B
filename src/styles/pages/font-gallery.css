@@ -283,6 +283,24 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 .tl-sheet-layer .fg-cats,
 .fg-page .tl-pop .fg-cats { flex-wrap: wrap; }
 
+/* Sticky-row controls are fills, never outlines (Font Pair's language): a quiet
+   tint at rest, a deeper one for the chosen pill. The sliding pill's own marker
+   keeps its fill. */
+.fg-page {
+  --fg-fill: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+  --fg-fill-sel: color-mix(in srgb, var(--t0) 14%, var(--bg-0));
+}
+.fg-page .tl-btn:not(.tl-btn--quiet),
+.fg-page .tl-pill,
+.fg-page .tl-select,
+.fg-page .fg-preview-field,
+.fg-page .fg-size {
+  border: 0;
+  background: var(--fg-fill);
+}
+.fg-page .tl-btn--quiet { border: 0; }
+.fg-page .tl-pills:not([data-slide]) .tl-pill.is-on { background: var(--fg-fill-sel); color: var(--t0); }
+
 /* The second toolbar row (tablet and phone): search, and on a tablet the pair
    link. It never wraps. */
 .fg-page .fg-bar2 {
@@ -353,8 +371,6 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 .fg-page :is(.fg-card, .fg-skel-row) {
   /* Wide values; the tablet and phone ones follow. */
   --fg-y-max: 20px;
-  --fg-pangram: 20px;
-  --fg-steps: 14px;
   --fg-y: min(var(--fg-y-max), calc(var(--fg-name, 96px) * .25));
   --fg-line: calc(var(--fg-name, 96px) * 1.1);
   --fg-right: calc(var(--fg-padr) + 56px);
@@ -363,15 +379,11 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 1023px) {
-  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 16px; --fg-pangram: 18px; --fg-steps: 13px; }
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 16px; }
 }
 @media (max-width: 767px) {
-  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 12px; --fg-pangram: 13px; --fg-steps: 11px; }
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 12px; }
 }
-@media (max-width: 359px) {
-  .fg-page :is(.fg-card, .fg-skel-row) { --fg-pangram: 11px; }
-}
-
 .fg-page .fg-card {
   /* The wake flips these four; everything inside reads them. */
   --fg-ground: transparent;
@@ -503,10 +515,10 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 
 /* No transitions at all under reduced motion: the wake switches at once. */
 html[data-reduced-motion="true"] .fg-page .fg-card-skeleton::after { animation: none; }
-html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
+html[data-reduced-motion="true"] .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-compare, .fg-preview-field) { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-skeleton::after { animation: none; }
-  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare, .fg-preview-field) { transition: none; }
+  html:not([data-reduced-motion="false"]) .fg-page :is(.fg-card, .fg-card-name, .fg-card-meta, .fg-card-compare, .fg-preview-field) { transition: none; }
 }
 
 /* ── The compare tray ─────────────────────────────────────────────────────
@@ -558,6 +570,90 @@ html.fg-tray { --fg-tray-h: 60px; }
 .fg-page .fg-compare-tray-name { font-family: var(--fg-ff, var(--font)); font-size: 15px; color: var(--t0); }
 .fg-page .fg-compare-head-actions { display: flex; align-items: center; gap: 8px; }
 .fg-page .fg-compare-clear { border-radius: var(--radius-pill); }
+
+/* The tray's parts. Chips and buttons are 36px on desktop and 44px on a phone. */
+.fg-page .fg-compare-tray { --fg-ctl: 36px; }
+@media (max-width: 767px), (pointer: coarse) { .fg-page .fg-compare-tray { --fg-ctl: 44px; } }
+.fg-page .fg-compare-tray .fg-compare-chip { box-sizing: border-box; min-height: var(--fg-ctl); gap: 8px; padding: 0 6px 0 14px; border: 0; background: var(--bg-2); font-weight: 500; }
+.fg-page .fg-compare-chip-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: inherit;
+  background: color-mix(in srgb, var(--t0) 10%, transparent);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--fg-ease);
+}
+.fg-page .fg-compare-chip-x svg { opacity: 1; }
+.fg-page .fg-compare-chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-compare-chip-x:active { transform: scale(.94); }
+@media (hover: hover) and (pointer: fine) {
+  .fg-page .fg-compare-chip-x:hover { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+}
+/* Where the pointer is coarse the 24px mark gets a 44px hit area from its pseudo-element. */
+@media (pointer: coarse) {
+  .fg-page .fg-compare-chip-x { position: relative; }
+  .fg-page .fg-compare-chip-x::after { content: ""; position: absolute; inset: -10px; }
+}
+.fg-page .fg-compare-tray-status { flex: 0 0 auto; margin-left: 4px; font-size: 13px; line-height: 18px; color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fg-page .fg-compare-tray-nm { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fg-page .fg-compare-tray-nm > span > i { font-style: normal; color: var(--t1); }
+.fg-page .fg-compare-tray-ct { display: block; font-size: 12px; line-height: 16px; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fg-page .fg-compare-tray-hint { flex: 0 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 18px; color: var(--t1); }
+.fg-page .fg-compare-tray--names .fg-compare-tray-names { display: flex; flex-direction: column; justify-content: center; }
+.fg-page .fg-compare-tray-actions { margin-left: auto; gap: 12px; }
+
+/* Clear is an outline pill; Compare N is the one ink pill, with its Go arrow. */
+.fg-page .fg-compare-tray .fg-dock-ghost,
+.fg-page .fg-compare-tray .fg-dock-ink {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--fg-ctl);
+  height: var(--fg-ctl);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  border-radius: var(--radius-pill);
+  transition: background-color 150ms ease, transform 120ms var(--fg-ease);
+}
+.fg-page .fg-compare-tray .fg-dock-ghost { gap: 8px; padding: 0 18px; color: var(--t0); background: transparent; border: 1px solid color-mix(in srgb, var(--t0) 20%, transparent); }
+.fg-page .fg-compare-tray .fg-dock-ink { gap: 10px; padding: 0 6px 0 16px; color: var(--bg-0); background: var(--t0); border: 0; }
+.fg-page .fg-dock-ink .mi-go { width: 24px; height: 24px; border-radius: var(--radius-pill); }
+@media (hover: hover) and (pointer: fine) {
+  .fg-page .fg-compare-tray .fg-dock-ghost:hover:not(:disabled) { background: var(--hvr); border-color: color-mix(in srgb, var(--t0) 20%, transparent); }
+  .fg-page .fg-compare-tray .fg-dock-ink:hover:not(:disabled) { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
+}
+.fg-page .fg-compare-tray .fg-dock-ghost:focus-visible,
+.fg-page .fg-compare-tray .fg-dock-ink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The Go arrow: it turns inside its round tint while the button is hovered or
+   focused. The second arrow is spare and stays hidden. */
+.fg-page .mi-go { position: relative; display: inline-grid; place-items: center; overflow: hidden; --mi-r: 45deg; transition: background-color 150ms ease; }
+.fg-page .mi-go > svg { grid-area: 1 / 1; }
+.fg-page .mi-go > .mi-b { display: none; }
+.fg-page .mi-go > .mi-a { transition: transform 260ms cubic-bezier(.25, 1, .5, 1); }
+.fg-page .mi-go--ink { background: color-mix(in srgb, var(--bg-0) 8%, transparent); }
+.fg-page .mi-go--paper { background: rgba(239, 238, 234, .08); }
+@media (hover: hover) and (pointer: fine) {
+  .fg-page :hover > .mi-go > .mi-a { transform: rotate(var(--mi-r)); transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+  .fg-page :hover > .mi-go--ink { background: color-mix(in srgb, var(--bg-0) 12%, transparent); }
+  .fg-page :hover > .mi-go--paper { background: rgba(239, 238, 234, .14); }
+}
+.fg-page :focus-visible > .mi-go > .mi-a { transform: rotate(var(--mi-r)); transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .fg-page .mi-go > .mi-a, .fg-page :hover > .mi-go > .mi-a, .fg-page :focus-visible > .mi-go > .mi-a { transition: none; transform: none; }
+  .fg-page .mi-go > .mi-b { visibility: hidden; }
+}
+html[data-reduced-motion="true"] .fg-page :is(.mi-go > .mi-a, :hover > .mi-go > .mi-a, :focus-visible > .mi-go > .mi-a) { transition: none; transform: none; }
 html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 60px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
 html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 60px) + 20px + env(safe-area-inset-bottom, 0px)); }
 /* The page and the scroll snap both leave room for the tray, so the last band
@@ -600,8 +696,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 
 /* ── Grid view: 4, 3 and 2 columns of the same bands ─────────────────────────
    The name wraps in its cell (two lines at most) instead of shrinking, and
-   keeps 60px clear on the right for the compare button. The wake's reveal has
-   no room here, so a tile stays as it is at rest. The grid is one pixel wider than its
+   keeps 60px clear on the right for the compare button. The grid is one pixel wider than its
    parent so the last column's hairline falls outside the clip. */
 .fg-page .fg-results--tiles { overflow-x: clip; }
 .fg-page .fg-grid--tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: calc(100% + 1px); }
@@ -630,7 +725,6 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 /* The meta line runs to the cell's edge, past the compare button's column. */
 .fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); text-overflow: ellipsis; white-space: nowrap; }
 .fg-page .fg-grid--tiles .fg-card-preview { overflow: hidden; }
-.fg-page .fg-grid--tiles .fg-card-reveal { display: none; }
 .fg-page .fg-grid--tiles .fg-card-compare { right: 10px; top: var(--fg-y); }
 
 /* ── The Filters sheet ───────────────────────────────────────────────────────
@@ -717,6 +811,13 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 .fg-page .fg-sheet-field::placeholder { color: var(--t2); }
 .fg-page .fg-sheet-foot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--border); }
 .fg-page .fg-sheet-btn { min-height: 48px; }
+
+/* While the preview text is being typed the sheet shrinks to its field, so the
+   keyboard leaves room to see the bands change behind a thinner scrim. */
+.fg-page .fg-sheet-layer[data-typing] .fg-sheet-drag,
+.fg-page .fg-sheet-layer[data-typing] .fg-sheet-body > .fg-sheet-group ~ .fg-sheet-group { display: none; }
+.fg-page .fg-sheet-layer[data-typing] .fg-sheet-scrim { background: rgba(6, 6, 7, .24); }
+.fg-page .fg-sheet-layer[data-typing] .fg-sheet-body { padding-bottom: 0; }
 
 /* Reduced motion: the sheet fades in and the press scale is dropped. */
 html[data-reduced-motion="true"] .fg-page .fg-sheet { animation: fg-fade var(--dur-2) linear; transition: none; }

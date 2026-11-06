@@ -388,9 +388,8 @@ function useOpenBand(firstFamily) {
 /* ── Catalogue band ───────────────────────────────────────────────────────── */
 
 // One band per family: the name at band size in its own face, a meta line
-// along the bottom, and a compare button on the right. The pangram and the run
-// of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
-// faded in (hover or keyboard focus), so showing it never moves a box.
+// along the bottom, and a pick button on the right. The open band swaps its
+// flat fill for the family's strip, so showing it never moves a box.
 function GalleryCard({
   font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles,
   open, ground, bands, onCopy,
@@ -931,7 +930,8 @@ export default function FontGallery({ onCopy, toast }) {
   const barLead = bar.filter(it => it !== groundItem)
 
   // One item set per layout. The row never wraps: whatever does not fit goes
-  // into the overflow menu, lowest priority first.
+  // into the overflow menu, lowest priority first. The pair link folds first
+  // (priority 0), then the preview text, then Size and the view toggle.
   //   wide    every control on the row
   //   tablet  category pills and Filters on the row; search and the view toggle
   //           sit on a second row
