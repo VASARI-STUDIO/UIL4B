@@ -1,24 +1,23 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import TryItMark from '../components/TryItMark'
 import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumBench from '../components/spectrum/SpectrumBench'
 import SpectrumExports from '../components/spectrum/SpectrumExports'
-import SpectrumSearch from '../components/spectrum/SpectrumSearch'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
+import HomeHero from '../components/home/HomeHero'
+import { AutoplayOwner } from '../components/home/AutoplayOwner'
 import PhIcon from '../components/spectrum/PhIcon'
 import SpectrumProof from '../components/spectrum/SpectrumProof'
-import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
-import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../components/spectrum/spectrumHero'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
 // `/`, the first paint, which must not wait on a chunk. The budget test
 // (tests/unit/home-asset-budget.test.js) holds its size.
 import '../styles/pages/spectrum.css'
 import '../styles/pages/home-tokens.css'
+import '../styles/pages/home-hero.css'
 
 // The sales page: hero, bookmarks, try the tools, exports, examples, proof,
 // plans and the final call, then the footer. Every section is a landmark target
@@ -40,15 +39,6 @@ export default function Spectrum() {
 
   usePageAnchors()
 
-  // `data-hero-prepainted` is set on <html> for shells whose headline
-  // scripts/home-shell.mjs already painted. Decided at first render so the hero
-  // never commits settled and then drops for a frame.
-  const [heroLit] = useState(() => typeof document !== 'undefined'
-    && !document.documentElement.hasAttribute('data-hero-prepainted')
-    && !prefersReducedMotion())
-  // The sub-line, search and buttons rise in under the painted headline.
-  const [arrive] = useState(() => typeof document !== 'undefined' && !prefersReducedMotion())
-  const arriveAt = heroLit ? '300ms' : '0ms'
 
   return (
     <div className="spectrum">
@@ -57,38 +47,10 @@ export default function Spectrum() {
       </header>
       <div className="sp-grain" aria-hidden="true" />
 
+      <AutoplayOwner>
       <main id="main" tabIndex={-1}>
 
-        {/* ── Hero (slot) ─────────────────────────────────────────────────── */}
-        <div
-          id="top"
-          className={`sp-hero${heroLit ? ' is-in' : ''}${arrive ? ' is-arriving' : ''}`}
-          style={arrive ? { '--sp-arrive-at': arriveAt } : undefined}
-        >
-          <div className="sp-shell sp-hero-core">
-            <h1 className="sp-hero-h1">
-              <SpectrumWords text={SPECTRUM_HERO.text} mark={SPECTRUM_HERO.mark} joinMark />
-            </h1>
-            <p className="sp-hero-sub">{SPECTRUM_HERO_SUB}</p>
-
-            <p className="sr-only" id="spectrum-search-label">Search every tool</p>
-            <div className="sp-hero-bar">
-              <div className="tim-anchor">
-                <SpectrumSearch labelledBy="spectrum-search-label" />
-                <TryItMark />
-              </div>
-              <div className="sp-hero-cta">
-                <Link className="sp-pill sp-pill--hero" to="/projects">
-                  <span>Open the toolkit</span>
-                  <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-                </Link>
-                <Link className="sp-ghost sp-ghost--hero" to="/plans">View plans</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <SpectrumRamp mirror arrive={arrive} arriveAt={arriveAt} className="sp-ramp--hero" />
+        <HomeHero />
 
         {/* ── Bookmarks (slot: the previous bench stands here) ────────────── */}
         <section id="bookmarks" className="sp-section" aria-labelledby="sp-bench-h">
@@ -160,6 +122,7 @@ export default function Spectrum() {
           </section>
         </div>
       </main>
+      </AutoplayOwner>
 
       <SpectrumFooter toolkitTo="/projects" reveal />
     </div>

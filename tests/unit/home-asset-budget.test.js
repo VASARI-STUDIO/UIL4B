@@ -156,17 +156,12 @@ test('the render-blocking stylesheet stays inside its byte budget', async () => 
 
   const css = fs.readFileSync(path.join(assets, entrySheets[0]), 'utf8')
   // It is the app's sheet: the design tokens and the homepage hero are in it.
-  //
-  // THE CONTROL MOVED WITH THE HOMEPAGE, and it was re-pointed rather than
-  // deleted. It read `.home-hero-h1` while Home.jsx was the front door; Spectrum
-  // is the front door now and its sheet is `src/styles/pages/spectrum.css`,
-  // imported statically, so `.sp-hero-h1` is the rule that proves this is the
-  // sheet the first paint actually blocks on. Dropping the assertion instead
-  // would have left both budgets below passing against whichever stylesheet the
-  // build happened to name `index-*.css` — which is the failure mode the
-  // positive controls above exist to stop.
+  // `.hh-h1` is the rule that proves home-hero.css, imported statically by the
+  // page, is in the sheet the first paint actually blocks on. Without the
+  // control, both budgets below would pass against whichever stylesheet the
+  // build happened to name `index-*.css`.
   assert.match(css, /--bg-0:/, 'the entry stylesheet carries no design tokens — is this the right file?')
-  assert.match(css, /\.sp-hero-h1/, 'the entry stylesheet does not style the sales page headline')
+  assert.match(css, /\.hh-h1/, 'the entry stylesheet does not style the homepage hero headline')
 
   const raw = Buffer.byteLength(css)
   const gzip = zlib.gzipSync(Buffer.from(css), { level: 9 }).length

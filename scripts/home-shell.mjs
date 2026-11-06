@@ -27,7 +27,7 @@
 // string reappears in index.html. tests/unit/home-shell-hero.test.js is the
 // equivalent guard for this sentence: index.html and this file must both
 // contain none of it, and what this module emits must equal what
-// src/pages/Home.jsx renders, part for part.
+// src/components/home/HomeHero.jsx renders, part for part.
 //
 // ── WHY THE MARKUP IS THE HYDRATED MARKUP, ELEMENT FOR ELEMENT ──────────────
 //
@@ -44,14 +44,13 @@
 //   DOM node, so if it paints bigger than the shell's did, LCP moves back to
 //   hydration and this whole file buys nothing.
 //
-// Both are answered the same way: emit `.home > main > header.home-hero >
-// .home-hero-core > h1.home-hero-h1` with the same two `.home-hero-line` /
-// `.home-hero-line-in` spans and the same `<mark class="home-mark">`, and let
-// src/styles/global.css — the render-blocking sheet, already paid for by FCP —
-// do the typography. Font, size, weight, line-height, letter-spacing, wrap
-// points and position then come from ONE set of rules, not from a copy of them.
-// `.home-hero`'s padding-top already reserves the fixed nav's height, so the
-// skeleton nav below is `position:fixed` and contributes nothing to flow.
+// Both are answered the same way: emit `.spectrum > main > section.hh-hero >
+// .hh-copy > h1.hh-h1` with the marked run in one `span.hh-h1-mark`, and let
+// src/styles/pages/home-hero.css, the render-blocking sheet, do the typography.
+// Font, size, weight, line-height, letter-spacing, wrap points and position
+// then come from ONE set of rules, not from a copy of them. The hero's
+// padding-top reserves the nav's height, so the skeleton nav below is
+// `position:fixed` and contributes nothing to flow.
 //
 // ── WHAT A VISITOR SEES BETWEEN FIRST PAINT AND HYDRATION, AND WHY ──────────
 //
@@ -92,13 +91,9 @@
 // there — an arrival — and the clip-up plays as it always has.
 // `prefers-reduced-motion` is untouched: those two rules in global.css already
 // say `animation:none`, and none of this restates them.
-// The Spectrum headline. ONE module feeds both the hydrated hero and this
-// shell.
-import { SPECTRUM_HERO } from '../src/components/spectrum/spectrumHero.js'
+// The hero's words: one module feeds both the hydrated hero and this shell.
+import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../src/components/spectrum/spectrumHero.js'
 import { logoSvg } from '../src/config/brandLogo.js'
-
-const heroHeadlineText = () => SPECTRUM_HERO.text
-const HERO_HEADLINE = SPECTRUM_HERO
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
 const text = (s) => String(s)
@@ -148,91 +143,24 @@ export const HOME_SHELL_ROUTES = new Set(['/', '/home'])
 /**
  * The `/` shell's #root contents.
  *
- * ── RE-POINTED AT SPECTRUM, 2026-09-18 ──────────────────────────────────────
+ * The hero is the chain src/components/home/HomeHero.jsx renders, so the served
+ * headline sits on the same pixels the hydrated one will:
+ * `.spectrum > main > section#top.hh-hero > .hh-copy > h1.hh-h1`, with the
+ * marked run in a single `span.hh-h1-mark`, then the sub-line. The headline is
+ * plain text with no entrance, so its first painted frame is its settled one.
+ * The typography comes from src/styles/pages/home-hero.css, which is in the
+ * render-blocking sheet.
  *
- * This emitted `.home-hero > .home-hero-core > h1.home-hero-h1` for as long as
- * Home.jsx was the sales page. Home.jsx is deleted and `/` renders
- * src/pages/Spectrum.jsx, so the shell emits SPECTRUM's hero chain. Leaving the
- * old chain would have been worse than emitting nothing: the rules that painted
- * it went out of global.css in the same commit, so the served document would
- * have flashed an unstyled headline and then jumped.
- *
- * THE WORD SPANS ARE NOT DECORATION AND THEY HAVE TO BE HERE. `.sp-wm` is
- * `display:inline-block; overflow:hidden; vertical-align:bottom`, and an
- * inline-block with `overflow:hidden` takes its baseline from its bottom margin
- * edge rather than from its last line box. Emitting the sentence as plain text
- * would therefore paint it on a different baseline from the hydrated copy —
- * a layout shift, and a second LCP candidate, which is the pair of failures the
- * header of this file exists to prevent.
- *
- * AND THEY ARE SAFE TO PRE-PAINT, which the old hero's were not. The header
- * above records why the home hero could not be shown settled without also
- * disabling its clip-up: its resting state was a 2369px² sliver. `.sp-w`
- * declares no transform at rest — spectrum.css puts the movement in
- * `@keyframes sp-word-up`, which only exists under an ancestor carrying
- * `.is-in` — so the resting state IS the final state. The shell paints the full
- * box on its first frame, and Spectrum.jsx reads `data-hero-prepainted` on
- * mount and never adds `.is-in`, so the hydrated copy never animates over it.
- *
- * THE SPLIT IS REIMPLEMENTED, NOT IMPORTED, and that is a deliberate limit.
- * src/components/spectrum/SpectrumWords.jsx is JSX and this is a Node script;
- * what must not be duplicated is the SENTENCE, and it is not — every word here
- * comes from HERO_HEADLINE. tests/unit/home-shell-hero.test.js compares what
- * this emits against `heroHeadlineText()` and against the class chain read out
- * of SpectrumWords.jsx, so the two splitters cannot drift in either the words
- * or the elements without the build going red.
- *
- * `id="boot-shell"` STAYS, and so do the three things read through it:
+ * `id="boot-shell"` stays, and so do the things read through it:
  * tests/user-sim/helpers.js `ready()` treats its absence as "React has
  * committed", and 04-premium-home.spec.js asserts the status live region, the
- * single `aria-hidden` decoration wrapper and a `.boot-card` whose shimmer is
- * off under reduced motion. The decoration moved AFTER `<main>` so the skeleton
- * strip flows below the hero instead of pushing it down; the nav inside it is
- * fixed, so where it sits in the tree does not matter.
+ * single `aria-hidden` decoration wrapper and a `.boot-card`. The decoration
+ * comes AFTER `<main>` so the skeleton strip flows below the hero instead of
+ * pushing it down; the nav inside it is fixed, so where it sits in the tree
+ * does not matter.
  */
-
-/**
- * The headline as SpectrumWords renders it: one `.sp-wm` clip per word, one
- * `.sp-w` inside it carrying its stagger index, and a REAL space text node
- * between the wrappers — two adjacent inline-blocks with nothing between them
- * render "Buildandexport", which is a defect SpectrumWords.jsx records finding
- * in the browser.
- *
- * The marked run is matched as WHOLE WORDS, with trailing punctuation stripped
- * from the last one only, which is SpectrumWords' own rule: a substring match
- * could paint half a word in the accent.
- */
-function heroWords() {
-  const words = heroHeadlineText().split(/\s+/).filter(Boolean)
-  const markWords = HERO_HEADLINE.mark.split(/\s+/).filter(Boolean)
-
-  let markStart = -1
-  for (let i = 0; markWords.length && i + markWords.length <= words.length; i += 1) {
-    const window = words.slice(i, i + markWords.length)
-    const ok = window.every((w, j) => {
-      const isLast = j === markWords.length - 1
-      return (isLast ? w.replace(/[.,;:!?]+$/, '') : w) === markWords[j]
-    })
-    if (ok) { markStart = i; break }
-  }
-
-  // The marked run is ONE word, its trailing punctuation outside the accent in
-  // a .sp-w-tail: SpectrumWords' `joinMark`, which the hero uses.
-  const items = []
-  for (let i = 0; i < words.length; i += 1) {
-    if (markStart > -1 && i === markStart) {
-      const run = words.slice(markStart, markStart + markWords.length).join(' ')
-      const tail = /[.,;:!?]+$/.exec(run)?.[0] || ''
-      items.push({ word: tail ? run.slice(0, -tail.length) : run, marked: true, tail })
-      i = markStart + markWords.length - 1
-    } else {
-      items.push({ word: words[i], marked: false, tail: '' })
-    }
-  }
-  return items.map(({ word, marked, tail }, i) => {
-    const tailHtml = tail ? `<span class="sp-w-tail">${text(tail)}</span>` : ''
-    return `<span class="sp-wm" data-sp-wm=""><span class="${marked ? 'sp-w sp-w--mark' : 'sp-w'}" data-sp-w="" style="--sp-wi:${i}">${text(word)}${tailHtml}</span></span>`
-  }).join(' ')
+function heroH1() {
+  return `<h1 class="hh-h1">${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>${text(SPECTRUM_HERO.tail)}</h1>`
 }
 
 export function homeShellRoot() {
@@ -242,11 +170,13 @@ export function homeShellRoot() {
     <div class="spectrum">
       <div class="sp-grain" aria-hidden="true"></div>
       <main>
-        <header class="sp-hero">
-          <div class="sp-shell sp-hero-core">
-            <h1 class="sp-hero-h1"><span class="sp-words"><span class="sr-only">${text(heroHeadlineText())}</span><span aria-hidden="true" class="sp-words-visual">${heroWords()}</span></span></h1>
+        <section id="top" class="hh-hero">
+          <div class="hh-glow" aria-hidden="true"><span></span></div>
+          <div class="hh-copy">
+            ${heroH1()}
+            <p class="hh-sub">${text(SPECTRUM_HERO_SUB)}</p>
           </div>
-        </header>
+        </section>
       </main>
       <div class="boot-decoration" aria-hidden="true">
         <div class="boot-nav">
@@ -314,11 +244,10 @@ export function applyHomeShell(html) {
  */
 export function assertHomeShellApplied(html, where) {
   const wanted = [
-    ['the h1', '<h1 class="sp-hero-h1">'],
-    ['the LCP element', 'class="sp-words-visual"'],
-    ['the highlight', 'class="sp-w sp-w--mark"'],
-    ['the screen-reader sentence', `<span class="sr-only">${text(heroHeadlineText())}</span>`],
-    ['the word split', 'data-sp-w=""'],
+    ['the hero section', '<section id="top" class="hh-hero">'],
+    ['the h1', '<h1 class="hh-h1">'],
+    ['the lead', `${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">`],
+    ['the highlight', `<span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>`],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
