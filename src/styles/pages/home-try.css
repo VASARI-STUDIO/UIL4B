@@ -65,18 +65,19 @@
   background: #060607; border-bottom: 1px solid var(--hair);
 }
 @media (max-width: 767px) { .ht-names { max-width: none; margin-inline: -20px; padding-inline: 20px; margin-bottom: 16px; } }
-.ht-n {
+/* `.ht .ht-n` outranks the `.ht button` colour reset above. */
+.ht .ht-n {
   display: block; width: 100%; height: 44px; padding: 0; border: 0; background: none;
   font-size: 14px; font-weight: 500; line-height: 1.1; text-align: center; white-space: nowrap;
   color: rgba(var(--ink), .62);
   transition: color 150ms var(--ease);
 }
-.ht-n[aria-current="true"] { color: #EFEEEA; }
-.ht-n:focus-visible { outline-offset: -2px; }
-@media (max-width: 767px) { .ht-n { font-size: 13px; } .ht-n[aria-current="true"] { font-weight: 600; } }
+.ht .ht-n[aria-current="true"] { color: #EFEEEA; }
+.ht .ht-n:focus-visible { outline-offset: -2px; }
+@media (max-width: 767px) { .ht .ht-n { font-size: 13px; } .ht .ht-n[aria-current="true"] { font-weight: 600; } }
 @media (hover: hover) {
-  .ht-n:hover { color: rgba(var(--ink), .86); }
-  .ht-n[aria-current="true"]:hover { color: #EFEEEA; }
+  .ht .ht-n:hover { color: rgba(var(--ink), .86); }
+  .ht .ht-n[aria-current="true"]:hover { color: #EFEEEA; }
 }
 /* The marker slides under the active name (one quarter of the row each). */
 .ht-mark {
@@ -102,7 +103,7 @@
   .ht-left { display: block; grid-column: 1; grid-row: 1; position: sticky; top: max(8px, calc(50vh - 300px)); height: 600px; align-self: start; }
   .ht-names { position: relative; top: auto; z-index: auto; display: block; height: auto; max-width: none; margin: 0; background: none; border: 0; }
   .ht-it { display: block; }
-  .ht-n {
+  .ht .ht-n {
     position: relative; height: 72px; padding: 0 0 0 28px; font-size: 48px; font-weight: 600;
     line-height: 1.1; letter-spacing: -.035em; text-align: left; color: rgba(var(--ink), .56);
   }
@@ -462,21 +463,18 @@
 
 /* ── phones: each tool is a 580px card, its link and next step beneath it ─── */
 
-.ht-names [data-s] { display: none; }
+.ht-names [data-s], .ht-h3 [data-s] { display: none; }
 @media (max-width: 767px) {
-  .ht-names [data-l] { display: none; }
-  .ht-names [data-s] { display: inline; }
+  .ht-names [data-l], .ht-h3 [data-l] { display: none; }
+  .ht-names [data-s], .ht-h3 [data-s] { display: inline; }
   .ht-stage { display: flex; flex-direction: column; }
   /* The description wrapper drops out so its two lines can sit either side of the card. */
   .ht-d { display: contents; }
   .ht-lead { order: 1; margin-top: 8px; }
-  .ht-fr { order: 2; height: auto; margin-top: 16px; padding: 0; border-radius: 0; background: none; overflow: visible; }
-  .ht-fr::after { display: none; }
+  /* The frame is the card: the tool and its foot sit inside it, the next-step text beneath. */
+  .ht-fr { order: 2; height: 580px; margin-top: 16px; padding: 13px; }
   .ht-next { order: 3; margin-top: 12px; }
-  .ht-tool {
-    flex: none; height: 580px; margin-bottom: 0; padding: 12px; overflow: hidden; isolation: isolate;
-    border: 1px solid var(--hair); border-radius: 16px; background: #0F1012;
-  }
+  .ht-tool { margin-bottom: 0; overflow: hidden; }
   .ht-ft { height: auto; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 12px; padding-top: 0; border-top: 0; }
   .ht-ln { order: -1; white-space: normal; text-overflow: clip; min-height: 20px; }
   .ht-go { justify-content: center; height: 48px; padding: 0 14px 0 16px; }

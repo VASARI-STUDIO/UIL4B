@@ -202,7 +202,7 @@ export default function HomeTry() {
                 onFocus={() => onStageFocus(i)}
                 onKeyDown={(e) => onStageKey(e, i)}
               >
-                <h3 className="ht-h3" id={`ht-h3-${i}`}>{t.name}</h3>
+                <h3 className="ht-h3" id={`ht-h3-${i}`}><span data-l>{t.name}</span><span data-s>{t.short}</span></h3>
                 {/* On phones the lead sits under the name and the next-step text under the link. */}
                 <div className="ht-d ht-info" id={`ht-d-${i}`}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
                 <div className="ht-fr">{t.body}</div>
