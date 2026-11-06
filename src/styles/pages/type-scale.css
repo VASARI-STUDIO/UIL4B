@@ -16,8 +16,9 @@
  * shows the Scale / Page / Code switch, one view at a time.
  * The panel is first in the source, so under 1024px it is a card above the
  * work with no CSS reordering, and from 1024px the grid puts it beside the
- * work. Phone: a Base and Ratio strip above the ladder, and a non-modal
- * settings sheet capped at 55% of the viewport.
+ * work. Phone: no view switch; the width, the page and the ladder are one
+ * scroll, and a non-modal sheet (Settings and Code tabs) holds everything else,
+ * capped at 55% of the viewport.
  * Docked bar: Save to a project (Code and Save in the split; Save and Copy CSS
  * on a phone). */
 
@@ -354,10 +355,11 @@
 .tsc-page .tsc-slider-k { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
 .tsc-page .tsc-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 
-/* The sheet's row and head exist on a phone only. */
-.tsc-page .tsc-sheet-row,
+/* The sheet's head and the Code tab exist on a phone only. */
 .tsc-page .tsc-sheet-head { display: none; }
-.tsc-page .tsc-sheet-body { display: contents; }
+.tsc-page .tsc-sheet-body,
+.tsc-page .tsc-sheet-set { display: contents; }
+.tsc-page .tsc-sheet-set[hidden] { display: none; }
 
 /* ── The grid ────────────────────────────────────────────────────────────────
    The panel is first in the source, so under 1024 it reads, tabs and shows
@@ -375,32 +377,14 @@
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* The panel dissolves: its first section is the Base and Ratio strip above
-     the ladder, its row opens the sheet, and the sheet floats. They come
-     before the ladder in the source, so nothing is reordered. */
+  /* The panel dissolves: only the floating sheet is left of it, and the work
+     column is the whole page. */
   .tsc-page .tsc-config { display: contents; }
-  .tsc-page .tsc-sec-scale { padding: 0; border: 0; }
+  .tsc-page .tsc-sec-scale { border: 0; }
   .tsc-page .tsc-scale-bar { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: end; }
   .tsc-page .tsc-scale-term--base .tsc-range input[type="range"] { display: none; }
   .tsc-page .tsc-scale-term--base .snapv-value,
   .tsc-page .tsc-scale-term--base .snapv-input { order: 0; flex: 1; }
-  .tsc-page .tsc-scale-out { display: none; }
-  .tsc-page .tsc-sheet-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 44px;
-    padding: 0;
-    border: 0;
-    border-bottom: 1px solid var(--tl-hair);
-    background: transparent;
-    color: var(--tl-ink);
-    font-family: var(--font);
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
   /* Phone: the sample takes the row's full width, under its token and value. */
   .tsc-page .tsc-row { padding-inline: 16px; }
   .tsc-page .tsc-row:has(.is-first) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
@@ -428,9 +412,18 @@
   }
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom)); }
   .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
-  .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
-  .tsc-page .tsc-sheet-title { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
+  /* The Code tab is the taller sheet; its code scrolls with the sheet. */
+  .tsc-page .tsc-sheet[data-tab="code"] { max-height: min(72dvh, 620px); }
+  .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
+  .tsc-page .tsc-sheet-tabs { flex: 1 1 auto; max-width: 224px; flex-wrap: nowrap; }
+  .tsc-page .tsc-sheet-tabs .tsc-sheet-tab { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 12px; white-space: nowrap; }
+  .tsc-page .tsc-sheet-done { flex: none; }
   .tsc-page .tsc-sheet-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: max(0px, env(safe-area-inset-left, 0px)); }
+  .tsc-page .tsc-sheet-set { display: block; }
+  .tsc-page .tsc-sheet-code { display: grid; gap: 12px; min-width: 0; padding: 12px 16px 24px; }
+  .tsc-page .tsc-sheet-code .tsc-fmt { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; flex-wrap: nowrap; overflow: visible; }
+  .tsc-page .tsc-sheet-code .tsc-fmt-btn { justify-content: center; min-width: 0; white-space: nowrap; }
+  .tsc-page .tsc-sheet-code .tsc-export { max-height: none; overflow-x: auto; overflow-y: visible; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* The walkthrough's bar stacks on the dock (the tab bar is hidden then), so the
      sheet sits above both. */
@@ -491,10 +484,7 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-words-row .tsc-tuning-toggle { width: auto; }
 }
 
-/* Phone: the settings row shows the families. */
 @media (max-width: 767px) {
-  .tsc-page .tsc-sheet-row-value { margin-left: auto; min-width: 0; max-width: 55%; overflow: hidden; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-  .tsc-page .tsc-sheet-row-label { flex: 0 0 auto; }
   .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
   /* The tab bar's rule is more specific; with the keyboard up the sheet sits on the keyboard, not on the dock. */
   html.has-tabbar .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); }
@@ -575,4 +565,22 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
 }
 @media (max-width: 359px) {
   .tsc-page .tsc-dock-ratio-v { display: none; }
+}
+
+/* ── Phone: width, page and ladder in one scroll ────────────────────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tsc-view[data-view="stack"] { display: grid; gap: 24px; min-width: 0; }
+  .tsc-page .tsc-view[data-view="stack"] .tsc-page-view { gap: 0; }
+  .tsc-page .tsc-steps-line { margin: 0; padding: 12px 16px 0; font-size: max(var(--fs-caption), 13px); line-height: 18px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+  .tsc-page .tsc-steps-line + .tsc-use { padding-top: 8px; }
+  .tsc-page .tsc-sample-line,
+  .tsc-page .tsc-lit-note { margin: 8px 0 0; font-size: max(var(--fs-caption), 13px); line-height: 18px; color: var(--tl-dim); text-wrap: pretty; }
+}
+@media (max-width: 359px) {
+  /* The three width buttons share a 320px row: the label alone fits. */
+  .tsc-page .tsc-width-btn .tsc-width-px { display: none; }
+}
+@media (max-width: 359px) {
+  /* Base size and Ratio take a row each, so the ratio's name has room. */
+  .tsc-page .tsc-scale-bar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }

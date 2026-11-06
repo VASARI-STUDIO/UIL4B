@@ -24,7 +24,7 @@ import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
 import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
-import { ladderNote } from '../components/typescale/kerbsideSteps'
+import { ladderNote, usedStepNames } from '../components/typescale/kerbsideSteps'
 import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -258,10 +258,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const [width, setWidth] = useState(deviceWidth)
   const [view, setView] = useState('scale')
   const [sheetOpen, setSheetOpen] = useState(false)
+  // The sheet's two tabs: the settings, and the code for the scale.
+  const [sheetTab, setSheetTab] = useState('settings')
   const phone = useMedia('(max-width: 767px)')
   const ladderRef = useRef(null)
   const pageColRef = useRef(null)
-  const sheetRowRef = useRef(null)
   const dockRatioRef = useRef(null)
   // Whichever control opened the sheet, so closing it gives focus back there.
   const sheetOpenerRef = useRef(null)
@@ -611,11 +612,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // chosen width doesn't fit and lines wrap sooner.
   useEffect(() => {
     const el = pageColRef.current
-    if ((view !== 'page' && !split) || (split && half === 'code') || !el || typeof ResizeObserver === 'undefined') return undefined
+    const pageShown = split ? half !== 'code' : phone || view === 'page'
+    if (!pageShown || !el || typeof ResizeObserver === 'undefined') return undefined
     const ro = new ResizeObserver(() => setColW(el.clientWidth))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view, split, half])
+  }, [view, split, half, phone])
 
   // Measure the work column before it paints, then follow it as it resizes.
   useLayoutEffect(() => {
@@ -636,8 +638,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The settings sheet is non-modal. Opening it brings the ladder up under the
   // toolbar, so the steps stay in view above it.
-  const openSheet = (opener = sheetRowRef.current) => {
+  const openSheet = (opener) => {
     sheetOpenerRef.current = opener
+    setSheetTab('settings')
     setSheetOpen(true)
     requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
   }
@@ -791,6 +794,18 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     '--tsc-body-ls': `${bodyTrack}em`,
   }
   const activeWidth = WIDTHS.find(w => w.id === width) || DESKTOP
+  // A phone is one scroll: the width, the page, then the ladder, with Code in the
+  // sheet. From 768 the Scale / Page / Code switch (or the split) takes over.
+  const stackedView = phone && !split
+  const codeTab = stackedView && sheetTab === 'code'
+  const stepsLine = `${steps.length} step${steps.length === 1 ? '' : 's'}, ${steps[steps.length - 1].px}px to ${steps[0].px}px`
+  // The step pressed in the ladder, when the page never sets it.
+  const litUnused = litStep && !usedStepNames(steps, up, !!user).has(litStep)
+  // On a phone the screen keeps the phone's width whatever is chosen, so the note
+  // only speaks when another width is.
+  const widthNote = stackedView
+    ? (width !== 'mobile' ? `Sizes are shown as they fall at ${activeWidth.px}px wide. The screen keeps this phone’s width.` : '')
+    : `Sizes as on a ${activeWidth.px}px screen.${colW > 0 && colW < activeWidth.px - 1 ? ' Lines wrap sooner here.' : ''}`
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
   // The chevrons walk the named ratios; each row of the list says what the top step would be.
   const namedRatios = RATIOS.filter(r => r.value)
@@ -829,7 +844,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const ladderView = (
     <div className="tsc-ladder" ref={ladderRef} data-ladder="" data-ground={ground}>
       <h2 className="sr-only">Read the scale</h2>
-      <p className="tsc-use" role="status">{ladderNote(steps, up, !!user, litStep)}</p>
+      {stackedView && <p className="tsc-steps-line" aria-live="polite">{stepsLine}</p>}
+      <p className="tsc-use" role="status">{stackedView ? ladderNote(steps, up, !!user, '') : ladderNote(steps, up, !!user, litStep)}</p>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
           Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
@@ -944,7 +960,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   const pageView = (
     <div className="tsc-page-view">
-      <div className="tsc-page-bar">
+      {stackedView ? (
+        <h2 className="sr-only">{user ? 'A sample screen set on this scale' : 'Kerbside’s tracking screen, set on this scale'}</h2>
+      ) : <div className="tsc-page-bar">
         {split ? (
           <SlidePills className="tsc-half-switch tl-pills" role="group" aria-label="Show beside the scale" value={half}>
             {[['page', 'Page'], ['code', 'Code']].map(([id, label]) => (
@@ -960,7 +978,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             ))}
           </SlidePills>
         ) : <p className="tsc-page-label">Page set on this scale</p>}
-      </div>
+      </div>}
       {split && half === 'code' ? <div className="tsc-developer-view"><div className="tsc-developer-bar">{formatPills}{exportCopy}</div>{exportPre}</div> : <>
       <div className="tsc-page-col" ref={pageColRef}>
         <div className="tsc-kerb" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
@@ -976,9 +994,94 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             onRetry={retryFace}
           />
         </div>
+        {stackedView && !user && <p className="tsc-sample-line">Kerbside &middot; sample screen</p>}
+        {stackedView && litUnused && <p className="tsc-lit-note" role="status">Nothing on this page uses {litStep}.</p>}
       </div>
       </>}
     </div>
+  )
+
+  // The Base and Ratio strip. From 768 it is the first section of the panel; on a phone it
+  // is the top of the settings sheet.
+  const scaleSection = (
+    <ToolSection className="tsc-sec-scale">
+      <div className="tsc-scale-bar" role="group" aria-label="The scale">
+        <div className="tsc-scale-term tsc-scale-term--base">
+          <label className="tsc-k" htmlFor="tsc-base">Base size</label>
+          <SnapSlider
+            id="tsc-base"
+            className="tsc-range"
+            min={10}
+            max={28}
+            value={base}
+            defaultValue={DEFAULTS.base}
+            snaps={[14, 16, 18, 20]}
+            unit="px"
+            inputMin={8}
+            inputMax={40}
+            onChange={changeBase}
+            ariaLabel="Base font size in pixels"
+          />
+        </div>
+        <div className="tsc-scale-term tsc-scale-term--ratio">
+          <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
+          <div className="tsc-ratio-row">
+            <button
+              type="button"
+              className="tsc-ratio-step"
+              aria-label="Previous ratio"
+              disabled={ratioAt <= 0}
+              onClick={() => changeRatioId(namedRatios[ratioAt - 1].id)}
+            >
+              <ToolIcon name="arrow-left" size={16} />
+            </button>
+            <MenuSelect label="Scale ratio"
+              id="tsc-ratio"
+              className="tsc-select tsc-scale-select"
+              value={ratioId}
+              options={ratioOptions}
+              onChange={nextValue => changeRatioId(nextValue)}
+            />
+            <button
+              type="button"
+              className="tsc-ratio-step"
+              aria-label="Next ratio"
+              disabled={ratioAt < 0 || ratioAt >= namedRatios.length - 1}
+              onClick={() => changeRatioId(namedRatios[ratioAt + 1].id)}
+            >
+              <ToolIcon name="arrow-right" size={16} />
+            </button>
+          </div>
+        </div>
+        {ratioId === 'custom' && (
+          <div className="tsc-scale-term tsc-scale-custom">
+            <label className="tsc-k" htmlFor="tsc-custom">Custom ratio</label>
+            <SnapSlider
+              id="tsc-custom"
+              className="tsc-range"
+              min={1.05}
+              max={2}
+              step={0.001}
+              decimals={3}
+              value={customRatio}
+              defaultValue={DEFAULTS.custom}
+              snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
+              snapRadius={0.012}
+              inputMin={1.01}
+              inputMax={3}
+              onChange={changeCustomRatio}
+              ariaLabel="Custom scale ratio"
+            />
+          </div>
+        )}
+      </div>
+      {(!phone || ratioHint) && (
+        <p className="tsc-scale-out" aria-live="polite">
+          {!phone && <span className="tsc-scale-range">{stepsLine}</span>}
+          {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
+        </p>
+      )}
+    </ToolSection>
   )
 
   return layout(
@@ -987,108 +1090,41 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         {/* The panel is first in the source, so reading order, Tab order and
             what's on screen agree below 1024: Base and Ratio, then the
             families, then the ladder. From 1024 the grid puts it in the right
-            column. Phone: the Base and Ratio strip above the ladder, and
-            everything else in a non-modal sheet. */}
+            column. Phone: all of it, and the Code tab, is in the non-modal
+            sheet the dock opens. */}
         <ToolPanel label="Type Scale controls" className="tsc-panel tsc-config">
-          <ToolSection className="tsc-sec-scale">
-            <div className="tsc-scale-bar" role="group" aria-label="The scale">
-              <div className="tsc-scale-term tsc-scale-term--base">
-                <label className="tsc-k" htmlFor="tsc-base">Base size</label>
-                <SnapSlider
-                  id="tsc-base"
-                  className="tsc-range"
-                  min={10}
-                  max={28}
-                  value={base}
-                  defaultValue={DEFAULTS.base}
-                  snaps={[14, 16, 18, 20]}
-                  unit="px"
-                  inputMin={8}
-                  inputMax={40}
-                  onChange={changeBase}
-                  ariaLabel="Base font size in pixels"
-                />
-              </div>
-              <div className="tsc-scale-term tsc-scale-term--ratio">
-                <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
-                <div className="tsc-ratio-row">
-                  <button
-                    type="button"
-                    className="tsc-ratio-step"
-                    aria-label="Previous ratio"
-                    disabled={ratioAt <= 0}
-                    onClick={() => changeRatioId(namedRatios[ratioAt - 1].id)}
-                  >
-                    <ToolIcon name="arrow-left" size={16} />
-                  </button>
-                  <MenuSelect label="Scale ratio"
-                    id="tsc-ratio"
-                    className="tsc-select tsc-scale-select"
-                    value={ratioId}
-                    options={ratioOptions}
-                    onChange={nextValue => changeRatioId(nextValue)}
-                  />
-                  <button
-                    type="button"
-                    className="tsc-ratio-step"
-                    aria-label="Next ratio"
-                    disabled={ratioAt < 0 || ratioAt >= namedRatios.length - 1}
-                    onClick={() => changeRatioId(namedRatios[ratioAt + 1].id)}
-                  >
-                    <ToolIcon name="arrow-right" size={16} />
-                  </button>
-                </div>
-              </div>
-              {ratioId === 'custom' && (
-                <div className="tsc-scale-term tsc-scale-custom">
-                  <label className="tsc-k" htmlFor="tsc-custom">Custom ratio</label>
-                  <SnapSlider
-                    id="tsc-custom"
-                    className="tsc-range"
-                    min={1.05}
-                    max={2}
-                    step={0.001}
-                    decimals={3}
-                    value={customRatio}
-                    defaultValue={DEFAULTS.custom}
-                    snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
-                    snapRadius={0.012}
-                    inputMin={1.01}
-                    inputMax={3}
-                    onChange={changeCustomRatio}
-                    ariaLabel="Custom scale ratio"
-                  />
-                </div>
-              )}
-            </div>
-            <p className="tsc-scale-out" aria-live="polite">
-              <span className="tsc-scale-range">
-                {steps.length} step{steps.length === 1 ? '' : 's'}, {steps[steps.length - 1].px}px to {steps[0].px}px
-              </span>
-              {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
-            </p>
-          </ToolSection>
+          {!phone && scaleSection}
 
-          <button
-            type="button"
-            ref={sheetRowRef}
-            className="tsc-sheet-row"
-            aria-expanded={sheetOpen}
-            aria-controls="tsc-sheet"
-            onClick={() => (sheetOpen ? closeSheet() : openSheet())}
-          >
-            <span className="tsc-sheet-row-label">Families, preview text and fine tuning</span>
-            <span className="tsc-sheet-row-value">{degraded ? `${catalog.length} bundled families` : headingName === bodyName ? headingName : `${headingName} · ${bodyName}`}</span>
-            <ToolIcon name="caret-right" size={13} />
-          </button>
-
-          <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'}>
+          <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Scale, families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'} data-tab={codeTab ? 'code' : 'settings'}>
             <div className="tsc-sheet-head">
-              <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
+              <h2 className="sr-only">{codeTab ? 'Code' : 'Type settings'}</h2>
+              <SlidePills className="tsc-sheet-tabs tl-pills" role="group" aria-label="Sheet" value={sheetTab}>
+                {[['settings', 'Settings'], ['code', 'Code']].map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={sheetTab === id ? 'tsc-sheet-tab tl-pill is-on' : 'tsc-sheet-tab tl-pill'}
+                    aria-pressed={sheetTab === id}
+                    onClick={() => setSheetTab(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </SlidePills>
               <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
             {/* A field that takes focus while the keyboard is up scrolls into the room above it. */}
             <div className="tsc-sheet-body" onFocus={(e) => { if (e.target.matches?.('input, textarea')) e.target.scrollIntoView?.({ block: 'nearest' }) }}>
+              {codeTab && (
+                <div className="tsc-sheet-code">
+                  {formatPills}
+                  {exportPre}
+                </div>
+              )}
+              {/* Kept mounted behind the Code tab, so a field's state and the open
+                  fine-tuning group are still there when Settings comes back. */}
+              <div className="tsc-sheet-set" hidden={codeTab}>
+              {phone && scaleSection}
               <ToolSection className="tsc-fonts">
                 <FontCatalogNotice
                   online={online}
@@ -1337,6 +1373,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               </div>
             </div>
           </ToolSection>
+              </div>
             </div>
           </div>
         </ToolPanel>
@@ -1344,9 +1381,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         {/* The work column. It is a size container (see type-scale.css) and is
             measured as one: from SPLIT_MIN the ladder and the page sit side by
             side and Code is a view beside the scale; below it the
-            Scale / Page / Code switch shows one view at a time. */}
+            Scale / Page / Code switch shows one view at a time. On a phone
+            there is no switch: the width, the page and the ladder are one
+            scroll, and Code is a tab in the sheet. */}
         <ToolMain className="tsc-output" ref={setWorkEl}>
-          {!split && (
+          {!stackedView && !split && (
             <div className="tsc-view-bar">
               <SlidePills className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view" value={view}>
                 {VIEWS.map(([id, label]) => (
@@ -1370,28 +1409,27 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           )}
 
           {/* The page header: the width every size on the page is read at. */}
-          {(split || view !== 'code') && (
+          {(split || stackedView || view !== 'code') && (
             <div className="tsc-width-bar">
               <span className="tsc-width-k" id="tsc-width-k">Preview width</span>
               {widthSegment}
-              <p className="tsc-width-note" role="status">
-                Sizes as on a {activeWidth.px}px screen.{colW > 0 && colW < activeWidth.px - 1 ? ' Lines wrap sooner here.' : ''}
-              </p>
+              {widthNote && <p className="tsc-width-note" role="status">{widthNote}</p>}
             </div>
           )}
 
           <div
             id="tsc-view-panel"
-            role={split ? undefined : 'tabpanel'}
-            aria-labelledby={split ? undefined : `tsc-tab-${view}`}
+            role={split || stackedView ? undefined : 'tabpanel'}
+            aria-labelledby={split || stackedView ? undefined : `tsc-tab-${view}`}
             className="tsc-view"
-            data-view={split ? 'split' : view}
+            data-view={split ? 'split' : stackedView ? 'stack' : view}
             data-width={width}
             ref={varsRef(previewVars)}
           >
-            {(split || view === 'scale') && ladderView}
-            {(split || view === 'page') && pageView}
-            {!split && view === 'code' && (
+            {stackedView && <>{pageView}{ladderView}</>}
+            {!stackedView && (split || view === 'scale') && ladderView}
+            {!stackedView && (split || view === 'page') && pageView}
+            {!stackedView && !split && view === 'code' && (
               <div className="tsc-developer-view">
                 {formatPills}
                 {exportPre}
