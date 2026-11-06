@@ -60,7 +60,7 @@ test('sliders snap to their detents and not outside the radius', () => {
 test('temperature snaps at -50, 0 and 50, each with its own radius', () => {
   // Mutation: drop the [-50, 6] or [50, 6] detent from TEMP, or give 0 the radius 6 instead of 12.
   assert.equal(snap(TEMP, -45), -50)
-  assert.equal(snap(TEMP, -44), -44)
+  assert.equal(snap(TEMP, -43), -43)
   assert.equal(snap(TEMP, 56), 50)
   assert.equal(snap(TEMP, 57), 57)
   assert.equal(snap(TEMP, 12), 0)
