@@ -33,8 +33,8 @@
 .bm-fold:active { transform: none; background-color: rgba(239, 238, 234, .12); }
 
 /* ── The stage ─────────────────────────────────────────────────────────────── */
-.bm-frame { margin-top: 80px; }
-.bm-stage { position: relative; isolation: isolate; width: 1336px; height: 640px; margin: 0 auto; }
+/* The gap above the stage sits on the stage, so the zoom scales it with the rest. */
+.bm-stage { position: relative; isolation: isolate; width: 1336px; height: 640px; margin: 80px auto 0; }
 /* Scaled as one piece so nothing scrolls sideways; zoom shrinks the layout height too. */
 @media (max-width: 1439px) { .bm-stage { zoom: .86; } }
 @media (max-width: 1252px) { .bm-stage { zoom: .82; } }
@@ -258,7 +258,10 @@
   .bm-h { font-size: 60px; }
   .bm-head { gap: 16px; }
   .bm-sub { font-size: 18px; line-height: 1.6; }
-  .bmp { max-width: 560px; margin-top: 40px; }
+  /* Heading, sub-line and the layout share one centred 640px column; the tools go three up. */
+  .bm-wide { max-width: 640px; }
+  .bmp { margin-top: 40px; }
+  .bmp .bmp-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .bmp, .bmp *, .bmp *::before, .bmp *::after { box-sizing: border-box; }
