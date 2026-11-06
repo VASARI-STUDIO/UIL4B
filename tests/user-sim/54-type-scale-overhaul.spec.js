@@ -94,11 +94,11 @@ test.describe('Type Scale · the overhaul', () => {
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
     await expect(range).toHaveText('9 steps, 10px to 61px')
-    await expect(largest).toContainText('61px')
+    await expect(largest).toHaveText(/^61 \//)
 
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
     await expect(range).toHaveText('9 steps, 7px to 182.5px')
-    await expect(largest).toContainText('182.5px')
+    await expect(largest).toHaveText(/^182\.5 \//)
 
     // And the base, from its own control in the same bar.
     await page.locator('#tsc-base + .snapv-value').click()
@@ -199,8 +199,8 @@ test.describe('Type Scale · the overhaul', () => {
     // one decimal, so the top step (61.04) reads 61px with or without rounding; the
     // second step shows it: 16 x 1.25^5 = 48.83 reads 49px rounded and 48.8px not.
     const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
-    await expect(second).toContainText('49px')
+    await expect(second).toHaveText(/^49 \//)
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(second).toContainText('48.8px')
+    await expect(second).toHaveText(/^48\.83 \//)
   })
 })

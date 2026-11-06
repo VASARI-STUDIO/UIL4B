@@ -34,7 +34,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       }))
       expect(rows).toHaveLength(9)
       for (const r of rows) {
-        expect(r.label, `${w}px: the printed size is the drawn size`).toMatch(new RegExp(`^${Math.round(r.fs * 10) / 10}px`))
+        expect(r.label, `${w}px: the printed size is the drawn size`).toMatch(new RegExp(`^${Math.round(r.fs * 100) / 100} /`))
         expect(r.fs, `${w}px: no step is larger than its desktop size`).toBeLessThanOrEqual(r.px)
         expect(r.transforms, 'nothing is scaled with transform or zoom').toEqual([])
       }
@@ -66,7 +66,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', want)
       // Below the split Page is a tab; at 1440 it is already beside the ladder.
       await showTypeScalePage(page)
-      await expect(page.locator('#tsc-width')).toContainText(label)
+      await expect(page.locator('#tsc-width button[aria-pressed="true"]')).toContainText(label)
     }
   })
 
@@ -408,7 +408,7 @@ test.describe('Type Scale · the split and its Page | Code switch', () => {
     // Visible with no tab to press, and already on the visitor's own size.
     await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', 'full')
     await expect(page.locator('#tsc-width')).toBeVisible()
-    await expect(page.locator('#tsc-width')).toContainText('Desktop')
+    await expect(page.locator('#tsc-width button[aria-pressed="true"]')).toContainText('Desktop')
     // The half is narrower than the 1440px page it shows, and the note says so.
     await expect(page.locator('.tsc-width-note')).toBeVisible()
     await expect(page.locator('.tsc-width-note')).toContainText('Sizes as on a 1440px screen')

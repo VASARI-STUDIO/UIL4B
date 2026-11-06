@@ -71,42 +71,60 @@
   line-height: 1.45;
   color: var(--tl-soft);
 }
+/* A row is a button: the token and its "size / lead" value on the left, the
+   sample on the right. Pressing it lights the row and copies its CSS. */
+.tsc-page .tsc-ladder { --tsc-hv: var(--tl-wash); --tsc-sel: var(--tl-wash-on); }
+.tsc-page .tsc-use { margin: 0 0 4px; padding: 12px 20px 0; font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); }
 .tsc-page .tsc-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto);
-  align-items: baseline;
-  gap: 12px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
   width: 100%;
   min-width: 0;
-  padding: 12px 0;
+  margin: 0 0 8px;
+  padding: 16px 20px;
   scroll-margin-top: calc(var(--chrome-h) + var(--tl-bar-h) + 60px);
   border: 0;
+  border-radius: 12px;
   background: transparent;
   color: var(--tl-ink);
   text-align: left;
   cursor: pointer;
-  transition: background-color .16s ease;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.tsc-page .tsc-row + .tsc-row { border-top: 1px solid var(--tl-hair); }
-.tsc-page .tsc-row:focus-visible { position: relative; z-index: 1; outline-offset: -2px; }
-.tsc-page .tsc-row:active { background: var(--tl-wash-2); }
-/* The longest token, --text-base, is about 80px at 12px mono. */
-@media (min-width: 768px) {
-  .tsc-page .tsc-row { grid-template-columns: 92px minmax(0, 1fr) auto; gap: 16px; }
-}
-/* Literal values only are mono: the token and the px. */
-.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-.tsc-page .tsc-row-num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-row:last-child { margin-bottom: 0; }
+.tsc-page .tsc-row:active { transform: scale(.99); }
+.tsc-page .tsc-row[aria-pressed="true"],
+.tsc-page .tsc-row[aria-pressed="true"]:hover { background: var(--tsc-sel); }
+.tsc-page .tsc-row:focus-visible { outline-offset: -2px; }
+.tsc-page .tsc-row--static { cursor: default; }
+.tsc-page .tsc-row--static:active { transform: none; }
+.tsc-page .tsc-fit-note { margin: 0 0 8px; padding: 12px 20px; border: 0; }
+/* The token, its value and the Copy label stack in the left cell. */
+.tsc-page .tsc-row-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+/* Literal values only are mono: the token and the size / lead. The --text- prefix is read, not shown. */
+.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 13px; line-height: 18px; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
+.tsc-page .tsc-row-prefix { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Copy shows on hover and focus; after a press the two words cross-fade to Copied. */
+.tsc-page .tsc-row-cp { display: inline-grid; margin-top: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tl-dim); opacity: 0; pointer-events: none; transition: opacity 150ms var(--tl-ease); }
+.tsc-page .tsc-row-cp > span { grid-area: 1 / 1; transition: opacity 300ms var(--tl-ease); }
+.tsc-page .tsc-cp-b { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did { opacity: 1; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-a { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-b { opacity: 1; }
+.tsc-page .tsc-row:focus-visible .tsc-row-cp { opacity: 1; }
 .tsc-page .tsc-row-text {
+  display: block;
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   color: var(--tl-ink);
   font-family: var(--tsc-body-ff);
   font-size: var(--tsc-fs);
   font-weight: var(--tsc-body-fw);
-  /* A sample is judged by its size, so the ladder holds a tight leading; the
-     Line height control still sets the Page view and the export. */
-  line-height: min(1.2, var(--tsc-lh));
+  line-height: var(--tsc-lead);
   letter-spacing: var(--tsc-body-ls);
 }
 .tsc-page .tsc-row-text--heading {
@@ -114,8 +132,19 @@
   font-weight: var(--tsc-heading-fw);
   letter-spacing: var(--tsc-heading-ls);
 }
+/* A step too big for the whole line shows its first word at the step's true size, the size its row prints. */
+.tsc-page .tsc-row-text.is-loading { font-family: var(--font); font-size: 15px; font-weight: 500; line-height: 24px; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-cap { display: block; margin-top: 4px; font-family: var(--font); font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-err { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 36px; margin: -8px 0; font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; color: var(--tl-soft); }
+.tsc-page .tsc-retry {
+  min-height: 36px; margin: -4px 0; padding: 0 16px; border: 0; border-radius: 999px;
+  background: var(--tl-wash-on); color: var(--tl-ink); font: 500 14px/1 var(--font); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-retry:active { transform: scale(.97); }
 @media (hover: hover) and (pointer: fine) {
-  .tsc-page .tsc-row:hover { background: var(--tl-wash); }
+  .tsc-page .tsc-row:not(.tsc-row--static):hover { background: var(--tsc-hv); }
+  .tsc-page .tsc-row:hover .tsc-row-cp { opacity: 1; }
 }
 
 /* ── Page view ──────────────────────────────────────────────────────────── */
@@ -136,10 +165,6 @@
   gap: var(--tl-gap) 24px;
   align-items: start;
 }
-.tsc-page .tsc-view[data-view="split"] .tsc-row { grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto); gap: 12px; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-num { text-align: right; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-prefix,
-.tsc-page .tsc-view[data-view="split"] .tsc-row-rem { display: none; }
 /* A tall ladder keeps the page beside it: the page half stays under the toolbar
    while the steps scroll, when the screen is tall enough to hold it. A page
    taller than the room between the toolbar and the dock scrolls within itself. */
@@ -159,40 +184,6 @@
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
 .tsc-page .tsc-page-col { min-width: 0; }
-.tsc-page .tsc-article {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--tsc-w, 100%);
-  padding: clamp(16px, 3vw, 32px);
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-  background: var(--tl-card);
-}
-.tsc-page .tsc-article-h1,
-.tsc-page .tsc-article-h2 {
-  margin: 14px 0 8px;
-  color: var(--tl-ink);
-  font-family: var(--tsc-heading-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-heading-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-heading-ls);
-  overflow-wrap: break-word;
-}
-.tsc-page .tsc-article-h1 { margin-top: 0; }
-.tsc-page .tsc-article-lede,
-.tsc-page .tsc-article-body,
-.tsc-page .tsc-article-small {
-  max-width: 64ch;
-  margin: 0 0 14px;
-  color: var(--tl-soft);
-  font-family: var(--tsc-body-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-body-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-body-ls);
-}
-.tsc-page .tsc-article-small { margin-bottom: 0; color: var(--tl-dim); }
 
 /* ── Code view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
@@ -412,8 +403,13 @@
     text-align: left;
     cursor: pointer;
   }
-  .tsc-page .tsc-row-prefix,
-  .tsc-page .tsc-row-rem { display: none; }
+  /* Phone: the sample takes the row's full width, under its token and value. */
+  .tsc-page .tsc-row { padding-inline: 16px; }
+  .tsc-page .tsc-row:has(.is-first) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-l { flex-direction: row; align-items: baseline; gap: 12px; padding-top: 0; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-cp { display: none; }
+  .tsc-page .tsc-row { grid-template-columns: 88px minmax(0, 1fr); }
+  .tsc-page .tsc-use { padding-inline: 16px; }
 
   .tsc-page .tsc-sheet {
     --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom) + env(safe-area-inset-bottom, 0px));
@@ -505,4 +501,67 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
   /* The tab bar's rule is more specific; with the keyboard up the sheet sits on the keyboard, not on the dock. */
   html.has-tabbar .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); }
+}
+
+/* ── Ratio: previous and next beside the list ───────────────────────────── */
+.tsc-page .tsc-ratio-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 8px; align-items: center; }
+.tsc-page .tsc-ratio-step {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--tl-wash); color: var(--tl-ink); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease), opacity 150ms var(--tl-ease);
+}
+.tsc-page .tsc-ratio-step:active:not(:disabled) { transform: scale(.97); }
+.tsc-page .tsc-ratio-step:disabled { opacity: .4; cursor: default; }
+.tsc-page .tsc-ratio-step:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-ratio-step:hover:not(:disabled) { background: var(--tl-wash-on); }
+}
+
+/* ── Weight cells: one per weight the family has ────────────────────────── */
+.tsc-page .tsc-weights { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.tsc-page .tsc-wt {
+  min-width: 40px; height: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--tl-dim); font: 400 13px/1 var(--font); font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-wt:active { transform: scale(.97); }
+.tsc-page .tsc-wt[aria-pressed="true"] { background: var(--tl-wash-on); color: var(--tl-ink); font-weight: 500; }
+.tsc-page .tsc-wt:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-wt:hover:not([aria-pressed="true"]) { background: var(--tl-wash); color: var(--tl-ink); }
+}
+@media (pointer: coarse) { .tsc-page .tsc-wt { height: 44px; min-width: 44px; } }
+
+/* ── The page header: Preview width, as a segment, with its note ────────── */
+.tsc-page .tsc-width-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 36px; min-width: 0; }
+.tsc-page .tsc-width-k { flex: none; font-size: max(var(--fs-caption), 13px); font-weight: 500; color: var(--tl-dim); white-space: nowrap; }
+.tsc-page .tsc-width-bar .tsc-width-seg { flex: none; flex-wrap: nowrap; }
+.tsc-page .tsc-width-px { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
+.tsc-page .tsc-width-btn.is-on .tsc-width-px { color: inherit; }
+.tsc-page .tsc-width-bar .tsc-width-note { flex: 1 1 240px; }
+@media (max-width: 767px) {
+  .tsc-page .tsc-width-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tsc-page .tsc-width-bar .tsc-width-seg { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tsc-page .tsc-width-btn { justify-content: center; min-width: 0; padding-inline: 6px; white-space: nowrap; }
+  /* The pressed button is a full 44px target on touch. */
+  @media (pointer: coarse) { .tsc-page .tsc-width-btn { min-height: 44px; } }
+}
+
+/* ── The phone dock's scale trigger: opens the settings sheet ────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tl-dock .tsc-dock-ratio {
+    flex: 1 1 0; display: flex; align-items: center; gap: 8px; height: 44px; min-height: 44px; min-width: 0; padding: 0 12px 0 16px;
+    border: 0; border-radius: 999px; background: var(--tl-wash); color: var(--tl-ink);
+    font: 500 14px/20px var(--font); text-align: left; cursor: pointer;
+    transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+  }
+  .tsc-page .tl-dock .tsc-dock-ratio:active { transform: scale(.97); }
+  .tsc-page .tsc-dock-ratio b { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .tsc-page .tsc-dock-ratio-v { flex: none; font-family: var(--mono); font-size: 13px; color: var(--tl-dim); }
+  .tsc-page .tsc-dock-ratio svg { flex: none; margin-left: auto; transition: transform 150ms var(--tl-ease); }
+  .tsc-page .tsc-dock-ratio[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .tsc-page .tl-dock .tsc-copy-primary { flex: 0 0 auto; }
+}
+@media (max-width: 359px) {
+  .tsc-page .tsc-dock-ratio-v { display: none; }
 }

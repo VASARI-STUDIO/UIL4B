@@ -254,9 +254,17 @@ const ALLOWED = {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
     ':is(.tl, .tl-sheet-layer) .tl-kbd': 'kbd',
   },
+  'pages/type-scale-kerbside.css': {
+    '.tsc-page .tsk-tag': 'value',
+  },
   'pages/type-scale.css': {
+    '.tsc-page .tsc-dock-ratio-v': 'value',
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
+    '.tsc-page .tsc-width-px': 'value',
+  },
+  'pages/type-tools-nav.css': {
+    '.ttn-mono': 'value',
   },
   'pages/type-tools-nav.css': {
     '.ttn-mono': 'value',

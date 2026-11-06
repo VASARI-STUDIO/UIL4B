@@ -84,11 +84,11 @@ test.describe('Type Scale Generator', () => {
     // 16 × 1.25^6 = 61.04 and 16 × 1.5^6 = 182.25, both snapped to the default
     // nearest-0.5px rounding.
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(largest).toContainText('61px')
+    await expect(largest).toHaveText(/^61 \//)
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(largest).toContainText('182.5px')
+    await expect(largest).toHaveText(/^182\.5 \//)
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.25')
-    await expect(largest).toContainText('61px')
+    await expect(largest).toHaveText(/^61 \//)
 
     // Rounding is an explicit decision, not a hidden .toFixed(). It is one of
     // the four controls that moved behind the "Fine tuning" disclosure, so
@@ -99,8 +99,8 @@ test.describe('Type Scale Generator', () => {
     // 16 × 1.25^5 = 48.83, which whole rounding makes 49 and "none" leaves at 48.8.
     const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
-    await expect(largest).toContainText('61px')
-    await expect(second).toContainText('49px')
+    await expect(largest).toHaveText(/^61 \//)
+    await expect(second).toHaveText(/^49 \//)
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
     await expect(second).toContainText('48.8px')
 
@@ -235,7 +235,7 @@ test.describe('Type Scale Generator', () => {
     await page.getByRole('button', { name: 'Fine tuning' }).click()
     await page.getByLabel('Number of steps above the base size').fill('9')
 
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('787320px')
+    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toHaveText(/^787320 \//)
     await expect(page.locator('.tsc-fit-note')).toContainText('Labels and exports retain the exact scale')
     const rendered = parseFloat(await page.locator('.tsc-row-text').first().evaluate(
       element => getComputedStyle(element).fontSize,
@@ -248,7 +248,7 @@ test.describe('Type Scale Generator', () => {
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
     await showTypeScaleCode(page)
-    await expect(page.locator('#tsc-export')).toContainText('787320px')
+    await expect(page.locator('#tsc-export')).toHaveText(/^787320 \//)
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
 })
@@ -1078,7 +1078,7 @@ test.describe('typography tools under a failing font catalogue', () => {
 
     // The scale is pure maths — it must keep responding with the network gone.
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('182.5px')
+    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toHaveText(/^182\.5 \//)
 
     await context.setOffline(false)
     await page.evaluate(() => window.dispatchEvent(new Event('online')))
@@ -1374,6 +1374,6 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await go(page, '/create/type-scale')
   await page.getByRole('tab', { name: 'Page' }).click()
   await expect(page.locator('#tsc-width')).toBeVisible()
-  await expectTarget(page.locator('#tsc-width'), 'Type Scale width')
+  await expectTarget(page.locator('#tsc-width button[aria-pressed="true"]'), 'Type Scale width')
   await context.close()
 })
