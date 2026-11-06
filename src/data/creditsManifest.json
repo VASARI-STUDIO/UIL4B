@@ -136,6 +136,10 @@
       "licence": "MIT"
     },
     {
+      "name": "opentype.js",
+      "licence": "MIT"
+    },
+    {
       "name": "react",
       "licence": "MIT"
     },
