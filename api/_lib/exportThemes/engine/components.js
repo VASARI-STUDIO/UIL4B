@@ -210,7 +210,7 @@ export function makeUi(ctx) {
       return `<${tag} class="${c}"${tag === 'button' ? ' type="button"' : ''}${dis} ${attrs}>${iconLeft ? ic(iconLeft, 18) : ''}${A(label)}${iconRight ? ic(iconRight, 18) : ''}</${tag}>`;
     },
     chip(label, tone = 'neutral') { return `<span class="ui-chip ui-chip--${cssIdent(tone)}">${A(label)}</span>`; },
-    statusChip(id, { label } = {}) { const s = ctx.status.find((x) => x.id === id); return `<span class="ui-chip ${s.custom ? 'ui-chip--s-' + cssIdent(s.id) : 'ui-chip--' + cssIdent(s.tone)}">${A(label || s.label)}</span>`; },
+    statusChip(id, { label } = {}) { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return `<span class="ui-chip ${s.custom ? 'ui-chip--s-' + cssIdent(s.id) : 'ui-chip--' + cssIdent(s.tone)}">${A(label || s.label)}</span>`; },
     field({ id, label, value = '', type = 'text', help, error, disabled, state, placeholder, kind = 'input', options = [] }) {
       const d = error ? ` aria-invalid="true" aria-describedby="${id}-m"` : help ? ` aria-describedby="${id}-m"` : '';
       let ctl;

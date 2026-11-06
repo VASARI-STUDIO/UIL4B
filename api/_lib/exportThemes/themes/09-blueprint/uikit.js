@@ -411,7 +411,7 @@ ${rv('left:-40px;top:0;height:132px', 44, 'l')}${rh(`left:3px;top:-28px;width:${
 
   status(ctx) {
     const ui = ctx.ui, M = { light: colourMap(ctx, 'light'), dark: colourMap(ctx, 'dark') }, lbl = ctx.uiType.find((t) => t.token === 'label');
-    const ok = ctx.status.find((s) => s.id === 'needs-ok');
+    const ok = ctx.status.find((s) => s.id === 'needs-ok') || ctx.status[0];
     // the words at 4x: one line of the label size, no fill, no padding, no radius; the numbers are the 1x values
     const lh = +(lbl.size * 1.3).toFixed(1), half = +((52 - lh) / 2).toFixed(1);
     const okL = statusText(ctx, 'light', ok), okD = statusText(ctx, 'dark', ok);
@@ -489,14 +489,14 @@ ${rv(`left:-40px;top:0;height:${lh * 4}px`, lh, 'l')}</div>`;
   },
 
   'screen-dark'(ctx) {
-    const ok = ctx.status.find((x) => x.id === 'needs-ok');
+    const ok = ctx.status.find((x) => x.id === 'needs-ok') || ctx.status[0];
     return kstd(ctx, 'screen-dark', screenFig(ctx, true), { lead: `The same screen in dark. Needs your OK reads at ${rt(ctx, statusText(ctx, 'dark', ok).hex, colourMap(ctx, 'dark').surface)}.` });
   },
 
   'screen-mobile'(ctx) {
     const S = sc(ctx);
     const lines = { booked: ['Start Mon 16 Nov', ''], 'quote-sent': ['Quote sent Mon 2 Nov', ''], 'on-site': ['On site since 26 Oct', ''], 'needs-ok': ['Decide by Fri 6 Nov', ''], finished: ['Handed over', 'final'] };
-    const states = ctx.status.map((s) => `<li class="kstate"><span class="kstate-chip">${ctx.ui.statusChip(s.id)}</span><span class="ui-display kstate-line${lines[s.id][1] ? ' is-final' : ''}">${A(lines[s.id][0])}</span></li>`).join('');
+    const states = ctx.status.map((s) => { const ln = lines[s.id] || [s.label, '']; return `<li class="kstate"><span class="kstate-chip">${ctx.ui.statusChip(s.id)}</span><span class="ui-display kstate-line${ln[1] ? ' is-final' : ''}">${A(ln[0])}</span></li>`; }).join('');
     // measured: top bar 36, 20, status words 16.9 down the left; Share 44, 20, tab bar 64 at the foot; side padding 24 and content 340 across the top
     const tags = [[1, 13, 19], [2, 13, 65], [3, 13, 116], [4, 13, 234], [5, 377, 309], [6, 377, 473], [7, 378, 529]];
     const dims = `${rh('left:1px;top:-14px;width:24px', 24)}${rh('left:25px;top:-14px;width:340px', 340)}${rh('left:365px;top:-14px;width:24px', 24)}${vs([[36], [20], [16.9]], 1, -14)}${vs([[44], [20], [64]], 451, -14)}`;

@@ -276,7 +276,7 @@ function applications(ctx) {
 <div class="bk-post bk-post--st is-hair" style="background:${R.surface};color:${R.text}"><p class="disp">${A(ap.social[2])}</p><span class="bk-post__lg">${fluid(ctx, 'colour', 96, { label: 'Logo' })}</span></div>
 </div>`;
   // the wharf departure sign: a Hull panel, the next sailings in display type, the boarding row in Buoy
-  const label = (id) => ctx.status.find((s) => s.id === id).label;
+  const label = (id) => (ctx.status.find((s) => s.id === id) || ctx.status[0]).label;
   // a slot placeholder is one token: never split it, the whole thing sits in the time cell
   const whenOf = (d) => (ctx.edition === 'slot' ? [d.when, ''] : d.when.split(', '));
   const rows = S.deliveries.slice(0, 3).map((d) => {

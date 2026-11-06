@@ -21,7 +21,7 @@ const NOPE = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"
 // the brand's real UI, built from ui.screen.content and ui.status
 const content = (ctx) => ctx.brand.ui.screen.content;
 const statusOf = (ctx, id) => ctx.brand.ui.status.find((s) => s.id === id);
-const chip = (ctx, id, short) => { const s = ctx.status.find((x) => x.id === id); return `<span class="a-chip2" style="color:${statusText(ctx, 'light', s).hex}">${A(short ? s.label.split(' ')[0] : s.label)}</span>`; };
+const chip = (ctx, id, short) => { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return `<span class="a-chip2" style="color:${statusText(ctx, 'light', s).hex}">${A(short ? s.label.split(' ')[0] : s.label)}</span>`; };
 const delivery = (ctx, status) => content(ctx).deliveries.find((d) => d.status === status);
 const listRow = (ctx, d) => `<div class="a-r"><div><b>${A(d.to)}</b><i>${A(d.when)}</i></div>${chip(ctx, d.status)}<span class="a-amt num">${A(d.price)}</span></div>`;
 const toast = (text) => { const m = text.match(/^(.*?)\s+(\S+)$/); return `<div class="a-toast"><span>${A(m ? m[1] : text)}</span>${m ? `<u>${A(m[2])}</u>` : ''}</div>`; };

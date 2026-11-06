@@ -151,7 +151,7 @@ export const uikit = {
     const spec = `<ol class="kc-spec"><li><span>1</span><p>Keep a clear zone round the logo, ${+(L.geo.unit / ux).toFixed(1)}x on every side. ${A(unit)}</p></li><li><span>2</span><p>Measure from the edge of the logo, on all four sides.</p></li><li><span>3</span><p>On screen, ${mn.screenPx} px wide. The wake is ${f1(ux * mn.screenPx / g.w)} px thick.</p></li></ol>`;
     return `<section class="pg pg--kcover" data-page="cover"><div class="cv-top"><div><h1>Interface standards manual</h1><p>${A(B.name)}, river ferry, ${A(B.city)}. ${A(B.product)}<br>${A(ctx.versionLine)}.</p></div><ul class="sec">${sections}</ul></div>
 <div class="kc-row">${sheet}${spec}</div>
-<div class="kc-band"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A(ctx.status.find((x) => x.id === d.status).label)}</span></div>
+<div class="kc-band"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A((ctx.status.find((x) => x.id === d.status) || ctx.status[0]).label)}</span></div>
 <div class="cv-bot"><p>On screen, x is fixed at ${base(ctx)} px.<br>Every space and height is a whole number of x.</p></div></section>`;
   },
 
@@ -334,7 +334,7 @@ export const uikit = {
   },
 
   status(ctx) {
-    const tk = (id) => m(statusText(ctx, 'light', ctx.status.find((x) => x.id === id)).token);
+    const tk = (id) => m(statusText(ctx, 'light', ctx.status.find((x) => x.id === id) || ctx.status[0]).token);
     const meaning = { boarding: `The one sailing boarding now. Words in ${tk('boarding')}.`, 'on-time': `Leaves when the timetable says. Words in ${tk('on-time')}.`, late: `Behind the time we gave. The words name the minutes, in ${tk('late')}.`, cancelled: `Not sailing. Words in ${tk('cancelled')}. The next sailing is named beside it.`, 'fare-bought': `Your fare is bought. Words in ${tk('fare-bought')}.`, departed: 'Gone. The row drops to quiet.' };
     const L = chipPairs(ctx, 'light'), D = chipPairs(ctx, 'dark');
     const ids = [...ctx.status.map((s) => s.id), 'departed'];

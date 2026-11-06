@@ -340,7 +340,7 @@ function status(ctx) {
   return kpage(ctx, 'status', {
     lede: 'A status is a word first and a colour second. The five states of an install are words in one colour, so a row reads the same whether or not the colour shows.',
     left: tb('Status chips', table), right: [fig(dark, `On ${A(roleName(ctx, 'text'))}`, 'The same words in dark, from the same ids.'), fig(spare, 'Neutral chip and badge', 'A neutral chip for an unknown state. A badge counts.')], fw: 186,
-    rules: ['Every chip carries its words. Colour is never the only cue.', `A status is label 14 / 500 in one colour, with no fill and no edge. It is not a button and never takes focus.`, `“${ctx.status.find((s) => s.tone === 'action').label}” is the action state. Where ${A(roleColour(ctx, 'action').name)} does not hold 4.5 : 1 as words, it takes ${m('--text')}.`, 'The ratio is the words on the page ground. Every status holds 4.5 : 1.'],
+    rules: ['Every chip carries its words. Colour is never the only cue.', `A status is label 14 / 500 in one colour, with no fill and no edge. It is not a button and never takes focus.`, `“${(ctx.status.find((s) => s.tone === 'action') || ctx.status[0]).label}” is the action state. Where ${A(roleColour(ctx, 'action').name)} does not hold 4.5 : 1 as words, it takes ${m('--text')}.`, 'The ratio is the words on the page ground. Every status holds 4.5 : 1.'],
   });
 }
 
@@ -436,7 +436,7 @@ function phoneScreen(ctx) {
 function screenPage(ctx, id, dark) {
   const sunbelt = roleColour(ctx, 'action').name;
   const tbl = `<table class="st kparts"><thead><tr><th style="width:100px">Part</th><th style="width:80px">Set in</th><th>Note</th></tr></thead><tbody>${[
-    ['Top bar', 'navigation', 'The wordmark, three links, the clock.'], ['Status', 'status', `The live state, ${ctx.status.find((s) => s.id === 'producing').label}, beside the headline.`], ['Row list', 'lists', 'Each install with its own status.'], ['Buttons', 'buttons', `One filled: ${A(S(ctx).form.book)}. The rest are outlines.`],
+    ['Top bar', 'navigation', 'The wordmark, three links, the clock.'], ['Status', 'status', `The live state, ${(ctx.status.find((s) => s.id === 'producing') || ctx.status[0]).label}, beside the headline.`], ['Row list', 'lists', 'Each install with its own status.'], ['Buttons', 'buttons', `One filled: ${A(S(ctx).form.book)}. The rest are outlines.`],
   ].map(([a, r, n]) => `<tr><td>${A(a)}</td><td class="num">§${refOf(ctx, r)}</td><td class="kq">${n}</td></tr>`).join('')}</tbody></table>`;
   return kpage(ctx, id, {
     lede: dark ? `The same screen on ${A(roleName(ctx, 'text'))}. No markup changes: the page sets one attribute and every component follows.` : 'The Install day screen, built only from the components in this kit. Nothing on it is drawn for the page.',

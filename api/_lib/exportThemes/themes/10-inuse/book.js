@@ -18,7 +18,7 @@ const rulesList = (rules) => `<ul class="bk-rules">${rules.map((r) => `<li><p cl
 const sec = (id, cls, inner) => `<section class="bk-sec ${cls}" id="${id}" aria-labelledby="h-${id}">${inner}</section>`;
 
 // ---- the phone: a 360 wide screen from the brand's own screens, light roles always (it is the product, not the book's chrome) ----
-const chipOf = (ctx, id) => { const s = ctx.status.find((x) => x.id === id); return `<span class="bk-chip" style="color:${wordsHex(ctx, s)}">${A(s.label)}</span>`; };
+const chipOf = (ctx, id) => { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return `<span class="bk-chip" style="color:${wordsHex(ctx, s)}">${A(s.label)}</span>`; };
 const floatChip = (text, style = '') => `<span class="bk-chip bk-chip--float" style="${style}">${A(text)}</span>`;
 const mkr = (n) => `<span class="bk-mkr" aria-hidden="true">${n}</span>`;
 // a note marker beside the phone: solid when the thing is on the screen, hollow when it is not
@@ -143,7 +143,7 @@ function colour(ctx) {
     const share = pct != null ? `<p class="bk-share"><span class="bk-share__bar"><i class="${hair.trim()}" style="width:${pct}%;background:${c.hex}"></i></span><span class="bk-cap num">${pct}% of a page</span></p>` : '';
     return `<li class="bk-crow">${keyMk(n, on)}<div class="bk-crow__b"><div class="bk-crow__h">${sw}<div class="bk-cinfo"><p class="bk-cname">${A(c.name)}</p><p class="bk-clands">${A(c.lands)}${on ? '' : ' <span class="bk-off">Not on this screen.</span>'}</p></div></div>${share}<dl class="bk-vals"><div><dt>HEX</dt><dd>${c.hex}</dd></div><div><dt>RGB</dt><dd>${rgb}</dd></div><div><dt>OKLCH</dt><dd>${ok}</dd></div></dl><div class="bk-copies">${copyBtn('Copy HEX', c.hex, `${c.name} HEX`)}${copyBtn('Copy RGB', rgb, `${c.name} RGB`)}${copyBtn('Copy OKLCH', ok, `${c.name} OKLCH`)}</div></div></li>`;
   };
-  const done = ctx.status.find((s) => s.id === 'done');
+  const done = ctx.status.find((s) => s.id === 'done') || ctx.status[0];
   const order = [col('deep-end'), col('white'), col('float'), col('chalk'), col('lane'), tone('quiet'), tone('soft'), tone('hover')];
   const items = order.map((c, i) => entry(c, i + 2, i < 6));
   const statusNote = `<li class="bk-knote">${keyMk(1)}<div class="bk-crow__b"><div class="bk-crow__h"><span class="bk-chipsw" style="background:${wordsHex(ctx, done)}" aria-hidden="true"></span><div class="bk-cinfo"><p class="bk-cname">Status words</p><p class="bk-clands">Each status is words in one colour. Its tint is for highlights, never under text.</p></div></div></div></li>`;

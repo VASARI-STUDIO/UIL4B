@@ -64,7 +64,8 @@ function annotated(ctx, mode) {
   const M = colourMap(ctx, mode), S = sc(ctx), ui = ctx.ui, F = S.form;
   const R = (a, b) => rt(ctx, M[a], M[b]);
   const C = (side, y, reach, name, t, a, b) => co(side, y, reach, name, '--' + t, M[t], b ? R(a, b) : '');
-  const sent = ctx.status.find((x) => x.id === 'sent'), over = ctx.status.find((x) => x.id === 'overdue'), paid = ctx.status.find((x) => x.id === 'paid'), draft = ctx.status.find((x) => x.id === 'draft');
+  const byId = (id, tone) => ctx.status.find((x) => x.id === id) || ctx.status.find((x) => x.tone === tone) || ctx.status[0];
+  const sent = byId('sent', 'info'), over = byId('overdue', 'danger'), paid = byId('paid', 'success'), draft = byId('draft', 'neutral');
   const chip = (s) => ui.statusChip(s.id);
   return `<div class="an-st"><div class="an-card">
 <div class="an-pt">${C('l', 7, 20, 'Info', 'info', 'info', 'surface')}${C('r', 7, 20, 'Quiet text', 'quiet', 'quiet', 'surface')}<div class="an-head">${chip(sent)}<span class="an-q num">${A(S.time)}</span></div></div>
