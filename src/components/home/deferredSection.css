@@ -1,0 +1,75 @@
+/* The empty box a below-the-fold section holds until it arrives: the least
+   height the real section has anywhere in each width band, so the page only
+   ever grows by a little when a section lands and nothing is left over to
+   collapse. The bands follow where the sections change layout (1440, 1200,
+   1024, 768 and the phone widths), and each one reads the shortest the section
+   measured inside it. Measured with every section mounted, at 320 to 1920. */
+.dsh-bookmarks { min-height: 1130px; }
+.dsh-try       { min-height: 3456px; }
+.dsh-exports   { min-height: 2589px; }
+.dsh-examples  { min-height: 1541px; }
+.dsh-plans     { min-height: 1517px; }
+
+@media (max-width: 1439px) {
+  .dsh-bookmarks { min-height: 1030px; }
+  .dsh-examples  { min-height: 1511px; }
+}
+@media (max-width: 1359px) {
+  .dsh-examples { min-height: 1480px; }
+}
+@media (max-width: 1279px) {
+  .dsh-bookmarks { min-height: 1001px; }
+  .dsh-examples  { min-height: 1449px; }
+  .dsh-plans     { min-height: 1538px; }
+}
+@media (max-width: 1199px) {
+  .dsh-bookmarks { min-height: 850px; }
+  .dsh-try       { min-height: 3993px; }
+  .dsh-exports   { min-height: 2525px; }
+  .dsh-examples  { min-height: 1327px; }
+  .dsh-plans     { min-height: 1978px; }
+}
+@media (max-width: 1023px) {
+  .dsh-bookmarks { min-height: 1746px; }
+  .dsh-exports   { min-height: 3527px; }
+  .dsh-examples  { min-height: 1314px; }
+  .dsh-plans     { min-height: 2043px; }
+}
+@media (max-width: 767px) {
+  .dsh-bookmarks { min-height: 1769px; }
+  .dsh-try       { min-height: 3592px; }
+  .dsh-exports   { min-height: 2738px; }
+  .dsh-examples  { min-height: 1306px; }
+  .dsh-plans     { min-height: 1654px; }
+}
+@media (max-width: 639px) {
+  .dsh-try      { min-height: 3592px; }
+  .dsh-exports  { min-height: 2784px; }
+  .dsh-examples { min-height: 1326px; }
+  .dsh-plans    { min-height: 1698px; }
+}
+@media (max-width: 519px) {
+  .dsh-try      { min-height: 3676px; }
+  .dsh-exports  { min-height: 2824px; }
+  .dsh-examples { min-height: 1351px; }
+  .dsh-plans    { min-height: 1720px; }
+}
+@media (max-width: 479px) {
+  .dsh-try      { min-height: 3764px; }
+  .dsh-exports  { min-height: 2970px; }
+  .dsh-examples { min-height: 1391px; }
+  .dsh-plans    { min-height: 1904px; }
+}
+@media (max-width: 399px) {
+  .dsh-try      { min-height: 3828px; }
+  .dsh-exports  { min-height: 3009px; }
+  .dsh-examples { min-height: 1314px; }
+  .dsh-plans    { min-height: 1976px; }
+}
+@media (max-width: 359px) {
+  .dsh-bookmarks { min-height: 1745px; }
+  .dsh-try       { min-height: 3857px; }
+  .dsh-exports   { min-height: 3109px; }
+  .dsh-examples  { min-height: 1312px; }
+  .dsh-plans     { min-height: 2069px; }
+}

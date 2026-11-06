@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useLocation, useNavigationType } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
+import { requestSections } from '../home/useBelowFoldReady'
 
 // Anchors that older links and bookmarks still use, mapped to the sections that
 // replaced them.
@@ -12,18 +13,74 @@ export const OLD_ANCHORS = {
 
 // How long an arriving hash waits for the page to finish loading its sections,
 // and how many consecutive frames the target must hold still to count as settled.
-const ARRIVAL_DEADLINE_MS = 6000
+const ARRIVAL_DEADLINE_MS = 10000
 const SETTLED_FRAMES = 3
 // Input that means the visitor has taken over the scroll position.
 const TAKEOVER_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown']
 
+// True while a section above the element, or the element itself, is still an
+// empty stand-in (DeferredSection marks them). Stand-ins below it do not move it.
+function sectionsPending(el) {
+  return [...document.querySelectorAll('[data-deferred-hold]')].some((hold) => (
+    hold === el
+    || hold.contains(el)
+    || el.contains(hold)
+    || (hold.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+  ))
+}
+
+// THE BROWSER'S OWN SCROLL TO A URL FRAGMENT, HELD BACK.
+//
+// A page that loads with `#plans` is scrolled by the browser to the element with
+// that id as soon as it exists, which is the first stand-in or section React
+// renders, and again when the load event fires. The sections above are still
+// empty boxes then, so the browser lands on a position that moves the moment they
+// arrive. With the fragment out of the URL it has nothing to scroll to (and with
+// scroll restoration off, nothing to restore), so the page stays put at the top
+// until landArrivingHash scrolls once, to the finished heading. The fragment goes
+// back into the URL when that is done, or when the visitor takes the scroll over.
+let held = null
+
+// The fragment is dropped through the router, not history.replaceState, because
+// the app's own route-change scroll (App.jsx, landOnHash) also reads the
+// router's hash and scrolls to the first element it finds with that id, a
+// stand-in included. With the router's hash empty that scroll has nothing to do.
+// The way back writes the URL directly: the router has no use for the hash again.
+function holdBrowserScroll(navigate) {
+  const { pathname, search, hash } = window.location
+  if (held || hash.length < 2) return
+  held = { pathname, search, hash, restoration: window.history.scrollRestoration }
+  window.history.scrollRestoration = 'manual'
+  navigate({ pathname, search, hash: '' }, { replace: true })
+}
+
+function releaseBrowserScroll() {
+  if (!held) return
+  const { pathname, search, hash, restoration } = held
+  held = null
+  window.history.scrollRestoration = restoration
+  // Only if the visitor is still on the same page with no fragment of its own.
+  const { location } = window
+  if (location.pathname === pathname && location.search === search && !location.hash) {
+    window.history.replaceState(window.history.state, '', `${pathname}${search}${hash}`)
+  }
+}
+
+const currentHash = () => (held ? held.hash : window.location.hash)
+
 // Scrolls to a section through Lenis (falling back to the browser) and moves
 // focus to its heading, so a keyboard or screen reader user lands where the page
 // has scrolled to. `immediate` skips the glide, for a hash the page arrives on.
-// Returns false when the id is not on the page.
+// A section that is not there yet (it, or one above it, is a stand-in) is waited
+// for, as an arriving hash waits, so the scroll happens once, on the finished
+// page. Returns false when the id is not on the page.
 export function jumpToSection(id, { immediate = false } = {}) {
   const el = document.getElementById(id)
   if (!el) return false
+  if (!immediate && sectionsPending(el)) {
+    landArrivingHash(id)
+    return true
+  }
   const lenis = getLenis()
   if (lenis) {
     if (immediate) {
@@ -47,14 +104,20 @@ function decodeHash(hash) {
   try { return decodeURIComponent(raw) } catch { return raw }
 }
 
+let cancelLanding = () => {}
+
 // A page that arrives with a hash (`/home#plans` from another page, or a fresh
 // load of it) cannot jump straight away: the sections below the first screen
-// are code-split, and until each one arrives its place is an empty box of an
-// estimated height, so a scroll now would land on the placeholder and drift as
-// the real sections push it down. This waits until no placeholder is left, the
-// fonts are in and the target has held still, then scrolls and focuses once.
-// Gives up quietly if the sections never arrive. Returns a cancel function.
+// are code-split, and until each one arrives its place is an empty box, so a
+// scroll now would land on the placeholder and drift as the real sections push
+// it down. This asks for the sections, then waits until none above the target
+// (or the target itself) is left as a placeholder, the fonts are in and the
+// target has held still, and scrolls and focuses once. Past the deadline it
+// scrolls to whatever is there. Gives up if the target is not on the page.
+// Returns a cancel function.
 function landArrivingHash(id) {
+  cancelLanding()
+  requestSections()
   let raf = 0
   let fontsReady = !document.fonts
   if (document.fonts) document.fonts.ready.then(() => { fontsReady = true }, () => { fontsReady = true })
@@ -65,23 +128,33 @@ function landArrivingHash(id) {
   const stop = () => {
     cancelAnimationFrame(raf)
     TAKEOVER_EVENTS.forEach((name) => window.removeEventListener(name, stop))
+    releaseBrowserScroll()
+    if (cancelLanding === stop) cancelLanding = () => {}
   }
+  cancelLanding = stop
   TAKEOVER_EVENTS.forEach((name) => window.addEventListener(name, stop, { passive: true }))
 
   const frame = () => {
     const el = document.getElementById(id)
-    const loaded = !!el && fontsReady && !document.querySelector('[data-deferred-hold]')
-    if (loaded) {
+    const late = performance.now() >= deadline
+    const stillPending = el ? sectionsPending(el) : !!document.querySelector('[data-deferred-hold]')
+    if (!el && !stillPending) {
+      // Every section has arrived and none carries this id.
+      stop()
+      return
+    }
+    if (el && fontsReady && !stillPending) {
       // Measured against the document, so the scroll position does not move it.
       const top = el.getBoundingClientRect().top + window.scrollY
       still = top === lastTop ? still + 1 : 0
       lastTop = top
-      if (still >= SETTLED_FRAMES || performance.now() >= deadline) {
-        stop()
-        jumpToSection(id, { immediate: true })
-        return
-      }
-    } else if (performance.now() >= deadline) {
+    }
+    if (el && ((fontsReady && !stillPending && still >= SETTLED_FRAMES) || late)) {
+      stop()
+      jumpToSection(id, { immediate: true })
+      return
+    }
+    if (late) {
       stop()
       return
     }
@@ -97,22 +170,38 @@ function landArrivingHash(id) {
 export function usePageAnchors() {
   const navType = useNavigationType()
   const { key } = useLocation()
+  const navigate = useNavigate()
   // Back and forward restore the scroll position they left, so only a first
   // load (the router's initial entry) or a pushed link counts as an arrival.
   const arriving = useRef(navType !== 'POP' || key === 'default')
 
+  // Before the first paint, so the browser has no fragment to scroll to. Only
+  // the document's own first load has the browser scrolling to a fragment; a
+  // link pushed inside the app does not.
+  useLayoutEffect(() => {
+    if (key === 'default') holdBrowserScroll(navigate)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- first render only
+  }, [])
+
   useEffect(() => {
     const rewriteOld = () => {
-      const old = OLD_ANCHORS[window.location.hash.slice(1)]
+      const old = OLD_ANCHORS[currentHash().slice(1)]
       if (!old) return null
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${old}`)
+      if (held) {
+        held.hash = `#${old}`
+      } else {
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${old}`)
+      }
       return old
     }
-    let cancelArrival = () => {}
     const arrive = () => {
-      const id = rewriteOld() || decodeHash(window.location.hash)
-      cancelArrival()
-      if (id) cancelArrival = landArrivingHash(id)
+      const id = rewriteOld() || decodeHash(currentHash())
+      if (id) landArrivingHash(id)
+    }
+    const onHashChange = () => {
+      // A hash typed or pushed by someone else replaces the one being held.
+      releaseBrowserScroll()
+      arrive()
     }
     const onClick = (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
@@ -123,16 +212,7 @@ export function usePageAnchors() {
       if (!id || !document.getElementById(id)) return
       e.preventDefault()
       window.history.pushState(window.history.state, '', `${window.location.pathname}${window.location.search}#${id}`)
-      // A section that has not arrived yet is an estimate of its height, and a
-      // glide aimed at it would stop short once the real sections push it down.
-      // The press that started this click has already asked for them all, so
-      // wait for them as an arriving hash does.
-      if (document.querySelector('[data-deferred-hold]')) {
-        cancelArrival()
-        cancelArrival = landArrivingHash(id)
-      } else {
-        jumpToSection(id)
-      }
+      jumpToSection(id)
     }
 
     if (arriving.current) arrive()
@@ -141,11 +221,12 @@ export function usePageAnchors() {
       const old = rewriteOld()
       if (old) jumpToSection(old)
     }
-    window.addEventListener('hashchange', arrive)
+    window.addEventListener('hashchange', onHashChange)
     document.addEventListener('click', onClick)
     return () => {
-      cancelArrival()
-      window.removeEventListener('hashchange', arrive)
+      cancelLanding()
+      releaseBrowserScroll()
+      window.removeEventListener('hashchange', onHashChange)
       document.removeEventListener('click', onClick)
     }
   }, [])

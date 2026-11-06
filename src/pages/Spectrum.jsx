@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import PillNav from '../components/PillNav'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
@@ -9,6 +9,9 @@ import HomeProof from '../components/home/HomeProof'
 import DeferredSection from '../components/home/DeferredSection'
 import { useBelowFoldReady } from '../components/home/useBelowFoldReady'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
+import {
+  loadBookmarks, loadTry, loadExports, loadShowcase, loadPlans, prefetchBelowFold,
+} from '../components/home/belowFoldSections'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
 // `/`, the first paint, which must not wait on a chunk. The budget test
@@ -32,19 +35,19 @@ import '../styles/pages/home-hero.css'
 // The sections below the fold, each in a chunk with its own stylesheet, so the
 // entry chunk and the render-blocking sheet carry the hero, the proof band and
 // the final call only. DeferredSection says when they start.
-const HomeBookmarks = lazy(() => import('../components/home/HomeBookmarks'))
-const HomeTry = lazy(() => import('../components/home/HomeTry'))
-const HomeExports = lazy(() => import('../components/home/HomeExports'))
-const HomeShowcase = lazy(() => import('../components/home/HomeShowcase'))
-const HomePlans = lazy(() => import('../components/home/HomePlans'))
-
-// A little under how tall each section is once it has arrived, at any width, so
-// the page does not lengthen under the scrollbar as the chunks land.
-const H = { bookmarks: 1100, try: 3400, exports: 2600, examples: 1400, plans: 1500 }
+// The page fetches the same chunks when it is idle (belowFoldSections.js), so
+// they are usually in the cache before a section is asked to mount. Each
+// stand-in's height at every width is in deferredSection.css.
+const HomeBookmarks = lazy(loadBookmarks)
+const HomeTry = lazy(loadTry)
+const HomeExports = lazy(loadExports)
+const HomeShowcase = lazy(loadShowcase)
+const HomePlans = lazy(loadPlans)
 
 export default function Spectrum() {
   usePageAnchors()
   const below = useBelowFoldReady()
+  useEffect(() => prefetchBelowFold(), [])
 
   // The page is drawn dark in both colour schemes: the page ground and the nav
   // read the theme tokens, so the theme itself is held at dark while it shows.
@@ -68,26 +71,26 @@ export default function Spectrum() {
         <HomeHero />
 
         {/* ── Bookmarks ───────────────────────────────────────────────────── */}
-        <DeferredSection ready={below} holdId="bookmarks" minHeight={H.bookmarks}><HomeBookmarks /></DeferredSection>
+        <DeferredSection ready={below} holdId="bookmarks" size="bookmarks"><HomeBookmarks /></DeferredSection>
 
         {/* ── Try the tools (slot) ────────────────────────────────────────── */}
         <section id="try" aria-labelledby="try-h">
-          <DeferredSection ready={below} minHeight={H.try}><HomeTry /></DeferredSection>
+          <DeferredSection ready={below} size="try"><HomeTry /></DeferredSection>
         </section>
 
         {/* ── Exports: renders its own <section id="exports"> ─────────────── */}
-        <DeferredSection ready={below} holdId="exports" minHeight={H.exports}><HomeExports /></DeferredSection>
+        <DeferredSection ready={below} holdId="exports" size="exports"><HomeExports /></DeferredSection>
 
         {/* ── Examples (slot) ─────────────────────────────────────────────── */}
         <section id="examples" aria-labelledby="examples-h" data-slot="examples">
-          <DeferredSection ready={below} minHeight={H.examples}><HomeShowcase /></DeferredSection>
+          <DeferredSection ready={below} size="examples"><HomeShowcase /></DeferredSection>
         </section>
 
         {/* ── Proof ───────────────────────────────────────────────────────── */}
         <HomeProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
-        <DeferredSection ready={below} holdId="plans" minHeight={H.plans}><HomePlans /></DeferredSection>
+        <DeferredSection ready={below} holdId="plans" size="plans"><HomePlans /></DeferredSection>
 
         {/* ── Final call: last child of main. The light behind it is drawn on
             the footer's box, so this section paints nothing of its own. ───── */}
