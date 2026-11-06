@@ -45,7 +45,7 @@ export default function HomeHero() {
               </svg>
             </span>
           </Link>
-          <Link className="hh-ghost mi-ring" to="/plans">View plans</Link>
+          <Link className="hh-ghost ui-pill-out" to="/plans">View plans</Link>
         </div>
       </div>
 

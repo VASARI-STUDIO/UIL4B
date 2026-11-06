@@ -94,7 +94,7 @@ export function NextButton({ loop, v, box }) {
   return (
     <button
       type="button"
-      className="lp-next"
+      className="lp-next ui-pill-out"
       data-sim={v.nextSim}
       onClick={onClick}
       aria-label={v.nextAria}

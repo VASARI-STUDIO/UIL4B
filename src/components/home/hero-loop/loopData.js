@@ -150,3 +150,16 @@ export const IMAGES = {
   'guide-3': { path: '/hero-loop/guide-3', widths: [400, 800] },
   riders: { path: '/hero-loop/riders', widths: [400, 800] },
 }
+
+// The loop's chapters and Next stops, the same on every size: each names the
+// timeline beats it starts and ends on. SETTLE is the chapter shown finished
+// under reduced motion.
+export const CHAPTERS = [
+  { name: 'Palette', first: 'p0', end: 'h5' },
+  { name: 'Icons', first: 'enter3', end: 'h16' },
+  { name: 'Type', first: 'enter1', end: 'h11' },
+  { name: 'Alt text', first: 'enter6', end: 'h6c' },
+  { name: 'Export', first: 'pExp', end: 'guide' },
+];
+export const EXTRA_STEPS = [{ name: 'Type scale', beat: 'enter2' }];
+export const SETTLE = 4;

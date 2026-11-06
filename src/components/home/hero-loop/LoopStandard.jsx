@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
 import { buildLoopModel, useLoop } from './useLoop'
-import { PANEL_LABEL, RESULTS, PK_FROM, PK_HUE, PK_TO, FIELD_KEYS, SEARCH_KEYS, ALT_WORDS, dragSteps, keyBeats, pickerPlacers } from './loopData'
+import { CHAPTERS, EXTRA_STEPS, SETTLE, PANEL_LABEL, RESULTS, PK_FROM, PK_HUE, PK_TO, FIELD_KEYS, SEARCH_KEYS, ALT_WORDS, dragSteps, keyBeats, pickerPlacers } from './loopData'
 import { deriveVals, stackedRows } from './loopVals'
 import { ChapterButtons, ExportRows, LoopImage, NextButton, PauseButton } from './LoopParts'
 import './hero-loop.css'
@@ -73,15 +73,9 @@ const TL = [
 
 const MODEL = buildLoopModel({
   timeline: TL,
-  chapters: [
-    { name: 'Palette', first: 'p0', end: 'h5' },
-    { name: 'Icons', first: 'enter3', end: 'h16' },
-    { name: 'Type', first: 'enter1', end: 'h11' },
-    { name: 'Alt text', first: 'enter6', end: 'h6c' },
-    { name: 'Export', first: 'pExp', end: 'guide' },
-  ],
-  extraSteps: [{ name: 'Type scale', beat: 'enter2' }],
-  settle: 4,
+  chapters: CHAPTERS,
+  extraSteps: EXTRA_STEPS,
+  settle: SETTLE,
 })
 
 const GEO = {
