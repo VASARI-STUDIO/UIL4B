@@ -11,9 +11,9 @@
 //       `backwards`, so a cancelled or skipped run costs the movement and never
 //       the content.
 //   U3  the keyframes move `transform` and `opacity` only (compositor work).
-//   U4  no scroll handler on the bench or the proof band, and the band's hue
-//       handler is attached from an IntersectionObserver callback and from
-//       nowhere else.
+//   U4  no scroll handler on the bench or the proof band, the proof figures
+//       are static text, and the colour band's hue handler is attached from an
+//       IntersectionObserver callback and from nowhere else.
 //   U5  the served shell is untouched: it carries none of the arrival markup, so
 //       the headline stays the page's one settled, full-size largest paint.
 //
@@ -248,13 +248,17 @@ const matching = (src, openAt, open, close) => {
   return -1
 }
 
-test('U4: the bench and the proof band listen to no scroll, and use an observer instead', () => {
-  assert.ok(BENCH.includes('new IntersectionObserver'), 'the bench no longer observes its steps')
-  assert.ok(PROOF.includes('new IntersectionObserver'), 'the proof band no longer observes its row')
+test('U4: the bench listens to no scroll, and the proof band neither listens nor animates', () => {
+  // What the bench observes instead is the bookmarks section's own business; the frame only
+  // guarantees it does not run a handler per scroll frame.
   for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'SpectrumProof.jsx': PROOF })) {
-    assert.ok(!scrollListener.test(src), `${file} adds a scroll listener. Both ran one per frame before; an observer replaced them.`)
+    assert.ok(!scrollListener.test(src), `${file} adds a scroll listener`)
     assert.ok(!/onScroll|\.onscroll/.test(src), `${file} has an onScroll handler`)
   }
+  // The proof figures print as they are: no observer, timer or frame loop drives them.
+  assert.ok(!/IntersectionObserver|requestAnimationFrame|setInterval|setTimeout|useEffect/.test(PROOF),
+    'SpectrumProof.jsx drives its figures from an observer, timer or effect; they are static text')
+  assert.ok(PROOF.includes('PROOF_STATS'), 'the proof band no longer prints PROOF_STATS')
 })
 
 test('U4: the band\'s hue listener is attached from an IntersectionObserver callback only', () => {
