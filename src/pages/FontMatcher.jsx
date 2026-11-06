@@ -12,6 +12,7 @@ import {
 } from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
+import useModalDialog from '../hooks/useModalDialog'
 import { trackFontCopy } from '../utils/analytics'
 import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, suggestPairings,
@@ -107,11 +108,11 @@ function useMedia(query) {
   return match
 }
 
-// One family of the pair: its name in its own face, the category and weight
-// count on a second line so nothing is cut, then the actions on the name's row.
-// `headAction` is the body family's Best match button, drawn on the label line
-// so it never reads as one of the weights. Weights are a pill row (a menu pill
-// on a phone) and never hold anything but weights.
+// One family of the pair: the label with its actions (Shuffle or Best match,
+// then Browse), the name in its own face beside the weight, and a foot line with
+// the category and weight count beside Lock. `headAction` is the slot's own
+// action: Shuffle on the heading, Best match on the body. Weights hold nothing
+// but weights.
 function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, headAction, locked, onToggleLock }) {
   const uid = useId()
   const [browsing, setBrowsing] = useState(false)
@@ -119,40 +120,43 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
   const count = font.variants.length
   const weights = font.variants.map((w) => ({ value: w, label: String(w) }))
   return (
-    <div className="fpr-fam" role="group" aria-labelledby={`${uid}-label`}>
+    <div
+      className="fpr-fam"
+      role="group"
+      aria-labelledby={`${uid}-label`}
+      ref={(el) => {
+        if (!el) return
+        el.style.setProperty('--fpr-fam-ff', fontStack(font))
+        el.style.setProperty('--fpr-fam-fw', String(weight))
+      }}
+    >
       <div className="fpr-fam-head">
         <span className="fpr-label" id={`${uid}-label`}>{label}</span>
-        {headAction}
-      </div>
-      <div className="fpr-fam-row">
-        <div
-          className="fpr-fam-id"
-          ref={(el) => {
-            if (!el) return
-            el.style.setProperty('--fpr-fam-ff', fontStack(font))
-            el.style.setProperty('--fpr-fam-fw', String(weight))
-          }}
-        >
-          <span className="fpr-fam-name">{font.family}</span>
-          <span className="fpr-fam-meta">{categoryLabel(font.category)} · {weightCount(count)}</span>
-        </div>
         <div className="fpr-fam-acts">
-          <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
-          <ToolButton
-            icon={locked ? 'lock-simple' : 'lock-simple-open'}
-            iconSize={14}
-            className="fpr-lock"
-            aria-pressed={locked}
-            aria-label={`Lock ${label.toLowerCase()}`}
-            title={locked ? `${font.family} stays when you shuffle. Press to unlock.` : `Keep ${font.family} when you shuffle`}
-            onClick={onToggleLock}
-          >
-            {locked ? 'Locked' : 'Lock'}
-          </ToolButton>
+          {headAction}
           <ToolButton className="fpr-browse" aria-haspopup="dialog" aria-label={`Browse ${label.toLowerCase()}`} onClick={() => setBrowsing(true)}>
             Browse
           </ToolButton>
         </div>
+      </div>
+      <div className="fpr-fam-row">
+        <span className="fpr-fam-name">{font.family}</span>
+        <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
+      </div>
+      <div className="fpr-fam-foot">
+        <span className="fpr-fam-meta">{categoryLabel(font.category)} · {weightCount(count)}</span>
+        <ToolButton
+          variant="quiet"
+          icon={locked ? 'lock-simple' : 'lock-simple-open'}
+          iconSize={14}
+          className="fpr-lock"
+          aria-pressed={locked}
+          aria-label={`Lock ${label.toLowerCase()}`}
+          title={locked ? `${font.family} stays when you shuffle. Press to unlock.` : `Keep ${font.family} when you shuffle`}
+          onClick={onToggleLock}
+        >
+          {locked ? 'Locked' : 'Lock'}
+        </ToolButton>
       </div>
       {browsing && (
         <FontBrowseDialog
@@ -164,6 +168,27 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           onClose={() => setBrowsing(false)}
         />
       )}
+    </div>
+  )
+}
+
+// A phone's bottom sheet for one family's controls. It locks the page scroll,
+// traps focus, closes on Escape and hands focus back (useModalDialog).
+function FamilySheet({ title, onClose, children }) {
+  const ref = useModalDialog(onClose)
+  return (
+    <div className="tl-sheet-layer fpr-sheet-layer">
+      <div className="tl-sheet-scrim" aria-hidden="true" onClick={onClose} />
+      <div ref={ref} className="tl-sheet fpr-sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
+        <span className="tl-sheet-grab" aria-hidden="true" />
+        <div className="tl-sheet-head">
+          <span className="tl-sheet-title">{title}</span>
+          <button type="button" className="tl-sheet-x" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`}>
+            <ToolIcon name="x" size={16} />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
@@ -210,6 +235,9 @@ export default function FontMatcher({ onCopy, toast }) {
   // A locked side survives Shuffle. History is the undo stack of earlier pairs.
   const [locks, setLocks] = useState({ heading: false, body: false })
   const [history, setHistory] = useState([])
+  // Which family sheet is open on a phone: 'heading', 'body' or null.
+  const [sheet, setSheet] = useState(null)
+  const [monoOpen, setMonoOpen] = useState(false)
 
   useEffect(() => {
     const draft = readPairDraft()
@@ -217,6 +245,9 @@ export default function FontMatcher({ onCopy, toast }) {
     consumePairDraft()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A sheet belongs to the phone layout; widening past it closes the sheet.
+  useEffect(() => { if (!phone) setSheet(null) }, [phone])
 
   // Resolve names against the catalogue, falling back to the first entry so the
   // specimen always has something real to render — a catalogue that came back
@@ -442,18 +473,26 @@ export default function FontMatcher({ onCopy, toast }) {
     onGround: setGround,
   })
   const groundItem = bar.find((it) => it.id === 'ttb-ground')
+  // The preview words: a field in the stage head from 1024, in the panel on a
+  // tablet, and in More on a phone. Only one of them is mounted at a time.
+  const previewInput = (id, className) => (
+    <input
+      id={id}
+      className={className}
+      type="text"
+      aria-label="Preview text"
+      value={previewText}
+      placeholder="Type your own words"
+      maxLength={72}
+      autoComplete="off"
+      spellCheck="false"
+      enterKeyHint="done"
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+      onChange={e => setPreviewText(e.target.value)}
+    />
+  )
   const allItems = [
     ...bar.filter((it) => it !== groundItem),
-    {
-      id: 'shuffle',
-      priority: 1,
-      render: () => (
-        <ToolButton icon="shuffle" collapse onClick={shuffle} disabled={!ready} title={shuffleName}>
-          Shuffle
-        </ToolButton>
-      ),
-      menu: { label: shuffleName, icon: 'shuffle', onSelect: shuffle, disabled: !ready },
-    },
     {
       id: 'swap',
       priority: 5,
@@ -505,13 +544,40 @@ export default function FontMatcher({ onCopy, toast }) {
       menu: { label: 'Copy font import', icon: 'copy', onSelect: copyImport, disabled: !importUrl },
     },
   ]
-  // Below 1024 Shuffle lives in the docked bar, and the Font Gallery link and
-  // the import copy fold into More.
+  // A phone's bar is Back, the switcher and More. Everything else lives in the
+  // More sheet, so the row never wraps at any width.
+  const phoneItems = [
+    {
+      id: 'preview',
+      inline: false,
+      menu: () => (
+        <div className="fpr-more-preview">
+          <label className="fpr-label" htmlFor="fpr-text-more">Preview text</label>
+          {previewInput('fpr-text-more', 'fpr-input')}
+          <p className="fpr-hint">Try your real headline before you commit to a face.</p>
+        </div>
+      ),
+    },
+    {
+      id: 'shuffle',
+      inline: false,
+      menu: { label: shuffleName, icon: 'shuffle', onSelect: shuffle, disabled: !ready },
+    },
+    ...(ready ? [{
+      id: 'save',
+      inline: false,
+      menu: () => <div className="fpr-more-save" onClickCapture={keepPair}>{saveButton}</div>,
+    }] : []),
+  ]
   const items = desktop
     ? allItems
-    : allItems
-      .filter((it) => it.id !== 'shuffle')
-      .map((it) => (it.id === 'gallery' || it.id === 'import' ? { ...it, inline: false } : it))
+    : phone
+      ? [
+        ...allItems.filter((it) => ['ttb-back', 'ttb-chip', 'ttb-switcher'].includes(it.id)),
+        ...phoneItems,
+        ...allItems.filter((it) => ['gallery', 'scale', 'swap', 'undo', 'import', 'ttb-ground'].includes(it.id)).map((it) => ({ ...it, inline: false })),
+      ]
+      : allItems.map((it) => (it.id === 'gallery' || it.id === 'import' ? { ...it, inline: false } : it))
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
       Copy CSS

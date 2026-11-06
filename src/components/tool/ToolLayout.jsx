@@ -33,6 +33,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
 import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { requestFeedbackDialog } from '../../utils/errorReport'
+import { lockScroll } from '../../utils/scrollLock'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -232,6 +233,8 @@ export function ToolToolbar({
   const menuId = useId().replace(/:/g, '')
   const close = useCallback(() => setOpen(false), [setOpen])
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
+  // The phone sheet covers the page, so the page behind it must not scroll.
+  useEffect(() => (open && phone ? lockScroll() : undefined), [open, phone])
 
   // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
   // The primary is measured with the row, so gaining or losing one is a new set too.
