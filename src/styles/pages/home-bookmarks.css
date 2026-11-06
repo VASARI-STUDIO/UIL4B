@@ -260,7 +260,6 @@
   .bm-sub { font-size: 18px; line-height: 1.6; }
   /* Heading, sub-line and the layout share one centred 640px column; the tools go three up. */
   .bm-wide { max-width: 640px; }
-  .bmp { margin-top: 40px; }
   .bmp .bmp-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
