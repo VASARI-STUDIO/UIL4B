@@ -16,7 +16,7 @@
 //    on the input, so a touch anywhere along the bar lands in the field, and
 //    the field is at least 44px tall on a coarse pointer.
 import { test, expect } from './base.js'
-import { go, ready, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const PLANS_CHUNK = '**/assets/HomePlans-*.js'
 const LANDED_WITHIN_MS = 5000
@@ -85,8 +85,7 @@ for (const vp of VIEWPORTS) {
       watch(page, 'a visitor opening /#plans while the Plans file fails to download once')
       const seen = await failPlansChunk(page, 1)
       const startedAt = Date.now()
-      await page.goto('/#plans', { waitUntil: 'domcontentloaded' })
-      await ready(page, '/#plans')
+      await go(page, '/#plans')
 
       // POSITIVE CONTROLS: the failure happened, and the page reloaded after it.
       await expect.poll(() => seen.aborted, { message: 'the Plans file was never asked for, so nothing was failed' }).toBe(1)
@@ -105,8 +104,7 @@ for (const vp of VIEWPORTS) {
       watch(page, 'a visitor opening /#plans while the Plans file never downloads')
       const seen = await failPlansChunk(page, Infinity)
       const startedAt = Date.now()
-      await page.goto('/#plans', { waitUntil: 'domcontentloaded' })
-      await ready(page, '/#plans')
+      await go(page, '/#plans')
 
       await expect.poll(() => seen.documents, { message: 'the page did not reload after the failed download' }).toBeGreaterThanOrEqual(2)
       // The reload fails too, and the stand-in is what is left: it keeps the id.
