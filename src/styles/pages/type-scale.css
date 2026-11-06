@@ -674,6 +674,9 @@ html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
 /* The project row in More: a label, not a button. */
 .tsc-page .tsc-menu-project { margin: 0; cursor: default; pointer-events: none; }
 .tsc-page .tsc-menu-sample { font-weight: 400; color: var(--tl-dim); }
+/* The More sheet's heading at the board's size (17/24, weight 600, -0.01em). The
+   sheet is portalled out of the page, so it is found by the project row it holds. */
+.tl-sheet:has(.tsc-menu-project) .tl-sheet-title { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; }
 
 /* ── Copy CSS: the label, then the copy glyph in a disc ───────────────────── */
 .tsc-page .tsc-copy-primary.tl-btn { gap: 8px; height: 36px; padding: 0 4px 0 16px; }
