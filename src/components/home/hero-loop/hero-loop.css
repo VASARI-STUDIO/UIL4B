@@ -109,3 +109,59 @@
     transition: opacity 200ms ease-out !important;
   }
 }
+
+/* Phone strip buttons. Drawn 44px tall, tapped over 56px: the ::after reaches
+   12px below the button, under the strip's own edge, so a thumb that lands a
+   little low still hits it. */
+.lp-tap {
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 120ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.lp-tap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 56px;
+}
+
+.lp-tap:active {
+  transform: scale(.97);
+}
+
+.lp-tap:focus-visible {
+  outline: 2px solid #EFEEEA;
+  outline-offset: -3px;
+  border-radius: 10px;
+}
+
+.lp-tap-pause:focus-visible {
+  border-radius: 999px;
+}
+
+.lp-tap-ch {
+  background-color: transparent;
+}
+
+@media (hover:hover) {
+  .lp-tap-ch:hover {
+    background-color: rgba(239, 238, 234, .06);
+  }
+}
+
+/* The demo finger's tap on the next chapter. */
+.lp-tap-ch[data-sim="press"] {
+  background-color: rgba(239, 238, 234, .14);
+  transform: scale(.97);
+}
+
+/* The page zooms the panel to .8 under 350px; 13px keeps the labels above 10px. */
+@media (max-width: 349px) {
+  .lp-tap-ch {
+    font-size: 13px !important;
+  }
+}

@@ -166,11 +166,12 @@ export function ExportRows({ rows, m }) {
 
 /**
  * A panel picture: AVIF with a WebP fallback, in the widths the asset set
- * holds. The browser picks from `sizes`, the width the panel draws it at.
+ * holds. The browser picks from `sizes`, the width the panel draws it at:
+ * `drawn` when given, else the style's pixel width, else the image's own.
  */
-export function LoopImage({ name, width, height, style, ...rest }) {
+export function LoopImage({ name, width, height, drawn: drawnWidth, style, ...rest }) {
   const img = IMAGES[name]
-  const drawn = typeof style?.width === 'number' ? style.width : width
+  const drawn = drawnWidth ?? (typeof style?.width === 'number' ? style.width : width)
   const set = (ext) => img.widths.map((w) => `${img.path}-${w}.${ext} ${w}w`).join(', ')
   return (
     <picture style={{ display: 'contents' }}>
