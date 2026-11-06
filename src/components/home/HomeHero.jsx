@@ -2,19 +2,24 @@ import { Suspense, useState } from 'react'
 import { lazyRoute as lazy } from '../../utils/lazyRoute'
 import { Link } from 'react-router-dom'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../spectrum/spectrumHero'
+import SpectrumSearch from '../spectrum/SpectrumSearch'
 import { useAutoplaySlot } from './useAutoplaySlot'
 import { useLoopSize } from './heroLoopSize'
 
 const HeroLoop = lazy(() => import('./HeroLoop'))
 
-// THE HOMEPAGE HERO (`#top`): the headline, one line under it, two links and the
-// loop panel. Layout, sizes and the one entrance live in
+// THE HOMEPAGE HERO (`#top`): the headline, one line under it, two links, the
+// tool search and the loop panel. Layout, sizes and the one entrance live in
 // src/styles/pages/home-hero.css, imported by the page so it is in the
 // render-blocking sheet.
 //
 // The headline is the page's largest paint and has no entrance: it is plain
 // text in one element, the same chain scripts/home-shell.mjs writes into the
 // served page. Only the loop panel enters.
+//
+// The search is the page's command bar: while it is mounted it owns Ctrl/Cmd+K
+// (the nav's palette stands down for that chord and keeps "/"). Its results
+// open over the loop rather than pushing it (home-hero.css, `.hh-search`).
 //
 // The loop's frame (`.hh-slot`) is the element the page's autoplay owner
 // watches. It is sized by CSS from the first paint, and the loop module that
@@ -47,6 +52,10 @@ export default function HomeHero() {
             </span>
           </Link>
           <Link className="hh-ghost ui-pill-out" to="/plans">View plans</Link>
+        </div>
+        <p className="sr-only" id="hh-search-label">Search every tool</p>
+        <div className="hh-search">
+          <SpectrumSearch labelledBy="hh-search-label" />
         </div>
       </div>
 

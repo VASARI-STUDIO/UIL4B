@@ -248,10 +248,21 @@ test.describe('premium homepage', () => {
     const label = (await keycap.innerText()).trim()
     expect(label, 'the nav keycap no longer names a key').toMatch(/K$/i)
 
-    // Control+K on this platform; the nav accepts either modifier.
-    await page.keyboard.press('Control+k')
+    // The hero's command bar owns the chord while it is on the page: the nav
+    // palette stands down, and the bar takes focus. Control+K on this platform;
+    // the page accepts either modifier.
+    const heroInput = page.locator('#top .hcmd-input')
     const palette = page.getByRole('dialog', { name: /search/i })
-    await expect(palette, 'the keycap chord did not open the search').toBeVisible()
+    await expect(heroInput, 'the hero no longer mounts its command bar').toBeVisible()
+    await expect(heroInput).not.toBeFocused()
+    await page.keyboard.press('Control+k')
+    await expect(heroInput, 'the keycap chord did not focus the hero command bar').toBeFocused()
+    await expect(palette, 'the chord opened the nav palette as well as focusing the hero bar').toHaveCount(0)
+
+    // "/" is still the nav palette's key, from anywhere that is not a text field.
+    await heroInput.evaluate((el) => el.blur())
+    await page.keyboard.press('/')
+    await expect(palette, 'the slash key did not open the search').toBeVisible()
     await expect(palette.getByRole('combobox')).toBeFocused()
   })
 

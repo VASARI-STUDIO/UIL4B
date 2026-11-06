@@ -145,6 +145,41 @@
   .hh-ghost.ui-pill-out:hover { background: transparent; border-color: rgba(var(--hh-ink-rgb), .3); }
 }
 
+/* ── the search ───────────────────────────────────────────────────────────────
+   SpectrumSearch (its look is spectrum.css, `.sp-search`) under the links. The
+   hero is dark in either page theme, so the tokens that bar and its results read
+   are restated here with the dark theme's values, scoped to this wrapper. The
+   results open as a layer under the bar, over the loop, so a search never moves
+   the loop. */
+.hh-search {
+  --sp-card: #0F1012;
+  --sp-ink: var(--hh-ink);
+  --sp-ink-rgb: var(--hh-ink-rgb);
+  --sp-shade-rgb: 0, 0, 0;
+  --sp-shade-a: 1;
+  --sp-faint-a: .62;
+  --sp-link: var(--hh-ink);
+  --bg-1: #0B0C0E;
+  --bg-2: #111215;
+  --border: #202125;
+  --t0: #F2F1EC;
+  --t2: #9F9F98;
+  --hvr: rgba(242, 241, 236, .065);
+  --accent-mid: color-mix(in srgb, var(--accent) 78%, var(--accent-paper));
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 660px;
+  margin-top: 24px;
+  text-align: left;
+}
+.hh-search .hcmd-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+
 /* ── the loop panel ───────────────────────────────────────────────────────── */
 
 .hh-fig {
@@ -241,6 +276,9 @@
   .hh-go-disc { width: 40px; height: 40px; }
   .hh-go-disc > svg { width: 15px; height: 15px; }
   .hh-ghost { justify-content: center; padding: 0; }
+  .hh-search { margin-top: 16px; }
+  .hh-search .sp-search .hcmd-bar { padding: 14px 20px; }
+  .hh-search .sp-search-ghost { left: 42px; }
 
   .hh-fig {
     margin: 28px 16px 0;
@@ -251,6 +289,12 @@
   }
   .hh-slot { zoom: .95; }
   .hh-loop { border-radius: 22px; }
+}
+/* On the narrowest phones the typed phrase has no room beside the key chip, and
+   a phone has no key to name. */
+@media (max-width: 374px) {
+  .hh-search .sp-search .hcmd-kbd { display: none; }
+  .hh-search .sp-search-ghost { font-size: 14px; }
 }
 @media (max-width: 374px) { .hh-slot { zoom: .88; } }
 @media (max-width: 349px) { .hh-slot { zoom: .8; } }
