@@ -3,17 +3,20 @@
 // Below 768px ToolLayout (src/components/tool/ToolLayout.jsx) moves each tool's
 // primary out of the top toolbar into a fixed bar, `[data-tl-dock]`, where a
 // thumb reaches it. From 768px the primary stays in the toolbar and there is no
-// dock. For Palette, Gradient, Tint, Contrast, Aspect & Resolution, Alt Text
-// and Semantic Colour, on a touch screen at 390 and 360:
+// dock. For Palette, Gradient, Tint, Contrast, Aspect & Resolution, Alt Text,
+// Semantic Colour and Type Scale, on a touch screen at 390 and 360:
 //   · the dock shows, its button is at least 44px and the primary is not also
 //     in the toolbar; the page does not scroll sideways;
+//   · Type Scale's dock holds three controls, the scale button that opens the
+//     settings sheet, Save to a project and the primary Copy CSS, each a 44px
+//     target that fits the screen without touching its neighbour;
 //   · scrolled to the end, the last thing on the page is wholly above the dock;
 //   · the dock sits above the phone tab bar, touching neither it nor its taps;
 //   · a toast clears the dock, and a sheet opened over it covers it;
 //   · the keyboard (the visual viewport shrinking, or a focused text field when
 //     the browser has no visual viewport) puts the dock away, and puts it back.
-// At 768 and 1440 there is no dock. Font Pair, Type Scale and File Converter
-// have no primary on a phone, so no dock and no room kept for one. The brand kit
+// At 768 and 1440 there is no dock. Font Pair and File Converter have no
+// primary on a phone, so no dock and no room kept for one. The brand kit
 // walkthrough owns the foot of the screen, so the primary goes back to the
 // toolbar and only one fixed bar shows. The toolbar is one row at every phone
 // width.
@@ -36,8 +39,8 @@ const PHONES = [
 ]
 
 // `field` is a text field to focus for the keyboard (none on Semantic Colour); `open`
-// is a tap that makes it appear first (Type Scale shows Base as a value you tap to type);
-// `sheet` opens the tool's own sheet where it has one.
+// is a tap that makes it appear first (Type Scale keeps Preview text in the settings
+// sheet its dock's scale button opens); `sheet` opens the tool's own sheet where it has one.
 const TOOLS = [
   { route: '/create/palette', title: 'Palette Generator', primary: /^Save or share/, sheet: 'Extra tools' },
   { route: '/create/gradient', title: 'Gradient', primary: /^Save or share/, field: (page) => page.getByRole('textbox', { name: 'Stop 1 hex' }), sheet: 'More' },
@@ -46,7 +49,7 @@ const TOOLS = [
   { route: '/create/aspect-ratio', title: 'Aspect & Resolution', primary: /^Copy size/, field: (page) => page.getByRole('spinbutton', { name: 'Known width in pixels' }) },
   { route: '/create/alt-text', title: 'Alt Text Generator', primary: /^Add images/, field: (page) => page.locator('.alt-field').first() },
   { route: '/create/semantic-color', title: 'Semantic Colour', primary: /^Copy /, field: null },
-  { route: '/create/type-scale', title: 'Type Scale', primary: /^Copy CSS/, open: (page) => page.locator('.tsc-scale-term--base .snapv-value').tap(), field: (page) => page.getByRole('spinbutton', { name: 'Base font size in pixels — custom value', exact: true }) },
+  { route: '/create/type-scale', title: 'Type Scale', primary: /^Copy CSS/, dockControls: [/Scale, families and fine tuning/, /^Save to a project/, /^Copy CSS/], open: (page) => page.getByRole('button', { name: /Scale, families and fine tuning/ }).tap(), field: (page) => page.locator('#tsc-sample') },
 ]
 
 const NO_PRIMARY_ON_A_PHONE = [
@@ -55,7 +58,11 @@ const NO_PRIMARY_ON_A_PHONE = [
 ]
 
 const dock = (page) => page.locator('[data-tl-dock]')
-const dockButton = (page) => page.locator('[data-tl-dock] button').first()
+// The dock's primary. Type Scale's dock leads with the scale button and Save, so
+// the primary is found by its name; with no tool given it is the dock's first button.
+const dockButton = (page, tool) => (tool
+  ? page.locator('[data-tl-dock]').getByRole('button', { name: tool.primary }).first()
+  : page.locator('[data-tl-dock] button').first())
 const toolbar = (page) => page.locator('[data-tool-toolbar]')
 
 /** A visual viewport the test can shrink, standing in for the on-screen keyboard. */
@@ -128,7 +135,7 @@ for (const phone of PHONES) {
       })
 
       test('the primary is in the dock, 44px tall, and not also in the toolbar', async ({ page }) => {
-        const button = dockButton(page)
+        const button = dockButton(page, tool)
         await expect(button).toBeVisible()
         await expect(button).toHaveAccessibleName(tool.primary)
         const b = await box(button)
@@ -149,6 +156,29 @@ for (const phone of PHONES) {
         const edges = await dock(page).evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, vw: document.documentElement.clientWidth } })
         expect([edges.left, edges.right], 'the dock runs edge to edge').toEqual([0, edges.vw])
       })
+
+      if (tool.dockControls) {
+        test('the dock lays its controls side by side, each a 44px target on screen with a gap between', async ({ page }) => {
+          const controls = []
+          for (const name of tool.dockControls) {
+            const control = dock(page).getByRole('button', { name })
+            await expect(control, `one dock control named ${name}`).toHaveCount(1)
+            controls.push({ name: String(name), ...(await box(control)) })
+          }
+          for (const c of controls) {
+            expect(c.height, `${c.name} is at least 44px tall`).toBeGreaterThanOrEqual(44)
+            expect(c.width, `${c.name} is at least 44px wide`).toBeGreaterThanOrEqual(44)
+            expect(c.x, `${c.name} starts off screen`).toBeGreaterThanOrEqual(0)
+            expect(c.x + c.width, `${c.name} runs off screen`).toBeLessThanOrEqual(phone.width)
+          }
+          controls.sort((a, b) => a.x - b.x)
+          controls.slice(1).forEach((c, i) => {
+            const gap = c.x - (controls[i].x + controls[i].width)
+            expect(gap, `${controls[i].name} and ${c.name} are ${Math.round(gap)}px apart`).toBeGreaterThanOrEqual(7.5)
+          })
+          expect(controls.map((c) => c.name), 'the dock order is scale, Save, Copy CSS').toEqual(tool.dockControls.map(String))
+        })
+      }
 
       test('scrolled to the end, the last thing on the page is wholly above the dock', async ({ page }) => {
         await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -364,7 +394,7 @@ for (const tool of TOOLS) {
       expect(row.spread, `${width}px: toolbar children sit on more than one line`).toBeLessThanOrEqual(2)
       expect(row.right, `${width}px: the toolbar runs past the screen`).toBeLessThanOrEqual(row.vw)
       expect(row.height, `${width}px: the toolbar is ${Math.round(row.height)}px tall, a second row`).toBeLessThan(72)
-      const b = await box(dockButton(page))
+      const b = await box(dockButton(page, tool))
       expect(b.x, `${width}px: the dock button starts off screen`).toBeGreaterThanOrEqual(0)
       expect(b.x + b.width, `${width}px: the dock button runs off screen`).toBeLessThanOrEqual(width)
       const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
