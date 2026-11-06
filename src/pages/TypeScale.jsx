@@ -775,19 +775,36 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   }
   const activeWidth = WIDTHS.find(w => w.id === width) || DESKTOP
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
+  // The chevrons walk the named ratios; each row of the list says what the top step would be.
+  const namedRatios = RATIOS.filter(r => r.value)
+  const ratioAt = namedRatios.findIndex(r => r.id === ratioId)
+  const ratioOptions = RATIOS.map(r => ({
+    value: r.id,
+    label: `${r.label}${r.value ? ` ${r.value}` : ''}`,
+    note: r.value ? `${trim(stepPx(base, r.value, up, rounding))}px top step` : undefined,
+  }))
 
   // One menu per family. Only the weights the family has are listed.
   const weightSelect = (font, value, onPick, label) => (
-    <MenuSelect
-      label={label}
+    <div
       id={label === 'Heading weight' ? 'tsc-hweight' : 'tsc-bweight'}
-      className="tsc-select tsc-weight-select"
-      value={value}
-      onChange={next => onPick(Number(next))}
-      triggerLabel={`Weight ${weightLabel(value)}`}
+      className="tsc-weights"
+      role="group"
+      aria-label={label}
     >
-      {font.variants.map(w => <option key={w} value={w}>{weightLabel(w)}</option>)}
-    </MenuSelect>
+      {font.variants.map(w => (
+        <button
+          key={w}
+          type="button"
+          className="tsc-wt"
+          aria-pressed={w === value}
+          aria-label={weightLabel(w)}
+          onClick={() => onPick(w)}
+        >
+          {w}
+        </button>
+      ))}
+    </div>
   )
 
   // The three pieces of the work column. The split shows the ladder and the
@@ -864,16 +881,20 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // One width menu, shared by the Scale and Page views. In the split it sits in
   // the Page half's bar; below the split it joins the Scale / Page / Code switch.
-  const widthMenu = (
-    <MenuSelect
-      label="Preview width"
-      id="tsc-width"
-      className="tsc-select tsc-width-select"
-      value={width}
-      onChange={setWidth}
-    >
-      {WIDTHS.map(w => <option key={w.id} value={w.id}>{`${w.label} · ${w.px}px`}</option>)}
-    </MenuSelect>
+  const widthSegment = (
+    <SlidePills id="tsc-width" className="tsc-width-seg tl-pills" role="group" aria-label="Preview width" value={width}>
+      {WIDTHS.map(w => (
+        <button
+          key={w.id}
+          type="button"
+          className={width === w.id ? 'tsc-width-btn tl-pill is-on' : 'tsc-width-btn tl-pill'}
+          aria-pressed={width === w.id}
+          onClick={() => setWidth(w.id)}
+        >
+          {w.label}<span className="tsc-width-px">{w.px}</span>
+        </button>
+      ))}
+    </SlidePills>
   )
 
   // Declared before pageView, which shows them as the Code half at 1440.
@@ -922,14 +943,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             ))}
           </SlidePills>
         ) : <p className="tsc-page-label">Page set on this scale</p>}
-        {split && half === 'page' && widthMenu}
       </div>
       {split && half === 'code' ? <div className="tsc-developer-view"><div className="tsc-developer-bar">{formatPills}{exportCopy}</div>{exportPre}</div> : <>
-      {colW > 0 && colW < activeWidth.px - 1 && (
-        <p className="tsc-width-note" role="status">
-          Sizes as on a {activeWidth.px}px screen. Lines wrap sooner here.
-        </p>
-      )}
       <div className="tsc-page-col" ref={pageColRef}>
         <div className="tsc-kerb" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
           <KerbsidePage
@@ -979,18 +994,33 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               </div>
               <div className="tsc-scale-term tsc-scale-term--ratio">
                 <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
-                <MenuSelect label="Scale ratio"
-                  id="tsc-ratio"
-                  className="tsc-select tsc-scale-select"
-                  value={ratioId}
-                  onChange={nextValue => changeRatioId(nextValue)}
-                >
-                  {RATIOS.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}{r.value ? ` ${r.value}` : ''}
-                    </option>
-                  ))}
-                </MenuSelect>
+                <div className="tsc-ratio-row">
+                  <button
+                    type="button"
+                    className="tsc-ratio-step"
+                    aria-label="Previous ratio"
+                    disabled={ratioAt <= 0}
+                    onClick={() => changeRatioId(namedRatios[ratioAt - 1].id)}
+                  >
+                    <ToolIcon name="arrow-left" size={16} />
+                  </button>
+                  <MenuSelect label="Scale ratio"
+                    id="tsc-ratio"
+                    className="tsc-select tsc-scale-select"
+                    value={ratioId}
+                    options={ratioOptions}
+                    onChange={nextValue => changeRatioId(nextValue)}
+                  />
+                  <button
+                    type="button"
+                    className="tsc-ratio-step"
+                    aria-label="Next ratio"
+                    disabled={ratioAt < 0 || ratioAt >= namedRatios.length - 1}
+                    onClick={() => changeRatioId(namedRatios[ratioAt + 1].id)}
+                  >
+                    <ToolIcon name="arrow-right" size={16} />
+                  </button>
+                </div>
               </div>
               {ratioId === 'custom' && (
                 <div className="tsc-scale-term tsc-scale-custom">
@@ -1319,7 +1349,17 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   </button>
                 ))}
               </SlidePills>
-              {view !== 'code' && widthMenu}
+            </div>
+          )}
+
+          {/* The page header: the width every size on the page is read at. */}
+          {(split || view !== 'code') && (
+            <div className="tsc-width-bar">
+              <span className="tsc-width-k" id="tsc-width-k">Preview width</span>
+              {widthSegment}
+              <p className="tsc-width-note" role="status">
+                Sizes as on a {activeWidth.px}px screen.{colW > 0 && colW < activeWidth.px - 1 ? ' Lines wrap sooner here.' : ''}
+              </p>
             </div>
           )}
 

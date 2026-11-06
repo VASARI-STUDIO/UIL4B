@@ -505,3 +505,45 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   /* The tab bar's rule is more specific; with the keyboard up the sheet sits on the keyboard, not on the dock. */
   html.has-tabbar .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); }
 }
+
+/* ── Ratio: previous and next beside the list ───────────────────────────── */
+.tsc-page .tsc-ratio-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 8px; align-items: center; }
+.tsc-page .tsc-ratio-step {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--tl-wash); color: var(--tl-ink); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease), opacity 150ms var(--tl-ease);
+}
+.tsc-page .tsc-ratio-step:active:not(:disabled) { transform: scale(.97); }
+.tsc-page .tsc-ratio-step:disabled { opacity: .4; cursor: default; }
+.tsc-page .tsc-ratio-step:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-ratio-step:hover:not(:disabled) { background: var(--tl-wash-on); }
+}
+
+/* ── Weight cells: one per weight the family has ────────────────────────── */
+.tsc-page .tsc-weights { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.tsc-page .tsc-wt {
+  min-width: 40px; height: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--tl-dim); font: 400 13px/1 var(--font); font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-wt:active { transform: scale(.97); }
+.tsc-page .tsc-wt[aria-pressed="true"] { background: var(--tl-wash-on); color: var(--tl-ink); font-weight: 500; }
+.tsc-page .tsc-wt:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-wt:hover:not([aria-pressed="true"]) { background: var(--tl-wash); color: var(--tl-ink); }
+}
+@media (pointer: coarse) { .tsc-page .tsc-wt { height: 44px; min-width: 44px; } }
+
+/* ── The page header: Preview width, as a segment, with its note ────────── */
+.tsc-page .tsc-width-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 36px; min-width: 0; }
+.tsc-page .tsc-width-k { flex: none; font-size: max(var(--fs-caption), 13px); font-weight: 500; color: var(--tl-dim); white-space: nowrap; }
+.tsc-page .tsc-width-bar .tsc-width-seg { flex: none; flex-wrap: nowrap; }
+.tsc-page .tsc-width-px { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
+.tsc-page .tsc-width-btn.is-on .tsc-width-px { color: inherit; }
+.tsc-page .tsc-width-bar .tsc-width-note { flex: 1 1 240px; }
+@media (max-width: 767px) {
+  .tsc-page .tsc-width-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tsc-page .tsc-width-bar .tsc-width-seg { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tsc-page .tsc-width-btn { justify-content: center; }
+}
